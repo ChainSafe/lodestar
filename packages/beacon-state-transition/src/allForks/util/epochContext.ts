@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, BitList, List} from "@chainsafe/ssz";
+import {ByteVector, hash, toHexString, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
   BLSSignature,
@@ -25,6 +25,7 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
+import {MutableVector} from "@chainsafe/persistent-ts";
 
 import {
   computeActivationExitEpoch,
@@ -38,7 +39,6 @@ import {
   zipIndexesCommitteeBits,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {MutableVector} from "@chainsafe/persistent-ts";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
@@ -95,7 +95,6 @@ export class PubkeyIndexMap {
 export function createEpochContext(
   config: IBeaconConfig,
   state: allForks.BeaconState,
-  validators: MutableVector<phase0.Validator>,
   opts?: EpochContextOpts
 ): EpochContext {
   const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
@@ -116,20 +115,26 @@ export function createEpochContext(
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
   const nextActiveIndices: ValidatorIndex[] = [];
-  validators.forEach(function processActiveIndices(v, i) {
-    if (isActiveValidator(v, previousEpoch)) {
+
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+  const validatorCount = validators.length;
+
+  for (let i = 0; i < validatorCount; i++) {
+    const validator = validators[i];
+
+    if (isActiveValidator(validator, previousEpoch)) {
       previousActiveIndices.push(i);
     }
-    if (isActiveValidator(v, currentEpoch)) {
+    if (isActiveValidator(validator, currentEpoch)) {
       currentActiveIndices.push(i);
       // We track totalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      totalActiveBalanceByIncrement += Math.floor(v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      totalActiveBalanceByIncrement += Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
-    if (isActiveValidator(v, nextEpoch)) {
+    if (isActiveValidator(validator, nextEpoch)) {
       nextActiveIndices.push(i);
     }
 
-    const {exitEpoch} = v;
+    const {exitEpoch} = validator;
     if (exitEpoch !== FAR_FUTURE_EPOCH) {
       if (exitEpoch > exitQueueEpoch) {
         exitQueueEpoch = exitEpoch;
@@ -140,8 +145,8 @@ export function createEpochContext(
     }
 
     // TODO: Should have 0 for not active validators to be re-usable in ForkChoice
-    effectiveBalancesArr.push(v.effectiveBalance);
-  });
+    effectiveBalancesArr.push(validator.effectiveBalance);
+  }
   const effectiveBalances = MutableVector.from(effectiveBalancesArr);
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
@@ -228,9 +233,13 @@ export function syncPubkeys(
   if (currentCount !== index2pubkey.length) {
     throw new Error(`Pubkey indices have fallen out of sync: ${currentCount} != ${index2pubkey.length}`);
   }
+
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
+
   const newCount = state.validators.length;
   for (let i = currentCount; i < newCount; i++) {
-    const pubkey = state.validators[i].pubkey.valueOf() as Uint8Array;
+    const pubkey = validators[i].pubkey.valueOf() as Uint8Array;
     pubkey2index.set(pubkey, i);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.
@@ -523,9 +532,13 @@ export class EpochContext {
     return validatorIndices;
   }
 
-  getCommitteeAssignments(epoch: Epoch, requestedValidatorIndices: ValidatorIndex[]): AttesterDuty[] {
+  getCommitteeAssignments(
+    epoch: Epoch,
+    requestedValidatorIndices: ValidatorIndex[]
+  ): Map<ValidatorIndex, AttesterDuty> {
     const requestedValidatorIndicesSet = new Set(requestedValidatorIndices);
-    const duties = [];
+    const duties = new Map<ValidatorIndex, AttesterDuty>();
+
     const epochCommittees = this.getShufflingAtEpoch(epoch).committees;
     for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
       const slotCommittees = epochCommittees[epochSlot];
@@ -533,7 +546,9 @@ export class EpochContext {
         for (let j = 0, committeeLength = slotCommittees[i].length; j < committeeLength; j++) {
           const validatorIndex = slotCommittees[i][j];
           if (requestedValidatorIndicesSet.has(validatorIndex)) {
-            duties.push({
+            // no-non-null-assertion: We know that if index is in set there must exist an entry in the map
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            duties.set(validatorIndex, {
               validatorIndex,
               committeeLength,
               committeesAtSlot,
@@ -545,6 +560,7 @@ export class EpochContext {
         }
       }
     }
+
     return duties;
   }
 

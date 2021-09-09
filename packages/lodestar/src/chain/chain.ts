@@ -2,6 +2,7 @@
  * @module chain
  */
 
+import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -19,7 +20,7 @@ import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain} from "./interface";
+import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
@@ -30,6 +31,7 @@ import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool}
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
+import {Archiver} from "./archiver";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -78,6 +80,7 @@ export class BeaconChain implements IBeaconChain {
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
   protected internalEmitter = new ChainEventEmitter();
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
 
   constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
@@ -141,6 +144,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
+    this.archiver = new Archiver(db, this, logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -149,6 +153,10 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
+  }
+
+  async persistToDisk(): Promise<void> {
+    await this.archiver.persistToDisk();
   }
 
   getGenesisTime(): Number64 {
@@ -304,5 +312,24 @@ export class BeaconChain implements IBeaconChain {
       headRoot: head.blockRoot,
       headSlot: head.slot,
     };
+  }
+
+  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {
+    if (!this.persistInvalidSszObject) {
+      return null;
+    }
+    const now = new Date();
+    // yyyy-MM-dd
+    const date = now.toISOString().split("T")[0];
+    // by default store to lodestar_archive of current dir
+    const byDate = this.opts.persistInvalidSszObjectsDir
+      ? `${this.opts.persistInvalidSszObjectsDir}/${date}`
+      : `invalidSszObjects/${date}`;
+    if (!fs.existsSync(byDate)) {
+      fs.mkdirSync(byDate, {recursive: true});
+    }
+    const fileName = `${byDate}/${type}_${suffix}_${Date.now()}.ssz`;
+    fs.writeFileSync(fileName, bytes);
+    return fileName;
   }
 }

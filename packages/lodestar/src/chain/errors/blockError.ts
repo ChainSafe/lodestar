@@ -1,5 +1,6 @@
-import {Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {GossipActionError} from "./gossipValidation";
@@ -58,6 +59,10 @@ export enum BlockErrorCode {
    */
   INVALID_SIGNATURE = "BLOCK_ERROR_INVALID_SIGNATURE",
   /**
+   * Block transition returns invalid state root.
+   */
+  INVALID_STATE_ROOT = "BLOCK_ERROR_INVALID_STATE_ROOT",
+  /**
    * The provided block is from an later slot than its parent.
    */
   BLOCK_IS_NOT_LATER_THAN_PARENT = "BLOCK_ERROR_BLOCK_IS_NOT_LATER_THAN_PARENT",
@@ -97,7 +102,12 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; blockProposer: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposer: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; preState: CachedBeaconState<allForks.BeaconState>}
+  | {
+      code: BlockErrorCode.INVALID_STATE_ROOT;
+      preState: CachedBeaconState<allForks.BeaconState>;
+      postState: CachedBeaconState<allForks.BeaconState>;
+    }
   | {code: BlockErrorCode.BLOCK_IS_NOT_LATER_THAN_PARENT; blockSlot: Slot; stateSlot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}

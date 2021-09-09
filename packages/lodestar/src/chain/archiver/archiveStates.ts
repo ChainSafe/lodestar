@@ -4,10 +4,9 @@
 
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../db";
-import {IBeaconChain} from "../../chain";
+import {CheckpointStateCache} from "../stateCache";
 
 /**
  * Minimum number of epochs between archived states
@@ -19,29 +18,17 @@ export const PERSIST_STATE_EVERY_EPOCHS = 1024;
  */
 const PERSIST_TEMP_STATE_EVERY_EPOCHS = 32;
 
-export type StatesArchiverModules = {
-  chain: IBeaconChain;
-  db: IBeaconDb;
-  logger: ILogger;
-};
-
 /**
  * Archives finalized states from active bucket to archive bucket.
  *
  * Only the new finalized state is stored to disk
  */
 export class StatesArchiver {
-  private readonly config: IBeaconConfig;
-  private readonly chain: IBeaconChain;
-  private readonly db: IBeaconDb;
-  private readonly logger: ILogger;
-
-  constructor(config: IBeaconConfig, modules: StatesArchiverModules) {
-    this.config = config;
-    this.chain = modules.chain;
-    this.db = modules.db;
-    this.logger = modules.logger;
-  }
+  constructor(
+    private readonly checkpointStateCache: CheckpointStateCache,
+    private readonly db: IBeaconDb,
+    private readonly logger: ILogger
+  ) {}
 
   /**
    * Persist states every some epochs to
@@ -79,7 +66,7 @@ export class StatesArchiver {
    * Only the new finalized state is stored to disk
    */
   async archiveState(finalized: phase0.Checkpoint): Promise<void> {
-    const finalizedState = this.chain.checkpointStateCache.get(finalized);
+    const finalizedState = this.checkpointStateCache.get(finalized);
     if (!finalizedState) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);
     }

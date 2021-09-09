@@ -21,7 +21,6 @@ export function generateBalanceDeltasEpochProcess(
 
   const epochProcess: Partial<IEpochProcess> = {
     statuses: generateStatuses(state.validators.length, flagFactors),
-    validators: state.validators.persistent.toArray(),
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {

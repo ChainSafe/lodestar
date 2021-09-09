@@ -1,4 +1,6 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
@@ -13,6 +15,7 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
+    private readonly config: IChainForkConfig,
     private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
@@ -52,7 +55,7 @@ export class BlockProposingService {
       const graffiti = this.graffiti || "";
 
       this.logger.debug("Producing block", logCtx);
-      const block = await this.api.validator.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
+      const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", logCtx);
@@ -66,4 +69,16 @@ export class BlockProposingService {
       this.logger.error("Error proposing block", logCtx, e);
     }
   }
+
+  /** Wrapper around the API's different methods for producing blocks across forks */
+  private produceBlock: Api["validator"]["produceBlock"] = (slot, randaoReveal, graffiti) => {
+    switch (this.config.getForkName(slot)) {
+      case ForkName.phase0:
+        return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
+      // All subsequent forks are expected to use v2 too
+      case ForkName.altair:
+      default:
+        return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+    }
+  };
 }

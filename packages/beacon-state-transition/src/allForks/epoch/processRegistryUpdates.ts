@@ -21,31 +21,37 @@ export function processRegistryUpdates(
   state: CachedBeaconState<allForks.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  const {validators, epochCtx} = state;
+  const {epochCtx} = state;
+
+  // Get the validators sub tree once for all the loop
+  const validators = state.validators;
+
+  // TODO: Batch set this properties in the tree at once with setMany() or setNodes()
 
   // process ejections
   for (const index of epochProcess.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, index);
+    initiateValidatorExit(state, validators[index]);
   }
 
   // set new activation eligibilities
   for (const index of epochProcess.indicesEligibleForActivationQueue) {
-    validators.update(index, {
-      activationEligibilityEpoch: epochCtx.currentShuffling.epoch + 1,
-    });
+    validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
   for (const index of epochProcess.indicesEligibleForActivation.slice(0, epochCtx.churnLimit)) {
+    const validator = validators[index];
     // placement in queue is finalized
-    if (epochProcess.validators[index].activationEligibilityEpoch > finalityEpoch) {
-      break; // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
+    if (validator.activationEligibilityEpoch > finalityEpoch) {
+      // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early
+      // activationEligibilityEpoch has been sorted in epoch process in ascending order.
+      // At that point the finalityEpoch was not known because processJustificationAndFinalization() wasn't called yet.
+      // So we need to filter by finalityEpoch here to comply with the spec.
+      break;
     }
-    validators.update(index, {
-      activationEpoch: computeActivationExitEpoch(epochProcess.currentEpoch),
-    });
+    validator.activationEpoch = computeActivationExitEpoch(epochProcess.currentEpoch);
   }
 }

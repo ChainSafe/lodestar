@@ -17,6 +17,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
+import {BlockError, BlockErrorCode} from "../errors";
 
 /**
  * Starting at `state.slot`,
@@ -84,12 +85,17 @@ export async function runStateTransition(
     state,
     job.signedBlock,
     {
-      verifyStateRoot: true,
+      verifyStateRoot: false,
       verifyProposer: !job.validSignatures && !job.validProposerSignature,
       verifySignatures: !job.validSignatures,
     },
     metrics
   );
+
+  const blockStateRoot = job.signedBlock.message.stateRoot;
+  if (!ssz.Root.equals(blockStateRoot, postState.tree.root)) {
+    throw new BlockError(job.signedBlock, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+  }
 
   const oldHead = forkChoice.getHead();
 
@@ -103,7 +109,6 @@ export async function runStateTransition(
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
       throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
     }
-    // TODO - PERFORMANCE WARNING - NAIVE CODE
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);

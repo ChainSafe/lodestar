@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
-import {Epoch} from "@chainsafe/lodestar-types";
+import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation";
@@ -10,6 +10,8 @@ import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntar
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
 import {ApiModules} from "../../types";
 import {OpSource} from "../../../../metrics/validatorMonitor";
+import {toHexString} from "@chainsafe/ssz";
+import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
 
 export function getBeaconPoolApi({
   chain,
@@ -64,6 +66,14 @@ export function getBeaconPoolApi({
               {slot: attestation.data.slot, index: attestation.data.index},
               e
             );
+            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "attestation",
+                ssz.phase0.Attestation.serialize(attestation),
+                toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
+              );
+              logger.debug("Submitted invalid attestation was written to", archivedPath);
+            }
           }
         })
       );
@@ -144,6 +154,14 @@ export function getBeaconPoolApi({
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
               e
             );
+            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "syncCommittee",
+                ssz.altair.SyncCommitteeMessage.serialize(signature),
+                toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(signature))
+              );
+              logger.debug("The submitted sync committee message was written to", archivedPath);
+            }
           }
         })
       );

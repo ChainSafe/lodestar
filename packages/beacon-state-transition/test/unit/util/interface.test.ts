@@ -45,7 +45,10 @@ describe("CachedBeaconState", function () {
 
   it("should modify both state and wrappedState", () => {
     const oldFlatValidator = wrappedState.validators[1000];
-    wrappedState.validators.update(1000, {activationEpoch: 2020, exitEpoch: 2030});
+    const validator = wrappedState.validators[1000];
+    validator.activationEpoch = 2020;
+    validator.exitEpoch = 2030;
+
     expect(wrappedState.validators[1000].activationEpoch).to.be.equal(2020);
     expect(wrappedState.validators[1000].exitEpoch).to.be.equal(2030);
     // other property is the same

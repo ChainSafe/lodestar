@@ -1,14 +1,12 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
-
+import {ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-
 import {ForkChoice} from "../../../../src/chain";
-import {ArchiveBlocksTask} from "../../../../src/tasks/tasks/archiveBlocks";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
-import {ssz} from "@chainsafe/lodestar-types";
+import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks";
 
 describe("block archiver task", function () {
   const sandbox = sinon.createSandbox();
@@ -33,18 +31,7 @@ describe("block archiver task", function () {
     const nonCanonicalBlocks = [blocks[2]];
     forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
     forkChoiceStub.iterateNonAncestors.returns(nonCanonicalBlocks);
-    const archiverTask = new ArchiveBlocksTask(
-      {
-        db: dbStub,
-        forkChoice: forkChoiceStub,
-        logger,
-      },
-      {
-        epoch: 5,
-        root: ZERO_HASH,
-      }
-    );
-    await archiverTask.run();
+    await archiveBlocks(dbStub, forkChoiceStub, logger, {epoch: 5, root: ZERO_HASH});
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(
         canonicalBlocks.map((summary) => ({

@@ -12,10 +12,10 @@ import {
   SYNC_COMMITTEE_SIZE,
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
-import {allForks, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
-import {AttestationError, AttestationErrorCode} from "../../../chain/errors";
+import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
@@ -27,6 +27,7 @@ import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -134,27 +135,30 @@ export function getValidatorApi({
     }
   }
 
-  return {
-    async produceBlock(slot, randaoReveal, graffiti = "") {
-      let timer;
-      metrics?.blockProductionRequests.inc();
-      try {
-        notWhileSyncing();
-        await waitForSlot(slot); // Must never request for a future slot > currentSlot
+  const produceBlock: routes.validator.Api["produceBlock"] = async function produceBlock(slot, randaoReveal, graffiti) {
+    let timer;
+    metrics?.blockProductionRequests.inc();
+    try {
+      notWhileSyncing();
+      await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-        timer = metrics?.blockProductionTime.startTimer();
-        const block = await assembleBlock(
-          {config, chain, db, eth1, metrics},
-          slot,
-          randaoReveal,
-          toGraffitiBuffer(graffiti)
-        );
-        metrics?.blockProductionSuccess.inc();
-        return {data: block, version: config.getForkName(block.slot)};
-      } finally {
-        if (timer) timer();
-      }
-    },
+      timer = metrics?.blockProductionTime.startTimer();
+      const block = await assembleBlock(
+        {config, chain, db, eth1, metrics},
+        slot,
+        randaoReveal,
+        toGraffitiBuffer(graffiti || "")
+      );
+      metrics?.blockProductionSuccess.inc();
+      return {data: block, version: config.getForkName(block.slot)};
+    } finally {
+      if (timer) timer();
+    }
+  };
+
+  return {
+    produceBlock: produceBlock,
+    produceBlockV2: produceBlock,
 
     async produceAttestationData(committeeIndex, slot) {
       notWhileSyncing();
@@ -191,17 +195,24 @@ export function getValidatorApi({
 
       const state = await chain.getHeadStateAtCurrentEpoch();
 
-      // Note: Using a MutableVector is the fastest way of getting compressed pubkeys.
-      //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
-      const validators = state.validators.persistent;
       const duties: routes.validator.ProposerDuty[] = [];
+      const indexes: ValidatorIndex[] = [];
 
-      for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
+      // Gather indexes to get pubkeys in batch (performance optimization)
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         // getBeaconProposer ensures the requested epoch is correct
-        const validatorIndex = state.getBeaconProposer(slot);
-        const validator = validators.get(validatorIndex);
-        if (!validator) throw Error(`Unknown validatorIndex ${validatorIndex}`);
-        duties.push({slot, validatorIndex, pubkey: validator.pubkey});
+        const validatorIndex = state.getBeaconProposer(startSlot + i);
+        indexes.push(validatorIndex);
+      }
+
+      // NOTE: this is the fastest way of getting compressed pubkeys.
+      //       See benchmark -> packages/lodestar/test/perf/api/impl/validator/attester.test.ts
+      // After dropping the flat caches attached to the CachedBeaconState it's no longer available.
+      // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
+      const pubkeys = getPubkeysForIndices(state.validators, indexes);
+
+      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+        duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }
 
       // Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
@@ -239,14 +250,18 @@ export function getValidatorApi({
       // will equal `currentEpoch + 1`
 
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
-      const getPubkey = getPubkeysForIndices(state, validatorIndices);
-
+      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       const committeeAssignments = state.epochCtx.getCommitteeAssignments(epoch, validatorIndices);
-      const duties = committeeAssignments as routes.validator.AttesterDuty[];
-      for (const duty of duties) {
-        // Mutate existing object instead of re-creating another new object with spread operator
-        // Should be faster and require less memory
-        duty.pubkey = getPubkey(duty.validatorIndex);
+      const duties: routes.validator.AttesterDuty[] = [];
+      for (let i = 0, len = validatorIndices.length; i < len; i++) {
+        const validatorIndex = validatorIndices[i];
+        const duty = committeeAssignments.get(validatorIndex) as routes.validator.AttesterDuty | undefined;
+        if (duty) {
+          // Mutate existing object instead of re-creating another new object with spread operator
+          // Should be faster and require less memory
+          duty.pubkey = pubkeys[i];
+          duties.push(duty);
+        }
       }
 
       const dependentRoot = attesterShufflingDecisionRoot(state, epoch) || (await getGenesisBlockRoot(state));
@@ -283,16 +298,18 @@ export function getValidatorApi({
       // Note: does not support requesting past duties
       const state = chain.getHeadState();
 
+      // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
+      const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
       const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
-      const getPubkey = getPubkeysForIndices(state, validatorIndices);
 
       const duties: routes.validator.SyncDuty[] = [];
-      for (const validatorIndex of validatorIndices) {
+      for (let i = 0, len = validatorIndices.length; i < len; i++) {
+        const validatorIndex = validatorIndices[i];
         const validatorSyncCommitteeIndices = syncComitteeValidatorIndexMap.get(validatorIndex);
         if (validatorSyncCommitteeIndices) {
           duties.push({
-            pubkey: getPubkey(validatorIndex),
+            pubkey: pubkeys[i],
             validatorIndex,
             validatorSyncCommitteeIndices,
           });
@@ -361,6 +378,14 @@ export function getValidatorApi({
               },
               e
             );
+            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "signedAggregatedAndProof",
+                ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
+                toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
+              );
+              logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
+            }
           }
         })
       );
@@ -401,6 +426,14 @@ export function getValidatorApi({
               },
               e
             );
+            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+              const archivedPath = chain.persistInvalidSszObject(
+                "contributionAndProof",
+                ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
+                toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
+              );
+              logger.debug("The submitted contribution adn proof was written to", archivedPath);
+            }
           }
         })
       );

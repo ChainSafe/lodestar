@@ -313,7 +313,8 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     return;
   }
 
-  this.logger.error("Block error", {slot: err.signedBlock.message.slot}, err);
+  // err type data may contain CachedBeaconState which is too much to log
+  this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code});
 
   if (err.type.code === BlockErrorCode.FUTURE_SLOT) {
     this.pendingBlocks.addBySlot(err.signedBlock);
@@ -325,5 +326,41 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   else if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
     this.pendingBlocks.addByParent(err.signedBlock);
     await this.db.pendingBlock.add(err.signedBlock);
+  } else if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
+    const {signedBlock} = err;
+    const blockSlot = signedBlock.message.slot;
+    const {preState} = err.type;
+    const blockPath = this.persistInvalidSszObject(
+      "signedBlock",
+      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
+      `${blockSlot}_invalid_signature`
+    );
+    const statePath = this.persistInvalidSszObject("state", preState.serialize(), `${preState.slot}_invalid_signature`);
+    this.logger.debug("Invalid signature block and state were written to disc", {blockPath, statePath});
+  } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
+    const {signedBlock} = err;
+    const blockSlot = signedBlock.message.slot;
+    const {preState, postState} = err.type;
+    const invalidRoot = toHexString(postState.hashTreeRoot());
+    const blockPath = this.persistInvalidSszObject(
+      "signedBlock",
+      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
+      `${blockSlot}_invalid_state_root_${invalidRoot}`
+    );
+    const preStatePath = this.persistInvalidSszObject(
+      "state",
+      preState.serialize(),
+      `${preState.slot}_invalid_state_root_preState_${invalidRoot}`
+    );
+    const postStatePath = this.persistInvalidSszObject(
+      "state",
+      postState.serialize(),
+      `${postState.slot}_invalid_state_root_postState_${invalidRoot}`
+    );
+    this.logger.debug("Invalid signature block and state were written to disc", {
+      blockPath,
+      preStatePath,
+      postStatePath,
+    });
   }
 }

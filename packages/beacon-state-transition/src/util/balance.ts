@@ -6,7 +6,6 @@ import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "../allForks";
-import {isActiveValidator} from "./validator";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -18,6 +17,7 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
   return bigIntMax(
     BigInt(EFFECTIVE_BALANCE_INCREMENT),
     indices.reduce(
+      // TODO: Use a fast cache to get the effective balance 🐢
       (total: Gwei, index: ValidatorIndex): Gwei => total + BigInt(state.validators[index].effectiveBalance),
       BigInt(0)
     )
@@ -50,16 +50,27 @@ export function decreaseBalance(
 }
 
 /**
- * TODO - PERFORMANCE WARNING - NAIVE CODE
  * This method is used to get justified balances from a justified state.
- *
- * SLOW CODE - 🐢
+ * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
+ * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
  */
 export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
-  const justifiedEpoch = justifiedState.currentShuffling.epoch;
-  const effectiveBalances: number[] = [];
-  justifiedState.validators.forEach((v) => {
-    effectiveBalances.push(isActiveValidator(v, justifiedEpoch) ? v.effectiveBalance : 0);
-  });
-  return effectiveBalances;
+  const {activeIndices} = justifiedState.currentShuffling;
+  // 5x faster than using readonlyValuesListOfLeafNodeStruct
+  const count = justifiedState.validators.length;
+  const {effectiveBalances} = justifiedState;
+  const effectiveBalancesArr = new Array<number>(count);
+  let j = 0;
+  for (let i = 0; i < count; i++) {
+    if (i === activeIndices[j]) {
+      // active validator
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      effectiveBalancesArr[i] = Math.floor(effectiveBalances.get(i)! / EFFECTIVE_BALANCE_INCREMENT);
+      j++;
+    } else {
+      // inactive validator
+      effectiveBalancesArr[i] = 0;
+    }
+  }
+  return effectiveBalancesArr;
 }
