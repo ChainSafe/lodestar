@@ -148,6 +148,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
+  const isActivePrevEpoch: boolean[] = [];
   const isActiveNextEpoch: boolean[] = [];
   const statuses: IAttesterStatus[] = [];
 
@@ -173,7 +174,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveValidator(validator, prevEpoch) || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
+    const activePrev = isActiveValidator(validator, prevEpoch);
+    isActivePrevEpoch.push(activePrev);
+    if (activePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
@@ -279,7 +282,8 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   } else {
     state.previousEpochParticipation.forEachStatus((participationStatus, i) => {
       const status = statuses[i];
-      if (status.active) {
+      // this is required to pass random spec tests in altair
+      if (isActivePrevEpoch[i]) {
         status.flags |=
           ((participationStatus.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
           ((participationStatus.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
@@ -288,6 +292,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     });
     state.currentEpochParticipation.forEachStatus((participationStatus, i) => {
       const status = statuses[i];
+      // this is required to pass random spec tests in altair
       if (status.active) {
         status.flags |=
           ((participationStatus.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
