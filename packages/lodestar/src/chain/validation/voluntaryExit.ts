@@ -18,10 +18,10 @@ export async function validateGossipVoluntaryExit(
   //
   // The only condtion that is time sensitive and may require a non-head state is
   // -> Validator is active && validator has not initiated exit
-  // The voluntaryExit.epoch must be in the past so using the head state may evaluate the
-  // validator's status in the future, compared to using a state at epoch voluntaryExit.epoch
-  // Unless there's a clear need to use a non-head state, will use the head state as its cheap.
-  const state = chain.getHeadState();
+  // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
+  // We dial the head state to the current epoch to get the current status of the validator. This is
+  // relevant on periods of many skipped slots.
+  const state = await chain.getHeadStateAtCurrentEpoch();
 
   try {
     // verifySignature = false, verified in batch below
