@@ -10,6 +10,11 @@ import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
 
 export function sanity(fork: ForkName): void {
+  sanitySlot(fork);
+  sanityBlock(fork, `/tests/${ACTIVE_PRESET}/${fork}/sanity/blocks/pyspec_tests`);
+}
+
+export function sanitySlot(fork: ForkName): void {
   describeDirectorySpecTest<IProcessSlotsTestCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/sanity/slots`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/slots/pyspec_tests`),
@@ -33,10 +38,12 @@ export function sanity(fork: ForkName): void {
       },
     }
   );
+}
 
+export function sanityBlock(fork: ForkName, testPath: string): void {
   describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
-    join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/blocks/pyspec_tests`),
+    join(SPEC_TEST_LOCATION, testPath),
     (testcase) => {
       const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
       let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);

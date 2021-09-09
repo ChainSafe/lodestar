@@ -19,7 +19,9 @@ describe("ProtoArray", () => {
       parentRoot,
       blockRoot: finalizedRoot,
       justifiedEpoch: genesisEpoch,
+      justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
+      finalizedRoot: stateRoot,
     });
 
     // Add block that is a finalized descendant.
@@ -30,7 +32,9 @@ describe("ProtoArray", () => {
       stateRoot,
       targetRoot: finalizedRoot,
       justifiedEpoch: genesisEpoch,
+      justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
+      finalizedRoot: stateRoot,
     });
 
     // Add block that is *not* a finalized descendant.
@@ -41,7 +45,9 @@ describe("ProtoArray", () => {
       stateRoot,
       targetRoot: finalizedRoot,
       justifiedEpoch: genesisEpoch,
+      justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
+      finalizedRoot: stateRoot,
     });
 
     expect(fc.isDescendant(unknown, unknown)).to.be.false;
