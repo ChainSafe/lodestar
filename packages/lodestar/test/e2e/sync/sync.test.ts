@@ -50,6 +50,7 @@ describe("sync", function () {
 
     const bn2 = await getDevBeaconNode({
       params: beaconParams,
+      options: {api: {rest: {enabled: false}}},
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,

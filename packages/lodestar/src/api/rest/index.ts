@@ -19,7 +19,7 @@ export type RestApiOptions = {
 };
 
 export const restApiOptionsDefault: RestApiOptions = {
-  enabled: false,
+  enabled: true,
   // ApiNamespace "debug" is not turned on by default
   api: ["beacon", "config", "events", "node", "validator"],
   host: "127.0.0.1",
