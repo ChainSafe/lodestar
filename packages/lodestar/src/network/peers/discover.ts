@@ -3,7 +3,7 @@ import PeerId from "peer-id";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
+import {Discv5, Discv5Discovery} from "@chainsafe/discv5";
 import {shuffle} from "../../util/shuffle";
 import {getConnectedPeerIds} from "./utils";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
