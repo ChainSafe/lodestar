@@ -65,6 +65,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       logger.verbose("Received gossip block", {
         slot: slot,
         root: blockHex,
+        curentSlot: chain.clock.currentSlot,
       });
       try {
         await validateGossipBlock(config, chain, db, {
