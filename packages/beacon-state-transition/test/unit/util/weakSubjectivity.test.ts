@@ -1,12 +1,12 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
-import {computeWeakSubjectivityPeriodFromConstituents, ETH_TO_GWEI} from "../../../src/allForks/util/weakSubjectivity";
+import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/allForks/util/weakSubjectivity";
 import {getChurnLimit} from "../../../src/util/validator";
 
 describe("weak subjectivity tests", () => {
   describe("computeWeakSubjectivityPeriodFromConstituents", function () {
-    const balance28 = BigInt(28) * BigInt(ETH_TO_GWEI);
-    const balance32 = BigInt(32) * BigInt(ETH_TO_GWEI);
+    const balance28 = 28;
+    const balance32 = 32;
 
     const testValues = [
       {avgValBalance: balance28, valCount: 32768, wsPeriod: 504},
@@ -27,7 +27,7 @@ describe("weak subjectivity tests", () => {
       it(`should have wsPeriod: ${wsPeriod} with avgValBalance: ${avgValBalance} and valCount: ${valCount}`, () => {
         const wsPeriod = computeWeakSubjectivityPeriodFromConstituents(
           valCount,
-          avgValBalance * BigInt(valCount),
+          avgValBalance * valCount,
           getChurnLimit(config, valCount),
           config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
         );

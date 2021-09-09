@@ -27,8 +27,6 @@ export function processEffectiveBalanceUpdates(
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
   const {validators, epochCtx} = state;
   const {effectiveBalances} = epochCtx;
-  const nextEpoch = epochCtx.currentShuffling.epoch + 1;
-  const isNextEpochAfterAltairFork = nextEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH;
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
@@ -56,7 +54,7 @@ export function processEffectiveBalanceUpdates(
       // TODO: Update all in batch after this loop
       epochCtx.effectiveBalances.set(i, effectiveBalance);
     }
-    if (isNextEpochAfterAltairFork && epochProcess.isActiveNextEpoch[i]) {
+    if (epochProcess.isActiveNextEpoch[i]) {
       // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       nextEpochTotalActiveBalanceByIncrement += Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
