@@ -83,7 +83,6 @@ export interface IBeaconChain {
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
-  getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>>;
   getHeadBlock(): Promise<allForks.SignedBeaconBlock | null>;
 
   /**
@@ -93,7 +92,6 @@ export interface IBeaconChain {
    * @param slot
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
-  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
   getFinalizedCheckpoint(): phase0.Checkpoint;
 

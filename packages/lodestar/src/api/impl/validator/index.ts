@@ -4,6 +4,8 @@ import {
   computeStartSlotAtEpoch,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
+  getBlockRootAtSlot,
+  computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -13,7 +15,6 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
-import {assembleAttestationData} from "../../../chain/factory/attestation";
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
@@ -165,9 +166,46 @@ export function getValidatorApi({
 
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
-      const headRoot = chain.forkChoice.getHeadRoot();
-      const state = await chain.regen.getBlockSlotState(headRoot, slot, RegenCaller.produceAttestationData);
-      return {data: assembleAttestationData(state, headRoot, slot, committeeIndex)};
+      // This needs a state in the same epoch as `slot` such that state.currentJustifiedCheckpoint is correct.
+      // Note: This may trigger an epoch transition if there skipped slots at the begining of the epoch.
+      const headState = chain.getHeadState();
+      const headSlot = headState.slot;
+      const attEpoch = computeEpochAtSlot(slot);
+      const headEpoch = computeEpochAtSlot(headSlot);
+      const headBlockRoot = chain.forkChoice.getHeadRoot();
+
+      const beaconBlockRoot =
+        slot >= headSlot
+          ? // When attesting to the head slot or later, always use the head of the chain.
+            headBlockRoot
+          : // Permit attesting to slots *prior* to the current head. This is desirable when
+            // the VC and BN are out-of-sync due to time issues or overloading.
+            getBlockRootAtSlot(headState, slot);
+
+      const targetSlot = computeStartSlotAtEpoch(attEpoch);
+      const targetRoot =
+        targetSlot >= headSlot
+          ? // If the state is earlier than the target slot then the target *must* be the head block root.
+            headBlockRoot
+          : getBlockRootAtSlot(headState, targetSlot);
+
+      // To get the correct source we must get a state in the same epoch as the attestation's epoch.
+      // An epoch transition may change state.currentJustifiedCheckpoint
+      const attEpochState =
+        attEpoch === headEpoch
+          ? headState
+          : // Will advance the state to the correct next epoch if necessary
+            await chain.regen.getBlockSlotState(headBlockRoot, slot, RegenCaller.produceAttestationData);
+
+      return {
+        data: {
+          slot,
+          index: committeeIndex,
+          beaconBlockRoot,
+          source: attEpochState.currentJustifiedCheckpoint,
+          target: {epoch: attEpoch, root: targetRoot},
+        },
+      };
     },
 
     /**
@@ -295,6 +333,8 @@ export function getValidatorApi({
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
 
+      // sync committee duties have a lookahead of 1 day. Assuming the validator only requests duties for upcomming
+      // epochs, the head state will very likely have the duties available for the requested epoch.
       // Note: does not support requesting past duties
       const state = chain.getHeadState();
 

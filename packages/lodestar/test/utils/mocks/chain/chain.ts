@@ -132,10 +132,6 @@ export class MockBeaconChain implements IBeaconChain {
     return createCachedBeaconState(this.config, this.state);
   }
 
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return createCachedBeaconState(this.config, this.state);
-  }
-
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
     const block = generateEmptySignedBlock();
     block.message.slot = slot;
@@ -179,10 +175,6 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async persistToDisk(): Promise<void> {}
-
-  async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    return null;
-  }
 
   getStatus(): phase0.Status {
     return {
