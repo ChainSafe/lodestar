@@ -1,4 +1,4 @@
-import sinon, {SinonStubbedInstance} from "sinon";
+import sinon from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
 import {
@@ -13,7 +13,6 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
-import {StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
 import {generateState} from "../../../utils/state";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
@@ -27,7 +26,6 @@ describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let dbStub: StubbedBeaconDb;
   let chainStub: StubbedChain;
-  let regenStub: SinonStubbedInstance<StateRegenerator>;
   let state: CachedBeaconState<allForks.BeaconState>;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
 
@@ -70,10 +68,9 @@ describe("validate voluntary exit", () => {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
     // TODO: Use actual BLS verification
     chainStub.bls = {verifySignatureSets: async () => true};
-    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
-    regenStub.getCheckpointState.resolves(state);
     dbStub = new StubbedBeaconDb(sandbox);
     dbStub.voluntaryExit.has.resolves(false);
   });

@@ -57,9 +57,11 @@ export type AttesterDuty = {
   slot: Slot;
 };
 
+export type Index2PubkeyCache = PublicKey[];
+
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
-  index2pubkey?: PublicKey[];
+  index2pubkey?: Index2PubkeyCache;
   skipSyncPubkeys?: boolean;
 };
 
@@ -98,7 +100,7 @@ export function createEpochContext(
   opts?: EpochContextOpts
 ): EpochContext {
   const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
-  const index2pubkey = opts?.index2pubkey || ([] as PublicKey[]);
+  const index2pubkey = opts?.index2pubkey || ([] as Index2PubkeyCache);
   if (!opts?.skipSyncPubkeys) {
     syncPubkeys(state, pubkey2index, index2pubkey);
   }
@@ -228,7 +230,7 @@ export function createEpochContext(
 export function syncPubkeys(
   state: allForks.BeaconState,
   pubkey2index: PubkeyIndexMap,
-  index2pubkey: PublicKey[]
+  index2pubkey: Index2PubkeyCache
 ): void {
   const currentCount = pubkey2index.size;
   if (currentCount !== index2pubkey.length) {
@@ -345,7 +347,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
 interface IEpochContextData {
   config: IBeaconConfig;
   pubkey2index: PubkeyIndexMap;
-  index2pubkey: PublicKey[];
+  index2pubkey: Index2PubkeyCache;
   proposers: number[];
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
@@ -387,7 +389,7 @@ export class EpochContext {
    *
    * $VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)
    */
-  index2pubkey: PublicKey[];
+  index2pubkey: Index2PubkeyCache;
   /**
    * Indexes of the block proposers for the current epoch.
    *
