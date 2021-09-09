@@ -86,6 +86,7 @@ export class NodejsNode extends LibP2p {
             enr: options.discv5.enr,
             bindAddr: options.discv5.bindAddr,
             bootEnrs: options.discv5.bootEnrs || [],
+            searchInterval: Infinity,
           },
         },
       },
