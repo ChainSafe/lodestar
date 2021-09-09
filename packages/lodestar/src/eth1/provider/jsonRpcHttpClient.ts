@@ -74,7 +74,7 @@ export class JsonRpcHttpClient {
       try {
         return await this.fetchJsonOneUrl(url, json, opts);
       } catch (e) {
-        if (this.opts.shouldNotFallback?.(e)) {
+        if (this.opts.shouldNotFallback?.(e as Error)) {
           throw e;
         }
 
@@ -148,7 +148,7 @@ function parseJson<T>(json: string): T {
   try {
     return JSON.parse(json) as T;
   } catch (e) {
-    throw new ErrorParseJson(json, e);
+    throw new ErrorParseJson(json, e as Error);
   }
 }
 

@@ -90,13 +90,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
-    let secretKey;
-
-    try {
-      secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
-    } catch (error) {
-      throw new YargsError(error);
-    }
+    const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
     if (!secretKey) throw new YargsError("No validator keystores found");
     console.log(`Decrypted keystore for validator ${publicKey}`);
 
@@ -111,10 +105,6 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       graffiti: args.graffiti,
     });
 
-    try {
-      await validatorClient.voluntaryExit(publicKey, args.exitEpoch);
-    } catch (error) {
-      throw new Error(error);
-    }
+    await validatorClient.voluntaryExit(publicKey, args.exitEpoch);
   },
 };

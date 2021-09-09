@@ -269,7 +269,7 @@ export class SyncChain {
       }
 
       this.status = SyncChainStatus.Error;
-      this.logger.verbose("SyncChain Error", {id: this.logId}, e);
+      this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
 
       // A batch could not be processed after max retry limit. It's likely that all peers
       // in this chain are sending invalid batches repeatedly so are either malicious or faulty.
@@ -303,7 +303,7 @@ export class SyncChain {
       this.requestBatches(this.peerset.keys());
     } catch (e) {
       // bubble the error up to the main async iterable loop
-      this.batchProcessor.end(e);
+      this.batchProcessor.end(e as Error);
     }
   }
 
@@ -397,7 +397,7 @@ export class SyncChain {
       this.triggerBatchDownloader();
     } catch (e) {
       // bubble the error up to the main async iterable loop
-      this.batchProcessor.end(e);
+      this.batchProcessor.end(e as Error);
     }
 
     // Pre-emptively request more blocks from peers whilst we process current blocks

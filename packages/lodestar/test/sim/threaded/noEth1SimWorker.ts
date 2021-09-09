@@ -100,7 +100,7 @@ async function runWorker(): Promise<void> {
   await Promise.all(validators.map((validator) => validator.start()));
 }
 
-runWorker().catch((e) => {
+runWorker().catch((e: Error) => {
   console.error("Worker error", e);
   process.exit(1);
 });

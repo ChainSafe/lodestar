@@ -28,7 +28,7 @@ export class Clock implements IClock {
 
   start(signal: AbortSignal): void {
     for (const fn of this.fns) {
-      this.runAtMostEvery(signal, fn).catch((e) => {
+      this.runAtMostEvery(signal, fn).catch((e: Error) => {
         if (this.onError) this.onError(e);
       });
     }

@@ -39,7 +39,7 @@ export class BlockProposingService {
       this.logger.warn("Multiple block proposers", {slot, count: proposers.length});
     }
 
-    Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e) => {
+    Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e: Error) => {
       this.logger.error("Error on block duties", {slot}, e);
     });
   };
@@ -55,18 +55,18 @@ export class BlockProposingService {
       const graffiti = this.graffiti || "";
 
       this.logger.debug("Producing block", logCtx);
-      const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
+      const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", logCtx);
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
-      await this.api.beacon.publishBlock(signedBlock).catch((e) => {
+      await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
     } catch (e) {
-      this.logger.error("Error proposing block", logCtx, e);
+      this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }
 

@@ -34,7 +34,7 @@ function wrapHandler<
       await handler(...args);
       emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
     } catch (e) {
-      logger.error("Error handling event", {event}, e);
+      logger.error("Error handling event", {event}, e as Error);
     }
   };
 }
@@ -197,12 +197,12 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
         state as TreeBacked<altair.BeaconState>
       );
     } catch (e) {
-      this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e);
+      this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e as Error);
     }
     try {
       await this.lightClientIniter.onFinalized(cp);
     } catch (e) {
-      this.logger.error("Error LightClientIniter.onFinalized", {epoch: cp.epoch}, e);
+      this.logger.error("Error LightClientIniter.onFinalized", {epoch: cp.epoch}, e as Error);
     }
   }
 }
@@ -259,7 +259,7 @@ export async function onBlock(
 
         this.metrics?.registerAttestationInBlock(indexedAttestation, block.message);
       } catch (e) {
-        this.logger.error("Error processing attestation from block", {slot: block.message.slot}, e);
+        this.logger.error("Error processing attestation from block", {slot: block.message.slot}, e as Error);
       }
     }
   }
@@ -293,7 +293,7 @@ export async function onBlock(
         postState as TreeBacked<altair.BeaconState>
       );
     } catch (e) {
-      this.logger.error("Error lightclientUpdater.onHead", {slot: block.message.slot}, e);
+      this.logger.error("Error lightclientUpdater.onHead", {slot: block.message.slot}, e as Error);
     }
   }
 }

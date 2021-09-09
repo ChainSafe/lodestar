@@ -43,7 +43,7 @@ export class HttpMetricsServer implements IMetricsServer {
     try {
       await this.terminator.terminate();
     } catch (e) {
-      this.logger.warn("Failed to stop metrics server", e);
+      this.logger.warn("Failed to stop metrics server", {}, e as Error);
     }
   }
 

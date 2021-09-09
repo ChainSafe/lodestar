@@ -60,11 +60,11 @@ export function getBeaconPoolApi({
               chain.attestationPool.add(attestation),
             ]);
           } catch (e) {
-            errors.push(e);
+            errors.push(e as Error);
             logger.error(
               `Error on submitPoolAttestations [${i}]`,
               {slot: attestation.data.slot, index: attestation.data.index},
-              e
+              e as Error
             );
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
               const archivedPath = chain.persistInvalidSszObject(
@@ -148,11 +148,11 @@ export function getBeaconPoolApi({
               })
             );
           } catch (e) {
-            errors.push(e);
+            errors.push(e as Error);
             logger.error(
               `Error on submitPoolSyncCommitteeSignatures [${i}]`,
               {slot: signature.slot, validatorIndex: signature.validatorIndex},
-              e
+              e as Error
             );
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
               const archivedPath = chain.persistInvalidSszObject(

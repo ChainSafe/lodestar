@@ -215,7 +215,7 @@ export class BeaconSync implements IBeaconSync {
       this.chain.receiveBlock(block);
       this.logger.verbose("Found UnknownBlockRoot", {parentRootHex});
     } catch (e) {
-      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e);
+      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e as Error);
     } finally {
       this.processingRoots.delete(parentRootHex);
     }

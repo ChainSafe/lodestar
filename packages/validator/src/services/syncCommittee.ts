@@ -64,13 +64,13 @@ export class SyncCommitteeService {
           if (duties.length === 0) return;
           // Then download, sign and publish a `SignedAggregateAndProof` for each
           // validator that is elected to aggregate for this `slot` and `subcommitteeIndex`.
-          await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e) => {
+          await this.produceAndPublishAggregates(slot, subcommitteeIndex, beaconBlockRoot, duties).catch((e: Error) => {
             this.logger.error("Error on SyncCommitteeContribution", {slot, index: subcommitteeIndex}, e);
           });
         })
       );
     } catch (e) {
-      this.logger.error("Error on runSyncCommitteeTasks", {slot}, e);
+      this.logger.error("Error on runSyncCommitteeTasks", {slot}, e as Error);
     }
   };
 
@@ -94,7 +94,7 @@ export class SyncCommitteeService {
 
     let blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
     if (blockRoot === null) {
-      const blockRootData = await this.api.beacon.getBlockRoot("head").catch((e) => {
+      const blockRootData = await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
         throw extendError(e, "Error producing SyncCommitteeMessage");
       });
       blockRoot = blockRootData.data;
@@ -110,7 +110,7 @@ export class SyncCommitteeService {
         );
         this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
       } catch (e) {
-        this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e);
+        this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e as Error);
       }
     }
 
@@ -119,7 +119,7 @@ export class SyncCommitteeService {
         await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
         this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
       } catch (e) {
-        this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e);
+        this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e as Error);
       }
     }
 
@@ -152,7 +152,7 @@ export class SyncCommitteeService {
     this.logger.verbose("Producing SyncCommitteeContribution", logCtx);
     const contribution = await this.api.validator
       .produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot)
-      .catch((e) => {
+      .catch((e: Error) => {
         throw extendError(e, "Error producing SyncCommitteeContribution");
       });
 
@@ -169,7 +169,7 @@ export class SyncCommitteeService {
           this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
         }
       } catch (e) {
-        this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e);
+        this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e as Error);
       }
     }
 
@@ -178,7 +178,7 @@ export class SyncCommitteeService {
         await this.api.validator.publishContributionAndProofs(signedContributions);
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
       } catch (e) {
-        this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e);
+        this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e as Error);
       }
     }
   }

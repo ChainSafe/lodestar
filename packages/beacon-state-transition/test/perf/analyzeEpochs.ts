@@ -175,7 +175,7 @@ const fromEpoch = process.env.FROM_EPOCH !== undefined ? parseInt(process.env.FR
 const network = process.env.NETWORK;
 if (!network) throw Error("Must define process.env.NETWORK");
 
-analyzeEpochs(network, fromEpoch).catch((e) => {
+analyzeEpochs(network, fromEpoch).catch((e: Error) => {
   // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);

@@ -40,7 +40,7 @@ export class AttestationService {
     await Promise.all(
       Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
         if (duties.length === 0) return;
-        await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, signal).catch((e) => {
+        await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, signal).catch((e: Error) => {
           this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
         });
       })
@@ -83,7 +83,7 @@ export class AttestationService {
     const logCtx = {slot, index: committeeIndex};
 
     // Produce one attestation data per slot and committeeIndex
-    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e) => {
+    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
       throw extendError(e, "Error producing attestation");
     });
     const attestation = attestationRes.data;
@@ -101,7 +101,7 @@ export class AttestationService {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
         this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
-        this.logger.error("Error signing attestation", logCtxValidator, e);
+        this.logger.error("Error signing attestation", logCtxValidator, e as Error);
       }
     }
 
@@ -110,7 +110,7 @@ export class AttestationService {
         await this.api.beacon.submitPoolAttestations(signedAttestations);
         this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
       } catch (e) {
-        this.logger.error("Error publishing attestations", logCtx, e);
+        this.logger.error("Error publishing attestations", logCtx, e as Error);
       }
     }
 
@@ -141,7 +141,7 @@ export class AttestationService {
     this.logger.verbose("Aggregating attestations", logCtx);
     const aggregate = await this.api.validator
       .getAggregatedAttestation(ssz.phase0.AttestationData.hashTreeRoot(attestation), attestation.slot)
-      .catch((e) => {
+      .catch((e: Error) => {
         throw extendError(e, "Error producing aggregateAndProofs");
       });
 
@@ -158,7 +158,7 @@ export class AttestationService {
           this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
         }
       } catch (e) {
-        this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e);
+        this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e as Error);
       }
     }
 
@@ -167,7 +167,7 @@ export class AttestationService {
         await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
       } catch (e) {
-        this.logger.error("Error publishing aggregateAndProofs", logCtx, e);
+        this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
       }
     }
   }

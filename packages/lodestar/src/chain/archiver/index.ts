@@ -82,7 +82,7 @@ export class Archiver {
       this.chain.forkChoice.prune(finalized.root);
       this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
-      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
+      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
     }
   };
 }

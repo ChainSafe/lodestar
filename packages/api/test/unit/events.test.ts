@@ -69,7 +69,7 @@ describe("events", () => {
             await sleep(5);
           }
         } catch (e) {
-          reject(e);
+          reject(e as Error);
         }
       });
 

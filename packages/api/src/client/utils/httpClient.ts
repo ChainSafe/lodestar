@@ -93,7 +93,7 @@ export class HttpClient implements IHttpClient {
 
       return await getBody(res);
     } catch (e) {
-      if (isAbortedError(e)) {
+      if (isAbortedError(e as Error)) {
         if (signalGlobal?.aborted) {
           throw new ErrorAborted("REST client");
         } else if (controller.signal.aborted) {
