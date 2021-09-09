@@ -15,6 +15,8 @@ import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool}
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
+import {IMetrics} from "../metrics";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export interface IProcessBlock {
   /**
@@ -51,6 +53,8 @@ export interface IBlockJob extends IProcessBlock {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly metrics: IMetrics | null;
+  readonly config: IBeaconConfig;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -81,6 +85,8 @@ export interface IBeaconChain {
   persistToDisk(): Promise<void>;
   getGenesisTime(): Number64;
 
+  /** Run fork-choice and may change head. If so get head state from regen */
+  updateHead(): void;
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
   getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>>;

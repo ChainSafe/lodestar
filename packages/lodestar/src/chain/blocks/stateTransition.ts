@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
@@ -9,15 +9,14 @@ import {
   allForks,
   getEffectiveBalances,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {ZERO_HASH} from "../../constants";
-import {CheckpointStateCache} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
 import {BlockError, BlockErrorCode} from "../errors";
+import {IBeaconChain} from "../interface";
 
 /**
  * Starting at `state.slot`,
@@ -66,11 +65,12 @@ async function processSlotsToNearestCheckpoint(
 }
 
 export async function runStateTransition(
-  {emitter, forkChoice, metrics}: {emitter: ChainEventEmitter; forkChoice: IForkChoice; metrics: IMetrics | null},
-  checkpointStateCache: CheckpointStateCache,
+  chain: IBeaconChain,
   preState: CachedBeaconState<allForks.BeaconState>,
   job: IBlockJob
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
+  const {emitter, forkChoice, metrics} = chain;
+
   const postSlot = job.signedBlock.message.slot;
   const preEpoch = preState.currentShuffling.epoch;
   const postEpoch = computeEpochAtSlot(postSlot);
@@ -97,13 +97,11 @@ export async function runStateTransition(
     throw new BlockError(job.signedBlock, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
   }
 
-  const oldHead = forkChoice.getHead();
-
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
+    const justifiedState = chain.checkpointStateCache.get(postState.currentJustifiedCheckpoint);
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
@@ -119,8 +117,7 @@ export async function runStateTransition(
     }
 
     emitBlockEvent(emitter, job, postState);
-    forkChoice.updateHead();
-    emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead, metrics);
+    chain.updateHead();
   }
 
   return postState;
@@ -150,31 +147,6 @@ function emitCheckpointEvent(
     },
     checkpointState
   );
-}
-
-function emitForkChoiceHeadEvents(
-  emitter: ChainEventEmitter,
-  forkChoice: IForkChoice,
-  head: IBlockSummary,
-  oldHead: IBlockSummary,
-  metrics: IMetrics | null
-): void {
-  const headRoot = head.blockRoot;
-  const oldHeadRoot = oldHead.blockRoot;
-  if (!byteArrayEquals(headRoot, oldHeadRoot)) {
-    // new head
-    if (!forkChoice.isDescendant(oldHeadRoot, headRoot)) {
-      // chain reorg
-      const oldHeadHistory = forkChoice.iterateBlockSummaries(oldHeadRoot);
-      const headHistory = forkChoice.iterateBlockSummaries(headRoot);
-      const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
-      const distance = oldHead.slot - (firstAncestor?.slot ?? oldHead.slot);
-      emitter.emit(ChainEvent.forkChoiceReorg, head, oldHead, distance);
-      metrics?.forkChoiceReorg.inc();
-    }
-    emitter.emit(ChainEvent.forkChoiceHead, head);
-    metrics?.forkChoiceChangedHead.inc();
-  }
 }
 
 function emitBlockEvent(

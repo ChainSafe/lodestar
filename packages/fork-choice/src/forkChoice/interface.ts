@@ -121,6 +121,7 @@ export interface IForkChoice {
   forwardIterateBlockSummaries(): IBlockSummary[];
   getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[];
   getBlockSummariesAtSlot(slot: Slot): IBlockSummary[];
+  commonAncestorDistance(prevBlock: IBlockSummary, newBlock: IBlockSummary): null | number;
 }
 
 export interface ILatestMessage {

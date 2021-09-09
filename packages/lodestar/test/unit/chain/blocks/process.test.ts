@@ -3,7 +3,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ChainEventEmitter} from "../../../../src/chain";
+import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 import {processBlock} from "../../../../src/chain/blocks/process";
@@ -38,7 +38,11 @@ describe("processBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     try {
-      await processBlock({forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
+      await processBlock(
+        ({forkChoice, checkpointStateCache, regen, emitter, bls, metrics} as Partial<IBeaconChain>) as IBeaconChain,
+        {},
+        job
+      );
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
@@ -52,7 +56,11 @@ describe("processBlock", function () {
     forkChoice.hasBlock.returns(true);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
-      await processBlock({forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
+      await processBlock(
+        ({forkChoice, checkpointStateCache, regen, emitter, bls, metrics} as Partial<IBeaconChain>) as IBeaconChain,
+        {},
+        job
+      );
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);

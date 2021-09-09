@@ -1,18 +1,15 @@
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {IBlockJob} from "../interface";
+import {BlockError, BlockErrorCode} from "../errors";
+import {IBeaconClock} from "../clock";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {IBlockJob} from "../interface";
-import {IBeaconClock} from "../clock";
-import {BlockError, BlockErrorCode} from "../errors";
-
-export type BlockValidateModules = {
-  config: IChainForkConfig;
-  forkChoice: IForkChoice;
-  clock: IBeaconClock;
-};
-
-export function validateBlock({config, forkChoice, clock}: BlockValidateModules, job: IBlockJob): void {
+export function validateBlock(
+  modules: {config: IChainForkConfig; forkChoice: IForkChoice; clock: IBeaconClock},
+  job: IBlockJob
+): void {
+  const {config, forkChoice, clock} = modules;
   const block = job.signedBlock;
 
   try {

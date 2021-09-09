@@ -7,37 +7,29 @@ import {ChainEvent} from "../emitter";
 import {JobItemQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 
-import {processBlock, processChainSegment, BlockProcessModules} from "./process";
-import {validateBlock, BlockValidateModules} from "./validate";
+import {BlockProcessOpts, processBlock, processChainSegment} from "./process";
+import {validateBlock} from "./validate";
+import {IBeaconChain} from "../interface";
 
-export type BlockProcessorModules = BlockProcessModules & BlockValidateModules;
+const BLOCK_PROCESSOR_QUEUE_MAX_LEN = 256;
 
 /**
  * BlockProcessor processes block jobs in a queued fashion, one after the other.
  */
 export class BlockProcessor {
   readonly jobQueue: JobItemQueue<[IChainSegmentJob | IBlockJob], void>;
-  private modules: BlockProcessorModules;
 
-  constructor({
-    signal,
-    maxLength = 256,
-    ...modules
-  }: BlockProcessorModules & {
-    signal: AbortSignal;
-    maxLength?: number;
-  }) {
-    this.modules = modules;
+  constructor(private readonly chain: IBeaconChain, private readonly opts: BlockProcessOpts, signal: AbortSignal) {
     this.jobQueue = new JobItemQueue(
       (job) => {
         if ((job as IBlockJob).signedBlock) {
-          return processBlockJob(this.modules, job as IBlockJob);
+          return processBlockJob(this.chain, this.opts, job as IBlockJob);
         } else {
-          return processChainSegmentJob(this.modules, job as IChainSegmentJob);
+          return processChainSegmentJob(this.chain, this.opts, job as IChainSegmentJob);
         }
       },
-      {maxLength, signal},
-      modules.metrics ? modules.metrics.blockProcessorQueue : undefined
+      {maxLength: BLOCK_PROCESSOR_QUEUE_MAX_LEN, signal},
+      chain.metrics ? chain.metrics.blockProcessorQueue : undefined
     );
   }
 
@@ -60,17 +52,17 @@ export class BlockProcessor {
  *
  * All other effects are provided by downstream event handlers
  */
-export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
+export async function processBlockJob(chain: IBeaconChain, opts: BlockProcessOpts, job: IBlockJob): Promise<void> {
   try {
-    validateBlock(modules, job);
-    await processBlock(modules, job);
+    validateBlock(chain, job);
+    await processBlock(chain, opts, job);
   } catch (e) {
     // above functions only throw BlockError
     if (e instanceof BlockError) {
-      modules.emitter.emit(ChainEvent.errorBlock, e);
+      chain.emitter.emit(ChainEvent.errorBlock, e);
     } else {
       // TODO: Hanlde non-BlockError(s)
-      modules.emitter.emit(ChainEvent.errorBlock, e as BlockError);
+      chain.emitter.emit(ChainEvent.errorBlock, e as BlockError);
     }
   }
 }
@@ -78,8 +70,12 @@ export async function processBlockJob(modules: BlockProcessorModules, job: IBloc
 /**
  * Similar to processBlockJob but this process a chain segment
  */
-export async function processChainSegmentJob(modules: BlockProcessorModules, job: IChainSegmentJob): Promise<void> {
-  const config = modules.config;
+export async function processChainSegmentJob(
+  chain: IBeaconChain,
+  opts: BlockProcessOpts,
+  job: IChainSegmentJob
+): Promise<void> {
+  const config = chain.config;
   const blocks = job.signedBlocks;
 
   // Validate and filter out irrelevant blocks
@@ -115,7 +111,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     }
 
     try {
-      validateBlock(modules, {...job, signedBlock: block});
+      validateBlock(chain, {...job, signedBlock: block});
       // If the block is relevant, add it to the filtered chain segment.
       filteredChainSegment.push(block);
     } catch (e) {
@@ -154,5 +150,5 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     }
   }
 
-  await processChainSegment(modules, {...job, signedBlocks: filteredChainSegment});
+  await processChainSegment(chain, opts, {...job, signedBlocks: filteredChainSegment});
 }

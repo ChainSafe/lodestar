@@ -1,15 +1,11 @@
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {ChainEventEmitter} from "../emitter";
 import {IBlockJob, IChainSegmentJob, IProcessBlock} from "../interface";
 import {runStateTransition} from "./stateTransition";
-import {IStateRegenerator, RegenError, RegenCaller} from "../regen";
+import {RegenError, RegenCaller} from "../regen";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-import {IBlsVerifier} from "../bls";
 import {groupBlocksByEpoch} from "./util";
 import {allForks, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointStateCache} from "../stateCache";
-import {IMetrics} from "../../metrics";
+import {IBeaconChain} from "../interface";
 
 export type BlockProcessOpts = {
   /**
@@ -19,37 +15,28 @@ export type BlockProcessOpts = {
   disableBlsBatchVerify?: boolean;
 };
 
-export type BlockProcessModules = {
-  bls: IBlsVerifier;
-  checkpointStateCache: CheckpointStateCache;
-  emitter: ChainEventEmitter;
-  forkChoice: IForkChoice;
-  metrics: IMetrics | null;
-  regen: IStateRegenerator;
-  opts?: BlockProcessOpts;
-};
-
-export async function processBlock(modules: BlockProcessModules, job: IBlockJob): Promise<void> {
-  const {forkChoice} = modules;
-
-  if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
+export async function processBlock(chain: IBeaconChain, opts: BlockProcessOpts, job: IBlockJob): Promise<void> {
+  if (!chain.forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
     throw new BlockError(job.signedBlock, {
       code: BlockErrorCode.PARENT_UNKNOWN,
       parentRoot: job.signedBlock.message.parentRoot.valueOf() as Uint8Array,
     });
   }
 
-  await processBlocksInEpoch(modules, job, [job.signedBlock]);
+  await processBlocksInEpoch(chain, opts, job, [job.signedBlock]);
 }
 
-export async function processChainSegment(modules: BlockProcessModules, job: IChainSegmentJob): Promise<void> {
-  const {forkChoice} = modules;
+export async function processChainSegment(
+  chain: IBeaconChain,
+  opts: BlockProcessOpts,
+  job: IChainSegmentJob
+): Promise<void> {
   const blocks = job.signedBlocks;
 
   const firstSegBlock = blocks[0];
   if (firstSegBlock) {
     // First ensure that the segment's parent has been processed
-    if (!forkChoice.hasBlock(firstSegBlock.message.parentRoot)) {
+    if (!chain.forkChoice.hasBlock(firstSegBlock.message.parentRoot)) {
       throw new ChainSegmentError({
         code: BlockErrorCode.PARENT_UNKNOWN,
         parentRoot: firstSegBlock.message.parentRoot.valueOf() as Uint8Array,
@@ -74,7 +61,7 @@ export async function processChainSegment(modules: BlockProcessModules, job: ICh
     let importedBlocks = 0;
 
     try {
-      await processBlocksInEpoch(modules, job, blocksInEpoch, () => importedBlocks++);
+      await processBlocksInEpoch(chain, opts, job, blocksInEpoch, () => importedBlocks++);
     } catch (e) {
       if (e instanceof BlockError) {
         throw new ChainSegmentError({...e.type, job, importedBlocks});
@@ -92,7 +79,8 @@ export async function processChainSegment(modules: BlockProcessModules, job: ICh
  * This function can be used to validate one (processBlock) or more blocks (processChainSegment)
  */
 async function processBlocksInEpoch(
-  {forkChoice, regen, emitter, checkpointStateCache, bls, metrics, opts}: BlockProcessModules,
+  chain: IBeaconChain,
+  opts: BlockProcessOpts,
   job: IProcessBlock,
   blocksInEpoch: allForks.SignedBeaconBlock[],
   onProcessBlock?: (block: allForks.SignedBeaconBlock) => void
@@ -103,9 +91,9 @@ async function processBlocksInEpoch(
   }
   let preState: CachedBeaconState<allForks.BeaconState> | undefined = undefined;
   try {
-    preState = await regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
+    preState = await chain.regen.getPreState(firstBlock.message, RegenCaller.processBlocksInEpoch);
     for (const block of blocksInEpoch) {
-      preState = await runStateTransition({emitter, forkChoice, metrics}, checkpointStateCache, preState, {
+      preState = await runStateTransition(chain, preState, {
         reprocess: job.reprocess,
         prefinalized: job.prefinalized,
         signedBlock: block,
@@ -133,7 +121,7 @@ async function processBlocksInEpoch(
         );
       }
 
-      if (signatureSets.length > 0 && !(await bls.verifySignatureSets(signatureSets))) {
+      if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
         throw new BlockError(firstBlock, {code: BlockErrorCode.INVALID_SIGNATURE, preState});
       }
     }

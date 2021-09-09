@@ -6,10 +6,10 @@ import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
+import {byteArrayEquals, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
@@ -32,6 +32,7 @@ import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {Archiver} from "./archiver";
+import {ChainEvent} from ".";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -44,6 +45,8 @@ export interface IBeaconChainModules {
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly metrics: IMetrics | null;
+  readonly config: IBeaconConfig;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -70,10 +73,8 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
   protected readonly blockProcessor: BlockProcessor;
-  protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
-  protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
   /**
    * Internal event emitter is used internally to the chain to update chain state
@@ -82,6 +83,8 @@ export class BeaconChain implements IBeaconChain {
   protected internalEmitter = new ChainEventEmitter();
   private readonly archiver: Archiver;
   private abortController = new AbortController();
+
+  private canonicalHead: {head: IBlockSummary; state: CachedBeaconState<allForks.BeaconState>};
 
   constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
     this.opts = opts;
@@ -111,29 +114,9 @@ export class BeaconChain implements IBeaconChain {
       state: cachedState,
       metrics,
     });
-    const regen = new QueuedStateRegenerator({
-      config,
-      emitter,
-      forkChoice,
-      stateCache,
-      checkpointStateCache,
-      db,
-      metrics,
-      signal,
-    });
+    const regen = new QueuedStateRegenerator(this, db, signal);
     this.pendingBlocks = new BlockPool(config, logger);
-    this.blockProcessor = new BlockProcessor({
-      config,
-      forkChoice,
-      clock,
-      regen,
-      bls,
-      metrics,
-      emitter,
-      checkpointStateCache,
-      signal,
-      opts,
-    });
+    this.blockProcessor = new BlockProcessor(this, opts, signal);
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -145,6 +128,11 @@ export class BeaconChain implements IBeaconChain {
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
     this.archiver = new Archiver(db, this, logger, signal);
+
+    this.canonicalHead = {
+      head: forkChoice.getHead(),
+      state: cachedState,
+    };
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -163,16 +151,44 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconState<allForks.BeaconState> {
-    // head state should always exist
-    const head = this.forkChoice.getHead();
+  updateHead(): void {
+    const prevHead = this.forkChoice.getHead();
+    this.forkChoice.updateHead();
+    const newHead = this.forkChoice.getHead();
+
+    const headRoot = newHead.blockRoot;
+    const oldHeadRoot = prevHead.blockRoot;
+    if (byteArrayEquals(headRoot, oldHeadRoot)) {
+      return;
+    }
+
+    // If not descendants returns distance to common ancestor
+    const ancestorDistance = this.forkChoice.commonAncestorDistance(prevHead, newHead);
+    if (ancestorDistance !== null) {
+      this.emitter.emit(ChainEvent.forkChoiceReorg, newHead, prevHead, ancestorDistance);
+      this.metrics?.forkChoiceReorg.inc();
+    }
+
+    this.emitter.emit(ChainEvent.forkChoiceHead, newHead);
+    this.metrics?.forkChoiceChangedHead.inc();
+
+    // TODO: Use regen and get the state if not available
     const headState =
       this.checkpointStateCache.getLatest({
-        root: head.blockRoot,
+        root: newHead.blockRoot,
         epoch: Infinity,
-      }) || this.stateCache.get(head.stateRoot);
+      }) || this.stateCache.get(newHead.stateRoot);
+
     if (!headState) throw Error("headState does not exist");
-    return headState;
+
+    this.canonicalHead = {
+      head: newHead,
+      state: headState,
+    };
+  }
+
+  getHeadState(): CachedBeaconState<allForks.BeaconState> {
+    return this.canonicalHead.state;
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {

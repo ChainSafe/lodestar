@@ -245,6 +245,23 @@ export class ForkChoice implements IForkChoice {
     return this.fcStore.bestJustifiedCheckpoint;
   }
 
+  // TODO: Optimize
+  /** Returns the distance to the common ancestor, or null if descendants */
+  commonAncestorDistance(prevBlock: IBlockSummary, newBlock: IBlockSummary): null | number {
+    const prevRoot = prevBlock.blockRoot;
+    const newRoot = newBlock.blockRoot;
+
+    if (this.isDescendant(prevRoot, newRoot)) {
+      return null;
+    }
+
+    // chain reorg
+    const oldHeadHistory = this.iterateBlockSummaries(prevRoot);
+    const headHistory = this.iterateBlockSummaries(newRoot);
+    const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
+    return prevBlock.slot - (firstAncestor?.slot ?? newBlock.slot);
+  }
+
   /**
    * Add `block` to the fork choice DAG.
    *

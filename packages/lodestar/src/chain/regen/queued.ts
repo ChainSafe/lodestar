@@ -1,29 +1,17 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Root, phase0, Slot, allForks} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
-import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {JobItemQueue} from "../../util/queue";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
 import {StateRegenerator} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
+import {IBeaconChain} from "../interface";
 
 const REGEN_QUEUE_MAX_LEN = 256;
-
-type QueuedStateRegeneratorModules = {
-  config: IBeaconConfig;
-  emitter: ChainEventEmitter;
-  forkChoice: IForkChoice;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  db: IBeaconDb;
-  metrics: IMetrics | null;
-  signal: AbortSignal;
-};
 
 type RegenRequestKey = keyof IStateRegenerator;
 type RegenRequestByKey = {[K in RegenRequestKey]: {key: K; args: Parameters<IStateRegenerator[K]>}};
@@ -43,17 +31,17 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private checkpointStateCache: CheckpointStateCache;
   private metrics: IMetrics | null;
 
-  constructor(modules: QueuedStateRegeneratorModules) {
-    this.regen = new StateRegenerator(modules);
+  constructor(chain: IBeaconChain, db: IBeaconDb, signal: AbortSignal) {
+    this.regen = new StateRegenerator(chain, db);
     this.jobQueue = new JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>(
       this.jobQueueProcessor,
-      {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
-      modules.metrics ? modules.metrics.regenQueue : undefined
+      {maxLength: REGEN_QUEUE_MAX_LEN, signal},
+      chain.metrics ? chain.metrics.regenQueue : undefined
     );
-    this.forkChoice = modules.forkChoice;
-    this.stateCache = modules.stateCache;
-    this.checkpointStateCache = modules.checkpointStateCache;
-    this.metrics = modules.metrics;
+    this.forkChoice = chain.forkChoice;
+    this.stateCache = chain.stateCache;
+    this.checkpointStateCache = chain.checkpointStateCache;
+    this.metrics = chain.metrics;
   }
 
   async getPreState(
