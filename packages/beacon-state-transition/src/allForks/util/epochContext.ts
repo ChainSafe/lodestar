@@ -211,6 +211,7 @@ export function createEpochContext(
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
+    totalActiveBalanceByIncrement,
     churnLimit,
     exitQueueEpoch,
     exitQueueChurn,
@@ -328,9 +329,9 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
     epochCtx.exitQueueEpoch = exitQueueEpoch;
     epochCtx.exitQueueChurn = 0;
   }
-
+  const totalActiveBalanceByIncrement = epochProcess.nextEpochTotalActiveBalanceByIncrement;
+  epochCtx.totalActiveBalanceByIncrement = totalActiveBalanceByIncrement;
   if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalanceByIncrement = epochProcess.nextEpochTotalActiveBalanceByIncrement;
     const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
     epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
     epochCtx.syncProposerReward = Math.floor(
@@ -353,6 +354,7 @@ interface IEpochContextData {
   syncParticipantReward: number;
   syncProposerReward: number;
   baseRewardPerIncrement: number;
+  totalActiveBalanceByIncrement: number;
   churnLimit: number;
   exitQueueEpoch: Epoch;
   exitQueueChurn: number;
@@ -413,6 +415,10 @@ export class EpochContext {
    * Update freq: once per epoch after `process_effective_balance_updates()`
    */
   baseRewardPerIncrement: number;
+  /**
+   * Total active balance for current epoch, to be used instead of getTotalBalance()
+   */
+  totalActiveBalanceByIncrement: number;
 
   /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
@@ -446,6 +452,7 @@ export class EpochContext {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
+    this.totalActiveBalanceByIncrement = data.totalActiveBalanceByIncrement;
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
@@ -474,6 +481,7 @@ export class EpochContext {
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
+      totalActiveBalanceByIncrement: this.totalActiveBalanceByIncrement,
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
