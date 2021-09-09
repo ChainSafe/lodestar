@@ -12,7 +12,7 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
-import { IDiscv5Metrics } from "@chainsafe/discv5";
+import {IDiscv5Metrics} from "@chainsafe/discv5";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
 
