@@ -24,6 +24,7 @@ export function safeType(type: Type<any>): Type<any> {
       }
     }
     if (props.fields) {
+      props.fields.value = {...props.fields.value};
       for (const fieldName of Object.keys(props.fields.value)) {
         props.fields.value[fieldName] = safeType(props.fields.value[fieldName]);
       }
