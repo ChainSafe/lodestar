@@ -2,7 +2,6 @@ import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors";
 import {IBeaconDb} from "../../db";
-import {RegenCaller} from "../regen";
 
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
@@ -15,13 +14,14 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const state = await chain.regen.getCheckpointState(
-    {
-      root: chain.forkChoice.getHeadRoot(),
-      epoch: voluntaryExit.message.epoch,
-    },
-    RegenCaller.validateGossipVoluntaryExit
-  );
+  // What state should the voluntaryExit validate against?
+  //
+  // The only condtion that is time sensitive and may require a non-head state is
+  // -> Validator is active && validator has not initiated exit
+  // The voluntaryExit.epoch must be in the past so using the head state may evaluate the
+  // validator's status in the future, compared to using a state at epoch voluntaryExit.epoch
+  // Unless there's a clear need to use a non-head state, will use the head state as its cheap.
+  const state = chain.getHeadState();
 
   try {
     // verifySignature = false, verified in batch below
