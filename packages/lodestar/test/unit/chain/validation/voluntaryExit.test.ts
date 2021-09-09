@@ -68,9 +68,9 @@ describe("validate voluntary exit", () => {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
     // TODO: Use actual BLS verification
     chainStub.bls = {verifySignatureSets: async () => true};
-    chainStub.getHeadState.returns(state);
     dbStub = new StubbedBeaconDb(sandbox);
     dbStub.voluntaryExit.has.resolves(false);
   });
