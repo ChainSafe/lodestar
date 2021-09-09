@@ -1,10 +1,9 @@
-import path from "path";
 import {IGlobalArgs} from "../options";
 import {getDefaultRootDir} from "./rootDir";
 
 export interface IGlobalPaths {
   rootDir: string;
-  paramsFile: string;
+  paramsFile?: string;
 }
 
 /**
@@ -18,7 +17,7 @@ export interface IGlobalPaths {
 export function getGlobalPaths(args: Partial<IGlobalArgs>): IGlobalPaths {
   // Set rootDir to network name iff rootDir is not set explicitly
   const rootDir = args.rootDir || getDefaultRootDir(args.network);
-  const paramsFile = args.paramsFile || path.join(rootDir, "config.yaml");
+  const paramsFile = args.paramsFile;
   return {
     rootDir,
     paramsFile,

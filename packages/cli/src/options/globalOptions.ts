@@ -1,4 +1,3 @@
-import {defaultGlobalPaths} from "../paths/global";
 import {paramsOptions, IParamsArgs} from "./paramsOptions";
 import {NetworkName, networkNames} from "../networks";
 import {ICliCommandOptions, readFile} from "../util";
@@ -26,7 +25,6 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
 
   paramsFile: {
     description: "Network configuration file",
-    defaultDescription: defaultGlobalPaths.paramsFile,
     type: "string",
   },
 };

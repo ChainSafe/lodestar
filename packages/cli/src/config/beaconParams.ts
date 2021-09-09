@@ -6,7 +6,7 @@ import {
   IChainConfig,
   parsePartialIChainConfigJson,
 } from "@chainsafe/lodestar-config";
-import {writeFile, readFileIfExists} from "../util";
+import {writeFile, readFile} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
 import {IBeaconParamsUnparsed} from "./types";
@@ -19,7 +19,7 @@ type IBeaconParamsCliArgs = {
 
 interface IBeaconParamsArgs {
   network?: NetworkName;
-  paramsFile: string;
+  paramsFile?: string;
   additionalParamsCli: IBeaconParamsUnparsed;
 }
 
@@ -61,7 +61,9 @@ export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBea
   // Default network params
   const networkParams: Partial<IChainConfig> = network ? getNetworkBeaconParams(network) : {};
   // Existing user custom params from file
-  const fileParams: Partial<IChainConfig> = parsePartialIChainConfigJson(readBeaconParamsIfExists(paramsFile));
+  const fileParams: Partial<IChainConfig> = paramsFile
+    ? parsePartialIChainConfigJson(readBeaconParams(paramsFile))
+    : {};
   // Params from CLI flags
   const cliParams: Partial<IChainConfig> = parsePartialIChainConfigJson(additionalParamsCli);
 
@@ -76,6 +78,6 @@ export function writeBeaconParams(filepath: string, params: IChainConfig): void 
   writeFile(filepath, ChainConfig.toJson(params));
 }
 
-function readBeaconParamsIfExists(filepath: string): IBeaconParamsUnparsed {
-  return readFileIfExists(filepath) || {};
+function readBeaconParams(filepath: string): IBeaconParamsUnparsed {
+  return readFile(filepath) || {};
 }
