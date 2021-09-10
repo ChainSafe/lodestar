@@ -1,6 +1,7 @@
+import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
-import {ProtoArray} from "../../../src/protoArray";
+import {ProtoArray} from "../../../src";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {
@@ -50,24 +51,36 @@ describe("ProtoArray", () => {
       finalizedRoot: stateRoot,
     });
 
-    expect(fc.isDescendant(unknown, unknown)).to.be.false;
-    expect(fc.isDescendant(unknown, finalizedRoot)).to.be.false;
-    expect(fc.isDescendant(unknown, finalizedDesc)).to.be.false;
-    expect(fc.isDescendant(unknown, notFinalizedDesc)).to.be.false;
+    // ancestorRoot, descendantRoot, isDescendant
+    type Assertion = [RootHex, RootHex, boolean];
 
-    expect(fc.isDescendant(finalizedRoot, unknown)).to.be.false;
-    expect(fc.isDescendant(finalizedRoot, finalizedRoot)).to.be.true;
-    expect(fc.isDescendant(finalizedRoot, finalizedDesc)).to.be.true;
-    expect(fc.isDescendant(finalizedRoot, notFinalizedDesc)).to.be.false;
+    const assertions: Assertion[] = [
+      [unknown, unknown, false],
+      [unknown, finalizedRoot, false],
+      [unknown, finalizedDesc, false],
+      [unknown, notFinalizedDesc, false],
 
-    expect(fc.isDescendant(finalizedDesc, unknown)).to.be.false;
-    expect(fc.isDescendant(finalizedDesc, finalizedRoot)).to.be.false;
-    expect(fc.isDescendant(finalizedDesc, finalizedDesc)).to.be.true;
-    expect(fc.isDescendant(finalizedDesc, notFinalizedDesc)).to.be.false;
+      [finalizedRoot, unknown, false],
+      [finalizedRoot, finalizedRoot, true],
+      [finalizedRoot, finalizedDesc, true],
+      [finalizedRoot, notFinalizedDesc, false],
 
-    expect(fc.isDescendant(notFinalizedDesc, unknown)).to.be.false;
-    expect(fc.isDescendant(notFinalizedDesc, finalizedRoot)).to.be.false;
-    expect(fc.isDescendant(notFinalizedDesc, finalizedDesc)).to.be.false;
-    expect(fc.isDescendant(notFinalizedDesc, notFinalizedDesc)).to.be.true;
+      [finalizedDesc, unknown, false],
+      [finalizedDesc, finalizedRoot, false],
+      [finalizedDesc, finalizedDesc, true],
+      [finalizedDesc, notFinalizedDesc, false],
+
+      [notFinalizedDesc, unknown, false],
+      [notFinalizedDesc, finalizedRoot, false],
+      [notFinalizedDesc, finalizedDesc, false],
+      [notFinalizedDesc, notFinalizedDesc, true],
+    ];
+
+    for (const [ancestorRoot, descendantRoot, isDescendant] of assertions) {
+      expect(fc.isDescendant(ancestorRoot, descendantRoot)).to.equal(
+        isDescendant,
+        `${descendantRoot} must be ${isDescendant ? "descendant" : "not descendant"} of ${ancestorRoot}`
+      );
+    }
   });
 });

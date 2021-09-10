@@ -1,7 +1,7 @@
-import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {List} from "@chainsafe/ssz";
+import {List, toHexString} from "@chainsafe/ssz";
 import {
   allForks,
   phase0,
@@ -223,7 +223,7 @@ export function verifyHeadBlockAndTargetRoot(
  * it's still fine to reject here because there's no need for us to handle attestations that are
  * already finalized.
  */
-function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IBlockSummary {
+function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IProtoBlock {
   // TODO (LH): Enforce a maximum skip distance for unaggregated attestations.
 
   const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
@@ -241,7 +241,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IBl
  * Verifies that the `attestation.data.target.root` is indeed the target root of the block at
  * `attestation.data.beacon_block_root`.
  */
-function verifyAttestationTargetRoot(headBlock: IBlockSummary, targetRoot: Root, attestationEpoch: Epoch): void {
+function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, attestationEpoch: Epoch): void {
   // Check the attestation target root.
   const headBlockEpoch = computeEpochAtSlot(headBlock.slot);
 
@@ -258,7 +258,7 @@ function verifyAttestationTargetRoot(headBlock: IBlockSummary, targetRoot: Root,
     // https://github.com/ethereum/eth2.0-specs/pull/2001#issuecomment-699246659
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_TARGET_ROOT,
-      targetRoot: targetRoot.valueOf() as Uint8Array,
+      targetRoot: toHexString(targetRoot),
       expected: null,
     });
   } else {
@@ -273,11 +273,12 @@ function verifyAttestationTargetRoot(headBlock: IBlockSummary, targetRoot: Root,
           // We know the head block is from a previous epoch due to a previous check.
           headBlock.blockRoot;
 
-    if (!ssz.Root.equals(expectedTargetRoot, targetRoot)) {
+    // TODO: Do a fast comparision to convert and compare byte by byte
+    if (expectedTargetRoot !== toHexString(targetRoot)) {
       // Reject any attestation with an invalid target root.
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.INVALID_TARGET_ROOT,
-        targetRoot: targetRoot.valueOf() as Uint8Array,
+        targetRoot: toHexString(targetRoot),
         expected: expectedTargetRoot,
       });
     }

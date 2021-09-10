@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
@@ -9,10 +9,10 @@ import {
   allForks,
   getEffectiveBalances,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
 import {ZERO_HASH} from "../../constants";
-import {CheckpointStateCache} from "../stateCache";
+import {CheckpointStateCache, toCheckpointHex} from "../stateCache";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -103,7 +103,7 @@ export async function runStateTransition(
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
+    const justifiedState = checkpointStateCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
@@ -155,17 +155,18 @@ function emitCheckpointEvent(
 function emitForkChoiceHeadEvents(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
-  oldHead: IBlockSummary,
+  oldHead: IProtoBlock,
   metrics: IMetrics | null
 ): void {
   const newHead = forkChoice.getHead();
-  if (!byteArrayEquals(newHead.blockRoot, oldHead.blockRoot)) {
+  if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
     emitter.emit(ChainEvent.forkChoiceHead, newHead);
     metrics?.forkChoiceChangedHead.inc();
 
     const distance = forkChoice.getCommonAncestorDistance(oldHead, newHead);
     if (distance !== null) {
+      // chain reorg
       emitter.emit(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       metrics?.forkChoiceReorg.inc();
     }

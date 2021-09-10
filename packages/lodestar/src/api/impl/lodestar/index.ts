@@ -144,7 +144,7 @@ function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest
   switch (regenRequest.key) {
     case "getBlockSlotState":
       return {
-        root: toHexString(regenRequest.args[0]),
+        root: regenRequest.args[0],
         slot: regenRequest.args[1],
       };
 
@@ -161,7 +161,7 @@ function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest
 
     case "getState":
       return {
-        root: toHexString(regenRequest.args[0]),
+        root: regenRequest.args[0],
       };
   }
 }

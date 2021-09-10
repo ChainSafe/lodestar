@@ -61,7 +61,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
         } = step.checks;
         const head = forkchoice.updateHead();
         expect(head.slot).to.be.equal(Number(expectedHead.slot));
-        expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root);
+        expect(head.blockRoot).to.be.equal(expectedHead.root);
         // time in spec mapped to Slot in our forkchoice implementation
         if (expectedTime) expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(Number(expectedTime));
         if (justifiedCheckpointRoot)

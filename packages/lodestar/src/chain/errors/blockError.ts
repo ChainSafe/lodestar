@@ -1,4 +1,4 @@
-import {allForks, Root, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
@@ -52,12 +52,12 @@ export enum BlockErrorCode {
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING}
-  | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: Root}
+  | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
   | {code: BlockErrorCode.GENESIS_BLOCK}
   | {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT; blockSlot: Slot; finalizedSlot: Slot}
-  | {code: BlockErrorCode.ALREADY_KNOWN; root: Root}
+  | {code: BlockErrorCode.ALREADY_KNOWN; root: RootHex}
   | {code: BlockErrorCode.REPEAT_PROPOSAL; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED}
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
@@ -69,7 +69,7 @@ export type BlockErrorType =
       preState: CachedBeaconState<allForks.BeaconState>;
       postState: CachedBeaconState<allForks.BeaconState>;
     }
-  | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: Root}
+  | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
   | {code: BlockErrorCode.NON_LINEAR_PARENT_ROOTS}
   | {code: BlockErrorCode.NON_LINEAR_SLOTS}

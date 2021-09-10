@@ -13,7 +13,7 @@ import {assembleBlock} from "../../../../../src/chain/factory/block";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import {StateRegenerator} from "../../../../../src/chain/regen";
 import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
-import {generateBlockSummary, generateEmptyBlock} from "../../../../utils/block";
+import {generateProtoBlock, generateEmptyBlock} from "../../../../utils/block";
 import {generateCachedState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
 import {SinonStubFn} from "../../../../utils/types";
@@ -46,7 +46,7 @@ describe("block assembly", function () {
 
   it("should assemble block", async function () {
     sandbox.stub(chainStub.clock, "currentSlot").get(() => 1);
-    forkChoiceStub.getHead.returns(generateBlockSummary());
+    forkChoiceStub.getHead.returns(generateProtoBlock());
     const state = generateCachedState({slot: 1});
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(2);
     regenStub.getBlockSlotState.resolves(state);

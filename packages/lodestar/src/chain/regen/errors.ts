@@ -1,4 +1,4 @@
-import {Root, Slot} from "@chainsafe/lodestar-types";
+import {Root, Slot, RootHex} from "@chainsafe/lodestar-types";
 
 export enum RegenErrorCode {
   BLOCK_NOT_IN_FORKCHOICE = "REGEN_ERROR_BLOCK_NOT_IN_FORKCHOICE",
@@ -11,12 +11,12 @@ export enum RegenErrorCode {
 }
 
 export type RegenErrorType =
-  | {code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE; blockRoot: Root}
-  | {code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE; stateRoot: Root}
+  | {code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE; blockRoot: RootHex | Root}
+  | {code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE; stateRoot: RootHex | Root}
   | {code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT; slot: Slot; blockSlot: Slot}
   | {code: RegenErrorCode.NO_SEED_STATE}
-  | {code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED; stateRoot: Root}
-  | {code: RegenErrorCode.BLOCK_NOT_IN_DB; blockRoot: Root}
+  | {code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED; stateRoot: RootHex | Root}
+  | {code: RegenErrorCode.BLOCK_NOT_IN_DB; blockRoot: RootHex | Root}
   | {code: RegenErrorCode.STATE_TRANSITION_ERROR; error: Error};
 
 export class RegenError extends Error {

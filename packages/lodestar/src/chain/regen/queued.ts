@@ -1,9 +1,9 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Root, phase0, Slot, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointStateCache, StateContextCache} from "../stateCache";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
@@ -11,6 +11,7 @@ import {JobItemQueue} from "../../util/queue";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
 import {StateRegenerator} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
+import {toHexString} from "@chainsafe/ssz";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 
@@ -63,7 +64,8 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
 
     // First attempt to fetch the state from caches before queueing
-    const parentBlock = this.forkChoice.getBlock(block.parentRoot);
+    const parentRoot = toHexString(block.parentRoot);
+    const parentBlock = this.forkChoice.getBlockHex(parentRoot);
     if (!parentBlock) {
       throw new RegenError({
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
@@ -76,7 +78,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
     // Check the checkpoint cache (if the pre-state is a checkpoint state)
     if (parentEpoch < blockEpoch) {
-      const checkpointState = this.checkpointStateCache.getLatest({root: block.parentRoot, epoch: blockEpoch});
+      const checkpointState = this.checkpointStateCache.getLatest(parentRoot, blockEpoch);
       if (checkpointState) {
         return checkpointState;
       }
@@ -98,7 +100,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
 
     // First attempt to fetch the state from cache before queueing
-    const checkpointState = this.checkpointStateCache.get(cp);
+    const checkpointState = this.checkpointStateCache.get(toCheckpointHex(cp));
     if (checkpointState) {
       return checkpointState;
     }
@@ -107,7 +109,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   }
 
   async getBlockSlotState(
-    blockRoot: Root,
+    blockRoot: RootHex,
     slot: Slot,
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -116,7 +118,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
   }
 
-  async getState(stateRoot: Root, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
     // First attempt to fetch the state from cache before queueing

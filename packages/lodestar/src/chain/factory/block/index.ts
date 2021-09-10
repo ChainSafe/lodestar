@@ -12,6 +12,7 @@ import {IMetrics} from "../../../metrics";
 import {IBeaconChain} from "../../interface";
 import {assembleBody} from "./body";
 import {RegenCaller} from "../../regen";
+import {fromHexString} from "@chainsafe/ssz";
 
 type AssembleBlockModules = {
   config: IChainForkConfig;
@@ -29,15 +30,16 @@ export async function assembleBlock(
 ): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
   const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+  const parentBlockRoot = fromHexString(head.blockRoot);
 
   const block: allForks.BeaconBlock = {
     slot,
     proposerIndex: state.getBeaconProposer(slot),
-    parentRoot: head.blockRoot,
+    parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
     body: await assembleBody({config, chain, db, eth1}, state, randaoReveal, graffiti, slot, {
       parentSlot: slot - 1,
-      parentBlockRoot: head.blockRoot,
+      parentBlockRoot,
     }),
   };
   block.stateRoot = computeNewStateRoot({config, metrics}, state, block);

@@ -9,7 +9,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
@@ -168,10 +168,7 @@ export class BeaconChain implements IBeaconChain {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
-      this.checkpointStateCache.getLatest({
-        root: head.blockRoot,
-        epoch: Infinity,
-      }) || this.stateCache.get(head.stateRoot);
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
     if (!headState) throw Error("headState does not exist");
     return headState;
   }
@@ -183,25 +180,16 @@ export class BeaconChain implements IBeaconChain {
     return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
-  async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
-    const headSummary = this.forkChoice.getHead();
-    const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
-    if (unfinalizedBlock) {
-      return unfinalizedBlock;
-    }
-    return await this.db.blockArchive.get(headSummary.slot);
-  }
-
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
     const finalizedBlock = this.forkChoice.getFinalizedBlock();
     if (finalizedBlock.slot > slot) {
       return this.db.blockArchive.get(slot);
     }
-    const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-    if (!summary) {
+    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    if (!block) {
       return null;
     }
-    return await this.db.block.get(summary.blockRoot);
+    return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
   /** Returned blocks have the same ordering as `slots` */
@@ -211,21 +199,20 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const slotsSet = new Set(slots);
+    const minSlot = Math.min(...slots); // Slots must have length > 0
     const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
 
     // these blocks are on the same chain to head
-    for (const summary of this.forkChoice.getAllAncestorBlocks(this.forkChoice.getHeadRoot())) {
-      if (slotsSet.has(summary.slot)) {
-        blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
+    for (const block of this.forkChoice.iterateAncestorBlocks(this.forkChoice.getHeadRoot())) {
+      if (block.slot < minSlot) {
+        break;
+      } else if (slotsSet.has(block.slot)) {
+        blockRootsPerSlot.set(block.slot, this.db.block.get(fromHexString(block.blockRoot)));
       }
     }
 
     const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
     return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
-  }
-
-  getFinalizedCheckpoint(): phase0.Checkpoint {
-    return this.forkChoice.getFinalizedCheckpoint();
   }
 
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {
@@ -290,7 +277,8 @@ export class BeaconChain implements IBeaconChain {
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
-      headRoot: head.blockRoot,
+      // TODO: PERFORMANCE: Memoize to prevent re-computing every time
+      headRoot: fromHexString(head.blockRoot),
       headSlot: head.slot,
     };
   }

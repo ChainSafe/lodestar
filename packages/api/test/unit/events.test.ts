@@ -8,9 +8,8 @@ import {getMockApi, getTestServer} from "../utils/utils";
 import {registerRoutesGroup} from "../../src/server";
 import {expect} from "chai";
 
-const root = Buffer.alloc(32, 1);
-
 describe("events", () => {
+  const rootHex = "0x" + "01".repeat(32);
   const {baseUrl, server} = getTestServer();
   const mockApi = getMockApi<Api>(routesData);
   const routes = getRoutes(config, mockApi);
@@ -25,22 +24,22 @@ describe("events", () => {
       type: EventType.head,
       message: {
         slot: 1,
-        block: root,
-        state: root,
+        block: rootHex,
+        state: rootHex,
         epochTransition: false,
-        previousDutyDependentRoot: root,
-        currentDutyDependentRoot: root,
+        previousDutyDependentRoot: rootHex,
+        currentDutyDependentRoot: rootHex,
       },
     };
     const eventHead2: BeaconEvent = {
       type: EventType.head,
       message: {
         slot: 2,
-        block: root,
-        state: root,
+        block: rootHex,
+        state: rootHex,
         epochTransition: true,
-        previousDutyDependentRoot: root,
-        currentDutyDependentRoot: root,
+        previousDutyDependentRoot: rootHex,
+        currentDutyDependentRoot: rootHex,
       },
     };
     const eventChainReorg: BeaconEvent = {
@@ -48,10 +47,10 @@ describe("events", () => {
       message: {
         slot: 3,
         depth: 2,
-        oldHeadBlock: root,
-        newHeadBlock: root,
-        oldHeadState: root,
-        newHeadState: root,
+        oldHeadBlock: rootHex,
+        newHeadBlock: rootHex,
+        oldHeadState: rootHex,
+        newHeadState: rootHex,
         epoch: 1,
       },
     };

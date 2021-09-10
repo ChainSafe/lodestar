@@ -1,4 +1,3 @@
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
@@ -6,9 +5,10 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {validateBlock} from "../../../../src/chain/blocks/validate";
 import {LocalClock} from "../../../../src/chain/clock";
-import {BlockError, BlockErrorCode} from "../../../../src/chain/errors";
+import {BlockErrorCode} from "../../../../src/chain/errors";
 import {getNewBlockJob} from "../../../utils/block";
 import {ssz} from "@chainsafe/lodestar-types";
+import {expectThrowsLodestarError} from "../../../utils/errors";
 
 describe("validateBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -23,56 +23,43 @@ describe("validateBlock", function () {
     sinon.restore();
   });
 
-  it("should throw on genesis block", function () {
+  it("GENESIS_BLOCK", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     const job = getNewBlockJob(signedBlock);
-    try {
-      validateBlock({config, forkChoice, clock}, job);
-      expect.fail("block should throw");
-    } catch (e) {
-      expect((e as BlockError).type.code).to.equal(BlockErrorCode.GENESIS_BLOCK);
-    }
+
+    expectThrowsLodestarError(() => validateBlock({config, forkChoice, clock}, job), BlockErrorCode.GENESIS_BLOCK);
   });
 
-  it("should throw on already known block", function () {
+  it("ALREADY_KNOWN", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
-    forkChoice.hasBlock.returns(true);
-    try {
-      validateBlock({config, forkChoice, clock}, job);
-      expect.fail("block should throw");
-    } catch (e) {
-      expect((e as BlockError).type.code).to.equal(BlockErrorCode.ALREADY_KNOWN);
-    }
+    forkChoice.hasBlockHex.returns(true);
+
+    expectThrowsLodestarError(() => validateBlock({config, forkChoice, clock}, job), BlockErrorCode.ALREADY_KNOWN);
   });
 
-  it("should throw on already known block", function () {
+  it("WOULD_REVERT_FINALIZED_SLOT", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32)});
-    try {
-      validateBlock({config, forkChoice, clock}, job);
-      expect.fail("block should throw");
-    } catch (e) {
-      expect((e as BlockError).type.code).to.equal(BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT);
-    }
+    forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
+
+    expectThrowsLodestarError(
+      () => validateBlock({config, forkChoice, clock}, job),
+      BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
+    );
   });
 
-  it("should throw on future slot", function () {
+  it("FUTURE_SLOT", function () {
     const signedBlock = ssz.phase0.SignedBeaconBlock.defaultValue();
     signedBlock.message.slot = 1;
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
-    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32)});
+    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: Buffer.alloc(32), rootHex: ""});
     sinon.stub(clock, "currentSlot").get(() => 0);
-    try {
-      validateBlock({config, forkChoice, clock}, job);
-      expect.fail("block should throw");
-    } catch (e) {
-      expect((e as BlockError).type.code).to.equal(BlockErrorCode.FUTURE_SLOT);
-    }
+
+    expectThrowsLodestarError(() => validateBlock({config, forkChoice, clock}, job), BlockErrorCode.FUTURE_SLOT);
   });
 });

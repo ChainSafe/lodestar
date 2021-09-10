@@ -1,12 +1,12 @@
-import {allForks, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
@@ -90,15 +90,15 @@ export class StateRegenerator implements IStateRegenerator {
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
     const checkpointStartSlot = computeStartSlotAtEpoch(cp.epoch);
-    return await this.getBlockSlotState(cp.root, checkpointStartSlot, rCaller);
+    return await this.getBlockSlotState(toHexString(cp.root), checkpointStartSlot, rCaller);
   }
 
   async getBlockSlotState(
-    blockRoot: Root,
+    blockRoot: RootHex,
     slot: Slot,
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>> {
-    const block = this.forkChoice.getBlock(blockRoot);
+    const block = this.forkChoice.getBlockHex(blockRoot);
     if (!block) {
       throw new RegenError({
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
@@ -114,10 +114,7 @@ export class StateRegenerator implements IStateRegenerator {
       });
     }
 
-    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest({
-      root: blockRoot,
-      epoch: computeEpochAtSlot(slot),
-    });
+    const latestCheckpointStateCtx = this.checkpointStateCache.getLatest(blockRoot, computeEpochAtSlot(slot));
 
     // If a checkpoint state exists with the given checkpoint root, it either is in requested epoch
     // or needs to have empty slots processed until the requested epoch
@@ -136,7 +133,7 @@ export class StateRegenerator implements IStateRegenerator {
     return await processSlotsByCheckpoint({emitter: this.emitter, metrics: this.metrics}, blockStateCtx, slot);
   }
 
-  async getState(stateRoot: Root, _rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getState(stateRoot: RootHex, _rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
     // Trivial case, state at stateRoot is already cached
     const cachedStateCtx = this.stateCache.get(stateRoot);
     if (cachedStateCtx) {
@@ -146,17 +143,7 @@ export class StateRegenerator implements IStateRegenerator {
     // Otherwise we have to use the fork choice to traverse backwards, block by block,
     // searching the state caches
     // then replay blocks forward to the desired stateRoot
-    const rootType = ssz.Root;
-    const block = this.forkChoice
-      .forwardIterateBlockSummaries()
-      .find((summary) => rootType.equals(summary.stateRoot, stateRoot));
-
-    if (!block) {
-      throw new RegenError({
-        code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE,
-        stateRoot,
-      });
-    }
+    const block = this.findFirstStateBlock(stateRoot);
 
     // blocks to replay, ordered highest to lowest
     // gets reversed when replayed
@@ -167,10 +154,10 @@ export class StateRegenerator implements IStateRegenerator {
       if (state) {
         break;
       }
-      state = this.checkpointStateCache.getLatest({
-        root: b.blockRoot,
-        epoch: computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1),
-      });
+      state = this.checkpointStateCache.getLatest(
+        b.blockRoot,
+        computeEpochAtSlot(blocksToReplay[blocksToReplay.length - 1].slot - 1)
+      );
       if (state) {
         break;
       }
@@ -192,9 +179,9 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     for (const b of blocksToReplay.reverse()) {
-      const structBlock = await this.db.block.get(b.blockRoot);
+      const structBlock = await this.db.block.get(fromHexString(b.blockRoot));
       if (!structBlock) {
-        throw Error(`No block found for ${toHexString(b.blockRoot)}`);
+        throw Error(`No block found for ${b.blockRoot}`);
       }
       const block = this.config.getForkTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
       if (!block) {
@@ -222,5 +209,18 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     return state as CachedBeaconState<allForks.BeaconState>;
+  }
+
+  private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {
+    for (const block of this.forkChoice.forwarditerateAncestorBlocks()) {
+      if (block) {
+        return block;
+      }
+    }
+
+    throw new RegenError({
+      code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE,
+      stateRoot,
+    });
   }
 }

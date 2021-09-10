@@ -15,7 +15,10 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 // eslint-disable-next-line no-restricted-imports
 import {initializeForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice";
 // eslint-disable-next-line no-restricted-imports
-import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
+import {
+  CheckpointStateCache,
+  toCheckpointHex,
+} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
@@ -73,7 +76,7 @@ for (const testFolder of ["get_head", "on_block"]) {
           } = step.checks;
           const head = forkchoice.updateHead();
           expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-          expect(toHexString(head.blockRoot)).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+          expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
           // time in spec mapped to Slot in our forkchoice implementation
           if (expectedTime)
             expect(forkchoice.getTime() * SECONDS_PER_SLOT).to.be.equal(
@@ -175,7 +178,7 @@ function runStateTranstion(
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
   let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointCache.get(postState.currentJustifiedCheckpoint);
+    const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
       const root = toHexString(postState.currentJustifiedCheckpoint.root);

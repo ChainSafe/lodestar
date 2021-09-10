@@ -5,6 +5,7 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBlockJob} from "../interface";
 import {IBeaconClock} from "../clock";
 import {BlockError, BlockErrorCode} from "../errors";
+import {toHexString} from "@chainsafe/ssz";
 
 export type BlockValidateModules = {
   config: IChainForkConfig;
@@ -16,13 +17,13 @@ export function validateBlock({config, forkChoice, clock}: BlockValidateModules,
   const block = job.signedBlock;
 
   try {
-    const blockHash = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const blockHash = toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
     const blockSlot = block.message.slot;
     if (blockSlot === 0) {
       throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
     }
 
-    if (!job.reprocess && forkChoice.hasBlock(blockHash)) {
+    if (!job.reprocess && forkChoice.hasBlockHex(blockHash)) {
       throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
     }
 

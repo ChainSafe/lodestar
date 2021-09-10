@@ -1,12 +1,12 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
-import {TreeBacked} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ForkChoice, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
@@ -19,7 +19,6 @@ import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
-import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
@@ -122,10 +121,6 @@ export class MockBeaconChain implements IBeaconChain {
     });
   }
 
-  async getHeadBlock(): Promise<null> {
-    return null;
-  }
-
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
     return createCachedBeaconState(this.config, this.state);
   }
@@ -145,10 +140,6 @@ export class MockBeaconChain implements IBeaconChain {
       return [];
     }
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
-  }
-
-  getFinalizedCheckpoint(): phase0.Checkpoint {
-    return this.state.finalizedCheckpoint;
   }
 
   getHeadForkDigest(): ForkDigest {
@@ -195,15 +186,26 @@ export class MockBeaconChain implements IBeaconChain {
 
 function mockForkChoice(): IForkChoice {
   const root = ssz.Root.defaultValue() as Uint8Array;
-  const blockSummary = generateEmptyBlockSummary();
-  const checkpoint = ssz.phase0.Checkpoint.defaultValue();
+  const rootHex = toHexString(root);
+  const block: IProtoBlock = {
+    slot: 0,
+    blockRoot: rootHex,
+    parentRoot: rootHex,
+    stateRoot: rootHex,
+    targetRoot: rootHex,
+    justifiedEpoch: 0,
+    justifiedRoot: rootHex,
+    finalizedEpoch: 0,
+    finalizedRoot: rootHex,
+  };
+  const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
-    getAncestor: () => root,
-    getHeadRoot: () => root,
-    getHead: () => blockSummary,
-    updateHead: () => blockSummary,
-    getHeads: () => [blockSummary],
+    getAncestor: () => rootHex,
+    getHeadRoot: () => rootHex,
+    getHead: () => block,
+    updateHead: () => block,
+    getHeads: () => [block],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
     onBlock: () => {},
@@ -212,20 +214,24 @@ function mockForkChoice(): IForkChoice {
     updateTime: () => {},
     getTime: () => 0,
     hasBlock: () => true,
-    getBlock: () => blockSummary,
-    getFinalizedBlock: () => blockSummary,
-    getJustifiedBlock: () => blockSummary,
+    hasBlockHex: () => true,
+    getBlock: () => block,
+    getBlockHex: () => block,
+    getFinalizedBlock: () => block,
+    getJustifiedBlock: () => block,
     isDescendantOfFinalized: () => true,
     isDescendant: () => true,
-    prune: () => [blockSummary],
+    prune: () => [block],
     setPruneThreshold: () => {},
-    iterateAncestorBlocks: function* () {},
-    getAllAncestorBlocks: () => [blockSummary],
-    getAllNonAncestorBlocks: () => [blockSummary],
-    getCanonicalBlockSummaryAtSlot: () => blockSummary,
-    forwardIterateBlockSummaries: () => [blockSummary],
-    getBlockSummariesByParentRoot: () => [blockSummary],
-    getBlockSummariesAtSlot: () => [blockSummary],
+    iterateAncestorBlocks: function* () {
+      yield block;
+    },
+    getAllAncestorBlocks: () => [block],
+    getAllNonAncestorBlocks: () => [block],
+    getCanonicalBlockAtSlot: () => block,
+    forwarditerateAncestorBlocks: () => [block],
+    getBlockSummariesByParentRoot: () => [block],
+    getBlockSummariesAtSlot: () => [block],
     getCommonAncestorDistance: () => null,
   };
 }

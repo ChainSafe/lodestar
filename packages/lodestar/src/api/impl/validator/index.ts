@@ -28,7 +28,7 @@ import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -172,7 +172,8 @@ export function getValidatorApi({
       const headSlot = headState.slot;
       const attEpoch = computeEpochAtSlot(slot);
       const headEpoch = computeEpochAtSlot(headSlot);
-      const headBlockRoot = chain.forkChoice.getHeadRoot();
+      const headBlockRootHex = chain.forkChoice.getHead().blockRoot;
+      const headBlockRoot = fromHexString(headBlockRootHex);
 
       const beaconBlockRoot =
         slot >= headSlot
@@ -195,7 +196,7 @@ export function getValidatorApi({
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRoot, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
 
       return {
         data: {

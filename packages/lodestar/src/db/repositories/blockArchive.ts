@@ -2,7 +2,6 @@ import all from "it-all";
 import {ArrayLike} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
@@ -13,9 +12,11 @@ export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
 }
 
-export interface IKeyValueSummary<K, V, S> extends IKeyValue<K, V> {
-  summary: S;
-}
+export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
+  slot: Slot;
+  blockRoot: Root;
+  parentRoot: Root;
+};
 
 /**
  * Stores finalized blocks. Block slot is identifier.
@@ -74,11 +75,11 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async batchPutBinary(items: ArrayLike<IKeyValueSummary<Slot, Buffer, IBlockSummary>>): Promise<void> {
+  async batchPutBinary(items: ArrayLike<BlockArchiveBatchPutBinaryItem>): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
-      Array.from(items).map((item) => storeRootIndex(this.db, item.summary.slot, item.summary.blockRoot)),
-      Array.from(items).map((item) => storeParentRootIndex(this.db, item.summary.slot, item.summary.parentRoot)),
+      Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
+      Array.from(items).map((item) => storeParentRootIndex(this.db, item.slot, item.parentRoot)),
     ]);
   }
 

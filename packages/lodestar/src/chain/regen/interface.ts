@@ -1,4 +1,4 @@
-import {allForks, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 export enum RegenCaller {
@@ -39,7 +39,7 @@ export interface IStateRegenerator {
    * Return the state of `blockRoot` processed to slot `slot`
    */
   getBlockSlotState(
-    blockRoot: Root,
+    blockRoot: RootHex,
     slot: Slot,
     rCaller: RegenCaller
   ): Promise<CachedBeaconState<allForks.BeaconState>>;
@@ -47,5 +47,5 @@ export interface IStateRegenerator {
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: Root, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
 }

@@ -294,10 +294,7 @@ export class ProtoArray {
     for (let nodeIndex = 0; nodeIndex < finalizedIndex; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
-          index: nodeIndex,
-        });
+        throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: nodeIndex});
       }
       this.indices.delete(node.blockRoot);
     }
@@ -520,7 +517,7 @@ export class ProtoArray {
   }
 
   /**
-   * get all nodes from a block root backwards
+   * Get all nodes from a block root backwards
    */
   getAllAncestorNodes(blockRoot: RootHex): IProtoNode[] {
     const startIndex = this.indices.get(blockRoot);
@@ -535,12 +532,15 @@ export class ProtoArray {
         index: startIndex,
       });
     }
-    const result: IProtoNode[] = [node];
+
+    const nodes = [node];
+
     while (node.parent !== undefined) {
       node = this.getNodeFromIndex(node.parent);
-      result.push(node);
+      nodes.push(node);
     }
-    return result;
+
+    return nodes;
   }
 
   /**

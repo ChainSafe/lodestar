@@ -1,4 +1,4 @@
-import {Slot, Epoch} from "@chainsafe/lodestar-types";
+import {Slot, Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
 export enum InvalidBlockCode {
@@ -9,10 +9,10 @@ export enum InvalidBlockCode {
 }
 
 export type InvalidBlock =
-  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: Uint8Array}
+  | {code: InvalidBlockCode.UNKNOWN_PARENT; root: RootHex}
   | {code: InvalidBlockCode.FUTURE_SLOT; currentSlot: Slot; blockSlot: Slot}
   | {code: InvalidBlockCode.FINALIZED_SLOT; finalizedSlot: Slot; blockSlot: Slot}
-  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: Uint8Array; blockAncestor?: Uint8Array};
+  | {code: InvalidBlockCode.NOT_FINALIZED_DESCENDANT; finalizedRoot: RootHex; blockAncestor?: RootHex};
 
 export enum InvalidAttestationCode {
   /**
@@ -57,12 +57,12 @@ export enum InvalidAttestationCode {
 
 export type InvalidAttestation =
   | {code: InvalidAttestationCode.EMPTY_AGGREGATION_BITFIELD}
-  | {code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK; beaconBlockRoot: Uint8Array}
+  | {code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK; beaconBlockRoot: RootHex}
   | {code: InvalidAttestationCode.BAD_TARGET_EPOCH; target: Epoch; slot: Slot}
-  | {code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
+  | {code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT; root: RootHex}
   | {code: InvalidAttestationCode.FUTURE_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: InvalidAttestationCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
-  | {code: InvalidAttestationCode.INVALID_TARGET; attestation: Uint8Array; local: Uint8Array}
+  | {code: InvalidAttestationCode.INVALID_TARGET; attestation: RootHex; local: RootHex}
   | {code: InvalidAttestationCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: InvalidAttestationCode.FUTURE_SLOT; attestationSlot: Slot; latestPermissibleSlot: Slot};
 
@@ -86,8 +86,8 @@ export type ForkChoiceErrorType =
   | {code: ForkChoiceErrorCode.INVALID_BLOCK; err: InvalidBlock}
   | {code: ForkChoiceErrorCode.PROTO_ARRAY_ERROR; err: string}
   | {code: ForkChoiceErrorCode.INVALID_PROTO_ARRAY_BYTES; err: string}
-  | {code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK; root: Uint8Array}
-  | {code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR; ancestorSlot: Slot; descendantRoot: Uint8Array}
+  | {code: ForkChoiceErrorCode.MISSING_PROTO_ARRAY_BLOCK; root: RootHex}
+  | {code: ForkChoiceErrorCode.UNKNOWN_ANCESTOR; ancestorSlot: Slot; descendantRoot: RootHex}
   | {code: ForkChoiceErrorCode.INCONSISTENT_ON_TICK; previousSlot: Slot; time: Slot}
   | {code: ForkChoiceErrorCode.BEACON_STATE_ERROR; error: Error}
   | {code: ForkChoiceErrorCode.ATTEMPT_TO_REVERT_JUSTIFICATION; store: Slot; state: Slot}
