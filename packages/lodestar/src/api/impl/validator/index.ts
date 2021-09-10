@@ -192,7 +192,7 @@ export function getValidatorApi({
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
       const attEpochState =
-        attEpoch <== headEpoch
+        attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
             await chain.regen.getBlockSlotState(headBlockRoot, slot, RegenCaller.produceAttestationData);
