@@ -1,3 +1,4 @@
-export * from "./seenAttesters";
-export * from "./seenCommittee";
-export * from "./seenCommitteeContribution";
+export {SeenAggregators, SeenAttesters} from "./seenAttesters";
+export {SeenBlockProposers} from "./seenBlockProposers";
+export {SeenSyncCommitteeMessages} from "./seenCommittee";
+export {SeenContributionAndProof} from "./seenCommitteeContribution";

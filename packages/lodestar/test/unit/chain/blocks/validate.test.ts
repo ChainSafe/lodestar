@@ -43,7 +43,7 @@ describe("validateBlock", function () {
       validateBlock({config, forkChoice, clock}, job);
       expect.fail("block should throw");
     } catch (e) {
-      expect((e as BlockError).type.code).to.equal(BlockErrorCode.BLOCK_IS_ALREADY_KNOWN);
+      expect((e as BlockError).type.code).to.equal(BlockErrorCode.ALREADY_KNOWN);
     }
   });
 
