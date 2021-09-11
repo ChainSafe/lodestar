@@ -256,6 +256,10 @@ export function createLodestarMetrics(
       name: "lodestar_sync_status",
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
+    syncUnknownParentSyncs: register.gauge({
+      name: "lodestar_sync_unknown_parent_syncs_total",
+      help: "Total number of unknown parent syncs",
+    }),
 
     // Validator monitoring
 
