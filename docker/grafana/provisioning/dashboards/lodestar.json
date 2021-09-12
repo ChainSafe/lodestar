@@ -432,7 +432,7 @@
       "pluginVersion": "8.0.6",
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_validators_total",
           "interval": "",
           "legendFormat": "",
@@ -1317,7 +1317,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_clock_slot - beacon_head_slot",
               "hide": false,
               "interval": "",
@@ -5784,7 +5784,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_fork_choice_find_head_seconds_sum[$__rate_interval])/delta(beacon_fork_choice_find_head_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "find head",
@@ -5880,7 +5880,7 @@
           "pluginVersion": "8.0.0",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_fork_choice_changed_head_total[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -5888,7 +5888,7 @@
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_fork_choice_requests_total[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -5969,7 +5969,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(beacon_fork_choice_find_head_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
@@ -6050,7 +6050,7 @@
           "pluginVersion": "8.0.0",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_fork_choice_errors_total",
               "interval": "",
               "legendFormat": "",
@@ -6127,7 +6127,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(beacon_fork_choice_find_head_seconds_sum[$__rate_interval])",
               "interval": "",
               "legendFormat": "process  time",
@@ -6186,7 +6186,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "beacon_fork_choice_reorg_total",
               "interval": "",
               "legendFormat": "",
@@ -7963,14 +7963,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(beacon_block_production_requests_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "total",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(beacon_block_production_successes_total[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -8053,7 +8053,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_block_production_seconds_sum[$__rate_interval])/delta(beacon_block_production_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
@@ -8151,7 +8151,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_reqresp_incoming_requests_error_total[$__rate_interval])/(delta(beacon_reqresp_incoming_requests_total[$__rate_interval])>0)",
               "interval": "",
               "legendFormat": "{{method}}",
@@ -8233,7 +8233,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(beacon_reqresp_incoming_requests_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{method}}",
@@ -8316,7 +8316,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(beacon_reqresp_outgoing_requests_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{method}}",
@@ -8399,7 +8399,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(beacon_reqresp_outgoing_requests_error_total[$__rate_interval])/(delta(beacon_reqresp_outgoing_requests_total[$__rate_interval]) > 0)",
               "interval": "",
               "legendFormat": "{{method}}",
@@ -8481,7 +8481,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(beacon_reqresp_dial_errors_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
@@ -8594,14 +8594,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "total lookups",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -8683,14 +8683,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(cp_state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "total lookups",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(cp_state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -8772,7 +8772,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "state_cache_size{}",
               "interval": "",
               "legendFormat": "states",
@@ -8853,14 +8853,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "cp_state_cache_size{}",
               "interval": "",
               "legendFormat": "states",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "cp_state_epoch_size",
               "hide": false,
               "interval": "",
@@ -8942,14 +8942,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(state_cache_adds_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "state cache",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(cp_state_cache_adds_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -9062,14 +9062,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])) * 0",
               "interval": "",
               "legendFormat": "Total Errors",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0 )",
               "hide": false,
               "interval": "",
@@ -9149,14 +9149,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "",
               "hide": false,
               "interval": "",
@@ -9254,7 +9254,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9335,7 +9335,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9417,7 +9417,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getBlockSlotState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9514,14 +9514,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])) * 0",
               "interval": "",
               "legendFormat": "Total Errors",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0 )",
               "hide": false,
               "interval": "",
@@ -9601,14 +9601,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "",
               "hide": false,
               "interval": "",
@@ -9706,7 +9706,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9788,7 +9788,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getCheckpointState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9869,7 +9869,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -9966,14 +9966,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])) * 0",
               "interval": "",
               "legendFormat": "Total Errors",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0 )",
               "hide": false,
               "interval": "",
@@ -10053,14 +10053,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "",
               "hide": false,
               "interval": "",
@@ -10158,7 +10158,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -10239,7 +10239,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -10321,7 +10321,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getPreState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -10418,14 +10418,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])) * 0",
               "interval": "",
               "legendFormat": "Total Errors",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]) * 0 )",
               "hide": false,
               "interval": "",
@@ -10505,14 +10505,14 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]))",
               "interval": "",
               "legendFormat": "From {{caller}}",
               "refId": "A"
             },
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "",
               "hide": false,
               "interval": "",
@@ -10610,7 +10610,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]) * 0",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -10691,7 +10691,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
@@ -10773,7 +10773,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
               "interval": "",
               "legendFormat": "From {{caller}}",
