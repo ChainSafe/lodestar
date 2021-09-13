@@ -1,6 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IBeaconChain, IBlockJob} from "..";
-import {IBeaconDb} from "../../db";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
@@ -9,7 +8,6 @@ import {RegenCaller} from "../regen";
 export async function validateGossipBlock(
   config: IChainForkConfig,
   chain: IBeaconChain,
-  db: IBeaconDb,
   blockJob: IBlockJob
 ): Promise<void> {
   const signedBlock = blockJob.signedBlock;
@@ -73,11 +71,9 @@ export async function validateGossipBlock(
     //    pre-finalization or conflicting with finalization.
     // 2. The parent is unknown to us, we probably want to download it since it might actually
     //    descend from the finalized root.
-    if ((await db.block.get(parentRoot as Uint8Array)) !== null) {
-      throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT, parentRoot});
-    } else {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-    }
+    // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
+    // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
   // [REJECT] The block is from a higher slot than its parent.

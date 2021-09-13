@@ -5,7 +5,6 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
 import {getNewBlockJob} from "../../../utils/block";
-import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {SinonStubFn} from "../../../utils/types";
@@ -20,7 +19,6 @@ describe("gossip block validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
-  let db: StubbedBeaconDb;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;
   const proposerIndex = 0;
   const clockSlot = 32;
@@ -36,7 +34,6 @@ describe("gossip block validation", function () {
     forkChoice.getBlock.returns(null);
     chain.forkChoice = forkChoice;
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
-    db = new StubbedBeaconDb(sinon, config);
 
     verifySignature = sinon.stub();
     verifySignature.resolves(true);
@@ -56,7 +53,7 @@ describe("gossip block validation", function () {
     // Set the block slot to after the current clock
     const job = getNewBlockJob({signature, message: {...block, slot: clockSlot + 1}});
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, db, job), BlockErrorCode.FUTURE_SLOT);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.FUTURE_SLOT);
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", async function () {
@@ -64,7 +61,7 @@ describe("gossip block validation", function () {
     chain.getFinalizedCheckpoint.returns({epoch: Infinity, root: ZERO_HASH});
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, db, job),
+      validateGossipBlock(config, chain, job),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
     );
   });
@@ -73,14 +70,14 @@ describe("gossip block validation", function () {
     // Make the fork choice return a block summary for the proposed block
     forkChoice.getBlock.returns({} as IBlockSummary);
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, db, job), BlockErrorCode.ALREADY_KNOWN);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.ALREADY_KNOWN);
   });
 
   it("REPEAT_PROPOSAL", async function () {
     // Register the proposer as known
     chain.seenBlockProposers.add(job.signedBlock.message.slot, job.signedBlock.message.proposerIndex);
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, db, job), BlockErrorCode.REPEAT_PROPOSAL);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.REPEAT_PROPOSAL);
   });
 
   it("PARENT_UNKNOWN (fork-choice)", async function () {
@@ -88,10 +85,8 @@ describe("gossip block validation", function () {
     forkChoice.getBlock.onCall(0).returns(null);
     // Return not known for parent block too
     forkChoice.getBlock.onCall(1).returns(null);
-    // Parent block not known to block db
-    db.block.get.resolves(null);
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, db, job), BlockErrorCode.PARENT_UNKNOWN);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.PARENT_UNKNOWN);
   });
 
   it("NOT_LATER_THAN_PARENT", async function () {
@@ -101,7 +96,7 @@ describe("gossip block validation", function () {
     forkChoice.getBlock.onCall(1).returns({slot: clockSlot + 1} as IBlockSummary);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, db, job),
+      validateGossipBlock(config, chain, job),
       BlockErrorCode.NOT_LATER_THAN_PARENT
     );
   });
@@ -114,7 +109,7 @@ describe("gossip block validation", function () {
     // Regen not able to get the parent block state
     regen.getBlockSlotState.rejects();
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, db, job), BlockErrorCode.PARENT_UNKNOWN);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.PARENT_UNKNOWN);
   });
 
   it("PROPOSAL_SIGNATURE_INVALID", async function () {
@@ -128,7 +123,7 @@ describe("gossip block validation", function () {
     verifySignature.resolves(false);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, db, job),
+      validateGossipBlock(config, chain, job),
       BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
     );
   });
@@ -146,10 +141,7 @@ describe("gossip block validation", function () {
     // Force proposer shuffling cache to return wrong value
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex + 1);
 
-    await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chain, db, job),
-      BlockErrorCode.INCORRECT_PROPOSER
-    );
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.INCORRECT_PROPOSER);
   });
 
   it("valid", async function () {
@@ -165,6 +157,6 @@ describe("gossip block validation", function () {
     // Force proposer shuffling cache to return wrong value
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex);
 
-    await validateGossipBlock(config, chain, db, job);
+    await validateGossipBlock(config, chain, job);
   });
 });
