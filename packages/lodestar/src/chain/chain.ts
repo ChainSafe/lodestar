@@ -220,7 +220,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
 
     // these blocks are on the same chain to head
-    for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
+    for (const summary of this.forkChoice.getAllAncestorBlocks(this.forkChoice.getHeadRoot())) {
       if (slotsSet.has(summary.slot)) {
         blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
       }
