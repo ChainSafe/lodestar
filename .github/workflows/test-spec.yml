@@ -35,9 +35,9 @@ jobs:
         uses: actions/cache@master
         with:
           path: packages/spec-test-runner/spec-tests
-          key: spec-tests-${{ hashFiles('packages/spec-test-runner/test/specTestVersioning.ts') }}
+          key: spec-test-data-${{ hashFiles('packages/spec-test-runner/test/specTestVersioning.ts') }}
       - name: Download spec tests
-        run: yarn download-test-cases
+        run: yarn download-spec-tests
         working-directory: packages/spec-test-runner
       - name: Check spec tests
         run: yarn check-tests
