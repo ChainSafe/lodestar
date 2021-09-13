@@ -3,8 +3,9 @@ import {use, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
+import {IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {IEth1ForBlockProduction} from "../../../../../../src/eth1";

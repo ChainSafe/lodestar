@@ -1,8 +1,9 @@
-import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "../../../../src/chain";
+import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateSignedBlock} from "../../../utils/block";
 import {
   allForks,
@@ -17,7 +18,7 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {generateValidators} from "../../../utils/validator";
 
 describe("LodestarForkChoice", function () {
-  let forkChoice: LodestarForkChoice;
+  let forkChoice: ForkChoice;
   const anchorState = generateState(
     {
       slot: 0,
@@ -43,12 +44,7 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    forkChoice = new LodestarForkChoice({
-      config,
-      emitter,
-      currentSlot,
-      state,
-    });
+    forkChoice = initializeForkChoice(config, emitter, currentSlot, state);
   });
 
   describe("forkchoice", function () {
@@ -142,13 +138,13 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block20.message, state20, justifiedBalances);
       forkChoice.onBlock(block24.message, state24, justifiedBalances);
       forkChoice.onBlock(block28.message, state28, justifiedBalances);
-      expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
         3,
-        "iterateBlockSummaries should return 3 blocks"
+        "getAllAncestorBlocks should return 3 blocks"
       );
-      expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
         5,
-        "iterateBlockSummaries should return 5 blocks"
+        "getAllAncestorBlocks should return 5 blocks"
       );
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.not.null;
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.not.null;
@@ -156,13 +152,13 @@ describe("LodestarForkChoice", function () {
       expect(forkChoice.hasBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.true;
       forkChoice.onBlock(block32.message, state32, justifiedBalances);
       forkChoice.prune(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message));
-      expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
         0,
-        "iterateBlockSummaries should not return finalized block"
+        "getAllAncestorBlocks should not return finalized block"
       );
-      expect(forkChoice.iterateBlockSummaries(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
         2,
-        "iterateBlockSummaries should return 2 blocks"
+        "getAllAncestorBlocks should return 2 blocks"
       );
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.null;
       expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.null;
@@ -175,7 +171,7 @@ describe("LodestarForkChoice", function () {
      *                     \
      *                       parent (34) - child (35)
      */
-    it("iterateNonAncestors - should get non ancestor nodes", () => {
+    it("getAllNonAncestorBlocks - should get non ancestor nodes", () => {
       const {blockHeader} = computeAnchorCheckpoint(config, anchorState);
       const finalizedRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);
       const targetBlock = generateSignedBlock({message: {slot: 32}});
@@ -200,8 +196,8 @@ describe("LodestarForkChoice", function () {
           (summary) =>
             summary.slot < childBlock.message.slot && !forkChoice.isDescendant(summary.blockRoot, childBlockRoot)
         );
-      // compare to iterateNonAncestors api
-      expect(forkChoice.iterateNonAncestors(childBlockRoot)).to.be.deep.equal(nonCanonicalSummaries);
+      // compare to getAllNonAncestorBlocks api
+      expect(forkChoice.getAllNonAncestorBlocks(childBlockRoot)).to.be.deep.equal(nonCanonicalSummaries);
     });
   });
 });

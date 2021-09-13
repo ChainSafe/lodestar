@@ -23,7 +23,7 @@ import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
-import {LodestarForkChoice} from "./forkChoice";
+import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
@@ -111,13 +111,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = new LodestarForkChoice({
-      config,
-      emitter,
-      currentSlot: clock.currentSlot,
-      state: cachedState,
-      metrics,
-    });
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       emitter,
@@ -220,7 +214,7 @@ export class BeaconChain implements IBeaconChain {
     const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
 
     // these blocks are on the same chain to head
-    for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
+    for (const summary of this.forkChoice.getAllAncestorBlocks(this.forkChoice.getHeadRoot())) {
       if (slotsSet.has(summary.slot)) {
         blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
       }

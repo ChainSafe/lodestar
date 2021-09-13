@@ -1,8 +1,9 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {SinonSandbox, SinonStubbedInstance} from "sinon";
 import sinon from "sinon";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {getBeaconBlockApi} from "../../../../src/api/impl/beacon/blocks";
-import {ForkChoice, BeaconChain} from "../../../../src/chain";
+import {BeaconChain} from "../../../../src/chain";
 import {Network} from "../../../../src/network";
 import {BeaconSync} from "../../../../src/sync";
 import {StubbedBeaconDb} from "../../../utils/stub";

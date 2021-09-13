@@ -4,7 +4,7 @@ import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
-import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
+import {createDbMetrics, createDiscv5Metrics} from "@chainsafe/lodestar/lib/metrics";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IGlobalArgs} from "../../options";
@@ -54,11 +54,15 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   logger.info("Lodestar", {version: version, network: args.network});
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
+  let discv5Metrics: null | ReturnType<typeof createDiscv5Metrics> = null;
   // additional metrics registries
   const metricsRegistries = [];
   if (options.metrics.enabled) {
     dbMetrics = createDbMetrics();
-    metricsRegistries.push(dbMetrics.registry);
+    discv5Metrics = createDiscv5Metrics();
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    options.network.discv5!.metrics = discv5Metrics.metrics;
+    metricsRegistries.push(dbMetrics.registry, discv5Metrics.registry);
   }
   const db = new BeaconDb({
     config,

@@ -2,7 +2,7 @@ import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice} from "../../../../src/chain";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateBlockSummary, generateEmptySignedBlock} from "../../../utils/block";
 import {StubbedBeaconDb} from "../../../utils/stub";
 import {testLogger} from "../../../utils/logger";
@@ -29,8 +29,8 @@ describe("block archiver task", function () {
     );
     const canonicalBlocks = [blocks[4], blocks[3], blocks[1], blocks[0]];
     const nonCanonicalBlocks = [blocks[2]];
-    forkChoiceStub.iterateBlockSummaries.returns(canonicalBlocks);
-    forkChoiceStub.iterateNonAncestors.returns(nonCanonicalBlocks);
+    forkChoiceStub.getAllAncestorBlocks.returns(canonicalBlocks);
+    forkChoiceStub.getAllNonAncestorBlocks.returns(nonCanonicalBlocks);
     await archiveBlocks(dbStub, forkChoiceStub, logger, {epoch: 5, root: ZERO_HASH});
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(

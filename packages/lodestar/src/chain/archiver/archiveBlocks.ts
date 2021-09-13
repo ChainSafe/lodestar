@@ -20,10 +20,10 @@ export async function archiveBlocks(
   finalized: phase0.Checkpoint
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
-  const allCanonicalSummaries = forkChoice.iterateBlockSummaries(finalized.root);
-  // 1st block in iterateBlockSummaries() is the finalized block itself
+  const allCanonicalSummaries = forkChoice.getAllAncestorBlocks(finalized.root);
+  // 1st block in getAllAncestorBlocks() is the finalized block itself
   // we move it to blockArchive but forkchoice still have it to check next onBlock calls
-  // the next iterateBlockSummaries call does not return this block
+  // the next getAllAncestorBlocks call does not return this block
   let i = 0;
   // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
   const BATCH_SIZE = 1000;
@@ -65,7 +65,7 @@ export async function archiveBlocks(
 
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
-  const nonCanonicalSummaries = forkChoice.iterateNonAncestors(finalized.root);
+  const nonCanonicalSummaries = forkChoice.getAllNonAncestorBlocks(finalized.root);
   if (nonCanonicalSummaries && nonCanonicalSummaries.length > 0) {
     await db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
     logger.verbose("deleteNonCanonicalBlocks", {

@@ -120,7 +120,7 @@ export async function runStateTransition(
 
     emitBlockEvent(emitter, job, postState);
     forkChoice.updateHead();
-    emitForkChoiceHeadEvents(emitter, forkChoice, forkChoice.getHead(), oldHead, metrics);
+    emitForkChoiceHeadEvents(emitter, forkChoice, oldHead, metrics);
   }
 
   return postState;
@@ -155,25 +155,20 @@ function emitCheckpointEvent(
 function emitForkChoiceHeadEvents(
   emitter: ChainEventEmitter,
   forkChoice: IForkChoice,
-  head: IBlockSummary,
   oldHead: IBlockSummary,
   metrics: IMetrics | null
 ): void {
-  const headRoot = head.blockRoot;
-  const oldHeadRoot = oldHead.blockRoot;
-  if (!byteArrayEquals(headRoot, oldHeadRoot)) {
+  const newHead = forkChoice.getHead();
+  if (!byteArrayEquals(newHead.blockRoot, oldHead.blockRoot)) {
     // new head
-    if (!forkChoice.isDescendant(oldHeadRoot, headRoot)) {
-      // chain reorg
-      const oldHeadHistory = forkChoice.iterateBlockSummaries(oldHeadRoot);
-      const headHistory = forkChoice.iterateBlockSummaries(headRoot);
-      const firstAncestor = headHistory.find((summary) => oldHeadHistory.includes(summary));
-      const distance = oldHead.slot - (firstAncestor?.slot ?? oldHead.slot);
-      emitter.emit(ChainEvent.forkChoiceReorg, head, oldHead, distance);
+    emitter.emit(ChainEvent.forkChoiceHead, newHead);
+    metrics?.forkChoiceChangedHead.inc();
+
+    const distance = forkChoice.getCommonAncestorDistance(oldHead, newHead);
+    if (distance !== null) {
+      emitter.emit(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       metrics?.forkChoiceReorg.inc();
     }
-    emitter.emit(ChainEvent.forkChoiceHead, head);
-    metrics?.forkChoiceChangedHead.inc();
   }
 }
 

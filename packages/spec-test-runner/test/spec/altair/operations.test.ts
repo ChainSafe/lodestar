@@ -5,7 +5,7 @@ import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {IAltairStateTestCase, config} from "./util";
 import {IBaseSpecTest} from "../type";

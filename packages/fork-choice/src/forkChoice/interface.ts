@@ -107,13 +107,17 @@ export interface IForkChoice {
   prune(finalizedRoot: phase0.Root): IBlockSummary[];
   setPruneThreshold(threshold: number): void;
   /**
-   * Iterates backwards through block summaries, starting from a block root
+   * Iterates backwards through ancestor block summaries, starting from a block root
    */
-  iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[];
+  iterateAncestorBlocks(blockRoot: phase0.Root): IterableIterator<IBlockSummary>;
   /**
-   * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
+   * Returns all ancestor blocks backwards, starting from a block root
    */
-  iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[];
+  getAllAncestorBlocks(blockRoot: phase0.Root): IBlockSummary[];
+  /**
+   * The same to getAllAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
+   */
+  getAllNonAncestorBlocks(blockRoot: phase0.Root): IBlockSummary[];
   getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null;
   /**
    * Iterates forwards through block summaries, exact order is not guaranteed
@@ -121,6 +125,8 @@ export interface IForkChoice {
   forwardIterateBlockSummaries(): IBlockSummary[];
   getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[];
   getBlockSummariesAtSlot(slot: Slot): IBlockSummary[];
+  /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
+  getCommonAncestorDistance(prevBlock: IBlockSummary, newBlock: IBlockSummary): number | null;
 }
 
 export interface ILatestMessage {

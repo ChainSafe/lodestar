@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import fs from "fs";
 import path from "path";
-import {SPEC_TEST_LOCATION} from "./utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "./specTestVersioning";
 
 // TEMP TEMP
 const forksToIgnore = new Set(["merge"]);

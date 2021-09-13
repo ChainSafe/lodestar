@@ -4,7 +4,7 @@ import {phase0, Uint64, Root, ssz, allForks} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {expectEqualBeaconState} from "../util";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
