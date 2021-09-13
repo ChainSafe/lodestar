@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 // eslint-disable-next-line no-restricted-imports
-import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
+import {initializeForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice";
 // eslint-disable-next-line no-restricted-imports
 import {CheckpointStateCache} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 // eslint-disable-next-line no-restricted-imports
@@ -41,7 +41,7 @@ for (const testFolder of ["get_head", "on_block"]) {
       const currentSlot = anchorState.slot;
       const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
       let wrappedState = createCachedBeaconState(config, tbState);
-      const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: wrappedState});
+      const forkchoice = initializeForkChoice(config, emitter, currentSlot, wrappedState);
       const checkpointStateCache = new CheckpointStateCache({});
       const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
       cacheState(wrappedState, stateCache);

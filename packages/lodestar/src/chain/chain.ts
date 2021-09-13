@@ -23,7 +23,7 @@ import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
-import {LodestarForkChoice} from "./forkChoice";
+import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
@@ -111,13 +111,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = new LodestarForkChoice({
-      config,
-      emitter,
-      currentSlot: clock.currentSlot,
-      state: cachedState,
-      metrics,
-    });
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       emitter,

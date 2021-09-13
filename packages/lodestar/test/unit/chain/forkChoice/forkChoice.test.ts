@@ -1,8 +1,9 @@
-import {ChainEventEmitter, computeAnchorCheckpoint, LodestarForkChoice} from "../../../../src/chain";
+import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {generateSignedBlock} from "../../../utils/block";
 import {
   allForks,
@@ -17,7 +18,7 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {generateValidators} from "../../../utils/validator";
 
 describe("LodestarForkChoice", function () {
-  let forkChoice: LodestarForkChoice;
+  let forkChoice: ForkChoice;
   const anchorState = generateState(
     {
       slot: 0,
@@ -43,12 +44,7 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    forkChoice = new LodestarForkChoice({
-      config,
-      emitter,
-      currentSlot,
-      state,
-    });
+    forkChoice = initializeForkChoice(config, emitter, currentSlot, state);
   });
 
   describe("forkchoice", function () {

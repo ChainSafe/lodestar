@@ -18,3 +18,44 @@ export interface IForkChoiceStore {
   finalizedCheckpoint: phase0.Checkpoint;
   bestJustifiedCheckpoint: phase0.Checkpoint;
 }
+
+/**
+ * IForkChoiceStore implementer which emits forkChoice events on updated justified and finalized checkpoints.
+ */
+export class ForkChoiceStore implements IForkChoiceStore {
+  bestJustifiedCheckpoint: phase0.Checkpoint;
+  private _justifiedCheckpoint: phase0.Checkpoint;
+  private _finalizedCheckpoint: phase0.Checkpoint;
+
+  constructor(
+    public currentSlot: Slot,
+    justifiedCheckpoint: phase0.Checkpoint,
+    finalizedCheckpoint: phase0.Checkpoint,
+    private readonly events?: {
+      onJustified: (cp: phase0.Checkpoint) => void;
+      onFinalized: (cp: phase0.Checkpoint) => void;
+    }
+  ) {
+    this._justifiedCheckpoint = justifiedCheckpoint;
+    this._finalizedCheckpoint = finalizedCheckpoint;
+    this.bestJustifiedCheckpoint = this._justifiedCheckpoint;
+  }
+
+  get justifiedCheckpoint(): phase0.Checkpoint {
+    return this._justifiedCheckpoint;
+  }
+
+  set justifiedCheckpoint(cp: phase0.Checkpoint) {
+    this._justifiedCheckpoint = cp;
+    this.events?.onJustified(cp);
+  }
+
+  get finalizedCheckpoint(): phase0.Checkpoint {
+    return this._finalizedCheckpoint;
+  }
+
+  set finalizedCheckpoint(cp: phase0.Checkpoint) {
+    this._finalizedCheckpoint = cp;
+    this.events?.onFinalized(cp);
+  }
+}

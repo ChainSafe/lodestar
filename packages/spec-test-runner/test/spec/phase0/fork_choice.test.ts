@@ -3,7 +3,7 @@ import {expect} from "chai";
 import {createCachedBeaconState, phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 // eslint-disable-next-line no-restricted-imports
-import {LodestarForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice/forkChoice";
+import {initializeForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice";
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
@@ -27,7 +27,7 @@ describeDirectorySpecTest<IForkChoiceTestCase, void>(
     const currentSlot = anchorState.slot;
     const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
     let cachedState = createCachedBeaconState(config, tbState);
-    const forkchoice = new LodestarForkChoice({config, emitter, currentSlot, state: cachedState});
+    const forkchoice = initializeForkChoice(config, emitter, currentSlot, cachedState);
     const {SECONDS_PER_SLOT} = cachedState.config;
     for (const step of steps) {
       if (isTick(step)) {

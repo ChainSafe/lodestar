@@ -1,13 +1,13 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {expect} from "chai";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils";
 import {getDebugApi} from "../../../../../src/api/impl/debug";
 import {INetwork, Network} from "../../../../../src/network";
-import {IBeaconChain, LodestarForkChoice} from "../../../../../src/chain";
+import {IBeaconChain} from "../../../../../src/chain";
 import {generateBlockSummary} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {generateState} from "../../../../utils/state";
@@ -26,7 +26,7 @@ describe("api - debug - beacon", function () {
     const server = setupApiImplTestServer();
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
     chainStub = server.chainStub;
-    forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
+    forkchoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkchoiceStub;
     dbStub = new StubbedBeaconDb(sinon);
     networkStub = sinon.createStubInstance(Network);
