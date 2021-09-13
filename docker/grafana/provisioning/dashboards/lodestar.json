@@ -7912,7 +7912,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_discv5_sent_message_count",
+              "expr": "rate(lodestar_discv5_sent_message_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -8006,7 +8006,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_discv5_rcvd_message_count",
+              "expr": "rate(lodestar_discv5_rcvd_message_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"

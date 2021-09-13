@@ -85,10 +85,12 @@ export function createDiscv5Metrics(): {metrics: IDiscv5Metrics; registry: Regis
     sentMessageCount: new Gauge<"type">({
       name: "lodestar_discv5_sent_message_count",
       help: "Count of the discv5 messages sent by message type",
+      labelNames: ["type"],
     }) as Gauge<"type"> & {collect(): void},
     rcvdMessageCount: new Gauge<"type">({
       name: "lodestar_discv5_rcvd_message_count",
       help: "Count of the discv5 messages received by message type",
+      labelNames: ["type"],
     }) as Gauge<"type"> & {collect(): void},
   };
   const registry = new Registry();
