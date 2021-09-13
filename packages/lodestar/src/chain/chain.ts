@@ -179,15 +179,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getProposerAttesterDuties);
-  }
-
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return await this.regen.getBlockSlotState(
-      this.forkChoice.getHeadRoot(),
-      this.clock.currentSlot,
-      RegenCaller.getProposerAttesterDuties
-    );
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
@@ -209,18 +201,6 @@ export class BeaconChain implements IBeaconChain {
       return null;
     }
     return await this.db.block.get(summary.blockRoot);
-  }
-
-  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    const blockSummary = this.forkChoice.getBlock(blockRoot);
-    if (!blockSummary) {
-      return null;
-    }
-    try {
-      return await this.regen.getState(blockSummary.stateRoot, RegenCaller.getStateByBlockRoot);
-    } catch (e) {
-      return null;
-    }
   }
 
   /** Returned blocks have the same ordering as `slots` */
