@@ -1,6 +1,5 @@
-import {Epoch} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {HexRoot} from "./interface";
 
 export enum ProtoArrayErrorCode {
   FINALIZED_NODE_UNKNOWN = "PROTO_ARRAY_ERROR_FINALIZED_NODE_UNKNOWN",
@@ -20,8 +19,8 @@ export enum ProtoArrayErrorCode {
 }
 
 export type ProtoArrayErrorType =
-  | {code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN; root: HexRoot}
-  | {code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN; root: HexRoot}
+  | {code: ProtoArrayErrorCode.FINALIZED_NODE_UNKNOWN; root: RootHex}
+  | {code: ProtoArrayErrorCode.JUSTIFIED_NODE_UNKNOWN; root: RootHex}
   | {code: ProtoArrayErrorCode.INVALID_FINALIZED_ROOT_CHANGE}
   | {code: ProtoArrayErrorCode.INVALID_NODE_INDEX; index: number}
   | {code: ProtoArrayErrorCode.INVALID_PARENT_INDEX; index: number}
@@ -35,10 +34,10 @@ export type ProtoArrayErrorType =
   | {code: ProtoArrayErrorCode.REVERTED_FINALIZED_EPOCH; currentFinalizedEpoch: Epoch; newFinalizedEpoch: Epoch}
   | {
       code: ProtoArrayErrorCode.INVALID_BEST_NODE;
-      startRoot: HexRoot;
+      startRoot: RootHex;
       justifiedEpoch: Epoch;
       finalizedEpoch: Epoch;
-      headRoot: HexRoot;
+      headRoot: RootHex;
       headJustifiedEpoch: Epoch;
       headFinalizedEpoch: Epoch;
     };
