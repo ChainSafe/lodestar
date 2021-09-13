@@ -162,7 +162,7 @@ export class StateRegenerator implements IStateRegenerator {
     // gets reversed when replayed
     const blocksToReplay = [block];
     let state: CachedBeaconState<allForks.BeaconState> | null = null;
-    for (const b of this.forkChoice.iterateBlockSummaries(block.parentRoot)) {
+    for (const b of this.forkChoice.iterateAncestorBlocks(block.parentRoot)) {
       state = this.stateCache.get(b.stateRoot);
       if (state) {
         break;

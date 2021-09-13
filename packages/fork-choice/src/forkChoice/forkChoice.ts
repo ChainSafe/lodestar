@@ -140,7 +140,7 @@ export class ForkChoice implements IForkChoice {
     if (block.slot > ancestorSlot) {
       // Search for a slot that is lte the target slot.
       // We check for lower slots to account for skip slots.
-      for (const node of this.protoArray.iterateNodes(blockRootHex)) {
+      for (const node of this.protoArray.iterateAncestorNodes(blockRootHex)) {
         if (node.slot <= ancestorSlot) {
           return fromHexString(node.blockRoot);
         }
@@ -559,26 +559,40 @@ export class ForkChoice implements IForkChoice {
     this.protoArray.pruneThreshold = threshold;
   }
 
+  *iterateAncestorBlocks(blockRoot: phase0.Root): IterableIterator<IBlockSummary> {
+    for (const block of this.protoArray.iterateAncestorNodes(toHexString(blockRoot))) {
+      yield toBlockSummary(block);
+    }
+  }
+
   /**
    * Iterates backwards through block summaries, starting from a block root.
    * Return only the non-finalized blocks.
    */
-  iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[] {
-    const blocks = this.protoArray.iterateNodes(toHexString(blockRoot)).map(toBlockSummary);
+  getAllAncestorBlocks(blockRoot: phase0.Root): IBlockSummary[] {
+    const blocks = this.protoArray.getAllAncestorNodes(toHexString(blockRoot)).map(toBlockSummary);
     // the last node is the previous finalized one, it's there to check onBlock finalized checkpoint only.
     return blocks.slice(0, blocks.length - 1);
   }
 
   /**
-   * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
+   * The same to getAllAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[] {
-    return this.protoArray.iterateNonAncestorNodes(toHexString(blockRoot)).map(toBlockSummary);
+  getAllNonAncestorBlocks(blockRoot: phase0.Root): IBlockSummary[] {
+    return this.protoArray.getAllNonAncestorNodes(toHexString(blockRoot)).map(toBlockSummary);
   }
 
   getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null {
-    const head = this.getHeadRoot();
-    return this.iterateBlockSummaries(head).find((summary) => summary.slot === slot) || null;
+    if (slot >= this.head.slot) {
+      return this.head;
+    }
+
+    for (const block of this.protoArray.iterateAncestorNodes(toHexString(this.head.blockRoot))) {
+      if (block.slot === slot) {
+        return toBlockSummary(block);
+      }
+    }
+    return null;
   }
 
   forwardIterateBlockSummaries(): IBlockSummary[] {
@@ -591,7 +605,33 @@ export class ForkChoice implements IForkChoice {
   }
 
   getBlockSummariesAtSlot(slot: Slot): IBlockSummary[] {
-    return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
+    const nodes = this.protoArray.nodes;
+    const blocksAtSlot: IBlockSummary[] = [];
+    for (let i = 0, len = nodes.length; i < len; i++) {
+      const node = nodes[i];
+      if (node.slot === slot) {
+        blocksAtSlot.push(toBlockSummary(node));
+      }
+    }
+    return blocksAtSlot;
+  }
+
+  getCommonAncestorDistance(prevBlock: IBlockSummary, newBlock: IBlockSummary): number | null {
+    const prevNode = this.protoArray.getNode(toHexString(prevBlock.blockRoot));
+    const newNode = this.protoArray.getNode(toHexString(newBlock.blockRoot));
+    if (!prevNode) throw Error(`No node if forkChoice for blockRoot ${prevBlock.blockRoot}`);
+    if (!newNode) throw Error(`No node if forkChoice for blockRoot ${newBlock.blockRoot}`);
+
+    const commonAncestor = this.protoArray.getCommonAncestor(prevNode, newNode);
+    // No common ancestor, should never happen. Return null to not throw
+    if (!commonAncestor) return null;
+
+    // If common node is one of both nodes, then they are direct descendants, return null
+    if (commonAncestor.blockRoot === prevNode.blockRoot || commonAncestor.blockRoot === newNode.blockRoot) {
+      return null;
+    }
+
+    return newNode.slot - commonAncestor.slot;
   }
 
   private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: number[]): void {

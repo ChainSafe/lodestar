@@ -44,7 +44,7 @@ describe("Forkchoice", function () {
     bestJustifiedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
   };
 
-  it("iterateBlockSummaries", function () {
+  it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);
     const forkchoice = new ForkChoice({
       config,
@@ -53,8 +53,8 @@ describe("Forkchoice", function () {
       queuedAttestations: new Set(),
       justifiedBalances: [],
     });
-    const summaries = forkchoice.iterateBlockSummaries(fromHexString(finalizedDesc));
-    // there are 2 blocks in protoArray but iterateBlockSummaries should only return non-finalized blocks
+    const summaries = forkchoice.getAllAncestorBlocks(fromHexString(finalizedDesc));
+    // there are 2 blocks in protoArray but getAllAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");
     expect(summaries[0]).to.be.deep.equals(toBlockSummary(block), "the block summary is not correct");
   });

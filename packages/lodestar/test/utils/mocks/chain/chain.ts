@@ -219,11 +219,13 @@ function mockForkChoice(): IForkChoice {
     isDescendant: () => true,
     prune: () => [blockSummary],
     setPruneThreshold: () => {},
-    iterateBlockSummaries: () => [blockSummary],
-    iterateNonAncestors: () => [blockSummary],
+    iterateAncestorBlocks: function* () {},
+    getAllAncestorBlocks: () => [blockSummary],
+    getAllNonAncestorBlocks: () => [blockSummary],
     getCanonicalBlockSummaryAtSlot: () => blockSummary,
     forwardIterateBlockSummaries: () => [blockSummary],
     getBlockSummariesByParentRoot: () => [blockSummary],
     getBlockSummariesAtSlot: () => [blockSummary],
+    getCommonAncestorDistance: () => null,
   };
 }
