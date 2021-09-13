@@ -87,6 +87,8 @@ export class NodejsNode extends LibP2p {
             enr: options.discv5.enr,
             bindAddr: options.discv5.bindAddr,
             bootEnrs: options.discv5.bootEnrs || [],
+            // TODO: Disable and query on demand https://github.com/ChainSafe/lodestar/pull/3104
+            searchInterval: 30_000,
             metrics: options.discv5.metrics,
           },
         },
