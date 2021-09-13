@@ -6,7 +6,7 @@ import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {AbortController} from "@chainsafe/abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {Eth2Gossipsub, GossipHandlers, GossipType, GossipEncoding} from "../../../../src/network/gossip";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
@@ -18,6 +18,10 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
 import {GossipAction, GossipActionError} from "../../../../src/chain/errors";
+import {generateState} from "../../../utils/state";
+import {IBeaconChain, IBeaconClock} from "../../../../src/chain";
+import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
+import {TreeBacked} from "@chainsafe/ssz";
 
 describe("network / gossip / validation", function () {
   const logger = testLogger();
@@ -28,9 +32,20 @@ describe("network / gossip / validation", function () {
   let topicString: string;
   let libp2p: Libp2p;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
+  let chain: IBeaconChain;
 
   let controller: AbortController;
-  beforeEach(() => (controller = new AbortController()));
+  beforeEach(() => {
+    controller = new AbortController();
+    const state = generateState();
+    chain = new MockBeaconChain({
+      genesisTime: Math.floor(Date.now() / 1000),
+      chainId: 0,
+      networkId: BigInt(0),
+      state: state as TreeBacked<allForks.BeaconState>,
+      config,
+    });
+  });
   afterEach(() => controller.abort());
 
   beforeEach(async function () {
@@ -65,6 +80,8 @@ describe("network / gossip / validation", function () {
       libp2p,
       metrics,
       signal: controller.signal,
+      chain,
+      clock: {} as IBeaconClock,
     });
 
     try {
@@ -96,6 +113,8 @@ describe("network / gossip / validation", function () {
       libp2p,
       metrics,
       signal: controller.signal,
+      chain,
+      clock: {} as IBeaconClock,
     });
 
     await gossipSub.validate(message);

@@ -28,7 +28,16 @@ import BufferList from "bl";
 import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
-interface IGossipsubModules {
+import {
+  GossipPeerScoreParamsBuilder,
+  gossipScoreThresholds,
+  GOSSIP_D,
+  GOSSIP_D_HIGH,
+  GOSSIP_D_LOW,
+} from "./scoringParameters";
+import {IBeaconChain, IBeaconClock} from "../../chain";
+
+export interface IGossipsubModules {
   config: IChainForkConfig;
   libp2p: Libp2p;
   logger: ILogger;
@@ -36,6 +45,8 @@ interface IGossipsubModules {
   signal: AbortSignal;
   forkDigestContext: IForkDigestContext;
   gossipHandlers: GossipHandlers;
+  clock: IBeaconClock;
+  chain: IBeaconChain;
 }
 
 /**
@@ -70,10 +81,12 @@ export class Eth2Gossipsub extends Gossipsub {
     super(modules.libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: "StrictNoSign" as const,
-      D: 8,
-      Dlo: 6,
-      Dhi: 12,
+      D: GOSSIP_D,
+      Dlo: GOSSIP_D_LOW,
+      Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
+      scoreParams: new GossipPeerScoreParamsBuilder(modules).getGossipPeerScoreParams(),
+      scoreThresholds: gossipScoreThresholds,
     });
     const {config, forkDigestContext, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
