@@ -30,8 +30,7 @@ export class SeenContributionAndProof {
 
   /** Register item as seen in the cache */
   add(slot: Slot, subCommitteeIndex: number, aggregatorIndex: ValidatorIndex): void {
-    const seenCache = this.seenCacheBySlot.getOrDefault(slot);
-    seenCache.add(seenCacheKey(subCommitteeIndex, aggregatorIndex));
+    this.seenCacheBySlot.getOrDefault(slot).add(seenCacheKey(subCommitteeIndex, aggregatorIndex));
   }
 
   /** Prune per head slot */

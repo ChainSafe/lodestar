@@ -121,7 +121,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     } catch (e) {
       switch ((e as BlockError).type.code) {
         // If the block is already known, simply ignore this block.
-        case BlockErrorCode.BLOCK_IS_ALREADY_KNOWN:
+        case BlockErrorCode.ALREADY_KNOWN:
           continue;
         // If the block is the genesis block, simply ignore this block.
         case BlockErrorCode.GENESIS_BLOCK:

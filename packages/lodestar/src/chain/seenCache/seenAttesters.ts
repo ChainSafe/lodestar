@@ -30,8 +30,7 @@ export class SeenAttesters {
       throw Error(`EpochTooLow ${targetEpoch} < ${this.lowestPermissibleEpoch}`);
     }
 
-    const validatorIndexes = this.validatorIndexesByEpoch.getOrDefault(targetEpoch);
-    validatorIndexes.add(validatorIndex);
+    this.validatorIndexesByEpoch.getOrDefault(targetEpoch).add(validatorIndex);
   }
 
   prune(currentEpoch: Epoch): void {

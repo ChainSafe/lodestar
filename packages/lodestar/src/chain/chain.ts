@@ -26,7 +26,13 @@ import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
-import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {
+  SeenAttesters,
+  SeenAggregators,
+  SeenBlockProposers,
+  SeenSyncCommitteeMessages,
+  SeenContributionAndProof,
+} from "./seenCache";
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
@@ -66,6 +72,7 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 

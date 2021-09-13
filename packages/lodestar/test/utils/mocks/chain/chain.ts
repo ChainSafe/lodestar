@@ -26,6 +26,7 @@ import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
   SeenAggregators,
   SeenAttesters,
+  SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "../../../../src/chain/seenCache";
@@ -72,6 +73,7 @@ export class MockBeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 

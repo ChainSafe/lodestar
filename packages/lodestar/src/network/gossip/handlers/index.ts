@@ -68,7 +68,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         curentSlot: chain.clock.currentSlot,
       });
       try {
-        await validateGossipBlock(config, chain, db, {
+        await validateGossipBlock(config, chain, {
           signedBlock,
           reprocess: false,
           prefinalized: false,
