@@ -9,7 +9,9 @@ const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 
 describe(`altair processEpoch - ${stateId}`, () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 10});
+  setBenchOpts({
+    yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
+  });
 
   const stateOg = beforeValue(async () => {
     const state = await getNetworkCachedState(network, slot, 300_000);
@@ -19,6 +21,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
 
   itBench({
     id: `altair processEpoch - ${stateId}`,
+    yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     beforeEach: () => stateOg.value.clone() as CachedBeaconState<allForks.BeaconState>,
     fn: (state) => {
       const epochProcess = allForks.beforeProcessEpoch(state);
@@ -31,7 +34,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
 
   // Only in local environment compute a full breakdown of the cost of each step
   describe(`altair processEpoch steps - ${stateId}`, () => {
-    setBenchOpts({threshold: Infinity, minRuns: 10});
+    setBenchOpts({noThreshold: true});
 
     benchmarkAltairEpochSteps(stateOg, stateId);
   });

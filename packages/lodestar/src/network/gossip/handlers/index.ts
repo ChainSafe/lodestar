@@ -1,11 +1,18 @@
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
-import {BlockErrorCode, BlockGossipError} from "../../../chain/errors";
+import {
+  AttestationError,
+  BlockErrorCode,
+  BlockGossipError,
+  GossipAction,
+  SyncCommitteeError,
+} from "../../../chain/errors";
 import {GossipTopicMap, GossipType, GossipTypeMap} from "../interface";
 import {
   validateGossipAggregateAndProof,
@@ -58,15 +65,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       logger.verbose("Received gossip block", {
         slot: slot,
         root: blockHex,
+        curentSlot: chain.clock.currentSlot,
       });
       try {
-        await validateGossipBlock(config, chain, db, {
+        await validateGossipBlock(config, chain, {
           signedBlock,
           reprocess: false,
           prefinalized: false,
           validSignatures: false,
           validProposerSignature: false,
         });
+
         metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
         // Handler
@@ -74,7 +83,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         try {
           chain.receiveBlock(signedBlock);
         } catch (e) {
-          logger.error("Error receiving block", {}, e);
+          logger.error("Error receiving block", {}, e as Error);
         }
       } catch (e) {
         if (
@@ -83,6 +92,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         ) {
           logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
           chain.receiveBlock(signedBlock);
+        } else if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
+          const archivedPath = chain.persistInvalidSszObject(
+            "signedBlock",
+            config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
+            `gossip_slot_${slot}`
+          );
+          logger.debug("The invalid gossip block was written to", archivedPath);
         }
 
         throw e;
@@ -92,43 +108,67 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {
       const seenTimestampSec = Date.now() / 1000;
 
-      const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
-        chain,
-        signedAggregateAndProof
-      );
+      try {
+        const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+          chain,
+          signedAggregateAndProof
+        );
 
-      metrics?.registerAggregatedAttestation(
-        OpSource.gossip,
-        seenTimestampSec,
-        signedAggregateAndProof,
-        indexedAttestation
-      );
+        metrics?.registerAggregatedAttestation(
+          OpSource.gossip,
+          seenTimestampSec,
+          signedAggregateAndProof,
+          indexedAttestation
+        );
 
-      // TODO: Add DoS resistant pending attestation pool
-      // switch (e.type.code) {
-      //   case AttestationErrorCode.FUTURE_SLOT:
-      //     chain.pendingAttestations.putBySlot(e.type.attestationSlot, attestation);
-      //     break;
-      //   case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-      //   case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-      //     chain.pendingAttestations.putByBlock(e.type.root, attestation);
-      //     break;
-      // }
+        // TODO: Add DoS resistant pending attestation pool
+        // switch (e.type.code) {
+        //   case AttestationErrorCode.FUTURE_SLOT:
+        //     chain.pendingAttestations.putBySlot(e.type.attestationSlot, attestation);
+        //     break;
+        //   case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
+        //   case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
+        //     chain.pendingAttestations.putByBlock(e.type.root, attestation);
+        //     break;
+        // }
 
-      // Handler
-      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
+        // Handler
+        const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        indexedAttestation.attestingIndices as ValidatorIndex[],
-        committeeIndices
-      );
+        chain.aggregatedAttestationPool.add(
+          aggregatedAttestation,
+          indexedAttestation.attestingIndices as ValidatorIndex[],
+          committeeIndices
+        );
+      } catch (e) {
+        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+          const archivedPath = chain.persistInvalidSszObject(
+            "signedAggregatedAndProof",
+            ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
+            toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
+          );
+          logger.debug("The invalid gossip aggregate and proof was written to", archivedPath, e);
+        }
+        throw e;
+      }
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}) => {
       const seenTimestampSec = Date.now() / 1000;
-
-      const {indexedAttestation} = await validateGossipAttestation(chain, attestation, subnet);
+      let indexedAttestation: phase0.IndexedAttestation | undefined = undefined;
+      try {
+        indexedAttestation = (await validateGossipAttestation(chain, attestation, subnet)).indexedAttestation;
+      } catch (e) {
+        if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+          const archivedPath = chain.persistInvalidSszObject(
+            "attestation",
+            ssz.phase0.Attestation.serialize(attestation),
+            toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
+          );
+          logger.debug("The invalid gossip attestation was written to", archivedPath);
+        }
+        throw e;
+      }
 
       metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
 
@@ -143,7 +183,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.attestationPool.add(attestation);
       } catch (e) {
-        logger.error("Error adding attestation to pool", {subnet}, e);
+        logger.error("Error adding attestation to pool", {subnet}, e as Error);
       }
     },
 
@@ -152,7 +192,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.voluntaryExit.add(voluntaryExit).catch((e) => {
+      db.voluntaryExit.add(voluntaryExit).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
@@ -162,7 +202,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.proposerSlashing.add(proposerSlashing).catch((e) => {
+      db.proposerSlashing.add(proposerSlashing).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
@@ -172,32 +212,57 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
       // Handler
 
-      db.attesterSlashing.add(attesterSlashing).catch((e) => {
+      db.attesterSlashing.add(attesterSlashing).catch((e: Error) => {
         logger.error("Error adding attesterSlashing to pool", {}, e);
       });
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
-      await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+      try {
+        await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+      } catch (e) {
+        if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+          const archivedPath = chain.persistInvalidSszObject(
+            "contributionAndProof",
+            ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
+            toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
+          );
+          logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
+        }
+        throw e;
+      }
 
       // Handler
 
       try {
         chain.syncContributionAndProofPool.add(contributionAndProof.message);
       } catch (e) {
-        logger.error("Error adding to contributionAndProof pool", {}, e);
+        logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
-      const {indexInSubCommittee} = await validateGossipSyncCommittee(chain, syncCommittee, subnet);
+      let indexInSubCommittee = 0;
+      try {
+        indexInSubCommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubCommittee;
+      } catch (e) {
+        if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+          const archivedPath = chain.persistInvalidSszObject(
+            "syncCommittee",
+            ssz.altair.SyncCommitteeMessage.serialize(syncCommittee),
+            toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(syncCommittee))
+          );
+          logger.debug("The invalid gossip sync committee was written to", archivedPath);
+        }
+        throw e;
+      }
 
       // Handler
 
       try {
         chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubCommittee);
       } catch (e) {
-        logger.error("Error adding to syncCommittee pool", {subnet}, e);
+        logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }
     },
   };

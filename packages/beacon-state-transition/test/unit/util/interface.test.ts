@@ -21,7 +21,7 @@ describe("CachedBeaconState", function () {
           "0x84105a985058fc8740a48bf1ede9d223ef09e8c6b1735ba0a55cf4a9ff2ff92376b778798365e488dab07a652eb04576"
         ),
         withdrawalCredentials: Buffer.alloc(32),
-        effectiveBalance: BigInt(1000000),
+        effectiveBalance: 1000000,
         slashed: false,
         activationEligibilityEpoch: i + 10,
         activationEpoch: i,
@@ -45,7 +45,10 @@ describe("CachedBeaconState", function () {
 
   it("should modify both state and wrappedState", () => {
     const oldFlatValidator = wrappedState.validators[1000];
-    wrappedState.validators.update(1000, {activationEpoch: 2020, exitEpoch: 2030});
+    const validator = wrappedState.validators[1000];
+    validator.activationEpoch = 2020;
+    validator.exitEpoch = 2030;
+
     expect(wrappedState.validators[1000].activationEpoch).to.be.equal(2020);
     expect(wrappedState.validators[1000].exitEpoch).to.be.equal(2030);
     // other property is the same
@@ -69,7 +72,7 @@ describe("CachedBeaconState", function () {
     wrappedState.validators.push({
       pubkey: Buffer.alloc(48),
       withdrawalCredentials: Buffer.alloc(32),
-      effectiveBalance: BigInt(1000000),
+      effectiveBalance: 1000000,
       slashed: false,
       activationEligibilityEpoch: NUM_VALIDATORS + 10,
       activationEpoch: NUM_VALIDATORS,

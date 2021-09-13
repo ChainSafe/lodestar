@@ -14,10 +14,14 @@ export async function validateGossipVoluntaryExit(
     });
   }
 
-  const state = await chain.regen.getCheckpointState({
-    root: chain.forkChoice.getHeadRoot(),
-    epoch: voluntaryExit.message.epoch,
-  });
+  // What state should the voluntaryExit validate against?
+  //
+  // The only condtion that is time sensitive and may require a non-head state is
+  // -> Validator is active && validator has not initiated exit
+  // The voluntaryExit.epoch must be in the past but the validator's status may change in recent epochs.
+  // We dial the head state to the current epoch to get the current status of the validator. This is
+  // relevant on periods of many skipped slots.
+  const state = await chain.getHeadStateAtCurrentEpoch();
 
   try {
     // verifySignature = false, verified in batch below

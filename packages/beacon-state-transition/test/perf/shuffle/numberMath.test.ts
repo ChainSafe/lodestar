@@ -1,8 +1,6 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 
 describe.skip("shuffle number math ops", () => {
-  setBenchOpts({maxMs: 10 * 1000});
-
   const forRuns = 100e5;
   const j = forRuns / 2;
 

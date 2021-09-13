@@ -34,6 +34,7 @@ const opts: INetworkOptions = {
 
 describe("network", function () {
   if (this.timeout() < 5000) this.timeout(5000);
+  this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

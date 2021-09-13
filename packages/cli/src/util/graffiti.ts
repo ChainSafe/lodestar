@@ -12,7 +12,7 @@ export function getDefaultGraffiti(): string {
     return `${lodestarPackageName}-${version}`;
   } catch (e) {
     // eslint-disable-next-line no-console
-    console.error("Error guessing lodestar version", e);
+    console.error("Error guessing lodestar version", e as Error);
     return lodestarPackageName;
   }
 }

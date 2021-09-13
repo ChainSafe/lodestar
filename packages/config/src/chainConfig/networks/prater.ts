@@ -16,6 +16,18 @@ export const praterChainConfig: IChainConfig = {
 
   // Mar-01-2021 08:53:32 AM +UTC
   MIN_GENESIS_TIME: 1614588812,
-  GENESIS_DELAY: 1919188,
+  // Prater area code (Vienna)
   GENESIS_FORK_VERSION: b("0x00001020"),
+  // Customized for Prater: 1919188 seconds (Mar-23-2021 02:00:00 PM +UTC)
+  GENESIS_DELAY: 1919188,
+
+  // Forking
+  ALTAIR_FORK_VERSION: b("0x01001020"),
+  ALTAIR_FORK_EPOCH: 36660,
+  // Merge
+  MERGE_FORK_VERSION: b("0x02001020"),
+  MERGE_FORK_EPOCH: Infinity,
+  // Sharding
+  SHARDING_FORK_VERSION: b("0x03001020"),
+  SHARDING_FORK_EPOCH: Infinity,
 };

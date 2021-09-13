@@ -12,7 +12,7 @@ import {altair, phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {Epoch, ValidatorIndex, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {ByteVector, fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
@@ -95,7 +95,7 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
   }
   // withdrawal
   if (validator.withdrawableEpoch <= currentEpoch) {
-    return validator.effectiveBalance !== BigInt(0) ? "withdrawal_possible" : "withdrawal_done";
+    return validator.effectiveBalance !== 0 ? "withdrawal_possible" : "withdrawal_done";
   }
   throw new Error("ValidatorStatus unknown");
 }
@@ -103,7 +103,7 @@ export function getValidatorStatus(validator: phase0.Validator, currentEpoch: Ep
 export function toValidatorResponse(
   index: ValidatorIndex,
   validator: phase0.Validator,
-  balance: Gwei,
+  balance: number,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse {
   return {
@@ -227,14 +227,14 @@ async function stateBySlot(
 export function filterStateValidatorsByStatuses(
   statuses: string[],
   state: allForks.BeaconState,
-  chain: IBeaconChain,
+  pubkey2index: allForks.PubkeyIndexMap,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
   const validators = Array.from(state.validators);
   const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
   for (const validator of readonlyValues(filteredValidators)) {
-    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, chain);
+    const validatorIndex = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
     if (validatorIndex && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
       responses.push(toValidatorResponse(validatorIndex, validator, state.balances[validatorIndex], currentEpoch));
     }
@@ -284,7 +284,7 @@ async function getFinalizedState(
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | ByteVector,
   state: allForks.BeaconState,
-  chain: IBeaconChain
+  pubkey2index: allForks.PubkeyIndexMap
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "number") {
@@ -292,7 +292,7 @@ export function getStateValidatorIndex(
       validatorIndex = id;
     }
   } else {
-    validatorIndex = chain.getHeadState().pubkey2index.get(id) ?? undefined;
+    validatorIndex = pubkey2index.get(id) ?? undefined;
     // validator added later than given stateId
     if (validatorIndex && validatorIndex >= state.validators.length) {
       validatorIndex = undefined;

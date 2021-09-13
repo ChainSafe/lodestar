@@ -71,7 +71,7 @@ async function runAltairChainSimulator(): Promise<void> {
   }
 }
 
-runAltairChainSimulator().catch((e) => {
+runAltairChainSimulator().catch((e: Error) => {
   console.error(e);
   process.exit(1);
 });

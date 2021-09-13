@@ -185,7 +185,7 @@ export class PeerManager {
           return this.onStatus(peer, request.body);
       }
     } catch (e) {
-      this.logger.error("Error onRequest handler", {}, e);
+      this.logger.error("Error onRequest handler", {}, e as Error);
     }
   };
 
@@ -238,7 +238,7 @@ export class PeerManager {
       if (e instanceof IrrelevantPeerError) {
         this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});
       } else {
-        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e);
+        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e as Error);
       }
 
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
@@ -282,7 +282,7 @@ export class PeerManager {
       const localStatus = this.chain.getStatus();
       await Promise.all(peers.map(async (peer) => this.requestStatus(peer, localStatus)));
     } catch (e) {
-      this.logger.verbose("Error requesting new status to peers", {}, e);
+      this.logger.verbose("Error requesting new status to peers", {}, e as Error);
     }
   }
 
@@ -324,7 +324,7 @@ export class PeerManager {
 
     if (discv5Queries.length > 0 && !this.opts.disablePeerDiscovery) {
       // It's a promise due to crypto lib calls only
-      this.discovery.discoverSubnetPeers(discv5Queries).catch((e) => {
+      this.discovery.discoverSubnetPeers(discv5Queries).catch((e: Error) => {
         this.logger.error("Error on discoverSubnetPeers", {}, e);
       });
     }
@@ -333,7 +333,7 @@ export class PeerManager {
       try {
         this.discovery.discoverPeers(peersToConnect);
       } catch (e) {
-        this.logger.error("Error on discoverPeers", {}, e);
+        this.logger.error("Error on discoverPeers", {}, e as Error);
       }
     }
 
@@ -419,7 +419,7 @@ export class PeerManager {
     try {
       await this.libp2p.hangUp(peer);
     } catch (e) {
-      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e);
+      this.logger.warn("Unclean disconnect", {peer: prettyPrintPeerId(peer)}, e as Error);
     }
   }
 
@@ -428,7 +428,7 @@ export class PeerManager {
       this.metrics?.peerGoodbyeSent.inc({reason: GOODBYE_KNOWN_CODES[goodbye.toString()] || ""});
       await this.reqResp.goodbye(peer, BigInt(goodbye));
     } catch (e) {
-      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e);
+      this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       void this.disconnect(peer);
     }

@@ -2,7 +2,7 @@ import deepmerge from "deepmerge";
 import {Json} from "@chainsafe/ssz";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject, RecursivePartial} from "@chainsafe/lodestar-utils";
-import {writeFile, readFileIfExists} from "../util";
+import {writeFile, readFile} from "../util";
 import {getNetworkBeaconNodeOptions, NetworkName} from "../networks";
 
 export class BeaconNodeOptions {
@@ -25,7 +25,7 @@ export class BeaconNodeOptions {
   }) {
     this.beaconNodeOptions = mergeBeaconNodeOptions(
       network ? getNetworkBeaconNodeOptions(network) : {},
-      configFile ? readBeaconNodeOptionsIfExists(configFile) : {},
+      configFile ? readBeaconNodeOptions(configFile) : {},
       beaconNodeOptionsCli
     );
   }
@@ -61,8 +61,8 @@ export function writeBeaconNodeOptions(filename: string, config: Partial<IBeacon
  * This needs to be a synchronous function because it will be run as part of the yargs 'build' step
  * If the config file is not found, the default values will apply.
  */
-export function readBeaconNodeOptionsIfExists(filepath: string): RecursivePartial<IBeaconNodeOptions> {
-  return readFileIfExists(filepath) || {};
+export function readBeaconNodeOptions(filepath: string): RecursivePartial<IBeaconNodeOptions> {
+  return readFile(filepath);
 }
 
 /**

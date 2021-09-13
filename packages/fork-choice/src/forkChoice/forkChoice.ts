@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, Gwei, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -56,14 +56,14 @@ export class ForkChoice implements IForkChoice {
    *
    * This should be the balances of the state at fcStore.justifiedCheckpoint
    */
-  justifiedBalances: Gwei[];
+  justifiedBalances: number[];
   /**
    * Balances tracked in the protoArray, or soon to be tracked
    * Indexed by validator index
    *
    * This should be the balances of the state at fcStore.bestJustifiedCheckpoint
    */
-  bestJustifiedBalances: Gwei[];
+  bestJustifiedBalances: number[];
   /**
    * Attestations that arrived at the current slot and must be queued for later processing.
    * NOT currently tracked in the protoArray
@@ -102,7 +102,7 @@ export class ForkChoice implements IForkChoice {
     fcStore: IForkChoiceStore;
     protoArray: ProtoArray;
     queuedAttestations: Set<IQueuedAttestation>;
-    justifiedBalances: Gwei[];
+    justifiedBalances: number[];
     metrics?: IForkChoiceMetrics | null;
   }) {
     this.config = config;
@@ -196,11 +196,13 @@ export class ForkChoice implements IForkChoice {
           this.justifiedBalances,
           this.justifiedBalances
         );
-        this.protoArray.applyScoreChanges(
+        this.protoArray.applyScoreChanges({
           deltas,
-          this.fcStore.justifiedCheckpoint.epoch,
-          this.fcStore.finalizedCheckpoint.epoch
-        );
+          justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
+          justifiedRoot: toHexString(this.fcStore.justifiedCheckpoint.root),
+          finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
+          finalizedRoot: toHexString(this.fcStore.finalizedCheckpoint.root),
+        });
         this.synced = true;
       }
       const headRoot = this.protoArray.findHead(toHexString(this.fcStore.justifiedCheckpoint.root));
@@ -262,7 +264,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: Gwei[]): void {
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -346,12 +348,16 @@ export class ForkChoice implements IForkChoice {
       // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
       // See https://github.com/ChainSafe/lodestar/issues/2258
       this.fcStore.finalizedCheckpoint = finalizedCheckpoint.valueOf() as phase0.Checkpoint;
+      this.synced = false;
 
       if (
         (!ssz.phase0.Checkpoint.equals(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
           stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
         !ssz.Root.equals(
-          this.getAncestor(this.fcStore.justifiedCheckpoint.root, finalizedSlot),
+          this.getAncestor(
+            this.fcStore.justifiedCheckpoint.root,
+            computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch)
+          ),
           this.fcStore.finalizedCheckpoint.root
         )
       ) {
@@ -385,7 +391,9 @@ export class ForkChoice implements IForkChoice {
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
       justifiedEpoch: stateJustifiedEpoch,
+      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
+      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
     });
   }
 
@@ -586,13 +594,13 @@ export class ForkChoice implements IForkChoice {
     return this.protoArray.nodes.filter((node) => node.slot === slot).map(toBlockSummary);
   }
 
-  private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
+  private updateJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: number[]): void {
     this.synced = false;
     this.justifiedBalances = justifiedBalances;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
 
-  private updateBestJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: Gwei[]): void {
+  private updateBestJustified(justifiedCheckpoint: phase0.Checkpoint, justifiedBalances: number[]): void {
     this.bestJustifiedBalances = justifiedBalances;
     this.fcStore.bestJustifiedCheckpoint = justifiedCheckpoint;
   }
@@ -788,7 +796,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Add a validator's latest message to the tracked votes
    */
-  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: BlockRootHex): void {
+  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
     this.synced = false;
     const vote = this.votes[validatorIndex];
     if (!vote) {
@@ -849,8 +857,14 @@ export class ForkChoice implements IForkChoice {
       return;
     }
 
-    if (this.fcStore.bestJustifiedCheckpoint.epoch > this.fcStore.justifiedCheckpoint.epoch) {
-      this.updateJustified(this.fcStore.bestJustifiedCheckpoint, this.bestJustifiedBalances);
+    const {bestJustifiedCheckpoint, justifiedCheckpoint, finalizedCheckpoint} = this.fcStore;
+    // Update store.justified_checkpoint if a better checkpoint on the store.finalized_checkpoint chain
+    if (bestJustifiedCheckpoint.epoch > justifiedCheckpoint.epoch) {
+      const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
+      const ancestorAtFinalizedSlot = this.getAncestor(bestJustifiedCheckpoint.root, finalizedSlot);
+      if (ssz.Root.equals(ancestorAtFinalizedSlot, finalizedCheckpoint.root)) {
+        this.updateJustified(this.fcStore.bestJustifiedCheckpoint, this.bestJustifiedBalances);
+      }
     }
   }
 }

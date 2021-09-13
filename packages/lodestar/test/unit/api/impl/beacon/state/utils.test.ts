@@ -11,11 +11,11 @@ import {
   getValidatorStatus,
 } from "../../../../../../src/api/impl/beacon/state/utils";
 import {IBeaconChain} from "../../../../../../src/chain";
+import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates";
 import {generateBlockSummary} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {generateValidators} from "../../../../../utils/validator";
-import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/tasks/tasks/archiveStates";
 
 use(chaiAsPromised);
 
@@ -195,7 +195,7 @@ describe("beacon state api utils", function () {
     it("should return WITHDRAWAL_POSSIBLE", function () {
       const validator = {
         withdrawableEpoch: 1,
-        effectiveBalance: BigInt(32),
+        effectiveBalance: 32,
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);
@@ -204,7 +204,7 @@ describe("beacon state api utils", function () {
     it("should return WITHDRAWAL_DONE", function () {
       const validator = {
         withdrawableEpoch: 1,
-        effectiveBalance: BigInt(0),
+        effectiveBalance: 0,
       } as phase0.Validator;
       const currentEpoch = 1;
       const status = getValidatorStatus(validator, currentEpoch);

@@ -5,6 +5,6 @@ export const mochaHooks: RootHookObject = {
   beforeAll: (done) => {
     init("blst-native")
       .then(() => done())
-      .catch((e) => done(e));
+      .catch((e: Error) => done(e));
   },
 };

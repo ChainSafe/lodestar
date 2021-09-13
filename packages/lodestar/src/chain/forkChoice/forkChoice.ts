@@ -58,7 +58,9 @@ export class LodestarForkChoice extends ForkChoice {
         stateRoot: toHexString(blockHeader.stateRoot),
         blockRoot: toHexString(checkpoint.root),
         justifiedEpoch: justifiedCheckpoint.epoch,
+        justifiedRoot: toHexString(justifiedCheckpoint.root),
         finalizedEpoch: finalizedCheckpoint.epoch,
+        finalizedRoot: toHexString(finalizedCheckpoint.root),
       }),
 
       queuedAttestations: new Set(),

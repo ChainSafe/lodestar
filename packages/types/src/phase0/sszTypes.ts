@@ -17,7 +17,17 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
-import {BitListType, BitVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
+import {
+  BitListType,
+  BitVectorType,
+  ContainerLeafNodeStructType,
+  ContainerType,
+  List,
+  ListType,
+  RootType,
+  Vector,
+  VectorType,
+} from "@chainsafe/ssz";
 import {ssz as primitiveSsz} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
 import * as phase0 from "./types";
@@ -90,7 +100,7 @@ export const DepositMessage = new ContainerType<phase0.DepositMessage>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
   },
 });
 
@@ -98,7 +108,7 @@ export const DepositData = new ContainerType<phase0.DepositData>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    amount: Gwei,
+    amount: Number64,
     signature: BLSSignature,
   },
 });
@@ -173,11 +183,11 @@ export const HistoricalBatch = new ContainerType<phase0.HistoricalBatch>({
   },
 });
 
-export const Validator = new ContainerType<phase0.Validator>({
+export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
   fields: {
     pubkey: BLSPubkey,
     withdrawalCredentials: Bytes32,
-    effectiveBalance: Gwei,
+    effectiveBalance: Number64,
     slashed: Boolean,
     activationEligibilityEpoch: Epoch,
     activationEpoch: Epoch,
@@ -185,6 +195,10 @@ export const Validator = new ContainerType<phase0.Validator>({
     withdrawableEpoch: Epoch,
   },
 });
+
+// Export as stand-alone for direct tree optimizations
+export const Validators = new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT});
+export const Balances = new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT});
 
 // Misc dependants
 
@@ -332,8 +346,8 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     }),
     eth1DepositIndex: Number64,
     // Registry
-    validators: new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT}),
-    balances: new ListType({elementType: Gwei, limit: VALIDATOR_REGISTRY_LIMIT}),
+    validators: Validators,
+    balances: Balances,
     randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
     // Slashings
     slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),

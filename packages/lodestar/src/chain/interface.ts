@@ -10,7 +10,13 @@ import {IStateRegenerator} from "./regen";
 import {BlockPool} from "./blocks";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
-import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {
+  SeenAttesters,
+  SeenAggregators,
+  SeenBlockProposers,
+  SeenSyncCommitteeMessages,
+  SeenContributionAndProof,
+} from "./seenCache";
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
@@ -73,16 +79,17 @@ export interface IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
   readonly seenAggregators: SeenAggregators;
+  readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
   /** Stop beacon chain processing */
   close(): void;
+  persistToDisk(): Promise<void>;
   getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
-  getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>>;
   getHeadBlock(): Promise<allForks.SignedBeaconBlock | null>;
 
   /**
@@ -92,7 +99,6 @@ export interface IBeaconChain {
    * @param slot
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
-  getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
   getFinalizedCheckpoint(): phase0.Checkpoint;
 
@@ -119,4 +125,16 @@ export interface IBeaconChain {
   getClockForkDigest(): phase0.ForkDigest;
 
   getStatus(): phase0.Status;
+
+  /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
+  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
 }
+
+export type SSZObjectType =
+  | "state"
+  | "signedBlock"
+  | "block"
+  | "attestation"
+  | "signedAggregatedAndProof"
+  | "syncCommittee"
+  | "contributionAndProof";

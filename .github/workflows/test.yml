@@ -22,7 +22,7 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-ignore-optional-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile --ignore-optional
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
@@ -39,5 +39,7 @@ jobs:
         run: yarn coverage
       - name: E2e tests
         run: yarn test:e2e
-      - name: README check
-        run: yarn run check-readme
+      # Tool incompatible with current Typescript version
+      # See https://github.com/bbc/typescript-docs-verifier/issues/1
+      # - name: README check
+      #   run: yarn run check-readme

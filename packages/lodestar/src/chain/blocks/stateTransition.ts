@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals, toHexString} from "@chainsafe/ssz";
-import {Gwei, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {assert} from "@chainsafe/lodestar-utils";
 import {
   CachedBeaconState,
@@ -17,6 +17,7 @@ import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {IBlockJob} from "../interface";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
+import {BlockError, BlockErrorCode} from "../errors";
 
 /**
  * Starting at `state.slot`,
@@ -84,18 +85,23 @@ export async function runStateTransition(
     state,
     job.signedBlock,
     {
-      verifyStateRoot: true,
+      verifyStateRoot: false,
       verifyProposer: !job.validSignatures && !job.validProposerSignature,
       verifySignatures: !job.validSignatures,
     },
     metrics
   );
 
+  const blockStateRoot = job.signedBlock.message.stateRoot;
+  if (!ssz.Root.equals(blockStateRoot, postState.tree.root)) {
+    throw new BlockError(job.signedBlock, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+  }
+
   const oldHead = forkChoice.getHead();
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  let justifiedBalances: Gwei[] = [];
+  let justifiedBalances: number[] = [];
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(postState.currentJustifiedCheckpoint);
     if (!justifiedState) {
@@ -103,7 +109,6 @@ export async function runStateTransition(
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
       throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
     }
-    // TODO - PERFORMANCE WARNING - NAIVE CODE
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);

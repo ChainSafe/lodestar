@@ -13,12 +13,14 @@ import {fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {ISyncOptions} from "./options";
+import {IMetrics} from "../metrics";
 
 export class BeaconSync implements IBeaconSync {
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly metrics: IMetrics | null;
   private readonly opts: ISyncOptions;
 
   private readonly rangeSync: RangeSync;
@@ -42,6 +44,7 @@ export class BeaconSync implements IBeaconSync {
     this.config = config;
     this.network = network;
     this.chain = chain;
+    this.metrics = metrics;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, this.opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
@@ -207,6 +210,7 @@ export class BeaconSync implements IBeaconSync {
       return;
     }
 
+    this.metrics?.syncUnknownParentSyncs.inc(1);
     this.processingRoots.add(parentRootHex);
     this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
 
@@ -215,7 +219,7 @@ export class BeaconSync implements IBeaconSync {
       this.chain.receiveBlock(block);
       this.logger.verbose("Found UnknownBlockRoot", {parentRootHex});
     } catch (e) {
-      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e);
+      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e as Error);
     } finally {
       this.processingRoots.delete(parentRootHex);
     }

@@ -93,7 +93,7 @@ export class SyncCommitteeDutiesService {
 
     await Promise.all([
       // Run pollSyncCommittees immediately for all known local indices
-      this.pollSyncCommittees(currentEpoch, this.indicesService.getAllLocalIndices()).catch((e) => {
+      this.pollSyncCommittees(currentEpoch, this.indicesService.getAllLocalIndices()).catch((e: Error) => {
         this.logger.error("Error on poll SyncDuties", {epoch: currentEpoch}, e);
       }),
 
@@ -101,7 +101,7 @@ export class SyncCommitteeDutiesService {
       this.indicesService
         .pollValidatorIndices()
         .then((newIndices) => this.pollSyncCommittees(currentEpoch, newIndices))
-        .catch((e) => {
+        .catch((e: Error) => {
           this.logger.error("Error on poll indices and SyncDuties", {epoch: currentEpoch}, e);
         }),
     ]);
@@ -129,7 +129,7 @@ export class SyncCommitteeDutiesService {
     const nextPeriodEpoch = currentEpoch + EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
     for (const epoch of [currentEpoch, nextPeriodEpoch]) {
       // Download the duties and update the duties for the current and next period.
-      await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e) => {
+      await this.pollSyncCommitteesForEpoch(epoch, indexArr).catch((e: Error) => {
         this.logger.error("Failed to download SyncDuties", {epoch}, e);
       });
     }
@@ -167,7 +167,7 @@ export class SyncCommitteeDutiesService {
     // If there are any subscriptions, push them out to the beacon node.
     if (syncCommitteeSubscriptions.length > 0) {
       // TODO: Should log or throw?
-      await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e) => {
+      await this.api.validator.prepareSyncCommitteeSubnets(syncCommitteeSubscriptions).catch((e: Error) => {
         throw extendError(e, "Failed to subscribe to sync committee subnets");
       });
     }
@@ -182,7 +182,7 @@ export class SyncCommitteeDutiesService {
       return;
     }
 
-    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e) => {
+    const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
     const dependentRoot = syncDuties.dependentRoot;

@@ -5,3 +5,8 @@ export type IGauge<T extends string = string> = Pick<Gauge<T>, "inc" | "set"> & 
 };
 
 export type IHistogram<T extends string = string> = Pick<Histogram<T>, "observe" | "startTimer">;
+
+export type IAvgMinMax = {
+  addGetValuesFn(getValuesFn: () => number[]): void;
+  set(values: number[]): void;
+};

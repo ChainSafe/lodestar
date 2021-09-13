@@ -1,20 +1,18 @@
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {MAX_DEPOSITS, MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {
+  EFFECTIVE_BALANCE_INCREMENT,
+  MAX_DEPOSITS,
+  MAX_EFFECTIVE_BALANCE,
+  SLOTS_PER_EPOCH,
+} from "@chainsafe/lodestar-params";
 import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from ".";
-import {
-  getActiveValidatorIndices,
-  getCurrentEpoch,
-  computeEpochAtSlot,
-  ZERO_HASH,
-  getTotalBalance,
-  getChurnLimit,
-} from "../..";
+import {getActiveValidatorIndices, getCurrentEpoch, computeEpochAtSlot, ZERO_HASH, getChurnLimit} from "../..";
 
-export const ETH_TO_GWEI = BigInt(10 ** 9);
+export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = BigInt(10);
 
 /**
@@ -25,7 +23,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
   config: IChainForkConfig,
   state: CachedBeaconState<allForks.BeaconState>
 ): Epoch {
-  return state.epochCtx.currentShuffling.epoch - computeWeakSubjectivityPeriod(config, state);
+  return state.epochCtx.currentShuffling.epoch - computeWeakSubjectivityPeriodCachedState(config, state);
 }
 
 /**
@@ -36,24 +34,51 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
     A detailed calculation can be found at:
     https://github.com/runtimeverification/beacon-chain-verification/blob/master/weak-subjectivity/weak-subjectivity-analysis.pdf
  */
-export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: allForks.BeaconState): number {
-  const indices = getActiveValidatorIndices(state, getCurrentEpoch(state));
+export function computeWeakSubjectivityPeriodCachedState(
+  config: IChainForkConfig,
+  state: CachedBeaconState<allForks.BeaconState>
+): number {
+  const activeValidatorCount = state.currentShuffling.activeIndices.length;
   return computeWeakSubjectivityPeriodFromConstituents(
-    indices.length,
-    getTotalBalance(state, indices),
-    getChurnLimit(config, indices.length),
+    activeValidatorCount,
+    state.totalActiveBalanceByIncrement,
+    getChurnLimit(config, activeValidatorCount),
+    config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
+  );
+}
+
+/**
+ * Same to computeWeakSubjectivityPeriodCachedState but for normal state
+ * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceByIncrement manually
+ */
+export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: allForks.BeaconState): number {
+  const activeIndices = getActiveValidatorIndices(state, getCurrentEpoch(state));
+  let totalActiveBalanceByIncrement = 0;
+  for (const index of activeIndices) {
+    totalActiveBalanceByIncrement += Math.floor(state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+  }
+  if (totalActiveBalanceByIncrement <= 1) {
+    totalActiveBalanceByIncrement = 1;
+  }
+  return computeWeakSubjectivityPeriodFromConstituents(
+    activeIndices.length,
+    totalActiveBalanceByIncrement,
+    getChurnLimit(config, activeIndices.length),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );
 }
 
 export function computeWeakSubjectivityPeriodFromConstituents(
   activeValidatorCount: number,
-  totalBalance: bigint,
+  totalBalanceByIncrement: number,
   churnLimit: number,
   minWithdrawabilityDelay: number
 ): number {
   const N = activeValidatorCount;
-  const t = Number(totalBalance / BigInt(N) / ETH_TO_GWEI);
+  // originally const t = Number(totalBalance / BigInt(N) / BigInt(ETH_TO_GWEI));
+  // totalBalanceByIncrement = totalBalance / MAX_EFFECTIVE_BALANCE and MAX_EFFECTIVE_BALANCE = ETH_TO_GWEI atm
+  // we need to change this calculation just in case MAX_EFFECTIVE_BALANCE != ETH_TO_GWEI
+  const t = Math.floor(totalBalanceByIncrement / N);
   const T = Number(MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI);
   const delta = churnLimit;
   // eslint-disable-next-line @typescript-eslint/naming-convention

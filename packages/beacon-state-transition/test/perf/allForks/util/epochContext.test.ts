@@ -1,5 +1,5 @@
 import {Epoch} from "@chainsafe/lodestar-types";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {allForks, computeEpochAtSlot} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 
@@ -22,8 +22,6 @@ describe("epochCtx.getCommitteeAssignments", () => {
     if (state.validators.length !== numValidators) throw Error("constant numValidators is wrong");
   });
 
-  setBenchOpts({maxMs: 10 * 1000});
-
   // the new way of getting attester duties
   for (const reqCount of [1, 100, 1000]) {
     const validatorCount = numValidators;
@@ -34,7 +32,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
     itBench({
       id: `getCommitteeAssignments - req ${reqCount} vs - ${validatorCount} vc`,
       // Only run for 1000 in CI to ensure performance does not degrade
-      threshold: reqCount < 1000 ? Infinity : undefined,
+      noThreshold: reqCount < 1000,
       fn: () => {
         state.epochCtx.getCommitteeAssignments(epoch, indices);
       },

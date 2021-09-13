@@ -6,6 +6,7 @@ import {
   number32Type,
   NumberUintType,
   RootType,
+  Number64UintType,
 } from "@chainsafe/ssz";
 
 export const Boolean = booleanType;
@@ -17,7 +18,7 @@ export const Bytes96 = new ByteVectorType({length: 96});
 export const Uint8 = byteType;
 export const Uint16 = new NumberUintType({byteLength: 2});
 export const Uint32 = number32Type;
-export const Number64 = new NumberUintType({byteLength: 8});
+export const Number64 = new Number64UintType();
 export const Uint64 = new BigIntUintType({byteLength: 8});
 export const Uint128 = new BigIntUintType({byteLength: 16});
 export const Uint256 = new BigIntUintType({byteLength: 32});

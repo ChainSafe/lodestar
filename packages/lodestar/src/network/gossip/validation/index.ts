@@ -96,7 +96,7 @@ function getGossipValidatorFn<K extends GossipType>(
       metrics?.gossipValidationAccept.inc({topic: type}, 1);
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
-        logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e);
+        logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
       }
 

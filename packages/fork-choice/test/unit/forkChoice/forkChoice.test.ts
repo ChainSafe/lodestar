@@ -6,6 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 describe("Forkchoice", function () {
   const genesisSlot = 0;
   const genesisEpoch = 0;
+  const genesisRoot = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   const stateRoot = "0xb021a96da54dd89dfafc0e8817e23fe708f5746e924855f49b3f978133c3ac6a";
   const finalizedRoot = "0x86d2ebb56a21be95b9036f4596ff4feaa336acf5fd8739cf39f5d58955b1295b";
@@ -18,7 +19,9 @@ describe("Forkchoice", function () {
     parentRoot,
     blockRoot: finalizedRoot,
     justifiedEpoch: genesisEpoch,
+    justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
+    finalizedRoot: genesisRoot,
   });
 
   // Add block that is a finalized descendant.
@@ -29,7 +32,9 @@ describe("Forkchoice", function () {
     stateRoot,
     targetRoot: finalizedRoot,
     justifiedEpoch: genesisEpoch,
+    justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
+    finalizedRoot: genesisRoot,
   };
 
   const fcStore: IForkChoiceStore = {

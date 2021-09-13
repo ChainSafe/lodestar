@@ -104,7 +104,7 @@ export async function runNodeNotifier({
     if (e instanceof ErrorAborted) {
       return; // Ok
     } else {
-      logger.error("Node notifier error", {}, e);
+      logger.error("Node notifier error", {}, e as Error);
     }
   }
 }

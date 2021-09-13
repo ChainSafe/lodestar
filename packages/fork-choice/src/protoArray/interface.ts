@@ -1,18 +1,15 @@
-import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, RootHex} from "@chainsafe/lodestar-types";
 
-/**
- * HexRoot is a root as a hex string
- * Used for lightweight and easy comparison
- */
-export type HexRoot = string;
+// RootHex is a root as a hex string
+// Used for lightweight and easy comparison
 export const HEX_ZERO_HASH = "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 /**
  * Simplified 'latest message' with previous message
  */
 export interface IVoteTracker {
-  currentRoot: HexRoot;
-  nextRoot: HexRoot;
+  currentRoot: RootHex;
+  nextRoot: RootHex;
   nextEpoch: Epoch;
 }
 
@@ -28,22 +25,24 @@ export interface IProtoBlock {
    * This is useful for upstream fork choice logic.
    */
   slot: Slot;
-  blockRoot: HexRoot;
-  parentRoot: HexRoot;
+  blockRoot: RootHex;
+  parentRoot: RootHex;
   /**
    * The stateRoot is not necessary for ProtoArray either,
    * it also just exists for upstream components (namely attestation verification)
    */
-  stateRoot: HexRoot;
+  stateRoot: RootHex;
   /**
    * The root that would be used for the attestation.data.target.root if a LMD vote was cast for this block.
    *
    * The targetRoot is not necessary for ProtoArray either,
    * it also just exists for upstream components (namely attestation verification)
    */
-  targetRoot: HexRoot;
+  targetRoot: RootHex;
   justifiedEpoch: Epoch;
+  justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
+  finalizedRoot: RootHex;
 }
 
 /**
@@ -52,7 +51,7 @@ export interface IProtoBlock {
  */
 export interface IProtoNode extends IProtoBlock {
   parent?: number;
-  weight: Gwei;
+  weight: number;
   bestChild?: number;
   bestDescendant?: number;
 }

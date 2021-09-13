@@ -26,8 +26,7 @@ export class SeenSyncCommitteeMessages {
 
   /** Register item as seen in the cache */
   add(slot: Slot, subnet: phase0.SubCommitteeIndex, validatorIndex: ValidatorIndex): void {
-    const seenCache = this.seenCacheBySlot.getOrDefault(slot);
-    seenCache.add(seenCacheKey(subnet, validatorIndex));
+    this.seenCacheBySlot.getOrDefault(slot).add(seenCacheKey(subnet, validatorIndex));
   }
 
   /** Prune per clock slot */

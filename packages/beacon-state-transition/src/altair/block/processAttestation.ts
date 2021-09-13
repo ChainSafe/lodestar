@@ -28,11 +28,12 @@ export function processAttestations(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
+  const {effectiveBalances} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
 
   // Process all attestations first and then increase the balance of the proposer once
-  let proposerReward = BigInt(0);
+  let proposerReward = 0;
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -69,7 +70,7 @@ export function processAttestations(
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
-    let totalBalancesWithWeight = BigInt(0);
+    let totalBalancesWithWeight = 0;
     for (const index of attestingIndices) {
       const status = epochParticipation.getStatus(index) as IParticipationStatus;
       const newStatus = {
@@ -83,21 +84,21 @@ export function processAttestations(
        * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
        * proposerRewardNumerator += baseReward * totalWeight
        */
-      const totalWeight =
-        BigInt(!status.timelySource && timelySource) * TIMELY_SOURCE_WEIGHT +
-        BigInt(!status.timelyTarget && timelyTarget) * TIMELY_TARGET_WEIGHT +
-        BigInt(!status.timelyHead && timelyHead) * TIMELY_HEAD_WEIGHT;
+      const tsWeight: number = !status.timelySource && timelySource ? TIMELY_SOURCE_WEIGHT : 0;
+      const ttWeight: number = !status.timelyTarget && timelyTarget ? TIMELY_TARGET_WEIGHT : 0;
+      const thWeight: number = !status.timelyHead && timelyHead ? TIMELY_HEAD_WEIGHT : 0;
+      const totalWeight = tsWeight + ttWeight + thWeight;
 
       if (totalWeight > 0) {
-        // TODO: Cache effectiveBalance in a separate array
-        // TODO: Consider using number instead of bigint for faster math
-        totalBalancesWithWeight += state.validators[index].effectiveBalance * totalWeight;
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        totalBalancesWithWeight += effectiveBalances.get(index)! * totalWeight;
       }
     }
 
-    const totalIncrements = totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT;
+    // Do the discrete math inside the loop to ensure a deterministic result
+    const totalIncrements = Math.floor(totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT);
     const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
-    proposerReward += proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR;
+    proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);

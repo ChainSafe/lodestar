@@ -24,13 +24,14 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await initBLS();
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  await persistOptionsAndConfig(args);
 
   const version = getVersion();
   const gitData = getVersionGitData();
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
+  beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
   beaconNodeOptions.set({metrics: {metadata: {...gitData, version, network: args.network}}});
 

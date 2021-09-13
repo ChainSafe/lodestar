@@ -1,18 +1,20 @@
-import {assert} from "chai";
+import {assert, expect} from "chai";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 
-import {List} from "@chainsafe/ssz";
+import {List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {phase0, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {increaseBalance, decreaseBalance, getTotalBalance} from "../../../src/util";
+import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util";
 
 import {generateValidators} from "../../utils/validator";
-import {generateState} from "../../utils/state";
+import {generateCachedState, generateState} from "../../utils/state";
+import {getEffectiveBalances} from "../../../src";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
     const num = 500;
-    const validatorBalance = BigInt(1000000000000);
+    const validatorBalance = 1e12;
     const validators = generateValidators(num);
     for (const v of validators) {
       v.effectiveBalance = validatorBalance;
@@ -21,30 +23,30 @@ describe("getTotalBalance", () => {
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
-    const expected = BigInt(num) * validatorBalance;
+    const expected = BigInt(num * validatorBalance);
     assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
   });
 
   it("should return correct balances", () => {
     const num = 5;
     const validators = generateValidators(num);
-    const balances = Array.from({length: num}, () => BigInt(0)) as List<Gwei>;
+    const balances = Array.from({length: num}, () => 0) as List<number>;
     const state: phase0.BeaconState = generateState({validators: validators, balances});
     const validatorIndices: ValidatorIndex[] = Array.from({length: num}, (_, i) => i);
 
     const result = getTotalBalance(state, validatorIndices);
     const expected = EFFECTIVE_BALANCE_INCREMENT;
-    assert(result === expected, `Expected: ${expected} :: Result: ${result}`);
+    assert(result === BigInt(expected), `Expected: ${expected} :: Result: ${result}`);
   });
 });
 
 describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    state.balances = [BigInt(0)] as List<Gwei>;
-    const delta = BigInt(5);
-    for (let i = BigInt(1); i < BigInt(10); i++) {
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    state.balances.push(0);
+    const delta = 5;
+    for (let i = 1; i < 10; i++) {
       increaseBalance(state, 0, delta);
       assert(state.balances[0] === delta * i);
     }
@@ -53,23 +55,50 @@ describe("increaseBalance", () => {
 
 describe("decreaseBalance", () => {
   it("should subtract from a validators balance", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    const initial = BigInt(100);
-    state.balances = [initial] as List<Gwei>;
-    const delta = BigInt(5);
-    for (let i = BigInt(1); i < BigInt(10); i++) {
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    const initial = 100;
+    state.balances.push(initial);
+    const delta = 5;
+    for (let i = 1; i < 10; i++) {
       decreaseBalance(state, 0, delta);
       assert(state.balances[0] === initial - delta * i);
     }
   });
   it("should not make a validators balance < 0", () => {
-    const state = generateState();
-    state.validators = generateValidators(1);
-    const initial = BigInt(10);
-    state.balances = [initial] as List<Gwei>;
-    const delta = BigInt(11);
+    const state = generateCachedState();
+    state.validators.push(generateValidators(1)[0]);
+    const initial = 10;
+    state.balances.push(initial);
+    const delta = 11;
     decreaseBalance(state, 0, delta);
-    assert(state.balances[0] === BigInt(0));
+    assert(state.balances[0] === 0);
+  });
+});
+
+describe("getEffectiveBalances", () => {
+  it("should get correct effective balances", () => {
+    const justifiedState = generateCachedState(minimalConfig, {
+      validators: [
+        // not active
+        ...generateValidators(3, {activation: Infinity, exit: Infinity, balance: 32e9}),
+        // active
+        ...generateValidators(4, {activation: 0, exit: Infinity, balance: 32e9}),
+        // not active
+        ...generateValidators(5, {activation: Infinity, exit: Infinity, balance: 32e9}),
+      ] as List<phase0.Validator>,
+    });
+    const justifiedEpoch = justifiedState.currentShuffling.epoch;
+    const effectiveBalances: number[] = [];
+    const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
+    for (let i = 0, len = validators.length; i < len; i++) {
+      const validator = validators[i];
+      effectiveBalances.push(
+        isActiveValidator(validator, justifiedEpoch)
+          ? Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+          : 0
+      );
+    }
+    expect(getEffectiveBalances(justifiedState)).to.be.deep.equal(effectiveBalances, "wrong effectiveBalances");
   });
 });

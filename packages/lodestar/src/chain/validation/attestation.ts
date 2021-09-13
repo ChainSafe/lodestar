@@ -13,6 +13,7 @@ import {
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
+import {RegenCaller} from "../regen";
 
 const {EpochContextError, EpochContextErrorCode, computeSubnetForSlot, getIndexedAttestationSignatureSet} = allForks;
 
@@ -84,12 +85,14 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  const attestationTargetState = await chain.regen.getCheckpointState(attTarget).catch((e) => {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
-      error: e as Error,
+  const attestationTargetState = await chain.regen
+    .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
+    .catch((e: Error) => {
+      throw new AttestationError(GossipAction.REJECT, {
+        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+        error: e as Error,
+      });
     });
-  });
 
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)

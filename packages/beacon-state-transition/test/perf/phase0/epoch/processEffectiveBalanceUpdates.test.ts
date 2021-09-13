@@ -1,4 +1,4 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {allForks} from "../../../../src";
@@ -14,8 +14,6 @@ import {StateEpoch} from "../../types";
 // statuses: All balances are low enough to trigger an effective balance change
 
 describe("phase0 processEffectiveBalanceUpdates", () => {
-  setBenchOpts({maxMs: 60 * 1000, minRuns: 5});
-
   const vc = numValidators;
   const testCases: {id: string; changeRatio: number}[] = [
     // Normal (optimal) mainnet network conditions: No effectiveBalance is udpated
@@ -32,6 +30,8 @@ describe("phase0 processEffectiveBalanceUpdates", () => {
   for (const {id, changeRatio} of testCases) {
     itBench<StateEpoch, StateEpoch>({
       id: `phase0 processEffectiveBalanceUpdates - ${vc} ${id}`,
+      yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
+      minRuns: 5, // Worst case is very slow
       before: () => getEffectiveBalanceTestData(vc, changeRatio),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
       fn: ({state, epochProcess}) => allForks.processEffectiveBalanceUpdates(state, epochProcess),
@@ -57,13 +57,15 @@ function getEffectiveBalanceTestData(
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
     // Set current effective balance to max
-    effectiveBalance: BigInt(32e9),
+    effectiveBalance: 32e9,
   };
 
+  const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
     // Set flat balance to lower value
-    const balance = i < vc * changeRatio ? BigInt(30e9) : BigInt(32e9);
+    const balance = i < vc * changeRatio ? 30e9 : 32e9;
     stateTree.balances.push(balance);
+    balances.push(balance);
 
     // Initialize tree
     stateTree.validators.push(activeValidator);
@@ -71,6 +73,7 @@ function getEffectiveBalanceTestData(
 
   const cachedBeaconState = createCachedBeaconState(config, stateTree, {skipSyncPubkeys: true});
   const epochProcess = beforeProcessEpoch(cachedBeaconState);
+  epochProcess.balances = balances;
 
   return {
     state: cachedBeaconState as allForks.CachedBeaconState<allForks.BeaconState>,

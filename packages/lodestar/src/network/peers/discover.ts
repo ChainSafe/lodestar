@@ -124,7 +124,7 @@ export class PeerDiscovery {
           }
         }
       } catch (e) {
-        this.logger.debug("Error deserializing ENR", {nodeId: enr.nodeId}, e);
+        this.logger.debug("Error deserializing ENR", {nodeId: enr.nodeId}, e as Error);
       }
     }
 
@@ -145,7 +145,7 @@ export class PeerDiscovery {
     const toDialPeers: PeerId[] = [];
 
     for (const peerIdStr of discoveredPeers) {
-      const peer = PeerId.createFromCID(peerIdStr);
+      const peer = PeerId.createFromB58String(peerIdStr);
       if (
         connectedPeersCount + toDialPeers.length < this.maxPeers &&
         !this.isPeerConnected(peerIdStr) &&
@@ -164,7 +164,7 @@ export class PeerDiscovery {
 
       // Note: `libp2p.dial()` is what libp2p.connectionManager autoDial calls
       // Note: You must listen to the connected events to listen for a successful conn upgrade
-      this.libp2p.dial(peer).catch((e) => {
+      this.libp2p.dial(peer).catch((e: Error) => {
         this.logger.debug("Error dialing discovered peer", {peer: prettyPrintPeerId(peer)}, e);
       });
     }

@@ -124,6 +124,9 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getHeads: ContainerData(ArrayOf(SlotRoot)),
     getState: ContainerData(ssz.phase0.BeaconState),
-    getStateV2: WithVersion((fork: ForkName) => ssz[fork].BeaconState as TypeJson<allForks.BeaconState>),
+    // Teku returns fork as UPPERCASE
+    getStateV2: WithVersion(
+      (fork: ForkName) => ssz[fork.toLowerCase() as ForkName].BeaconState as TypeJson<allForks.BeaconState>
+    ),
   };
 }

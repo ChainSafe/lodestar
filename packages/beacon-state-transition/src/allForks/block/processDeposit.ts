@@ -1,6 +1,6 @@
 import bls, {CoordType} from "@chainsafe/bls";
 import {allForks, altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {verifyMerkleBranch, bigIntMin} from "@chainsafe/lodestar-utils";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {
   DEPOSIT_CONTRACT_TREE_DEPTH,
   DOMAIN_DEPOSIT,
@@ -67,6 +67,7 @@ export function processDeposit(
     }
 
     // add validator and balance entries
+    const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validators.push({
       pubkey,
       withdrawalCredentials: deposit.data.withdrawalCredentials.valueOf() as Uint8Array, // Drop tree
@@ -74,10 +75,11 @@ export function processDeposit(
       activationEpoch: FAR_FUTURE_EPOCH,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
-      effectiveBalance: bigIntMin(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE),
+      effectiveBalance,
       slashed: false,
     });
-    state.balances.push(amount);
+    state.balances.push(Number(amount));
+    epochCtx.effectiveBalances.push(effectiveBalance);
 
     // add participation caches
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
@@ -91,6 +93,6 @@ export function processDeposit(
     epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {
     // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, amount);
+    increaseBalance(state, cachedIndex, Number(amount));
   }
 }

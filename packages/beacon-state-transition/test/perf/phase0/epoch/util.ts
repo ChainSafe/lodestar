@@ -1,4 +1,3 @@
-import {EFFECTIVE_BALANCE_INCREMENT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {phase0, altair} from "../../../../src";
 import {
   AttesterFlags,
@@ -19,17 +18,15 @@ export function generateBalanceDeltasEpochProcess(
   flagFactors: FlagFactors
 ): IEpochProcess {
   const vc = state.validators.length;
-  const vcBn = BigInt(vc);
 
   const epochProcess: Partial<IEpochProcess> = {
     statuses: generateStatuses(state.validators.length, flagFactors),
-    validators: state.validators.persistent.toArray(),
-    totalActiveStake: MAX_EFFECTIVE_BALANCE * vcBn,
-    baseRewardPerIncrement: BigInt(726),
+    totalActiveStakeByIncrement: vc,
+    baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {
-      sourceStake: MAX_EFFECTIVE_BALANCE * vcBn - EFFECTIVE_BALANCE_INCREMENT,
-      targetStake: MAX_EFFECTIVE_BALANCE * vcBn - EFFECTIVE_BALANCE_INCREMENT,
-      headStake: MAX_EFFECTIVE_BALANCE * vcBn - EFFECTIVE_BALANCE_INCREMENT,
+      sourceStakeByIncrement: vc - 1,
+      targetStakeByIncrement: vc - 1,
+      headStakeByIncrement: vc - 1,
     },
     prevEpoch: isInInactivityLeak ? state.finalizedCheckpoint.epoch - 500 : state.finalizedCheckpoint.epoch,
   };

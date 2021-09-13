@@ -104,7 +104,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     while (afterHooks.length) {
       const afterHook = afterHooks.pop();
       if (afterHook)
-        await afterHook().catch((e) => {
+        await afterHook().catch((e: Error) => {
           // eslint-disable-next-line no-console
           console.error("Error in afterEach hook", e);
         });

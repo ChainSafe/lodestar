@@ -1,4 +1,3 @@
-import {Connection} from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
@@ -89,7 +88,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
     const {stream, protocol: protocolId} = await withTimeout(
       async (timeoutAndParentSignal) => {
         const protocolIds = Array.from(protocols.keys());
-        const conn = (await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal})) as Connection;
+        const conn = await libp2p.dialProtocol(peerId, protocolIds, {signal: timeoutAndParentSignal});
         if (!conn) throw Error("dialProtocol timeout");
         // TODO: libp2p-ts type Stream does not declare .abort() and requires casting to unknown here
         // Remove when https://github.com/ChainSafe/lodestar/issues/2167
@@ -98,7 +97,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       },
       DIAL_TIMEOUT,
       signal
-    ).catch((e) => {
+    ).catch((e: Error) => {
       if (e instanceof TimeoutError) {
         throw new RequestInternalError({code: RequestErrorCode.DIAL_TIMEOUT});
       } else {
@@ -142,7 +141,7 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
             collectResponses(method, maxResponses)
           ),
         maxTotalResponseTimeout(maxResponses, options)
-      ).catch((e) => {
+      ).catch((e: Error) => {
         // No need to close the stream here, the outter finally {} block will
         if (e instanceof TimeoutError) {
           throw new RequestInternalError({code: RequestErrorCode.RESPONSE_TIMEOUT});

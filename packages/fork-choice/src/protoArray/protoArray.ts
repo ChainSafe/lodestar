@@ -1,6 +1,6 @@
-import {Epoch, Gwei, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, RootHex} from "@chainsafe/lodestar-types";
 
-import {HexRoot, IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
+import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
@@ -10,22 +10,30 @@ export class ProtoArray {
   // Small prunes simply waste time
   pruneThreshold: number;
   justifiedEpoch: Epoch;
+  justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
+  finalizedRoot: RootHex;
   nodes: IProtoNode[];
-  indices: Map<HexRoot, number>;
+  indices: Map<RootHex, number>;
 
   constructor({
     pruneThreshold,
     justifiedEpoch,
+    justifiedRoot,
     finalizedEpoch,
+    finalizedRoot,
   }: {
     pruneThreshold: number;
     justifiedEpoch: Epoch;
+    justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
+    finalizedRoot: RootHex;
   }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
+    this.justifiedRoot = justifiedRoot;
     this.finalizedEpoch = finalizedEpoch;
+    this.finalizedRoot = finalizedRoot;
     this.nodes = [];
     this.indices = new Map<string, number>();
   }
@@ -36,19 +44,25 @@ export class ProtoArray {
     stateRoot,
     blockRoot,
     justifiedEpoch,
+    justifiedRoot,
     finalizedEpoch,
+    finalizedRoot,
   }: {
     slot: Slot;
-    parentRoot: HexRoot;
-    stateRoot: HexRoot;
-    blockRoot: HexRoot;
+    parentRoot: RootHex;
+    stateRoot: RootHex;
+    blockRoot: RootHex;
     justifiedEpoch: Epoch;
+    justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
+    finalizedRoot: RootHex;
   }): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
       justifiedEpoch,
+      justifiedRoot,
       finalizedEpoch,
+      finalizedRoot,
     });
     const block: IProtoBlock = {
       slot,
@@ -58,7 +72,9 @@ export class ProtoArray {
       // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
       targetRoot: blockRoot,
       justifiedEpoch,
+      justifiedRoot,
       finalizedEpoch,
+      finalizedRoot,
     };
     protoArray.onBlock(block);
     return protoArray;
@@ -79,7 +95,19 @@ export class ProtoArray {
    * should become the best child.
    * - If required, update the parents best-descendant with the current node or its best-descendant.
    */
-  applyScoreChanges(deltas: Gwei[], justifiedEpoch: Epoch, finalizedEpoch: Epoch): void {
+  applyScoreChanges({
+    deltas,
+    justifiedEpoch,
+    justifiedRoot,
+    finalizedEpoch,
+    finalizedRoot,
+  }: {
+    deltas: number[];
+    justifiedEpoch: Epoch;
+    justifiedRoot: RootHex;
+    finalizedEpoch: Epoch;
+    finalizedRoot: RootHex;
+  }): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_DELTA_LEN,
@@ -88,9 +116,16 @@ export class ProtoArray {
       });
     }
 
-    if (justifiedEpoch !== this.justifiedEpoch || this.finalizedEpoch !== this.finalizedEpoch) {
+    if (
+      justifiedEpoch !== this.justifiedEpoch ||
+      finalizedEpoch !== this.finalizedEpoch ||
+      justifiedRoot !== this.justifiedRoot ||
+      finalizedRoot !== this.finalizedRoot
+    ) {
       this.justifiedEpoch = justifiedEpoch;
       this.finalizedEpoch = finalizedEpoch;
+      this.justifiedRoot = justifiedRoot;
+      this.finalizedRoot = finalizedRoot;
     }
 
     // Iterate backwards through all indices in this.nodes
@@ -154,7 +189,7 @@ export class ProtoArray {
     const node: IProtoNode = {
       ...block,
       parent: this.indices.get(block.parentRoot),
-      weight: BigInt(0),
+      weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,
     };
@@ -177,7 +212,7 @@ export class ProtoArray {
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    */
-  findHead(justifiedRoot: HexRoot): HexRoot {
+  findHead(justifiedRoot: RootHex): RootHex {
     const justifiedIndex = this.indices.get(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
@@ -204,8 +239,14 @@ export class ProtoArray {
       });
     }
 
-    // Perform a sanity check that the node is indeed valid to be the head
-    if (!this.nodeIsViableForHead(bestNode)) {
+    /**
+     * Perform a sanity check that the node is indeed valid to be the head
+     * The justified node is always considered viable for head per spec:
+     * def get_head(store: Store) -> Root:
+     * blocks = get_filtered_block_tree(store)
+     * head = store.justified_checkpoint.root
+     */
+    if (bestDescendantIndex !== justifiedIndex && !this.nodeIsViableForHead(bestNode)) {
       throw new ProtoArrayError({
         code: ProtoArrayErrorCode.INVALID_BEST_NODE,
         startRoot: justifiedRoot,
@@ -235,7 +276,7 @@ export class ProtoArray {
    * - The finalized epoch is equal to the current one, but the finalized root is different.
    * - There is some internal error relating to invalid indices inside `this`.
    */
-  maybePrune(finalizedRoot: HexRoot): IProtoBlock[] {
+  maybePrune(finalizedRoot: RootHex): IProtoBlock[] {
     const finalizedIndex = this.indices.get(finalizedRoot);
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({
@@ -438,16 +479,19 @@ export class ProtoArray {
    * head.
    */
   nodeIsViableForHead(node: IProtoNode): boolean {
-    return (
-      (node.justifiedEpoch === this.justifiedEpoch || this.justifiedEpoch === 0) &&
-      (node.finalizedEpoch === this.finalizedEpoch || this.finalizedEpoch === 0)
-    );
+    const correctJustified =
+      (node.justifiedEpoch === this.justifiedEpoch && node.justifiedRoot === this.justifiedRoot) ||
+      this.justifiedEpoch === 0;
+    const correctFinalized =
+      (node.finalizedEpoch === this.finalizedEpoch && node.finalizedRoot === this.finalizedRoot) ||
+      this.finalizedEpoch === 0;
+    return correctJustified && correctFinalized;
   }
 
   /**
    * Iterate from a block root backwards over nodes
    */
-  iterateNodes(blockRoot: HexRoot): IProtoNode[] {
+  iterateNodes(blockRoot: RootHex): IProtoNode[] {
     const startIndex = this.indices.get(blockRoot);
     if (startIndex === undefined) {
       return [];
@@ -480,7 +524,7 @@ export class ProtoArray {
    * iterateNodes is to find ancestor nodes of a blockRoot.
    * this is to find non-ancestor nodes of a blockRoot.
    */
-  iterateNonAncestorNodes(blockRoot: HexRoot): IProtoNode[] {
+  iterateNonAncestorNodes(blockRoot: RootHex): IProtoNode[] {
     const startIndex = this.indices.get(blockRoot);
     if (startIndex === undefined) {
       return [];
@@ -522,7 +566,7 @@ export class ProtoArray {
     return result;
   }
 
-  hasBlock(blockRoot: HexRoot): boolean {
+  hasBlock(blockRoot: RootHex): boolean {
     return this.indices.has(blockRoot);
   }
 
@@ -550,7 +594,7 @@ export class ProtoArray {
     return result;
   }
 
-  getNode(blockRoot: HexRoot): IProtoNode | undefined {
+  getNode(blockRoot: RootHex): IProtoNode | undefined {
     const blockIndex = this.indices.get(blockRoot);
     if (blockIndex === undefined) {
       return undefined;
@@ -558,7 +602,7 @@ export class ProtoArray {
     return this.getNodeByIndex(blockIndex);
   }
 
-  getBlock(blockRoot: HexRoot): IProtoBlock | undefined {
+  getBlock(blockRoot: RootHex): IProtoBlock | undefined {
     const node = this.getNode(blockRoot);
     if (!node) {
       return undefined;
@@ -573,7 +617,7 @@ export class ProtoArray {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: HexRoot, descendantRoot: HexRoot): boolean {
+  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
     const ancestorNode = this.getNode(ancestorRoot);
     if (!ancestorNode) {
       return false;

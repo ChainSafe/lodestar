@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex, Gwei, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -8,7 +8,7 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 
-import {isActiveValidator} from "../../util";
+import {isActiveValidator, newZeroedArray} from "../../util";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -26,6 +26,7 @@ import {IEpochStakeSummary} from "./epochStakeSummary";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
+import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 
 /**
  * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
@@ -37,11 +38,14 @@ import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 export interface IEpochProcess {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
-  totalActiveStake: Gwei;
+  /**
+   * This is sum of active validators' balance in eth.
+   */
+  totalActiveStakeByIncrement: number;
   /** For altair */
-  baseRewardPerIncrement: Gwei;
+  baseRewardPerIncrement: number;
   prevEpochUnslashedStake: IEpochStakeSummary;
-  currEpochUnslashedTargetStake: Gwei;
+  currEpochUnslashedTargetStakeByIncrement: number;
   /**
    * Indices which will receive the slashing penalty
    * ```
@@ -97,10 +101,35 @@ export interface IEpochProcess {
   indicesToEject: ValidatorIndex[];
 
   statuses: IAttesterStatus[];
-  validators: phase0.Validator[];
-  balances?: BigUint64Array;
-  // to be used for afterProcessEpoch()
+  balances?: number[];
+  /**
+   * Active validator indices for currentEpoch + 2.
+   * This is only used in `afterProcessEpoch` to compute epoch shuffling, it's not efficient to calculate it at that time
+   * since it requires 1 loop through validator.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | calculate during the validator loop|
+   * | afterEpochProcess                | read it                            |
+   */
   nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+  /**
+   * Altair specific, this is total active balances for the next epoch.
+   * This is only used in `afterProcessEpoch` to compute base reward and sync participant reward.
+   * It's not efficient to calculate it at that time since it requires looping through all active validators,
+   * so we should calculate it during `processEffectiveBalancesUpdate` which gives us updated effective balance.
+   * | epoch process fn                 | nextEpochTotalActiveBalance action |
+   * | -------------------------------- | ---------------------------------- |
+   * | beforeProcessEpoch               | initialize as BigInt(0)            |
+   * | processEffectiveBalancesUpdate   | calculate during the loop          |
+   * | afterEpochProcess                | read it                            |
+   */
+  nextEpochTotalActiveBalanceByIncrement: number;
+
+  /**
+   * Track by validator index if it's active in the next epoch.
+   * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
+   */
+  isActiveNextEpoch: boolean[];
 }
 
 export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
@@ -110,6 +139,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const prevEpoch = epochCtx.previousShuffling.epoch;
   // active validator indices for nextShuffling is ready, we want to precalculate for the one after that
   const nextShufflingEpoch = currentEpoch + 2;
+  const nextEpoch = currentEpoch + 1;
 
   const slashingsEpoch = currentEpoch + intDiv(EPOCHS_PER_SLASHINGS_VECTOR, 2);
 
@@ -118,59 +148,113 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const indicesEligibleForActivation: ValidatorIndex[] = [];
   const indicesToEject: ValidatorIndex[] = [];
   const nextEpochShufflingActiveValidatorIndices: ValidatorIndex[] = [];
-
+  const isActivePrevEpoch: boolean[] = [];
+  const isActiveNextEpoch: boolean[] = [];
   const statuses: IAttesterStatus[] = [];
 
-  let totalActiveStake = BigInt(0);
+  let totalActiveStakeByIncrement = 0;
 
-  const validators = state.validators.persistent.toArray();
-  validators.forEach((v, i) => {
+  // To optimize memory each validator node in `state.validators` is represented with a special node type
+  // `BranchNodeStruct` that represents the data as struct internally. This utility grabs the struct data directrly
+  // from the nodes without any extra transformation. The returned `validators` array contains native JS objects.
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+  const validatorCount = validators.length;
+
+  const effectiveBalancesByIncrements = newZeroedArray(validators.length);
+
+  for (let i = 0; i < validatorCount; i++) {
+    const validator = validators[i];
     const status = createIAttesterStatus();
 
-    if (v.slashed) {
-      if (slashingsEpoch === v.withdrawableEpoch) {
+    if (validator.slashed) {
+      if (slashingsEpoch === validator.withdrawableEpoch) {
         indicesToSlash.push(i);
       }
     } else {
       status.flags |= FLAG_UNSLASHED;
     }
 
-    if (isActiveValidator(v, prevEpoch) || (v.slashed && prevEpoch + 1 < v.withdrawableEpoch)) {
+    const activePrev = isActiveValidator(validator, prevEpoch);
+    isActivePrevEpoch.push(activePrev);
+    if (activePrev || (validator.slashed && prevEpoch + 1 < validator.withdrawableEpoch)) {
       status.flags |= FLAG_ELIGIBLE_ATTESTER;
     }
 
-    const active = isActiveValidator(v, currentEpoch);
+    const active = isActiveValidator(validator, currentEpoch);
+    // We track effectiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
+    const effectiveBalanceByIncrement = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+    effectiveBalancesByIncrements[i] = effectiveBalanceByIncrement;
     if (active) {
       status.active = true;
-      totalActiveStake += v.effectiveBalance;
+      totalActiveStakeByIncrement += effectiveBalanceByIncrement;
     }
 
-    if (v.activationEligibilityEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation_queue(validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch == FAR_FUTURE_EPOCH
+    //     and validator.effective_balance == MAX_EFFECTIVE_BALANCE
+    //   )
+    // ```
+    if (
+      validator.activationEligibilityEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance === MAX_EFFECTIVE_BALANCE
+    ) {
       indicesEligibleForActivationQueue.push(i);
     }
 
-    // Note: ignores churn, apply churn limit latter, because finality may change
-    if (v.activationEpoch === FAR_FUTURE_EPOCH && v.activationEligibilityEpoch <= currentEpoch) {
+    // To optimize process_registry_updates():
+    // ```python
+    // def is_eligible_for_activation(state: BeaconState, validator: Validator) -> bool:
+    //   return (
+    //     validator.activation_eligibility_epoch <= state.finalized_checkpoint.epoch  # Placement in queue is finalized
+    //     and validator.activation_epoch == FAR_FUTURE_EPOCH                          # Has not yet been activated
+    //   )
+    // ```
+    // Here we have to check if `activationEligibilityEpoch <= currentEpoch` instead of finalized checkpoint, because the finalized
+    // checkpoint may change during epoch processing at processJustificationAndFinalization(), which is called before processRegistryUpdates().
+    // Then in processRegistryUpdates() we will check `activationEligibilityEpoch <= finalityEpoch`. This is to keep the array small.
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation are mutually exclusive
+    else if (validator.activationEpoch === FAR_FUTURE_EPOCH && validator.activationEligibilityEpoch <= currentEpoch) {
       indicesEligibleForActivation.push(i);
     }
 
-    if (status.active && v.exitEpoch === FAR_FUTURE_EPOCH && v.effectiveBalance <= config.EJECTION_BALANCE) {
+    // To optimize process_registry_updates():
+    // ```python
+    // if is_active_validator(validator, get_current_epoch(state)) and validator.effective_balance <= EJECTION_BALANCE:
+    // ```
+    // Adding extra condition `exitEpoch === FAR_FUTURE_EPOCH` to keep the array as small as possible. initiateValidatorExit() will ignore them anyway
+    //
+    // Use `else` since indicesEligibleForActivationQueue + indicesEligibleForActivation + indicesToEject are mutually exclusive
+    else if (
+      status.active &&
+      validator.exitEpoch === FAR_FUTURE_EPOCH &&
+      validator.effectiveBalance <= config.EJECTION_BALANCE
+    ) {
       indicesToEject.push(i);
     }
 
     statuses.push(status);
-    if (isActiveValidator(v, nextShufflingEpoch)) {
+
+    isActiveNextEpoch.push(isActiveValidator(validator, nextEpoch));
+
+    if (isActiveValidator(validator, nextShufflingEpoch)) {
       nextEpochShufflingActiveValidatorIndices.push(i);
     }
-  });
+  }
 
-  if (totalActiveStake < EFFECTIVE_BALANCE_INCREMENT) {
-    totalActiveStake = EFFECTIVE_BALANCE_INCREMENT;
+  if (totalActiveStakeByIncrement < 1) {
+    totalActiveStakeByIncrement = 1;
+  } else if (totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER) {
+    throw Error("totalActiveStakeByIncrement >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
   }
 
   // SPEC: function getBaseRewardPerIncrement()
-  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStake);
+  const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveStakeByIncrement);
 
+  // To optimize process_registry_updates():
   // order by sequence of activationEligibilityEpoch setting and then index
   indicesEligibleForActivation.sort(
     (a, b) => validators[a].activationEligibilityEpoch - validators[b].activationEligibilityEpoch || a - b
@@ -196,25 +280,33 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       FLAG_CURR_HEAD_ATTESTER
     );
   } else {
-    state.previousEpochParticipation.forEachStatus((status, i) => {
-      statuses[i].flags |=
-        ((status.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
-        ((status.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
-        ((status.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+    state.previousEpochParticipation.forEachStatus((participationStatus, i) => {
+      const status = statuses[i];
+      // this is required to pass random spec tests in altair
+      if (isActivePrevEpoch[i]) {
+        status.flags |=
+          ((participationStatus.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
+          ((participationStatus.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
+          ((participationStatus.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+      }
     });
-    state.currentEpochParticipation.forEachStatus((status, i) => {
-      statuses[i].flags |=
-        ((status.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
-        ((status.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
-        ((status.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+    state.currentEpochParticipation.forEachStatus((participationStatus, i) => {
+      const status = statuses[i];
+      // this is required to pass random spec tests in altair
+      if (status.active) {
+        status.flags |=
+          ((participationStatus.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
+          ((participationStatus.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
+          ((participationStatus.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+      }
     });
   }
 
-  let prevSourceUnslStake = BigInt(0);
-  let prevTargetUnslStake = BigInt(0);
-  let prevHeadUnslStake = BigInt(0);
+  let prevSourceUnslStake = 0;
+  let prevTargetUnslStake = 0;
+  let prevHeadUnslStake = 0;
 
-  let currTargetUnslStake = BigInt(0);
+  let currTargetUnslStake = 0;
 
   const FLAG_PREV_SOURCE_ATTESTER_UNSLASHED = FLAG_PREV_SOURCE_ATTESTER | FLAG_UNSLASHED;
   const FLAG_PREV_TARGET_ATTESTER_UNSLASHED = FLAG_PREV_TARGET_ATTESTER | FLAG_UNSLASHED;
@@ -223,48 +315,48 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
 
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];
-    const effectiveBalance = validators[i].effectiveBalance;
+    const effectiveBalanceByIncrement = effectiveBalancesByIncrements[i];
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
-      prevSourceUnslStake += effectiveBalance;
+      prevSourceUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
-      prevTargetUnslStake += effectiveBalance;
+      prevTargetUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
-      prevHeadUnslStake += effectiveBalance;
+      prevHeadUnslStake += effectiveBalanceByIncrement;
     }
     if (hasMarkers(status.flags, FLAG_CURR_TARGET_UNSLASHED)) {
-      currTargetUnslStake += effectiveBalance;
+      currTargetUnslStake += effectiveBalanceByIncrement;
     }
   }
   // As per spec of `get_total_balance`:
   // EFFECTIVE_BALANCE_INCREMENT Gwei minimum to avoid divisions by zero.
   // Math safe up to ~10B ETH, afterwhich this overflows uint64.
-  const increment = EFFECTIVE_BALANCE_INCREMENT;
-  if (prevSourceUnslStake < increment) prevSourceUnslStake = increment;
-  if (prevTargetUnslStake < increment) prevTargetUnslStake = increment;
-  if (prevHeadUnslStake < increment) prevHeadUnslStake = increment;
-  if (currTargetUnslStake < increment) currTargetUnslStake = increment;
+  if (prevSourceUnslStake < 1) prevSourceUnslStake = 1;
+  if (prevTargetUnslStake < 1) prevTargetUnslStake = 1;
+  if (prevHeadUnslStake < 1) prevHeadUnslStake = 1;
+  if (currTargetUnslStake < 1) currTargetUnslStake = 1;
 
   return {
     prevEpoch,
     currentEpoch,
-    totalActiveStake,
+    totalActiveStakeByIncrement,
 
     baseRewardPerIncrement,
     prevEpochUnslashedStake: {
-      sourceStake: prevSourceUnslStake,
-      targetStake: prevTargetUnslStake,
-      headStake: prevHeadUnslStake,
+      sourceStakeByIncrement: prevSourceUnslStake,
+      targetStakeByIncrement: prevTargetUnslStake,
+      headStakeByIncrement: prevHeadUnslStake,
     },
-    currEpochUnslashedTargetStake: currTargetUnslStake,
+    currEpochUnslashedTargetStakeByIncrement: currTargetUnslStake,
     indicesToSlash,
     indicesEligibleForActivationQueue,
     indicesEligibleForActivation,
     indicesToEject,
     nextEpochShufflingActiveValidatorIndices,
-
+    // to be updated in processEffectiveBalanceUpdates
+    nextEpochTotalActiveBalanceByIncrement: 0,
+    isActiveNextEpoch,
     statuses,
-    validators,
   };
 }

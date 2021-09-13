@@ -328,10 +328,10 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
       if (batchSigsSuccess > 0) this.metrics?.blsThreadPool.batchSigsSuccess.inc(batchSigsSuccess);
     } catch (e) {
       // Worker communications should never reject
-      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, e);
+      if (!this.signal.aborted) this.logger.error("BlsMultiThreadWorkerPool error", {}, e as Error);
       // Reject all
       for (const job of jobs) {
-        job.reject(e);
+        job.reject(e as Error);
       }
     }
 
@@ -379,7 +379,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     for (const [id, worker] of this.workers.entries()) {
       // NOTE: 'threads' has not yet updated types, and NodeJS complains with
       // [DEP0132] DeprecationWarning: Passing a callback to worker.terminate() is deprecated. It returns a Promise instead.
-      ((worker.worker.terminate() as unknown) as Promise<void>).catch((e) => {
+      ((worker.worker.terminate() as unknown) as Promise<void>).catch((e: Error) => {
         if (e) this.logger.error("Error terminating worker", {id}, e);
       });
     }

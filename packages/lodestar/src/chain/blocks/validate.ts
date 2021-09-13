@@ -23,7 +23,7 @@ export function validateBlock({config, forkChoice, clock}: BlockValidateModules,
     }
 
     if (!job.reprocess && forkChoice.hasBlock(blockHash)) {
-      throw new BlockError(block, {code: BlockErrorCode.BLOCK_IS_ALREADY_KNOWN, root: blockHash});
+      throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
     }
 
     const finalizedCheckpoint = forkChoice.getFinalizedCheckpoint();

@@ -1,4 +1,5 @@
 import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration} from "prom-client";
+import {AvgMinMax} from "./avgMinMax";
 import {GaugeExtra} from "./gauge";
 import {HistogramExtra} from "./histogram";
 
@@ -15,6 +16,10 @@ export class RegistryMetricCreator extends Registry {
 
   histogram<T extends string>(configuration: HistogramConfiguration<T>): HistogramExtra<T> {
     return new HistogramExtra<T>({...configuration, registers: [this]});
+  }
+
+  avgMinMax<T extends string>(configuration: GaugeConfiguration<T>): AvgMinMax<T> {
+    return new AvgMinMax<T>({...configuration, registers: [this]});
   }
 
   /** Static metric to send string-based data such as versions, config params, etc */

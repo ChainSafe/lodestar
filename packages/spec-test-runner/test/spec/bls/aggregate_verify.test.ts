@@ -3,7 +3,7 @@ import bls from "@chainsafe/bls";
 import {fromHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
 
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 
 interface IAggregateSigsVerifyTestCase extends IBaseSpecTest {

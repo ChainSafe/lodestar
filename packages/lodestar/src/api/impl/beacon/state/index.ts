@@ -46,35 +46,37 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
     async getStateValidators(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
       const currentEpoch = getCurrentEpoch(state);
+      const {validators, balances} = state; // Get the validators sub tree once for all the loop
+      const {pubkey2index} = chain.getHeadState();
 
-      const validators: routes.beacon.ValidatorResponse[] = [];
+      const validatorResponses: routes.beacon.ValidatorResponse[] = [];
       if (filters?.indices) {
         for (const id of filters.indices) {
-          const validatorIndex = getStateValidatorIndex(id, state, chain);
+          const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
           if (validatorIndex != null) {
-            const validator = state.validators[validatorIndex];
+            const validator = validators[validatorIndex];
             if (filters.statuses && !filters.statuses.includes(getValidatorStatus(validator, currentEpoch))) {
               continue;
             }
             const validatorResponse = toValidatorResponse(
               validatorIndex,
               validator,
-              state.balances[validatorIndex],
+              balances[validatorIndex],
               currentEpoch
             );
-            validators.push(validatorResponse);
+            validatorResponses.push(validatorResponse);
           }
         }
-        return {data: validators};
+        return {data: validatorResponses};
       } else if (filters?.statuses) {
-        const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, chain, currentEpoch);
+        const validatorsByStatus = filterStateValidatorsByStatuses(filters.statuses, state, pubkey2index, currentEpoch);
         return {data: validatorsByStatus};
       }
 
       let index = 0;
       const resp: routes.beacon.ValidatorResponse[] = [];
       for (const v of readonlyValues(state.validators)) {
-        resp.push(toValidatorResponse(index, v, state.balances[index], currentEpoch));
+        resp.push(toValidatorResponse(index, v, balances[index], currentEpoch));
         index++;
       }
       return {data: resp};
@@ -82,8 +84,9 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
 
     async getStateValidator(stateId, validatorId) {
       const state = await resolveStateId(config, chain, db, stateId);
+      const {pubkey2index} = chain.getHeadState();
 
-      const validatorIndex = getStateValidatorIndex(validatorId, state, chain);
+      const validatorIndex = getStateValidatorIndex(validatorId, state, pubkey2index);
       if (validatorIndex == null) {
         throw new ApiError(404, "Validator not found");
       }

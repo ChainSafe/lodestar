@@ -7,7 +7,6 @@ describe("config / beaconNodeOptions", () => {
   it("Should return pyrmont options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
       network: "pyrmont",
-      configFile: "./no/file",
       beaconNodeOptionsCli: {},
     });
 
@@ -21,7 +20,6 @@ describe("config / beaconNodeOptions", () => {
     const editedPartialOptions = {eth1: {enabled: false}};
 
     const beaconNodeOptions = new BeaconNodeOptions({
-      configFile: "./no/file",
       beaconNodeOptionsCli: initialPartialOptions,
     });
     beaconNodeOptions.set(editedPartialOptions);
@@ -32,7 +30,6 @@ describe("config / beaconNodeOptions", () => {
 
   it("Should return default options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
-      configFile: "./no/file",
       beaconNodeOptionsCli: {},
     });
 

@@ -5,14 +5,14 @@ import {generateCachedState} from "../../../utils/state";
 import {CheckpointStateCache} from "../../../../src/chain/stateCache";
 
 describe("CheckpointStateCache perf tests", function () {
-  setBenchOpts({maxMs: 10 * 1000, threshold: Infinity});
+  setBenchOpts({noThreshold: true});
 
   let state: CachedBeaconState<allForks.BeaconState>;
   let checkpoint: phase0.Checkpoint;
   let checkpointStateCache: CheckpointStateCache;
 
   before(() => {
-    checkpointStateCache = new CheckpointStateCache();
+    checkpointStateCache = new CheckpointStateCache({});
     state = generateCachedState();
     checkpoint = ssz.phase0.Checkpoint.defaultValue();
   });

@@ -102,9 +102,15 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     type: "string",
   },
 
+  persistInvalidSszObjectsDir: {
+    description: "Directory to persist invalid ssz objects",
+    defaultDescription: defaultBeaconPaths.persistInvalidSszObjectsDir,
+    hidden: true,
+    type: "string",
+  },
+
   configFile: {
     description: "Beacon node configuration file path",
-    defaultDescription: defaultBeaconPaths.configFile,
     type: "string",
   },
 

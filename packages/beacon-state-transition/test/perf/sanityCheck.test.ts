@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@chainsafe/lodestar-params";
 import {beforeProcessEpoch} from "../../src/allForks";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
@@ -31,9 +31,14 @@ describe("Perf test sanity check", function () {
   it("targetStake is in the same range", () => {
     const phase0State = generatePerfTestCachedStatePhase0();
     const epochProcess = beforeProcessEpoch(phase0State);
-    expect(epochProcess.prevEpochUnslashedStake.targetStake > targetStake).to.equal(
+    expect(
+      BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) >
+        targetStake
+    ).to.equal(
       true,
-      `targetStake too low: ${epochProcess.prevEpochUnslashedStake.targetStake} > ${targetStake}`
+      `targetStake too low: ${
+        BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT)
+      } > ${targetStake}`
     );
   });
 });

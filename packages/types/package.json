@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.29.0",
+  "version": "0.29.3",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -35,8 +35,8 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/lodestar-params": "^0.29.0",
-    "@chainsafe/ssz": "^0.8.15"
+    "@chainsafe/lodestar-params": "^0.29.3",
+    "@chainsafe/ssz": "^0.8.17"
   },
   "keywords": [
     "ethereum",

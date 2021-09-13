@@ -19,7 +19,7 @@ export type RestApiOptions = {
 };
 
 export const restApiOptionsDefault: RestApiOptions = {
-  enabled: false,
+  enabled: true,
   // ApiNamespace "debug" is not turned on by default
   api: ["beacon", "config", "events", "node", "validator"],
   host: "127.0.0.1",
@@ -117,7 +117,7 @@ export class RestApi {
       const address = await this.server.listen(this.opts.port, this.opts.host);
       this.logger.info("Started REST api server", {address, namespaces: this.opts.api});
     } catch (e) {
-      this.logger.error("Error starting REST api server", {host: this.opts.host, port: this.opts.port}, e);
+      this.logger.error("Error starting REST api server", {host: this.opts.host, port: this.opts.port}, e as Error);
       throw e;
     }
   }

@@ -80,7 +80,7 @@ and pre-computed deposit RPL data",
     const {name, passphraseFile, storeWithdrawalKeystore, count} = args;
     const accountPaths = getAccountPaths(args);
     const maxEffectiveBalance = MAX_EFFECTIVE_BALANCE;
-    const depositGwei = BigInt(args.depositGwei || 0) || maxEffectiveBalance;
+    const depositGwei = Number(args.depositGwei || 0) || maxEffectiveBalance;
 
     if (depositGwei > maxEffectiveBalance)
       throw new YargsError(`depositGwei ${depositGwei} is higher than MAX_EFFECTIVE_BALANCE ${maxEffectiveBalance}`);

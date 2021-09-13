@@ -24,23 +24,30 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-fermium
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@master
+        with:
+          path: packages/spec-test-runner/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/spec-test-runner/test/specTestVersioning.ts') }}
       - name: Download spec tests
-        run: yarn download-test-cases
+        run: yarn download-spec-tests
+        working-directory: packages/spec-test-runner
+      - name: Check spec tests
+        run: yarn check-tests
         working-directory: packages/spec-test-runner
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
-      - name: Spec tests ssz
-        run: yarn test:ssz
-        working-directory: packages/spec-test-runner
-      - name: Spec tests bls
-        run: yarn test:bls
+      - name: Spec tests general
+        run: yarn test:spec-general
         working-directory: packages/spec-test-runner
       - name: Spec tests phase0-minimal
         run: yarn test:spec-phase0-minimal

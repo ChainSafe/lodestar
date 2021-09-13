@@ -1,12 +1,10 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof";
 
 describe("validate gossip signedAggregateAndProof", () => {
-  setBenchOpts({maxMs: 60 * 1000});
-
   const vc = 64;
   const stateSlot = 100;
 

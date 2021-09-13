@@ -41,7 +41,7 @@ docs/reference/cli.md
 
 # Testnet artifacts
 .lodestar
-genesis.ssz
+*.ssz
 .pyrmont
 packages/lodestar/.tmpdb/
 

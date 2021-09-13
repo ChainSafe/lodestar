@@ -63,7 +63,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       this.logger.warn("No depositContractDeployBlock provided");
     }
 
-    this.runAutoUpdate().catch((e) => {
+    this.runAutoUpdate().catch((e: Error) => {
       if (!(e instanceof ErrorAborted)) {
         this.logger.error("Error on eth1 loop", {}, e);
       }
@@ -133,7 +133,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
           this.logger.debug("Eth1 provider rate limited", {}, e);
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
         } else {
-          this.logger.error("Error updating eth1 chain cache", {}, e);
+          this.logger.error("Error updating eth1 chain cache", {}, e as Error);
           await sleep(MIN_WAIT_ON_ERORR_MS, this.signal);
         }
       }

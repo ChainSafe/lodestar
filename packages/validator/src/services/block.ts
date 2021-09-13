@@ -1,4 +1,6 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
@@ -13,6 +15,7 @@ export class BlockProposingService {
   private readonly dutiesService: BlockDutiesService;
 
   constructor(
+    private readonly config: IChainForkConfig,
     private readonly logger: ILoggerVc,
     private readonly api: Api,
     clock: IClock,
@@ -36,7 +39,7 @@ export class BlockProposingService {
       this.logger.warn("Multiple block proposers", {slot, count: proposers.length});
     }
 
-    Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e) => {
+    Promise.all(proposers.map((pubkey) => this.createAndPublishBlock(pubkey, slot))).catch((e: Error) => {
       this.logger.error("Error on block duties", {slot}, e);
     });
   };
@@ -52,18 +55,30 @@ export class BlockProposingService {
       const graffiti = this.graffiti || "";
 
       this.logger.debug("Producing block", logCtx);
-      const block = await this.api.validator.produceBlock(slot, randaoReveal, graffiti).catch((e) => {
+      const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", logCtx);
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
-      await this.api.beacon.publishBlock(signedBlock).catch((e) => {
+      await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
     } catch (e) {
-      this.logger.error("Error proposing block", logCtx, e);
+      this.logger.error("Error proposing block", logCtx, e as Error);
     }
   }
+
+  /** Wrapper around the API's different methods for producing blocks across forks */
+  private produceBlock: Api["validator"]["produceBlock"] = (slot, randaoReveal, graffiti) => {
+    switch (this.config.getForkName(slot)) {
+      case ForkName.phase0:
+        return this.api.validator.produceBlock(slot, randaoReveal, graffiti);
+      // All subsequent forks are expected to use v2 too
+      case ForkName.altair:
+      default:
+        return this.api.validator.produceBlockV2(slot, randaoReveal, graffiti);
+    }
+  };
 }

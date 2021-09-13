@@ -2,6 +2,7 @@
  * @module chain
  */
 
+import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -19,17 +20,24 @@ import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain} from "./interface";
+import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator} from "./regen";
+import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {LodestarForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
-import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
+import {
+  SeenAttesters,
+  SeenAggregators,
+  SeenBlockProposers,
+  SeenSyncCommitteeMessages,
+  SeenContributionAndProof,
+} from "./seenCache";
 import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
+import {Archiver} from "./archiver";
 
 export interface IBeaconChainModules {
   config: IBeaconConfig;
@@ -64,6 +72,7 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
@@ -78,6 +87,7 @@ export class BeaconChain implements IBeaconChain {
    * Once event have been handled internally, they are re-emitted externally for downstream consumers
    */
   protected internalEmitter = new ChainEventEmitter();
+  private readonly archiver: Archiver;
   private abortController = new AbortController();
 
   constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
@@ -98,8 +108,8 @@ export class BeaconChain implements IBeaconChain {
       : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
-    const stateCache = new StateContextCache();
-    const checkpointStateCache = new CheckpointStateCache();
+    const stateCache = new StateContextCache({metrics});
+    const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
     const forkChoice = new LodestarForkChoice({
       config,
@@ -141,6 +151,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
+    this.archiver = new Archiver(db, this, logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
@@ -149,6 +160,10 @@ export class BeaconChain implements IBeaconChain {
     this.abortController.abort();
     this.stateCache.clear();
     this.checkpointStateCache.clear();
+  }
+
+  async persistToDisk(): Promise<void> {
+    await this.archiver.persistToDisk();
   }
 
   getGenesisTime(): Number64 {
@@ -171,11 +186,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot);
-  }
-
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return await this.regen.getBlockSlotState(this.forkChoice.getHeadRoot(), this.clock.currentSlot);
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
@@ -197,18 +208,6 @@ export class BeaconChain implements IBeaconChain {
       return null;
     }
     return await this.db.block.get(summary.blockRoot);
-  }
-
-  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    const blockSummary = this.forkChoice.getBlock(blockRoot);
-    if (!blockSummary) {
-      return null;
-    }
-    try {
-      return await this.regen.getState(blockSummary.stateRoot);
-    } catch (e) {
-      return null;
-    }
   }
 
   /** Returned blocks have the same ordering as `slots` */
@@ -300,5 +299,24 @@ export class BeaconChain implements IBeaconChain {
       headRoot: head.blockRoot,
       headSlot: head.slot,
     };
+  }
+
+  persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {
+    if (!this.persistInvalidSszObject) {
+      return null;
+    }
+    const now = new Date();
+    // yyyy-MM-dd
+    const date = now.toISOString().split("T")[0];
+    // by default store to lodestar_archive of current dir
+    const byDate = this.opts.persistInvalidSszObjectsDir
+      ? `${this.opts.persistInvalidSszObjectsDir}/${date}`
+      : `invalidSszObjects/${date}`;
+    if (!fs.existsSync(byDate)) {
+      fs.mkdirSync(byDate, {recursive: true});
+    }
+    const fileName = `${byDate}/${type}_${suffix}_${Date.now()}.ssz`;
+    fs.writeFileSync(fileName, bytes);
+    return fileName;
   }
 }

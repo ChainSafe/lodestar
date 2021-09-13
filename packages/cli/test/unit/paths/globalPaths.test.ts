@@ -15,7 +15,7 @@ describe("paths / global", () => {
       args: {},
       globalPaths: {
         rootDir: defaultRootDir,
-        paramsFile: "/my-root-dir/lodestar/mainnet/config.yaml",
+        paramsFile: undefined,
       },
     },
     {
@@ -23,7 +23,7 @@ describe("paths / global", () => {
       args: {network: "pyrmont"},
       globalPaths: {
         rootDir: "/my-root-dir/lodestar/pyrmont",
-        paramsFile: "/my-root-dir/lodestar/pyrmont/config.yaml",
+        paramsFile: undefined,
       },
     },
     {
@@ -31,7 +31,7 @@ describe("paths / global", () => {
       args: {rootDir: "./attack-network"},
       globalPaths: {
         rootDir: "./attack-network",
-        paramsFile: "attack-network/config.yaml",
+        paramsFile: undefined,
       },
     },
     {

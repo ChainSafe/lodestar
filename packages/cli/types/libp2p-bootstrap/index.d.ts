@@ -5,12 +5,12 @@
 
 type PeerInfo = {
   id: import("peer-id");
-  multiaddrs: import("multiaddr")[];
+  multiaddrs: import("multiaddr").Multiaddr[];
 };
 
 declare namespace LibP2pBootstrap {
   type Options = {
-    list: Array<string | import("multiaddr")>,
+    list: Array<string | import("multiaddr").Multiaddr>,
     interval?: number
   };
 

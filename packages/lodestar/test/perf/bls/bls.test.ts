@@ -1,10 +1,8 @@
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
+import {itBench} from "@dapplion/benchmark";
 import {bls, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {linspace} from "../../../src/util/numpy";
 
 describe("BLS ops", function () {
-  setBenchOpts({maxMs: 60 * 1000});
-
   type Keypair = {publicKey: PublicKey; secretKey: SecretKey};
   type BlsSet = {publicKey: PublicKey; message: Uint8Array; signature: Signature};
 

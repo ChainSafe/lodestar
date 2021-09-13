@@ -9,7 +9,6 @@ import {
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
 import {allForks, altair, Bytes32, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {bigIntMin} from "@chainsafe/lodestar-utils";
 
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
@@ -161,7 +160,9 @@ export function applyDeposits(
   for (let index = 0; index < validatorLength; index++) {
     const validator = state.validators[index];
     const balance = state.balances[index];
-    validator.effectiveBalance = bigIntMin(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
+    validator.effectiveBalance = effectiveBalance;
+    state.effectiveBalances.set(index, effectiveBalance);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
@@ -210,7 +211,7 @@ export function initializeBeaconStateFromEth1(
   const activeValidatorIndices = applyDeposits(config, state, deposits);
 
   if (config.getForkName(GENESIS_SLOT) === ForkName.altair) {
-    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices);
+    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
     const altairState = state as TreeBacked<altair.BeaconState>;
     altairState.currentSyncCommittee = syncCommittees;
     altairState.nextSyncCommittee = syncCommittees;

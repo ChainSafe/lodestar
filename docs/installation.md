@@ -50,7 +50,9 @@ Install globally
 ```
 npm install -g @chainsafe/lodestar-cli
 ```
+
 or
+
 ```
 yarn global add @chainsafe/lodestar-cli
 ```
@@ -75,6 +77,7 @@ Ensure you have Docker installed by issuing the command:
 ```bash
 docker -v
 ```
+
 It should return a non error message such as `Docker version xxxx, build xxxx`.
 
 Pull, run the image and Lodestar should now be ready to use

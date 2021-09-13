@@ -17,7 +17,6 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
-import {TasksService} from "../tasks";
 import {IBeaconNodeOptions} from "./options";
 import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
@@ -34,7 +33,6 @@ export interface IBeaconNodeModules {
   chain: IBeaconChain;
   api: Api;
   sync: IBeaconSync;
-  chores: TasksService;
   metricsServer?: HttpMetricsServer;
   restApi?: RestApi;
   controller?: AbortController;
@@ -71,7 +69,6 @@ export class BeaconNode {
   api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
-  chores: TasksService;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -87,7 +84,6 @@ export class BeaconNode {
     api,
     restApi,
     sync,
-    chores,
     controller,
   }: IBeaconNodeModules) {
     this.opts = opts;
@@ -100,7 +96,6 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
-    this.chores = chores;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -155,15 +150,6 @@ export class BeaconNode {
       network,
       logger: logger.child(opts.logger.sync),
     });
-    const chores = new TasksService({
-      config,
-      signal: controller.signal,
-      db,
-      chain,
-      sync,
-      network,
-      logger: logger.child(opts.logger.chores),
-    });
 
     const api = getApi(opts.api, {
       config,
@@ -203,7 +189,6 @@ export class BeaconNode {
     }
 
     await network.start();
-    chores.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
 
@@ -218,7 +203,6 @@ export class BeaconNode {
       api,
       restApi,
       sync,
-      chores,
       controller,
     }) as T;
   }
@@ -229,12 +213,12 @@ export class BeaconNode {
   async close(): Promise<void> {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
-      await this.chores.stop();
       this.sync.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
 
+      await this.chain.persistToDisk();
       this.chain.close();
       await this.db.stop();
       if (this.controller) this.controller.abort();

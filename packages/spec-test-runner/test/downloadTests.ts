@@ -1,5 +1,5 @@
 import {downloadTests} from "@chainsafe/lodestar-spec-test-util";
-import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL} from "./utils/specTestCases";
+import {SPEC_TEST_LOCATION, SPEC_TEST_VERSION, SPEC_TEST_REPO_URL} from "./specTestVersioning";
 
 /* eslint-disable no-console */
 
@@ -10,7 +10,7 @@ downloadTests(
     specTestsRepoUrl: SPEC_TEST_REPO_URL,
   },
   console.log
-).catch((e) => {
+).catch((e: Error) => {
   console.error(e);
   process.exit(1);
 });

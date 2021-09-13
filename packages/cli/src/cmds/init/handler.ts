@@ -1,13 +1,5 @@
 import fs from "fs";
-import {
-  BeaconNodeOptions,
-  getBeaconConfigFromArgs,
-  writeBeaconParams,
-  initPeerId,
-  initEnr,
-  readPeerId,
-  readEnr,
-} from "../../config";
+import {BeaconNodeOptions, getBeaconConfigFromArgs, initPeerId, initEnr, readPeerId, readEnr} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";
 import {fetchBootnodes} from "../../networks";
@@ -25,7 +17,7 @@ export type ReturnType = {
  */
 export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args, beaconNodeOptions, config);
+  await persistOptionsAndConfig(args);
   return {beaconNodeOptions, config};
 }
 
@@ -39,7 +31,16 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 
   // Auto-setup network
   // Only download files if params file does not exist
-  if (args.network && args.network != "dev" && !fs.existsSync(beaconPaths.paramsFile)) {
+  const bOpts = beaconNodeOptions.get();
+  const bOptsEnrs = bOpts && bOpts.network && bOpts.network.discv5 && bOpts.network.discv5.bootEnrs;
+  if (
+    args.network && args.network != "dev" &&
+    (!beaconPaths.configFile ||
+      !fs.existsSync(beaconPaths.configFile) ||
+      !beaconPaths.paramsFile ||
+      !fs.existsSync(beaconPaths.paramsFile) ||
+      !(bOptsEnrs && bOptsEnrs.length > 0))
+  ) {
     try {
       const bootEnrs = await fetchBootnodes(args.network);
       beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
@@ -58,11 +59,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 /**
  * Write options and configs to disk
  */
-export async function persistOptionsAndConfig(
-  args: IBeaconArgs & IGlobalArgs,
-  beaconNodeOptions: BeaconNodeOptions,
-  beaconConfig: IChainForkConfig
-): Promise<void> {
+export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<void> {
   const beaconPaths = getBeaconPaths(args);
 
   // initialize directories
@@ -87,14 +84,5 @@ export async function persistOptionsAndConfig(
     if (peerIdPrev.toB58String() !== peerId.toB58String()) {
       initEnr(beaconPaths.enrFile, peerId);
     }
-  }
-
-  if (!fs.existsSync(beaconPaths.paramsFile)) {
-    writeBeaconParams(beaconPaths.paramsFile, beaconConfig);
-  }
-
-  // initialize beacon configuration file, if it doesn't exist
-  if (!fs.existsSync(beaconPaths.configFile)) {
-    beaconNodeOptions.writeTo(beaconPaths.configFile);
   }
 }

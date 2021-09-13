@@ -23,7 +23,7 @@ export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.
     exitEpoch: opts.exitEpoch || randNum(),
     withdrawableEpoch: opts.withdrawableEpoch ?? randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.effectiveBalance || BigInt(0),
+    effectiveBalance: opts.effectiveBalance || 0,
   };
 }
 

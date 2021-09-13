@@ -31,7 +31,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
 
   // @TODO @Q9F The beacon node options are using mainnet, why???
-
   // ENR setup
   const peerId = await createPeerId();
   const enr = createEnr(peerId);
@@ -42,6 +41,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const validatorPaths = getValidatorPaths(args);
   const beaconDbDir = beaconPaths.dbDir;
   const validatorsDbDir = validatorPaths.validatorsDbDir;
+
+  // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
+  // until the clock reach a higher slot than the previous run of the dev command
+  if (!args.genesisTime) {
+    await promisify(rimraf)(beaconDbDir);
+    await promisify(rimraf)(validatorsDbDir);
+  }
   mkdir(beaconDbDir);
   mkdir(validatorsDbDir);
 

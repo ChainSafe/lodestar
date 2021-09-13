@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Gwei, phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
@@ -27,6 +27,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
 import {getInfuraUrl} from "./infura";
 import {testCachePath} from "../cache";
+import {MutableVector} from "@chainsafe/persistent-ts";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: allForks.CachedBeaconState<phase0.BeaconState> | null = null;
@@ -171,16 +172,19 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
     if (fullParticpation !== 7) {
       throw new Error("Not correct fullParticipation");
     }
-    state.previousEpochParticipation = Array.from({length: pubkeys.length}, () => fullParticpation) as List<
-      ParticipationFlags
-    >;
-    state.currentEpochParticipation = Array.from({length: pubkeys.length}, () => fullParticpation) as List<
-      ParticipationFlags
-    >;
+    state.previousEpochParticipation = Array.from(
+      {length: pubkeys.length},
+      () => fullParticpation
+    ) as List<ParticipationFlags>;
+    state.currentEpochParticipation = Array.from(
+      {length: pubkeys.length},
+      () => fullParticpation
+    ) as List<ParticipationFlags>;
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
     const epoch = computeEpochAtSlot(state.slot);
     const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
-    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices);
+    const effectiveBalances = MutableVector.from(Array.from(state.validators).map((v) => v.effectiveBalance));
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalances);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
@@ -316,14 +320,14 @@ function buildPerformanceStateAllForks(state: allForks.BeaconState, pubkeysArg?:
   state.validators = pubkeys.map((_, i) => ({
     pubkey: pubkeys[i],
     withdrawalCredentials: Buffer.alloc(32, i),
-    effectiveBalance: BigInt(31000000000),
+    effectiveBalance: 31000000000,
     slashed: false,
     activationEligibilityEpoch: 0,
     activationEpoch: 0,
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
   })) as List<phase0.Validator>;
-  state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
+  state.balances = Array.from({length: pubkeys.length}, () => 31217089836) as List<number>;
   state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
   // no slashings
   const currentEpoch = computeEpochAtSlot(state.slot - 1);
@@ -368,7 +372,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   const activeValidator = ssz.phase0.Validator.createTreeBackedFromStruct({
     pubkey: Buffer.alloc(48, 0),
     withdrawalCredentials: Buffer.alloc(32, 0),
-    effectiveBalance: BigInt(31000000000),
+    effectiveBalance: 31000000000,
     slashed: false,
     activationEligibilityEpoch: 0,
     activationEpoch: 0,
@@ -382,7 +386,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     state.validators[i] = validator;
   }
 
-  state.balances = Array.from({length: pubkeys.length}, () => BigInt(31217089836)) as List<Gwei>;
+  state.balances = Array.from({length: pubkeys.length}, () => 31217089836) as List<number>;
   state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
 
   return allForks.createCachedBeaconState(config, state as TreeBacked<allForks.BeaconState>, {

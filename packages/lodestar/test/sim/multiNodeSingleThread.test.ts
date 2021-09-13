@@ -63,6 +63,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
         const node = await getDevBeaconNode({
           params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
+          options: {api: {rest: {port: 10000 + i}}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger,

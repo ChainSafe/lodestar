@@ -26,6 +26,7 @@ import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
   SeenAggregators,
   SeenAttesters,
+  SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "../../../../src/chain/seenCache";
@@ -72,6 +73,7 @@ export class MockBeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
@@ -97,8 +99,8 @@ export class MockBeaconChain implements IBeaconChain {
       signal: this.abortController.signal,
     });
     this.forkChoice = mockForkChoice();
-    this.stateCache = new StateContextCache();
-    this.checkpointStateCache = new CheckpointStateCache();
+    this.stateCache = new StateContextCache({});
+    this.checkpointStateCache = new CheckpointStateCache({});
     this.pendingBlocks = new BlockPool(config, logger);
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
@@ -129,10 +131,6 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return createCachedBeaconState(this.config, this.state);
-  }
-
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return createCachedBeaconState(this.config, this.state);
   }
 
@@ -170,25 +168,15 @@ export class MockBeaconChain implements IBeaconChain {
     return Math.floor(Date.now() / 1000);
   }
 
-  async receiveBlock(): Promise<void> {
-    return;
-  }
-
-  async processBlock(): Promise<void> {
-    return;
-  }
-
-  async processChainSegment(): Promise<void> {
-    return;
-  }
+  async receiveBlock(): Promise<void> {}
+  async processBlock(): Promise<void> {}
+  async processChainSegment(): Promise<void> {}
 
   close(): void {
     this.abortController.abort();
   }
 
-  async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    return null;
-  }
+  async persistToDisk(): Promise<void> {}
 
   getStatus(): phase0.Status {
     return {
@@ -198,6 +186,10 @@ export class MockBeaconChain implements IBeaconChain {
       headRoot: Buffer.alloc(32),
       headSlot: 0,
     };
+  }
+
+  persistInvalidSszObject(): string | null {
+    return null;
   }
 }
 

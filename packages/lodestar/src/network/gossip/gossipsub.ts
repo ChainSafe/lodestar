@@ -156,8 +156,9 @@ export class Eth2Gossipsub extends Gossipsub {
     } catch (e) {
       // JobQueue may throw non-typed errors
       const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;
-      this.score.rejectMessage(message, code);
-      this.gossipTracer.rejectMessage(message, code);
+      // async to compute msgId with sha256 from multiformats/hashes/sha2
+      await this.score.rejectMessage(message, code);
+      await this.gossipTracer.rejectMessage(message, code);
       throw e;
     }
   }

@@ -1,22 +1,25 @@
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {InputType} from "@chainsafe/lodestar-spec-test-util";
+import {ContainerType} from "@chainsafe/ssz";
 
-/**
- * Compare each field in BeaconState to help debug failed test easier.
- */
-export function expectEqualBeaconStatePhase0(expected: phase0.BeaconState, actual: phase0.BeaconState): void {
-  if (!ssz.phase0.BeaconState.equals(actual, expected)) {
-    expect(ssz.phase0.BeaconState.toJson(actual)).to.deep.equal(ssz.phase0.BeaconState.toJson(expected));
+/** Compare each field in BeaconState to help debug failed test easier. */
+export function expectEqualBeaconState(
+  fork: ForkName,
+  expected: allForks.BeaconState,
+  actual: allForks.BeaconState
+): void {
+  const stateType = ssz[fork].BeaconState as ContainerType<allForks.BeaconState>;
+  if (!stateType.equals(actual, expected)) {
+    expect(stateType.toJson(actual)).to.deep.equal(stateType.toJson(expected));
     throw Error("Wrong state");
   }
 }
 
-/**
- * Compare each field in BeaconState to help debug failed test easier.
- */
-export function expectEqualBeaconStateAltair(expected: altair.BeaconState, actual: altair.BeaconState): void {
-  if (!ssz.altair.BeaconState.equals(actual, expected)) {
-    expect(ssz.altair.BeaconState.toJson(actual)).to.deep.equal(ssz.altair.BeaconState.toJson(expected));
-    throw Error("Wrong state");
-  }
-}
+/** Shortcut for commonly used inputType */
+export const inputTypeSszTreeBacked = {
+  pre: {type: InputType.SSZ_SNAPPY as const, treeBacked: true as const},
+  post: {type: InputType.SSZ_SNAPPY as const, treeBacked: true as const},
+  meta: InputType.YAML as const,
+};

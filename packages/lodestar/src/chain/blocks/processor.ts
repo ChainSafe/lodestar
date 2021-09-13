@@ -66,7 +66,12 @@ export async function processBlockJob(modules: BlockProcessorModules, job: IBloc
     await processBlock(modules, job);
   } catch (e) {
     // above functions only throw BlockError
-    modules.emitter.emit(ChainEvent.errorBlock, e);
+    if (e instanceof BlockError) {
+      modules.emitter.emit(ChainEvent.errorBlock, e);
+    } else {
+      // TODO: Hanlde non-BlockError(s)
+      modules.emitter.emit(ChainEvent.errorBlock, e as BlockError);
+    }
   }
 }
 
@@ -116,7 +121,7 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
     } catch (e) {
       switch ((e as BlockError).type.code) {
         // If the block is already known, simply ignore this block.
-        case BlockErrorCode.BLOCK_IS_ALREADY_KNOWN:
+        case BlockErrorCode.ALREADY_KNOWN:
           continue;
         // If the block is the genesis block, simply ignore this block.
         case BlockErrorCode.GENESIS_BLOCK:
@@ -140,8 +145,9 @@ export async function processChainSegmentJob(modules: BlockProcessorModules, job
         // error.
         default:
           throw new ChainSegmentError({
-            job: e.job,
-            ...e.type,
+            // TODO: Stop using jobs in errors
+            job: (e as ChainSegmentError).job,
+            ...(e as BlockError).type,
             importedBlocks: 0,
           });
       }

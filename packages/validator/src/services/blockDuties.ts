@@ -70,7 +70,7 @@ export class BlockDutiesService {
         await this.pollBeaconProposersAndNotify(slot);
       }
     } catch (e) {
-      this.logger.error("Error on pollBeaconProposers", {}, e);
+      this.logger.error("Error on pollBeaconProposers", {}, e as Error);
     } finally {
       this.pruneOldDuties(computeEpochAtSlot(slot));
     }
@@ -135,7 +135,7 @@ export class BlockDutiesService {
       return;
     }
 
-    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e) => {
+    const proposerDuties = await this.api.validator.getProposerDuties(epoch).catch((e: Error) => {
       throw extendError(e, "Error on getProposerDuties");
     });
     const dependentRoot = proposerDuties.dependentRoot;

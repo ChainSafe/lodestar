@@ -4,7 +4,7 @@
 
 import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
-import Multiaddr from "multiaddr";
+import {Multiaddr} from "multiaddr";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -274,7 +274,7 @@ export class Network implements INetwork {
         }
       }
     } catch (e) {
-      this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e);
+      this.logger.error("Error on BeaconGossipHandler.onEpoch", {epoch}, e as Error);
     }
   };
 
