@@ -1,19 +1,28 @@
 <p align="center"><a href="https://chainsafe.github.io/lodestar"><img width="500" title="Lodestar" src='assets/lodestar_icon_text_black_stroke.png' /></a></p>
 
-# Lodestar Monorepo
+# Lodestar Eth2 Implementation
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Latest)](https://github.com/ChainSafe/lodestar/releases/latest)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/chainsafe/lodestar?label=Github)](https://github.com/ChainSafe/lodestar/releases/latest)
+[![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-cli)](https://www.npmjs.com/package/@chainsafe/lodestar-cli)
+[![Docker Image Version (latest by date)](https://img.shields.io/docker/v/chainsafe/lodestar?color=blue&label=Docker&sort=semver)](https://hub.docker.com/r/chainsafe/lodestar)
 [![Eth2_Spec v1.1.0-beta.3](https://img.shields.io/badge/Eth2_Spec-v1.1.0--beta.3-2e86c1.svg)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.0-beta.3)
 [![codecov](https://codecov.io/gh/ChainSafe/lodestar/branch/master/graph/badge.svg)](https://codecov.io/gh/ChainSafe/lodestar)
 [![Maintainability](https://api.codeclimate.com/v1/badges/678099476c401e1af503/maintainability)](https://codeclimate.com/github/ChainSafe/lodestar/maintainability)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
 ![Node Version](https://img.shields.io/badge/node-14.x-green)
-[![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 
 [Lodestar](https://lodestar.chainsafe.io) is a TypeScript implementation of the [Ethereum 2.0 specification](https://github.com/ethereum/consensus-specs) developed by [ChainSafe Systems](https://chainsafe.io).
 
+###### Get it from the NPM Registry:
+
 ```bash
 npm install -g @chainsafe/lodestar-cli
+```
+
+###### Get it from the Docker Hub:
+
+```bash
+docker pull chainsafe/lodestar
 ```
 
 ## Getting started
@@ -24,13 +33,15 @@ npm install -g @chainsafe/lodestar-cli
 - :spiral_notepad: View the lodestar [CLI commands and options](https://chainsafe.github.io/lodestar/reference/cli/).
 - :nerd_face: View the [TypeDoc code documentation](https://chainsafe.github.io/lodestar/packages).
 - :writing_hand: If you have questions [submit an issue](https://github.com/ChainSafe/lodestar/issues/new) or join us on [Discord](https://discord.gg/yjyvFRP)!
+  [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
+- :rotating_light: Please note our [security policy](./SECURITY.md).
 
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS/Fermium)
 - :toolbox: [Yarn](https://yarnpkg.com/)/[Lerna](https://lerna.js.org/)
 
-## Developer Quickstart
+###### Developer Quickstart:
 
 ```bash
 lerna bootstrap
@@ -40,11 +51,9 @@ yarn build
 
 ## Architecture Overview
 
+- :package: This mono-repository contains a suite of Ethereum 2.0 packages.
 - :triangular_ruler: The [architecure docs](https://chainsafe.github.io/lodestar/design/architecture/) for Lodestar should give an overview over the node modules.
-
-## Packages
-
-- :package: This monorepo repository contains a suite of Ethereum 2.0 packages.
+- :balance_scale: The mono-repositoy is released under [LGPLv3 license](./LICENSE). Note, that the packages contain their own licenses.
 
 | Package                                                                                                                           | Version                                                                                                                                                       | License                                                                                                               | Docs                                                                                                                                             | Description                                 |
 | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
@@ -70,5 +79,5 @@ Weekly contributor meetings are public and announced on Discord. Feel free to ch
 
 ## Donations
 
-We are a local group of Toronto open source developers. As such, all of our open-source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
-If you want to donate, you can send us ETH at the following address: **lodestar.chainsafe.eth**
+We are a local group of Toronto open-source developers. As such, all of our open-source work is funded by grants. We all take the time out of our hectic lives to contribute to the Ethereum ecosystem.
+If you want to donate, you can send us ETH at the following address: `lodestar.chainsafe.eth`
