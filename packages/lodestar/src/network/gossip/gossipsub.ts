@@ -21,6 +21,11 @@ import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByType} from "./validation";
 import {GossipHandlers} from "./handlers";
 import {Map2d, Map2dArr} from "../../util/map";
+import pipe from "it-pipe";
+import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
+import BufferList from "bl";
+import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
+import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
 interface IGossipsubModules {
   config: IChainForkConfig;
@@ -119,6 +124,69 @@ export class Eth2Gossipsub extends Gossipsub {
       this.msgIdCache.set(msg, msgId);
     }
     return msgId;
+  }
+
+  // Temporaly reverts https://github.com/libp2p/js-libp2p-interfaces/pull/103 while a proper fixed is done upstream
+  // await-ing _processRpc causes messages to be processed 10-20 seconds latter than when received. This kills the node
+  async _processMessages(
+    idB58Str: string,
+    stream: AsyncIterable<Uint8Array | BufferList>,
+    peerStreams: PeerStreams
+  ): Promise<void> {
+    try {
+      await pipe(stream, async (source) => {
+        for await (const data of source) {
+          const rpcBytes = data instanceof Uint8Array ? data : data.slice();
+          const rpcMsg = this._decodeRpc(rpcBytes);
+
+          this._processRpc(idB58Str, peerStreams, rpcMsg).catch((e) => {
+            this.log("_processRpc error", (e as Error).stack);
+          });
+        }
+      });
+    } catch (err) {
+      this._onPeerDisconnected(peerStreams.id, err as Error);
+    }
+  }
+
+  // Temporaly reverts https://github.com/libp2p/js-libp2p-interfaces/pull/103 while a proper fixed is done upstream
+  // await-ing _processRpc causes messages to be processed 10-20 seconds latter than when received. This kills the node
+  async _processRpc(idB58Str: string, peerStreams: PeerStreams, rpc: RPC): Promise<boolean> {
+    this.log("rpc from", idB58Str);
+    const subs = rpc.subscriptions;
+    const msgs = rpc.msgs;
+
+    if (subs.length) {
+      // update peer subscriptions
+      subs.forEach((subOpt) => {
+        this._processRpcSubOpt(idB58Str, subOpt);
+      });
+      this.emit("pubsub:subscription-change", peerStreams.id, subs);
+    }
+
+    if (!this._acceptFrom(idB58Str)) {
+      this.log("received message from unacceptable peer %s", idB58Str);
+      return false;
+    }
+
+    if (msgs.length) {
+      await Promise.all(
+        msgs.map(async (message) => {
+          if (
+            !(
+              this.canRelayMessage ||
+              (message.topicIDs && message.topicIDs.some((topic) => this.subscriptions.has(topic)))
+            )
+          ) {
+            this.log("received message we didn't subscribe to. Dropping.");
+            return;
+          }
+          const msg = normalizeInRpcMessage(message, idB58Str);
+          await this._processRpcMessage(msg);
+        })
+      );
+    }
+    return true;
   }
 
   /**
