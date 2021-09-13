@@ -3,7 +3,11 @@ import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {IBlockJob} from "./interface";
@@ -181,6 +185,8 @@ export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint):
 
 export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
   this.logger.verbose("Fork choice finalized", ssz.phase0.Checkpoint.toJson(cp));
+  this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
+
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
