@@ -1,7 +1,7 @@
 /* eslint-disable max-len */
 import {fromHexString, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Slot, ValidatorIndex, phase0, allForks, ssz, BlockRootHex, Epoch} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch} from "@chainsafe/lodestar-types";
 import {
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
@@ -796,7 +796,7 @@ export class ForkChoice implements IForkChoice {
   /**
    * Add a validator's latest message to the tracked votes
    */
-  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: BlockRootHex): void {
+  private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
     this.synced = false;
     const vote = this.votes[validatorIndex];
     if (!vote) {
