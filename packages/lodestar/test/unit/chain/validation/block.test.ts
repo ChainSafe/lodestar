@@ -1,6 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
-import {BeaconChain, ForkChoice, IBeaconChain, IBlockJob} from "../../../../src/chain";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {BeaconChain, IBeaconChain, IBlockJob} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
