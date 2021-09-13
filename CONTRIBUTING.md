@@ -79,6 +79,7 @@ We're currently experimenting with hosting the majority of lodestar packages and
 ## Style Guide
 
 - Pull requests should usually only update a single package (in our monorepo) at a time
+  - prefix your PR title with the module you are working on, e.g.: `validator: foo bar buz`
 - Many module class constructors have the following signature: `(options, dependencies)`
   - e.g.: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
 - Modules should be designed to _"do one thing and do it well!"_
@@ -103,4 +104,4 @@ We're currently experimenting with hosting the majority of lodestar packages and
 
 ## Community
 
-Come chat with us on [Discord](https://discord.gg/aMxzVcr)!
+Come chat with us on [Discord](https://discord.gg/aMxzVcr) and join our public weekly planning meetings!
