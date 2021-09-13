@@ -29,8 +29,15 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
+
+      # Download spec tests with cache
+      - name: Restore spec tests cache
+        uses: actions/cache@master
+        with:
+          path: packages/spec-test-runner/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/spec-test-runner/test/specTestVersioning.ts') }}
       - name: Download spec tests
-        run: yarn download-test-cases
+        run: yarn download-spec-tests
         working-directory: packages/spec-test-runner
       - name: Check spec tests
         run: yarn check-tests

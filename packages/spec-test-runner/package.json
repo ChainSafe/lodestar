@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "check-types": "tsc --noEmit",
-    "download-test-cases": "node -r ts-node/register test/downloadTests.ts",
+    "download-spec-tests": "node -r ts-node/register test/downloadTests.ts",
     "check-tests": "mocha test/checkTests.test.ts",
     "test:bls": "mocha 'test/spec/bls/**/*.test.ts'",
     "test:ssz-generic": "mocha 'test/spec/ssz/generic/index.test.ts'",

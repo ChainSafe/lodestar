@@ -9,7 +9,7 @@ import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {config} from "./util";
 
