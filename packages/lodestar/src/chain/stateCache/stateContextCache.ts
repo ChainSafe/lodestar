@@ -70,6 +70,7 @@ export class StateContextCache {
 
   clear(): void {
     this.cache.clear();
+    this.epochIndex.clear();
   }
 
   get size(): number {
