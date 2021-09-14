@@ -1,33 +1,56 @@
-StateTransition:
+mod1-beaconchain:
+  - packages/lodestar/**/*
+
+mod2-validator:
+  - packages/validator/**/*
+
+mod3-lightclient:
+  - packages/light-client/**/*
+
+mod4-api:
+  - packages/lodestar/src/api/**/*
+  - packages/api/**/*
+
+mod5-cli:
+  - packages/cli/**/*
+
+mod6-statetransition:
   - packages/beacon-state-transition/**/*
   - packages/spec-test-runner/**/*
   - packages/spec-test-util/**/*
 
-CLI:
-  - packages/cli/**/*
-
-Types:
+mod7-types:
   - packages/types/**/*
 
-Config:
+mod8-params:
+  - packages/params/**/*
+
+mod9-utils:
+  - packages/utils/**/*
+
+moda-config:
   - packages/config/**/*
   - packages/params/**/*
 
-Validator:
-  - packages/validator/**/*
+modb-database:
+  - packages/db/**/*
 
-Api:
-  - packages/lodestar/src/api/**/*
+modc-forkchoice:
+  - packages/fork-choice/**/*
 
-Network:
+modd-spectests:
+  - packages/spec-test-runner/**/*
+  - packages/spec-test-util/**/*
+
+scope4-benchmarks:
+  - packages/lodestar/test/benchmarks/**/*
+
+scope5-networking:
   - packages/lodestar/src/network/**/*
   - packages/lodestar/src/sync/**/*
 
-Eth1:
+scopea-eth1:
   - packages/lodestar/src/eth1/**/*
 
-Benchmarks:
-  - packages/lodestar/test/benchmarks/**/*
-
-CI:
+scopeb-ci:
   - .github/**/*
