@@ -47,7 +47,7 @@
     "winston-transport": "^4.3.0"
   },
   "devDependencies": {
-    "@types/js-yaml": "^3.12.1",
+    "@types/js-yaml": "^4.0.3",
     "@types/triple-beam": "^1.3.2",
     "triple-beam": "^1.3.0"
   },
