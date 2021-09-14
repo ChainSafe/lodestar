@@ -2471,9 +2471,9 @@
   integrity sha512-tSj7MRNgEJCSqVRgPL4WIIcslZChgL6gVwnVFsAj2nTx0RdcG7iSpWm+0fkAKEe7e/YQ08TZH4wQWxpFODYqJw==
 
 "@types/qs@^6.9.6":
-  version "6.9.6"
-  resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.6.tgz#df9c3c8b31a247ec315e6996566be3171df4b3b1"
-  integrity sha512-0/HnwIfW4ki2D8L8c9GVcG5I72s9jP5GSLVF0VIXDW00kmIpA6O33G7a8n59Tmh7Nz0WUC3rSb7PTY/sdW2JzA==
+  version "6.9.7"
+  resolved "https://registry.yarnpkg.com/@types/qs/-/qs-6.9.7.tgz#63bb7d067db107cc1e457c303bc25d511febf6cb"
+  integrity sha512-FGa1F62FT09qcrueBA6qYTrJPVDzah9a+493+o2PCXsesWHIn27G98TsSMs3WPNbZIEj4+VJf6saSFpvD+3Zsw==
 
 "@types/responselike@*", "@types/responselike@^1.0.0":
   version "1.0.0"
@@ -6975,7 +6975,7 @@ libnpmaccess@^4.0.1:
     npm-package-arg "^8.1.2"
     npm-registry-fetch "^10.0.0"
 
-libnpmpublish@^4.0.0:
+libnpmpublish@4.0.0, libnpmpublish@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/libnpmpublish/-/libnpmpublish-4.0.0.tgz#ad6413914e0dfd78df868ce14ba3d3a4cc8b385b"
   integrity sha512-2RwYXRfZAB1x/9udKpZmqEzSqNd7ouBRU52jyG14/xG8EF+O9A62d7/XVR3iABEQHf1iYhkm0Oq9iXjrL3tsXA==
