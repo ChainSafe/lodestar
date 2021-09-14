@@ -18,8 +18,7 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-  db,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network" | "db">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): IBeaconPoolApi {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot
@@ -33,15 +32,15 @@ export function getBeaconPoolApi({
     },
 
     async getPoolAttesterSlashings() {
-      return {data: await db.attesterSlashing.values()};
+      return {data: chain.opPool.getAllAttesterSlashings()};
     },
 
     async getPoolProposerSlashings() {
-      return {data: await db.proposerSlashing.values()};
+      return {data: chain.opPool.getAllProposerSlashings()};
     },
 
     async getPoolVoluntaryExits() {
-      return {data: await db.voluntaryExit.values()};
+      return {data: chain.opPool.getAllVoluntaryExits()};
     },
 
     async submitPoolAttestations(attestations) {
@@ -85,19 +84,22 @@ export function getBeaconPoolApi({
       }
     },
 
-    async submitPoolAttesterSlashing(slashing) {
-      await validateGossipAttesterSlashing(chain, db, slashing);
-      await Promise.all([network.gossip.publishAttesterSlashing(slashing), db.attesterSlashing.add(slashing)]);
+    async submitPoolAttesterSlashing(attesterSlashing) {
+      await validateGossipAttesterSlashing(chain, attesterSlashing);
+      chain.opPool.insertAttesterSlashing(attesterSlashing);
+      await network.gossip.publishAttesterSlashing(attesterSlashing);
     },
 
-    async submitPoolProposerSlashing(slashing) {
-      await validateGossipProposerSlashing(chain, db, slashing);
-      await Promise.all([network.gossip.publishProposerSlashing(slashing), db.proposerSlashing.add(slashing)]);
+    async submitPoolProposerSlashing(proposerSlashing) {
+      await validateGossipProposerSlashing(chain, proposerSlashing);
+      chain.opPool.insertProposerSlashing(proposerSlashing);
+      await network.gossip.publishProposerSlashing(proposerSlashing);
     },
 
-    async submitPoolVoluntaryExit(exit) {
-      await validateGossipVoluntaryExit(chain, db, exit);
-      await Promise.all([network.gossip.publishVoluntaryExit(exit), db.voluntaryExit.add(exit)]);
+    async submitPoolVoluntaryExit(voluntaryExit) {
+      await validateGossipVoluntaryExit(chain, voluntaryExit);
+      chain.opPool.insertVoluntaryExit(voluntaryExit);
+      await network.gossip.publishVoluntaryExit(voluntaryExit);
     },
 
     /**

@@ -56,11 +56,7 @@ describe("block assembly", function () {
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
 
-    const result = await assembleBlock(
-      {config, chain: chainStub, db: beaconDB, eth1, metrics: null},
-      1,
-      Buffer.alloc(96, 0)
-    );
+    const result = await assembleBlock({config, chain: chainStub, eth1, metrics: null}, 1, Buffer.alloc(96, 0));
     expect(result).to.not.be.null;
     expect(result.slot).to.equal(1);
     expect(result.proposerIndex).to.equal(2);

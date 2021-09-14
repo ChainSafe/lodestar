@@ -1,4 +1,9 @@
-import {CachedBeaconState, computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  allForks,
+  getAttesterSlashableIndices,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -17,10 +22,10 @@ export class OpPool {
   private readonly proposerSlashings = new Map<ValidatorIndex, phase0.ProposerSlashing>();
   /** Map of to exit validator index -> SignedVoluntaryExit */
   private readonly voluntaryExits = new Map<ValidatorIndex, phase0.SignedVoluntaryExit>();
+  /** Set of seen attester slashing indexes. No need to prune */
+  private readonly attesterSlashingIndexes = new Set<ValidatorIndex>();
 
-  static async fromPersisted(db: IBeaconDb): Promise<OpPool> {
-    const opPool = new OpPool();
-
+  async fromPersisted(db: IBeaconDb): Promise<void> {
     const [attesterSlashings, proposerSlashings, voluntaryExits] = await Promise.all([
       db.attesterSlashing.entries(),
       db.proposerSlashing.values(),
@@ -28,16 +33,14 @@ export class OpPool {
     ]);
 
     for (const attesterSlashing of attesterSlashings) {
-      opPool.insertAttesterSlashing(attesterSlashing.value, attesterSlashing.key);
+      this.insertAttesterSlashing(attesterSlashing.value, attesterSlashing.key);
     }
     for (const proposerSlashing of proposerSlashings) {
-      opPool.insertProposerSlashing(proposerSlashing);
+      this.insertProposerSlashing(proposerSlashing);
     }
     for (const voluntaryExit of voluntaryExits) {
-      opPool.insertVoluntaryExit(voluntaryExit);
+      this.insertVoluntaryExit(voluntaryExit);
     }
-
-    return opPool;
   }
 
   async toPersisted(db: IBeaconDb): Promise<void> {
@@ -54,16 +57,41 @@ export class OpPool {
     ]);
   }
 
-  /// Insert an attester slashing into the pool.
+  // Use the opPool as seen cache for gossip validation
+
+  /** Returns false if at least one intersecting index has not been seen yet */
+  hasSeenAttesterSlashing(intersectingIndices: ValidatorIndex[]): boolean {
+    for (const validatorIndex of intersectingIndices) {
+      if (!this.attesterSlashingIndexes.has(validatorIndex)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  hasSeenVoluntaryExit(validatorIndex: ValidatorIndex): boolean {
+    return this.voluntaryExits.has(validatorIndex);
+  }
+
+  hasSeenProposerSlashing(validatorIndex: ValidatorIndex): boolean {
+    return this.proposerSlashings.has(validatorIndex);
+  }
+
+  /** Must be validated beforehand */
   insertAttesterSlashing(attesterSlashing: phase0.AttesterSlashing, rootHash?: Uint8Array): void {
     if (!rootHash) rootHash = ssz.phase0.AttesterSlashing.hashTreeRoot(attesterSlashing);
+    // TODO: Do once and cache attached to the AttesterSlashing object
     const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
     this.attesterSlashings.set(toHexString(rootHash), {
       attesterSlashing,
       intersectingIndices,
     });
+    for (const index of intersectingIndices) {
+      this.attesterSlashingIndexes.add(index);
+    }
   }
 
+  /** Must be validated beforehand */
   insertProposerSlashing(proposerSlashing: phase0.ProposerSlashing): void {
     this.proposerSlashings.set(proposerSlashing.signedHeader1.message.proposerIndex, proposerSlashing);
   }
@@ -79,7 +107,7 @@ export class OpPool {
    * This function computes both types of slashings together, because attester slashings may be invalidated by
    * proposer slashings included earlier in the block.
    */
-  getSlashings(state: phase0.BeaconState): [phase0.AttesterSlashing[], phase0.ProposerSlashing[]] {
+  getSlashings(state: CachedBeaconState<allForks.BeaconState>): [phase0.AttesterSlashing[], phase0.ProposerSlashing[]] {
     const stateEpoch = computeEpochAtSlot(state.slot);
     const toBeSlashedIndices: ValidatorIndex[] = [];
     const proposerSlashings: phase0.ProposerSlashing[] = [];
@@ -178,21 +206,23 @@ export class OpPool {
       }
     }
   }
+
+  /** For beacon pool API */
+  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+    return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
+  }
+
+  /** For beacon pool API */
+  getAllProposerSlashings(): phase0.ProposerSlashing[] {
+    return Array.from(this.proposerSlashings.values());
+  }
+
+  /** For beacon pool API */
+  getAllVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return Array.from(this.voluntaryExits.values());
+  }
 }
 
 function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean {
   return !validator.slashed && validator.activationEpoch <= epoch && epoch < validator.withdrawableEpoch;
-}
-
-function getAttesterSlashableIndices(attesterSlashing: phase0.AttesterSlashing): ValidatorIndex[] {
-  const indices: ValidatorIndex[] = [];
-  const attSet1 = new Set(attesterSlashing.attestation1.attestingIndices);
-  const attArr2 = attesterSlashing.attestation2.attestingIndices;
-  for (let i = 0, len = attArr2.length; i < len; i++) {
-    const index = attArr2[i];
-    if (attSet1.has(index)) {
-      indices.push(index);
-    }
-  }
-  return indices;
 }

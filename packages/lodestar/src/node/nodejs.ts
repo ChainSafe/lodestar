@@ -132,13 +132,16 @@ export class BeaconNode {
       metrics,
       anchorState,
     });
+
+    // Load persisted data from disk to in-memory caches
+    await chain.loadFromDisk();
+
     const network = new Network(opts.network, {
       config,
       libp2p,
       logger: logger.child(opts.logger.network),
       metrics,
       chain,
-      db,
       reqRespHandlers: getReqRespHandlers({db, chain}),
       signal,
     });

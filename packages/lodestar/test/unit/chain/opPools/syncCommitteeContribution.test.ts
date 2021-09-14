@@ -10,7 +10,7 @@ import {
   replaceIfBetter,
   SyncContributionAndProofPool,
   SyncContributionFast,
-} from "../../../../src/chain/opPools";
+} from "../../../../src/chain/opPools/syncContributionAndProofPool";
 import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof";
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
 import bls, {SecretKey, Signature} from "@chainsafe/bls";

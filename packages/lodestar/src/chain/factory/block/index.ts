@@ -6,7 +6,6 @@ import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-tran
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes96, Root, Slot} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
-import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IMetrics} from "../../../metrics";
 import {IBeaconChain} from "../../interface";
@@ -16,13 +15,12 @@ import {RegenCaller} from "../../regen";
 type AssembleBlockModules = {
   config: IChainForkConfig;
   chain: IBeaconChain;
-  db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
   metrics: IMetrics | null;
 };
 
 export async function assembleBlock(
-  {config, chain, db, eth1, metrics}: AssembleBlockModules,
+  {config, chain, eth1, metrics}: AssembleBlockModules,
   slot: Slot,
   randaoReveal: Bytes96,
   graffiti = ZERO_HASH
@@ -35,7 +33,7 @@ export async function assembleBlock(
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: head.blockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody({config, chain, db, eth1}, state, randaoReveal, graffiti, slot, {
+    body: await assembleBody({config, chain, eth1}, state, randaoReveal, graffiti, slot, {
       parentSlot: slot - 1,
       parentBlockRoot: head.blockRoot,
     }),

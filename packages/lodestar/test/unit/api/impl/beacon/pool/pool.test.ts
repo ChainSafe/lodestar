@@ -7,7 +7,6 @@ import {
   generateAttestationData,
   generateEmptySignedVoluntaryExit,
 } from "../../../../../utils/attestation";
-import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
@@ -26,7 +25,6 @@ import {AggregatedAttestationPool} from "../../../../../../src/chain/opPools";
 describe("beacon pool api impl", function () {
   const logger = testLogger();
   let poolApi: ReturnType<typeof getBeaconPoolApi>;
-  let dbStub: StubbedBeaconDb;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
   let networkStub: SinonStubbedInstance<Network>;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
@@ -37,7 +35,6 @@ describe("beacon pool api impl", function () {
 
   beforeEach(function () {
     const server = setupApiImplTestServer();
-    dbStub = server.dbStub;
     chainStub = server.chainStub;
     aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
     ((chainStub as unknown) as {
@@ -50,7 +47,6 @@ describe("beacon pool api impl", function () {
     networkStub = server.networkStub;
     networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     poolApi = getBeaconPoolApi({
-      db: server.dbStub,
       logger,
       network: networkStub,
       chain: chainStub,
@@ -97,18 +93,16 @@ describe("beacon pool api impl", function () {
       },
     };
 
-    it("should broadcast and persist to db", async function () {
+    it("should broadcast", async function () {
       validateGossipAttesterSlashing.resolves();
       await poolApi.submitPoolAttesterSlashing(atterterSlashing);
       expect(gossipStub.publishAttesterSlashing.calledOnceWithExactly(atterterSlashing)).to.be.true;
-      expect(dbStub.attesterSlashing.add.calledOnceWithExactly(atterterSlashing)).to.be.true;
     });
 
-    it("should not broadcast or persist to db", async function () {
+    it("should not broadcast", async function () {
       validateGossipAttesterSlashing.throws(new Error("unit test error"));
       await poolApi.submitPoolAttesterSlashing(atterterSlashing).catch(() => ({}));
       expect(gossipStub.publishAttesterSlashing.calledOnce).to.be.false;
-      expect(dbStub.attesterSlashing.add.calledOnce).to.be.false;
     });
   });
 
@@ -118,36 +112,32 @@ describe("beacon pool api impl", function () {
       signedHeader2: generateEmptySignedBlockHeader(),
     };
 
-    it("should broadcast and persist to db", async function () {
+    it("should broadcast", async function () {
       validateGossipProposerSlashing.resolves();
       await poolApi.submitPoolProposerSlashing(proposerSlashing);
       expect(gossipStub.publishProposerSlashing.calledOnceWithExactly(proposerSlashing)).to.be.true;
-      expect(dbStub.proposerSlashing.add.calledOnceWithExactly(proposerSlashing)).to.be.true;
     });
 
-    it("should not broadcast or persist to db", async function () {
+    it("should not broadcast", async function () {
       validateGossipProposerSlashing.throws(new Error("unit test error"));
       await poolApi.submitPoolProposerSlashing(proposerSlashing).catch(() => ({}));
       expect(gossipStub.publishProposerSlashing.calledOnce).to.be.false;
-      expect(dbStub.proposerSlashing.add.calledOnce).to.be.false;
     });
   });
 
   describe("submitPoolVoluntaryExit", function () {
     const voluntaryExit = generateEmptySignedVoluntaryExit();
 
-    it("should broadcast and persist to db", async function () {
+    it("should broadcast", async function () {
       validateVoluntaryExit.resolves();
       await poolApi.submitPoolVoluntaryExit(voluntaryExit);
       expect(gossipStub.publishVoluntaryExit.calledOnceWithExactly(voluntaryExit)).to.be.true;
-      expect(dbStub.voluntaryExit.add.calledOnceWithExactly(voluntaryExit)).to.be.true;
     });
 
-    it("should not broadcast or persist to db", async function () {
+    it("should not broadcast", async function () {
       validateVoluntaryExit.throws(new Error("unit test error"));
       await poolApi.submitPoolVoluntaryExit(voluntaryExit).catch(() => ({}));
       expect(gossipStub.publishVoluntaryExit.calledOnce).to.be.false;
-      expect(dbStub.voluntaryExit.add.calledOnce).to.be.false;
     });
   });
 });

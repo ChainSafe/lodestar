@@ -3,28 +3,16 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {
-  ForkName,
-  MAX_ATTESTATIONS,
-  MAX_ATTESTER_SLASHINGS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-} from "@chainsafe/lodestar-params";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IBeaconDb} from "../../../db";
 import {IEth1ForBlockProduction} from "../../../eth1";
 import {IBeaconChain} from "../../interface";
 
 export async function assembleBody(
-  {
-    chain,
-    config,
-    db,
-    eth1,
-  }: {chain: IBeaconChain; config: IChainForkConfig; db: IBeaconDb; eth1: IEth1ForBlockProduction},
+  {chain, config, eth1}: {chain: IBeaconChain; config: IChainForkConfig; eth1: IEth1ForBlockProduction},
   currentState: CachedBeaconState<allForks.BeaconState>,
   randaoReveal: Bytes96,
   graffiti: Bytes32,
@@ -43,13 +31,12 @@ export async function assembleBody(
   //   }
   // }
 
-  const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
-    db.proposerSlashing.values({limit: MAX_PROPOSER_SLASHINGS}),
-    db.attesterSlashing.values({limit: MAX_ATTESTER_SLASHINGS}),
-    chain.aggregatedAttestationPool.getAttestationsForBlock(currentState).slice(0, MAX_ATTESTATIONS),
-    db.voluntaryExit.values({limit: MAX_VOLUNTARY_EXITS}),
-    eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
-  ]);
+  const [attesterSlashings, proposerSlashings] = chain.opPool.getSlashings(currentState);
+  const voluntaryExits = chain.opPool.getVoluntaryExits(currentState);
+  const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
+  const {eth1Data, deposits} = await eth1.getEth1DataAndDeposits(
+    currentState as CachedBeaconState<allForks.BeaconState>
+  );
 
   const blockBodyPhase0: phase0.BeaconBlockBody = {
     randaoReveal,

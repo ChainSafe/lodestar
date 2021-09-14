@@ -1,14 +1,14 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {ProposerSlashingError, ProposerSlashingErrorCode, GossipAction} from "../errors";
-import {IBeaconDb} from "../../db";
 
 export async function validateGossipProposerSlashing(
   chain: IBeaconChain,
-  db: IBeaconDb,
   proposerSlashing: phase0.ProposerSlashing
 ): Promise<void> {
-  if (await db.proposerSlashing.has(proposerSlashing.signedHeader1.message.proposerIndex)) {
+  // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
+  // proposer_slashing.signed_header_1.message.proposer_index.
+  if (chain.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
     throw new ProposerSlashingError(GossipAction.IGNORE, {
       code: ProposerSlashingErrorCode.ALREADY_EXISTS,
     });
@@ -16,6 +16,7 @@ export async function validateGossipProposerSlashing(
 
   const state = chain.getHeadState();
 
+  // [REJECT] All of the conditions within process_proposer_slashing pass validation.
   try {
     // verifySignature = false, verified in batch below
     allForks.assertValidProposerSlashing(state, proposerSlashing, false);
