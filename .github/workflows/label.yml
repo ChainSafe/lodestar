@@ -7,5 +7,5 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - uses: srvaroa/labeler@v0.8
-        with:
-          repo-token: "${{ secrets.GITHUB_TOKEN }}"
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
