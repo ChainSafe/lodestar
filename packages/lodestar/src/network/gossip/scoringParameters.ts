@@ -64,7 +64,7 @@ export class GossipPeerScoreParamsBuilder {
   private epochDurationMs: number;
   private slotDurationMs: number;
 
-  constructor(modules: IGossipsubModules) {
+  constructor(modules: Pick<IGossipsubModules, "config" | "forkDigestContext" | "logger" | "eth2Context">) {
     const {config, forkDigestContext, logger, eth2Context} = modules;
     this.config = config;
     this.forkDigestContext = forkDigestContext;
@@ -192,8 +192,8 @@ export class GossipPeerScoreParamsBuilder {
 
     params.topicWeight = topicWeight;
 
-    params.timeInMeshQuantum = this.config.SECONDS_PER_SLOT;
-    params.timeInMeshCap = 3600 / params.timeInMeshQuantum;
+    params.timeInMeshQuantum = this.slotDurationMs;
+    params.timeInMeshCap = 3600 / (params.timeInMeshQuantum / 1000);
     params.timeInMeshWeight = 10 / params.timeInMeshCap;
 
     params.firstMessageDeliveriesDecay = this.scoreParameterDecay(firstMessageDecayTime);
