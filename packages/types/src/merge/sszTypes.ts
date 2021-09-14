@@ -2,8 +2,10 @@ import {
   byteType,
   ByteVectorType,
   ContainerType,
+  List,
   ListType,
   RootType,
+  Union,
   UnionType,
   Vector,
   VectorType,
@@ -41,7 +43,11 @@ export const OpaqueTransaction = new ListType({elementType: byteType, limit: MAX
  *
  * Spec v1.0.1
  */
-export const Transaction = new UnionType({types: [OpaqueTransaction]});
+export const Transaction = new UnionType<Union<merge.Transaction>>({types: [OpaqueTransaction]});
+export const Transactions = new ListType<List<merge.Transaction>>({
+  elementType: Transaction,
+  limit: MAX_TRANSACTIONS_PER_PAYLOAD,
+});
 
 const executionPayloadFields = {
   parentHash: Root,
@@ -81,10 +87,10 @@ const executionPayloadFields = {
  *
  * Spec v1.0.1
  */
-export const ExecutionPayload = new ContainerType<merge.BeaconBlockBody>({
+export const ExecutionPayload = new ContainerType<merge.ExecutionPayload>({
   fields: {
     ...executionPayloadFields,
-    transactions: new ListType({elementType: Transaction, limit: MAX_TRANSACTIONS_PER_PAYLOAD}),
+    transactions: Transactions,
   },
 });
 
@@ -97,7 +103,7 @@ export const ExecutionPayload = new ContainerType<merge.BeaconBlockBody>({
  *
  * Spec v1.0.1
  */
-export const ExecutionPayloadHeader = new ContainerType<merge.BeaconBlockBody>({
+export const ExecutionPayloadHeader = new ContainerType<merge.ExecutionPayloadHeader>({
   fields: {
     ...executionPayloadFields,
     transactionsRoot: Root,
