@@ -10,7 +10,7 @@ merge:
   trigger:
     # Pull requests with any of these labels (case-insensitive) are added to
     # the trigger.
-    labels: ["status6-bulldozer"]
+    labels: ["status5-mergeready", "status6-bulldozer"]
 
     # Pull requests where the body or any comment contains any of these
     # substrings are added to the trigger.
@@ -93,7 +93,7 @@ update:
   # "ignore" defines the set of pull requests that should not be updated by
   # bulldozer. It accepts the same keys as the ignore in the "merge" block.
   ignore:
-    labels: ["status5-mergeready"]
+    labels: ["status5-mergeready", "status6-bulldozer"]
 
   # If true, bulldozer will ignore updating draft pull requests, unless they
   # explicitly match a configured trigger condition.
