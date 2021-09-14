@@ -87,7 +87,7 @@ describe("validate voluntary exit", () => {
     };
 
     // Return SignedVoluntaryExit known
-    opPool.hasSeenProposerSlashing.returns(true);
+    opPool.hasSeenVoluntaryExit.returns(true);
 
     await expectRejectedWithLodestarError(
       validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalidSig),

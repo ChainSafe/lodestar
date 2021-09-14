@@ -20,12 +20,13 @@ import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
 import {SinonStubFn} from "../../../../../utils/types";
 import {testLogger} from "../../../../../utils/logger";
-import {AggregatedAttestationPool} from "../../../../../../src/chain/opPools";
+import {AggregatedAttestationPool, OpPool} from "../../../../../../src/chain/opPools";
 
 describe("beacon pool api impl", function () {
   const logger = testLogger();
   let poolApi: ReturnType<typeof getBeaconPoolApi>;
   let chainStub: SinonStubbedInstance<IBeaconChain>;
+  let opPool: SinonStubbedInstance<OpPool>;
   let networkStub: SinonStubbedInstance<Network>;
   let gossipStub: SinonStubbedInstance<Eth2Gossipsub>;
   let validateGossipAttesterSlashing: SinonStubFn<typeof attesterSlashingValidation["validateGossipAttesterSlashing"]>;
@@ -40,6 +41,10 @@ describe("beacon pool api impl", function () {
     ((chainStub as unknown) as {
       aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
     }).aggregatedAttestationPool = aggregatedAttestationPool;
+    opPool = sinon.createStubInstance(OpPool);
+    ((chainStub as unknown) as {
+      opPool: SinonStubbedInstance<OpPool>;
+    }).opPool = opPool;
     gossipStub = sinon.createStubInstance(Eth2Gossipsub);
     gossipStub.publishAttesterSlashing = sinon.stub();
     gossipStub.publishProposerSlashing = sinon.stub();

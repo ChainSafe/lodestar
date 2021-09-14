@@ -17,7 +17,7 @@ describe("validate proposer slashing", () => {
   let chainStub: StubbedChain;
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
-  before(() => {
+  beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
