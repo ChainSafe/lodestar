@@ -2,13 +2,17 @@ import {expect} from "chai";
 import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
-export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any>): void {
+export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any> | string): void {
   try {
     const value = fn();
     const json = JSON.stringify(value, null, 2);
     throw Error(`Expected fn to throw but returned value: \n\n\t${json}`);
   } catch (e) {
-    expectLodestarError(e as LodestarError<any>, expectedErr);
+    if (typeof expectedErr === "string") {
+      expectLodestarErrorCode(e as LodestarError<any>, expectedErr);
+    } else {
+      expectLodestarError(e as LodestarError<any>, expectedErr);
+    }
   }
 }
 

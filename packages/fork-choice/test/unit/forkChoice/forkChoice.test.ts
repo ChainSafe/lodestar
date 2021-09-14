@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, ProtoArray, toBlockSummary} from "../../../src";
+import {ForkChoice, IForkChoiceStore, ProtoArray} from "../../../src";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
@@ -39,9 +39,9 @@ describe("Forkchoice", function () {
 
   const fcStore: IForkChoiceStore = {
     currentSlot: block.slot,
-    justifiedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
-    finalizedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
-    bestJustifiedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
+    justifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
   };
 
   it("getAllAncestorBlocks", function () {
@@ -53,9 +53,9 @@ describe("Forkchoice", function () {
       queuedAttestations: new Set(),
       justifiedBalances: [],
     });
-    const summaries = forkchoice.getAllAncestorBlocks(fromHexString(finalizedDesc));
-    // there are 2 blocks in protoArray but getAllAncestorBlocks should only return non-finalized blocks
+    const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
+    // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");
-    expect(summaries[0]).to.be.deep.equals(toBlockSummary(block), "the block summary is not correct");
+    expect(summaries[0]).to.be.deep.include(block, "the block summary is not correct");
   });
 });

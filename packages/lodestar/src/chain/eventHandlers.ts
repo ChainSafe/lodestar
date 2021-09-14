@@ -2,7 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -179,12 +179,12 @@ export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Pro
   this.metrics?.finalizedEpoch.set(cp.epoch);
 }
 
-export function onForkChoiceJustified(this: BeaconChain, cp: phase0.Checkpoint): void {
-  this.logger.verbose("Fork choice justified", ssz.phase0.Checkpoint.toJson(cp));
+export function onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex): void {
+  this.logger.verbose("Fork choice justified", {epoch: cp.epoch, root: cp.rootHex});
 }
 
-export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
-  this.logger.verbose("Fork choice finalized", ssz.phase0.Checkpoint.toJson(cp));
+export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
+  this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
   this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
   // Only after altair
@@ -194,7 +194,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
       // using state.slot is not correct for a checkpoint with skipped slot
       const block = await this.getCanonicalBlockAtSlot(state.latestBlockHeader.slot);
       if (!block) {
-        throw Error(`No block found for checkpoint ${cp.epoch} : ${toHexString(cp.root)}`);
+        throw Error(`No block found for checkpoint ${cp.epoch} : ${cp.rootHex}`);
       }
 
       await this.lightclientUpdater.onFinalized(
@@ -213,17 +213,17 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: phase0.Checkp
   }
 }
 
-export function onForkChoiceHead(this: BeaconChain, head: IBlockSummary): void {
+export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
-    headRoot: toHexString(head.blockRoot),
+    headRoot: head.blockRoot,
   });
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
 }
 
-export function onForkChoiceReorg(this: BeaconChain, head: IBlockSummary, oldHead: IBlockSummary, depth: number): void {
+export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
   this.logger.verbose("Chain reorg", {depth});
 }
 

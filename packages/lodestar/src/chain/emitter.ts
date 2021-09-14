@@ -3,7 +3,7 @@ import StrictEventEmitter from "strict-event-emitter-types";
 
 import {ForkName} from "@chainsafe/lodestar-params";
 import {phase0, Epoch, Slot, Version, allForks} from "@chainsafe/lodestar-types";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {IBlockJob} from "./interface";
 import {AttestationError, BlockError} from "./errors";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -123,10 +123,10 @@ export interface IChainEvents {
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
-  [ChainEvent.forkChoiceHead]: (head: IBlockSummary) => void;
-  [ChainEvent.forkChoiceReorg]: (head: IBlockSummary, oldHead: IBlockSummary, depth: number) => void;
-  [ChainEvent.forkChoiceJustified]: (checkpoint: phase0.Checkpoint) => void;
-  [ChainEvent.forkChoiceFinalized]: (checkpoint: phase0.Checkpoint) => void;
+  [ChainEvent.forkChoiceHead]: (head: IProtoBlock) => void;
+  [ChainEvent.forkChoiceReorg]: (head: IProtoBlock, oldHead: IProtoBlock, depth: number) => void;
+  [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
+  [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 }
 
 /**

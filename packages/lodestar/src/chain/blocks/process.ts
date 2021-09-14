@@ -10,6 +10,7 @@ import {groupBlocksByEpoch} from "./util";
 import {allForks, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache} from "../stateCache";
 import {IMetrics} from "../../metrics";
+import {toHexString} from "@chainsafe/ssz";
 
 export type BlockProcessOpts = {
   /**
@@ -35,7 +36,7 @@ export async function processBlock(modules: BlockProcessModules, job: IBlockJob)
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
     throw new BlockError(job.signedBlock, {
       code: BlockErrorCode.PARENT_UNKNOWN,
-      parentRoot: job.signedBlock.message.parentRoot.valueOf() as Uint8Array,
+      parentRoot: toHexString(job.signedBlock.message.parentRoot),
     });
   }
 
@@ -52,7 +53,7 @@ export async function processChainSegment(modules: BlockProcessModules, job: ICh
     if (!forkChoice.hasBlock(firstSegBlock.message.parentRoot)) {
       throw new ChainSegmentError({
         code: BlockErrorCode.PARENT_UNKNOWN,
-        parentRoot: firstSegBlock.message.parentRoot.valueOf() as Uint8Array,
+        parentRoot: toHexString(firstSegBlock.message.parentRoot),
         job,
         importedBlocks: 0,
       });

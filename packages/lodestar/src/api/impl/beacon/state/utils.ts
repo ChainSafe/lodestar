@@ -192,10 +192,10 @@ async function stateByRoot(
   stateId: routes.beacon.StateId
 ): Promise<allForks.BeaconState | null> {
   if (stateId.startsWith("0x")) {
-    const stateRoot = fromHexString(stateId);
+    const stateRoot = stateId;
     const cachedStateCtx = stateCache.get(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
-    return await db.stateArchive.getByRoot(stateRoot);
+    return await db.stateArchive.getByRoot(fromHexString(stateRoot));
   } else {
     throw new Error("not a root state id");
   }
@@ -209,7 +209,7 @@ async function stateBySlot(
   slot: Slot,
   opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
-  const blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(slot);
+  const blockSummary = forkChoice.getCanonicalBlockAtSlot(slot);
   if (blockSummary) {
     const state = stateCache.get(blockSummary.stateRoot);
     if (state) {

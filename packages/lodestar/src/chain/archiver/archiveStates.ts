@@ -3,10 +3,10 @@
  */
 
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache} from "../stateCache";
+import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 
 /**
  * Minimum number of epochs between archived states
@@ -42,7 +42,7 @@ export class StatesArchiver {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: phase0.Checkpoint): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot || 0);
 
@@ -65,7 +65,7 @@ export class StatesArchiver {
    * Archives finalized states from active bucket to archive bucket.
    * Only the new finalized state is stored to disk
    */
-  async archiveState(finalized: phase0.Checkpoint): Promise<void> {
+  async archiveState(finalized: CheckpointWithHex): Promise<void> {
     const finalizedState = this.checkpointStateCache.get(finalized);
     if (!finalizedState) {
       throw Error("No state in cache for finalized checkpoint state epoch #" + finalized.epoch);

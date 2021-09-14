@@ -90,7 +90,6 @@ export interface IBeaconChain {
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
-  getHeadBlock(): Promise<allForks.SignedBeaconBlock | null>;
 
   /**
    * Since we can have multiple parallel chains,
@@ -100,7 +99,6 @@ export interface IBeaconChain {
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
-  getFinalizedCheckpoint(): phase0.Checkpoint;
 
   /** Pre-process and run the per slot state transition function */
   receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;

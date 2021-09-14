@@ -1,6 +1,6 @@
 import {computeEpochAtSlot, computeStartSlotAtEpoch, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
@@ -9,6 +9,7 @@ import {BeaconNode} from "../../../src";
 import {ChainEvent} from "../../../src/chain";
 import {linspace} from "../../../src/util/numpy";
 import {RegenCaller} from "../../../src/chain/regen";
+import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable no-console */
 
@@ -20,7 +21,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   const prevParticipationPerEpoch = new Map<Epoch, number>();
   const currParticipationPerEpoch = new Map<Epoch, number>();
 
-  async function onHead(head: IBlockSummary): Promise<void> {
+  async function onHead(head: IProtoBlock): Promise<void> {
     const slot = head.slot;
 
     // For each block
@@ -63,7 +64,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, RegenCaller.onForkChoiceFinalized);
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots[lastSlot % SLOTS_PER_HISTORICAL_ROOT];
-    const lastState = await bn.chain.regen.getState(lastStateRoot, RegenCaller.onForkChoiceFinalized);
+    const lastState = await bn.chain.regen.getState(toHexString(lastStateRoot), RegenCaller.onForkChoiceFinalized);
     logParticipation(lastState);
   }
 

@@ -11,16 +11,15 @@ import {registerRoutesGroup} from "../../src/server";
 import {expect} from "chai";
 import {HttpClient} from "../../src";
 
-const root = Buffer.alloc(32, 1);
-
 describe("debug", function () {
   // Extend timeout since states are very big
   this.timeout(30 * 1000);
+  const root = Buffer.alloc(32, 1);
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getHeads: {
       args: [],
-      res: {data: [{slot: 1, root}]},
+      res: {data: [{slot: 1, root: toHexString(root)}]},
     },
     getState: {
       args: ["head", "json"],

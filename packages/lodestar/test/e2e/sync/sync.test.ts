@@ -8,6 +8,7 @@ import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
 import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
+import {fromHexString} from "@chainsafe/ssz";
 
 describe("sync", function () {
   const validatorCount = 8;
@@ -56,7 +57,8 @@ describe("sync", function () {
       logger: loggerNodeB,
     });
 
-    const head = await bn.chain.getHeadBlock();
+    const headSummary = bn.chain.forkChoice.getHead();
+    const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<phase0.SignedBeaconBlock>(bn2.chain.emitter, ChainEvent.block, 100000, (block) =>
       ssz.phase0.SignedBeaconBlock.equals(block, head)

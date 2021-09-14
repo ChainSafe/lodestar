@@ -4,6 +4,7 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
+import {toHexString} from "@chainsafe/ssz";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -28,7 +29,7 @@ export async function validateGossipBlock(
 
   // [IGNORE] The block is from a slot greater than the latest finalized slot -- i.e. validate that
   // signed_beacon_block.message.slot > compute_start_slot_at_epoch(state.finalized_checkpoint.epoch)
-  const finalizedCheckpoint = chain.getFinalizedCheckpoint();
+  const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (blockSlot <= finalizedSlot) {
     throw new BlockGossipError(GossipAction.IGNORE, {
@@ -44,8 +45,8 @@ export async function validateGossipBlock(
   // reboot if the `observed_block_producers` cache is empty. In that case, without this
   // check, we will load the parent and state from disk only to find out later that we
   // already know this block.
-  const blockRoot = config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-  if (chain.forkChoice.getBlock(blockRoot) !== null) {
+  const blockRoot = toHexString(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
+  if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
@@ -60,8 +61,8 @@ export async function validateGossipBlock(
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
-  const parentRoot = block.parentRoot.valueOf() as Uint8Array;
-  const parentBlock = chain.forkChoice.getBlock(parentRoot);
+  const parentRoot = toHexString(block.parentRoot);
+  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
     // If fork choice does *not* consider the parent to be a descendant of the finalized block,
     // then there are two more cases:
@@ -91,7 +92,7 @@ export async function validateGossipBlock(
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, block.slot, RegenCaller.validateGossipBlock)
+    .getBlockSlotState(parentRoot, blockSlot, RegenCaller.validateGossipBlock)
     .catch(() => {
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
@@ -107,7 +108,7 @@ export async function validateGossipBlock(
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.epochCtx.getBeaconProposer(block.slot) !== block.proposerIndex) {
+  if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
   }
 

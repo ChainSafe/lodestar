@@ -2,8 +2,7 @@ import {routes} from "@chainsafe/lodestar-api";
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon/block";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
-import {fromHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {ApiModules} from "../../types";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
@@ -17,23 +16,23 @@ export function getBeaconBlockApi({
 }: Pick<ApiModules, "chain" | "config" | "metrics" | "network" | "db">): IBeaconBlocksApi {
   return {
     async getBlockHeaders(filters) {
+      // TODO - SLOW CODE: This code seems like it could be improved
+
       const result: routes.beacon.BlockHeaderResponse[] = [];
       if (filters.parentRoot) {
-        const parentRoot = fromHexString(filters.parentRoot);
-        const finalizedBlock = await db.blockArchive.getByParentRoot(parentRoot);
+        const parentRoot = filters.parentRoot;
+        const finalizedBlock = await db.blockArchive.getByParentRoot(fromHexString(parentRoot));
         if (finalizedBlock) {
           result.push(toBeaconHeaderResponse(config, finalizedBlock, true));
         }
-        const nonFinalizedBlockSummaries = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
+        const nonFinalizedBlocks = chain.forkChoice.getBlockSummariesByParentRoot(parentRoot);
         await Promise.all(
-          nonFinalizedBlockSummaries.map(async (summary) => {
-            const block = await db.block.get(summary.blockRoot);
+          nonFinalizedBlocks.map(async (summary) => {
+            const block = await db.block.get(fromHexString(summary.blockRoot));
             if (block) {
-              const cannonical = chain.forkChoice.getCanonicalBlockSummaryAtSlot(block.message.slot);
+              const cannonical = chain.forkChoice.getCanonicalBlockAtSlot(block.message.slot);
               if (cannonical) {
-                result.push(
-                  toBeaconHeaderResponse(config, block, ssz.Root.equals(cannonical.blockRoot, summary.blockRoot))
-                );
+                result.push(toBeaconHeaderResponse(config, block, cannonical.blockRoot === summary.blockRoot));
               }
             }
           })
@@ -69,10 +68,11 @@ export function getBeaconBlockApi({
         result.push(toBeaconHeaderResponse(config, canonicalBlock, true));
 
         // fork blocks
+        // TODO: What is this logic?
         await Promise.all(
           chain.forkChoice.getBlockSummariesAtSlot(filters.slot).map(async (summary) => {
-            if (!ssz.Root.equals(summary.blockRoot, canonicalRoot)) {
-              const block = await db.block.get(summary.blockRoot);
+            if (summary.blockRoot !== toHexString(canonicalRoot)) {
+              const block = await db.block.get(fromHexString(summary.blockRoot));
               if (block) {
                 result.push(toBeaconHeaderResponse(config, block));
               }
@@ -110,7 +110,7 @@ export function getBeaconBlockApi({
         const head = chain.forkChoice.getHead();
 
         if (slot === head.slot) {
-          return {data: head.blockRoot};
+          return {data: fromHexString(head.blockRoot)};
         }
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {

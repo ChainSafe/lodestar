@@ -35,7 +35,6 @@ export function initializeForkChoice(
   };
   // TODO - PERFORMANCE WARNING - NAIVE CODE
   const justifiedBalances = getEffectiveBalances(state);
-
   return new ForkChoice({
     config,
 

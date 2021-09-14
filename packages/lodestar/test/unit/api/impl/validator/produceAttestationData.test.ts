@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
 import {ApiModules} from "../../../../../src/api/impl/types";
@@ -41,7 +41,7 @@ describe("api - validator - produceAttestationData", function () {
     const headSlot = 0;
     server.chainStub.clock = {currentSlot} as LocalClock;
     sinon.replaceGetter(syncStub, "state", () => SyncState.SyncingFinalized);
-    server.forkChoiceStub.getHead.returns({slot: headSlot} as IBlockSummary);
+    server.forkChoiceStub.getHead.returns({slot: headSlot} as IProtoBlock);
 
     // Should not allow any call to validator API
     const api = getValidatorApi(modules);

@@ -1,4 +1,3 @@
-import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -7,6 +6,7 @@ import {ChainEvent, IBeaconChain} from "..";
 import {archiveBlocks} from "./archiveBlocks";
 import {StatesArchiver} from "./archiveStates";
 import {JobItemQueue} from "../../util/queue";
+import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -15,7 +15,7 @@ const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
  * periodically.
  */
 export class Archiver {
-  private jobQueue: JobItemQueue<[phase0.Checkpoint], void>;
+  private jobQueue: JobItemQueue<[CheckpointWithHex], void>;
 
   private readonly statesArchiver: StatesArchiver;
 
@@ -26,7 +26,7 @@ export class Archiver {
     signal: AbortSignal
   ) {
     this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger);
-    this.jobQueue = new JobItemQueue<[phase0.Checkpoint], void>(this.processFinalizedCheckpoint, {
+    this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
       maxLength: PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN,
       signal,
     });
@@ -46,10 +46,10 @@ export class Archiver {
 
   /** Archive latest finalized state */
   async persistToDisk(): Promise<void> {
-    await this.statesArchiver.archiveState(this.chain.getFinalizedCheckpoint());
+    await this.statesArchiver.archiveState(this.chain.forkChoice.getFinalizedCheckpoint());
   }
 
-  private onFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
+  private onFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     return this.jobQueue.push(finalized);
   };
 
@@ -64,7 +64,7 @@ export class Archiver {
     ]);
   };
 
-  private processFinalizedCheckpoint = async (finalized: phase0.Checkpoint): Promise<void> => {
+  private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
@@ -79,7 +79,7 @@ export class Archiver {
       ]);
 
       // tasks rely on extended fork choice
-      this.chain.forkChoice.prune(finalized.root);
+      this.chain.forkChoice.prune(finalized.rootHex);
       this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
       this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);

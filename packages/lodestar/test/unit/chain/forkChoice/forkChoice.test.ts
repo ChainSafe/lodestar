@@ -14,7 +14,7 @@ import {
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {List, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {generateValidators} from "../../../utils/validator";
 
 describe("LodestarForkChoice", function () {
@@ -34,6 +34,8 @@ describe("LodestarForkChoice", function () {
     },
     config
   );
+
+  const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
   let state: CachedBeaconState<allForks.BeaconState>;
 
@@ -138,32 +140,32 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(block20.message, state20, justifiedBalances);
       forkChoice.onBlock(block24.message, state24, justifiedBalances);
       forkChoice.onBlock(block28.message, state28, justifiedBalances);
-      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         3,
         "getAllAncestorBlocks should return 3 blocks"
       );
-      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).to.be.equal(
         5,
         "getAllAncestorBlocks should return 5 blocks"
       );
-      expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.not.null;
-      expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.not.null;
-      expect(forkChoice.hasBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.true;
-      expect(forkChoice.hasBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.true;
+      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.be.not.null;
+      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.not.null;
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.true;
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.true;
       forkChoice.onBlock(block32.message, state32, justifiedBalances);
-      forkChoice.prune(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message));
-      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block16.message)).length).to.be.equal(
+      forkChoice.prune(hashBlock(block16.message));
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         0,
         "getAllAncestorBlocks should not return finalized block"
       );
-      expect(forkChoice.getAllAncestorBlocks(ssz.phase0.BeaconBlock.hashTreeRoot(block24.message)).length).to.be.equal(
+      expect(forkChoice.getAllAncestorBlocks(hashBlock(block24.message)).length).to.be.equal(
         2,
         "getAllAncestorBlocks should return 2 blocks"
       );
-      expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.null;
-      expect(forkChoice.getBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.null;
-      expect(forkChoice.hasBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block08.message))).to.be.false;
-      expect(forkChoice.hasBlock(ssz.phase0.BeaconBlock.hashTreeRoot(block12.message))).to.be.false;
+      expect(forkChoice.getBlockHex(hashBlock(block08.message))).to.be.null;
+      expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.null;
+      expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.false;
+      expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.false;
     });
 
     /**
@@ -188,10 +190,10 @@ describe("LodestarForkChoice", function () {
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       forkChoice.onBlock(parentBlock.message, parentState);
       forkChoice.onBlock(childBlock.message, childState);
-      const childBlockRoot = ssz.phase0.BeaconBlock.hashTreeRoot(childBlock.message);
+      const childBlockRoot = toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(childBlock.message));
       // the old way to get non canonical blocks
       const nonCanonicalSummaries = forkChoice
-        .forwardIterateBlockSummaries()
+        .forwarditerateAncestorBlocks()
         .filter(
           (summary) =>
             summary.slot < childBlock.message.slot && !forkChoice.isDescendant(summary.blockRoot, childBlockRoot)

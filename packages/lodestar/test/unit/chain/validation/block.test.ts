@@ -1,6 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain, IBeaconChain, IBlockJob} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
@@ -13,7 +13,6 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache";
 import {ssz} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
 
 describe("gossip block validation", function () {
   let job: IBlockJob;
@@ -32,7 +31,7 @@ describe("gossip block validation", function () {
     chain.clock = sinon.createStubInstance(LocalClock);
     sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
     forkChoice = sinon.createStubInstance(ForkChoice);
-    forkChoice.getBlock.returns(null);
+    forkChoice.getBlockHex.returns(null);
     chain.forkChoice = forkChoice;
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
 
@@ -40,7 +39,7 @@ describe("gossip block validation", function () {
     verifySignature.resolves(true);
     chain.bls = {verifySignatureSets: verifySignature};
 
-    chain.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH});
+    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH, rootHex: ""});
 
     // Reset seen cache
     (chain as {
@@ -59,7 +58,7 @@ describe("gossip block validation", function () {
 
   it("WOULD_REVERT_FINALIZED_SLOT", async function () {
     // Set finalized epoch to be greater than block's epoch
-    chain.getFinalizedCheckpoint.returns({epoch: Infinity, root: ZERO_HASH});
+    forkChoice.getFinalizedCheckpoint.returns({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job),
@@ -69,7 +68,7 @@ describe("gossip block validation", function () {
 
   it("ALREADY_KNOWN", async function () {
     // Make the fork choice return a block summary for the proposed block
-    forkChoice.getBlock.returns({} as IBlockSummary);
+    forkChoice.getBlockHex.returns({} as IProtoBlock);
 
     await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.ALREADY_KNOWN);
   });
@@ -83,18 +82,18 @@ describe("gossip block validation", function () {
 
   it("PARENT_UNKNOWN (fork-choice)", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Return not known for parent block too
-    forkChoice.getBlock.onCall(1).returns(null);
+    forkChoice.getBlockHex.onCall(1).returns(null);
 
     await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.PARENT_UNKNOWN);
   });
 
   it("NOT_LATER_THAN_PARENT", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlock.onCall(1).returns({slot: clockSlot + 1} as IBlockSummary);
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot + 1} as IProtoBlock);
 
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job),
@@ -104,9 +103,9 @@ describe("gossip block validation", function () {
 
   it("PARENT_UNKNOWN (regen)", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlock.onCall(1).returns({slot: clockSlot - 1} as IBlockSummary);
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
     // Regen not able to get the parent block state
     regen.getBlockSlotState.rejects();
 
@@ -115,9 +114,9 @@ describe("gossip block validation", function () {
 
   it("PROPOSAL_SIGNATURE_INVALID", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlock.onCall(1).returns({slot: clockSlot - 1} as IBlockSummary);
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
     // Regen returns some state
     regen.getBlockSlotState.resolves(generateCachedState());
     // BLS signature verifier returns invalid
@@ -131,9 +130,9 @@ describe("gossip block validation", function () {
 
   it("INCORRECT_PROPOSER", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlock.onCall(1).returns({slot: clockSlot - 1} as IBlockSummary);
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getBlockSlotState.resolves(state);
@@ -147,9 +146,9 @@ describe("gossip block validation", function () {
 
   it("valid", async function () {
     // Return not known for proposed block
-    forkChoice.getBlock.onCall(0).returns(null);
+    forkChoice.getBlockHex.onCall(0).returns(null);
     // Returned parent block is latter than proposed block
-    forkChoice.getBlock.onCall(1).returns({slot: clockSlot - 1} as IBlockSummary);
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
     // Regen returns some state
     const state = generateCachedState();
     regen.getBlockSlotState.resolves(state);
