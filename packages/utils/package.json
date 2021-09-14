@@ -41,7 +41,7 @@
     "any-signal": "2.1.1",
     "bigint-buffer": "^1.1.5",
     "chalk": "^2.4.2",
-    "js-yaml": "^3.13.1",
+    "js-yaml": "^4.1.0",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
     "winston-transport": "^4.3.0"
