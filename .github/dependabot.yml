@@ -1,0 +1,92 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/api"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/beacon-state-transition"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/cli"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/config"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/db"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/fork-choice"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/light-client"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/lodestar"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/params"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/spec-test-runner"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/spec-test-util"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/types"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/utils"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "meta9-dependencies"
+  - package-ecosystem: "npm"
+    directory: "/packages/validator"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "meta9-dependencies"
