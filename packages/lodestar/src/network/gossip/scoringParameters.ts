@@ -5,7 +5,7 @@ import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMIT
 import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
-import {IBeaconChain, IBeaconClock} from "../../chain";
+import {Eth2Context} from "../../chain";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {FORK_EPOCH_LOOKAHEAD, getCurrentAndNextFork} from "../forks";
 import {IGossipsubModules} from "./gossipsub";
@@ -35,7 +35,8 @@ const maxPositiveScore =
     ATTESTER_SLASHING_WEIGHT);
 
 /**
- * The following params is implemented by Lighthouse.
+ * The following params is implemented by Lighthouse at
+ * https://github.com/sigp/lighthouse/blob/b0ac3464ca5fb1e9d75060b56c83bfaf990a3d25/beacon_node/eth2_libp2p/src/behaviour/gossipsub_scoring_parameters.rs#L83
  */
 export const gossipScoreThresholds: PeerScoreThresholds = {
   gossipThreshold: -4000,
@@ -55,9 +56,8 @@ type MeshMessageInfo = {
 export class GossipPeerScoreParamsBuilder {
   private readonly config: IChainForkConfig;
   private readonly forkDigestContext: IForkDigestContext;
+  private readonly eth2Context: Eth2Context;
   private readonly logger: ILogger;
-  private readonly clock: IBeaconClock;
-  private readonly chain: IBeaconChain;
 
   private decayIntervalMs: number;
   private decayToZero: number;
@@ -65,12 +65,11 @@ export class GossipPeerScoreParamsBuilder {
   private slotDurationMs: number;
 
   constructor(modules: IGossipsubModules) {
-    const {config, forkDigestContext, logger, clock, chain} = modules;
+    const {config, forkDigestContext, logger, eth2Context} = modules;
     this.config = config;
     this.forkDigestContext = forkDigestContext;
+    this.eth2Context = eth2Context;
     this.logger = logger;
-    this.clock = clock;
-    this.chain = chain;
     this.decayIntervalMs = this.config.SECONDS_PER_SLOT * 1000;
     this.decayToZero = 0.01;
     this.epochDurationMs = this.config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
@@ -105,7 +104,7 @@ export class GossipPeerScoreParamsBuilder {
   }
 
   private getAllTopicsScoreParams(): Record<string, TopicScoreParams> {
-    const epoch = this.clock.currentEpoch;
+    const epoch = this.eth2Context.currentEpoch;
     const {currentFork, nextFork} = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
     const topicsParams: Record<string, TopicScoreParams> = {};
     const forks = nextFork ? [currentFork, nextFork] : [currentFork];
@@ -141,10 +140,10 @@ export class GossipPeerScoreParamsBuilder {
         decaySlots: SLOTS_PER_EPOCH * 5,
         capFactor: 3,
         activationWindow: this.epochDurationMs,
-        currentSlot: this.clock.currentSlot,
+        currentSlot: this.eth2Context.currentSlot,
       });
 
-      const activeValidatorCount = this.chain.getHeadState().currentShuffling.activeIndices.length;
+      const activeValidatorCount = this.eth2Context.activeValidatorCount;
       const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
       const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
       topicsParams[
@@ -156,7 +155,7 @@ export class GossipPeerScoreParamsBuilder {
         decaySlots: SLOTS_PER_EPOCH * 2,
         capFactor: 4,
         activationWindow: this.epochDurationMs,
-        currentSlot: this.clock.currentSlot,
+        currentSlot: this.eth2Context.currentSlot,
       });
 
       for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
@@ -175,7 +174,7 @@ export class GossipPeerScoreParamsBuilder {
             activationWindow: multipleBurstsPerSubnetPerEpoch
               ? this.slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
               : this.epochDurationMs,
-            currentSlot: this.clock.currentSlot,
+            currentSlot: this.eth2Context.currentSlot,
           }
         );
       }

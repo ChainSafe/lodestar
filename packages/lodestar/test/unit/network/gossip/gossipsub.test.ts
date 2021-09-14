@@ -5,8 +5,8 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {AbortController} from "@chainsafe/abort-controller";
 import {config} from "@chainsafe/lodestar-config/default";
-import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {Eth2Gossipsub, GossipHandlers, GossipType, GossipEncoding} from "../../../../src/network/gossip";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
@@ -18,10 +18,7 @@ import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
 import {GossipAction, GossipActionError} from "../../../../src/chain/errors";
-import {generateState} from "../../../utils/state";
-import {IBeaconChain, IBeaconClock} from "../../../../src/chain";
-import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
-import {TreeBacked} from "@chainsafe/ssz";
+import {Eth2Context} from "../../../../src/chain";
 
 describe("network / gossip / validation", function () {
   const logger = testLogger();
@@ -32,19 +29,16 @@ describe("network / gossip / validation", function () {
   let topicString: string;
   let libp2p: Libp2p;
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
-  let chain: IBeaconChain;
+  let eth2Context: Eth2Context;
 
   let controller: AbortController;
   beforeEach(() => {
     controller = new AbortController();
-    const state = generateState();
-    chain = new MockBeaconChain({
-      genesisTime: Math.floor(Date.now() / 1000),
-      chainId: 0,
-      networkId: BigInt(0),
-      state: state as TreeBacked<allForks.BeaconState>,
-      config,
-    });
+    eth2Context = {
+      activeValidatorCount: 16,
+      currentEpoch: 1000,
+      currentSlot: 1000 * SLOTS_PER_EPOCH,
+    };
   });
   afterEach(() => controller.abort());
 
@@ -80,8 +74,7 @@ describe("network / gossip / validation", function () {
       libp2p,
       metrics,
       signal: controller.signal,
-      chain,
-      clock: {} as IBeaconClock,
+      eth2Context,
     });
 
     try {
@@ -113,8 +106,7 @@ describe("network / gossip / validation", function () {
       libp2p,
       metrics,
       signal: controller.signal,
-      chain,
-      clock: {} as IBeaconClock,
+      eth2Context,
     });
 
     await gossipSub.validate(message);
