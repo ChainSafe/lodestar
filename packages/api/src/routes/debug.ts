@@ -1,5 +1,5 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, Slot, RootHex, ssz} from "@chainsafe/lodestar-types";
+import {allForks, Slot, RootHex, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {StateId} from "./beacon/state";
 import {
@@ -114,10 +114,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
+  const stringType = new StringType();
   const SlotRoot = new ContainerType<SlotRoot>({
     fields: {
       slot: ssz.Slot,
-      root: ssz.Root,
+      root: stringType,
     },
   });
 
