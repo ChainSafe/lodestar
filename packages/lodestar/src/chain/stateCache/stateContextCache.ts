@@ -1,6 +1,7 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {Epoch, allForks} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
 
@@ -109,10 +110,10 @@ export class StateContextCache {
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
-  dumpSummary(): {slot: number; root: Uint8Array; reads: number; lastRead: number}[] {
+  dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: state.hashTreeRoot(),
+      root: toHexString(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
     }));

@@ -1,4 +1,4 @@
-import {Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
 import {
   jsonType,
@@ -47,7 +47,7 @@ export type BlockProcessorQueueItem = {
 
 export type StateCacheItem = {
   slot: Slot;
-  root: Uint8Array;
+  root: RootHex;
   /** Total number of reads */
   reads: number;
   /** Unix timestamp (ms) of the last read */
@@ -136,13 +136,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
-  const StateCacheItem = new ContainerType<StateCacheItem>({
-    fields: {
-      slot: ssz.Slot,
-      root: ssz.Root,
-    },
-  });
-
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
@@ -151,7 +144,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getGossipQueueItems: ArrayOf(GossipQueueItem),
     getRegenQueueItems: jsonType(),
     getBlockProcessorQueueItems: jsonType(),
-    getStateCacheItems: ArrayOf(StateCacheItem),
-    getCheckpointStateCacheItems: ArrayOf(StateCacheItem),
+    getStateCacheItems: jsonType(),
+    getCheckpointStateCacheItems: jsonType(),
   };
 }
