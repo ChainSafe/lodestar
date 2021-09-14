@@ -1,56 +1,63 @@
-mod1-beaconchain:
+version: 1
+labels:
+- label: "mod1-beaconchain"
+  files:
   - packages/lodestar/**/*
-
-mod2-validator:
+- label: "mod2-validator"
+  files:
   - packages/validator/**/*
-
-mod3-lightclient:
+- label: "mod3-lightclient"
+  files:
   - packages/light-client/**/*
-
-mod4-api:
+- label: "mod4-api"
+  files:
   - packages/lodestar/src/api/**/*
   - packages/api/**/*
-
-mod5-cli:
+- label: "mod5-cli"
+  files:
   - packages/cli/**/*
-
-mod6-statetransition:
+- label: "mod6-statetransition"
+  files:
   - packages/beacon-state-transition/**/*
   - packages/spec-test-runner/**/*
   - packages/spec-test-util/**/*
-
-mod7-types:
+- label: "mod7-types"
+  files:
   - packages/types/**/*
-
-mod8-params:
+- label: "mod8-params"
+  files:
   - packages/params/**/*
-
-mod9-utils:
+- label: "mod9-utils"
+  files:
   - packages/utils/**/*
-
-moda-config:
+- label: "moda-config"
+  files:
   - packages/config/**/*
   - packages/params/**/*
-
-modb-database:
+- label: "modb-database"
+  files:
   - packages/db/**/*
-
-modc-forkchoice:
+- label: "modc-forkchoice"
+  files:
   - packages/fork-choice/**/*
-
-modd-spectests:
+- label: "modd-spectests"
+  files:
   - packages/spec-test-runner/**/*
   - packages/spec-test-util/**/*
-
-scope4-benchmarks:
+- label: "scope4-benchmarks"
+  files:
   - packages/lodestar/test/benchmarks/**/*
-
-scope5-networking:
+- label: "scope5-networking"
+  files:
   - packages/lodestar/src/network/**/*
   - packages/lodestar/src/sync/**/*
-
-scopea-eth1:
+- label: "scopea-eth1"
+  files:
   - packages/lodestar/src/eth1/**/*
-
-scopeb-ci:
+- label: "scopeb-ci"
+  files:
   - .github/**/*
+- label: "status3-needsreview"
+  mergeable: true
+- label: "status9-workinprogress"
+  mergeable: false
