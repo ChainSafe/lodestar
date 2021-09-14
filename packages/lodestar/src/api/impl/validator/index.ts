@@ -42,8 +42,14 @@ const MAX_API_CLOCK_DISPARITY_MS = 1000;
  *
  * This helps prevent attacks where nodes can convince us that we're syncing some non-existent
  * finalized head.
+ *
+ * TODO: Lighthouse uses 8 for the attack described above. However, 8 kills Lodestar since validators
+ * can trigger regen to fast-forward head state 8 epochs to be immediatelly invalidated as sync sets
+ * a new head. Then the checkpoint state cache grows unbounded with very different states (because
+ * they are 8 epochs apart) and causes an OOM. Research a proper solution once regen and the state
+ * caches are better.
  */
-const SYNC_TOLERANCE_EPOCHS = 8;
+const SYNC_TOLERANCE_EPOCHS = 1;
 
 /**
  * Server implementation for handling validator duties.
