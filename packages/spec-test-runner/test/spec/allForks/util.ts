@@ -9,5 +9,7 @@ export function getConfig(fork: ForkName): IChainForkConfig {
       return phase0Config;
     case ForkName.altair:
       return altairConfig;
+    case ForkName.merge:
+      throw Error("Not implemented");
   }
 }

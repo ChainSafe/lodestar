@@ -4,6 +4,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {AllForksSSZTypes} from "./types";
 import {ssz as phase0} from "../phase0";
 import {ssz as altair} from "../altair";
+import {ssz as merge} from "../merge";
 
 /**
  * Index the ssz types that differ by fork
@@ -22,6 +23,13 @@ export const allForks: {[K in ForkName]: AllForksSSZTypes} = {
     BeaconBlock: altair.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
     SignedBeaconBlock: altair.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
     BeaconState: altair.BeaconState as AllForksSSZTypes["BeaconState"],
+    Metadata: altair.Metadata as AllForksSSZTypes["Metadata"],
+  },
+  merge: {
+    BeaconBlockBody: merge.BeaconBlockBody as AllForksSSZTypes["BeaconBlockBody"],
+    BeaconBlock: merge.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
+    SignedBeaconBlock: merge.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
+    BeaconState: merge.BeaconState as AllForksSSZTypes["BeaconState"],
     Metadata: altair.Metadata as AllForksSSZTypes["Metadata"],
   },
 };

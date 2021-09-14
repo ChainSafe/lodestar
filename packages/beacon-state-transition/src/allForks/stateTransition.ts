@@ -19,11 +19,17 @@ type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => voi
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
   [ForkName.altair]: altair.processBlock as ProcessBlockFn,
+  [ForkName.merge]: () => {
+    throw Error("Not implemented");
+  },
 };
 
 const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.phase0]: phase0.processEpoch as ProcessEpochFn,
   [ForkName.altair]: altair.processEpoch as ProcessEpochFn,
+  [ForkName.merge]: () => {
+    throw Error("Not implemented");
+  },
 };
 
 // Multifork capable state transition

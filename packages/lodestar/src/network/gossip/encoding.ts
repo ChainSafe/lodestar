@@ -68,6 +68,7 @@ export function computeMsgId(
     case ForkName.phase0:
       return computeMsgIdPhase0(topic, msgData, uncompressCache);
     case ForkName.altair:
+    case ForkName.merge:
       return computeMsgIdAltair(topic, topicStr, msgData, uncompressCache);
   }
 }
