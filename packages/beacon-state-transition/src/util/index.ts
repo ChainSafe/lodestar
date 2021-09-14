@@ -22,4 +22,3 @@ export * from "./signingRoot";
 export * from "./slot";
 export * from "./validator";
 export * from "./finality";
-export * from "./blockProcess";

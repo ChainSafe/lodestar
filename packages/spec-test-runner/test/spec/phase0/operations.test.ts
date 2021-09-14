@@ -15,12 +15,12 @@ import {IBaseSpecTest} from "../type";
 /** Describe with which function to run each directory of tests */
 const operationFns: Record<string, EpochProcessFn> = {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
-    phase0.processAttestation(state, testCase.attestation, {});
+    phase0.processAttestation(state, testCase.attestation);
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
     const verify = !!testCase.meta && !!testCase.meta.blsSetting && testCase.meta.blsSetting === BigInt(1);
-    phase0.processAttesterSlashing(state, testCase.attester_slashing, {}, verify);
+    phase0.processAttesterSlashing(state, testCase.attester_slashing, verify);
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: phase0.BeaconBlock}) => {
@@ -32,11 +32,11 @@ const operationFns: Record<string, EpochProcessFn> = {
   },
 
   proposer_slashing: (state, testCase: IBaseSpecTest & {proposer_slashing: phase0.ProposerSlashing}) => {
-    phase0.processProposerSlashing(state, testCase.proposer_slashing, {});
+    phase0.processProposerSlashing(state, testCase.proposer_slashing);
   },
 
   voluntary_exit: (state, testCase: IBaseSpecTest & {voluntary_exit: phase0.SignedVoluntaryExit}) => {
-    phase0.processVoluntaryExit(state, testCase.voluntary_exit, {});
+    phase0.processVoluntaryExit(state, testCase.voluntary_exit);
   },
 };
 type EpochProcessFn = (state: CachedBeaconState<phase0.BeaconState>, testCase: any) => void;

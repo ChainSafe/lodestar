@@ -4,7 +4,6 @@ import {computeEpochAtSlot} from "../../util";
 import {CachedBeaconState} from "../../allForks/util";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {BlockProcess} from "../../util/blockProcess";
 import {toHexString} from "@chainsafe/ssz";
 
 /**
@@ -17,8 +16,6 @@ import {toHexString} from "@chainsafe/ssz";
 export function processAttestation(
   state: CachedBeaconState<phase0.BeaconState>,
   attestation: phase0.Attestation,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;
