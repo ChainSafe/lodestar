@@ -1,60 +1,60 @@
 ---
+version: 1
 labels:
-  - files:
+  - label: "mod1-beaconchain"
+    files:
       - "packages/lodestar/**/*"
-    label: "mod1-beaconchain"
-  - files:
+  - label: "mod2-validator"
+    files:
       - "packages/validator/**/*"
-    label: "mod2-validator"
-  - files:
+  - label: "mod3-lightclient"
+    files:
       - "packages/light-client/**/*"
-    label: "mod3-lightclient"
-  - files:
+  - label: "mod4-api"
+    files:
       - "packages/lodestar/src/api/**/*"
       - "packages/api/**/*"
-    label: "mod4-api"
-  - files:
+  - label: "mod5-cli"
+    files:
       - "packages/cli/**/*"
-    label: "mod5-cli"
-  - files:
+  - label: "mod6-statetransition"
+    files:
       - "packages/beacon-state-transition/**/*"
       - "packages/spec-test-runner/**/*"
       - "packages/spec-test-util/**/*"
-    label: "mod6-statetransition"
-  - files:
+  - label: "mod7-types"
+    files:
       - "packages/types/**/*"
-    label: "mod7-types"
-  - files:
+  - label: "mod8-params"
+    files:
       - "packages/params/**/*"
-    label: "mod8-params"
-  - files:
+  - label: "mod9-utils"
+    files:
       - "packages/utils/**/*"
-    label: "mod9-utils"
-  - files:
+  - label: "moda-config"
+    files:
       - "packages/config/**/*"
       - "packages/params/**/*"
-    label: "moda-config"
-  - files:
+  - label: "modb-database"
+    files:
       - "packages/db/**/*"
-    label: "modb-database"
-  - files:
+  - label: "modc-forkchoice"
+    files:
       - "packages/fork-choice/**/*"
-    label: "modc-forkchoice"
-  - files:
+  - label: "modd-spectests"
+    files:
       - "packages/spec-test-runner/**/*"
       - "packages/spec-test-util/**/*"
-    label: "modd-spectests"
-  - files:
+  - label: "scope4-benchmarks"
+    files:
       - "packages/lodestar/test/benchmarks/**/*"
-    label: "scope4-benchmarks"
-  - files:
+  - label: "scope5-networking"
+    files:
       - "packages/lodestar/src/network/**/*"
       - "packages/lodestar/src/sync/**/*"
-    label: "scope5-networking"
-  - files:
+  - label: "scopea-eth1"
+    files:
       - "packages/lodestar/src/eth1/**/*"
-    label: "scopea-eth1"
-  - files:
-      - .github/**/*
-    label: "scopeb-ci"
-version: 1
+  - label: "scopeb-ci"
+    files:
+      - ".github/**/*"
