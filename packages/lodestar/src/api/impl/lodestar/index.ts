@@ -127,6 +127,16 @@ export function getLodestarApi({
     async getCheckpointStateCacheItems() {
       return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
     },
+
+    async runGC() {
+      if (!global.gc) throw Error("You must expose GC running the Node.js process with 'node --expose_gc'");
+      global.gc();
+    },
+
+    async dropStateCache() {
+      chain.stateCache.clear();
+      chain.checkpointStateCache.clear();
+    },
   };
 }
 
