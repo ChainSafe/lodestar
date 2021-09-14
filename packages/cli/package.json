@@ -66,7 +66,7 @@
     "@chainsafe/ssz": "^0.8.17",
     "@types/lockfile": "^1.0.1",
     "bip39": "^3.0.2",
-    "deepmerge": "^3.2.0",
+    "deepmerge": "^4.2.2",
     "ethers": "^5.0.2",
     "expand-tilde": "^2.0.2",
     "find-up": "^5.0.0",
