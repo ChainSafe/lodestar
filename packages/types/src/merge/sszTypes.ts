@@ -1,4 +1,13 @@
-import {ByteVectorType, ContainerType, ListType, RootType, UnionType, Vector, VectorType} from "@chainsafe/ssz";
+import {
+  byteType,
+  ByteVectorType,
+  ContainerType,
+  ListType,
+  RootType,
+  UnionType,
+  Vector,
+  VectorType,
+} from "@chainsafe/ssz";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
@@ -25,7 +34,7 @@ const typesRef = new LazyVariable<{
  *
  * Spec v1.0.1
  */
-export const OpaqueTransaction = new ByteVectorType({length: MAX_BYTES_PER_OPAQUE_TRANSACTION});
+export const OpaqueTransaction = new ListType({elementType: byteType, limit: MAX_BYTES_PER_OPAQUE_TRANSACTION});
 
 /**
  * Union[OpaqueTransaction]
