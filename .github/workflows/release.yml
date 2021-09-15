@@ -75,7 +75,7 @@ jobs:
           sinceTag: "${{ needs.tag.outputs.previous_tag }}"
           maxIssues: "0"
           stripGeneratorNotice: "true"
-          excludeLabels: "meta8-excludefromchangelog"
+          excludeLabels: "meta-excludefromchangelog"
 
       - name: Create Release
         id: create_release
