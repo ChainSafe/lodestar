@@ -3,8 +3,7 @@ import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-// eslint-disable-next-line no-restricted-imports
-import {computeWeakSubjectivityPeriod} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks/util/weakSubjectivity";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db";
 import {StateContextCache} from "../stateCache";
@@ -131,7 +130,7 @@ export class LightClientIniter {
     };
 
     // calculate beginning of weak subjectivity period to prune from there
-    const wsPeriod = computeWeakSubjectivityPeriod(this.config, finalizedState);
+    const wsPeriod = allForks.computeWeakSubjectivityPeriodCachedState(this.config, finalizedState);
     const wsEpoch = Math.max(0, finalizedBlockEpoch - wsPeriod);
     const wsSyncPeriod = computeSyncPeriodAtEpoch(wsEpoch);
 
