@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {altair, Number64, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, hasMarkers, IEpochProcess} from "../../allForks/util";
-import * as constants from "../../allForks/util/attesterStatus";
+import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import * as attesterStatusUtil from "../../allForks/util/attesterStatus";
 import {isInInactivityLeak} from "../../util";
 
 /**
@@ -31,14 +31,13 @@ export function processInactivityUpdates(
   const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
-  const {FLAG_ELIGIBLE_ATTESTER, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED} = constants;
-  const hasMarkersFn = hasMarkers;
+  const {FLAG_ELIGIBLE_ATTESTER, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED, hasMarkers} = attesterStatusUtil;
   const newValues = new Map<number, Number64>();
   inactivityScores.forEach(function processInactivityScore(inactivityScore, i) {
     const status = statuses[i];
-    if (hasMarkersFn(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
+    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       const prevInactivityScore = inactivityScore;
-      if (hasMarkersFn(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         inactivityScore -= Math.min(1, inactivityScore);
       } else {
         inactivityScore += Number(INACTIVITY_SCORE_BIAS);
