@@ -3,90 +3,135 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/api"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/beacon-state-transition"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/cli"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/config"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/db"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/fork-choice"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/light-client"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/lodestar"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/params"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/spec-test-runner"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/spec-test-util"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/types"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/utils"
     schedule:
-      interval: "monthly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
   - package-ecosystem: "npm"
     directory: "/packages/validator"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+      allowed_updates:
+      - match:
+          update_type: "security"
     labels:
       - "meta-dependencies"
