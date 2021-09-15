@@ -15,12 +15,12 @@ import {IBaseSpecTest} from "../type";
 /** Describe with which function to run each directory of tests */
 const operationFns: Record<string, EpochProcessFn> = {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
-    altair.processAttestations(state, [testCase.attestation], {});
+    altair.processAttestations(state, [testCase.attestation]);
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
     const verify = !!testCase.meta && !!testCase.meta.blsSetting && testCase.meta.blsSetting === BigInt(1);
-    altair.processAttesterSlashing(state, testCase.attester_slashing, {}, verify);
+    altair.processAttesterSlashing(state, testCase.attester_slashing, verify);
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: altair.BeaconBlock}) => {
@@ -32,7 +32,7 @@ const operationFns: Record<string, EpochProcessFn> = {
   },
 
   proposer_slashing: (state, testCase: IBaseSpecTest & {proposer_slashing: phase0.ProposerSlashing}) => {
-    altair.processProposerSlashing(state, testCase.proposer_slashing, {});
+    altair.processProposerSlashing(state, testCase.proposer_slashing);
   },
 
   sync_aggregate: (state, testCase: IBaseSpecTest & {sync_aggregate: altair.SyncAggregate}) => {
@@ -56,7 +56,7 @@ const operationFns: Record<string, EpochProcessFn> = {
   },
 
   voluntary_exit: (state, testCase: IBaseSpecTest & {voluntary_exit: phase0.SignedVoluntaryExit}) => {
-    altair.processVoluntaryExit(state, testCase.voluntary_exit, {});
+    altair.processVoluntaryExit(state, testCase.voluntary_exit);
   },
 };
 type EpochProcessFn = (state: CachedBeaconState<altair.BeaconState>, testCase: any) => void;

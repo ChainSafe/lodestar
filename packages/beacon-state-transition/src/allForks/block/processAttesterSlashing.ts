@@ -5,7 +5,6 @@ import {isSlashableValidator, isSlashableAttestationData} from "../../util";
 import {CachedBeaconState} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
-import {BlockProcess} from "../../util/blockProcess";
 
 /**
  * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -17,7 +16,6 @@ export function processAttesterSlashing(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,
   attesterSlashing: phase0.AttesterSlashing,
-  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   assertValidAttesterSlashing(state as CachedBeaconState<allForks.BeaconState>, attesterSlashing, verifySignatures);
@@ -37,7 +35,7 @@ export function processAttesterSlashing(
   // TODO: Why do we need to sort()? If it necessary add a comment with why
   for (const index of indices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {
-      slashValidatorAllForks(fork, state, index, blockProcess);
+      slashValidatorAllForks(fork, state, index);
       slashedAny = true;
     }
   }

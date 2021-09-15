@@ -15,7 +15,6 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
-import {BlockProcess} from "../../util/blockProcess";
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
@@ -23,8 +22,6 @@ const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIG
 export function processAttestations(
   state: CachedBeaconState<altair.BeaconState>,
   attestations: phase0.Attestation[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;

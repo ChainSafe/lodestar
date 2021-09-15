@@ -8,7 +8,6 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {BlockProcess} from "../../util/blockProcess";
 
 type Operation =
   | phase0.ProposerSlashing
@@ -16,17 +15,11 @@ type Operation =
   | phase0.Attestation
   | phase0.Deposit
   | phase0.VoluntaryExit;
-type OperationFunction = (
-  state: CachedBeaconState<phase0.BeaconState>,
-  op: Operation,
-  process: BlockProcess,
-  verify: boolean
-) => void;
+type OperationFunction = (state: CachedBeaconState<phase0.BeaconState>, op: Operation, verify: boolean) => void;
 
 export function processOperations(
   state: CachedBeaconState<phase0.BeaconState>,
   body: phase0.BeaconBlockBody,
-  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   // verify that outstanding deposits are processed up to the maximum number of deposits
@@ -45,7 +38,7 @@ export function processOperations(
     [body.voluntaryExits, processVoluntaryExit],
   ] as [List<Operation>, OperationFunction][]) {
     for (const op of readonlyValues(operations)) {
-      processOp(state, op, blockProcess, verifySignatures);
+      processOp(state, op, verifySignatures);
     }
   }
 }
