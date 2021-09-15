@@ -1,12 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {altair, phase0} from "@chainsafe/lodestar-types";
-import {
-  CachedBeaconState,
-  FLAG_ELIGIBLE_ATTESTER,
-  FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
-  hasMarkers,
-  IEpochProcess,
-} from "../../allForks/util";
+import {altair, Number64, phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, hasMarkers, IEpochProcess} from "../../allForks/util";
+import * as constants from "../../allForks/util/attesterStatus";
 import {isInInactivityLeak} from "../../util";
 
 /**
@@ -35,12 +30,15 @@ export function processInactivityUpdates(
   const {statuses} = epochProcess;
   const inActivityLeak = isInInactivityLeak((state as unknown) as phase0.BeaconState);
 
-  for (let i = 0; i < statuses.length; i++) {
+  // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
+  const {FLAG_ELIGIBLE_ATTESTER, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED} = constants;
+  const hasMarkersFn = hasMarkers;
+  const newValues = new Map<number, Number64>();
+  inactivityScores.forEach(function processInactivityScore(inactivityScore, i) {
     const status = statuses[i];
-    if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
-      let inactivityScore = inactivityScores[i];
+    if (hasMarkersFn(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       const prevInactivityScore = inactivityScore;
-      if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+      if (hasMarkersFn(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
         inactivityScore -= Math.min(1, inactivityScore);
       } else {
         inactivityScore += Number(INACTIVITY_SCORE_BIAS);
@@ -49,8 +47,9 @@ export function processInactivityUpdates(
         inactivityScore -= Math.min(Number(INACTIVITY_SCORE_RECOVERY_RATE), inactivityScore);
       }
       if (inactivityScore !== prevInactivityScore) {
-        inactivityScores[i] = inactivityScore;
+        newValues.set(i, inactivityScore);
       }
     }
-  }
+  });
+  inactivityScores.setMultiple(newValues);
 }
