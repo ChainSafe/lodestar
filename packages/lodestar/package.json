@@ -34,7 +34,7 @@
     "pretest": "yarn run check-types",
     "test": "yarn test:unit && yarn test:e2e",
     "test:unit:minimal": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/*.test.ts'",
-    "test:unit:mainnet": "nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit/**/mainnetTests.ts'",
+    "test:unit:mainnet": "LODESTAR_PRESET=mainnet nyc --cache-dir .nyc_output/.cache -e .ts mocha 'test/unit-mainnet/**/*.test.ts'",
     "test:unit": "yarn test:unit:minimal && yarn test:unit:mainnet",
     "test:e2e": "mocha 'test/e2e/**/*.test.ts'",
     "test:sim": "mocha 'test/sim/**/*.test.ts'",
