@@ -6,6 +6,7 @@ import {
   computeStartSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
+  merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -15,8 +16,9 @@ import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation} from "./interface";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlock} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
+import {ITransitionStore} from "./transitionStore";
 
 /* eslint-disable max-len */
 
@@ -38,85 +40,53 @@ import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpoin
  * - Time is not updated automatically, updateTime MUST be called every slot
  */
 export class ForkChoice implements IForkChoice {
-  config: IChainForkConfig;
-  /**
-   * Storage for `ForkChoice`, modelled off the spec `Store` object.
-   */
-  fcStore: IForkChoiceStore;
-  /**
-   * The underlying representation of the block DAG.
-   */
-  protoArray: ProtoArray;
   /**
    * Votes currently tracked in the protoArray
    * Indexed by validator index
    * Each vote contains the latest message and previous message
    */
-  votes: IVoteTracker[];
-  /**
-   * Balances currently tracked in the protoArray
-   * Indexed by validator index
-   *
-   * This should be the balances of the state at fcStore.justifiedCheckpoint
-   */
-  justifiedBalances: number[];
+  private readonly votes: IVoteTracker[] = [];
+
   /**
    * Balances tracked in the protoArray, or soon to be tracked
    * Indexed by validator index
    *
    * This should be the balances of the state at fcStore.bestJustifiedCheckpoint
    */
-  bestJustifiedBalances: number[];
-  /**
-   * Attestations that arrived at the current slot and must be queued for later processing.
-   * NOT currently tracked in the protoArray
-   */
-  queuedAttestations: Set<IQueuedAttestation>;
+  private bestJustifiedBalances: number[];
 
-  /**
-   * Avoid having to compute detas all the times.
-   */
-  synced: boolean;
-
-  /**
-   * Cached head
-   */
-  head: IProtoBlock;
-
-  /**
-   * Fork choice metrics.
-   */
-  private readonly metrics: IForkChoiceMetrics | null | undefined;
+  /** Avoid having to compute detas all the times. */
+  private synced = false;
+  /** Cached head */
+  private head: IProtoBlock;
 
   /**
    * Instantiates a Fork Choice from some existing components
    *
    * This is useful if the existing components have been loaded from disk after a process restart.
    */
-  constructor({
-    config,
-    fcStore,
-    protoArray,
-    queuedAttestations,
-    justifiedBalances,
-    metrics,
-  }: {
-    config: IChainForkConfig;
-    fcStore: IForkChoiceStore;
-    protoArray: ProtoArray;
-    queuedAttestations: Set<IQueuedAttestation>;
-    justifiedBalances: number[];
-    metrics?: IForkChoiceMetrics | null;
-  }) {
-    this.config = config;
-    this.fcStore = fcStore;
-    this.protoArray = protoArray;
-    this.votes = [];
-    this.justifiedBalances = justifiedBalances;
+  constructor(
+    private readonly config: IChainForkConfig,
+    private readonly fcStore: IForkChoiceStore,
+    /** Nullable until merge time comes */
+    private readonly transitionStore: ITransitionStore | null,
+    /** The underlying representation of the block DAG. */
+    private readonly protoArray: ProtoArray,
+    /**
+     * Attestations that arrived at the current slot and must be queued for later processing.
+     * NOT currently tracked in the protoArray
+     */
+    private readonly queuedAttestations: Set<IQueuedAttestation>,
+    /**
+     * Balances currently tracked in the protoArray
+     * Indexed by validator index
+     *
+     * This should be the balances of the state at fcStore.justifiedCheckpoint
+     */
+    private justifiedBalances: number[],
+    private readonly metrics?: IForkChoiceMetrics | null
+  ) {
     this.bestJustifiedBalances = justifiedBalances;
-    this.queuedAttestations = queuedAttestations;
-    this.synced = false;
-    this.metrics = metrics;
     this.head = this.updateHead();
   }
 
@@ -270,7 +240,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void {
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData: OnBlockPrecachedData): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -327,6 +297,22 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    if (this.transitionStore && merge.isMergeBlock(state as merge.BeaconState, (block as merge.BeaconBlock).body)) {
+      const {powBlock, powBlockParent} = preCachedData;
+      if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
+      if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
+
+      // Delay consideration of block until PoW block is processed by the PoW node
+      // const powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash);
+      // const powParent = getPowBlock(powBlock.parentHash);
+      if (!powBlock.isProcessed) {
+        throw Error("POW block not processed");
+      }
+      if (!isValidTerminalPowBlock(this.transitionStore, powBlock, powBlockParent)) {
+        throw Error("Not valid terminal POW block");
+      }
+    }
+
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
     const currentJustifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
@@ -334,6 +320,7 @@ export class ForkChoice implements IForkChoice {
 
     // Update justified checkpoint.
     if (stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) {
+      const {justifiedBalances} = preCachedData;
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
@@ -369,6 +356,7 @@ export class ForkChoice implements IForkChoice {
 
     // This needs to be performed after finalized checkpoint has been updated
     if (shouldUpdateJustified) {
+      const {justifiedBalances} = preCachedData;
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
@@ -922,4 +910,10 @@ export class ForkChoice implements IForkChoice {
       }
     }
   }
+}
+
+function isValidTerminalPowBlock(transitionStore: ITransitionStore, block: PowBlock, parent: PowBlock): boolean {
+  const isTotalDifficultyReached = block.totalDifficulty >= transitionStore.terminalTotalDifficulty;
+  const isParentTotalDifficultyValid = parent.totalDifficulty < transitionStore.terminalTotalDifficulty;
+  return block.isValid && isTotalDifficultyReached && isParentTotalDifficultyValid;
 }

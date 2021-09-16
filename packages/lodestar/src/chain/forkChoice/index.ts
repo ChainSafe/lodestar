@@ -43,6 +43,9 @@ export function initializeForkChoice(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }),
 
+    // TODO: Create and persist transition store
+    transitionStore: null,
+
     protoArray: ProtoArray.initialize({
       slot: blockHeader.slot,
       parentRoot: toHexString(blockHeader.parentRoot),

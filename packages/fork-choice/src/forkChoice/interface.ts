@@ -53,10 +53,10 @@ export interface IForkChoice {
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    *
-   * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
-   * This ensures that the forkchoice is never out of sync.
+   * `preCachedData` includes data necessary for validation included in the spec but some data is
+   * pre-fetched in advance to keep the fork-choice fully syncronous
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void;
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData: OnBlockPrecachedData): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -133,6 +133,34 @@ export interface IForkChoice {
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
   getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
 }
+
+export type PowBlock = {
+  blockhash: Root;
+  parentHash: Root;
+  isProcessed: boolean;
+  isValid: boolean;
+  totalDifficulty: bigint;
+  difficulty: bigint;
+};
+
+export type OnBlockPrecachedData = {
+  /** `justifiedBalances` balances of justified state which is updated synchronously. */
+  justifiedBalances?: number[];
+  /**
+   * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
+   * ```ts
+   * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
+   * ```
+   */
+  powBlock?: PowBlock;
+  /**
+   * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
+   * ```ts
+   * const powParent = getPowBlock(powBlock.parentHash);
+   * ```
+   */
+  powBlockParent?: PowBlock;
+};
 
 export interface ILatestMessage {
   epoch: Epoch;

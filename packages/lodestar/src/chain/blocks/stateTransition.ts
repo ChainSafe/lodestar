@@ -111,7 +111,13 @@ export async function runStateTransition(
     }
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
-  forkChoice.onBlock(job.signedBlock.message, postState, justifiedBalances);
+
+  forkChoice.onBlock(job.signedBlock.message, postState, {
+    justifiedBalances,
+    // TODO: Figure out how to fetch for merge
+    powBlock: undefined,
+    powBlockParent: undefined,
+  });
 
   if (!job.reprocess) {
     if (postSlot % SLOTS_PER_EPOCH === 0) {
