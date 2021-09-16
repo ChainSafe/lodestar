@@ -85,7 +85,7 @@ export function processExecutionPayload(
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
 
-  if (executionEngine && executionEngine.onPayload(payload)) {
+  if (executionEngine && !executionEngine.onPayload(payload)) {
     throw Error("Invalid execution payload");
   }
 

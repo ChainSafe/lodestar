@@ -51,12 +51,12 @@ operations<altair.BeaconState>(ForkName.merge, {
     altair.processVoluntaryExit(state, testCase.voluntary_exit);
   },
 
-  execution_payload: (state, testCase: IBaseSpecTest & {execution_payload: merge.ExecutionPayload}) => {
-    console.log({testCase});
-    processExecutionPayload(
-      (state as unknown) as CachedBeaconState<merge.BeaconState>,
-      testCase.execution_payload,
-      {} as any
-    );
+  execution_payload: (
+    state,
+    testCase: IBaseSpecTest & {execution_payload: merge.ExecutionPayload; execution: {executionValid: boolean}}
+  ) => {
+    processExecutionPayload((state as unknown) as CachedBeaconState<merge.BeaconState>, testCase.execution_payload, {
+      onPayload: () => testCase.execution.executionValid,
+    });
   },
 });
