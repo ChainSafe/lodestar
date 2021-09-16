@@ -1,17 +1,17 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
-import {Eth1Provider} from "../../../src/eth1";
-import {IEth1Options} from "../../../src/eth1/options";
+import {Eth1Options} from "../../../src/eth1/options";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {goerliTestnetDepositEvents} from "../../utils/testnet";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
-  const eth1Options: IEth1Options = {
+  const eth1Options: Eth1Options = {
     enabled: true,
     providerUrls: [testnet.providerUrl],
     depositContractDeployBlock: 0,

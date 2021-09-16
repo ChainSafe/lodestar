@@ -1,7 +1,6 @@
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
-import {ITransitionStore} from "./transitionStore";
 
 export type CheckpointHex = {
   epoch: Epoch;
@@ -9,8 +8,6 @@ export type CheckpointHex = {
 };
 
 export interface IForkChoice {
-  /** For merge transition. Initialize transition store when merge fork condition is met */
-  initializeTransitionStore(transitionStore: ITransitionStore): void;
   /**
    * Returns the block root of an ancestor of `block_root` at the given `slot`. (Note: `slot` refers
    * to the block that is *returned*, not the one that is supplied.)

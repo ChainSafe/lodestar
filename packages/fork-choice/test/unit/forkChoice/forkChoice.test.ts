@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, ProtoArray} from "../../../src";
+import {ForkChoice, IForkChoiceStore, ITransitionStore, ProtoArray} from "../../../src";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
@@ -44,7 +44,7 @@ describe("Forkchoice", function () {
     bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
   };
 
-  const transitionStore = null;
+  const transitionStore: ITransitionStore = {initialized: false, terminalTotalDifficulty: BigInt(0)};
 
   it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);

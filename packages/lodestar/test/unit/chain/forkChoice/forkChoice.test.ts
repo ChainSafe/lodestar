@@ -1,4 +1,4 @@
-import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice} from "../../../../src/chain";
+import {ChainEventEmitter, computeAnchorCheckpoint, initializeForkChoice, TransitionStore} from "../../../../src/chain";
 import {generateState} from "../../../utils/state";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -46,7 +46,7 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    const transitionStore = null;
+    const transitionStore = new TransitionStore(null);
     forkChoice = initializeForkChoice(config, transitionStore, emitter, currentSlot, state);
   });
 

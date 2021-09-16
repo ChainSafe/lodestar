@@ -8,9 +8,10 @@ import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
 import {getDeposits} from "./utils/deposits";
-import {IEth1ForBlockProduction, IEth1Provider} from "./interface";
-import {IEth1Options} from "./options";
+import {Eth1DataAndDeposits, IEth1Provider} from "./interface";
+import {Eth1Options} from "./options";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient";
+import {parseBlock} from "./provider/eth1Provider";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
@@ -21,11 +22,18 @@ const RATE_LIMITED_WAIT_MS = 30 * 1000;
 /** Min time to wait on auto update loop on unknown error */
 const MIN_WAIT_ON_ERORR_MS = 1 * 1000;
 
+export type Eth1DepositDataTrackerModules = {
+  config: IChainForkConfig;
+  db: IBeaconDb;
+  logger: ILogger;
+  signal: AbortSignal;
+};
+
 /**
  * Main class handling eth1 data fetching, processing and storing
  * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
  */
-export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
+export class Eth1DepositDataTracker {
   private config: IChainForkConfig;
   private logger: ILogger;
   private signal: AbortSignal;
@@ -33,24 +41,13 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   // Internal modules, state
   private depositsCache: Eth1DepositsCache;
   private eth1DataCache: Eth1DataCache;
-  private eth1Provider: IEth1Provider;
   private lastProcessedDepositBlockNumber: number | null;
 
-  constructor({
-    config,
-    db,
-    eth1Provider,
-    logger,
-    opts,
-    signal,
-  }: {
-    config: IChainForkConfig;
-    db: IBeaconDb;
-    eth1Provider: IEth1Provider;
-    logger: ILogger;
-    opts: IEth1Options;
-    signal: AbortSignal;
-  }) {
+  constructor(
+    opts: Eth1Options,
+    {config, db, logger, signal}: Eth1DepositDataTrackerModules,
+    private readonly eth1Provider: IEth1Provider
+  ) {
     this.config = config;
     this.signal = signal;
     this.logger = logger;
@@ -73,12 +70,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(
-    state: CachedBeaconState<allForks.BeaconState>
-  ): Promise<{
-    eth1Data: phase0.Eth1Data;
-    deposits: phase0.Deposit[];
-  }> {
+  async getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits> {
     const eth1Data = await this.getEth1Data(state);
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -197,10 +189,11 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
       lastProcessedDepositBlockNumber
     );
 
-    const eth1Blocks = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
-    this.logger.verbose("Fetched eth1 blocks", {blockCount: eth1Blocks.length, fromBlock, toBlock});
+    const blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
+    const blocks = blocksRaw.map(parseBlock);
+    this.logger.verbose("Fetched eth1 blocks", {blockCount: blocks.length, fromBlock, toBlock});
 
-    const eth1Datas = await this.depositsCache.getEth1DataForBlocks(eth1Blocks, lastProcessedDepositBlockNumber);
+    const eth1Datas = await this.depositsCache.getEth1DataForBlocks(blocks, lastProcessedDepositBlockNumber);
     await this.eth1DataCache.add(eth1Datas);
 
     return toBlock >= remoteFollowBlock;

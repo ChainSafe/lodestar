@@ -75,7 +75,7 @@ export class ForkChoice implements IForkChoice {
     private readonly config: IChainForkConfig,
     private readonly fcStore: IForkChoiceStore,
     /** Nullable until merge time comes */
-    private transitionStore: ITransitionStore | null,
+    private readonly transitionStore: ITransitionStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
     /**
@@ -89,12 +89,6 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.bestJustifiedBalances = justifiedBalances;
     this.head = this.updateHead();
-  }
-
-  /** For merge transition. Initialize transition store when merge fork condition is met */
-  initializeTransitionStore(transitionStore: ITransitionStore): void {
-    if (this.transitionStore !== null) throw Error("transitionStore already initialized");
-    this.transitionStore = transitionStore;
   }
 
   /**
@@ -304,7 +298,12 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    if (this.transitionStore && merge.isMergeBlock(state as merge.BeaconState, (block as merge.BeaconBlock).body)) {
+    if (
+      this.transitionStore.initialized &&
+      merge.isMergeStateType(state) &&
+      merge.isMergeBlockBodyType(block.body) &&
+      merge.isMergeBlock(state, block.body)
+    ) {
       const {powBlock, powBlockParent} = preCachedData || {};
       if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
       if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
