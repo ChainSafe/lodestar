@@ -32,6 +32,13 @@ export class CachedInactivityScoreList implements List<Number64> {
     this.type.tree_setProperty(this.tree, index, value);
   }
 
+  setMultiple(newValues: Map<number, Number64>): void {
+    // TODO: based on newValues.size to determine we build the tree from scratch or not
+    for (const [index, value] of newValues.entries()) {
+      this.set(index, value);
+    }
+  }
+
   push(value: Number64): number {
     this.persistent.push(value);
     return this.type.tree_push(this.tree, value);
