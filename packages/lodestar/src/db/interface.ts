@@ -25,6 +25,7 @@ import {
   PreGenesisStateLastProcessedBlock,
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
+  TotalTerminalDifficulty,
 } from "./single";
 import {PendingBlockRepository} from "./repositories/pendingBlock";
 
@@ -69,6 +70,7 @@ export interface IBeaconDb {
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
+  totalTerminalDifficulty: TotalTerminalDifficulty;
 
   processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 

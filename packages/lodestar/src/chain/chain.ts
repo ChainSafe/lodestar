@@ -6,7 +6,7 @@ import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ITransitionStore} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
@@ -43,14 +43,6 @@ import {
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {Archiver} from "./archiver";
-
-export interface IBeaconChainModules {
-  config: IBeaconConfig;
-  db: IBeaconDb;
-  logger: ILogger;
-  metrics: IMetrics | null;
-  anchorState: TreeBacked<allForks.BeaconState>;
-}
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
@@ -96,7 +88,24 @@ export class BeaconChain implements IBeaconChain {
   private readonly archiver: Archiver;
   private abortController = new AbortController();
 
-  constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
+  constructor(
+    opts: IChainOptions,
+    {
+      config,
+      db,
+      logger,
+      metrics,
+      anchorState,
+      transitionStore,
+    }: {
+      config: IBeaconConfig;
+      db: IBeaconDb;
+      logger: ILogger;
+      metrics: IMetrics | null;
+      anchorState: TreeBacked<allForks.BeaconState>;
+      transitionStore: ITransitionStore | null;
+    }
+  ) {
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -117,7 +126,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
+    const forkChoice = initializeForkChoice(config, transitionStore, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       emitter,

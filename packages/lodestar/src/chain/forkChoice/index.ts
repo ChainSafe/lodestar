@@ -5,19 +5,25 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice, ProtoArray, ForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, ProtoArray, ForkChoiceStore, ITransitionStore} from "@chainsafe/lodestar-fork-choice";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {getEffectiveBalances, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IMetrics} from "../../metrics";
 import {ChainEvent} from "../emitter";
+import {IBeaconDb} from "../../db";
+
+export type ForkChoiceOpts = {
+  terminalTotalDifficulty?: bigint;
+};
 
 /**
  * Fork Choice extended with a ChainEventEmitter
  */
 export function initializeForkChoice(
   config: IChainForkConfig,
+  transitionStore: ITransitionStore | null,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconState<allForks.BeaconState>,
@@ -36,9 +42,6 @@ export function initializeForkChoice(
 
   // TODO - PERFORMANCE WARNING - NAIVE CODE
   const justifiedBalances = getEffectiveBalances(state);
-
-  // TODO: Create and persist transition store
-  const transitionStore = null;
 
   return new ForkChoice(
     config,
@@ -64,4 +67,20 @@ export function initializeForkChoice(
     justifiedBalances,
     metrics
   );
+}
+
+/**
+ * Initialize TransitionStore with locally persisted value, overriding it with user provided option.
+ */
+export async function initializeTransitionStore(opts: ForkChoiceOpts, db: IBeaconDb): Promise<ITransitionStore | null> {
+  if (opts.terminalTotalDifficulty !== undefined) {
+    return {terminalTotalDifficulty: opts.terminalTotalDifficulty};
+  }
+
+  const terminalTotalDifficulty = await db.totalTerminalDifficulty.get();
+  if (terminalTotalDifficulty !== null) {
+    return {terminalTotalDifficulty: opts.terminalTotalDifficulty ?? terminalTotalDifficulty};
+  }
+
+  return null;
 }

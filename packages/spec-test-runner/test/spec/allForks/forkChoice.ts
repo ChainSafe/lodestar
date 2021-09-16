@@ -46,7 +46,8 @@ export function forkChoiceTest(fork: ForkName): void {
         let state = createCachedBeaconState(config, tbState);
 
         const emitter = new ChainEventEmitter();
-        const forkchoice = initializeForkChoice(config, emitter, currentSlot, state);
+        const transitionStore = null;
+        const forkchoice = initializeForkChoice(config, transitionStore, emitter, currentSlot, state);
 
         const checkpointStateCache = new CheckpointStateCache({});
         const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
