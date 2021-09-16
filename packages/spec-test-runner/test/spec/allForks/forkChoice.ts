@@ -23,7 +23,7 @@ import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ACTIVE_PRESET, SLOTS_PER_EPOCH, PresetName, ForkName} from "@chainsafe/lodestar-params";
+import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
@@ -156,18 +156,10 @@ export function forkChoiceTest(fork: ForkName): void {
         expectFunc: () => {},
 
         shouldSkip: (_, n) =>
-          // TODO: Test case below errors with
-          //
-          // Error: FORKCHOICE_ERROR_UNABLE_TO_SET_JUSTIFIED_CHECKPOINT
-          // at LodestarForkChoice.onBlock (/home/lion/Code/eth2.0/lodestar/packages/fork-choice/src/forkChoice/forkChoice.ts:328:15)
-          // at lodestar_spec_test_util_1.describeDirectorySpecTest.inputTypes.meta (test/spec/phase0/fork_choice.test.ts:53:20)
-          // at Context.<anonymous> (/home/lion/Code/eth2.0/lodestar/packages/spec-test-util/src/single.ts:144:22)
-          (fork === ForkName.phase0 && ACTIVE_PRESET === PresetName.minimal && n === "filtered_block_tree") ||
           // we should enable this for next spec test release
           // refer to https://github.com/hwwhww/consensus-spec-tests/tree/fork-choice-pr2577
-          (fork === ForkName.altair &&
-            (n === "new_justified_is_later_than_store_justified" ||
-              n === "on_block_finalized_skip_slots_not_in_skip_chain")),
+          n === "new_justified_is_later_than_store_justified" ||
+          n === "on_block_finalized_skip_slots_not_in_skip_chain",
       }
     );
   }

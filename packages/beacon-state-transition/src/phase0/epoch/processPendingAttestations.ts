@@ -26,6 +26,9 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
   const {epochCtx} = state;
   const rootType = ssz.Root;
   const prevEpoch = epochCtx.previousShuffling.epoch;
+  if (attestations.length === 0) {
+    return;
+  }
   const actualTargetBlockRoot = getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
   for (const att of readonlyValues(attestations)) {
     const aggregationBits = att.aggregationBits;
