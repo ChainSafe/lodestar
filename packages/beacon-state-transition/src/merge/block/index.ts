@@ -4,8 +4,9 @@ import {CachedBeaconState} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "../../altair/block/processOperations";
 import {processSyncAggregate} from "../../altair/block/processSyncCommittee";
-import {processExecutionPayload, isExecutionEnabled} from "./processExecutionPayload";
+import {processExecutionPayload} from "./processExecutionPayload";
 import {ExecutionEngine} from "../executionEngine";
+import {isExecutionEnabled} from "../utils";
 
 export function processBlock(
   state: CachedBeaconState<merge.BeaconState>,

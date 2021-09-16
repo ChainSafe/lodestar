@@ -4,24 +4,7 @@ import {byteArrayEquals, List} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../../allForks";
 import {getCurrentEpoch, getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
-
-export function isExecutionEnabled(state: merge.BeaconState, body: merge.BeaconBlockBody): boolean {
-  return isMergeBlock(state, body) || isMergeComplete(state);
-}
-
-function isMergeBlock(state: merge.BeaconState, body: merge.BeaconBlockBody): boolean {
-  return (
-    !isMergeComplete(state) &&
-    !ssz.merge.ExecutionPayload.equals(body.executionPayload, ssz.merge.ExecutionPayload.defaultValue())
-  );
-}
-
-function isMergeComplete(state: merge.BeaconState): boolean {
-  return !ssz.merge.ExecutionPayloadHeader.equals(
-    state.latestExecutionPayloadHeader,
-    ssz.merge.ExecutionPayloadHeader.defaultValue()
-  );
-}
+import {isMergeComplete} from "../utils";
 
 function isValidGasLimit(payload: merge.ExecutionPayload, parent: merge.ExecutionPayloadHeader): boolean {
   const parentGasLimit = parent.gasLimit;

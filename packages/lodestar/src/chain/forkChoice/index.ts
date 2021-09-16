@@ -33,17 +33,24 @@ export function initializeForkChoice(
     // with the head not matching the fork choice justified and finalized epochs.
     epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
   };
+
   // TODO - PERFORMANCE WARNING - NAIVE CODE
   const justifiedBalances = getEffectiveBalances(state);
-  return new ForkChoice({
+
+  // TODO: Create and persist transition store
+  const transitionStore = null;
+
+  return new ForkChoice(
     config,
 
-    fcStore: new ForkChoiceStore(currentSlot, justifiedCheckpoint, finalizedCheckpoint, {
+    new ForkChoiceStore(currentSlot, justifiedCheckpoint, finalizedCheckpoint, {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }),
 
-    protoArray: ProtoArray.initialize({
+    transitionStore,
+
+    ProtoArray.initialize({
       slot: blockHeader.slot,
       parentRoot: toHexString(blockHeader.parentRoot),
       stateRoot: toHexString(blockHeader.stateRoot),
@@ -54,8 +61,7 @@ export function initializeForkChoice(
       finalizedRoot: toHexString(finalizedCheckpoint.root),
     }),
 
-    queuedAttestations: new Set(),
     justifiedBalances,
-    metrics,
-  });
+    metrics
+  );
 }

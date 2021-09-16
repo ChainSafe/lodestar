@@ -205,7 +205,7 @@ function runStateTranstion(
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   try {
-    forkchoice.onBlock(signedBlock.message, postState, justifiedBalances);
+    forkchoice.onBlock(signedBlock.message, postState, {justifiedBalances});
     for (const attestation of signedBlock.message.body.attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
