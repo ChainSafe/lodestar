@@ -33,6 +33,7 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   AggregatedAttestationPool,
+  OpPool,
 } from "../../../../src/chain/opPools";
 import {LightClientIniter} from "../../../../src/chain/lightClient";
 
@@ -68,6 +69,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly opPool = new OpPool();
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -168,6 +170,7 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async persistToDisk(): Promise<void> {}
+  async loadFromDisk(): Promise<void> {}
 
   getStatus(): phase0.Status {
     return {

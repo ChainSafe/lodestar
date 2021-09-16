@@ -4,7 +4,6 @@ import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
-import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 import {
   AttestationError,
@@ -34,7 +33,6 @@ export type GossipHandlers = {
 type ValidatorFnsModules = {
   chain: IBeaconChain;
   config: IBeaconConfig;
-  db: IBeaconDb;
   logger: ILogger;
   network: INetwork;
   metrics: IMetrics | null;
@@ -55,7 +53,7 @@ type ValidatorFnsModules = {
  * - Eth2.0 gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers {
-  const {chain, db, config, metrics, network, logger} = modules;
+  const {chain, config, metrics, network, logger} = modules;
 
   return {
     [GossipType.beacon_block]: async (signedBlock) => {
@@ -187,34 +185,40 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
     },
 
-    [GossipType.voluntary_exit]: async (voluntaryExit) => {
-      await validateGossipVoluntaryExit(chain, db, voluntaryExit);
+    [GossipType.attester_slashing]: async (attesterSlashing) => {
+      await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
 
-      db.voluntaryExit.add(voluntaryExit).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertAttesterSlashing(attesterSlashing);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
     [GossipType.proposer_slashing]: async (proposerSlashing) => {
-      await validateGossipProposerSlashing(chain, db, proposerSlashing);
+      await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler
 
-      db.proposerSlashing.add(proposerSlashing).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertProposerSlashing(proposerSlashing);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
-    [GossipType.attester_slashing]: async (attesterSlashing) => {
-      await validateGossipAttesterSlashing(chain, db, attesterSlashing);
+    [GossipType.voluntary_exit]: async (voluntaryExit) => {
+      await validateGossipVoluntaryExit(chain, voluntaryExit);
 
       // Handler
 
-      db.attesterSlashing.add(attesterSlashing).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertVoluntaryExit(voluntaryExit);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {

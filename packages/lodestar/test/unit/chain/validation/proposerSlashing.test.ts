@@ -1,32 +1,31 @@
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
-import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
+import {StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
 import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
+import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, chainStub: StubbedChain;
+  let chainStub: StubbedChain;
+  let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
-  before(() => {
+  beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
-    dbStub = new StubbedBeaconDb(sandbox);
+    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
+    (chainStub as {opPool: OpPool}).opPool = opPool;
 
     const state = generateCachedState();
     chainStub.getHeadState.returns(state);
-  });
-
-  afterEach(() => {
-    dbStub.proposerSlashing.has.resolves(false);
   });
 
   after(() => {
@@ -35,10 +34,10 @@ describe("validate proposer slashing", () => {
 
   it("should return invalid proposer slashing - existing", async () => {
     const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
-    dbStub.proposerSlashing.has.resolves(true);
+    opPool.hasSeenProposerSlashing.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing),
+      validateGossipProposerSlashing(chainStub, proposerSlashing),
       ProposerSlashingErrorCode.ALREADY_EXISTS
     );
   });
@@ -50,7 +49,7 @@ describe("validate proposer slashing", () => {
     proposerSlashing.signedHeader2.message.slot = 0;
 
     await expectRejectedWithLodestarError(
-      validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing),
+      validateGossipProposerSlashing(chainStub, proposerSlashing),
       ProposerSlashingErrorCode.INVALID
     );
   });
@@ -66,6 +65,6 @@ describe("validate proposer slashing", () => {
       signedHeader2: signedHeader2,
     };
 
-    await validateGossipProposerSlashing(chainStub, dbStub, proposerSlashing);
+    await validateGossipProposerSlashing(chainStub, proposerSlashing);
   });
 });

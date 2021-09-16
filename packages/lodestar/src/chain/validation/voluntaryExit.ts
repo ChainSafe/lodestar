@@ -1,14 +1,14 @@
 import {phase0, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {VoluntaryExitError, VoluntaryExitErrorCode, GossipAction} from "../errors";
-import {IBeaconDb} from "../../db";
 
 export async function validateGossipVoluntaryExit(
   chain: IBeaconChain,
-  db: IBeaconDb,
   voluntaryExit: phase0.SignedVoluntaryExit
 ): Promise<void> {
-  if (await db.voluntaryExit.has(voluntaryExit.message.validatorIndex)) {
+  // [IGNORE] The voluntary exit is the first valid voluntary exit received for the validator with index
+  // signed_voluntary_exit.message.validator_index.
+  if (chain.opPool.hasSeenVoluntaryExit(voluntaryExit.message.validatorIndex)) {
     throw new VoluntaryExitError(GossipAction.IGNORE, {
       code: VoluntaryExitErrorCode.ALREADY_EXISTS,
     });
@@ -23,21 +23,18 @@ export async function validateGossipVoluntaryExit(
   // relevant on periods of many skipped slots.
   const state = await chain.getHeadStateAtCurrentEpoch();
 
-  try {
-    // verifySignature = false, verified in batch below
-    allForks.assertValidVoluntaryExit(state, voluntaryExit, false);
-  } catch (e) {
+  // [REJECT] All of the conditions within process_voluntary_exit pass validation.
+  // verifySignature = false, verified in batch below
+  if (!allForks.isValidVoluntaryExit(state, voluntaryExit, false)) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
       code: VoluntaryExitErrorCode.INVALID,
-      error: e as Error,
     });
   }
 
   const signatureSet = allForks.getVoluntaryExitSignatureSet(state, voluntaryExit);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new VoluntaryExitError(GossipAction.REJECT, {
-      code: VoluntaryExitErrorCode.INVALID,
-      error: Error("Invalid signature"),
+      code: VoluntaryExitErrorCode.INVALID_SIGNATURE,
     });
   }
 }

@@ -33,10 +33,15 @@ import {
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
 } from "./seenCache";
-import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
+import {
+  AggregatedAttestationPool,
+  AttestationPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+  OpPool,
+} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {Archiver} from "./archiver";
 
 export interface IBeaconChainModules {
@@ -68,6 +73,7 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly opPool = new OpPool();
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
@@ -156,8 +162,15 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointStateCache.clear();
   }
 
+  /** Populate in-memory caches with persisted data. Call at least once on startup */
+  async loadFromDisk(): Promise<void> {
+    await this.opPool.fromPersisted(this.db);
+  }
+
+  /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiver.persistToDisk();
+    await this.opPool.toPersisted(this.db);
   }
 
   getGenesisTime(): Number64 {

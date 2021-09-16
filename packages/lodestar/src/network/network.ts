@@ -14,7 +14,6 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IMetrics} from "../metrics";
 import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
-import {IBeaconDb} from "../db";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
 import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
@@ -33,7 +32,6 @@ interface INetworkModules {
   logger: ILogger;
   metrics: IMetrics | null;
   chain: IBeaconChain;
-  db: IBeaconDb;
   reqRespHandlers: ReqRespHandlers;
   signal: AbortSignal;
   // Optionally pass custom GossipHandlers, for testing
@@ -60,7 +58,7 @@ export class Network implements INetwork {
   private subscribedForks = new Set<ForkName>();
 
   constructor(private readonly opts: INetworkOptions & IReqRespOptions, modules: INetworkModules) {
-    const {config, db, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
+    const {config, libp2p, logger, metrics, chain, reqRespHandlers, gossipHandlers, signal} = modules;
     this.libp2p = libp2p;
     this.logger = logger;
     this.config = config;
@@ -96,7 +94,7 @@ export class Network implements INetwork {
       logger,
       metrics,
       signal,
-      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, db, logger, network: this, metrics}),
+      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}),
       forkDigestContext: chain.forkDigestContext,
     });
 

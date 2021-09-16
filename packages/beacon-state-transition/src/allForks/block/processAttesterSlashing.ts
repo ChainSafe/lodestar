@@ -1,7 +1,7 @@
-import {allForks, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 
-import {isSlashableValidator, isSlashableAttestationData} from "../../util";
+import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
 import {CachedBeaconState} from "../util";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
@@ -20,20 +20,12 @@ export function processAttesterSlashing(
 ): void {
   assertValidAttesterSlashing(state as CachedBeaconState<allForks.BeaconState>, attesterSlashing, verifySignatures);
 
-  // TODO: Is there a more performant intersection algorythm? This should be a utility function: intersect()
-  const attSet1 = new Set(attesterSlashing.attestation1.attestingIndices);
-  const attSet2 = new Set(attesterSlashing.attestation2.attestingIndices);
-  const indices: ValidatorIndex[] = [];
-  for (const i of attSet1.values()) {
-    if (attSet2.has(i)) {
-      indices.push(i);
-    }
-  }
+  const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
   let slashedAny = false;
   const validators = state.validators; // Get the validators sub tree once for all indices
-  // TODO: Why do we need to sort()? If it necessary add a comment with why
-  for (const index of indices.sort((a, b) => a - b)) {
+  // Spec requires to sort indexes beforehand
+  for (const index of intersectingIndices.sort((a, b) => a - b)) {
     if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {
       slashValidatorAllForks(fork, state, index);
       slashedAny = true;

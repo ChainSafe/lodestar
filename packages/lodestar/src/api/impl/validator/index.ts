@@ -58,7 +58,6 @@ const SYNC_TOLERANCE_EPOCHS = 1;
 export function getValidatorApi({
   chain,
   config,
-  db,
   eth1,
   logger,
   metrics,
@@ -151,7 +150,7 @@ export function getValidatorApi({
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {config, chain, db, eth1, metrics},
+        {config, chain, eth1, metrics},
         slot,
         randaoReveal,
         toGraffitiBuffer(graffiti || "")

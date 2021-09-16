@@ -17,7 +17,7 @@ import {
   SeenSyncCommitteeMessages,
   SeenContributionAndProof,
 } from "./seenCache";
-import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
+import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
@@ -75,6 +75,7 @@ export interface IBeaconChain {
   readonly aggregatedAttestationPool: AggregatedAttestationPool;
   readonly syncCommitteeMessagePool: SyncCommitteeMessagePool;
   readonly syncContributionAndProofPool: SyncContributionAndProofPool;
+  readonly opPool: OpPool;
 
   // Gossip seen cache
   readonly seenAttesters: SeenAttesters;
@@ -85,6 +86,9 @@ export interface IBeaconChain {
 
   /** Stop beacon chain processing */
   close(): void;
+  /** Populate in-memory caches with persisted data. Call at least once on startup */
+  loadFromDisk(): Promise<void>;
+  /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
   getGenesisTime(): Number64;
 
