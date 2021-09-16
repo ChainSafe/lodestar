@@ -8,6 +8,7 @@ import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
+import {parseBlock} from "./provider/eth1Provider";
 
 /**
  * Phase 1 of genesis building.
@@ -53,10 +54,14 @@ export async function* getDepositsAndBlockStreamForGenesis(
   let toBlock = fromBlock; // First, fetch only the first block
 
   while (true) {
-    const [logs, block] = await Promise.all([
+    const [logs, blockRaw] = await Promise.all([
       provider.getDepositEvents(fromBlock, toBlock),
       provider.getBlockByNumber(toBlock),
     ]);
+
+    if (!blockRaw) throw Error(`No block found for number ${toBlock}`);
+    const block = parseBlock(blockRaw);
+
     yield [logs, block];
 
     const remoteFollowBlock = await getRemoteFollowBlock(provider, params);

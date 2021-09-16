@@ -2,7 +2,8 @@ import "mocha";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
-import {getDepositsStream, getDepositsAndBlockStreamForGenesis, Eth1Provider} from "../../../src/eth1";
+import {getDepositsStream, getDepositsAndBlockStreamForGenesis} from "../../../src/eth1/stream";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
 
 describe("Eth1 streams", function () {
   this.timeout("2 min");

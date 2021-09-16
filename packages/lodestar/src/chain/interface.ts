@@ -3,7 +3,10 @@ import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types"
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
+import {IEth1ForBlockProduction} from "../eth1";
+import {IExecutionEngine} from "../executionEngine";
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
@@ -57,6 +60,10 @@ export interface IBlockJob extends IProcessBlock {
 export interface IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly eth1: IEth1ForBlockProduction;
+  readonly executionEngine: IExecutionEngine;
+  // Expose config for convenience in modularized functions
+  readonly config: IBeaconConfig;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;

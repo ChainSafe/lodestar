@@ -23,7 +23,7 @@ export type ForkChoiceOpts = {
  */
 export function initializeForkChoice(
   config: IChainForkConfig,
-  transitionStore: ITransitionStore | null,
+  transitionStore: ITransitionStore,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconState<allForks.BeaconState>,
@@ -69,18 +69,26 @@ export function initializeForkChoice(
   );
 }
 
+export class TransitionStore implements ITransitionStore {
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  constructor(private readonly _terminalTotalDifficulty: bigint | null) {}
+
+  get initialized(): boolean {
+    return this._terminalTotalDifficulty !== null;
+  }
+
+  get terminalTotalDifficulty(): bigint {
+    if (this._terminalTotalDifficulty === null) {
+      throw Error("TransitionStore not initilized");
+    }
+    return this._terminalTotalDifficulty;
+  }
+}
+
 /**
  * Initialize TransitionStore with locally persisted value, overriding it with user provided option.
  */
-export async function initializeTransitionStore(opts: ForkChoiceOpts, db: IBeaconDb): Promise<ITransitionStore | null> {
-  if (opts.terminalTotalDifficulty !== undefined) {
-    return {terminalTotalDifficulty: opts.terminalTotalDifficulty};
-  }
-
-  const terminalTotalDifficulty = await db.totalTerminalDifficulty.get();
-  if (terminalTotalDifficulty !== null) {
-    return {terminalTotalDifficulty: opts.terminalTotalDifficulty ?? terminalTotalDifficulty};
-  }
-
-  return null;
+export async function initializeTransitionStore(opts: ForkChoiceOpts, db: IBeaconDb): Promise<ITransitionStore> {
+  const terminalTotalDifficulty = opts.terminalTotalDifficulty ?? (await db.totalTerminalDifficulty.get());
+  return new TransitionStore(terminalTotalDifficulty);
 }

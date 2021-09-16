@@ -1,10 +1,10 @@
-export interface IEth1Options {
+export type Eth1Options = {
   enabled: boolean;
   providerUrls: string[];
   depositContractDeployBlock: number;
-}
+};
 
-export const defaultEth1Options: IEth1Options = {
+export const defaultEth1Options: Eth1Options = {
   enabled: true,
   providerUrls: ["http://localhost:8545"],
   depositContractDeployBlock: 0,

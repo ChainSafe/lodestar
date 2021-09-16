@@ -8,20 +8,20 @@ import {retry} from "../../util/retry";
 import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
 import {IEth1Provider} from "../interface";
-import {IEth1Options} from "../options";
+import {Eth1Options} from "../options";
 import {isValidAddress} from "../../util/address";
+import {EthJsonRpcBlockRaw} from "../interface";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+export const rootHexRegex = /^0x[a-fA-F0-9]{64}$/;
 
 /**
  * Binds return types to Ethereum JSON RPC methods
  */
 interface IEthJsonRpcTypes {
-  eth_getBlockByNumber: {
-    hash: string; // "0x7f0c419985f2227c546a9c640ee05abb3d279316426e6c79d69f6e317d6bb301";
-    number: string; // "0x63";
-    timestamp: string; // "0x5c5315bb";
-  };
+  eth_getBlockByNumber: EthJsonRpcBlockRaw | null;
+  eth_getBlockByHash: EthJsonRpcBlockRaw | null;
   eth_blockNumber: string;
   eth_getCode: string;
   eth_getLogs: {
@@ -42,7 +42,7 @@ export class Eth1Provider implements IEth1Provider {
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
 
-  constructor(config: IChainForkConfig, opts: IEth1Options, signal: AbortSignal) {
+  constructor(config: IChainForkConfig, opts: Eth1Options, signal: AbortSignal) {
     this.deployBlock = opts.depositContractDeployBlock;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
     this.rpc = new JsonRpcHttpClient(opts.providerUrls, {
@@ -96,9 +96,9 @@ export class Eth1Provider implements IEth1Provider {
   /**
    * Fetches an arbitrary array of block numbers in batch
    */
-  async getBlocksByNumber(fromBlock: number, toBlock: number): Promise<phase0.Eth1Block[]> {
+  async getBlocksByNumber(fromBlock: number, toBlock: number): Promise<EthJsonRpcBlockRaw[]> {
     const method = "eth_getBlockByNumber";
-    const blocksRawArr = await retry(
+    const blocksArr = await retry(
       (attempt) => {
         // Large batch requests can return with code 200 but truncated, with broken JSON
         // This retry will split a given block range into smaller ranges exponentially
@@ -120,16 +120,30 @@ export class Eth1Provider implements IEth1Provider {
       }
     );
 
-    return blocksRawArr.flat(1).map(parseBlock);
+    const blocks: EthJsonRpcBlockRaw[] = [];
+    for (const block of blocksArr.flat(1)) {
+      if (block) blocks.push(block);
+    }
+    return blocks;
   }
 
-  async getBlockByNumber(blockNumber: number): Promise<phase0.Eth1Block> {
+  async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
-    const blocksRaw = await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({
+    const blockNumberHex = typeof blockNumber === "string" ? blockNumber : toHex(blockNumber);
+    return await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({
       method,
-      params: [toHex(blockNumber), false],
+      // false = include only transaction roots, not full objects
+      params: [blockNumberHex, false],
     });
-    return parseBlock(blocksRaw);
+  }
+
+  async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
+    const method = "eth_getBlockByHash";
+    return await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({
+      method,
+      // false = include only transaction roots, not full objects
+      params: [blockHashHex, false],
+    });
   }
 
   async getBlockNumber(): Promise<number> {
@@ -168,11 +182,13 @@ function toHex(n: number): string {
   return "0x" + n.toString(16);
 }
 
-function parseBlock(blockRaw: IEthJsonRpcTypes["eth_getBlockByNumber"]): phase0.Eth1Block {
+export function parseBlock(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
+  if (typeof blockRaw !== "object") throw Error("block is not an object");
+  validateHexRoot(blockRaw.hash);
   return {
     blockHash: fromHexString(blockRaw.hash),
-    blockNumber: parseInt(blockRaw.number, 16),
-    timestamp: parseInt(blockRaw.timestamp, 16),
+    blockNumber: hexToDecimal(blockRaw.number, "block.number"),
+    timestamp: hexToDecimal(blockRaw.timestamp, "block.timestamp"),
   };
 }
 
@@ -183,4 +199,24 @@ export function isJsonRpcTruncatedError(error: Error): boolean {
     // Otherwise guess Infura error message of too many events
     (error instanceof Error && error.message.includes("query returned more than 10000 results"))
   );
+}
+
+/** Safe parser of hex decimal positive integers */
+export function hexToDecimal(hex: string, id = ""): number {
+  const num = parseInt(hex, 16);
+  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
+  return num;
+}
+
+/** Typesafe fn to convert hex string to bigint. The BigInt constructor param is any */
+export function hexToBigint(hex: string, id = ""): bigint {
+  try {
+    return BigInt(hex);
+  } catch (e) {
+    throw Error(`Invalid hex bigint ${id} '${hex}': ${(e as Error).message}`);
+  }
+}
+
+export function validateHexRoot(hex: string, id = ""): void {
+  if (!rootHexRegex.test(hex)) throw Error(`Invalid hex root ${id} '${hex}'`);
 }

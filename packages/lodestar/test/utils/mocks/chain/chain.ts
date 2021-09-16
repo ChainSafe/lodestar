@@ -3,7 +3,7 @@ import sinon from "sinon";
 
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, ForkChoice, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
@@ -36,6 +36,8 @@ import {
   OpPool,
 } from "../../../../src/chain/opPools";
 import {LightClientIniter} from "../../../../src/chain/lightClient";
+import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
+import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -44,12 +46,16 @@ export interface IMockChainParams {
   chainId: Uint16;
   networkId: Uint64;
   state: TreeBacked<allForks.BeaconState>;
-  config: IChainForkConfig;
+  config: IBeaconConfig;
 }
 
 export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly eth1 = new Eth1ForBlockProductionDisabled();
+  readonly executionEngine = new ExecutionEngineDisabled();
+  readonly config: IBeaconConfig;
+
   readonly bls: IBlsVerifier;
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
@@ -79,7 +85,6 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
   private state: TreeBacked<allForks.BeaconState>;
-  private config: IChainForkConfig;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
@@ -204,7 +209,6 @@ function mockForkChoice(): IForkChoice {
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
-    initializeTransitionStore: () => {},
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,

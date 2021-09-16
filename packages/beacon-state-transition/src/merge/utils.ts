@@ -1,4 +1,4 @@
-import {merge, ssz} from "@chainsafe/lodestar-types";
+import {allForks, merge, ssz} from "@chainsafe/lodestar-types";
 
 /**
  * Execution enabled = merge is done.
@@ -31,4 +31,14 @@ export function isMergeComplete(state: merge.BeaconState): boolean {
     state.latestExecutionPayloadHeader,
     ssz.merge.ExecutionPayloadHeader.defaultTreeBacked()
   );
+}
+
+/** Type guard for merge.BeaconState */
+export function isMergeStateType(state: allForks.BeaconState): state is merge.BeaconState {
+  return (state as merge.BeaconState).latestExecutionPayloadHeader !== undefined;
+}
+
+/** Type guard for merge.BeaconBlockBody */
+export function isMergeBlockBodyType(blockBody: allForks.BeaconBlockBody): blockBody is merge.BeaconBlockBody {
+  return (blockBody as merge.BeaconBlockBody).executionPayload !== undefined;
 }

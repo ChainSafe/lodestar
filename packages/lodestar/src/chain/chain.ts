@@ -43,10 +43,16 @@ import {
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {Archiver} from "./archiver";
+import {IEth1ForBlockProduction} from "../eth1";
+import {IExecutionEngine} from "../executionEngine";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly eth1: IEth1ForBlockProduction;
+  readonly executionEngine: IExecutionEngine;
+  // Expose config for convenience in modularized functions
+  readonly config: IBeaconConfig;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -75,7 +81,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
   protected readonly blockProcessor: BlockProcessor;
-  protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
@@ -97,13 +102,17 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       anchorState,
       transitionStore,
+      eth1,
+      executionEngine,
     }: {
       config: IBeaconConfig;
       db: IBeaconDb;
       logger: ILogger;
       metrics: IMetrics | null;
       anchorState: TreeBacked<allForks.BeaconState>;
-      transitionStore: ITransitionStore | null;
+      transitionStore: ITransitionStore;
+      eth1: IEth1ForBlockProduction;
+      executionEngine: IExecutionEngine;
     }
   ) {
     this.opts = opts;
@@ -113,6 +122,8 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
+    this.eth1 = eth1;
+    this.executionEngine = executionEngine;
 
     this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 

@@ -55,15 +55,7 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  * Server implementation for handling validator duties.
  * See `@chainsafe/lodestar-validator/src/api` for the client implementation).
  */
-export function getValidatorApi({
-  chain,
-  config,
-  eth1,
-  logger,
-  metrics,
-  network,
-  sync,
-}: ApiModules): routes.validator.Api {
+export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
   let genesisBlockRoot: Root | null = null;
 
   /** Compute and cache the genesis block root */
@@ -149,12 +141,7 @@ export function getValidatorApi({
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await assembleBlock(
-        {config, chain, eth1, metrics},
-        slot,
-        randaoReveal,
-        toGraffitiBuffer(graffiti || "")
-      );
+      const block = await assembleBlock({chain, metrics}, slot, randaoReveal, toGraffitiBuffer(graffiti || ""));
       metrics?.blockProductionSuccess.inc();
       return {data: block, version: config.getForkName(block.slot)};
     } finally {

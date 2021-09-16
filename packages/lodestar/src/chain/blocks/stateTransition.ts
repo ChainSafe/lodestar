@@ -101,7 +101,7 @@ export async function runStateTransition(
 
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
-  let justifiedBalances: number[] = [];
+  let justifiedBalances: number[] | undefined = undefined;
   if (postState.currentJustifiedCheckpoint.epoch > forkChoice.getJustifiedCheckpoint().epoch) {
     const justifiedState = checkpointStateCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
     if (!justifiedState) {
