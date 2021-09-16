@@ -7,13 +7,17 @@ jobs:
     name: Spec tests
     runs-on: ubuntu-latest
     steps:
+      # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
+      # - run: ./scripts/free-disk-space.sh
+
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
           node-version: "lts/fermium"
-      # As of October 2020, runner has +8GB of free space w/out this script (takes 1m30s to run)
-      # - run: ./scripts/free-disk-space.sh
+      - name: Node.js version
+        id: node
+        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
       - name: Restore dependencies
         uses: actions/cache@master
         id: cache-deps
@@ -21,10 +25,10 @@ jobs:
           path: |
             node_modules
             packages/*/node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}-fermium
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
       - name: Install & build
         if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile && yarn build
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
       - name: Build
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
