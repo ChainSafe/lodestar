@@ -48,6 +48,12 @@ export class ForkChoice implements IForkChoice {
   private readonly votes: IVoteTracker[] = [];
 
   /**
+   * Attestations that arrived at the current slot and must be queued for later processing.
+   * NOT currently tracked in the protoArray
+   */
+  private readonly queuedAttestations = new Set<IQueuedAttestation>();
+
+  /**
    * Balances tracked in the protoArray, or soon to be tracked
    * Indexed by validator index
    *
@@ -72,11 +78,6 @@ export class ForkChoice implements IForkChoice {
     private readonly transitionStore: ITransitionStore | null,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
-    /**
-     * Attestations that arrived at the current slot and must be queued for later processing.
-     * NOT currently tracked in the protoArray
-     */
-    private readonly queuedAttestations: Set<IQueuedAttestation>,
     /**
      * Balances currently tracked in the protoArray
      * Indexed by validator index
@@ -240,7 +241,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData: OnBlockPrecachedData): void {
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -298,7 +299,7 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (this.transitionStore && merge.isMergeBlock(state as merge.BeaconState, (block as merge.BeaconBlock).body)) {
-      const {powBlock, powBlockParent} = preCachedData;
+      const {powBlock, powBlockParent} = preCachedData || {};
       if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
       if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
 
@@ -320,7 +321,7 @@ export class ForkChoice implements IForkChoice {
 
     // Update justified checkpoint.
     if (stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) {
-      const {justifiedBalances} = preCachedData;
+      const {justifiedBalances} = preCachedData || {};
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
@@ -356,7 +357,7 @@ export class ForkChoice implements IForkChoice {
 
     // This needs to be performed after finalized checkpoint has been updated
     if (shouldUpdateJustified) {
-      const {justifiedBalances} = preCachedData;
+      const {justifiedBalances} = preCachedData || {};
       if (!justifiedBalances) {
         throw new ForkChoiceError({
           code: ForkChoiceErrorCode.UNABLE_TO_SET_JUSTIFIED_CHECKPOINT,
