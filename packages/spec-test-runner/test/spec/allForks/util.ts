@@ -1,7 +1,8 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {config as altairConfig} from "../altair/util";
 import {config as phase0Config} from "../phase0/util";
+import {config as altairConfig} from "../altair/util";
+import {config as mergeConfig} from "../merge/util";
 
 export function getConfig(fork: ForkName): IChainForkConfig {
   switch (fork) {
@@ -10,6 +11,6 @@ export function getConfig(fork: ForkName): IChainForkConfig {
     case ForkName.altair:
       return altairConfig;
     case ForkName.merge:
-      throw Error("Not implemented");
+      return mergeConfig;
   }
 }
