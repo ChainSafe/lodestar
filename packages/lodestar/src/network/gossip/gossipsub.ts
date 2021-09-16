@@ -24,7 +24,8 @@ import {Map2d, Map2dArr} from "../../util/map";
 import pipe from "it-pipe";
 import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
 import BufferList from "bl";
-import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
+// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
+import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
 interface IGossipsubModules {
@@ -185,6 +186,11 @@ export class Eth2Gossipsub extends Gossipsub {
           await this._processRpcMessage(msg);
         })
       );
+    }
+    // not a direct implementation of js-libp2p-gossipsub, this is from gossipsub
+    // https://github.com/ChainSafe/js-libp2p-gossipsub/blob/751ea73e9b7dc2287ca56786857d32ec2ce796b9/ts/index.ts#L366
+    if (rpc.control) {
+      super._processRpcControlMessage(idB58Str, rpc.control);
     }
     return true;
   }
