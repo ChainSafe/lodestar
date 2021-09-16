@@ -1,7 +1,7 @@
 import fs from "fs";
 import {join} from "path";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked, Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -17,6 +17,12 @@ export type BlockProcessFn<BeaconState extends allForks.BeaconState> = (
   testCase: any
 ) => void;
 
+export type OperationsTestCase<BeaconState extends allForks.BeaconState> = IBaseSpecTest & {
+  pre: BeaconState;
+  post: BeaconState;
+  execution: {executionValid: boolean};
+};
+
 export function operations<BeaconState extends allForks.BeaconState>(
   fork: ForkName,
   operationFns: Record<string, BlockProcessFn<BeaconState>>,
@@ -29,7 +35,7 @@ export function operations<BeaconState extends allForks.BeaconState>(
       throw Error(`No operationFn for ${testDir}`);
     }
 
-    describeDirectorySpecTest<IBaseSpecTest & {pre: BeaconState; post: BeaconState}, BeaconState>(
+    describeDirectorySpecTest<OperationsTestCase<BeaconState>, BeaconState>(
       `${ACTIVE_PRESET}/${fork}/operations/${testDir}`,
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
@@ -39,7 +45,7 @@ export function operations<BeaconState extends allForks.BeaconState>(
         return state;
       },
       {
-        inputTypes: inputTypeSszTreeBacked,
+        inputTypes: {...inputTypeSszTreeBacked, execution: InputType.YAML},
         sszTypes: {
           pre: ssz[fork].BeaconState,
           post: ssz[fork].BeaconState,
@@ -51,6 +57,8 @@ export function operations<BeaconState extends allForks.BeaconState>(
           voluntary_exit: ssz.phase0.SignedVoluntaryExit,
           // Altair
           sync_aggregate: ssz.altair.SyncAggregate,
+          // Merge
+          execution_payload: ssz.merge.ExecutionPayload,
           // Provide types for new objects
           ...sszTypes,
         },

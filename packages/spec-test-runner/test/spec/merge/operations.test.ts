@@ -1,8 +1,10 @@
 import {CachedBeaconState, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {phase0, merge, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest} from "../type";
 import {operations, BlockProcessFn} from "../allForks/operations";
+// eslint-disable-next-line no-restricted-imports
+import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/merge/block/processExecutionPayload";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -20,7 +22,7 @@ const sync_aggregate: BlockProcessFn<altair.BeaconState> = (
   altair.processSyncAggregate(state, block);
 };
 
-operations<altair.BeaconState>(ForkName.altair, {
+operations<altair.BeaconState>(ForkName.merge, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
     altair.processAttestations(state, [testCase.attestation]);
   },
@@ -47,5 +49,14 @@ operations<altair.BeaconState>(ForkName.altair, {
 
   voluntary_exit: (state, testCase: IBaseSpecTest & {voluntary_exit: phase0.SignedVoluntaryExit}) => {
     altair.processVoluntaryExit(state, testCase.voluntary_exit);
+  },
+
+  execution_payload: (
+    state,
+    testCase: IBaseSpecTest & {execution_payload: merge.ExecutionPayload; execution: {executionValid: boolean}}
+  ) => {
+    processExecutionPayload((state as unknown) as CachedBeaconState<merge.BeaconState>, testCase.execution_payload, {
+      onPayload: () => testCase.execution.executionValid,
+    });
   },
 });

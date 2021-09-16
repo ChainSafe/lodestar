@@ -1,14 +1,16 @@
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
+  GENESIS_BASE_FEE_PER_GAS,
   GENESIS_EPOCH,
+  GENESIS_GAS_LIMIT,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, Bytes32, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, altair, Bytes32, merge, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
@@ -210,13 +212,21 @@ export function initializeBeaconStateFromEth1(
   // Process deposits
   const activeValidatorIndices = applyDeposits(config, state, deposits);
 
-  if (config.getForkName(GENESIS_SLOT) === ForkName.altair) {
+  if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
     const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
-    const altairState = state as TreeBacked<altair.BeaconState>;
-    altairState.currentSyncCommittee = syncCommittees;
-    altairState.nextSyncCommittee = syncCommittees;
-    return altairState as TreeBacked<allForks.BeaconState>;
-  } else {
-    return state;
+    const stateAltair = state as TreeBacked<altair.BeaconState>;
+    stateAltair.currentSyncCommittee = syncCommittees;
+    stateAltair.nextSyncCommittee = syncCommittees;
   }
+
+  if (GENESIS_SLOT >= config.MERGE_FORK_EPOCH) {
+    const stateMerge = state as TreeBacked<merge.BeaconState>;
+    stateMerge.latestExecutionPayloadHeader.blockHash = eth1BlockHash;
+    stateMerge.latestExecutionPayloadHeader.timestamp = eth1Timestamp;
+    stateMerge.latestExecutionPayloadHeader.random = eth1BlockHash;
+    stateMerge.latestExecutionPayloadHeader.gasLimit = GENESIS_GAS_LIMIT;
+    stateMerge.latestExecutionPayloadHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
+  }
+
+  return state;
 }

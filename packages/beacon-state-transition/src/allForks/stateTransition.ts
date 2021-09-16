@@ -3,6 +3,7 @@ import {allForks, phase0 as phase0Types, Slot, ssz} from "@chainsafe/lodestar-ty
 import {ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
+import * as merge from "../merge";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
 import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
@@ -19,17 +20,13 @@ type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => voi
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
   [ForkName.altair]: altair.processBlock as ProcessBlockFn,
-  [ForkName.merge]: () => {
-    throw Error("Not implemented");
-  },
+  [ForkName.merge]: merge.processBlock as ProcessBlockFn,
 };
 
 const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.phase0]: phase0.processEpoch as ProcessEpochFn,
   [ForkName.altair]: altair.processEpoch as ProcessEpochFn,
-  [ForkName.merge]: () => {
-    throw Error("Not implemented");
-  },
+  [ForkName.merge]: altair.processEpoch as ProcessEpochFn,
 };
 
 // Multifork capable state transition
