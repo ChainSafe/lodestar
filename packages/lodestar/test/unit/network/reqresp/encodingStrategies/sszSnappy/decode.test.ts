@@ -34,13 +34,13 @@ describe("network / reqresp / sszSnappy / decode", () => {
       error: SszSnappyErrorCode;
       chunks: Buffer[];
     }[] = [
-      // this does not work with varint 6
-      // {
-      //   id: "if it takes more than 10 bytes for varint",
-      //   type: ssz.phase0.Status,
-      //   error: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
-      //   chunks: [Buffer.from(varint.encode(99999999999999999999999))],
-      // },
+      {
+        id: "if it takes more than 10 bytes for varint",
+        type: ssz.phase0.Status,
+        error: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT,
+        // Use Number.MAX_SAFE_INTEGER to guard against this check https://github.com/chrisdickinson/varint/pull/20
+        chunks: [Buffer.from(varint.encode(Number.MAX_SAFE_INTEGER - 1))],
+      },
       {
         id: "if failed ssz size bound validation",
         type: ssz.phase0.Status,

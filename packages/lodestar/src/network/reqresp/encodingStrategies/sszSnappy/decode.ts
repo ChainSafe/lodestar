@@ -44,8 +44,9 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
     const sszDataLength = varint.decode(buffer.slice());
 
     // MUST validate: the unsigned protobuf varint used for the length-prefix MUST not be longer than 10 bytes
+    // Check for varintBytes > 0 to guard against NaN, or 0 values
     const varintBytes = varint.decode.bytes;
-    if (varintBytes > MAX_VARINT_BYTES) {
+    if (varintBytes > MAX_VARINT_BYTES || !(varintBytes > 0)) {
       throw new SszSnappyError({code: SszSnappyErrorCode.INVALID_VARINT_BYTES_COUNT, bytes: varintBytes});
     }
     buffer.consume(varintBytes);
