@@ -4,7 +4,7 @@ import path from "path";
 import {SPEC_TEST_LOCATION} from "./specTestVersioning";
 
 // TEMP TEMP
-const forksToIgnore = new Set(["merge"]);
+const forksToIgnore = new Set<string>([]);
 
 // This test ensures that we are covering all available spec tests.
 // The directory structure is organized first by preset, then by fork.
