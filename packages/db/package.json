@@ -39,13 +39,13 @@
     "@chainsafe/lodestar-config": "^0.30.0",
     "@chainsafe/lodestar-utils": "^0.30.0",
     "@chainsafe/ssz": "^0.8.17",
-    "@types/levelup": "^4.3.1",
+    "@types/levelup": "^4.3.3",
     "it-all": "^1.0.2",
-    "level": "^6.0.1",
-    "levelup": "^4.4.0"
+    "level": "^7.0.0",
+    "levelup": "^5.0.1"
   },
   "devDependencies": {
     "@types/level": "^6.0.0",
-    "@types/leveldown": "^4.0.2"
+    "@types/leveldown": "^4.0.3"
   }
 }
