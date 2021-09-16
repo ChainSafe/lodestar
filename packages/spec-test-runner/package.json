@@ -51,7 +51,7 @@
     "@chainsafe/lodestar-utils": "^0.30.0",
     "@chainsafe/lodestar-validator": "^0.30.0",
     "@chainsafe/ssz": "^0.8.17",
-    "@types/yargs": "^13.0.2"
+    "@types/yargs": "^17.0.2"
   },
   "keywords": [
     "Ethereum",
