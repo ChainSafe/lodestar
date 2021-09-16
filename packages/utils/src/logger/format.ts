@@ -1,6 +1,6 @@
 import {Json} from "@chainsafe/ssz";
 import {format} from "winston";
-import {toJson, toString} from "../json";
+import {toJson, toString} from "../json.js";
 import {Context, ILoggerOptions, TimestampFormatCode} from "./interface";
 import {formatEpochSlotTime} from "./util";
 

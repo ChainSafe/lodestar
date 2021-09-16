@@ -11,8 +11,10 @@ module.exports = {
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaVersion: 10,
+    ecmaVersion: "latest",
     project: "./tsconfig.json",
+    // Support ESM modules
+    sourceType: "module",
   },
   plugins: ["@typescript-eslint", "eslint-plugin-import", "eslint-plugin-node", "no-only-tests", "prettier"],
   extends: [
@@ -124,6 +126,9 @@ module.exports = {
 
     // Prevents accidentally pushing a commit with .only in Mocha tests
     "no-only-tests/no-only-tests": "error",
+
+    // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
+    "import/no-unresolved": "off",
   },
   overrides: [
     {

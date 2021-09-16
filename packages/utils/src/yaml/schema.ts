@@ -11,7 +11,7 @@ import boolType from "js-yaml/lib/js-yaml/type/bool";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 import floatType from "js-yaml/lib/js-yaml/type/float";
-import {intType} from "./int";
+import {intType} from "./int.js";
 
 export const schema = new Schema({
   include: [failsafe],

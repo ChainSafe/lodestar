@@ -1,4 +1,3 @@
-import {intDiv} from "./math";
 import {hash} from "@chainsafe/ssz";
 
 /**
@@ -14,7 +13,7 @@ export function verifyMerkleBranch(
 ): boolean {
   let value = leaf;
   for (let i = 0; i < depth; i++) {
-    if (intDiv(index, 2 ** i) % 2) {
+    if (Math.floor(index / 2 ** i) % 2) {
       value = hash(Buffer.concat([proof[i], value]));
     } else {
       value = hash(Buffer.concat([value, proof[i]]));

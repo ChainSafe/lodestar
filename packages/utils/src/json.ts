@@ -1,6 +1,6 @@
 import {Json, toHexString} from "@chainsafe/ssz";
-import {LodestarError} from "./errors";
-import {mapValues} from "./objects";
+import {LodestarError} from "./errors.js";
+import {mapValues} from "./objects.js";
 
 export const CIRCULAR_REFERENCE_TAG = "CIRCULAR_REFERENCE";
 
