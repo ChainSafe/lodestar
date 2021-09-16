@@ -88,7 +88,7 @@
     "stream-to-it": "^0.2.0",
     "strict-event-emitter-types": "^2.0.0",
     "threads": "^1.6.5",
-    "varint": "^5.0.0",
+    "varint": "^6.0.0",
     "wtfnode": "^0.8.4"
   },
   "devDependencies": {
