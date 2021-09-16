@@ -7726,7 +7726,7 @@
             {
               "expr": "lodestar_discv5_connected_peer_count",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "peers",
               "refId": "A"
             }
           ],
@@ -7820,7 +7820,7 @@
             {
               "expr": "lodestar_discv5_active_session_count",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "sessions",
               "refId": "A"
             }
           ],
@@ -7914,7 +7914,7 @@
             {
               "expr": "rate(lodestar_discv5_sent_message_count[$__rate_interval])",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "{{type}}",
               "refId": "A"
             }
           ],
@@ -8008,7 +8008,7 @@
             {
               "expr": "rate(lodestar_discv5_rcvd_message_count[$__rate_interval])",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "{{type}}",
               "refId": "A"
             }
           ],
@@ -8102,7 +8102,7 @@
             {
               "expr": "lodestar_discv5_kad_table_size",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "table size",
               "refId": "A"
             }
           ],
