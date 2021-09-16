@@ -92,7 +92,7 @@
     "wtfnode": "^0.8.4"
   },
   "devDependencies": {
-    "@types/bl": "^4.1.0",
+    "@types/bl": "^5.0.1",
     "@types/es6-promisify": "6.0.0",
     "@types/eventsource": "^1.1.5",
     "@types/http-terminator": "^2.0.1",
