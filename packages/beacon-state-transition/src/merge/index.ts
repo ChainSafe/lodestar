@@ -1,4 +1,5 @@
 export {processBlock} from "./block";
+export {upgradeState} from "./upgradeState";
 export * from "./utils";
 
 // re-export merge lodestar types for ergonomic usage downstream

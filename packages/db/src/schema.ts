@@ -58,7 +58,9 @@ export enum Bucket {
   altair_lightclientFinalizedCheckpoint = 33, // Epoch -> FinalizedCheckpointData
   // Note: this is the state root for the checkpoint block, NOT necessarily the state root at the epoch boundary
   altair_lightClientInitProof = 34, // Epoch -> Proof
-  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod -> Proof
+  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod ->
+
+  merge_totalTerminalDifficulty = 40, // Single item -> Uint256
 }
 
 export enum Key {

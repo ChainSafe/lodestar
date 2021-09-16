@@ -75,7 +75,7 @@ export class ForkChoice implements IForkChoice {
     private readonly config: IChainForkConfig,
     private readonly fcStore: IForkChoiceStore,
     /** Nullable until merge time comes */
-    private readonly transitionStore: ITransitionStore | null,
+    private transitionStore: ITransitionStore | null,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
     /**
@@ -89,6 +89,12 @@ export class ForkChoice implements IForkChoice {
   ) {
     this.bestJustifiedBalances = justifiedBalances;
     this.head = this.updateHead();
+  }
+
+  /** For merge transition. Initialize transition store when merge fork condition is met */
+  initializeTransitionStore(transitionStore: ITransitionStore): void {
+    if (this.transitionStore !== null) throw Error("transitionStore already initialized");
+    this.transitionStore = transitionStore;
   }
 
   /**

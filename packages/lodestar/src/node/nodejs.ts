@@ -14,7 +14,7 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics, initializeTransitionStore} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
 import {IBeaconNodeOptions} from "./options";
@@ -131,6 +131,7 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chain),
       metrics,
       anchorState,
+      transitionStore: await initializeTransitionStore(opts.chain, db),
     });
 
     // Load persisted data from disk to in-memory caches

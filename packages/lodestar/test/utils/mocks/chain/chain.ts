@@ -204,6 +204,7 @@ function mockForkChoice(): IForkChoice {
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
+    initializeTransitionStore: () => {},
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,
