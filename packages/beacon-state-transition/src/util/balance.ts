@@ -33,7 +33,7 @@ export function increaseBalance(
   delta: number
 ): void {
   // TODO: Inline this
-  state.balances.applyDelta(index, delta);
+  state.balanceList.applyDelta(index, delta);
 }
 
 /**
@@ -46,7 +46,7 @@ export function decreaseBalance(
   index: ValidatorIndex,
   delta: number
 ): void {
-  state.balances.applyDelta(index, -delta);
+  state.balanceList.applyDelta(index, -delta);
 }
 
 /**

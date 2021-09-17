@@ -32,7 +32,8 @@ export function processEffectiveBalanceUpdates(
   // update effective balances with hysteresis
   if (!epochProcess.balances) {
     // only do this for genesis epoch, or spec test
-    epochProcess.balances = Array.from({length: state.balances.length}, (_, i) => state.balances[i]);
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    epochProcess.balances = Array.from({length: state.balanceList.length}, (_, i) => state.balanceList.get(i)!);
   }
 
   for (let i = 0, len = epochProcess.balances.length; i < len; i++) {

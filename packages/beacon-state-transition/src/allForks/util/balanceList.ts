@@ -1,8 +1,8 @@
-import {List, Number64ListType, TreeBacked} from "@chainsafe/ssz";
+import {List, Number64ListType} from "@chainsafe/ssz";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 /**
- * Manage balances of BeaconState.
+ * Manage balances of BeaconState, use this instead of state.balances
  */
 export class BalanceList implements List<number> {
   [index: number]: number;
@@ -66,27 +66,3 @@ export class BalanceList implements List<number> {
     return -1;
   }
 }
-
-// eslint-disable-next-line @typescript-eslint/naming-convention
-export const CachedBalanceListProxyHandler: ProxyHandler<BalanceList> = {
-  get(target: BalanceList, key: PropertyKey): unknown {
-    if (!Number.isNaN(Number(String(key)))) {
-      return target.get(key as number);
-    } else if (target[key as keyof BalanceList]) {
-      return target[key as keyof BalanceList];
-    } else {
-      const treeBacked = target.type.createTreeBacked(target.tree);
-      if (key in treeBacked) {
-        return treeBacked[key as keyof TreeBacked<List<number>>];
-      }
-      return undefined;
-    }
-  },
-  set(target: BalanceList, key: PropertyKey, value: number): boolean {
-    if (!Number.isNaN(Number(key))) {
-      target.set(key as number, value);
-      return true;
-    }
-    return false;
-  },
-};
