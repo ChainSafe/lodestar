@@ -4,7 +4,7 @@ import {SinonStubbedInstance} from "sinon";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
-import {GossipPeerScoreParamsBuilder, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
+import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
@@ -15,7 +15,7 @@ import {TopicScoreParams} from "libp2p-gossipsub/src/score";
  * Refer to Teku tests at
  * https://github.com/ConsenSys/teku/blob/e18ab9903442410aa04b590c4cc46734e13d3ffd/networking/eth2/src/test/java/tech/pegasys/teku/networking/eth2/gossip/config/GossipScoringConfiguratorTest.java#L38
  */
-describe("GossipPeerScoreParamsBuilder", function () {
+describe("computeGossipPeerScoreParams", function () {
   let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   const TOLERANCE = 0.00005;
 
@@ -31,19 +31,17 @@ describe("GossipPeerScoreParamsBuilder", function () {
       currentSlot: 0,
       currentEpoch: 0,
     };
-    const builder = new GossipPeerScoreParamsBuilder({
-      // config: ({...mainnetChainConfig, ...createIForkConfig(mainnetChainConfig)} as unknown) as IChainForkConfig, // createIChainForkConfig(mainnetChainConfig),
-      config: createIChainForkConfig(mainnetChainConfig),
-      forkDigestContext,
-      logger: new WinstonLogger(),
-      eth2Context,
-    });
     expect(gossipScoreThresholds.gossipThreshold).to.be.equal(-4000);
     expect(gossipScoreThresholds.publishThreshold).to.be.equal(-8000);
     expect(gossipScoreThresholds.graylistThreshold).to.be.equal(-16000);
     expect(gossipScoreThresholds.acceptPXThreshold).to.be.equal(100);
     expect(gossipScoreThresholds.opportunisticGraftThreshold).to.be.equal(5);
-    const params = builder.getGossipPeerScoreParams();
+    const params = computeGossipPeerScoreParams({
+      config: createIChainForkConfig(mainnetChainConfig),
+      forkDigestContext,
+      logger: new WinstonLogger(),
+      eth2Context,
+    });
     const allTopics = params.topics;
     if (!allTopics) {
       throw new Error("No scoring params for topics");
@@ -61,19 +59,17 @@ describe("GossipPeerScoreParamsBuilder", function () {
       currentSlot: 10_000,
       currentEpoch: Math.floor(10_000 / SLOTS_PER_EPOCH),
     };
-    const builder = new GossipPeerScoreParamsBuilder({
-      // config: ({...mainnetChainConfig, ...createIForkConfig(mainnetChainConfig)} as unknown) as IChainForkConfig, // createIChainForkConfig(mainnetChainConfig),
-      config: createIChainForkConfig(mainnetChainConfig),
-      forkDigestContext,
-      logger: new WinstonLogger(),
-      eth2Context,
-    });
     expect(gossipScoreThresholds.gossipThreshold).to.be.equal(-4000);
     expect(gossipScoreThresholds.publishThreshold).to.be.equal(-8000);
     expect(gossipScoreThresholds.graylistThreshold).to.be.equal(-16000);
     expect(gossipScoreThresholds.acceptPXThreshold).to.be.equal(100);
     expect(gossipScoreThresholds.opportunisticGraftThreshold).to.be.equal(5);
-    const params = builder.getGossipPeerScoreParams();
+    const params = computeGossipPeerScoreParams({
+      config: createIChainForkConfig(mainnetChainConfig),
+      forkDigestContext,
+      logger: new WinstonLogger(),
+      eth2Context,
+    });
     const allTopics = params.topics;
     if (!allTopics) {
       throw new Error("No scoring params for topics");

@@ -29,7 +29,7 @@ import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
 import {
-  GossipPeerScoreParamsBuilder,
+  computeGossipPeerScoreParams,
   gossipScoreThresholds,
   GOSSIP_D,
   GOSSIP_D_HIGH,
@@ -84,7 +84,7 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
-      scoreParams: new GossipPeerScoreParamsBuilder(modules).getGossipPeerScoreParams(),
+      scoreParams: computeGossipPeerScoreParams(modules),
       scoreThresholds: gossipScoreThresholds,
     });
     const {config, forkDigestContext, logger, metrics, signal, gossipHandlers} = modules;

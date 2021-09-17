@@ -2,7 +2,7 @@
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
-import {Context, ILogger} from "@chainsafe/lodestar-utils";
+import {Context} from "@chainsafe/lodestar-utils";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
@@ -53,190 +53,223 @@ type MeshMessageInfo = {
   currentSlot: number;
 };
 
-export class GossipPeerScoreParamsBuilder {
-  private readonly config: IChainForkConfig;
-  private readonly forkDigestContext: IForkDigestContext;
-  private readonly eth2Context: Eth2Context;
-  private readonly logger: ILogger;
+type PreComputedParams = {
+  scoreParameterDecayFn: (decayTimeMs: number) => number;
+  epochDurationMs: number;
+  slotDurationMs: number;
+};
 
-  private decayIntervalMs: number;
-  private decayToZero: number;
-  private epochDurationMs: number;
-  private slotDurationMs: number;
+type TopicScoreInput = {
+  topicWeight: number;
+  expectedMessageRate: number;
+  firstMessageDecayTime: number;
+  meshMessageInfo?: MeshMessageInfo;
+};
 
-  constructor(modules: Pick<IGossipsubModules, "config" | "forkDigestContext" | "logger" | "eth2Context">) {
-    const {config, forkDigestContext, logger, eth2Context} = modules;
-    this.config = config;
-    this.forkDigestContext = forkDigestContext;
-    this.eth2Context = eth2Context;
-    this.logger = logger;
-    this.decayIntervalMs = this.config.SECONDS_PER_SLOT * 1000;
-    this.decayToZero = 0.01;
-    this.epochDurationMs = this.config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
-    this.slotDurationMs = this.config.SECONDS_PER_SLOT * 1000;
-  }
+/**
+ * Explanation of each param https://github.com/libp2p/specs/blob/master/pubsub/gossipsub/gossipsub-v1.1.md#peer-scoring
+ */
+export function computeGossipPeerScoreParams({
+  config,
+  forkDigestContext,
+  logger,
+  eth2Context,
+}: Pick<IGossipsubModules, "config" | "forkDigestContext" | "logger" | "eth2Context">): Partial<PeerScoreParams> {
+  const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
+  const decayToZero = 0.01;
+  const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
+  const slotDurationMs = config.SECONDS_PER_SLOT * 1000;
+  const scoreParameterDecayFn = (decayTimeMs: number): number => {
+    return scoreParameterDecayWithBase(decayTimeMs, decayIntervalMs, decayToZero);
+  };
+  const behaviourPenaltyDecay = scoreParameterDecayFn(epochDurationMs * 10);
+  const behaviourPenaltyThreshold = 6;
+  const targetValue = decayConvergence(behaviourPenaltyDecay, 10 / SLOTS_PER_EPOCH) - behaviourPenaltyThreshold;
+  const topicScoreCap = maxPositiveScore * 0.5;
 
-  /**
-   * Explanation of each param https://github.com/libp2p/specs/blob/master/pubsub/gossipsub/gossipsub-v1.1.md#peer-scoring
-   */
-  getGossipPeerScoreParams(): Partial<PeerScoreParams> {
-    const behaviourPenaltyDecay = this.scoreParameterDecay(this.epochDurationMs * 10);
-    const behaviourPenaltyThreshold = 6;
-    const targetValue = decayConvergence(behaviourPenaltyDecay, 10 / SLOTS_PER_EPOCH) - behaviourPenaltyThreshold;
-    const topicScoreCap = maxPositiveScore * 0.5;
+  const params = {
+    topics: getAllTopicsScoreParams(config, eth2Context, forkDigestContext, {
+      epochDurationMs,
+      slotDurationMs,
+      scoreParameterDecayFn,
+    }),
+    decayInterval: decayIntervalMs,
+    decayToZero,
+    // time to remember counters for a disconnected peer, should be in ms
+    retainScore: epochDurationMs * 100,
+    appSpecificWeight: 1,
+    IPColocationFactorThreshold: 3,
+    // js-gossipsub doesn't have behaviourPenaltiesThreshold
+    behaviourPenaltyDecay,
+    behaviourPenaltyWeight: gossipScoreThresholds.gossipThreshold / (targetValue * targetValue),
+    topicScoreCap,
+    IPColocationFactorWeight: -1 * topicScoreCap,
+  };
+  logger.verbose("Gossip Peer Score Params", (params as unknown) as Context);
+  return params;
+}
 
-    const params = {
-      topics: this.getAllTopicsScoreParams(),
-      decayInterval: this.decayIntervalMs,
-      decayToZero: this.decayToZero,
-      // time to remember counters for a disconnected peer, should be in ms
-      retainScore: this.epochDurationMs * 100,
-      appSpecificWeight: 1,
-      IPColocationFactorThreshold: 3,
-      // js-gossipsub doesn't have behaviourPenaltiesThreshold
-      behaviourPenaltyDecay,
-      behaviourPenaltyWeight: gossipScoreThresholds.gossipThreshold / (targetValue * targetValue),
-      topicScoreCap,
-      IPColocationFactorWeight: -1 * topicScoreCap,
-    };
-    this.logger.verbose("Gossip Peer Score Params", (params as unknown) as Context);
-    return params;
-  }
+function getAllTopicsScoreParams(
+  config: IChainForkConfig,
+  eth2Context: Eth2Context,
+  forkDigestContext: IForkDigestContext,
+  precomputedParams: PreComputedParams
+): Record<string, TopicScoreParams> {
+  const {epochDurationMs, slotDurationMs} = precomputedParams;
+  const epoch = eth2Context.currentEpoch;
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
+  const topicsParams: Record<string, TopicScoreParams> = {};
+  const forks = nextFork ? [currentFork, nextFork] : [currentFork];
+  const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
+  for (const fork of forks.map((fork) => fork.name)) {
+    //first all fixed topics
+    topicsParams[
+      stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.voluntary_exit,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: VOLUNTARY_EXIT_WEIGHT,
+      expectedMessageRate: 4 / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    topicsParams[
+      stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.attester_slashing,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: ATTESTER_SLASHING_WEIGHT,
+      expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
+    topicsParams[
+      stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.proposer_slashing,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: PROPOSER_SLASHING_WEIGHT,
+      expectedMessageRate: 1 / 5 / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: epochDurationMs * 100,
+    });
 
-  private getAllTopicsScoreParams(): Record<string, TopicScoreParams> {
-    const epoch = this.eth2Context.currentEpoch;
-    const {currentFork, nextFork} = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
-    const topicsParams: Record<string, TopicScoreParams> = {};
-    const forks = nextFork ? [currentFork, nextFork] : [currentFork];
-    const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-    for (const fork of forks.map((fork) => fork.name)) {
-      //first all fixed topics
-      topicsParams[
-        stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.voluntary_exit,
-          fork,
-        })
-      ] = this.getTopicScoreParams(VOLUNTARY_EXIT_WEIGHT, 4 / SLOTS_PER_EPOCH, this.epochDurationMs * 100);
-      topicsParams[
-        stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.attester_slashing,
-          fork,
-        })
-      ] = this.getTopicScoreParams(ATTESTER_SLASHING_WEIGHT, 1 / 5 / SLOTS_PER_EPOCH, this.epochDurationMs * 100);
-      topicsParams[
-        stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.proposer_slashing,
-          fork,
-        })
-      ] = this.getTopicScoreParams(PROPOSER_SLASHING_WEIGHT, 1 / 5 / SLOTS_PER_EPOCH, this.epochDurationMs * 100);
-
-      // other topics
-      topicsParams[
-        stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.beacon_block,
-          fork,
-        })
-      ] = this.getTopicScoreParams(BEACON_BLOCK_WEIGHT, 1, this.epochDurationMs * 20, {
+    // other topics
+    topicsParams[
+      stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.beacon_block,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: BEACON_BLOCK_WEIGHT,
+      expectedMessageRate: 1,
+      firstMessageDecayTime: epochDurationMs * 20,
+      meshMessageInfo: {
         decaySlots: SLOTS_PER_EPOCH * 5,
         capFactor: 3,
-        activationWindow: this.epochDurationMs,
-        currentSlot: this.eth2Context.currentSlot,
-      });
+        activationWindow: epochDurationMs,
+        currentSlot: eth2Context.currentSlot,
+      },
+    });
 
-      const activeValidatorCount = this.eth2Context.activeValidatorCount;
-      const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
-      const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
-      topicsParams[
-        stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.beacon_aggregate_and_proof,
-          fork,
-        })
-      ] = this.getTopicScoreParams(BEACON_AGGREGATE_PROOF_WEIGHT, aggregatorsPerslot, this.epochDurationMs, {
+    const activeValidatorCount = eth2Context.activeValidatorCount;
+    const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
+    const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
+    topicsParams[
+      stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.beacon_aggregate_and_proof,
+        fork,
+      })
+    ] = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: BEACON_AGGREGATE_PROOF_WEIGHT,
+      expectedMessageRate: aggregatorsPerslot,
+      firstMessageDecayTime: epochDurationMs,
+      meshMessageInfo: {
         decaySlots: SLOTS_PER_EPOCH * 2,
         capFactor: 4,
-        activationWindow: this.epochDurationMs,
-        currentSlot: this.eth2Context.currentSlot,
+        activationWindow: epochDurationMs,
+        currentSlot: eth2Context.currentSlot,
+      },
+    });
+
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      const topicStr = stringifyGossipTopic(forkDigestContext, {
+        type: GossipType.beacon_attestation,
+        fork,
+        subnet,
       });
-
-      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        const topicStr = stringifyGossipTopic(this.forkDigestContext, {
-          type: GossipType.beacon_attestation,
-          fork,
-          subnet,
-        });
-        topicsParams[topicStr] = this.getTopicScoreParams(
-          beaconAttestationSubnetWeight,
-          activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
-          multipleBurstsPerSubnetPerEpoch ? this.epochDurationMs : this.epochDurationMs * 4,
-          {
-            decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
-            capFactor: 16,
-            activationWindow: multipleBurstsPerSubnetPerEpoch
-              ? this.slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
-              : this.epochDurationMs,
-            currentSlot: this.eth2Context.currentSlot,
-          }
-        );
-      }
+      topicsParams[topicStr] = getTopicScoreParams(config, precomputedParams, {
+        topicWeight: beaconAttestationSubnetWeight,
+        expectedMessageRate: activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
+        firstMessageDecayTime: multipleBurstsPerSubnetPerEpoch ? epochDurationMs : epochDurationMs * 4,
+        meshMessageInfo: {
+          decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
+          capFactor: 16,
+          activationWindow: multipleBurstsPerSubnetPerEpoch
+            ? slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
+            : epochDurationMs,
+          currentSlot: eth2Context.currentSlot,
+        },
+      });
     }
-    return topicsParams;
   }
+  return topicsParams;
+}
 
-  private getTopicScoreParams(
-    topicWeight: number,
-    expectedMessageRate: number,
-    firstMessageDecayTime: number,
-    meshMessageInfo?: MeshMessageInfo
-  ): TopicScoreParams {
-    const params = {...defaultTopicScoreParams};
+function getTopicScoreParams(
+  config: IChainForkConfig,
+  {epochDurationMs, slotDurationMs, scoreParameterDecayFn}: PreComputedParams,
+  {topicWeight, expectedMessageRate, firstMessageDecayTime, meshMessageInfo}: TopicScoreInput
+): TopicScoreParams {
+  const params = {...defaultTopicScoreParams};
 
-    params.topicWeight = topicWeight;
+  params.topicWeight = topicWeight;
 
-    params.timeInMeshQuantum = this.slotDurationMs;
-    params.timeInMeshCap = 3600 / (params.timeInMeshQuantum / 1000);
-    params.timeInMeshWeight = 10 / params.timeInMeshCap;
+  params.timeInMeshQuantum = slotDurationMs;
+  params.timeInMeshCap = 3600 / (params.timeInMeshQuantum / 1000);
+  params.timeInMeshWeight = 10 / params.timeInMeshCap;
 
-    params.firstMessageDeliveriesDecay = this.scoreParameterDecay(firstMessageDecayTime);
-    params.firstMessageDeliveriesCap = decayConvergence(
-      params.firstMessageDeliveriesDecay,
-      (2 * expectedMessageRate) / GOSSIP_D
-    );
-    params.firstMessageDeliveriesWeight = 40 / params.firstMessageDeliveriesCap;
+  params.firstMessageDeliveriesDecay = scoreParameterDecayFn(firstMessageDecayTime);
+  params.firstMessageDeliveriesCap = decayConvergence(
+    params.firstMessageDeliveriesDecay,
+    (2 * expectedMessageRate) / GOSSIP_D
+  );
+  params.firstMessageDeliveriesWeight = 40 / params.firstMessageDeliveriesCap;
 
-    if (meshMessageInfo) {
-      const {decaySlots, capFactor, activationWindow, currentSlot} = meshMessageInfo;
-      const decayTimeMs = this.config.SECONDS_PER_SLOT * decaySlots * 1000;
-      params.meshMessageDeliveriesDecay = this.scoreParameterDecay(decayTimeMs);
-      params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
-      params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);
-      params.meshMessageDeliveriesActivation = activationWindow;
-      params.meshMessageDeliveriesWindow = 2 * 1000; // 2s
-      params.meshFailurePenaltyDecay = params.meshMessageDeliveriesDecay;
-      params.meshMessageDeliveriesWeight =
-        (-1 * maxPositiveScore) / (params.topicWeight * Math.pow(params.meshMessageDeliveriesThreshold, 2));
-      params.meshFailurePenaltyWeight = params.meshMessageDeliveriesWeight;
-      if (decaySlots >= currentSlot) {
-        params.meshMessageDeliveriesThreshold = 0;
-        params.meshMessageDeliveriesWeight = 0;
-      }
-    } else {
-      params.meshMessageDeliveriesWeight = 0;
+  if (meshMessageInfo) {
+    const {decaySlots, capFactor, activationWindow, currentSlot} = meshMessageInfo;
+    const decayTimeMs = config.SECONDS_PER_SLOT * decaySlots * 1000;
+    params.meshMessageDeliveriesDecay = scoreParameterDecayFn(decayTimeMs);
+    params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
+    params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);
+    params.meshMessageDeliveriesActivation = activationWindow;
+    params.meshMessageDeliveriesWindow = 2 * 1000; // 2s
+    params.meshFailurePenaltyDecay = params.meshMessageDeliveriesDecay;
+    params.meshMessageDeliveriesWeight =
+      (-1 * maxPositiveScore) / (params.topicWeight * Math.pow(params.meshMessageDeliveriesThreshold, 2));
+    params.meshFailurePenaltyWeight = params.meshMessageDeliveriesWeight;
+    if (decaySlots >= currentSlot) {
       params.meshMessageDeliveriesThreshold = 0;
-      params.meshMessageDeliveriesDecay = 0;
-      params.meshMessageDeliveriesCap = 0;
-      params.meshMessageDeliveriesWindow = 0;
-      params.meshMessageDeliveriesActivation = 0;
-      params.meshFailurePenaltyDecay = 0;
-      params.meshFailurePenaltyWeight = 0;
+      params.meshMessageDeliveriesWeight = 0;
     }
-    params.invalidMessageDeliveriesWeight = (-1 * maxPositiveScore) / params.topicWeight;
-    params.invalidMessageDeliveriesDecay = this.scoreParameterDecay(this.epochDurationMs * 50);
-    return params;
+  } else {
+    params.meshMessageDeliveriesWeight = 0;
+    params.meshMessageDeliveriesThreshold = 0;
+    params.meshMessageDeliveriesDecay = 0;
+    params.meshMessageDeliveriesCap = 0;
+    params.meshMessageDeliveriesWindow = 0;
+    params.meshMessageDeliveriesActivation = 0;
+    params.meshFailurePenaltyDecay = 0;
+    params.meshFailurePenaltyWeight = 0;
   }
+  params.invalidMessageDeliveriesWeight = (-1 * maxPositiveScore) / params.topicWeight;
+  params.invalidMessageDeliveriesDecay = scoreParameterDecayFn(epochDurationMs * 50);
+  return params;
+}
 
-  private scoreParameterDecay(decayTimeMs: number): number {
-    return scoreParameterDecayWithBase(decayTimeMs, this.decayIntervalMs, this.decayToZero);
-  }
+function scoreParameterDecayWithBase(decayTimeMs: number, decayIntervalMs: number, decayToZero: number): number {
+  const ticks = decayTimeMs / decayIntervalMs;
+  return Math.pow(decayToZero, 1 / ticks);
 }
 
 function expectedAggregatorCountPerSlot(
@@ -259,11 +292,6 @@ function expectedAggregatorCountPerSlot(
     ),
     committeesPerSlot,
   };
-}
-
-function scoreParameterDecayWithBase(decayTimeMs: number, decayIntervalMs: number, decayToZero: number): number {
-  const ticks = decayTimeMs / decayIntervalMs;
-  return Math.pow(decayToZero, 1 / ticks);
 }
 
 function threshold(decay: number, rate: number): number {
