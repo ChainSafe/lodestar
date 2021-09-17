@@ -1,11 +1,10 @@
-import {List, Number64ListType} from "@chainsafe/ssz";
+import {Number64ListType} from "@chainsafe/ssz";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 /**
  * Manage balances of BeaconState, use this instead of state.balances
  */
-export class BalanceList implements List<number> {
-  [index: number]: number;
+export class BalanceList {
   tree: Tree;
   type: Number64ListType;
 
