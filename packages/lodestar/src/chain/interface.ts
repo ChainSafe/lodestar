@@ -73,7 +73,6 @@ export interface IBeaconChain {
   regen: IStateRegenerator;
   pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
-  eth2Context: Eth2Context;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
 

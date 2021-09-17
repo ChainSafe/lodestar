@@ -9,7 +9,7 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, ForkChoice, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
-import {ChainEventEmitter, Eth2Context, IBeaconChain} from "../../../../src/chain";
+import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache";
@@ -19,7 +19,7 @@ import {StubbedBeaconDb} from "../../stub";
 import {BlockPool} from "../../../../src/chain/blocks";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
-import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {testLogger} from "../../logger";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
@@ -63,7 +63,6 @@ export class MockBeaconChain implements IBeaconChain {
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
-  eth2Context: Eth2Context;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -122,11 +121,6 @@ export class MockBeaconChain implements IBeaconChain {
       forkChoice: this.forkChoice as ForkChoice,
       stateCache: this.stateCache,
     });
-    this.eth2Context = {
-      activeValidatorCount: 16,
-      currentSlot: 1000 * SLOTS_PER_EPOCH,
-      currentEpoch: 1000,
-    };
   }
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
