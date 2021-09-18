@@ -51,7 +51,6 @@ describe("genesis builder", function () {
         timestamp: schlesiConfig.MIN_GENESIS_TIME + i.toString(16),
         // Extra un-used data for this test
         parentHash: "0x0",
-        difficulty: "0x0",
         totalDifficulty: "0x0",
       });
     }

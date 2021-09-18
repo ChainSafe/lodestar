@@ -11,7 +11,7 @@ import {getDeposits} from "./utils/deposits";
 import {Eth1DataAndDeposits, IEth1Provider} from "./interface";
 import {Eth1Options} from "./options";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient";
-import {parseBlock} from "./provider/eth1Provider";
+import {parseEth1Block} from "./provider/eth1Provider";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
@@ -190,7 +190,7 @@ export class Eth1DepositDataTracker {
     );
 
     const blocksRaw = await this.eth1Provider.getBlocksByNumber(fromBlock, toBlock);
-    const blocks = blocksRaw.map(parseBlock);
+    const blocks = blocksRaw.map(parseEth1Block);
     this.logger.verbose("Fetched eth1 blocks", {blockCount: blocks.length, fromBlock, toBlock});
 
     const eth1Datas = await this.depositsCache.getEth1DataForBlocks(blocks, lastProcessedDepositBlockNumber);

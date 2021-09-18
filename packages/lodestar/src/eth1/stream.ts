@@ -8,7 +8,7 @@ import {groupDepositEventsByBlock} from "./utils/groupDepositEventsByBlock";
 import {optimizeNextBlockDiffForGenesis} from "./utils/optimizeNextBlockDiffForGenesis";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {phase0} from "@chainsafe/lodestar-types";
-import {parseBlock} from "./provider/eth1Provider";
+import {parseEth1Block} from "./provider/eth1Provider";
 
 /**
  * Phase 1 of genesis building.
@@ -60,7 +60,7 @@ export async function* getDepositsAndBlockStreamForGenesis(
     ]);
 
     if (!blockRaw) throw Error(`No block found for number ${toBlock}`);
-    const block = parseBlock(blockRaw);
+    const block = parseEth1Block(blockRaw);
 
     yield [logs, block];
 

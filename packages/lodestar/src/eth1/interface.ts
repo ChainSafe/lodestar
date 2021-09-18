@@ -14,11 +14,6 @@ export type EthJsonRpcBlockRaw = {
   /** 32 Bytes - hash of the parent block. `"0xe99e022112df268087ea7eafaf4790497fd21dbeeb6bd7a1721df161a6657a54"` */
   parentHash: string;
   /**
-   * integer of the difficulty for this block. `"0x4ea3f27bc"`.
-   * Current mainnet value is 0x1f42c087a0d61e, 53 bits so requires a bigint.
-   */
-  difficulty: string;
-  /**
    * integer of the total difficulty of the chain until this block. `"0x78ed983323d"`.
    * Current mainnet value is 0x684de10dc5c03f006b6, 75 bits so requires a bigint.
    */
