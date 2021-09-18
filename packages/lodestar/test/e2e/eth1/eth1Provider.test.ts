@@ -6,7 +6,7 @@ import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {goerliTestnetDepositEvents} from "../../utils/testnet";
-import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
+import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
@@ -76,13 +76,13 @@ describe("eth1 / Eth1Provider", function () {
     const fromBlock = firstGoerliBlocks[0].blockNumber;
     const toBlock = firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber;
     const blocks = await getEth1Provider().getBlocksByNumber(fromBlock, toBlock);
-    expect(blocks).to.deep.equal(firstGoerliBlocks);
+    expect(blocks.map(parseEth1Block)).to.deep.equal(firstGoerliBlocks);
   });
 
   it("getBlockByNumber: Should fetch a single block", async function () {
     const firstGoerliBlock = firstGoerliBlocks[0];
     const block = await getEth1Provider().getBlockByNumber(firstGoerliBlock.blockNumber);
-    expect(block).to.deep.equal(firstGoerliBlock);
+    expect(block && parseEth1Block(block)).to.deep.equal(firstGoerliBlock);
   });
 
   it("getBlockNumber: Should fetch latest block number", async function () {

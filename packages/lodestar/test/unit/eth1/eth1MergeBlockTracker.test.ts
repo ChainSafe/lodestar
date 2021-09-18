@@ -41,7 +41,6 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         number: toHex(i),
         hash: toRootHex(i + 1),
         parentHash: toRootHex(i),
-        difficulty: "0x0",
         // Latest block is under TTD, so past block search is stopped
         totalDifficulty: toHex(totalDifficulty + i),
         timestamp: "0x0",
@@ -108,7 +107,6 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         number: toHex(i),
         hash: toRootHex(i + 1),
         parentHash: toRootHex(i),
-        difficulty: "0x0",
         // Latest block is under TTD, so past block search is stopped
         totalDifficulty: toHex(totalDifficulty + i),
         timestamp: "0x0",

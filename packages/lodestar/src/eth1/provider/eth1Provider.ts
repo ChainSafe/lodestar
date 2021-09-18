@@ -182,7 +182,7 @@ function toHex(n: number): string {
   return "0x" + n.toString(16);
 }
 
-export function parseBlock(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
+export function parseEth1Block(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
   if (typeof blockRaw !== "object") throw Error("block is not an object");
   validateHexRoot(blockRaw.hash);
   return {
