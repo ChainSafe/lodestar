@@ -4,7 +4,7 @@ import {ITransitionStore} from "@chainsafe/lodestar-fork-choice";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IEth1Provider, EthJsonRpcBlockRaw} from "./interface";
 import {hexToBigint, hexToDecimal, validateHexRoot} from "./provider/eth1Provider";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 type RootHexPow = string;
@@ -15,20 +15,27 @@ type PowMergeBlock = {
   totalDifficulty: bigint;
 };
 
-enum StatusCode {
+export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
   SEARCHING = "SEARCHING",
+  FOUND = "FOUND",
   POST_MERGE = "POST_MERGE",
 }
 
-/**
- * Numbers of epochs in advance of merge fork condition to start looking for merge block
- */
+/** Numbers of epochs in advance of merge fork condition to start looking for merge block */
 const START_EPOCHS_IN_ADVANCE = 5;
 
+/**
+ * Bounds `blocksByHashCache` cache, imposing a max distance between highest and lowest block numbers.
+ * In case of extreme forking the cache might grow unbounded.
+ */
 const MAX_CACHE_POW_HEIGHT_DISTANCE = 1024;
 
+/** Number of blocks to request at once in a getBlocksByNumber() request */
 const MAX_BLOCKS_PER_PAST_REQUEST = 1000;
+
+/** Prevent infinite loops on error by sleeping after each error */
+const SLEEP_ON_ERROR_MS = 3000;
 
 export type Eth1MergeBlockTrackerModules = {
   transitionStore: ITransitionStore;
@@ -46,13 +53,14 @@ export class Eth1MergeBlockTracker {
   private readonly transitionStore: ITransitionStore;
   private readonly config: IChainConfig;
   private readonly logger: ILogger;
+  private readonly signal: AbortSignal;
 
   /**
-   * List of blocks that meet the merge block conditions and are safe for block inclusion.
-   * TODO: In the edge case there are multiple, what to do?
+   * First found mergeBlock.
+   * TODO: Accept multiple, but then handle long backwards searches properly after crossing TTD
    */
-  private readonly mergeBlocks: PowMergeBlock[] = [];
-  private readonly blockCache = new Map<RootHexPow, PowMergeBlock>();
+  private mergeBlock: PowMergeBlock | null = null;
+  private readonly blocksByHashCache = new Map<RootHexPow, PowMergeBlock>();
 
   private status: StatusCode = StatusCode.PRE_MERGE;
   private readonly intervals: NodeJS.Timeout[] = [];
@@ -64,6 +72,7 @@ export class Eth1MergeBlockTracker {
     this.transitionStore = transitionStore;
     this.config = config;
     this.logger = logger;
+    this.signal = signal;
 
     // If merge has already happened, disable
     if (isMergeComplete) {
@@ -95,14 +104,12 @@ export class Eth1MergeBlockTracker {
    * Returns the most recent POW block that satisfies the merge block condition
    */
   getMergeBlock(): PowMergeBlock | null {
-    const mergeBlock = this.mergeBlocks[this.mergeBlocks.length - 1] ?? null;
-
     // For better debugging in case this module stops searching too early
-    if (mergeBlock === null && this.status === StatusCode.POST_MERGE) {
+    if (this.mergeBlock === null && this.status === StatusCode.POST_MERGE) {
       throw Error("Eth1MergeBlockFinder is on POST_MERGE status and found no mergeBlock");
     }
 
-    return mergeBlock;
+    return this.mergeBlock;
   }
 
   /**
@@ -118,14 +125,14 @@ export class Eth1MergeBlockTracker {
    */
   async getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
     // Check cache first
-    const cachedBlock = this.blockCache.get(powBlockHash);
+    const cachedBlock = this.blocksByHashCache.get(powBlockHash);
     if (cachedBlock) return cachedBlock;
 
     // Fetch from node
     const blockRaw = await this.eth1Provider.getBlockByHash(powBlockHash);
     if (blockRaw) {
       const block = toPowBlock(blockRaw);
-      this.blockCache.set(block.blockhash, block);
+      this.blocksByHashCache.set(block.blockhash, block);
       return block;
     }
 
@@ -134,6 +141,12 @@ export class Eth1MergeBlockTracker {
 
   private close(): void {
     this.intervals.forEach(clearInterval);
+  }
+
+  private setMergeBlock(mergeBlock: PowMergeBlock): void {
+    this.mergeBlock = mergeBlock;
+    this.status = StatusCode.FOUND;
+    this.close();
   }
 
   private startFinding(): void {
@@ -182,7 +195,7 @@ export class Eth1MergeBlockTracker {
     let minFetchedBlockNumber = latestBlock.number;
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const from = minFetchedBlockNumber - MAX_BLOCKS_PER_PAST_REQUEST;
+      const from = Math.max(0, minFetchedBlockNumber - MAX_BLOCKS_PER_PAST_REQUEST);
       // Re-fetch same block to have the full chain of parent-child nodes
       const to = minFetchedBlockNumber;
 
@@ -205,14 +218,12 @@ export class Eth1MergeBlockTracker {
             // Is terminal total difficulty block
             if (childBlock.parentHash === parentBlock.blockhash) {
               // AND has verified block -> parent relationship
-              this.mergeBlocks.push(childBlock);
+              return this.setMergeBlock(childBlock);
             } else {
               // WARNING! Re-org while doing getBlocksByNumber() call. Ensure that this block is the merge block
               // and not some of its parents.
-              await this.fetchPotentialMergeBlock(childBlock);
+              return await this.fetchPotentialMergeBlock(childBlock);
             }
-
-            return;
           }
         }
 
@@ -225,6 +236,7 @@ export class Eth1MergeBlockTracker {
         }
       } catch (e) {
         this.logger.error("Error on fetchPreviousBlocks range", {from, to}, e as Error);
+        await sleep(SLEEP_ON_ERROR_MS, this.signal);
       }
     }
   }
@@ -250,10 +262,12 @@ export class Eth1MergeBlockTracker {
    */
   private async fetchPotentialMergeBlock(block: PowMergeBlock): Promise<void> {
     // Persist block for future searches
-    this.blockCache.set(block.blockhash, block);
+    this.blocksByHashCache.set(block.blockhash, block);
+
+    // Check if this block is already visited
 
     while (block.totalDifficulty >= this.transitionStore.terminalTotalDifficulty) {
-      const parent = await this.getPowBlock(block.blockhash);
+      const parent = await this.getPowBlock(block.parentHash);
       // Unknown parent
       if (!parent) {
         return;
@@ -264,8 +278,12 @@ export class Eth1MergeBlockTracker {
         parent.totalDifficulty < this.transitionStore.terminalTotalDifficulty
       ) {
         // Is terminal total difficulty block AND has verified block -> parent relationship
-        this.mergeBlocks.push(block);
-        return;
+        return this.setMergeBlock(block);
+      }
+
+      // Guard against infinite loops
+      if (parent.blockhash === block.blockhash) {
+        throw Error("Infinite loop: parent.blockhash === block.blockhash");
       }
 
       // Fetch parent's parent
@@ -282,7 +300,7 @@ export class Eth1MergeBlockTracker {
   private prune(): void {
     // Find the heightest block number in the cache
     let maxBlockNumber = 0;
-    for (const block of this.blockCache.values()) {
+    for (const block of this.blocksByHashCache.values()) {
       if (block.number > maxBlockNumber) {
         maxBlockNumber = block.number;
       }
@@ -290,15 +308,15 @@ export class Eth1MergeBlockTracker {
 
     // Prune blocks below the max distance
     const minHeight = maxBlockNumber - MAX_CACHE_POW_HEIGHT_DISTANCE;
-    for (const [key, block] of this.blockCache.entries()) {
+    for (const [key, block] of this.blocksByHashCache.entries()) {
       if (block.number < minHeight) {
-        this.blockCache.delete(key);
+        this.blocksByHashCache.delete(key);
       }
     }
   }
 }
 
-function toPowBlock(block: EthJsonRpcBlockRaw): PowMergeBlock {
+export function toPowBlock(block: EthJsonRpcBlockRaw): PowMergeBlock {
   // Validate untrusted data from API
   validateHexRoot(block.hash);
   validateHexRoot(block.parentHash);
