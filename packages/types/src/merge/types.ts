@@ -17,6 +17,7 @@ type ExecutionPayloadFields = {
   gasLimit: Number64;
   gasUsed: Number64;
   timestamp: Number64;
+  extraData: Uint8Array;
   baseFeePerGas: Bytes32;
   // Extra payload fields
   blockHash: Bytes32;

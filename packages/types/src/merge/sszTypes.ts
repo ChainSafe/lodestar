@@ -16,6 +16,7 @@ import {
   MAX_TRANSACTIONS_PER_PAYLOAD,
   MAX_BYTES_PER_OPAQUE_TRANSACTION,
   SLOTS_PER_HISTORICAL_ROOT,
+  MAX_EXTRA_DATA_BYTES,
 } from "@chainsafe/lodestar-params";
 import {ssz as primitiveSsz, ts as primitive} from "../primitive";
 import {ssz as phase0Ssz, ts as phase0} from "../phase0";
@@ -60,6 +61,7 @@ const executionPayloadFields = {
   gasLimit: Number64,
   gasUsed: Number64,
   timestamp: Number64,
+  extraData: new ByteVectorType({length: MAX_EXTRA_DATA_BYTES}),
   baseFeePerGas: Bytes32,
   // Extra payload fields
   blockHash: Root,
@@ -79,6 +81,7 @@ const executionPayloadFields = {
  *     gas_limit: uint64
  *     gas_used: uint64
  *     timestamp: uint64
+ *     extra_data: ByteList[MAX_EXTRA_DATA_BYTES]
  *     base_fee_per_gas: Bytes32  # base fee introduced in EIP-1559, little-endian serialized
  *     # Extra payload fields
  *     block_hash: Hash32  # Hash of execution block

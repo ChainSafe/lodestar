@@ -142,6 +142,7 @@ export const MAX_TRANSACTIONS_PER_PAYLOAD = 2 ** 14;
 export const BYTES_PER_LOGS_BLOOM = 2 ** 8;
 export const GAS_LIMIT_DENOMINATOR = 2 ** 10;
 export const MIN_GAS_LIMIT = 5000;
+export const MAX_EXTRA_DATA_BYTES = 32;
 
 // Merge constants - Spec v1.0.1
 // Genesis testing settings
