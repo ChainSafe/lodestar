@@ -31,6 +31,9 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+
+      - name: Grafana Dashboard
+        run: yarn validate-gdash
       - name: Test root binary exists
         run: ./lodestar --version
       - name: Check Types
