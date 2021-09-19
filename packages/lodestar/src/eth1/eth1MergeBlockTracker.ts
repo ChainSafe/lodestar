@@ -4,7 +4,7 @@ import {ITransitionStore} from "@chainsafe/lodestar-fork-choice";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IEth1Provider, EthJsonRpcBlockRaw} from "./interface";
 import {hexToBigint, hexToDecimal, validateHexRoot} from "./provider/eth1Provider";
-import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 type RootHexPow = string;
@@ -155,13 +155,13 @@ export class Eth1MergeBlockTracker {
 
     // 1. Fetch current head chain until finding a block with total difficulty less than `transitionStore.terminalTotalDifficulty`
     this.fetchPreviousBlocks().catch((e) => {
-      this.logger.error("Error fetching past POW blocks", {}, e as Error);
+      if (!isErrorAborted(e)) this.logger.error("Error fetching past POW blocks", {}, e);
     });
 
     // 2. Subscribe to eth1 blocks and recursively fetch potential POW blocks
     const intervalPoll = setInterval(() => {
       this.pollLatestBlock().catch((e) => {
-        this.logger.error("Error fetching latest POW block", {}, e as Error);
+        if (!isErrorAborted(e)) this.logger.error("Error fetching latest POW block", {}, e);
       });
     }, this.config.SECONDS_PER_ETH1_BLOCK);
 
@@ -235,7 +235,7 @@ export class Eth1MergeBlockTracker {
           return;
         }
       } catch (e) {
-        this.logger.error("Error on fetchPreviousBlocks range", {from, to}, e as Error);
+        if (!isErrorAborted(e)) this.logger.error("Error on fetchPreviousBlocks range", {from, to}, e as Error);
         await sleep(SLEEP_ON_ERROR_MS, this.signal);
       }
     }
