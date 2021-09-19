@@ -42,7 +42,7 @@ describe("eth1 / Eth1Provider", function () {
       timestamp: 1548854791,
     };
     const block = await getEth1Provider().getBlockByNumber(goerliGenesisBlock.blockNumber);
-    expect(block).to.deep.equal(goerliGenesisBlock);
+    expect(block && parseEth1Block(block)).to.deep.equal(goerliGenesisBlock);
   });
 
   it("Should get deposits events for a block range", async function () {
