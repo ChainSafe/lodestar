@@ -81,8 +81,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
         metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
       } catch (e) {
-        // TODO: Lighthouse queue blocks that arrive MAXIMUM_GOSSIP_CLOCK_DISPARITY early to process on their slot.
-        //       Review if it's necessary to do, Lodestar hasn't had this functionality.
         if (e instanceof BlockGossipError) {
           if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
             logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
