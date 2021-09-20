@@ -24,10 +24,15 @@ import {
   validateGossipVoluntaryExit,
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
+import {NetworkEvent} from "../../events";
 
-export type GossipHandlerFn = (object: GossipTypeMap[GossipType], topic: GossipTopicMap[GossipType]) => Promise<void>;
+export type GossipHandlerFn = (
+  object: GossipTypeMap[GossipType],
+  topic: GossipTopicMap[GossipType],
+  peerIdStr: string
+) => Promise<void>;
 export type GossipHandlers = {
-  [K in GossipType]: (object: GossipTypeMap[K], topic: GossipTopicMap[K]) => Promise<void>;
+  [K in GossipType]: (object: GossipTypeMap[K], topic: GossipTopicMap[K], peerIdStr: string) => Promise<void>;
 };
 
 type ValidatorFnsModules = {
@@ -56,7 +61,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
   const {chain, config, metrics, network, logger} = modules;
 
   return {
-    [GossipType.beacon_block]: async (signedBlock) => {
+    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr) => {
       const seenTimestampSec = Date.now() / 1000;
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
@@ -75,22 +80,17 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         });
 
         metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
-
-        // Handler
-
-        try {
-          chain.receiveBlock(signedBlock);
-        } catch (e) {
-          logger.error("Error receiving block", {}, e as Error);
-        }
       } catch (e) {
-        if (
-          e instanceof BlockGossipError &&
-          (e.type.code === BlockErrorCode.FUTURE_SLOT || e.type.code === BlockErrorCode.PARENT_UNKNOWN)
-        ) {
-          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          chain.receiveBlock(signedBlock);
-        } else if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
+        // TODO: Lighthouse queue blocks that arrive MAXIMUM_GOSSIP_CLOCK_DISPARITY early to process on their slot.
+        //       Review if it's necessary to do, Lodestar hasn't had this functionality.
+        if (e instanceof BlockGossipError) {
+          if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
+            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
+          }
+        }
+
+        if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
             "signedBlock",
             config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
@@ -101,6 +101,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
         throw e;
       }
+
+      // Handler
+
+      chain.processBlock(signedBlock).catch((e) => {
+        // TODO: Downscore peer
+        logger.error("Error receiving block", {}, e as Error);
+      });
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {

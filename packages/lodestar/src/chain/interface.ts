@@ -50,6 +50,8 @@ export interface IBlockJob extends IProcessBlock {
   signedBlock: allForks.SignedBeaconBlock;
 }
 
+export type ProcessBlockFlags = {prefinalized?: boolean; trusted?: boolean};
+
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
@@ -104,18 +106,10 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
 
-  /** Pre-process and run the per slot state transition function */
-  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
   /** Process a block until complete */
-  processBlock(
-    signedBlock: allForks.SignedBeaconBlock,
-    flags: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void>;
+  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: ProcessBlockFlags): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(
-    signedBlocks: allForks.SignedBeaconBlock[],
-    flags: {prefinalized: boolean; trusted?: boolean}
-  ): Promise<void>;
+  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: ProcessBlockFlags): Promise<void>;
 
   /** Get the ForkName from the head state */
   getHeadForkName(): ForkName;

@@ -226,6 +226,8 @@ export async function onBlock(
     root: toHexString(blockRoot),
   });
 
+  // MUST happen before any other block is processed
+  // This adds the state necessary to process the next block
   this.stateCache.add(postState);
   if (!job.reprocess) {
     await this.db.block.add(block);

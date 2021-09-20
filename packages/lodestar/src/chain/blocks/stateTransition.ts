@@ -99,6 +99,9 @@ export async function runStateTransition(
 
   const oldHead = forkChoice.getHead();
 
+  // TODO: Use regen to get the justified state. Send the block to the forkChoice immediately, and the balances
+  // latter in case regen takes too much time.
+
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   let justifiedBalances: number[] = [];

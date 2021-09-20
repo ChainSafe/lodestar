@@ -20,7 +20,7 @@ import {BlockPool, BlockProcessor} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, SSZObjectType} from "./interface";
+import {IBeaconChain, ProcessBlockFlags, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
@@ -237,39 +237,23 @@ export class BeaconChain implements IBeaconChain {
     return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
   }
 
-  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {
-    this.blockProcessor
-      .processBlockJob({
-        signedBlock,
-        reprocess: false,
-        prefinalized: trusted,
-        validSignatures: trusted,
-        validProposerSignature: trusted,
-      })
-      .catch(() => /* unreachable */ ({}));
-  }
-
-  async processBlock(
-    signedBlock: allForks.SignedBeaconBlock,
-    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void> {
+  async processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: ProcessBlockFlags): Promise<void> {
+    const trusted = flags?.trusted ?? false;
     return await this.blockProcessor.processBlockJob({
       signedBlock,
       reprocess: false,
-      prefinalized,
+      prefinalized: flags?.prefinalized ?? false,
       validSignatures: trusted,
       validProposerSignature: trusted,
     });
   }
 
-  async processChainSegment(
-    signedBlocks: allForks.SignedBeaconBlock[],
-    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void> {
+  async processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: ProcessBlockFlags): Promise<void> {
+    const trusted = flags?.trusted ?? false;
     return await this.blockProcessor.processChainSegment({
       signedBlocks,
       reprocess: false,
-      prefinalized,
+      prefinalized: flags?.prefinalized ?? false,
       validSignatures: trusted,
       validProposerSignature: trusted,
     });

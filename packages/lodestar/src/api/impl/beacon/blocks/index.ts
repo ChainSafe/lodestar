@@ -147,7 +147,7 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      await Promise.all([chain.receiveBlock(signedBlock), network.gossip.publishBeaconBlock(signedBlock)]);
+      await Promise.all([chain.processBlock(signedBlock), network.gossip.publishBeaconBlock(signedBlock)]);
     },
   };
 }

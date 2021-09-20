@@ -71,11 +71,13 @@ function getGossipValidatorFn<K extends GossipType>(
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
   return async function gossipValidatorFn(topic, gossipMsg) {
+    // Define in scope above try {} to be used in catch {} if object was parsed
+    let gossipObject;
+
     try {
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
 
       // Deserialize object from bytes ONLY after being picked up from the validation queue
-      let gossipObject;
       try {
         const sszType = getGossipSSZType(topic);
         const messageData = decodeMessageData(encoding, gossipMsg.data, uncompressCache);
@@ -89,7 +91,7 @@ function getGossipValidatorFn<K extends GossipType>(
         throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic);
+      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom);
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);
@@ -100,14 +102,18 @@ function getGossipValidatorFn<K extends GossipType>(
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
       }
 
+      // If the gossipObject was deserialized include its short metadata with the error data
+      const metadata = gossipObject && getGossipObjectAcceptMetadata(config, gossipObject, topic);
+      const errorData = (typeof e.type === "object" && metadata ? {...metadata, ...e.type} : e.type) as Json;
+
       switch (e.action) {
         case GossipAction.IGNORE:
-          logger.debug(`gossip - ${type} - ignore`, e.type as Json);
+          logger.debug(`gossip - ${type} - ignore`, errorData);
           metrics?.gossipValidationIgnore.inc({topic: type}, 1);
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, e.message);
 
         case GossipAction.REJECT:
-          logger.debug(`gossip - ${type} - reject`, e.type as Json);
+          logger.debug(`gossip - ${type} - reject`, errorData);
           metrics?.gossipValidationReject.inc({topic: type}, 1);
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, e.message);
       }
