@@ -38,6 +38,15 @@ export class UnknownBlockSync {
       this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     }
+
+    if (metrics) {
+      metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
+        metrics.syncUnknownBlock.pendingBlocks.set(this.pendingBlocks.size)
+      );
+      metrics.syncUnknownBlock.knownBadBlocks.addCollect(() =>
+        metrics.syncUnknownBlock.knownBadBlocks.set(this.knownBadBlocks.size)
+      );
+    }
   }
 
   close(): void {
@@ -52,6 +61,7 @@ export class UnknownBlockSync {
     try {
       this.addToPendingBlocks(signedBlock, peerIdStr);
       this.triggerUnknownBlockSearch();
+      this.metrics?.syncUnknownBlock.requests.inc(1);
     } catch (e) {
       this.logger.error("Error handling unknownBlockParent event", {}, e as Error);
     }
@@ -115,11 +125,12 @@ export class UnknownBlockSync {
       return;
     }
 
-    this.metrics?.syncUnknownParentSyncs.inc(1);
-
     block.status = PendingBlockStatus.fetching;
     const res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.parentBlockRootHex), connectedPeers));
     block.status = PendingBlockStatus.pending;
+
+    if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc(1);
+    else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc(1);
 
     if (!res.err) {
       const {signedBlock, peerIdStr} = res.result;
@@ -157,6 +168,9 @@ export class UnknownBlockSync {
     pendingBlock.status = PendingBlockStatus.processing;
     const res = await wrapError(this.chain.processBlock(pendingBlock.signedBlock));
     pendingBlock.status = PendingBlockStatus.pending;
+
+    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc(1);
+    else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc(1);
 
     if (!res.err) {
       this.pendingBlocks.delete(pendingBlock.blockRootHex);
@@ -256,13 +270,19 @@ export class UnknownBlockSync {
    */
   private removeAndDownscoreAllDescendants(block: PendingBlock): void {
     // Get all blocks that are a descendat of this one
-    const descendantBlocks = getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks);
+    const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
 
-    for (const badPendingBlock of [block, ...descendantBlocks]) {
-      this.pendingBlocks.delete(badPendingBlock.blockRootHex);
-      this.knownBadBlocks.add(badPendingBlock.blockRootHex);
+    this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
 
-      for (const peerIdStr of badPendingBlock.peerIdStrs) {
+    for (const block of badPendingBlocks) {
+      this.pendingBlocks.delete(block.blockRootHex);
+      this.knownBadBlocks.add(block.blockRootHex);
+      this.logger.error("Removing and banning unknown parent block", {
+        root: block.blockRootHex,
+        slot: block.signedBlock.message.slot,
+      });
+
+      for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
         const peer = PeerId.createFromB58String(peerIdStr);
         this.network.peerRpcScores.applyAction(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
