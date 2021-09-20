@@ -11,24 +11,11 @@ import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
+import {PendingBlock, PendingBlockStatus} from "./interface";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
 const MAX_PENDING_BLOCKS = 100;
-
-export type PendingBlock = {
-  blockRootHex: RootHex;
-  parentBlockRootHex: RootHex;
-  signedBlock: allForks.SignedBeaconBlock;
-  peerIdStrs: Set<string>;
-  status: PendingBlockStatus;
-  downloadAttempts: number;
-};
-export enum PendingBlockStatus {
-  pending = "pending",
-  fetching = "fetching",
-  processing = "processing",
-}
 
 export class UnknownBlockSync {
   /**
