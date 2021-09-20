@@ -7,6 +7,7 @@ import {OpSource} from "../../../metrics/validatorMonitor";
 import {IBeaconChain} from "../../../chain";
 import {
   AttestationError,
+  BlockError,
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
@@ -25,6 +26,8 @@ import {
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
 import {NetworkEvent} from "../../events";
+import PeerId from "peer-id";
+import {PeerAction} from "../..";
 
 export type GossipHandlerFn = (
   object: GossipTypeMap[GossipType],
@@ -103,8 +106,22 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       // Handler
 
       chain.processBlock(signedBlock).catch((e) => {
-        // TODO: Downscore peer
-        logger.error("Error receiving block", {}, e as Error);
+        if (e instanceof BlockError) {
+          switch (e.type.code) {
+            case BlockErrorCode.ALREADY_KNOWN:
+            case BlockErrorCode.PARENT_UNKNOWN:
+            case BlockErrorCode.PRESTATE_MISSING:
+              break;
+            default:
+              network.peerRpcScores.applyAction(
+                PeerId.createFromB58String(peerIdStr),
+                PeerAction.LowToleranceError,
+                "BadGossipBlock"
+              );
+          }
+        }
+
+        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
       });
     },
 
