@@ -5,7 +5,9 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {BlockError, BlockErrorCode} from "../../../../chain/errors";
 import {OpSource} from "../../../../metrics/validatorMonitor";
+import {NetworkEvent} from "../../../../network";
 import {ApiModules} from "../../types";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 
@@ -147,7 +149,18 @@ export function getBeaconBlockApi({
 
       metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
 
-      await Promise.all([chain.processBlock(signedBlock), network.gossip.publishBeaconBlock(signedBlock)]);
+      await Promise.all([
+        // Send the block, regardless of whether or not it is valid. The API
+        // specification is very clear that this is the desired behaviour.
+        network.gossip.publishBeaconBlock(signedBlock),
+
+        chain.processBlock(signedBlock).catch((e) => {
+          if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toB58String());
+          }
+          throw e;
+        }),
+      ]);
     },
   };
 }

@@ -72,6 +72,8 @@ export async function processBlockJob(modules: BlockProcessorModules, job: IBloc
       // TODO: Hanlde non-BlockError(s)
       modules.emitter.emit(ChainEvent.errorBlock, e as BlockError);
     }
+
+    throw e;
   }
 }
 

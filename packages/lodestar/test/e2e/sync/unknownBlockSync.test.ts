@@ -2,38 +2,49 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import assert from "assert";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
 import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {fromHexString} from "@chainsafe/ssz";
+import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {BlockError, BlockErrorCode} from "../../../src/chain/errors";
 
-describe("sync", function () {
+describe("sync / unknown block sync", function () {
   const validatorCount = 8;
-  const beaconParams: Partial<IChainConfig> = {
+  const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: 2,
   };
 
-  it("should sync from other BN", async function () {
+  it("should do an unknown block sync from another BN", async function () {
     this.timeout("10 min");
 
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const genesisTime = Math.floor(Date.now() / 1000) + 2 * testParams.SECONDS_PER_SLOT;
+    const testLoggerOpts: TestLoggerOpts = {
+      logLevel: LogLevel.info,
+      timestampFormat: {
+        format: TimestampFormatCode.EpochSlot,
+        genesisTime,
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+      },
+    };
+
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
-      params: beaconParams,
+      params: testParams,
       options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
     });
-    const finalizationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     const validators = await getAndInitDevValidators({
       node: bn,
-      validatorsPerClient: 8,
+      validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       startIndex: 0,
       useRestApi: false,
@@ -42,16 +53,12 @@ describe("sync", function () {
 
     await Promise.all(validators.map((validator) => validator.start()));
 
-    try {
-      await finalizationEventListener;
-      loggerNodeA.important("Node A emitted finalized endpoint");
-    } catch (e) {
-      assert.fail("Failed to reach finalization");
-    }
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
+    loggerNodeA.important("Node A emitted checkpoint event");
 
     const bn2 = await getDevBeaconNode({
-      params: beaconParams,
-      options: {api: {rest: {enabled: false}}},
+      params: testParams,
+      options: {api: {rest: {enabled: false}}, sync: {disableRangeSync: true}},
       validatorCount,
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
@@ -66,11 +73,17 @@ describe("sync", function () {
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
-    try {
-      await waitForSynced;
-    } catch (e) {
-      assert.fail("Failed to sync to other node in time");
-    }
+    await bn2.api.beacon.publishBlock(head).catch((e) => {
+      if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+        // Expected
+      } else {
+        throw e;
+      }
+    });
+
+    // Wait for NODE-A head to be processed in NODE-B without range sync
+    await waitForSynced;
+
     await bn2.close();
     await Promise.all(validators.map((v) => v.stop()));
     await bn.close();
