@@ -127,7 +127,9 @@ export async function runStateTransition(
       emitCheckpointEvent(emitter, postState);
     }
 
-    emitBlockEvent(emitter, job, postState);
+    // TODO: Move internal emitter onBlock() code here
+    emitter.emit(ChainEvent.block, job.signedBlock, postState, job);
+
     forkChoice.updateHead();
     emitForkChoiceHeadEvents(emitter, forkChoice, oldHead, metrics);
   }
@@ -180,12 +182,4 @@ function emitForkChoiceHeadEvents(
       metrics?.forkChoiceReorg.inc();
     }
   }
-}
-
-function emitBlockEvent(
-  emitter: ChainEventEmitter,
-  job: IBlockJob,
-  postState: CachedBeaconState<allForks.BeaconState>
-): void {
-  emitter.emit(ChainEvent.block, job.signedBlock, postState, job);
 }

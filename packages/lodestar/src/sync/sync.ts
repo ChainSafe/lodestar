@@ -3,28 +3,23 @@ import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
-import {getPeerSyncType, PeerSyncType} from "./utils";
+import {getPeerSyncType, PeerSyncType} from "./utils/remoteSyncType";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {ISyncOptions} from "./options";
-import {IMetrics} from "../metrics";
+import {UnknownBlockSync} from "./unknownBlock";
 
 export class BeaconSync implements IBeaconSync {
-  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly metrics: IMetrics | null;
   private readonly opts: ISyncOptions;
 
   private readonly rangeSync: RangeSync;
-
-  // avoid finding same root at the same time
-  private readonly processingRoots = new Set<string>();
+  private readonly unknownBlockSync: UnknownBlockSync;
 
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
@@ -39,12 +34,11 @@ export class BeaconSync implements IBeaconSync {
   constructor(opts: ISyncOptions, modules: ISyncModules) {
     const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
-    this.config = config;
     this.network = network;
     this.chain = chain;
-    this.metrics = metrics;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, this.opts);
+    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
@@ -64,6 +58,7 @@ export class BeaconSync implements IBeaconSync {
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
+    this.unknownBlockSync.close();
   }
 
   getSyncStatus(): SyncingStatus {

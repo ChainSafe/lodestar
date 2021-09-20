@@ -8,7 +8,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {IMetrics} from "../../metrics";
-import {RangeSyncType, getRangeSyncType} from "../utils";
+import {RangeSyncType, getRangeSyncType} from "../utils/remoteSyncType";
 import {updateChains, shouldRemoveChain} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
 

@@ -39,22 +39,24 @@ export class UnknownBlockSync {
 
   constructor(
     private readonly config: IBeaconConfig,
-    private readonly logger: ILogger,
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
+    private readonly logger: ILogger,
     private readonly metrics: IMetrics | null
   ) {
     this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
+    this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
   }
 
   close(): void {
     this.network.events.off(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
+    this.network.events.off(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
   }
 
   /**
    * Process an unknownBlockParent event and register the block in `pendingBlocks` Map.
    */
-  private onUnknownBlock = async (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): Promise<void> => {
+  private onUnknownBlock = (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): void => {
     try {
       this.addToPendingBlocks(signedBlock, peerIdStr);
       void this.triggerUnknownBlockSearch();
@@ -67,8 +69,7 @@ export class UnknownBlockSync {
     const block = signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
-    const parentBlockRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
-    const parentBlockRootHex = toHexString(parentBlockRoot);
+    const parentBlockRootHex = toHexString(block.parentRoot);
 
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
@@ -95,9 +96,11 @@ export class UnknownBlockSync {
   /**
    * Gather tip parent blocks with unknown parent and do a search for all of them
    */
-  private async triggerUnknownBlockSearch(): Promise<void> {
-    // Early stop to prevent calling the network.getConnectedPeers()
-    if (this.pendingBlocks.size === 0) {
+  private triggerUnknownBlockSearch = (): void => {
+    const blocks = this.pendingBlocks.size > 0 && getLowestPendingUnknownParents(this.pendingBlocks);
+
+    // Cheap early stop to prevent calling the network.getConnectedPeers()
+    if (!blocks) {
       return;
     }
 
@@ -107,10 +110,10 @@ export class UnknownBlockSync {
       return;
     }
 
-    for (const block of getLowestUnknownParents(this.pendingBlocks)) {
+    for (const block of blocks) {
       void this.downloadParentBlock(block, connectedPeers);
     }
-  }
+  };
 
   private async downloadParentBlock(block: PendingBlock, connectedPeers: PeerId[]): Promise<void> {
     if (block.status !== PendingBlockStatus.pending) {
@@ -294,14 +297,14 @@ function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, Pending
   return descendantBlocks;
 }
 
-function getLowestUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const parentBlocks: PendingBlock[] = [];
+function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
+  const blocksToFetch: PendingBlock[] = [];
 
   for (const block of blocks.values()) {
-    if (!blocks.has(block.parentBlockRootHex)) {
-      parentBlocks.push(block);
+    if (block.status === PendingBlockStatus.pending && !blocks.has(block.parentBlockRootHex)) {
+      blocksToFetch.push(block);
     }
   }
 
-  return parentBlocks;
+  return blocksToFetch;
 }

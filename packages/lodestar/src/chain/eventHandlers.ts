@@ -253,22 +253,6 @@ export async function onBlock(
   // if reprocess job, don't have to reprocess block operations or pending blocks
   if (!job.reprocess) {
     await this.db.processBlockOperations(block);
-    await Promise.all(
-      this.pendingBlocks.getByParent(blockRoot).map(async (root) => {
-        const pendingBlock = await this.db.pendingBlock.get(root);
-        if (pendingBlock) {
-          this.pendingBlocks.remove(pendingBlock);
-          await this.db.pendingBlock.delete(root);
-          return this.blockProcessor.processBlockJob({
-            signedBlock: pendingBlock,
-            reprocess: false,
-            prefinalized: false,
-            validSignatures: false,
-            validProposerSignature: false,
-          });
-        }
-      })
-    );
   }
 
   // Only after altair
@@ -302,12 +286,7 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   // err type data may contain CachedBeaconState which is too much to log
   this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code});
 
-  // add to pendingBlocks first which is not await
-  // this is to process a block range
-  if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-    this.pendingBlocks.addByParent(err.signedBlock);
-    await this.db.pendingBlock.add(err.signedBlock);
-  } else if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
+  if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
     const {signedBlock} = err;
     const blockSlot = signedBlock.message.slot;
     const {preState} = err.type;
