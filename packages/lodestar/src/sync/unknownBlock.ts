@@ -1,4 +1,4 @@
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
@@ -12,6 +12,7 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus} from "./interface";
+import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -25,7 +26,7 @@ export class UnknownBlockSync {
   private readonly knownBadBlocks = new Set<RootHex>();
 
   constructor(
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
     private readonly logger: ILogger,
@@ -46,7 +47,7 @@ export class UnknownBlockSync {
   private onUnknownBlock = (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): void => {
     try {
       this.addToPendingBlocks(signedBlock, peerIdStr);
-      void this.triggerUnknownBlockSearch();
+      this.triggerUnknownBlockSearch();
     } catch (e) {
       this.logger.error("Error handling unknownBlockParent event", {}, e as Error);
     }
@@ -68,6 +69,7 @@ export class UnknownBlockSync {
         status: PendingBlockStatus.pending,
         downloadAttempts: 0,
       };
+      this.pendingBlocks.set(blockRootHex, pendingBlock);
     }
     pendingBlock.peerIdStrs.add(peerIdStr);
 
@@ -93,12 +95,14 @@ export class UnknownBlockSync {
 
     // If the node loses all peers with pending unknown blocks, the sync will stall
     const connectedPeers = this.network.getConnectedPeers();
-    if (connectedPeers.length) {
+    if (connectedPeers.length === 0) {
       return;
     }
 
     for (const block of blocks) {
-      void this.downloadParentBlock(block, connectedPeers);
+      this.downloadParentBlock(block, connectedPeers).catch((e) => {
+        this.logger.error("Unexpect error - downloadParentBlock", {}, e);
+      });
     }
   };
 
@@ -117,18 +121,22 @@ export class UnknownBlockSync {
       const {signedBlock, peerIdStr} = res.result;
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        void this.processBlock(this.addToPendingBlocks(signedBlock, peerIdStr));
+        this.processBlock(this.addToPendingBlocks(signedBlock, peerIdStr)).catch((e) => {
+          this.logger.error("Unexpect error - processBlock", {}, e);
+        });
       } else {
-        void this.onUnknownBlock(signedBlock, peerIdStr);
+        this.onUnknownBlock(signedBlock, peerIdStr);
       }
     } else {
-      // TODO: Log error
-
-      // Can't find parent
       block.downloadAttempts++;
+      const errorData = {root: block.parentBlockRootHex, attempts: block.downloadAttempts};
       if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
         // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
+        this.logger.error("Ignoring unknown block root after many failed downloads", errorData, res.err);
         this.removeAndDownscoreAllDescendants(block);
+      } else {
+        // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
+        this.logger.debug("Error downloading unknown block root", errorData, res.err);
       }
     }
   }
@@ -151,34 +159,37 @@ export class UnknownBlockSync {
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
-        void this.processBlock(descendantBlock);
+        this.processBlock(descendantBlock).catch((e) => {
+          this.logger.error("Unexpect error - processBlock", {}, e);
+        });
       }
     } else {
+      const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.signedBlock.message.slot};
       if (res.err instanceof BlockError) {
-        // Some race-condition imported the block earlier, that's okay ignore
-        if (res.err.type.code === BlockErrorCode.ALREADY_KNOWN) {
-          this.pendingBlocks.delete(pendingBlock.blockRootHex);
-        }
+        switch (res.err.type.code) {
+          case BlockErrorCode.ALREADY_KNOWN:
+          case BlockErrorCode.GENESIS_BLOCK:
+            // Some race-condition imported the block earlier, that's okay ignore
+            this.pendingBlocks.delete(pendingBlock.blockRootHex);
+            break;
 
-        // Should no happen, mark as pending to try again latter
-        else if (res.err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
-          pendingBlock.status = PendingBlockStatus.pending;
-        }
+          case BlockErrorCode.PARENT_UNKNOWN:
+          case BlockErrorCode.PRESTATE_MISSING:
+            // Should no happen, mark as pending to try again latter
+            this.logger.error("Attempted to process block but its parent was still unknown", errorData, res.err);
+            pendingBlock.status = PendingBlockStatus.pending;
+            break;
 
-        // Block is not correct with respect to our chain. Log error loudly
-        else {
-          this.logger.error(
-            "Error processing block from unknown parent sync",
-            {slot: pendingBlock.signedBlock.message.slot, root: pendingBlock.blockRootHex},
-            res.err
-          );
-
-          this.removeAndDownscoreAllDescendants(pendingBlock);
+          default:
+            // Block is not correct with respect to our chain. Log error loudly
+            this.logger.error("Error processing block from unknown parent sync", errorData, res.err);
+            this.removeAndDownscoreAllDescendants(pendingBlock);
         }
       }
 
       // Probably a queue error or something unwanted happened, mark as pending to try again latter
       else {
+        this.logger.error("Unknown error processing block from unknown parent sync", errorData, res.err);
         pendingBlock.status = PendingBlockStatus.pending;
       }
     }
@@ -257,41 +268,4 @@ export class UnknownBlockSync {
     // Prune knownBadBlocks
     pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
   }
-}
-
-function getAllDescendantBlocks(
-  blockRootHex: RootHex,
-  blocks: Map<RootHex, PendingBlock>,
-  descendantBlocks: PendingBlock[] = []
-): PendingBlock[] {
-  const firstDescendantBlocks = getDescendantBlocks(blockRootHex, blocks);
-  descendantBlocks.push(...firstDescendantBlocks);
-  for (const firstDescendantBlock of firstDescendantBlocks) {
-    getAllDescendantBlocks(firstDescendantBlock.blockRootHex, blocks, descendantBlocks);
-  }
-  return descendantBlocks;
-}
-
-function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const descendantBlocks: PendingBlock[] = [];
-
-  for (const block of blocks.values()) {
-    if (block.parentBlockRootHex === blockRootHex) {
-      descendantBlocks.push(block);
-    }
-  }
-
-  return descendantBlocks;
-}
-
-function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const blocksToFetch: PendingBlock[] = [];
-
-  for (const block of blocks.values()) {
-    if (block.status === PendingBlockStatus.pending && !blocks.has(block.parentBlockRootHex)) {
-      blocksToFetch.push(block);
-    }
-  }
-
-  return blocksToFetch;
 }
