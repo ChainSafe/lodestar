@@ -1,10 +1,12 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IBeaconChain, IBlockJob} from "..";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
+import {IBeaconChain, IBlockJob} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
-import {toHexString} from "@chainsafe/ssz";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -115,6 +117,15 @@ export async function validateGossipBlock(
   // Check again in case there two blocks are processed concurrently
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+  }
+
+  // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the
+  // gossip validation promise without any extra infrastructure.
+  // Do the sleep at the end, since regen and signature validation can already take longer than `msToBlockSlot`.
+  const msToBlockSlot = computeTimeAtSlot(config, blockSlot, chain.genesisTime) * 1000 - Date.now();
+  if (msToBlockSlot <= MAXIMUM_GOSSIP_CLOCK_DISPARITY && msToBlockSlot > 0) {
+    // If block is between 0 and 500 ms early, hold it in a promise. Equivalent to a pending queue.
+    await sleep(msToBlockSlot);
   }
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex);

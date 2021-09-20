@@ -19,10 +19,6 @@ export class BlockPool {
    * Blocks indexed by parentRoot, then blockRoot
    */
   private blocksByParent = new Map<string, Set<string>>();
-  /**
-   * Blocks indexed by slot, then blockRoot
-   */
-  private blocksBySlot = new Map<number, Set<string>>();
 
   constructor(private readonly config: IChainForkConfig, private readonly logger: ILogger) {}
 
@@ -49,45 +45,11 @@ export class BlockPool {
     this.logger.debug("Add block to pool", {blockKey});
   }
 
-  addBySlot(signedBlock: allForks.SignedBeaconBlock): void {
-    // put block in two indices:
-    // blocks
-    const blockKey = this.getBlockKey(signedBlock);
-    this.blocks.set(blockKey, {
-      parentRoot: toHexString(signedBlock.message.parentRoot),
-      slot: signedBlock.message.slot,
-    });
-
-    // blocks by slot
-    const slotKey = this.getSlotKey(signedBlock);
-
-    let blocksAtSlot = this.blocksBySlot.get(slotKey);
-    if (!blocksAtSlot) {
-      blocksAtSlot = new Set();
-      this.blocksBySlot.set(slotKey, blocksAtSlot);
-    }
-
-    blocksAtSlot.add(blockKey);
-
-    this.logger.debug("Add block to pool", {blockKey});
-  }
-
   remove(signedBlock: allForks.SignedBeaconBlock): void {
     // remove block from three indices:
     // blocks
     const blockKey = this.getBlockKey(signedBlock);
     this.blocks.delete(blockKey);
-
-    // blocks by slot
-    const slotKey = this.getSlotKey(signedBlock);
-    const blocksAtSlot = this.blocksBySlot.get(slotKey);
-
-    if (blocksAtSlot) {
-      blocksAtSlot.delete(blockKey);
-      if (!blocksAtSlot.size) {
-        this.blocksBySlot.delete(slotKey);
-      }
-    }
 
     // blocks by parent
     const parentKey = this.getParentKey(signedBlock);
@@ -128,21 +90,8 @@ export class BlockPool {
     return blockRoots.map((root) => fromHexString(root));
   }
 
-  getBySlot(slot: Slot): Uint8Array[] {
-    const slots = Array.from(this.blocksBySlot.keys()).filter((cachedSlot) => cachedSlot <= slot);
-    const blockRoots: string[] = [];
-    for (const cachedSlot of slots) {
-      blockRoots.push(...Array.from(this.blocksBySlot.get(cachedSlot)?.values() ?? []));
-    }
-    return Array.from(new Set(blockRoots)).map((root) => fromHexString(root));
-  }
-
   private getParentKey(block: allForks.SignedBeaconBlock): string {
     return toHexString(block.message.parentRoot);
-  }
-
-  private getSlotKey(block: allForks.SignedBeaconBlock): number {
-    return block.message.slot;
   }
 
   private getBlockKey(block: allForks.SignedBeaconBlock): string {

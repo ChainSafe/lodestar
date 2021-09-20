@@ -1,11 +1,19 @@
 import {routes} from "@chainsafe/lodestar-api";
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconBlocksApi} from "@chainsafe/lodestar-api/lib/routes/beacon/block";
+import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {ApiModules} from "../../types";
 import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
+
+/**
+ * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
+ * future slot, wait some time instead of rejecting the request because it's in the future
+ */
+const MAX_API_CLOCK_DISPARITY_MS = 1000;
 
 export function getBeaconBlockApi({
   chain,
@@ -126,6 +134,14 @@ export function getBeaconBlockApi({
 
     async publishBlock(signedBlock) {
       const seenTimestampSec = Date.now() / 1000;
+
+      // Simple implementation of a pending block queue. Keeping the block here recycles the API logic, and keeps the
+      // REST request promise without any extra infrastructure.
+      const msToBlockSlot = computeTimeAtSlot(config, signedBlock.message.slot, chain.genesisTime) * 1000 - Date.now();
+      if (msToBlockSlot <= MAX_API_CLOCK_DISPARITY_MS && msToBlockSlot > 0) {
+        // If block is a bit early, hold it in a promise. Equivalent to a pending queue.
+        await sleep(msToBlockSlot);
+      }
 
       // TODO: Validate block
 
