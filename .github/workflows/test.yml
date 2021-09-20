@@ -32,7 +32,7 @@ jobs:
       # </common-build>
 
 
-      - name: Grafana Dashboard
+      - name: Lint Grafana Dashboard
         run: yarn validate-gdash
       - name: Test root binary exists
         run: ./lodestar --version
