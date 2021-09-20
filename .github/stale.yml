@@ -18,6 +18,7 @@ exemptLabels:
   - "prio0-critical"
   - "prio2-high"
   - "prio5-medium"
+  - "prio7-low"
   - "status0-blocked"
   - "status1-donotmerge"
   - "status2-onice"
