@@ -322,14 +322,9 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   // err type data may contain CachedBeaconState which is too much to log
   this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code});
 
-  if (err.type.code === BlockErrorCode.FUTURE_SLOT) {
-    this.pendingBlocks.addBySlot(err.signedBlock);
-    await this.db.pendingBlock.add(err.signedBlock);
-  }
-
   // add to pendingBlocks first which is not await
   // this is to process a block range
-  else if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+  if (err.type.code === BlockErrorCode.PARENT_UNKNOWN) {
     this.pendingBlocks.addByParent(err.signedBlock);
     await this.db.pendingBlock.add(err.signedBlock);
   } else if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
