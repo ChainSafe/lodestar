@@ -29,6 +29,7 @@ describe("api - beacon - publishBlock", function () {
     server.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     chainStub = server.chainStub;
     syncStub = server.syncStub;
+    chainStub.processBlock.resolves();
   });
 
   it("successful publish", async function () {
