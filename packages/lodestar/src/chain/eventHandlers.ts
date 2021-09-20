@@ -104,28 +104,6 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.aggregatedAttestationPool.prune(slot);
   this.syncCommitteeMessagePool.prune(slot);
   this.seenSyncCommitteeMessages.prune(slot);
-
-  await Promise.all(
-    this.pendingBlocks.getBySlot(slot).map(async (root) => {
-      const pendingBlock = await this.db.pendingBlock.get(root);
-      if (pendingBlock) {
-        this.pendingBlocks.remove(pendingBlock);
-        await this.db.pendingBlock.delete(root);
-        return this.blockProcessor.processBlockJob({
-          signedBlock: pendingBlock,
-          reprocess: false,
-          prefinalized: false,
-          validSignatures: false,
-          validProposerSignature: false,
-        });
-      }
-    })
-  );
-
-  this.logger.debug("Block pools: ", {
-    pendingBlocks: this.pendingBlocks.getTotalPendingBlocks(),
-    currentSlot: this.clock.currentSlot,
-  });
 }
 
 export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
