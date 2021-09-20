@@ -32,9 +32,9 @@ export class UnknownBlockSync {
     private readonly chain: IBeaconChain,
     private readonly logger: ILogger,
     private readonly metrics: IMetrics | null,
-    opts: SyncOptions
+    opts?: SyncOptions
   ) {
-    if (!opts.disableUnknownBlockSync) {
+    if (!opts?.disableUnknownBlockSync) {
       this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     }
