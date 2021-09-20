@@ -9,14 +9,14 @@ import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
 import {getPeerSyncType, PeerSyncType} from "./utils/remoteSyncType";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
-import {ISyncOptions} from "./options";
+import {SyncOptions} from "./options";
 import {UnknownBlockSync} from "./unknownBlock";
 
 export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly opts: ISyncOptions;
+  private readonly opts: SyncOptions;
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
@@ -31,20 +31,22 @@ export class BeaconSync implements IBeaconSync {
    */
   private readonly slotImportTolerance: Slot;
 
-  constructor(opts: ISyncOptions, modules: ISyncModules) {
+  constructor(opts: SyncOptions, modules: ISyncModules) {
     const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
     this.network = network;
     this.chain = chain;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, this.opts);
-    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics);
+    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
-    this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
-    this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
-    this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    if (!opts.disableRangeSync) {
+      this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
+      this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
+      this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    }
     // TODO: It's okay to start this on initial sync?
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
 

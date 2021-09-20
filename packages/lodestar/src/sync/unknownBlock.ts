@@ -13,6 +13,7 @@ import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
+import {SyncOptions} from "./options";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -30,10 +31,13 @@ export class UnknownBlockSync {
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
     private readonly logger: ILogger,
-    private readonly metrics: IMetrics | null
+    private readonly metrics: IMetrics | null,
+    opts: SyncOptions
   ) {
-    this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
-    this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+    if (!opts.disableUnknownBlockSync) {
+      this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlock);
+      this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
+    }
   }
 
   close(): void {

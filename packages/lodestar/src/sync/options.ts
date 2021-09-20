@@ -1,4 +1,4 @@
-export interface ISyncOptions {
+export type SyncOptions = {
   /**
    * Allow node to consider itself synced without being connected to a peer.
    * Use only for local networks with a single node, can be dangerous in regular networks.
@@ -9,9 +9,14 @@ export interface ISyncOptions {
    * Should only be used for debugging or testing.
    */
   disableProcessAsChainSegment?: boolean;
-}
 
-export const defaultSyncOptions: Required<ISyncOptions> = {
+  /** USE FOR TESTING ONLY. Disable range sync completely */
+  disableRangeSync?: boolean;
+  /** USE FOR TESTING ONLY. Disable range sync completely */
+  disableUnknownBlockSync?: boolean;
+};
+
+export const defaultSyncOptions: SyncOptions = {
   isSingleNode: false,
   disableProcessAsChainSegment: false,
 };
