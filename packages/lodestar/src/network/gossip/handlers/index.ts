@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
@@ -25,6 +26,8 @@ import {
   validateGossipVoluntaryExit,
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
+import {NetworkEvent} from "../../events";
+import {PeerAction} from "../../peers";
 
 type ValidatorFnsModules = {
   chain: IBeaconChain;

@@ -77,6 +77,8 @@ function getGossipValidatorFn<K extends GossipType>(
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
   return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
+    // Define in scope above try {} to be used in catch {} if object was parsed
+    let gossipObject;
     try {
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
 
