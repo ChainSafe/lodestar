@@ -1,4 +1,5 @@
 import {toHexString} from "@chainsafe/ssz";
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
@@ -13,7 +14,7 @@ import {
   GossipAction,
   SyncCommitteeError,
 } from "../../../chain/errors";
-import {GossipTopicMap, GossipType, GossipTypeMap} from "../interface";
+import {GossipHandlers, GossipType} from "../interface";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -26,17 +27,7 @@ import {
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
 import {NetworkEvent} from "../../events";
-import PeerId from "peer-id";
-import {PeerAction} from "../..";
-
-export type GossipHandlerFn = (
-  object: GossipTypeMap[GossipType],
-  topic: GossipTopicMap[GossipType],
-  peerIdStr: string
-) => Promise<void>;
-export type GossipHandlers = {
-  [K in GossipType]: (object: GossipTypeMap[K], topic: GossipTopicMap[K], peerIdStr: string) => Promise<void>;
-};
+import {PeerAction} from "../../peers";
 
 type ValidatorFnsModules = {
   chain: IBeaconChain;
@@ -64,8 +55,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
   const {chain, config, metrics, network, logger} = modules;
 
   return {
-    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       logger.verbose("Received gossip block", {
@@ -104,8 +94,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
 
       // Handler
-
-      chain.processBlock(signedBlock).catch((e) => {
+      try {
+        await chain.processBlock(signedBlock);
+        // Returns the delay between the start of `block.slot` and `current time`
+        const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+        metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
+      } catch (e) {
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.ALREADY_KNOWN:
@@ -120,14 +114,11 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
               );
           }
         }
-
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
-      });
+        logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+      }
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {
-      const seenTimestampSec = Date.now() / 1000;
-
+    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
       try {
         const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
           chain,
@@ -173,8 +164,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
       let indexedAttestation: phase0.IndexedAttestation | undefined = undefined;
       try {
         indexedAttestation = (await validateGossipAttestation(chain, attestation, subnet)).indexedAttestation;

@@ -8,8 +8,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 
 import {getReqRespHandlers, Network} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
-import {GossipHandlers} from "../../../src/network/gossip/handlers";
-import {GossipType} from "../../../src/network/gossip";
+import {GossipType, GossipHandlers} from "../../../src/network/gossip";
 
 import {generateEmptySignedBlock} from "../../utils/block";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";

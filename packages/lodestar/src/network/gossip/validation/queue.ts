@@ -43,8 +43,8 @@ export function createValidationQueues(
 ): GossipJobQueues {
   return mapValues(gossipQueueOpts, (opts, type) => {
     const gossipValidatorFn = gossipValidatorFns[type];
-    return new JobItemQueue<[GossipTopic, InMessage], void>(
-      (topic, message) => gossipValidatorFn(topic, message),
+    return new JobItemQueue<[GossipTopic, InMessage, number], void>(
+      (topic, message, seenTimestampsMs) => gossipValidatorFn(topic, message, seenTimestampsMs),
       {signal, ...opts},
       metrics
         ? {
