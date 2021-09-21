@@ -50,6 +50,12 @@ export interface IBlockJob extends IProcessBlock {
   signedBlock: allForks.SignedBeaconBlock;
 }
 
+export type Eth2Context = {
+  activeValidatorCount: number;
+  currentSlot: number;
+  currentEpoch: number;
+};
+
 /**
  * The IBeaconChain service deals with processing incoming blocks, advancing a state transition
  * and applying the fork choice rule to update the chain head
