@@ -5,8 +5,14 @@ import {Json} from "@chainsafe/ssz";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
-import {GossipHandlers, GossipHandlerFn} from "../handlers";
-import {GossipJobQueues, GossipType, GossipValidatorFn, ValidatorFnsByType} from "../interface";
+import {
+  GossipJobQueues,
+  GossipType,
+  GossipValidatorFn,
+  ValidatorFnsByType,
+  GossipHandlers,
+  GossipHandlerFn,
+} from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
@@ -39,8 +45,8 @@ export function createValidatorFnsByType(
   const validatorFnsByType = mapValues(
     jobQueues,
     (jobQueue): GossipValidatorFn => {
-      return async function gossipValidatorFnWithQueue(topic, gossipMsg) {
-        await jobQueue.push(topic, gossipMsg);
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg, seenTimestampsMs) {
+        await jobQueue.push(topic, gossipMsg, seenTimestampsMs);
       };
     }
   );
@@ -70,10 +76,7 @@ function getGossipValidatorFn<K extends GossipType>(
   const {config, logger, metrics, uncompressCache} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
-  return async function gossipValidatorFn(topic, gossipMsg) {
-    // Define in scope above try {} to be used in catch {} if object was parsed
-    let gossipObject;
-
+  return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
     try {
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
 
@@ -91,7 +94,7 @@ function getGossipValidatorFn<K extends GossipType>(
         throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom);
+      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom, seenTimestampSec);
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);

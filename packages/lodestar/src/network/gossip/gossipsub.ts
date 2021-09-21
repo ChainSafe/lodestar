@@ -11,7 +11,15 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IMetrics} from "../../metrics";
-import {GossipJobQueues, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap, ValidatorFnsByType} from "./interface";
+import {
+  GossipJobQueues,
+  GossipTopic,
+  GossipTopicMap,
+  GossipType,
+  GossipTypeMap,
+  ValidatorFnsByType,
+  GossipHandlers,
+} from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
@@ -19,7 +27,6 @@ import {GossipValidationError} from "./errors";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByType} from "./validation";
-import {GossipHandlers} from "./handlers";
 import {Map2d, Map2dArr} from "../../util/map";
 import pipe from "it-pipe";
 import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
@@ -207,6 +214,16 @@ export class Eth2Gossipsub extends Gossipsub {
     return true;
   }
 
+  // // Snippet of _processRpcMessage from https://github.com/libp2p/js-libp2p-interfaces/blob/92245d66b0073f0a72fed9f7abcf4b533102f1fd/packages/interfaces/src/pubsub/index.js#L442
+  // async _processRpcMessage(msg: InMessage): Promise<void> {
+  //   try {
+  //     await this.validate(msg);
+  //   } catch (err) {
+  //     this.log("Message is invalid, dropping it. %O", err);
+  //     return;
+  //   }
+  // }
+
   /**
    * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
    * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
@@ -237,8 +254,11 @@ export class Eth2Gossipsub extends Gossipsub {
       // Also validates that the topicStr is known
       const topic = this.gossipTopicCache.getTopic(topicStr);
 
+      // Get seenTimestamp before adding the message to the queue or add async delays
+      const seenTimestampSec = Date.now() / 1000;
+
       // No error here means that the incoming object is valid
-      await this.validatorFnsByType[topic.type](topic, message);
+      await this.validatorFnsByType[topic.type](topic, message, seenTimestampSec);
     } catch (e) {
       // JobQueue may throw non-typed errors
       const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;

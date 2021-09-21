@@ -13,7 +13,7 @@ import {
   GossipAction,
   SyncCommitteeError,
 } from "../../../chain/errors";
-import {GossipTopicMap, GossipType, GossipTypeMap} from "../interface";
+import {GossipHandlers, GossipType} from "../interface";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -25,18 +25,6 @@ import {
   validateGossipVoluntaryExit,
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
-import {NetworkEvent} from "../../events";
-import PeerId from "peer-id";
-import {PeerAction} from "../..";
-
-export type GossipHandlerFn = (
-  object: GossipTypeMap[GossipType],
-  topic: GossipTopicMap[GossipType],
-  peerIdStr: string
-) => Promise<void>;
-export type GossipHandlers = {
-  [K in GossipType]: (object: GossipTypeMap[K], topic: GossipTopicMap[K], peerIdStr: string) => Promise<void>;
-};
 
 type ValidatorFnsModules = {
   chain: IBeaconChain;
@@ -64,8 +52,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
   const {chain, config, metrics, network, logger} = modules;
 
   return {
-    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       logger.verbose("Received gossip block", {
@@ -125,9 +112,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       });
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {
-      const seenTimestampSec = Date.now() / 1000;
-
+    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
       try {
         const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
           chain,
@@ -173,8 +158,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
       let indexedAttestation: phase0.IndexedAttestation | undefined = undefined;
       try {
         indexedAttestation = (await validateGossipAttestation(chain, attestation, subnet)).indexedAttestation;

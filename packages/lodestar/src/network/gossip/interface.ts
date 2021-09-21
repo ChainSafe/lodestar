@@ -114,8 +114,27 @@ export interface IGossipModules {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipValidatorFn = (topic: GossipTopic, message: InMessage) => Promise<void>;
+export type GossipValidatorFn = (topic: GossipTopic, message: InMessage, seenTimestampSec: number) => Promise<void>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
-export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage], void>};
+export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage, number], void>};
+
+export type GossipHandlerFn = (
+  object: GossipTypeMap[GossipType],
+  topic: GossipTopicMap[GossipType],
+  peerIdStr: string,
+  seenTimestampSec: number
+) => Promise<void>;
+export type GossipHandlers = {
+  [K in GossipType]: (
+    object: GossipTypeMap[K],
+    topic: GossipTopicMap[K],
+    peerIdStr: string,
+    seenTimestampSec: number
+  ) => Promise<void>;
+};
+
+export type InMessageTimestamp = InMessage & {
+  seenTimestampMs: number;
+};
