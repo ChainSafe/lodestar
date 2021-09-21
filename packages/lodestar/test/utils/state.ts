@@ -47,15 +47,16 @@ export function generateState(
     withdrawableEpoch: FAR_FUTURE_EPOCH,
     exitEpoch: FAR_FUTURE_EPOCH,
   };
+  const numValidators = 16;
   const validators = withPubkey
-    ? Array.from({length: 4}, (_, i) => {
+    ? Array.from({length: numValidators}, (_, i) => {
         const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
         return generateValidator({
           ...validatorOpts,
           pubkey: sk.toPublicKey().toBytes(),
         });
       })
-    : generateValidators(4, validatorOpts);
+    : generateValidators(numValidators, validatorOpts);
   const defaultState: phase0.BeaconState = {
     genesisTime: Math.floor(Date.now() / 1000),
     genesisValidatorsRoot: ZERO_HASH,
@@ -83,7 +84,7 @@ export function generateState(
     eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
     eth1DepositIndex: 0,
     validators: validators as List<phase0.Validator>,
-    balances: Array.from({length: 4}, () => MAX_EFFECTIVE_BALANCE) as List<number>,
+    balances: Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE) as List<number>,
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
     previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
@@ -106,8 +107,11 @@ export function generateState(
     const defaultAltairState: altair.BeaconState = {
       ...ssz.altair.BeaconState.struct_defaultValue(),
       ...defaultState,
-      previousEpochParticipation: [0xff, 0xff, 0, 0] as List<number>,
-      currentEpochParticipation: [0xff, 0xff, 0, 0] as List<number>,
+      previousEpochParticipation: [
+        ...[0xff, 0xff],
+        ...Array.from({length: numValidators - 2}, () => 0),
+      ] as List<number>,
+      currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)] as List<number>,
       currentSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
         aggregatePubkey: ssz.BLSPubkey.defaultValue(),

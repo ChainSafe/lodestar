@@ -96,6 +96,11 @@ export class Network implements INetwork {
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}),
       forkDigestContext: chain.forkDigestContext,
+      eth2Context: {
+        activeValidatorCount: chain.getHeadState().currentShuffling.activeIndices.length,
+        currentSlot: this.clock.currentSlot,
+        currentEpoch: this.clock.currentEpoch,
+      },
     });
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);

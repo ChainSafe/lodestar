@@ -25,7 +25,7 @@ describe("Sync Committee Signature validation", function () {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const config = createIChainForkConfig(Object.assign({}, defaultChainConfig, {ALTAIR_FORK_EPOCH: altairForkEpoch}));
   // all validators have same pubkey
-  const validatorIndexInSyncCommittee = 3;
+  const validatorIndexInSyncCommittee = 15;
 
   before(async function () {
     await initBLS();
