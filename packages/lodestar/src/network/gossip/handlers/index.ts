@@ -94,8 +94,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
 
       // Handler
-
-      chain.processBlock(signedBlock).catch((e) => {
+      try {
+        await chain.processBlock(signedBlock);
+        // Returns the delay between the start of `block.slot` and `current time`
+        const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+        metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
+      } catch (e) {
         if (e instanceof BlockError) {
           switch (e.type.code) {
             case BlockErrorCode.ALREADY_KNOWN:
@@ -110,9 +114,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
               );
           }
         }
-
-        logger.error("Error receiving block", {slot: signedBlock.message.slot, peer: peerIdStr}, e as Error);
-      });
+        logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+      }
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

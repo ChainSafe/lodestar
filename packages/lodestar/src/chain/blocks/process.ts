@@ -11,8 +11,6 @@ import {allForks, ISignatureSet, CachedBeaconState} from "@chainsafe/lodestar-be
 import {CheckpointStateCache} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {toHexString} from "@chainsafe/ssz";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Number64} from "@chainsafe/lodestar-types";
 
 export type BlockProcessOpts = {
   /**
@@ -23,7 +21,6 @@ export type BlockProcessOpts = {
 };
 
 export type BlockProcessModules = {
-  config: IChainForkConfig;
   bls: IBlsVerifier;
   checkpointStateCache: CheckpointStateCache;
   emitter: ChainEventEmitter;
@@ -33,8 +30,8 @@ export type BlockProcessModules = {
   opts?: BlockProcessOpts;
 };
 
-export async function processBlock(modules: BlockProcessModules, job: IBlockJob, genesisTime: Number64): Promise<void> {
-  const {forkChoice, metrics, config} = modules;
+export async function processBlock(modules: BlockProcessModules, job: IBlockJob): Promise<void> {
+  const {forkChoice} = modules;
 
   if (!forkChoice.hasBlock(job.signedBlock.message.parentRoot)) {
     throw new BlockError(job.signedBlock, {
@@ -43,13 +40,7 @@ export async function processBlock(modules: BlockProcessModules, job: IBlockJob,
     });
   }
 
-  const {signedBlock} = job;
-  await processBlocksInEpoch(modules, job, [signedBlock]);
-  if (metrics) {
-    // Returns the delay between the start of `block.slot` and `current time`
-    const delaySec = Date.now() / 1000 - (genesisTime + signedBlock.message.slot * config.SECONDS_PER_SLOT);
-    metrics.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
-  }
+  await processBlocksInEpoch(modules, job, [job.signedBlock]);
 }
 
 export async function processChainSegment(modules: BlockProcessModules, job: IChainSegmentJob): Promise<void> {

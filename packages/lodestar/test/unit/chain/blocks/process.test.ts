@@ -1,5 +1,4 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -21,7 +20,6 @@ describe("processBlock", function () {
   let checkpointStateCache: SinonStubbedInstance<CheckpointStateCache> & CheckpointStateCache;
   let regen: SinonStubbedInstance<StateRegenerator>;
   let bls: SinonStubbedInstance<BlsSingleThreadVerifier>;
-  const genesisTime = Math.floor(Date.now() / 1000);
 
   beforeEach(function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
@@ -40,7 +38,7 @@ describe("processBlock", function () {
     const job = getNewBlockJob(signedBlock);
     forkChoice.hasBlock.returns(false);
     try {
-      await processBlock({config, forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job, genesisTime);
+      await processBlock({forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PARENT_UNKNOWN);
@@ -54,7 +52,7 @@ describe("processBlock", function () {
     forkChoice.hasBlock.returns(true);
     regen.getPreState.rejects(new RegenError({code: RegenErrorCode.STATE_TRANSITION_ERROR, error: new Error()}));
     try {
-      await processBlock({config, forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job, genesisTime);
+      await processBlock({forkChoice, checkpointStateCache, regen, emitter, bls, metrics}, job);
       expect.fail("block should throw");
     } catch (e) {
       expect((e as BlockError).type.code).to.equal(BlockErrorCode.PRESTATE_MISSING);

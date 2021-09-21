@@ -147,7 +147,6 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       signal,
       opts,
-      genesisTime: this.genesisTime,
     });
 
     this.forkChoice = forkChoice;

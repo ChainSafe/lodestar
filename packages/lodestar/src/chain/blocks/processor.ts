@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {allForks, Number64, ssz} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {IBlockJob, IChainSegmentJob} from "../interface";
 import {ChainEvent} from "../emitter";
@@ -22,18 +22,16 @@ export class BlockProcessor {
   constructor({
     signal,
     maxLength = 256,
-    genesisTime,
     ...modules
   }: BlockProcessorModules & {
     signal: AbortSignal;
-    genesisTime: Number64;
     maxLength?: number;
   }) {
     this.modules = modules;
     this.jobQueue = new JobItemQueue(
       (job) => {
         if ((job as IBlockJob).signedBlock) {
-          return processBlockJob(this.modules, job as IBlockJob, genesisTime);
+          return processBlockJob(this.modules, job as IBlockJob);
         } else {
           return processChainSegmentJob(this.modules, job as IChainSegmentJob);
         }
@@ -62,14 +60,10 @@ export class BlockProcessor {
  *
  * All other effects are provided by downstream event handlers
  */
-export async function processBlockJob(
-  modules: BlockProcessorModules,
-  job: IBlockJob,
-  genesisTime: Number64
-): Promise<void> {
+export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob): Promise<void> {
   try {
     validateBlock(modules, job);
-    await processBlock(modules, job, genesisTime);
+    await processBlock(modules, job);
   } catch (e) {
     // above functions only throw BlockError
     if (e instanceof BlockError) {
