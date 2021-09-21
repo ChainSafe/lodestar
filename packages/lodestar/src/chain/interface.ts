@@ -7,7 +7,6 @@ import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
-import {BlockPool} from "./blocks";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {
@@ -50,6 +49,8 @@ export interface IBlockJob extends IProcessBlock {
   signedBlock: allForks.SignedBeaconBlock;
 }
 
+export type ProcessBlockFlags = {prefinalized?: boolean; trusted?: boolean};
+
 export type Eth2Context = {
   activeValidatorCount: number;
   currentSlot: number;
@@ -71,7 +72,6 @@ export interface IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -110,18 +110,10 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
 
-  /** Pre-process and run the per slot state transition function */
-  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted?: boolean): void;
   /** Process a block until complete */
-  processBlock(
-    signedBlock: allForks.SignedBeaconBlock,
-    flags: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void>;
+  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: ProcessBlockFlags): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(
-    signedBlocks: allForks.SignedBeaconBlock[],
-    flags: {prefinalized: boolean; trusted?: boolean}
-  ): Promise<void>;
+  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: ProcessBlockFlags): Promise<void>;
 
   /** Get the ForkName from the head state */
   getHeadForkName(): ForkName;

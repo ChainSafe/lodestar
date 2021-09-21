@@ -3,30 +3,23 @@ import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
 import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {ChainEvent, IBeaconChain} from "../chain";
-import {BlockError, BlockErrorCode} from "../chain/errors";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
-import {fetchUnknownBlockRoot, getPeerSyncType, PeerSyncType} from "./utils";
+import {getPeerSyncType, PeerSyncType} from "./utils/remoteSyncType";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
-import {ISyncOptions} from "./options";
-import {IMetrics} from "../metrics";
+import {SyncOptions} from "./options";
+import {UnknownBlockSync} from "./unknownBlock";
 
 export class BeaconSync implements IBeaconSync {
-  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
-  private readonly metrics: IMetrics | null;
-  private readonly opts: ISyncOptions;
+  private readonly opts: SyncOptions;
 
   private readonly rangeSync: RangeSync;
-
-  // avoid finding same root at the same time
-  private readonly processingRoots = new Set<string>();
+  private readonly unknownBlockSync: UnknownBlockSync;
 
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
@@ -38,23 +31,23 @@ export class BeaconSync implements IBeaconSync {
    */
   private readonly slotImportTolerance: Slot;
 
-  constructor(opts: ISyncOptions, modules: ISyncModules) {
+  constructor(opts: SyncOptions, modules: ISyncModules) {
     const {config, chain, metrics, network, logger} = modules;
     this.opts = opts;
-    this.config = config;
     this.network = network;
     this.chain = chain;
-    this.metrics = metrics;
     this.logger = logger;
-    this.rangeSync = new RangeSync(modules, this.opts);
+    this.rangeSync = new RangeSync(modules, opts);
+    this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
-    this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
-    this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
-    this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    if (!opts.disableRangeSync) {
+      this.rangeSync.on(RangeSyncEvent.completedChain, this.updateSyncState);
+      this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
+      this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
+    }
     // TODO: It's okay to start this on initial sync?
-    this.chain.emitter.on(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
 
     if (metrics) {
@@ -65,9 +58,9 @@ export class BeaconSync implements IBeaconSync {
   close(): void {
     this.network.events.off(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.off(NetworkEvent.peerDisconnected, this.removePeer);
-    this.chain.emitter.off(ChainEvent.errorBlock, this.onUnknownBlockRoot);
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
+    this.unknownBlockSync.close();
   }
 
   getSyncStatus(): SyncingStatus {
@@ -193,35 +186,8 @@ export class BeaconSync implements IBeaconSync {
   private onClockEpoch = (): void => {
     // If a node witness the genesis event consider starting gossip
     // Also, ensure that updateSyncState is run at least once per epoch.
-    // If the chain gets or very overloaded it could helps to resolve the situation
+    // If the chain gets stuck or very overloaded it could helps to resolve the situation
     // by realizing it's way behind and turning gossip off.
     this.updateSyncState();
-  };
-
-  private onUnknownBlockRoot = async (err: BlockError): Promise<void> => {
-    if (err.type.code !== BlockErrorCode.PARENT_UNKNOWN) return;
-
-    const block = err.signedBlock.message;
-    const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
-    const parentRoot = this.chain.pendingBlocks.getMissingAncestor(blockRoot);
-    const parentRootHex = toHexString(parentRoot);
-
-    if (this.processingRoots.has(parentRootHex)) {
-      return;
-    }
-
-    this.metrics?.syncUnknownParentSyncs.inc(1);
-    this.processingRoots.add(parentRootHex);
-    this.logger.verbose("Finding block for unknown ancestor root", {parentRootHex});
-
-    try {
-      const block = await fetchUnknownBlockRoot(parentRoot, this.network, this.logger);
-      this.chain.receiveBlock(block);
-      this.logger.verbose("Found UnknownBlockRoot", {parentRootHex});
-    } catch (e) {
-      this.logger.verbose("Error fetching UnknownBlockRoot", {parentRootHex}, e as Error);
-    } finally {
-      this.processingRoots.delete(parentRootHex);
-    }
   };
 }

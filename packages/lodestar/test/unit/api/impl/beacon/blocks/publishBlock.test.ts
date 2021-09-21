@@ -29,6 +29,7 @@ describe("api - beacon - publishBlock", function () {
     server.networkStub.gossip = (gossipStub as unknown) as Eth2Gossipsub;
     chainStub = server.chainStub;
     syncStub = server.syncStub;
+    chainStub.processBlock.resolves();
   });
 
   it("successful publish", async function () {
@@ -42,7 +43,7 @@ describe("api - beacon - publishBlock", function () {
 
     syncStub.isSynced.returns(true);
     await expect(blockApi.publishBlock(block)).to.be.fulfilled;
-    expect(chainStub.receiveBlock.calledOnceWith(block)).to.be.true;
+    expect(chainStub.processBlock.calledOnceWith(block)).to.be.true;
     expect(gossipStub.publishBeaconBlock.calledOnceWith(block)).to.be.true;
   });
 });

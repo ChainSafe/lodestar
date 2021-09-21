@@ -27,7 +27,6 @@ import {
   LatestNonFinalizedUpdate,
   TotalTerminalDifficulty,
 } from "./single";
-import {PendingBlockRepository} from "./repositories/pendingBlock";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -39,9 +38,6 @@ export interface IBeaconDb {
 
   // unfinalized blocks
   block: BlockRepository;
-
-  // pending block
-  pendingBlock: PendingBlockRepository;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;

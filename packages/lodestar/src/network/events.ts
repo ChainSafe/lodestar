@@ -1,7 +1,7 @@
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import StrictEventEmitter from "strict-event-emitter-types";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {RequestTypedContainer} from "./reqresp";
 
 export enum NetworkEvent {
@@ -12,12 +12,14 @@ export enum NetworkEvent {
   gossipStop = "gossip.stop",
   gossipHeartbeat = "gossipsub.heartbeat",
   reqRespRequest = "req-resp.request",
+  unknownBlockParent = "unknownBlockParent",
 }
 
 export type NetworkEvents = {
   [NetworkEvent.peerConnected]: (peer: PeerId, status: phase0.Status) => void;
   [NetworkEvent.peerDisconnected]: (peer: PeerId) => void;
   [NetworkEvent.reqRespRequest]: (request: RequestTypedContainer, peer: PeerId) => void;
+  [NetworkEvent.unknownBlockParent]: (signedBlock: allForks.SignedBeaconBlock, peerIdStr: string) => void;
 };
 
 export type INetworkEventBus = StrictEventEmitter<EventEmitter, NetworkEvents>;

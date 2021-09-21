@@ -27,13 +27,11 @@ import {
   LatestNonFinalizedUpdate,
   TotalTerminalDifficulty,
 } from "./single";
-import {PendingBlockRepository} from "./repositories/pendingBlock";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   metrics?: IDbMetrics;
 
   block: BlockRepository;
-  pendingBlock: PendingBlockRepository;
   blockArchive: BlockArchiveRepository;
   stateArchive: StateArchiveRepository;
 
@@ -61,7 +59,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.metrics = opts.metrics;
     // Warning: If code is ever run in the constructor, must change this stub to not extend 'packages/lodestar/test/utils/stub/beaconDb.ts' -
     this.block = new BlockRepository(this.config, this.db, this.metrics);
-    this.pendingBlock = new PendingBlockRepository(this.config, this.db, this.metrics);
     this.blockArchive = new BlockArchiveRepository(this.config, this.db, this.metrics);
     this.stateArchive = new StateArchiveRepository(this.config, this.db, this.metrics);
     this.voluntaryExit = new VoluntaryExitRepository(this.config, this.db, this.metrics);

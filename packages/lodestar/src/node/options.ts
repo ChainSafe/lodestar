@@ -9,7 +9,7 @@ import {defaultEth1Options, IEth1Options} from "../eth1/options";
 import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions";
 import {defaultMetricsOptions, IMetricsOptions} from "../metrics/options";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options";
-import {defaultSyncOptions, ISyncOptions} from "../sync/options";
+import {defaultSyncOptions, SyncOptions} from "../sync/options";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index";
 
@@ -21,7 +21,7 @@ export interface IBeaconNodeOptions {
   logger: IBeaconLoggerOptions;
   metrics: IMetricsOptions;
   network: INetworkOptions;
-  sync: ISyncOptions;
+  sync: SyncOptions;
 }
 
 export const defaultOptions: IBeaconNodeOptions = {

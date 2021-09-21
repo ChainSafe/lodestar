@@ -13,7 +13,6 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  PendingBlockRepository,
 } from "../../../src/db/repositories";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
@@ -23,7 +22,6 @@ export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
 
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
-  pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -43,7 +41,6 @@ export class StubbedBeaconDb extends BeaconDb {
     // eslint-disable-next-line
     super({config, controller: {} as any});
     this.block = createStubInstance(BlockRepository);
-    this.pendingBlock = createStubInstance(PendingBlockRepository);
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);
 

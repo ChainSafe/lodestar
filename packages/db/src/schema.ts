@@ -45,7 +45,7 @@ export enum Bucket {
   phase0_slashingProtectionAttestationLowerBound = 22,
   index_slashingProtectionMinSpanDistance = 23,
   index_slashingProtectionMaxSpanDistance = 24,
-  allForks_pendingBlock = 25, // Root -> SignedBeaconBlock
+  // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 

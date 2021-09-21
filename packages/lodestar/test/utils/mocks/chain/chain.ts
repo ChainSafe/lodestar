@@ -16,11 +16,9 @@ import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/sta
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
-import {BlockPool} from "../../../../src/chain/blocks";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {testLogger} from "../../logger";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
   SeenAggregators,
@@ -59,7 +57,6 @@ export class MockBeaconChain implements IBeaconChain {
   clock: IBeaconClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -83,7 +80,6 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
-    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -102,7 +98,6 @@ export class MockBeaconChain implements IBeaconChain {
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});
-    this.pendingBlocks = new BlockPool(config, logger);
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
       config: this.config,

@@ -1,3 +1,5 @@
+import {Root} from "@chainsafe/lodestar-types";
+
 export function byteArrayConcat(bytesArr: Uint8Array[]): Uint8Array {
   const totalBytes = bytesArr.reduce((total, bytes) => total + bytes.length, 0);
   const mergedBytes = new Uint8Array(totalBytes);
@@ -11,7 +13,7 @@ export function byteArrayConcat(bytesArr: Uint8Array[]): Uint8Array {
   return mergedBytes;
 }
 
-export function byteArrayEquals(a: Uint8Array, b: Uint8Array): boolean {
+export function byteArrayEquals(a: Uint8Array | Root, b: Uint8Array | Root): boolean {
   if (a.length !== b.length) {
     return false;
   }

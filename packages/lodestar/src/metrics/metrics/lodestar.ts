@@ -256,10 +256,40 @@ export function createLodestarMetrics(
       name: "lodestar_sync_status",
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
-    syncUnknownParentSyncs: register.gauge({
-      name: "lodestar_sync_unknown_parent_syncs_total",
-      help: "Total number of unknown parent syncs",
-    }),
+    syncUnknownBlock: {
+      requests: register.gauge({
+        name: "lodestar_sync_unknown_block_requests_total",
+        help: "Total number of unknownBlockParent events or requests",
+      }),
+      pendingBlocks: register.gauge({
+        name: "lodestar_sync_unknown_block_pending_blocks_size",
+        help: "Current size of UnknownBlockSync pending blocks cache",
+      }),
+      knownBadBlocks: register.gauge({
+        name: "lodestar_sync_unknown_block_known_bad_blocks_size",
+        help: "Current size of UnknownBlockSync known bad blocks cache",
+      }),
+      processedBlocksSuccess: register.gauge({
+        name: "lodestar_sync_unknown_block_processed_blocks_success_total",
+        help: "Total number of processed blocks successes in UnknownBlockSync",
+      }),
+      processedBlocksError: register.gauge({
+        name: "lodestar_sync_unknown_block_processed_blocks_error_total",
+        help: "Total number of processed blocks errors in UnknownBlockSync",
+      }),
+      downloadedBlocksSuccess: register.gauge({
+        name: "lodestar_sync_unknown_block_downloaded_blocks_success_total",
+        help: "Total number of downloaded blocks successes in UnknownBlockSync",
+      }),
+      downloadedBlocksError: register.gauge({
+        name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
+        help: "Total number of downloaded blocks errors in UnknownBlockSync",
+      }),
+      removedBlocks: register.gauge({
+        name: "lodestar_sync_unknown_block_removed_blocks_total",
+        help: "Total number of removed bad blocks in UnknownBlockSync",
+      }),
+    },
 
     // Validator monitoring
 
