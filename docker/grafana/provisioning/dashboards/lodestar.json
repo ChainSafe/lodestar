@@ -11471,7 +11471,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(gossip_block_elappsed_time_till_received_sum[$__rate_interval])/delta(gossip_block_elappsed_time_till_received_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
@@ -11554,7 +11554,7 @@
           },
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(gossip_block_elappsed_time_till_processed_sum[$__rate_interval])/delta(gossip_block_elappsed_time_till_processed_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",

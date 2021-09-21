@@ -62,7 +62,11 @@ export class BlockProcessor {
  *
  * All other effects are provided by downstream event handlers
  */
-export async function processBlockJob(modules: BlockProcessorModules, job: IBlockJob, genesisTime: Number64): Promise<void> {
+export async function processBlockJob(
+  modules: BlockProcessorModules,
+  job: IBlockJob,
+  genesisTime: Number64
+): Promise<void> {
   try {
     validateBlock(modules, job);
     await processBlock(modules, job, genesisTime);
