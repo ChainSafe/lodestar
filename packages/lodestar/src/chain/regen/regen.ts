@@ -34,8 +34,8 @@ export class StateRegenerator implements IStateRegenerator {
 
   /**
    * Get the state to run with `block`. May be:
-   * - Exact state at `block.parentRoot`
-   * - State after `block.parentRoot` dialed forward through epoch transition
+   * - If parent is in same epoch -> Exact state at `block.parentRoot`
+   * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
    */
   async getPreState(
     block: allForks.BeaconBlock,

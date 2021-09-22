@@ -47,6 +47,10 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics = modules.metrics;
   }
 
+  /**
+   * Get the state to run with `block`.
+   * - State after `block.parentRoot` dialed forward to block.slot
+   */
   async getPreState(
     block: allForks.BeaconBlock,
     rCaller: RegenCaller
@@ -73,10 +77,15 @@ export class QueuedStateRegenerator implements IStateRegenerator {
         return checkpointState;
       }
     }
-    // Check the state cache
-    const state = this.stateCache.get(parentBlock.stateRoot);
-    if (state) {
-      return state;
+
+    // Check the state cache, only if the state doesn't need to go through an epoch transition.
+    // Otherwise the state transition may not be cached and wasted. Queue for regen since the
+    // work required will still be significant.
+    if (parentEpoch === blockEpoch) {
+      const state = this.stateCache.get(parentBlock.stateRoot);
+      if (state) {
+        return state;
+      }
     }
 
     // The state is not immediately available in the caches, enqueue the job
