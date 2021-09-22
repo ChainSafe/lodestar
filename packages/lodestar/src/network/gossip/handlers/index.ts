@@ -63,16 +63,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
       });
-      try {
-        await validateGossipBlock(config, chain, {
-          signedBlock,
-          reprocess: false,
-          prefinalized: false,
-          validSignatures: false,
-          validProposerSignature: false,
-        });
 
-        metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
+      try {
+        await validateGossipBlock(config, chain, signedBlock);
       } catch (e) {
         if (e instanceof BlockGossipError) {
           if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
@@ -93,29 +86,35 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         throw e;
       }
 
-      // Handler
-      try {
-        await chain.processBlock(signedBlock);
-        // Returns the delay between the start of `block.slot` and `current time`
-        const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
-        metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
-      } catch (e) {
-        if (e instanceof BlockError) {
-          switch (e.type.code) {
-            case BlockErrorCode.ALREADY_KNOWN:
-            case BlockErrorCode.PARENT_UNKNOWN:
-            case BlockErrorCode.PRESTATE_MISSING:
-              break;
-            default:
-              network.peerRpcScores.applyAction(
-                PeerId.createFromB58String(peerIdStr),
-                PeerAction.LowToleranceError,
-                "BadGossipBlock"
-              );
+      // Handler - MUST NOT `await`, to allow validation result to be propagated
+
+      metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+
+      // `validProposerSignature = true`, in gossip validation the proposer signature is checked
+      chain
+        .processBlock(signedBlock, {validProposerSignature: true})
+        .then(() => {
+          // Returns the delay between the start of `block.slot` and `current time`
+          const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+          metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
+        })
+        .catch((e) => {
+          if (e instanceof BlockError) {
+            switch (e.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+              case BlockErrorCode.PARENT_UNKNOWN:
+              case BlockErrorCode.PRESTATE_MISSING:
+                break;
+              default:
+                network.peerRpcScores.applyAction(
+                  PeerId.createFromB58String(peerIdStr),
+                  PeerAction.LowToleranceError,
+                  "BadGossipBlock"
+                );
+            }
           }
-        }
-        logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
-      }
+          logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+        });
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {

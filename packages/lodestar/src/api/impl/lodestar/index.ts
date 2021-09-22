@@ -3,7 +3,7 @@ import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
-import {BeaconChain, IBlockJob, IChainSegmentJob} from "../../../chain";
+import {BeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
@@ -106,14 +106,13 @@ export function getLodestarApi({
     async getBlockProcessorQueueItems() {
       return (chain as BeaconChain)["blockProcessor"].jobQueue.getItems().map((item) => {
         const [job] = item.args;
-        const blocks = (job as IChainSegmentJob).signedBlocks ?? [(job as IBlockJob).signedBlock];
+        const jobs = Array.isArray(job) ? job : [job];
         return {
-          blocks: blocks.map((block) => block.message.slot),
+          blockSlots: jobs.map((j) => j.block.message.slot),
           jobOpts: {
-            reprocess: job.reprocess,
-            prefinalized: job.prefinalized,
-            validProposerSignature: job.validProposerSignature,
-            validSignatures: job.validSignatures,
+            skipImportingAttestations: jobs[0].skipImportingAttestations,
+            validProposerSignature: jobs[0].validProposerSignature,
+            validSignatures: jobs[0].validSignatures,
           },
           addedTimeMs: item.addedTimeMs,
         };

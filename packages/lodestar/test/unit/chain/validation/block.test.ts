@@ -1,25 +1,24 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {BeaconChain, IBeaconChain, IBlockJob} from "../../../../src/chain";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
-import {getNewBlockJob} from "../../../utils/block";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {SinonStubFn} from "../../../utils/types";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache";
-import {ssz} from "@chainsafe/lodestar-types";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants";
 
 describe("gossip block validation", function () {
-  let job: IBlockJob;
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
   let regen: SinonStubbedInstance<StateRegenerator>;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;
+  let job: allForks.SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
   const block = ssz.phase0.BeaconBlock.defaultValue();
@@ -46,14 +45,14 @@ describe("gossip block validation", function () {
       seenBlockProposers: SeenBlockProposers;
     }).seenBlockProposers = new SeenBlockProposers();
 
-    job = getNewBlockJob({signature, message: block});
+    job = {signature, message: block};
   });
 
   it("FUTURE_SLOT", async function () {
     // Set the block slot to after the current clock
-    const job = getNewBlockJob({signature, message: {...block, slot: clockSlot + 1}});
+    const signedBlock = {signature, message: {...block, slot: clockSlot + 1}};
 
-    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.FUTURE_SLOT);
+    await expectRejectedWithLodestarError(validateGossipBlock(config, chain, signedBlock), BlockErrorCode.FUTURE_SLOT);
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", async function () {
@@ -75,7 +74,7 @@ describe("gossip block validation", function () {
 
   it("REPEAT_PROPOSAL", async function () {
     // Register the proposer as known
-    chain.seenBlockProposers.add(job.signedBlock.message.slot, job.signedBlock.message.proposerIndex);
+    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
 
     await expectRejectedWithLodestarError(validateGossipBlock(config, chain, job), BlockErrorCode.REPEAT_PROPOSAL);
   });

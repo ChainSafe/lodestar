@@ -1,28 +1,18 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
-import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
-import {IBeaconDb} from "../../db";
 import {JobItemQueue} from "../../util/queue";
 import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
-import {StateRegenerator} from "./regen";
+import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
 
 const REGEN_QUEUE_MAX_LEN = 256;
 
-type QueuedStateRegeneratorModules = {
-  config: IBeaconConfig;
-  emitter: ChainEventEmitter;
-  forkChoice: IForkChoice;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
-  db: IBeaconDb;
-  metrics: IMetrics | null;
+type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
 };
 

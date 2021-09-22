@@ -16,11 +16,11 @@ import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
-import {BlockProcessor} from "./blocks";
+import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
-import {IBeaconChain, ProcessBlockFlags, SSZObjectType} from "./interface";
+import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
@@ -128,7 +128,6 @@ export class BeaconChain implements IBeaconChain {
     const forkChoice = initializeForkChoice(config, transitionStore, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
-      emitter,
       forkChoice,
       stateCache,
       checkpointStateCache,
@@ -136,18 +135,23 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
-    this.blockProcessor = new BlockProcessor({
-      config,
-      forkChoice,
-      clock,
-      regen,
-      bls,
-      metrics,
-      emitter,
-      checkpointStateCache,
-      signal,
+    this.blockProcessor = new BlockProcessor(
+      {
+        clock,
+        bls,
+        regen,
+        db,
+        forkChoice,
+        stateCache,
+        checkpointStateCache,
+        emitter,
+        config,
+        logger,
+        metrics,
+      },
       opts,
-    });
+      signal
+    );
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -235,26 +239,12 @@ export class BeaconChain implements IBeaconChain {
     return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
   }
 
-  async processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: ProcessBlockFlags): Promise<void> {
-    const trusted = flags?.trusted ?? false;
-    return await this.blockProcessor.processBlockJob({
-      signedBlock,
-      reprocess: false,
-      prefinalized: flags?.prefinalized ?? false,
-      validSignatures: trusted,
-      validProposerSignature: trusted,
-    });
+  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
+    return await this.blockProcessor.processBlockJob({...flags, block});
   }
 
-  async processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: ProcessBlockFlags): Promise<void> {
-    const trusted = flags?.trusted ?? false;
-    return await this.blockProcessor.processChainSegment({
-      signedBlocks,
-      reprocess: false,
-      prefinalized: flags?.prefinalized ?? false,
-      validSignatures: trusted,
-      validProposerSignature: trusted,
-    });
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
+    return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
   }
 
   getHeadForkName(): ForkName {

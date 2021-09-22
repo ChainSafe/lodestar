@@ -184,7 +184,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
     // Not trusted, verify signatures
-    const flags = {prefinalized: true, trusted: false};
+    const flags = {skipImportingAttestations: true, trusted: false};
 
     if (this.opts?.disableProcessAsChainSegment) {
       // Should only be used for debugging or testing

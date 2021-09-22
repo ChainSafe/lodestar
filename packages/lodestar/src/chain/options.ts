@@ -1,4 +1,3 @@
-import {BlockProcessOpts} from "./blocks/process";
 import {ForkChoiceOpts} from "./forkChoice";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -8,6 +7,14 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir: string;
   };
+
+export type BlockProcessOpts = {
+  /**
+   * Do not use BLS batch verify to validate all block signatures at once.
+   * Will double processing times. Use only for debugging purposes.
+   */
+  disableBlsBatchVerify?: boolean;
+};
 
 export const defaultChainOptions: IChainOptions = {
   useSingleThreadVerifier: false,

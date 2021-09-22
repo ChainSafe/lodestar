@@ -1,8 +1,6 @@
 import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IBlockJob, IChainSegmentJob} from "../interface";
 import {GossipActionError} from "./gossipValidation";
 
 export enum BlockErrorCode {
@@ -51,7 +49,7 @@ export enum BlockErrorCode {
 }
 
 export type BlockErrorType =
-  | {code: BlockErrorCode.PRESTATE_MISSING}
+  | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
   | {code: BlockErrorCode.PARENT_UNKNOWN; parentRoot: RootHex}
   | {code: BlockErrorCode.FUTURE_SLOT; blockSlot: Slot; currentSlot: Slot}
   | {code: BlockErrorCode.STATE_ROOT_MISMATCH}
@@ -80,29 +78,19 @@ export type BlockErrorType =
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
 export class BlockError extends LodestarError<BlockErrorType> {
-  signedBlock: IBlockJob["signedBlock"];
-
-  constructor(signedBlock: IBlockJob["signedBlock"], type: BlockErrorType) {
+  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
     super(type);
-    this.signedBlock = signedBlock;
   }
 }
 
-export type ChainSegmentJobObject = {
-  job: IChainSegmentJob;
-  importedBlocks: number;
-};
-
 export class ChainSegmentError extends LodestarError<BlockErrorType> {
-  job: IChainSegmentJob;
   /**
    * Number of blocks successfully imported before the error
    */
   importedBlocks: number;
 
-  constructor({job, importedBlocks, ...type}: BlockErrorType & ChainSegmentJobObject) {
+  constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType, importedBlocks: number) {
     super(type);
-    this.job = job;
     this.importedBlocks = importedBlocks;
   }
 }

@@ -4,16 +4,15 @@ import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
-import {IBeaconChain, IBlockJob} from "../interface";
+import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
   chain: IBeaconChain,
-  blockJob: IBlockJob
+  signedBlock: allForks.SignedBeaconBlock
 ): Promise<void> {
-  const signedBlock = blockJob.signedBlock;
   const block = signedBlock.message;
   const blockSlot = block.slot;
 

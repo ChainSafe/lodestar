@@ -20,36 +20,7 @@ import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndPr
 import {IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
-
-export interface IProcessBlock {
-  /**
-   * Metadata: lets a block thats already been processed to be processed again.
-   * After processing, the block will not be stored in the database
-   */
-  reprocess: boolean;
-  /**
-   * blocks fed to the processor that occur before the best known finalized checkpoint
-   */
-  prefinalized: boolean;
-  /**
-   * Metadata: `true` if only the block proposer signature has been verified
-   */
-  validProposerSignature: boolean;
-  /**
-   * Metadata: `true` if all the signatures including the proposer signature have been verified
-   */
-  validSignatures: boolean;
-}
-
-export interface IChainSegmentJob extends IProcessBlock {
-  signedBlocks: allForks.SignedBeaconBlock[];
-}
-
-export interface IBlockJob extends IProcessBlock {
-  signedBlock: allForks.SignedBeaconBlock;
-}
-
-export type ProcessBlockFlags = {prefinalized?: boolean; trusted?: boolean};
+import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -111,9 +82,9 @@ export interface IBeaconChain {
   getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
 
   /** Process a block until complete */
-  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: ProcessBlockFlags): Promise<void>;
+  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: ProcessBlockFlags): Promise<void>;
+  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
 
   /** Get the ForkName from the head state */
   getHeadForkName(): ForkName;
