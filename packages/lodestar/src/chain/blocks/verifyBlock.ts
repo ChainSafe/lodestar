@@ -128,11 +128,11 @@ export async function verifyBlockStateTransition(
   // so the attester and proposer shufflings are correct.
   if (useBlsBatchVerify && !validSignatures) {
     const signatureSets = validProposerSignature
-      ? allForks.getAllBlockSignatureSetsExceptProposer(preState, block)
-      : allForks.getAllBlockSignatureSets(preState as CachedBeaconState<allForks.BeaconState>, block);
+      ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
+      : allForks.getAllBlockSignatureSets(postState as CachedBeaconState<allForks.BeaconState>, block);
 
     if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
-      throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, preState});
+      throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
     }
   }
 

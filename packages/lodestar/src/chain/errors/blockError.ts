@@ -61,7 +61,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE; preState: CachedBeaconState<allForks.BeaconState>}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconState<allForks.BeaconState>}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
       preState: CachedBeaconState<allForks.BeaconState>;
