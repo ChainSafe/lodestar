@@ -51,7 +51,7 @@ export class BeaconChain implements IBeaconChain {
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
-  emitter = new ChainEventEmitter();
+  emitter: ChainEventEmitter;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
@@ -79,11 +79,6 @@ export class BeaconChain implements IBeaconChain {
   protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
-  /**
-   * Internal event emitter is used internally to the chain to update chain state
-   * Once event have been handled internally, they are re-emitted externally for downstream consumers
-   */
-  protected internalEmitter = new ChainEventEmitter();
   private readonly archiver: Archiver;
   private abortController = new AbortController();
 
@@ -116,7 +111,7 @@ export class BeaconChain implements IBeaconChain {
     this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
     const signal = this.abortController.signal;
-    const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
+    const emitter = new ChainEventEmitter();
     const bls = opts.useSingleThreadVerifier
       ? new BlsSingleThreadVerifier()
       : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
@@ -159,6 +154,7 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
+    this.emitter = emitter;
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
