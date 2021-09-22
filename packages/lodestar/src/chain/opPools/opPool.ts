@@ -165,12 +165,36 @@ export class OpPool {
     return voluntaryExits;
   }
 
+  /** For beacon pool API */
+  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+    return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
+  }
+
+  /** For beacon pool API */
+  getAllProposerSlashings(): phase0.ProposerSlashing[] {
+    return Array.from(this.proposerSlashings.values());
+  }
+
+  /** For beacon pool API */
+  getAllVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return Array.from(this.voluntaryExits.values());
+  }
+
+  /**
+   * Prune all types of transactions given the latest head state
+   */
+  pruneAll(headState: allForks.BeaconState): void {
+    this.pruneAttesterSlashings(headState);
+    this.pruneProposerSlashings(headState);
+    this.pruneVoluntaryExits(headState);
+  }
+
   /**
    * Prune attester slashings for all slashed or withdrawn validators.
    */
-  pruneAttesterSlashings(headState: phase0.BeaconState): void {
+  private pruneAttesterSlashings(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
+    attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings.entries()) {
       // Slashings that don't slash any validators can be dropped
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
@@ -186,19 +210,19 @@ export class OpPool {
       }
 
       // All intersecting indices are not slashable
-      // PRUNE
+      this.attesterSlashings.delete(key);
     }
   }
 
   /**
    * Prune proposer slashings for validators which are exited in the finalized epoch.
    */
-  pruneProposerSlashings(headState: phase0.BeaconState): void {
+  private pruneProposerSlashings(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    for (const proposerSlashing of this.proposerSlashings.values()) {
+    for (const [key, proposerSlashing] of this.proposerSlashings.entries()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
       if (headState.validators[index].exitEpoch <= finalizedEpoch) {
-        // PRUNE
+        this.proposerSlashings.delete(key);
       }
     }
   }
@@ -207,29 +231,14 @@ export class OpPool {
    * Call after finalizing
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
-  pruneVoluntaryExits(headState: phase0.BeaconState): void {
+  private pruneVoluntaryExits(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    for (const voluntaryExit of this.voluntaryExits.values()) {
+    for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
       // TODO: Improve this simplistic condition
       if (voluntaryExit.message.epoch <= finalizedEpoch) {
-        // PRUNE
+        this.voluntaryExits.delete(key);
       }
     }
-  }
-
-  /** For beacon pool API */
-  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
-    return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
-  }
-
-  /** For beacon pool API */
-  getAllProposerSlashings(): phase0.ProposerSlashing[] {
-    return Array.from(this.proposerSlashings.values());
-  }
-
-  /** For beacon pool API */
-  getAllVoluntaryExits(): phase0.SignedVoluntaryExit[] {
-    return Array.from(this.voluntaryExits.values());
   }
 }
 
