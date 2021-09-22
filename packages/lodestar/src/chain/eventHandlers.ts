@@ -240,7 +240,10 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
   }
 
   // err type data may contain CachedBeaconState which is too much to log
-  this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code});
+  const slimError = new Error();
+  slimError.message = err.message;
+  slimError.stack = err.stack;
+  this.logger.error("Block error", {slot: err.signedBlock.message.slot, errCode: err.type.code}, err);
 
   if (err.type.code === BlockErrorCode.INVALID_SIGNATURE) {
     const {signedBlock} = err;
