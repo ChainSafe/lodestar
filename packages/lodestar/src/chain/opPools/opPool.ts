@@ -4,6 +4,7 @@ import {
   allForks,
   getAttesterSlashableIndices,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -44,16 +45,25 @@ export class OpPool {
   }
 
   async toPersisted(db: IBeaconDb): Promise<void> {
-    // TODO: Only write new content
     await Promise.all([
-      db.attesterSlashing.batchPut(
+      persistDiff(
+        db.attesterSlashing,
         Array.from(this.attesterSlashings.entries()).map(([key, value]) => ({
           key: fromHexString(key),
           value: value.attesterSlashing,
-        }))
+        })),
+        toHexString
       ),
-      db.proposerSlashing.batchPut(Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value}))),
-      db.voluntaryExit.batchPut(Array.from(this.voluntaryExits.entries()).map(([key, value]) => ({key, value}))),
+      persistDiff(
+        db.proposerSlashing,
+        Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value})),
+        (index) => index
+      ),
+      persistDiff(
+        db.voluntaryExit,
+        Array.from(this.voluntaryExits.entries()).map(([key, value]) => ({key, value})),
+        (index) => index
+      ),
     ]);
   }
 
@@ -225,4 +235,35 @@ export class OpPool {
 
 function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean {
   return !validator.slashed && validator.activationEpoch <= epoch && epoch < validator.withdrawableEpoch;
+}
+
+/**
+ * Persist target items `items` in `dbRepo` doing minimum put and delete writes.
+ * Reads all keys in repository to compute the diff between current persisted data and target data.
+ */
+async function persistDiff<K extends Id, V>(
+  dbRepo: Repository<K, V>,
+  items: {key: K; value: V}[],
+  serializeKey: (key: K) => number | string
+): Promise<void> {
+  const persistedKeys = await dbRepo.keys();
+  const itemsToPut: {key: K; value: V}[] = [];
+  const keysToDelete: K[] = [];
+
+  const persistedKeysSerialized = new Set(persistedKeys.map(serializeKey));
+  for (const item of items) {
+    if (!persistedKeysSerialized.has(serializeKey(item.key))) {
+      itemsToPut.push(item);
+    }
+  }
+
+  const targetKeysSerialized = new Set(items.map((item) => serializeKey(item.key)));
+  for (const persistedKey of persistedKeys) {
+    if (!targetKeysSerialized.has(serializeKey(persistedKey))) {
+      keysToDelete.push(persistedKey);
+    }
+  }
+
+  if (itemsToPut.length > 0) await dbRepo.batchPut(itemsToPut);
+  if (keysToDelete.length > 0) await dbRepo.batchDelete(keysToDelete);
 }
