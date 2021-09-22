@@ -10,12 +10,11 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
-import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
+import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {RegenCaller} from "./regen";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ListenerType<T> = [T] extends [(...args: infer U) => any] ? U : [T] extends [void] ? [] : [T];
 type AnyCallback = () => Promise<void>;
 
 /**
@@ -26,16 +25,10 @@ type AnyCallback = () => Promise<void>;
 function wrapHandler<
   Event extends keyof IChainEvents = keyof IChainEvents,
   Callback extends IChainEvents[Event] = IChainEvents[Event]
->(
-  event: Event,
-  emitter: ChainEventEmitter,
-  logger: ILogger,
-  handler: (...args: Parameters<Callback>) => Promise<void> | void
-) {
+>(event: Event, logger: ILogger, handler: (...args: Parameters<Callback>) => Promise<void> | void) {
   return async (...args: Parameters<Callback>): Promise<void> => {
     try {
       await handler(...args);
-      emitter.emit(event, ...((args as unknown) as ListenerType<Callback>));
     } catch (e) {
       logger.error("Error handling event", {event}, e as Error);
     }
@@ -45,14 +38,6 @@ function wrapHandler<
 /**
  * Attach ChainEventEmitter event handlers
  * Listen on `signal` to remove event handlers
- *
- * Events are handled in the following way:
- * Because the chain relies on event handlers to perform side effects (eg: cache/db updates),
- * We require the chain's event handlers to run and complete in full before external event handlers are allowed to run.
- *
- * This is accomplished by maintaining a separate `chain.internalEmitter` and `chain.emitter`.
- * Chain submodules emit events on the `internalEmitter`, where chain event handlers are listening.
- * Once a chain event emitter is completed, the same event, with the same args, is emitted on `chain.emitter`, for consumption by external parties.
  */
 export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void {
   const handlersObj: {
@@ -80,9 +65,9 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
 
   for (const [eventStr, handler] of Object.entries(handlersObj)) {
     const event = eventStr as ChainEvent;
-    const wrappedHandler = wrapHandler(event, emitter, logger, handler.bind(this) as AnyCallback) as AnyCallback;
-    this.internalEmitter.on(event, wrappedHandler);
-    onAbort.push(() => this.internalEmitter.off(event, wrappedHandler));
+    const wrappedHandler = wrapHandler(event, logger, handler.bind(this) as AnyCallback) as AnyCallback;
+    emitter.on(event, wrappedHandler);
+    onAbort.push(() => emitter.off(event, wrappedHandler));
   }
 
   signal.addEventListener(
@@ -132,13 +117,13 @@ export function onCheckpoint(
     const justifiedEpoch = justifiedCheckpoint.epoch;
     const preJustifiedEpoch = parentBlockSummary.justifiedEpoch;
     if (justifiedEpoch > preJustifiedEpoch) {
-      this.internalEmitter.emit(ChainEvent.justified, justifiedCheckpoint, state);
+      this.emitter.emit(ChainEvent.justified, justifiedCheckpoint, state);
     }
     const finalizedCheckpoint = state.finalizedCheckpoint;
     const finalizedEpoch = finalizedCheckpoint.epoch;
     const preFinalizedEpoch = parentBlockSummary.finalizedEpoch;
     if (finalizedEpoch > preFinalizedEpoch) {
-      this.internalEmitter.emit(ChainEvent.finalized, finalizedCheckpoint, state);
+      this.emitter.emit(ChainEvent.finalized, finalizedCheckpoint, state);
     }
   }
 }
