@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {readonlyValues} from "@chainsafe/ssz";
+import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getEffectiveBalances} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -70,13 +70,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const justifiedBalances = shouldUpdateJustifiedBalances
     ? getJustifiedBalancesSync(chain.checkpointStateCache, justifiedCheckpoint)
     : undefined;
-
-  // TODO: Use regen to get the justified state. Send the block to the forkChoice immediately, and the balances
-  // latter in case regen takes too much time.
-  if (shouldUpdateJustifiedBalances && !justifiedBalances) {
-    const cpStr = `${justifiedCheckpoint.root}:${justifiedCheckpoint.epoch}`;
-    throw Error(`State not available for justified checkpoint ${cpStr}`);
-  }
 
   chain.forkChoice.onBlock(block.message, postState, {
     justifiedBalances,
@@ -156,6 +149,14 @@ function getJustifiedBalancesSync(
   checkpointStateCache: CheckpointStateCache,
   justifiedCheckpoint: phase0.Checkpoint
 ): number[] | undefined {
-  const justifiedState = checkpointStateCache.get(toCheckpointHex(justifiedCheckpoint));
-  return justifiedState ? getEffectiveBalances(justifiedState) : undefined;
+  const checkpointHex = toCheckpointHex(justifiedCheckpoint);
+  const state = checkpointStateCache.get(checkpointHex);
+  if (state) {
+    return getEffectiveBalances(state);
+  } else {
+    // TODO: Use regen to get the justified state. Send the block to the forkChoice immediately, and the balances
+    // latter in case regen takes too much time.
+    const cpStr = `${checkpointHex.rootHex}:${checkpointHex.epoch}`;
+    throw Error(`State not available for justified checkpoint ${cpStr}`);
+  }
 }
