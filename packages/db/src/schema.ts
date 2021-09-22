@@ -61,6 +61,7 @@ export enum Bucket {
   altair_lightClientSyncCommitteeProof = 35, // SyncPeriod ->
 
   merge_totalTerminalDifficulty = 40, // Single item -> Uint256
+  validator_metaData = 41,
 }
 
 export enum Key {

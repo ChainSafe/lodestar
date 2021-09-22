@@ -129,17 +129,18 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     fs.mkdirSync(dbPath, {recursive: true});
 
     const api = args.server === "memory" ? node.api : args.server;
-    const slashingProtection = new SlashingProtection({
+    const dbOps = {
       config: config,
       controller: new LevelDbController({name: dbPath}, {logger}),
-    });
+    };
+    const slashingProtection = new SlashingProtection(dbOps);
 
     const controller = new AbortController();
     onGracefulShutdownCbs.push(async () => controller.abort());
 
     // Initailize genesis once for all validators
     const validator = await Validator.initializeFromBeaconNode({
-      config,
+      dbOps,
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),

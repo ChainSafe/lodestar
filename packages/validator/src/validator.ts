@@ -1,7 +1,8 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
+import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
@@ -14,12 +15,14 @@ import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
-import {assertEqualParams, getLoggerVc} from "./util";
+import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker";
+import {MetaDataRepository} from ".";
+import {toHexString} from "@chainsafe/ssz";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
-  config: IChainForkConfig;
+  dbOps: IDatabaseApiOptions;
   api: Api | string;
   secretKeys: SecretKey[];
   logger: ILogger;
@@ -50,8 +53,8 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
-    const {config: chainForkConfig, logger, slashingProtection, secretKeys, graffiti} = opts;
-    const config = createIBeaconConfig(chainForkConfig, genesis.genesisValidatorsRoot);
+    const {dbOps, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
       typeof opts.api === "string"
@@ -80,17 +83,34 @@ export class Validator {
 
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(opts: ValidatorOptions, signal?: AbortSignal): Promise<Validator> {
+    const {config} = opts.dbOps;
     const api =
       typeof opts.api === "string"
-        ? getClient(opts.config, {baseUrl: opts.api, timeoutMs: 12000, getAbortSignal: () => signal})
+        ? getClient(config, {baseUrl: opts.api, timeoutMs: 12000, getAbortSignal: () => signal})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);
     opts.logger.info("Genesis available");
 
     const {data: nodeParams} = await api.config.getSpec();
-    assertEqualParams(opts.config, nodeParams);
+    assertEqualParams(config, nodeParams);
     opts.logger.info("Verified node and validator have same config");
+    const metaDataRepository = new MetaDataRepository(opts.dbOps);
+    const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
+    if (genesisValidatorsRoot) {
+      if (!ssz.Root.equals(genesisValidatorsRoot, genesis.genesisValidatorsRoot)) {
+        // this happens when the existing validator db serves another network before
+        opts.logger.error("Not the same genesisValidatorRoot", {
+          expected: toHexString(genesis.genesisValidatorsRoot),
+          actual: toHexString(genesisValidatorsRoot),
+        });
+        throw new NotEqualParamsError("Not the same genesisValidatorRoot");
+      }
+      opts.logger.info("Verified node and validator have same genesisValidatorRoot");
+    } else {
+      await metaDataRepository.setGenesisValidatorsRoot(genesis.genesisValidatorsRoot);
+      opts.logger.info("Persisted genesisValidatorRoot", toHexString(genesis.genesisValidatorsRoot));
+    }
 
     return new Validator(opts, genesis);
   }

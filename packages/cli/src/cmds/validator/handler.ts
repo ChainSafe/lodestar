@@ -46,15 +46,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   onGracefulShutdownCbs.push(async () => controller.abort());
 
   const api = getClient(config, {baseUrl: args.server});
-  const slashingProtection = new SlashingProtection({
+  const dbOps = {
     config: config,
     controller: new LevelDbController({name: dbPath}, {logger}),
-  });
+  };
+  const slashingProtection = new SlashingProtection(dbOps);
   const validator = await Validator.initializeFromBeaconNode(
-    {config, slashingProtection, api, logger, secretKeys, graffiti},
+    {dbOps, slashingProtection, api, logger, secretKeys, graffiti},
     controller.signal
   );
-
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
 }
