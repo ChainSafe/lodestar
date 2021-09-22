@@ -13,7 +13,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
-import {IStateRegenerator, RegenCaller} from "./interface";
+import {RegenCaller, IStateRegeneratorInternal} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -31,13 +31,16 @@ export type RegenModules = {
 /**
  * Regenerates states that have already been processed by the fork choice
  */
-export class StateRegenerator implements IStateRegenerator {
+export class StateRegenerator implements IStateRegeneratorInternal {
   constructor(private readonly modules: RegenModules) {}
 
   /**
    * Get the state to run with `block`. May be:
    * - If parent is in same epoch -> Exact state at `block.parentRoot`
    * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
+   *
+   * Used for:
+   * - Block verification (processBlock + processChainSegment)
    */
   async getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {
     const parentBlock = this.modules.forkChoice.getBlock(block.parentRoot);

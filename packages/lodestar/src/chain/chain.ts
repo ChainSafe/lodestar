@@ -58,8 +58,6 @@ export class BeaconChain implements IBeaconChain {
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
@@ -153,6 +151,13 @@ export class BeaconChain implements IBeaconChain {
 
     this.reprocessController = new ReprocessController(this.metrics);
 
+    // On start, the initial anchor state is added to the state cache + the forkchoice.
+    // Since this state and its block is the only one in the forkchoice, it becomes the head.
+    const head = forkChoice.getHead();
+    regen.setHead(head, cachedState).catch((e) => {
+      this.logger.error("Error setting head state on start", {slot: head.slot, stateRoot: head.stateRoot}, e);
+    });
+
     this.blockProcessor = new BlockProcessor(
       {
         clock,
@@ -162,9 +167,6 @@ export class BeaconChain implements IBeaconChain {
         eth1,
         db,
         forkChoice,
-        lightClientServer,
-        stateCache,
-        checkpointStateCache,
         emitter,
         config,
         logger,
@@ -178,12 +180,10 @@ export class BeaconChain implements IBeaconChain {
     this.clock = clock;
     this.regen = regen;
     this.bls = bls;
-    this.checkpointStateCache = checkpointStateCache;
-    this.stateCache = stateCache;
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal);
+    this.archiver = new Archiver(db, forkChoice, checkpointStateCache, stateCache, emitter, logger, signal);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
@@ -191,8 +191,6 @@ export class BeaconChain implements IBeaconChain {
 
   close(): void {
     this.abortController.abort();
-    this.stateCache.clear();
-    this.checkpointStateCache.clear();
   }
 
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -210,12 +208,9 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconStateAllForks {
-    // head state should always exist
-    const head = this.forkChoice.getHead();
-    const headState =
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-    if (!headState) throw Error("headState does not exist");
+  getHeadState(): CachedBeaconState<allForks.BeaconState> {
+    const headState = this.regen.getHeadState();
+    if (!headState) throw Error("headState not available");
     return headState;
   }
 

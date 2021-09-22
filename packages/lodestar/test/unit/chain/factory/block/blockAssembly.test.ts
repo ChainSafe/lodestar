@@ -11,8 +11,8 @@ import {BeaconChain} from "../../../../../src/chain";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
-import {StateRegenerator} from "../../../../../src/chain/regen";
-import {Eth1ForBlockProduction} from "../../../../../src/eth1";
+import {QueuedStateRegenerator} from "../../../../../src/chain/regen";
+import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
 import {generateProtoBlock, generateEmptyBlock} from "../../../../utils/block";
 import {generateCachedState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
@@ -24,7 +24,7 @@ describe("block assembly", function () {
   let assembleBodyStub: SinonStubFn<typeof blockBodyAssembly["assembleBody"]>,
     chainStub: StubbedChain,
     forkChoiceStub: SinonStubbedInstance<ForkChoice>,
-    regenStub: SinonStubbedInstance<StateRegenerator>,
+    regenStub: SinonStubbedInstance<QueuedStateRegenerator>,
     processBlockStub: SinonStubFn<typeof processBlock["processBlock"]>,
     beaconDB: StubbedBeaconDb;
 
@@ -35,7 +35,7 @@ describe("block assembly", function () {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     forkChoiceStub = chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.clock = sandbox.createStubInstance(LocalClock);
-    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
+    regenStub = chainStub.regen = sandbox.createStubInstance(QueuedStateRegenerator);
 
     beaconDB = new StubbedBeaconDb();
   });

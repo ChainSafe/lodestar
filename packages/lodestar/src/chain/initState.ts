@@ -189,7 +189,7 @@ export function restoreStateCaches(
   const cachedBeaconState = createCachedBeaconState(config, state);
 
   // store state in state caches
-  void stateCache.add(cachedBeaconState);
+  stateCache.add(cachedBeaconState);
   checkpointStateCache.add(checkpoint, cachedBeaconState);
   return cachedBeaconState;
 }

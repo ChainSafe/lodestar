@@ -13,10 +13,10 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {ByteVector, fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
-import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
 import {ApiError, ValidationError} from "../../errors";
 import {sleep, assert} from "@chainsafe/lodestar-utils";
+import {IStateRegenerator} from "../../../../chain/regen";
 
 type ResolveStateIdOpts = {
   /**
@@ -34,7 +34,7 @@ export async function resolveStateId(
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState> {
-  const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
+  const state = await resolveStateIdOrNull(config, chain.regen, chain.forkChoice, db, stateId, opts);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
   }
@@ -44,18 +44,19 @@ export async function resolveStateId(
 
 async function resolveStateIdOrNull(
   config: IChainForkConfig,
-  chain: IBeaconChain,
+  regen: IStateRegenerator,
+  forkChoice: IForkChoice,
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
-    return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
+    return await stateByName(db, regen, forkChoice, stateId);
   }
 
   if (stateId.startsWith("0x")) {
-    return await stateByRoot(db, chain.stateCache, stateId);
+    return await stateByRoot(db, regen, stateId);
   }
 
   // state id must be slot
@@ -63,7 +64,7 @@ async function resolveStateIdOrNull(
   if (isNaN(slot) && isNaN(slot - 0)) {
     throw new ValidationError(`Invalid state id '${stateId}'`, "stateId");
   }
-  return await stateBySlot(config, db, chain.stateCache, chain.forkChoice, slot, opts);
+  return await stateBySlot(config, db, regen, forkChoice, slot, opts);
 }
 
 /**
@@ -114,19 +115,19 @@ export function toValidatorResponse(
 
 async function stateByName(
   db: IBeaconDb,
-  stateCache: StateContextCache,
+  regen: IStateRegenerator,
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
 ): Promise<allForks.BeaconState | null> {
   switch (stateId) {
     case "head":
-      return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
+      return regen.getHeadState();
     case "genesis":
       return await db.stateArchive.get(GENESIS_SLOT);
     case "finalized":
-      return stateCache.get(forkChoice.getFinalizedBlock().stateRoot) ?? null;
+      return regen.getStateSync(forkChoice.getFinalizedBlock().stateRoot);
     case "justified":
-      return stateCache.get(forkChoice.getJustifiedBlock().stateRoot) ?? null;
+      return regen.getStateSync(forkChoice.getJustifiedBlock().stateRoot);
     default:
       throw new Error("not a named state id");
   }
@@ -134,12 +135,12 @@ async function stateByName(
 
 async function stateByRoot(
   db: IBeaconDb,
-  stateCache: StateContextCache,
+  regen: IStateRegenerator,
   stateId: routes.beacon.StateId
 ): Promise<allForks.BeaconState | null> {
   if (stateId.startsWith("0x")) {
     const stateRoot = stateId;
-    const cachedStateCtx = stateCache.get(stateRoot);
+    const cachedStateCtx = regen.getStateSync(stateRoot);
     if (cachedStateCtx) return cachedStateCtx;
     return await db.stateArchive.getByRoot(fromHexString(stateRoot));
   } else {
@@ -150,14 +151,14 @@ async function stateByRoot(
 async function stateBySlot(
   config: IChainForkConfig,
   db: IBeaconDb,
-  stateCache: StateContextCache,
+  regen: IStateRegenerator,
   forkChoice: IForkChoice,
   slot: Slot,
   opts?: ResolveStateIdOpts
 ): Promise<allForks.BeaconState | null> {
   const blockSummary = forkChoice.getCanonicalBlockAtSlot(slot);
   if (blockSummary) {
-    const state = stateCache.get(blockSummary.stateRoot);
+    const state = regen.getStateSync(blockSummary.stateRoot);
     if (state) {
       return state;
     }

@@ -122,11 +122,11 @@ export function getLodestarApi({
     },
 
     async getStateCacheItems() {
-      return (chain as BeaconChain)["stateCache"].dumpSummary();
+      return (chain.regen as QueuedStateRegenerator)["stateCache"].dumpSummary();
     },
 
     async getCheckpointStateCacheItems() {
-      return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
+      return (chain.regen as QueuedStateRegenerator)["checkpointStateCache"].dumpSummary();
     },
 
     async runGC() {
@@ -136,8 +136,8 @@ export function getLodestarApi({
     },
 
     async dropStateCache() {
-      chain.stateCache.clear();
-      chain.checkpointStateCache.clear();
+      (chain.regen as QueuedStateRegenerator)["stateCache"].clear();
+      (chain.regen as QueuedStateRegenerator)["checkpointStateCache"].clear();
     },
 
     async connectPeer(peerIdStr, multiaddrStrs) {

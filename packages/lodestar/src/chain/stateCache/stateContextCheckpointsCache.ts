@@ -6,7 +6,7 @@ import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
 import {MapDef} from "../../util/map";
 
-type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
+export type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
 
 /**

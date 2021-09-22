@@ -1,11 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconStateAllForks, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
+import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {CheckpointHex, CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {JobItemQueue} from "../../util/queue";
-import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
+import {IStateRegenerator, IStateRegeneratorInternal, RegenCaller, RegenFnName} from "./interface";
 import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
@@ -16,8 +16,8 @@ type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
 };
 
-type RegenRequestKey = keyof IStateRegenerator;
-type RegenRequestByKey = {[K in RegenRequestKey]: {key: K; args: Parameters<IStateRegenerator[K]>}};
+type RegenRequestKey = keyof IStateRegeneratorInternal;
+type RegenRequestByKey = {[K in RegenRequestKey]: {key: K; args: Parameters<IStateRegeneratorInternal[K]>}};
 export type RegenRequest = RegenRequestByKey[RegenRequestKey];
 
 /**
@@ -33,6 +33,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private stateCache: StateContextCache;
   private checkpointStateCache: CheckpointStateCache;
   private metrics: IMetrics | null;
+
+  private headStateRootHex: string | null = null;
+  private headState: CachedBeaconState<allForks.BeaconState> | null = null;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
@@ -123,6 +126,53 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     // The state is not immediately available in the cache, enqueue the job
     this.metrics?.regenFnQueuedTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
     return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
+  }
+
+  getHeadState(): CachedBeaconState<allForks.BeaconState> | null {
+    return (
+      this.headState ||
+      // Fallback, check if head state is in cache
+      (this.headStateRootHex ? this.stateCache.get(this.headStateRootHex) : null)
+    );
+  }
+
+  setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void {
+    this.headStateRootHex = head.stateRoot;
+
+    const headState =
+      potentialHeadState && head.stateRoot === toHexString(potentialHeadState.hashTreeRoot())
+        ? potentialHeadState
+        : this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
+
+    // State is available syncronously =D
+    // Note: almost always the headState should be in the cache since it should be from a block recently processed
+    if (headState) {
+      this.headState = headState;
+      return;
+    }
+
+    this.headState = null;
+    this.getState(head.stateRoot, RegenCaller.produceBlock)
+      .then((state) => {
+        this.headState = state;
+      })
+      .catch((e) => {
+        throw Error(`Head state slot ${head.slot} root ${head.stateRoot} not available in caches`);
+      });
+    // TODO: Use regen to get the state if not available
+    if (!this.headState) throw Error(`Head state slot ${head.slot} root ${head.stateRoot} not available in caches`);
+  }
+
+  addPostState(postState: CachedBeaconState<allForks.BeaconState>): void {
+    this.stateCache.add(postState);
+  }
+
+  getCheckpointStateSync(cp: CheckpointHex): CachedBeaconState<allForks.BeaconState> | null {
+    return this.checkpointStateCache.get(cp);
+  }
+
+  getStateSync(stateRootHex: string): CachedBeaconState<allForks.BeaconState> | null {
+    return this.stateCache.get(stateRootHex);
   }
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconStateAllForks> => {
