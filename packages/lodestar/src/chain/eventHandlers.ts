@@ -166,6 +166,12 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
   this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
+  // TODO: Improve using regen here
+  const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+  if (headState) {
+    this.opPool.pruneAll(headState);
+  }
+
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
