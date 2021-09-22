@@ -24,7 +24,7 @@ describe("beacon api impl - states", function () {
     api = getBeaconStateApi({
       config,
       chain: server.chainStub,
-      db: new StubbedBeaconDb(sinon, config),
+      db: new StubbedBeaconDb(config),
     });
   });
 

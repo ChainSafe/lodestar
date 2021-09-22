@@ -21,7 +21,7 @@ use(chaiAsPromised);
 
 describe("beacon state api utils", function () {
   describe("resolve state id", function () {
-    const dbStub = new StubbedBeaconDb(sinon, config);
+    const dbStub = new StubbedBeaconDb(config);
     const otherRoot = toHexString(Buffer.alloc(32, 1));
 
     it("resolve head state id - success", async function () {

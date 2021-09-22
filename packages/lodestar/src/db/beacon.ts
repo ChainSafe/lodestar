@@ -2,7 +2,6 @@
  * @module db/api/beacon
  */
 
-import {allForks} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions, IDbMetrics} from "@chainsafe/lodestar-db";
 import {IBeaconDb} from "./interface";
 import {
@@ -82,18 +81,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     );
     // merge
     this.totalTerminalDifficulty = new TotalTerminalDifficulty(this.config, this.db, this.metrics);
-  }
-
-  /**
-   * Remove stored operations based on a newly processed block
-   */
-  async processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void> {
-    await Promise.all([
-      this.voluntaryExit.batchRemove(signedBlock.message.body.voluntaryExits),
-      this.depositEvent.deleteOld(signedBlock.message.body.eth1Data.depositCount),
-      this.proposerSlashing.batchRemove(signedBlock.message.body.proposerSlashings),
-      this.attesterSlashing.batchRemove(signedBlock.message.body.attesterSlashings),
-    ]);
   }
 
   async stop(): Promise<void> {

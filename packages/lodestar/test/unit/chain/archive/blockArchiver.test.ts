@@ -10,14 +10,13 @@ import {testLogger} from "../../../utils/logger";
 import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks";
 
 describe("block archiver task", function () {
-  const sandbox = sinon.createSandbox();
   const logger = testLogger();
 
   let dbStub: StubbedBeaconDb;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
 
   beforeEach(function () {
-    dbStub = new StubbedBeaconDb(sandbox);
+    dbStub = new StubbedBeaconDb();
     forkChoiceStub = sinon.createStubInstance(ForkChoice);
   });
 

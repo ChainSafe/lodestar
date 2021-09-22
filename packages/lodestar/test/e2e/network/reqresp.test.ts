@@ -1,4 +1,3 @@
-import sinon from "sinon";
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "@chainsafe/abort-controller";
@@ -43,7 +42,7 @@ describe("network / ReqResp", function () {
   const state = generateState();
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
   const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
-  const db = new StubbedBeaconDb(sinon);
+  const db = new StubbedBeaconDb();
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {

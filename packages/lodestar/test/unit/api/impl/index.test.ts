@@ -25,7 +25,7 @@ export function setupApiImplTestServer(): ApiImplTestModules {
   const forkChoiceStub = sinon.createStubInstance(ForkChoice);
   const chainStub = sinon.createStubInstance(BeaconChain);
   const syncStub = sinon.createStubInstance(BeaconSync);
-  const dbStub = new StubbedBeaconDb(sinon, config);
+  const dbStub = new StubbedBeaconDb(config);
   const networkStub = sinon.createStubInstance(Network);
   const blockApi = getBeaconBlockApi({
     chain: chainStub,
