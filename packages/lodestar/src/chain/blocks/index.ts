@@ -1,14 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {AbortSignal} from "@chainsafe/abort-controller";
-
+import {allForks} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEvent} from "../emitter";
 import {JobItemQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
-
 import {verifyBlock, VerifyBlockModules} from "./verifyBlock";
 import {importBlock, ImportBlockModules} from "./importBlock";
 import {assertLinearChainSegment} from "./utils/chainSegment";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {BlockProcessOpts} from "../options";
 import {PartiallyVerifiedBlock} from "./types";
 export {PartiallyVerifiedBlockFlags} from "./types";
@@ -66,10 +65,7 @@ export async function processBlock(
     await importBlock(modules, fullyVerifiedBlock);
   } catch (e) {
     // above functions should only throw BlockError
-    const err =
-      e instanceof BlockError
-        ? e
-        : new BlockError(partiallyVerifiedBlock.block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+    const err = getBlockError(e, partiallyVerifiedBlock.block);
     modules.emitter.emit(ChainEvent.errorBlock, err);
 
     throw err;
@@ -92,20 +88,19 @@ export async function processChainSegment(
   for (const partiallyVerifiedBlock of partiallyVerifiedBlocks) {
     try {
       // TODO: Re-use preState
-      await processBlock(modules, partiallyVerifiedBlock, opts);
+      const fullyVerifiedBlock = await verifyBlock(modules, partiallyVerifiedBlock, opts);
+      await importBlock(modules, fullyVerifiedBlock);
       importedBlocks++;
 
       // this avoids keeping our node busy processing blocks
       await sleep(0);
     } catch (e) {
-      if (e instanceof BlockError) {
-        switch ((e as BlockError).type.code) {
-          // If the block is already known, simply ignore this block.
-          case BlockErrorCode.ALREADY_KNOWN:
-            continue;
+      if (
+        e instanceof BlockError &&
+        // If the block is already known, simply ignore this block.
+        (e.type.code === BlockErrorCode.ALREADY_KNOWN ||
           // If the block is the genesis block, simply ignore this block.
-          case BlockErrorCode.GENESIS_BLOCK:
-            continue;
+          e.type.code === BlockErrorCode.GENESIS_BLOCK ||
           // If the block is is for a finalized slot, simply ignore this block.
           //
           // The block is either:
@@ -119,21 +114,30 @@ export async function processChainSegment(
           // In the case of (2), skipping the block is valid since we should never import it.
           // However, we will potentially get a `ParentUnknown` on a later block. The sync
           // protocol will need to ensure this is handled gracefully.
-          case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
-            continue;
-
-          // Any other error whilst determining if the block was invalid, return that
-          // error.
-          default:
-            throw new ChainSegmentError(e.signedBlock, e.type, importedBlocks);
-        }
+          e.type.code === BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT)
+      ) {
+        continue;
       }
 
-      throw new ChainSegmentError(
-        partiallyVerifiedBlock.block,
-        {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error},
-        importedBlocks
-      );
+      const err = getBlockError(e, partiallyVerifiedBlock.block);
+      modules.emitter.emit(ChainEvent.errorBlock, err);
+
+      // Convert to ChainSegmentError to append `importedBlocks` data
+      const chainSegmentError = new ChainSegmentError(partiallyVerifiedBlock.block, err.type, importedBlocks);
+      chainSegmentError.stack = err.stack;
+      throw chainSegmentError;
     }
+  }
+}
+
+function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
+  if (e instanceof BlockError) {
+    return e;
+  } else if (e instanceof Error) {
+    const blockError = new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
+    blockError.stack = e.stack;
+    return blockError;
+  } else {
+    return new BlockError(block, {code: BlockErrorCode.BEACON_CHAIN_ERROR, error: e as Error});
   }
 }
