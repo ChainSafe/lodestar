@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
@@ -10,7 +10,6 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
-import {IBlockJob} from "./interface";
 import {ChainEvent, ChainEventEmitter, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {RegenCaller} from "./regen";
@@ -97,7 +96,10 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
 
 export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> {
   this.logger.verbose("Clock slot", {slot});
+
+  // CRITICAL UPDATE
   this.forkChoice.updateTime(slot);
+
   this.metrics?.clockSlot.set(slot);
 
   this.attestationPool.prune(slot);
@@ -121,7 +123,6 @@ export function onCheckpoint(
   state: CachedBeaconState<allForks.BeaconState>
 ): void {
   this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp));
-  this.checkpointStateCache.add(cp, state);
 
   this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
   const parentBlockSummary = this.forkChoice.getBlock(state.latestBlockHeader.parentRoot);
@@ -217,43 +218,13 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 export async function onBlock(
   this: BeaconChain,
   block: allForks.SignedBeaconBlock,
-  postState: CachedBeaconState<allForks.BeaconState>,
-  job: IBlockJob
+  postState: CachedBeaconState<allForks.BeaconState>
 ): Promise<void> {
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
-
-  // MUST happen before any other block is processed
-  // This adds the state necessary to process the next block
-  this.stateCache.add(postState);
-  if (!job.reprocess) {
-    await this.db.block.add(block);
-  }
-
-  // Only process attestations in response to an non-prefinalized block
-  if (!job.prefinalized) {
-    const attestations = Array.from(readonlyValues(block.message.body.attestations));
-
-    for (const attestation of attestations) {
-      try {
-        const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        this.forkChoice.onAttestation(indexedAttestation);
-        this.emitter.emit(ChainEvent.attestation, attestation);
-
-        this.metrics?.registerAttestationInBlock(indexedAttestation, block.message);
-      } catch (e) {
-        this.logger.error("Error processing attestation from block", {slot: block.message.slot}, e as Error);
-      }
-    }
-  }
-
-  // if reprocess job, don't have to reprocess block operations or pending blocks
-  if (!job.reprocess) {
-    await this.db.processBlockOperations(block);
-  }
 
   // Only after altair
   if (computeEpochAtSlot(block.message.slot) >= this.config.ALTAIR_FORK_EPOCH) {

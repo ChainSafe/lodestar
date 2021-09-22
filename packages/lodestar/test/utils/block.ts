@@ -3,10 +3,8 @@ import {List} from "@chainsafe/ssz";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
-import {IBlockJob} from "../../src/chain";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
@@ -82,17 +80,4 @@ export function generateProtoBlock(overrides: RecursivePartial<IProtoBlock> = {}
   return deepmerge<IProtoBlock, RecursivePartial<IProtoBlock>>(generateEmptyProtoBlock(), overrides, {
     isMergeableObject: isPlainObject,
   });
-}
-
-/**
- * Block job with all metadata set to false
- */
-export function getNewBlockJob(signedBlock: phase0.SignedBeaconBlock): IBlockJob {
-  return {
-    signedBlock,
-    reprocess: false,
-    prefinalized: false,
-    validSignatures: false,
-    validProposerSignature: false,
-  };
 }

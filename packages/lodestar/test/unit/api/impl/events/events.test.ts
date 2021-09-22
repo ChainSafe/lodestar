@@ -61,7 +61,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.block]);
 
       const block = generateSignedBlock();
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.block);
@@ -85,7 +85,7 @@ describe("Events api impl", function () {
       const exit = generateEmptySignedVoluntaryExit();
       const block = generateEmptySignedBlock();
       block.message.body.voluntaryExits.push(exit);
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.voluntaryExit);

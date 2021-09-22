@@ -101,7 +101,6 @@ export class MockBeaconChain implements IBeaconChain {
     const db = new StubbedBeaconDb(sinon);
     this.regen = new StateRegenerator({
       config: this.config,
-      emitter: this.emitter,
       forkChoice: this.forkChoice,
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
