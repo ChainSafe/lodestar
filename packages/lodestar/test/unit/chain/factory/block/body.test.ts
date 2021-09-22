@@ -28,7 +28,7 @@ describe("blockAssembly - body", function () {
     ((chain as unknown) as {
       opPool: SinonStubbedInstance<OpPool>;
     }).opPool = opPool;
-    return {chain, aggregatedAttestationPool, dbStub: new StubbedBeaconDb(sandbox), eth1, opPool};
+    return {chain, aggregatedAttestationPool, dbStub: new StubbedBeaconDb(), eth1, opPool};
   }
 
   it("should generate block body", async function () {

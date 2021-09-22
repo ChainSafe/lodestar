@@ -2,7 +2,6 @@
  * @module db/api/beacon
  */
 
-import {allForks} from "@chainsafe/lodestar-types";
 import {IDbMetrics} from "@chainsafe/lodestar-db";
 
 import {
@@ -67,8 +66,6 @@ export interface IBeaconDb {
   lightClientInitProof: LightClientInitProofRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
   totalTerminalDifficulty: TotalTerminalDifficulty;
-
-  processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 
   /**
    * Start the connection to the db instance and open the db store.

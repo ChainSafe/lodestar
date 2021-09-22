@@ -29,7 +29,7 @@ describe("api - debug - beacon", function () {
     chainStub = server.chainStub;
     forkchoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkchoiceStub;
-    dbStub = new StubbedBeaconDb(sinon);
+    dbStub = new StubbedBeaconDb();
     networkStub = sinon.createStubInstance(Network);
     debugApi = getDebugApi({chain: chainStub, db: dbStub, config, network: networkStub});
   });

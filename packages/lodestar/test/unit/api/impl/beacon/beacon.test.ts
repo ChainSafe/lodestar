@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {getBeaconApi} from "../../../../../src/api/impl/beacon";
-import sinon from "sinon";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
@@ -14,7 +13,7 @@ describe("beacon api implementation", function () {
 
   before(function () {
     server = setupApiImplTestServer();
-    dbStub = new StubbedBeaconDb(sinon);
+    dbStub = new StubbedBeaconDb();
   });
 
   describe("getGenesis", function () {

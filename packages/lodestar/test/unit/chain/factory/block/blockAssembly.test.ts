@@ -37,7 +37,7 @@ describe("block assembly", function () {
     chainStub.clock = sandbox.createStubInstance(LocalClock);
     regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
 
-    beaconDB = new StubbedBeaconDb(sandbox);
+    beaconDB = new StubbedBeaconDb();
   });
 
   afterEach(() => {
