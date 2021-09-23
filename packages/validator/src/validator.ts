@@ -3,7 +3,7 @@ import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Genesis} from "@chainsafe/lodestar-types/phase0";
+import {Genesis, Root} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {Clock, IClock} from "./util/clock";
@@ -95,23 +95,8 @@ export class Validator {
     const {data: nodeParams} = await api.config.getSpec();
     assertEqualParams(config, nodeParams);
     opts.logger.info("Verified node and validator have same config");
-    const metaDataRepository = new MetaDataRepository(opts.dbOps);
-    const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
-    if (genesisValidatorsRoot) {
-      if (!ssz.Root.equals(genesisValidatorsRoot, genesis.genesisValidatorsRoot)) {
-        // this happens when the existing validator db serves another network before
-        opts.logger.error("Not the same genesisValidatorRoot", {
-          expected: toHexString(genesis.genesisValidatorsRoot),
-          actual: toHexString(genesisValidatorsRoot),
-        });
-        throw new NotEqualParamsError("Not the same genesisValidatorRoot");
-      }
-      opts.logger.info("Verified node and validator have same genesisValidatorRoot");
-    } else {
-      await metaDataRepository.setGenesisValidatorsRoot(genesis.genesisValidatorsRoot);
-      opts.logger.info("Persisted genesisValidatorRoot", toHexString(genesis.genesisValidatorsRoot));
-    }
-
+    await assertEqualGenesisValidatorsRoot(opts, genesis.genesisValidatorsRoot);
+    opts.logger.info("Verified node and validator have same genesisValidatorRoot");
     return new Validator(opts, genesis);
   }
 
@@ -153,4 +138,22 @@ export class Validator {
   private getAbortSignal = (): AbortSignal | undefined => {
     return this.state.status === Status.running ? this.state.controller.signal : undefined;
   };
+}
+
+async function assertEqualGenesisValidatorsRoot(opts: ValidatorOptions, nodeGenesisValidatorRoot: Root): Promise<void> {
+  const metaDataRepository = new MetaDataRepository(opts.dbOps);
+  const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
+  if (genesisValidatorsRoot) {
+    if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {
+      // this happens when the existing validator db serves another network before
+      opts.logger.error("Not the same genesisValidatorRoot", {
+        expected: toHexString(nodeGenesisValidatorRoot),
+        actual: toHexString(genesisValidatorsRoot),
+      });
+      throw new NotEqualParamsError("Not the same genesisValidatorRoot");
+    }
+  } else {
+    await metaDataRepository.setGenesisValidatorsRoot(nodeGenesisValidatorRoot);
+    opts.logger.info("Persisted genesisValidatorRoot", toHexString(nodeGenesisValidatorRoot));
+  }
 }
