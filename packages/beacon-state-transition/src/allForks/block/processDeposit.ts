@@ -78,7 +78,7 @@ export function processDeposit(
       effectiveBalance,
       slashed: false,
     });
-    state.balances.push(Number(amount));
+    state.balanceList.push(Number(amount));
     epochCtx.effectiveBalances.push(effectiveBalance);
 
     // add participation caches

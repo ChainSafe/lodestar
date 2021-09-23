@@ -15,7 +15,7 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/l
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
-import {BalanceList, CachedBalanceListProxyHandler} from "./balanceList";
+import {BalanceList} from "./balanceList";
 import {
   CachedEpochParticipation,
   CachedEpochParticipationProxyHandler,
@@ -199,11 +199,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   /** The original BeaconState as a Tree */
   tree: Tree;
   /**
-   * Returns a Proxy to CachedBalanceList
-   *
-   * Stores state.balances in two duplicated forms (both structures are structurally shared):
-   * 1. TreeBacked, for efficient hashing
-   * 2. MutableVector (persistent-ts) with each validator balance as a bigint
+   * Returns a BalanceList instance with some convenient methods to work with Tree more efficiently.
+   * Notice that we want to work with state.balanceList instead of state.balances.
    *
    * The balances array completely changes at the epoch boundary, where almost all the validator balances
    * are updated. However it may have tiny changes during block processing if:
@@ -211,10 +208,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
    * - Validator gets slashed?
    * - On altair, the block proposer
    *
-   * TODO: Individual balances could be stored as regular numbers:
-   * - Number.MAX_SAFE_INTEGER = 9007199254740991, which is 9e6 GWEI
    */
-  balances: BalanceList & T["balances"];
+  balanceList: BalanceList;
   /**
    * Returns a Proxy to CachedEpochParticipation
    *
@@ -282,13 +277,10 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     this.type = type;
     this.tree = tree;
     this.epochCtx = epochCtx;
-    this.balances = (new Proxy(
-      new BalanceList(
-        this.type.fields["balances"] as Number64ListType,
-        this.type.tree_getProperty(this.tree, "balances") as Tree
-      ),
-      CachedBalanceListProxyHandler
-    ) as unknown) as BalanceList & T["balances"];
+    this.balanceList = new BalanceList(
+      this.type.fields["balances"] as Number64ListType,
+      this.type.tree_getProperty(this.tree, "balances") as Tree
+    );
     this.previousEpochParticipation = (new Proxy(
       new CachedEpochParticipation({
         type: this.type.fields["previousEpochParticipation"] as BasicListType<List<ParticipationFlags>>,
@@ -367,8 +359,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allForks.BeaconState>> = {
   get(target: CachedBeaconState<allForks.BeaconState>, key: string): unknown {
-    if (key === "balances") {
-      return target.balances;
+    if (key === "balanceList") {
+      return target.balanceList;
     } else if (key === "previousEpochParticipation") {
       return target.previousEpochParticipation;
     } else if (key === "currentEpochParticipation") {
@@ -402,8 +394,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
   set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {
     if (key === "validators") {
       throw new Error("Cannot set validators");
-    } else if (key === "balances") {
-      throw new Error("Cannot set balances");
+    } else if (key === "balanceList" || key === "balances") {
+      throw new Error("Cannot set either balanceList or balances");
     } else if (key === "previousEpochParticipation") {
       throw new Error("Cannot set previousEpochParticipation");
     } else if (key === "currentEpochParticipation") {

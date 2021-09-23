@@ -161,7 +161,8 @@ export function applyDeposits(
   const validatorLength = state.validators.length;
   for (let index = 0; index < validatorLength; index++) {
     const validator = state.validators[index];
-    const balance = state.balances[index];
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const balance = state.balanceList.get(index)!;
     const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validator.effectiveBalance = effectiveBalance;
     state.effectiveBalances.set(index, effectiveBalance);

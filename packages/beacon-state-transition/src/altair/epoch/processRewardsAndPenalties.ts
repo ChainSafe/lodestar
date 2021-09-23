@@ -23,7 +23,7 @@ export function processRewardsAndPenalties(
   // important: do not change state one balance at a time
   // set them all at once, constructing the tree in one go
   // cache the balances array, too
-  epochProcess.balances = state.balances.updateAll(deltas);
+  epochProcess.balances = state.balanceList.updateAll(deltas);
 }
 
 // // naive version, leave here for debugging purposes
