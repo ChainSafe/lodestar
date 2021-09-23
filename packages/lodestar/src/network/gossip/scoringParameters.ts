@@ -2,7 +2,6 @@
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
-import {Context} from "@chainsafe/lodestar-utils";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
@@ -72,9 +71,8 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   forkDigestContext,
-  logger,
   eth2Context,
-}: Pick<IGossipsubModules, "config" | "forkDigestContext" | "logger" | "eth2Context">): Partial<PeerScoreParams> {
+}: Pick<IGossipsubModules, "config" | "forkDigestContext" | "eth2Context">): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
@@ -105,7 +103,6 @@ export function computeGossipPeerScoreParams({
     topicScoreCap,
     IPColocationFactorWeight: -1 * topicScoreCap,
   };
-  logger.verbose("Gossip Peer Score Params", (params as unknown) as Context);
   return params;
 }
 
