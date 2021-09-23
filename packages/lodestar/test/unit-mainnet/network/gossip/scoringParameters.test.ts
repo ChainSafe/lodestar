@@ -5,7 +5,6 @@ import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
 import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
 import {GossipType} from "../../../../src/network";
@@ -39,7 +38,6 @@ describe("computeGossipPeerScoreParams", function () {
     const params = computeGossipPeerScoreParams({
       config: createIChainForkConfig(mainnetChainConfig),
       forkDigestContext,
-      logger: new WinstonLogger(),
       eth2Context,
     });
     const allTopics = params.topics;
@@ -67,7 +65,6 @@ describe("computeGossipPeerScoreParams", function () {
     const params = computeGossipPeerScoreParams({
       config: createIChainForkConfig(mainnetChainConfig),
       forkDigestContext,
-      logger: new WinstonLogger(),
       eth2Context,
     });
     const allTopics = params.topics;
