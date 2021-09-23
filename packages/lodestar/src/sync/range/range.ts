@@ -11,6 +11,7 @@ import {IMetrics} from "../../metrics";
 import {RangeSyncType, getRangeSyncType} from "../utils/remoteSyncType";
 import {updateChains, shouldRemoveChain} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
+import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -184,7 +185,12 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
     // Not trusted, verify signatures
-    const flags = {skipImportingAttestations: true, trusted: false};
+    const flags: PartiallyVerifiedBlockFlags = {
+      // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
+      skipImportingAttestations: true,
+      // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
+      ignoreIfKnown: true,
+    };
 
     if (this.opts?.disableProcessAsChainSegment) {
       // Should only be used for debugging or testing

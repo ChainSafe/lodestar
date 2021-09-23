@@ -166,7 +166,7 @@ export class UnknownBlockSync {
     }
 
     pendingBlock.status = PendingBlockStatus.processing;
-    const res = await wrapError(this.chain.processBlock(pendingBlock.signedBlock));
+    const res = await wrapError(this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true}));
     pendingBlock.status = PendingBlockStatus.pending;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc(1);
@@ -185,11 +185,9 @@ export class UnknownBlockSync {
       const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.signedBlock.message.slot};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
-          case BlockErrorCode.ALREADY_KNOWN:
-          case BlockErrorCode.GENESIS_BLOCK:
-            // Some race-condition imported the block earlier, that's okay ignore
-            this.pendingBlocks.delete(pendingBlock.blockRootHex);
-            break;
+          // This cases are already handled with `{ignoreIfKnown: true}`
+          // case BlockErrorCode.ALREADY_KNOWN:
+          // case BlockErrorCode.GENESIS_BLOCK:
 
           case BlockErrorCode.PARENT_UNKNOWN:
           case BlockErrorCode.PRESTATE_MISSING:
