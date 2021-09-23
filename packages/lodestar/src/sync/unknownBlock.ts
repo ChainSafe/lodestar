@@ -172,23 +172,15 @@ export class UnknownBlockSync {
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc(1);
     else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc(1);
 
-    if (!res.err) {
-      this.pendingBlocks.delete(pendingBlock.blockRootHex);
-
-      // Send child blocks to the processor
-      for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
-        this.processBlock(descendantBlock).catch((e) => {
-          this.logger.error("Unexpect error - processBlock", {}, e);
-        });
-      }
-    } else {
+    let isProcessed = false;
+    if (res.err) {
       const errorData = {root: pendingBlock.blockRootHex, slot: pendingBlock.signedBlock.message.slot};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
           case BlockErrorCode.ALREADY_KNOWN:
           case BlockErrorCode.GENESIS_BLOCK:
             // Some race-condition imported the block earlier, that's okay ignore
-            this.pendingBlocks.delete(pendingBlock.blockRootHex);
+            isProcessed = true;
             break;
 
           case BlockErrorCode.PARENT_UNKNOWN:
@@ -209,6 +201,19 @@ export class UnknownBlockSync {
       else {
         this.logger.error("Unknown error processing block from unknown parent sync", errorData, res.err);
         pendingBlock.status = PendingBlockStatus.pending;
+      }
+    } else {
+      // no error
+      isProcessed = true;
+    }
+    if (isProcessed) {
+      this.pendingBlocks.delete(pendingBlock.blockRootHex);
+
+      // Send child blocks to the processor
+      for (const descendantBlock of getDescendantBlocks(pendingBlock.blockRootHex, this.pendingBlocks)) {
+        this.processBlock(descendantBlock).catch((e) => {
+          this.logger.error("Unexpect error - processBlock", {}, e);
+        });
       }
     }
   }
