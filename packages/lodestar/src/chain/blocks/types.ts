@@ -6,6 +6,12 @@ export type FullyVerifiedBlockFlags = {
    * TEMP: Review if this is safe, Lighthouse always imports attestations even in finalized sync.
    */
   skipImportingAttestations?: boolean;
+  /**
+   * If error would trigger BlockErrorCode ALREADY_KNOWN or GENESIS_BLOCK, just ignore the block and don't verify nor
+   * import the block and return void | Promise<void>.
+   * Used by range sync and unknown block sync.
+   */
+  ignoreIfKnown?: boolean;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {

@@ -66,6 +66,16 @@ export async function processBlock(
   } catch (e) {
     // above functions should only throw BlockError
     const err = getBlockError(e, partiallyVerifiedBlock.block);
+
+    if (
+      partiallyVerifiedBlock.ignoreIfKnown &&
+      (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
+    ) {
+      // Flag ignoreIfKnown causes BlockErrorCodes ALREADY_KNOWN, GENESIS_BLOCK to resolve.
+      // Return before emitting to not cause loud logging.
+      return;
+    }
+
     modules.emitter.emit(ChainEvent.errorBlock, err);
 
     throw err;
@@ -95,31 +105,16 @@ export async function processChainSegment(
       // this avoids keeping our node busy processing blocks
       await sleep(0);
     } catch (e) {
+      // above functions should only throw BlockError
+      const err = getBlockError(e, partiallyVerifiedBlock.block);
+
       if (
-        e instanceof BlockError &&
-        // If the block is already known, simply ignore this block.
-        (e.type.code === BlockErrorCode.ALREADY_KNOWN ||
-          // If the block is the genesis block, simply ignore this block.
-          e.type.code === BlockErrorCode.GENESIS_BLOCK ||
-          // If the block is is for a finalized slot, simply ignore this block.
-          //
-          // The block is either:
-          //
-          // 1. In the canonical finalized chain.
-          // 2. In some non-canonical chain at a slot that has been finalized already.
-          //
-          // In the case of (1), there's no need to re-import and later blocks in this
-          // segement might be useful.
-          //
-          // In the case of (2), skipping the block is valid since we should never import it.
-          // However, we will potentially get a `ParentUnknown` on a later block. The sync
-          // protocol will need to ensure this is handled gracefully.
-          e.type.code === BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT)
+        partiallyVerifiedBlock.ignoreIfKnown &&
+        (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
       ) {
-        continue;
+        return;
       }
 
-      const err = getBlockError(e, partiallyVerifiedBlock.block);
       modules.emitter.emit(ChainEvent.errorBlock, err);
 
       // Convert to ChainSegmentError to append `importedBlocks` data
