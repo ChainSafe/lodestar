@@ -20,8 +20,9 @@ import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
 import {List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
-import {BLSKeypair, PubkeyHex} from "../types";
+import {AttestationSigningResult, BLSKeypair, PubkeyHex} from "../types";
 import {getAggregationBits, mapSecretKeysToValidators} from "./utils";
+import {SafeStatus} from "../slashingProtection/attestation";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -89,7 +90,7 @@ export class ValidatorStore {
     duty: routes.validator.AttesterDuty,
     attestationData: phase0.AttestationData,
     currentEpoch: Epoch
-  ): Promise<phase0.Attestation> {
+  ): Promise<AttestationSigningResult> {
     // Make sure the target epoch is not higher than the current epoch to avoid potential attacks.
     if (attestationData.target.epoch > currentEpoch) {
       throw Error(
@@ -103,17 +104,35 @@ export class ValidatorStore {
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
     const secretKey = this.getSecretKey(duty.pubkey); // Get before writing to slashingProtection
-    await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
+    const slashingProtection = {
       sourceEpoch: attestationData.source.epoch,
       targetEpoch: attestationData.target.epoch,
       signingRoot,
-    });
-
-    return {
+    };
+    const safeStatus = await this.slashingProtection.checkAttestation(duty.pubkey, slashingProtection);
+    const attestation = {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
       signature: secretKey.sign(signingRoot).toBytes(),
     };
+
+    return {
+      duty,
+      attestation,
+      slashingProtection,
+      safeStatus,
+    };
+  }
+
+  /**
+   * Only do this once we publish attestations successful
+   */
+  async slashingProtectionAttestation(attestationSigningResults: AttestationSigningResult[] = []): Promise<void> {
+    for (const {safeStatus, duty, slashingProtection} of attestationSigningResults) {
+      if (safeStatus != SafeStatus.SAME_DATA) {
+        await this.slashingProtection.insertAttestation(duty.pubkey, slashingProtection);
+      }
+    }
   }
 
   async signAggregateAndProof(

@@ -12,7 +12,7 @@ export {
   InvalidAttestationErrorCode,
 };
 
-enum SafeStatus {
+export enum SafeStatus {
   SAME_DATA = "SAFE_STATUS_SAME_DATA",
   OK = "SAFE_STATUS_OK",
 }
@@ -30,20 +30,6 @@ export class SlashingProtectionAttestationService {
     this.attestationByTarget = signedAttestationDb;
     this.attestationLowerBound = attestationLowerBound;
     this.minMaxSurround = minMaxSurround;
-  }
-
-  /**
-   * Check an attestation for slash safety, and if it is safe, record it in the database
-   * This is the safe, externally-callable interface for checking attestations
-   */
-  async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
-    const safeStatus = await this.checkAttestation(pubKey, attestation);
-
-    if (safeStatus != SafeStatus.SAME_DATA) {
-      await this.insertAttestation(pubKey, attestation);
-    }
-
-    // TODO: Implement safe clean-up of stored attestations
   }
 
   /**

@@ -13,6 +13,7 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
+import {AttestationSigningResult} from "../../../src/types";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -74,7 +75,8 @@ describe("AttestationService", function () {
     api.validator.publishAggregateAndProofs.resolves();
 
     // Mock signing service
-    validatorStore.signAttestation.resolves(attestation);
+    validatorStore.signAttestation.resolves({attestation} as AttestationSigningResult);
+    validatorStore.slashingProtectionAttestation.resolves();
     validatorStore.signAggregateAndProof.resolves(aggregate);
 
     // Trigger clock onSlot for slot 0

@@ -8,6 +8,7 @@ import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
+import {AttestationSigningResult} from "../types";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -89,7 +90,7 @@ export class AttestationService {
     const attestation = attestationRes.data;
 
     const currentEpoch = computeEpochAtSlot(slot);
-    const signedAttestations: phase0.Attestation[] = [];
+    const attestationSigningResults: AttestationSigningResult[] = [];
 
     for (const {duty} of duties) {
       const logCtxValidator = {
@@ -98,17 +99,19 @@ export class AttestationService {
         validator: prettyBytes(duty.pubkey),
       };
       try {
-        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
+        attestationSigningResults.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
         this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
         this.logger.error("Error signing attestation", logCtxValidator, e as Error);
       }
     }
 
-    if (signedAttestations.length > 0) {
+    if (attestationSigningResults.length > 0) {
       try {
-        await this.api.beacon.submitPoolAttestations(signedAttestations);
-        this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
+        await this.api.beacon.submitPoolAttestations(attestationSigningResults.map((attSR) => attSR.attestation));
+        // TODO: how to determine if a specific submit is error or not
+        await this.validatorStore.slashingProtectionAttestation(attestationSigningResults);
+        this.logger.info("Published attestations", {...logCtx, count: attestationSigningResults.length});
       } catch (e) {
         this.logger.error("Error publishing attestations", logCtx, e as Error);
       }

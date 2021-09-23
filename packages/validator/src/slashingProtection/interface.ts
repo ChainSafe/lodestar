@@ -1,4 +1,5 @@
 import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {SafeStatus} from "./attestation";
 import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types";
 
 export interface ISlashingProtection {
@@ -7,7 +8,11 @@ export interface ISlashingProtection {
    */
   checkAndInsertBlockProposal(pubKey: BLSPubkey, block: SlashingProtectionBlock): Promise<void>;
   /**
-   * Check an attestation for slash safety, and if it is safe, record it in the database
+   * Check an attestation for slash safety
    */
-  checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void>;
+  checkAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<SafeStatus>;
+  /**
+   * If it is safe, record it in the database
+   */
+  insertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void>;
 }

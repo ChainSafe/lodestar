@@ -49,13 +49,12 @@ describe("slashing-protection custom tests", () => {
     };
     const attestation2: SlashingProtectionAttestation = {
       targetEpoch: attestation1.targetEpoch,
-      sourceEpoch: 999,
+      sourceEpoch: attestation1.sourceEpoch,
       signingRoot: Buffer.alloc(32, 2),
     };
 
-    await slashingProtection.checkAndInsertAttestation(pubkey, attestation1);
-    await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation2)).to.be.rejectedWith(
-      InvalidAttestationError
-    );
+    await slashingProtection.checkAttestation(pubkey, attestation1);
+    await slashingProtection.insertAttestation(pubkey, attestation1);
+    await expect(slashingProtection.checkAttestation(pubkey, attestation2)).to.be.rejectedWith(InvalidAttestationError);
   });
 });

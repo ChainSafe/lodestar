@@ -5,6 +5,7 @@ import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block";
 import {
   AttestationByTargetRepository,
   AttestationLowerBoundRepository,
+  SafeStatus,
   SlashingProtectionAttestationService,
 } from "./attestation";
 import {ISlashingProtection} from "./interface";
@@ -51,8 +52,12 @@ export class SlashingProtection extends DatabaseService implements ISlashingProt
     await this.blockService.checkAndInsertBlockProposal(pubKey, block);
   }
 
-  async checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
-    await this.attestationService.checkAndInsertAttestation(pubKey, attestation);
+  async checkAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<SafeStatus> {
+    return await this.attestationService.checkAttestation(pubKey, attestation);
+  }
+
+  async insertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void> {
+    await this.attestationService.insertAttestation(pubKey, attestation);
   }
 
   async importInterchange(interchange: Interchange, genesisValidatorsRoot: Root): Promise<void> {

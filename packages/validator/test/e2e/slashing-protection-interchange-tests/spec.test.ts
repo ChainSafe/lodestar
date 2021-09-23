@@ -17,6 +17,7 @@ import {
   SlashingProtectionAttestation,
 } from "../../../src/slashingProtection";
 import {ISlashingProtectionInterchangeTest, SPEC_TEST_LOCATION} from "./params";
+import {SafeStatus} from "../../../src/slashingProtection/attestation";
 
 chai.use(chaiAsPromised);
 
@@ -96,9 +97,12 @@ describe("slashing-protection-interchange-tests", () => {
                 signingRoot: attestationRaw.signing_root ? fromHexString(attestationRaw.signing_root) : ZERO_HASH,
               };
               if (attestationRaw.should_succeed) {
-                await slashingProtection.checkAndInsertAttestation(pubkey, attestation);
+                const safeStatus = await slashingProtection.checkAttestation(pubkey, attestation);
+                if (safeStatus !== SafeStatus.SAME_DATA) {
+                  await slashingProtection.insertAttestation(pubkey, attestation);
+                }
               } else {
-                await expect(slashingProtection.checkAndInsertAttestation(pubkey, attestation)).to.be.rejectedWith(
+                await expect(slashingProtection.checkAttestation(pubkey, attestation)).to.be.rejectedWith(
                   InvalidAttestationError
                 );
               }
