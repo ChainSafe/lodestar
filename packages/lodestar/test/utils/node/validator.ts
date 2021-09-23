@@ -25,16 +25,18 @@ export async function getAndInitDevValidators({
     const startIndexVc = startIndex + i * validatorClientCount;
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
-
     const tmpDir = tmp.dirSync({unsafeCleanup: true});
+    const dbOps = {
+      config: node.config,
+      controller: new LevelDbController({name: tmpDir.name}, {logger}),
+    };
+    const slashingProtection = new SlashingProtection(dbOps);
+
     vcs.push(
       Validator.initializeFromBeaconNode({
-        config: node.config,
+        dbOps,
         api: useRestApi ? getNodeApiUrl(node) : node.api,
-        slashingProtection: new SlashingProtection({
-          config: node.config,
-          controller: new LevelDbController({name: tmpDir.name}, {logger}),
-        }),
+        slashingProtection,
         logger,
         secretKeys: Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc)),
       })

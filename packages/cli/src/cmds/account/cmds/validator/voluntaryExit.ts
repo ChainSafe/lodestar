@@ -1,14 +1,15 @@
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {readdirSync} from "fs";
+import {LevelDbController} from "@chainsafe/lodestar-db";
+import inquirer from "inquirer";
 import {ICliCommand, initBLS, YargsError} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
-import {Validator} from "@chainsafe/lodestar-validator";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {getBeaconConfigFromArgs} from "../../../../config";
 import {errorLogger} from "../../../../util/logger";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
-import inquirer from "inquirer";
-import {readdirSync} from "fs";
-import {getSlashingProtection} from "./slashingProtection/utils";
+import {getValidatorPaths} from "../../../validator/paths";
 
 /* eslint-disable no-console */
 
@@ -77,8 +78,8 @@ like to choose for the voluntary exit.",
 
 WARNING: THIS CANNOT BE UNDONE.
 
-ONCE YOU VOLUNTARILY EXIT, YOU WILL NOT BE ABLE TO WITHDRAW 
-YOUR DEPOSIT UNTIL PHASE 2 IS LAUNCHED WHICH MAY NOT 
+ONCE YOU VOLUNTARILY EXIT, YOU WILL NOT BE ABLE TO WITHDRAW
+YOUR DEPOSIT UNTIL PHASE 2 IS LAUNCHED WHICH MAY NOT
 BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
 `,
@@ -94,11 +95,19 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
     if (!secretKey) throw new YargsError("No validator keystores found");
     console.log(`Decrypted keystore for validator ${publicKey}`);
 
+    const validatorPaths = getValidatorPaths(args);
+    const dbPath = validatorPaths.validatorsDbDir;
     const config = getBeaconConfigFromArgs(args);
+    const logger = errorLogger();
+    const dbOps = {
+      config,
+      controller: new LevelDbController({name: dbPath}, {logger}),
+    };
+    const slashingProtection = new SlashingProtection(dbOps);
 
     const validatorClient = await Validator.initializeFromBeaconNode({
-      slashingProtection: getSlashingProtection(args),
-      config,
+      slashingProtection,
+      dbOps,
       api: args.server,
       secretKeys: [secretKey],
       logger: errorLogger(),
