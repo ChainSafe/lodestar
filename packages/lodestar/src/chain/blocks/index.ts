@@ -112,7 +112,7 @@ export async function processChainSegment(
         partiallyVerifiedBlock.ignoreIfKnown &&
         (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
       ) {
-        return;
+        continue;
       }
 
       modules.emitter.emit(ChainEvent.errorBlock, err);
