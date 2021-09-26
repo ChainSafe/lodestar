@@ -190,6 +190,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       skipImportingAttestations: true,
       // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
       ignoreIfKnown: true,
+      // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
+      ignoreIfFinalized: true,
     };
 
     if (this.opts?.disableProcessAsChainSegment) {

@@ -114,6 +114,9 @@ export async function processChainSegment(
       ) {
         continue;
       }
+      if (partiallyVerifiedBlock.ignoreIfFinalized && err.type.code == BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT) {
+        continue;
+      }
 
       modules.emitter.emit(ChainEvent.errorBlock, err);
 

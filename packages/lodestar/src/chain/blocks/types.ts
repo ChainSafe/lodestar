@@ -12,6 +12,12 @@ export type FullyVerifiedBlockFlags = {
    * Used by range sync and unknown block sync.
    */
   ignoreIfKnown?: boolean;
+  /**
+   * If error would trigger WOULD_REVERT_FINALIZED_SLOT, it means the block is finalized and we could ignore the block.
+   * Don't import and return void | Promise<void>
+   * Used by range sync.
+   */
+  ignoreIfFinalized?: boolean;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {

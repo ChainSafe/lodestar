@@ -52,6 +52,17 @@ export function verifyBlockSanityChecks(
   const {block} = partiallyVerifiedBlock;
   const blockSlot = block.message.slot;
 
+  // Not genesis block
+  if (blockSlot === 0) {
+    throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
+  }
+
+  // Not finalized slot
+  const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
+  if (blockSlot <= finalizedSlot) {
+    throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
+  }
+
   // Parent is known to the fork-choice
   const parentRoot = toHexString(block.message.parentRoot);
   if (!chain.forkChoice.hasBlockHex(parentRoot)) {
@@ -65,17 +76,6 @@ export function verifyBlockSanityChecks(
   const currentSlot = chain.clock.currentSlot;
   if (blockSlot > currentSlot) {
     throw new BlockError(block, {code: BlockErrorCode.FUTURE_SLOT, blockSlot, currentSlot});
-  }
-
-  // Not genesis block
-  if (blockSlot === 0) {
-    throw new BlockError(block, {code: BlockErrorCode.GENESIS_BLOCK});
-  }
-
-  // Not finalized slot
-  const finalizedSlot = computeStartSlotAtEpoch(chain.forkChoice.getFinalizedCheckpoint().epoch);
-  if (blockSlot <= finalizedSlot) {
-    throw new BlockError(block, {code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT, blockSlot, finalizedSlot});
   }
 
   // Not already known
