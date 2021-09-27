@@ -54,7 +54,7 @@ describe("network", function () {
     });
 
     const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
+    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
     const db = new StubbedBeaconDb(config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;

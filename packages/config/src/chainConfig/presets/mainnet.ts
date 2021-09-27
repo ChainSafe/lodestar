@@ -5,6 +5,11 @@ import {IChainConfig} from "../types";
 
 export const chainConfig: IChainConfig = {
   PRESET_BASE: PresetName.mainnet,
+
+  // Transition
+  // TBD, 2**256-1 is a placeholder
+  TERMINAL_TOTAL_DIFFICULTY: BigInt(115792089237316195423570985008687907853269984665640564039457584007913129639935),
+
   // Genesis
   // ---------------------------------------------------------------
   // `2**14` (= 16,384)

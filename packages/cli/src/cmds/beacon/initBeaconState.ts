@@ -4,13 +4,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {
-  IBeaconDb,
-  Eth1Provider,
-  IBeaconNodeOptions,
-  initStateFromAnchorState,
-  initStateFromEth1,
-} from "@chainsafe/lodestar";
+import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
@@ -127,13 +121,7 @@ export async function initBeaconState(
       const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
       return await initStateFromAnchorState(config, db, logger, anchorState);
     } else {
-      return await initStateFromEth1(
-        chainForkConfig,
-        db,
-        logger,
-        new Eth1Provider(chainForkConfig, options.eth1, signal),
-        signal
-      );
+      return await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
     }
   }
 }

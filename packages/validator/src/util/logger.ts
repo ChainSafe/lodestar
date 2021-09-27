@@ -1,7 +1,6 @@
 import {HttpError} from "@chainsafe/lodestar-api";
-import {Context, ILogger} from "@chainsafe/lodestar-utils";
+import {Context, ILogger, isErrorAborted} from "@chainsafe/lodestar-utils";
 import {IClock} from "./clock";
-import {isAbortedError} from "./error";
 
 export type ILoggerVc = Pick<ILogger, "error" | "warn" | "info" | "verbose" | "debug"> & {
   isSyncing(e: Error): void;
@@ -23,7 +22,7 @@ export function getLoggerVc(logger: ILogger, clock: IClock): ILoggerVc {
           this.isSyncing(e);
         }
         // Only log if arg `e` is not an instance of `ErrorAborted`
-        else if (!isAbortedError(e)) {
+        else if (!isErrorAborted(e)) {
           logger.error(message, context, e);
         }
       } else {

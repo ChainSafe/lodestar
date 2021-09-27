@@ -14,13 +14,14 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics, initializeTransitionStore} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
 import {IBeaconNodeOptions} from "./options";
-import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
+import {initializeEth1ForBlockProduction} from "../eth1";
 import {runNodeNotifier} from "./notifier";
 import {Registry} from "prom-client";
+import {ExecutionEngineDisabled} from "../executionEngine";
 
 export * from "./options";
 
@@ -131,7 +132,12 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chain),
       metrics,
       anchorState,
-      transitionStore: await initializeTransitionStore(opts.chain, db),
+      eth1: initializeEth1ForBlockProduction(
+        opts.eth1,
+        {config, db, logger: logger.child(opts.logger.eth1), signal},
+        anchorState
+      ),
+      executionEngine: new ExecutionEngineDisabled(),
     });
 
     // Load persisted data from disk to in-memory caches
@@ -159,16 +165,6 @@ export class BeaconNode {
       config,
       logger: logger.child(opts.logger.api),
       db,
-      eth1: opts.eth1.enabled
-        ? new Eth1ForBlockProduction({
-            config,
-            db,
-            eth1Provider: new Eth1Provider(config, opts.eth1, controller.signal),
-            logger: logger.child(opts.logger.eth1),
-            opts: opts.eth1,
-            signal,
-          })
-        : new Eth1ForBlockProductionDisabled(),
       sync,
       network,
       chain,

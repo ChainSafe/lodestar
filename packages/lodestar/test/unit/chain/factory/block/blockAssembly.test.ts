@@ -12,7 +12,7 @@ import {LocalClock} from "../../../../../src/chain/clock";
 import {assembleBlock} from "../../../../../src/chain/factory/block";
 import * as blockBodyAssembly from "../../../../../src/chain/factory/block/body";
 import {StateRegenerator} from "../../../../../src/chain/regen";
-import {Eth1ForBlockProduction} from "../../../../../src/eth1/";
+import {Eth1ForBlockProduction} from "../../../../../src/eth1";
 import {generateProtoBlock, generateEmptyBlock} from "../../../../utils/block";
 import {generateCachedState} from "../../../../utils/state";
 import {StubbedBeaconDb, StubbedChain} from "../../../../utils/stub";
@@ -55,8 +55,18 @@ describe("block assembly", function () {
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
     eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: []});
+    ((chainStub as unknown) as {eth1: typeof eth1}).eth1 = eth1;
+    ((chainStub as unknown) as {config: typeof config}).config = config;
 
-    const result = await assembleBlock({config, chain: chainStub, eth1, metrics: null}, 1, Buffer.alloc(96, 0));
+    const result = await assembleBlock(
+      {chain: chainStub, metrics: null},
+      {
+        randaoReveal: Buffer.alloc(96, 0),
+        graffiti: Buffer.alloc(32, 0),
+        slot: 1,
+        feeRecipient: Buffer.alloc(20, 0),
+      }
+    );
     expect(result).to.not.be.null;
     expect(result.slot).to.equal(1);
     expect(result.proposerIndex).to.equal(2);

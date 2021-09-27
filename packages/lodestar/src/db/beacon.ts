@@ -24,7 +24,6 @@ import {
   PreGenesisStateLastProcessedBlock,
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
-  TotalTerminalDifficulty,
 } from "./single";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
@@ -51,7 +50,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
-  totalTerminalDifficulty: TotalTerminalDifficulty;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -79,8 +77,6 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
       this.db,
       this.metrics
     );
-    // merge
-    this.totalTerminalDifficulty = new TotalTerminalDifficulty(this.config, this.db, this.metrics);
   }
 
   async stop(): Promise<void> {

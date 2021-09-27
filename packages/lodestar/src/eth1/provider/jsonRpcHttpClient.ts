@@ -3,7 +3,7 @@
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IRpcPayload, ReqOpts} from "../interface";
-import {toJson, toString} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, TimeoutError, toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
 /**
@@ -113,24 +113,37 @@ export class JsonRpcHttpClient {
       this.opts.signal.addEventListener("abort", onParentSignalAbort, {once: true});
     }
 
-    const res = await fetch(url, {
-      method: "post",
-      body: JSON.stringify(json),
-      headers: {"Content-Type": "application/json"},
-      signal: controller.signal,
-    }).finally(() => {
-      clearTimeout(timeout);
-      this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
-    });
+    try {
+      const res = await fetch(url, {
+        method: "post",
+        body: JSON.stringify(json),
+        headers: {"Content-Type": "application/json"},
+        signal: controller.signal,
+      }).finally(() => {
+        clearTimeout(timeout);
+        this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
+      });
 
-    const body = await res.text();
-    if (!res.ok) {
-      // Infura errors:
-      // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
-      throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+      const body = await res.text();
+      if (!res.ok) {
+        // Infura errors:
+        // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
+        throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+      }
+
+      return parseJson(body);
+    } catch (e) {
+      if (controller.signal.aborted) {
+        // controller will abort on both parent signal abort + timeout of this specific request
+        if (this.opts.signal.aborted) {
+          throw new ErrorAborted("request");
+        } else {
+          throw new TimeoutError("request");
+        }
+      } else {
+        throw e;
+      }
     }
-
-    return parseJson(body);
   }
 }
 

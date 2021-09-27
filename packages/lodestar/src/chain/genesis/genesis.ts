@@ -19,7 +19,9 @@ import {
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IEth1StreamParams, IEth1Provider, getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1";
+import {IEth1Provider} from "../../eth1";
+import {IEth1StreamParams} from "../../eth1/interface";
+import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream";
 import {IGenesisBuilder, IGenesisResult} from "./interface";
 
 export interface IGenesisBuilderKwargs {

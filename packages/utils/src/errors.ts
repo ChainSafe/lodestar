@@ -43,3 +43,10 @@ export class TimeoutError extends Error {
     super(`Timeout ${message || ""}`);
   }
 }
+
+/**
+ * Returns true if arg `e` is an instance of `ErrorAborted`
+ */
+export function isErrorAborted(e: unknown): e is ErrorAborted {
+  return e instanceof ErrorAborted;
+}

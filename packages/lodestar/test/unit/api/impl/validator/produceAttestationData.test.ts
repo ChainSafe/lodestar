@@ -4,7 +4,6 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
 import {ApiModules} from "../../../../../src/api/impl/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator";
-import {IEth1ForBlockProduction} from "../../../../../src/eth1";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {testLogger} from "../../../../utils/logger";
 import chaiAsPromised from "chai-as-promised";
@@ -15,7 +14,6 @@ use(chaiAsPromised);
 
 describe("api - validator - produceAttestationData", function () {
   const logger = testLogger();
-  let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
   let syncStub: SinonStubbedInstance<IBeaconSync>;
   let modules: ApiModules;
   let server: ApiImplTestModules;
@@ -27,7 +25,6 @@ describe("api - validator - produceAttestationData", function () {
       chain: server.chainStub,
       config,
       db: server.dbStub,
-      eth1: eth1Stub,
       logger,
       network: server.networkStub,
       sync: syncStub,

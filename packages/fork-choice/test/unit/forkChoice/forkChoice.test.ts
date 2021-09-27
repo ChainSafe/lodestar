@@ -44,11 +44,9 @@ describe("Forkchoice", function () {
     bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
   };
 
-  const transitionStore = null;
-
   it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);
-    const forkchoice = new ForkChoice(config, fcStore, transitionStore, protoArr, []);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, []);
     const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");

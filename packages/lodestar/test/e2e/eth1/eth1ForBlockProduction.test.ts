@@ -7,8 +7,8 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
-import {Eth1ForBlockProduction, Eth1Provider} from "../../../src/eth1";
-import {IEth1Options} from "../../../src/eth1/options";
+import {Eth1ForBlockProduction} from "../../../src/eth1";
+import {Eth1Options} from "../../../src/eth1/options";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
 import {BeaconDb} from "../../../src/db";
@@ -16,6 +16,7 @@ import {generateState} from "../../utils/state";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {Root, ssz} from "@chainsafe/lodestar-types";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
 
 const dbLocation = "./.__testdb";
 
@@ -30,7 +31,7 @@ const pyrmontDepositsDataRoot = [
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
-  const eth1Options: IEth1Options = {
+  const eth1Options: Eth1Options = {
     enabled: true,
     providerUrls: [testnet.providerUrl],
     depositContractDeployBlock: testnet.depositBlock,
@@ -66,13 +67,14 @@ describe("eth1 / Eth1Provider", function () {
   });
 
   it("Should fetch real Pyrmont eth1 data for block proposing", async function () {
-    const eth1ForBlockProduction = new Eth1ForBlockProduction({
+    const eth1ForBlockProduction = new Eth1ForBlockProduction(eth1Options, {
       config,
       db,
-      eth1Provider,
       logger,
-      opts: eth1Options,
       signal: controller.signal,
+      eth1Provider,
+      clockEpoch: 0,
+      isMergeComplete: false,
     });
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits

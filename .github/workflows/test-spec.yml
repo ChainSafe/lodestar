@@ -65,9 +65,9 @@ jobs:
       - name: Spec tests altair-mainnet
         run: yarn test:spec-altair-mainnet
         working-directory: packages/spec-test-runner
-      - name: Spec tests merge-minimal
-        run: yarn test:spec-merge-minimal
-        working-directory: packages/spec-test-runner
-      - name: Spec tests merge-mainnet
-        run: yarn test:spec-merge-mainnet
-        working-directory: packages/spec-test-runner
+      # - name: Spec tests merge-minimal
+      #   run: yarn test:spec-merge-minimal
+      #   working-directory: packages/spec-test-runner
+      # - name: Spec tests merge-mainnet
+      #   run: yarn test:spec-merge-mainnet
+      #   working-directory: packages/spec-test-runner

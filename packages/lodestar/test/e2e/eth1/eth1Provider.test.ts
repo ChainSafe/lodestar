@@ -1,17 +1,17 @@
 import "mocha";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
-import {Eth1Provider} from "../../../src/eth1";
-import {IEth1Options} from "../../../src/eth1/options";
+import {Eth1Options} from "../../../src/eth1/options";
 import {getTestnetConfig, testnet} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {goerliTestnetDepositEvents} from "../../utils/testnet";
+import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
-  const eth1Options: IEth1Options = {
+  const eth1Options: Eth1Options = {
     enabled: true,
     providerUrls: [testnet.providerUrl],
     depositContractDeployBlock: 0,
@@ -42,7 +42,7 @@ describe("eth1 / Eth1Provider", function () {
       timestamp: 1548854791,
     };
     const block = await getEth1Provider().getBlockByNumber(goerliGenesisBlock.blockNumber);
-    expect(block).to.deep.equal(goerliGenesisBlock);
+    expect(block && parseEth1Block(block)).to.deep.equal(goerliGenesisBlock);
   });
 
   it("Should get deposits events for a block range", async function () {
@@ -76,13 +76,13 @@ describe("eth1 / Eth1Provider", function () {
     const fromBlock = firstGoerliBlocks[0].blockNumber;
     const toBlock = firstGoerliBlocks[firstGoerliBlocks.length - 1].blockNumber;
     const blocks = await getEth1Provider().getBlocksByNumber(fromBlock, toBlock);
-    expect(blocks).to.deep.equal(firstGoerliBlocks);
+    expect(blocks.map(parseEth1Block)).to.deep.equal(firstGoerliBlocks);
   });
 
   it("getBlockByNumber: Should fetch a single block", async function () {
     const firstGoerliBlock = firstGoerliBlocks[0];
     const block = await getEth1Provider().getBlockByNumber(firstGoerliBlock.blockNumber);
-    expect(block).to.deep.equal(firstGoerliBlock);
+    expect(block && parseEth1Block(block)).to.deep.equal(firstGoerliBlock);
   });
 
   it("getBlockNumber: Should fetch latest block number", async function () {
