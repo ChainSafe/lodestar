@@ -25,7 +25,7 @@ export const chainConfig: IChainConfig = {
 
   // Altair
   ALTAIR_FORK_VERSION: b("0x01000001"),
-  ALTAIR_FORK_EPOCH: Infinity,
+  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
   // Merge
   MERGE_FORK_VERSION: b("0x02000001"),
   MERGE_FORK_EPOCH: Infinity,
