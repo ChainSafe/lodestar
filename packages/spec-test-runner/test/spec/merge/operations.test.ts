@@ -56,7 +56,7 @@ operations<altair.BeaconState>(ForkName.merge, {
     testCase: IBaseSpecTest & {execution_payload: merge.ExecutionPayload; execution: {executionValid: boolean}}
   ) => {
     processExecutionPayload((state as unknown) as CachedBeaconState<merge.BeaconState>, testCase.execution_payload, {
-      onPayload: () => testCase.execution.executionValid,
+      executePayload: () => testCase.execution.executionValid,
     });
   },
 });
