@@ -1,4 +1,4 @@
-import {Bytes32, merge, Root, ExecutionAddress, PayloadId} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -43,7 +43,7 @@ export interface IExecutionEngine {
    *
    * Should be called in response to fork-choice head and finalized events
    */
-  notifyForkchoiceUpdate(headBlockHash: Root, finalizedBlockHash: Root): Promise<void>;
+  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void>;
 
   /**
    * Given the set of execution payload attributes, prepare_payload initiates a process of building an execution

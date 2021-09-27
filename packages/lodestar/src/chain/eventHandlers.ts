@@ -9,6 +9,7 @@ import {
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
+import {ZERO_HASH_HEX} from "../constants";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -155,6 +156,16 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
   if (headState) {
     this.opPool.pruneAll(headState);
+  }
+
+  // Send event to consensus client
+  // TODO: Should send update with 0x0000.. when finalized block is still not merge block?
+  const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash;
+  const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+  if (headBlockHash) {
+    this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+      this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+    });
   }
 
   // Only after altair

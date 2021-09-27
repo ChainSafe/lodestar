@@ -1,4 +1,4 @@
-import {Bytes32, merge, Root, ExecutionAddress, PayloadId} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {hexToNumber, numberToHex} from "../eth1/provider/utils";
@@ -62,11 +62,11 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
-  notifyForkchoiceUpdate(headBlockHash: Root, finalizedBlockHash: Root): Promise<void> {
+  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void> {
     const method = "engine_forkchoiceUpdated";
     return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
-      params: [{headBlockHash: toHexString(headBlockHash), finalizedBlockHash: toHexString(finalizedBlockHash)}],
+      params: [{headBlockHash, finalizedBlockHash}],
     });
   }
 
