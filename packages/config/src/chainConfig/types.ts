@@ -7,6 +7,9 @@ import {PresetName} from "@chainsafe/lodestar-params";
 export interface IChainConfig {
   PRESET_BASE: PresetName;
 
+  // Transition
+  TERMINAL_TOTAL_DIFFICULTY: bigint;
+
   // Genesis
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;
   MIN_GENESIS_TIME: number;

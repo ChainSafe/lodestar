@@ -11,6 +11,9 @@ export const ChainConfig = new ContainerType<IChainConfig>({
   fields: {
     PRESET_BASE: new StringType(),
 
+    // Transition
+    TERMINAL_TOTAL_DIFFICULTY: ssz.Uint256,
+
     // Genesis
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: ssz.Number64,
     MIN_GENESIS_TIME: ssz.Number64,
