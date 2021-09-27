@@ -11,14 +11,14 @@ import {testLogger} from "../../utils/logger";
 
 describe("eth1 / Eth1MergeBlockTracker", () => {
   const logger = testLogger();
-  const notImplemented = async (): Promise<any> => {
-    throw Error("Not implemented");
-  };
 
-  // Set time units to 0 to make the test as fast as possible
+  const terminalTotalDifficulty = 1000;
   const config = ({
+    // Set time units to 0 to make the test as fast as possible
     SECONDS_PER_ETH1_BLOCK: 0,
     SECONDS_PER_SLOT: 0,
+    // Hardcode TTD to a low value
+    TERMINAL_TOTAL_DIFFICULTY: BigInt(terminalTotalDifficulty),
   } as Partial<IChainConfig>) as IChainConfig;
 
   let controller: AbortController;
@@ -26,7 +26,6 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   afterEach(() => controller.abort());
 
   it("Should find merge block polling future 'latest' blocks", async () => {
-    const terminalTotalDifficulty = 1000;
     // Set current network totalDifficulty to behind terminalTotalDifficulty by 5.
     // Then on each call to getBlockByNumber("latest") increase totalDifficulty by 1.
     const difficultyOffset = 5;
@@ -59,9 +58,15 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
         return blocks[blockNumber];
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,
-      getBlocksByNumber: notImplemented,
-      getDepositEvents: notImplemented,
-      validateContract: notImplemented,
+      getBlocksByNumber: async (): Promise<any> => {
+        throw Error("Not implemented");
+      },
+      getDepositEvents: async (): Promise<any> => {
+        throw Error("Not implemented");
+      },
+      validateContract: async (): Promise<any> => {
+        throw Error("Not implemented");
+      },
     };
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
@@ -92,7 +97,6 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
   });
 
   it("Should find merge block fetching past blocks", async () => {
-    const terminalTotalDifficulty = 1000;
     // Set current network totalDifficulty to behind terminalTotalDifficulty by 5.
     // Then on each call to getBlockByNumber("latest") increase totalDifficulty by 1.
     const difficultyOffset = 5;
@@ -130,8 +134,12 @@ describe("eth1 / Eth1MergeBlockTracker", () => {
       },
       getBlockByHash: async (blockHashHex) => blocksByHash.get(blockHashHex) ?? null,
       getBlocksByNumber: async (from, to) => blocks.slice(from, to),
-      getDepositEvents: notImplemented,
-      validateContract: notImplemented,
+      getDepositEvents: async (): Promise<any> => {
+        throw Error("Not implemented");
+      },
+      validateContract: async (): Promise<any> => {
+        throw Error("Not implemented");
+      },
     };
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
