@@ -24,7 +24,6 @@ import {
   PreGenesisStateLastProcessedBlock,
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
-  TotalTerminalDifficulty,
 } from "./single";
 
 /**
@@ -65,7 +64,6 @@ export interface IBeaconDb {
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
-  totalTerminalDifficulty: TotalTerminalDifficulty;
 
   /**
    * Start the connection to the db instance and open the db store.

@@ -8,7 +8,7 @@ import {
   ZERO_HASH,
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas} from "../protoArray/computeDeltas";
 import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock} from "../protoArray/interface";
@@ -18,7 +18,6 @@ import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlock} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
-import {ITransitionStore} from "./transitionStore";
 
 /* eslint-disable max-len */
 
@@ -74,8 +73,6 @@ export class ForkChoice implements IForkChoice {
   constructor(
     private readonly config: IChainForkConfig,
     private readonly fcStore: IForkChoiceStore,
-    /** Nullable until merge time comes */
-    private readonly transitionStore: ITransitionStore,
     /** The underlying representation of the block DAG. */
     private readonly protoArray: ProtoArray,
     /**
@@ -299,7 +296,6 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (
-      this.transitionStore.initialized &&
       merge.isMergeStateType(state) &&
       merge.isMergeBlockBodyType(block.body) &&
       merge.isMergeBlock(state, block.body)
@@ -307,14 +303,7 @@ export class ForkChoice implements IForkChoice {
       const {powBlock, powBlockParent} = preCachedData || {};
       if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
       if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
-
-      // Delay consideration of block until PoW block is processed by the PoW node
-      // const powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash);
-      // const powParent = getPowBlock(powBlock.parentHash);
-      if (!powBlock.isProcessed) {
-        throw Error("POW block not processed");
-      }
-      if (!isValidTerminalPowBlock(this.transitionStore, powBlock, powBlockParent)) {
+      if (!isValidTerminalPowBlock(this.config, powBlock, powBlockParent)) {
         throw Error("Not valid terminal POW block");
       }
     }
@@ -918,8 +907,8 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function isValidTerminalPowBlock(transitionStore: ITransitionStore, block: PowBlock, parent: PowBlock): boolean {
-  const isTotalDifficultyReached = block.totalDifficulty >= transitionStore.terminalTotalDifficulty;
-  const isParentTotalDifficultyValid = parent.totalDifficulty < transitionStore.terminalTotalDifficulty;
-  return block.isValid && isTotalDifficultyReached && isParentTotalDifficultyValid;
+function isValidTerminalPowBlock(config: IChainConfig, block: PowBlock, parent: PowBlock): boolean {
+  const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
+  const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
+  return isTotalDifficultyReached && isParentTotalDifficultyValid;
 }

@@ -6,7 +6,7 @@ import fs from "fs";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice, ITransitionStore} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
@@ -95,7 +95,6 @@ export class BeaconChain implements IBeaconChain {
       logger,
       metrics,
       anchorState,
-      transitionStore,
       eth1,
       executionEngine,
     }: {
@@ -104,7 +103,6 @@ export class BeaconChain implements IBeaconChain {
       logger: ILogger;
       metrics: IMetrics | null;
       anchorState: TreeBacked<allForks.BeaconState>;
-      transitionStore: ITransitionStore;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
     }
@@ -131,7 +129,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = initializeForkChoice(config, transitionStore, emitter, clock.currentSlot, cachedState, metrics);
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,

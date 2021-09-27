@@ -5,14 +5,13 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice, ProtoArray, ForkChoiceStore, ITransitionStore} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, ProtoArray, ForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {getEffectiveBalances, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IMetrics} from "../../metrics";
 import {ChainEvent} from "../emitter";
-import {IBeaconDb} from "../../db";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
@@ -23,7 +22,6 @@ export type ForkChoiceOpts = {
  */
 export function initializeForkChoice(
   config: IChainForkConfig,
-  transitionStore: ITransitionStore,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconState<allForks.BeaconState>,
@@ -50,8 +48,6 @@ export function initializeForkChoice(
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }),
 
-    transitionStore,
-
     ProtoArray.initialize({
       slot: blockHeader.slot,
       parentRoot: toHexString(blockHeader.parentRoot),
@@ -66,28 +62,4 @@ export function initializeForkChoice(
     justifiedBalances,
     metrics
   );
-}
-
-export class TransitionStore implements ITransitionStore {
-  // eslint-disable-next-line @typescript-eslint/naming-convention
-  constructor(private readonly _terminalTotalDifficulty: bigint | null) {}
-
-  get initialized(): boolean {
-    return this._terminalTotalDifficulty !== null;
-  }
-
-  get terminalTotalDifficulty(): bigint {
-    if (this._terminalTotalDifficulty === null) {
-      throw Error("TransitionStore not initilized");
-    }
-    return this._terminalTotalDifficulty;
-  }
-}
-
-/**
- * Initialize TransitionStore with locally persisted value, overriding it with user provided option.
- */
-export async function initializeTransitionStore(opts: ForkChoiceOpts, db: IBeaconDb): Promise<ITransitionStore> {
-  const terminalTotalDifficulty = opts.terminalTotalDifficulty ?? (await db.totalTerminalDifficulty.get());
-  return new TransitionStore(terminalTotalDifficulty);
 }

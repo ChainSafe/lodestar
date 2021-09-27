@@ -17,7 +17,6 @@ import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {Root, ssz} from "@chainsafe/lodestar-types";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
-import {TransitionStore} from "../../../src/chain";
 
 const dbLocation = "./.__testdb";
 
@@ -76,7 +75,6 @@ describe("eth1 / Eth1Provider", function () {
       eth1Provider,
       clockEpoch: 0,
       isMergeComplete: false,
-      transitionStore: new TransitionStore(null),
     });
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits

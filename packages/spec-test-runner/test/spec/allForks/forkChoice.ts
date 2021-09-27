@@ -20,8 +20,6 @@ import {
 } from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
-// eslint-disable-next-line no-restricted-imports
-import {TransitionStore} from "@chainsafe/lodestar/lib/chain";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -48,8 +46,7 @@ export function forkChoiceTest(fork: ForkName): void {
         let state = createCachedBeaconState(config, tbState);
 
         const emitter = new ChainEventEmitter();
-        const transitionStore = new TransitionStore(null);
-        const forkchoice = initializeForkChoice(config, transitionStore, emitter, currentSlot, state);
+        const forkchoice = initializeForkChoice(config, emitter, currentSlot, state);
 
         const checkpointStateCache = new CheckpointStateCache({});
         const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();

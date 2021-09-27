@@ -14,7 +14,7 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
-import {BeaconChain, IBeaconChain, initBeaconMetrics, initializeTransitionStore} from "../chain";
+import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
 import {IBeaconNodeOptions} from "./options";
@@ -126,17 +126,15 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
     }
 
-    const transitionStore = await initializeTransitionStore(opts.chain, db);
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
       logger: logger.child(opts.logger.chain),
       metrics,
       anchorState,
-      transitionStore,
       eth1: initializeEth1ForBlockProduction(
         opts.eth1,
-        {config, db, logger: logger.child(opts.logger.eth1), signal, transitionStore},
+        {config, db, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
       executionEngine: new ExecutionEngineDisabled(),

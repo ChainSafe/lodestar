@@ -24,7 +24,7 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 // - Fetch ALL deposit events from the deposit contract to build the deposit tree and validate future merkle proofs.
 //   Then it must follow deposit events at a distance roughly similar to the `ETH1_FOLLOW_DISTANCE` parameter above.
 //
-// - [New merge]: When initializing the TransitionStore (on MERGE_FORK_EPOCH), it must fetch the block with hash
+// - [New merge]: After MERGE_FORK_EPOCH, it must fetch the block with hash
 //   `state.eth1_data.block_hash` to compute `terminal_total_difficulty`. Note this may change with
 //   https://github.com/ethereum/consensus-specs/issues/2603.
 //
@@ -43,8 +43,7 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 export function initializeEth1ForBlockProduction(
   opts: Eth1Options,
-  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "logger" | "signal"> &
-    Pick<Eth1MergeBlockTrackerModules, "transitionStore">,
+  modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "logger" | "signal">,
   anchorState: allForks.BeaconState
 ): IEth1ForBlockProduction {
   if (opts.enabled) {
@@ -53,7 +52,6 @@ export function initializeEth1ForBlockProduction(
       db: modules.db,
       logger: modules.logger,
       signal: modules.signal,
-      transitionStore: modules.transitionStore,
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
       isMergeComplete: merge.isMergeStateType(anchorState) && merge.isMergeComplete(anchorState),
     });

@@ -35,7 +35,8 @@ export function processExecutionPayload(
   payload: merge.ExecutionPayload,
   executionEngine: ExecutionEngine | null
 ): void {
-  // Verify consistency of the parent hash, block number, random, base fee per gas and gas limit
+  // Verify consistency of the parent hash, block number, base fee per gas and gas limit
+  // with respect to the previous execution payload header
   if (isMergeComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash as Uint8Array, latestExecutionPayloadHeader.blockHash as Uint8Array)) {
@@ -44,12 +45,14 @@ export function processExecutionPayload(
     if (payload.blockNumber !== latestExecutionPayloadHeader.blockNumber + 1) {
       throw Error("Inconsistent execution payload blockNumber");
     }
-    if (!byteArrayEquals(payload.random as Uint8Array, getRandaoMix(state, getCurrentEpoch(state)) as Uint8Array)) {
-      throw Error("Inconsistent execution payload random");
-    }
     if (!isValidGasLimit(payload, latestExecutionPayloadHeader)) {
       throw Error("Inconsistent execution payload gas limit");
     }
+  }
+
+  // Verify random
+  if (!byteArrayEquals(payload.random as Uint8Array, getRandaoMix(state, getCurrentEpoch(state)) as Uint8Array)) {
+    throw Error("Inconsistent execution payload random");
   }
 
   // Verify timestamp
@@ -67,7 +70,7 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (executionEngine && !executionEngine.onPayload(payload)) {
+  if (executionEngine && !executionEngine.executePayload(payload)) {
     throw Error("Invalid execution payload");
   }
 

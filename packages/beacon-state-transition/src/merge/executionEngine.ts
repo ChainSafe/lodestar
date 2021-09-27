@@ -8,5 +8,5 @@ export type ExecutionEngine = {
    * mix from the state. Implementations that are considering parallel processing of execution payload with respect to
    * beacon chain state transition function should work around this dependency.
    */
-  onPayload(executionPayload: merge.ExecutionPayload): boolean;
+  executePayload(executionPayload: merge.ExecutionPayload): boolean;
 };

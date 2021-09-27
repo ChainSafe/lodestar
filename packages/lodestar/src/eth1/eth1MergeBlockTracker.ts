@@ -1,6 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {ITransitionStore} from "@chainsafe/lodestar-fork-choice";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IEth1Provider, EthJsonRpcBlockRaw} from "./interface";
 import {hexToBigint, hexToDecimal, validateHexRoot} from "./provider/eth1Provider";
@@ -38,7 +37,6 @@ const MAX_BLOCKS_PER_PAST_REQUEST = 1000;
 const SLEEP_ON_ERROR_MS = 3000;
 
 export type Eth1MergeBlockTrackerModules = {
-  transitionStore: ITransitionStore;
   config: IChainConfig;
   logger: ILogger;
   signal: AbortSignal;
@@ -50,7 +48,6 @@ export type Eth1MergeBlockTrackerModules = {
  * Follows the eth1 chain to find a (or multiple?) merge blocks that cross the threshold of total terminal difficulty
  */
 export class Eth1MergeBlockTracker {
-  private readonly transitionStore: ITransitionStore;
   private readonly config: IChainConfig;
   private readonly logger: ILogger;
   private readonly signal: AbortSignal;
@@ -66,10 +63,9 @@ export class Eth1MergeBlockTracker {
   private readonly intervals: NodeJS.Timeout[] = [];
 
   constructor(
-    {transitionStore, config, logger, signal, clockEpoch, isMergeComplete}: Eth1MergeBlockTrackerModules,
+    {config, logger, signal, clockEpoch, isMergeComplete}: Eth1MergeBlockTrackerModules,
     private readonly eth1Provider: IEth1Provider
   ) {
-    this.transitionStore = transitionStore;
     this.config = config;
     this.logger = logger;
     this.signal = signal;
@@ -187,7 +183,7 @@ export class Eth1MergeBlockTracker {
 
     const latestBlock = toPowBlock(latestBlockRaw);
     // TTD not reached yet, stop looking at old blocks and expect the subscription to find merge block
-    if (latestBlock.totalDifficulty < this.transitionStore.terminalTotalDifficulty) {
+    if (latestBlock.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY) {
       return;
     }
 
@@ -212,8 +208,8 @@ export class Eth1MergeBlockTracker {
           const childBlock = blocks[i + 1];
           const parentBlock = blocks[i];
           if (
-            childBlock.totalDifficulty >= this.transitionStore.terminalTotalDifficulty &&
-            parentBlock.totalDifficulty < this.transitionStore.terminalTotalDifficulty
+            childBlock.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY &&
+            parentBlock.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY
           ) {
             // Is terminal total difficulty block
             if (childBlock.parentHash === parentBlock.blockhash) {
@@ -266,7 +262,7 @@ export class Eth1MergeBlockTracker {
 
     // Check if this block is already visited
 
-    while (block.totalDifficulty >= this.transitionStore.terminalTotalDifficulty) {
+    while (block.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY) {
       const parent = await this.getPowBlock(block.parentHash);
       // Unknown parent
       if (!parent) {
@@ -274,8 +270,8 @@ export class Eth1MergeBlockTracker {
       }
 
       if (
-        block.totalDifficulty >= this.transitionStore.terminalTotalDifficulty &&
-        parent.totalDifficulty < this.transitionStore.terminalTotalDifficulty
+        block.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY &&
+        parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY
       ) {
         // Is terminal total difficulty block AND has verified block -> parent relationship
         return this.setMergeBlock(block);
