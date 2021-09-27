@@ -290,7 +290,8 @@ export class Network implements INetwork {
     this.gossip.subscribeTopic({type: GossipType.voluntary_exit, fork});
     this.gossip.subscribeTopic({type: GossipType.proposer_slashing, fork});
     this.gossip.subscribeTopic({type: GossipType.attester_slashing, fork});
-    if (fork === ForkName.altair) {
+    // Any fork after altair included
+    if (fork !== ForkName.phase0) {
       this.gossip.subscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
     }
 
@@ -313,7 +314,8 @@ export class Network implements INetwork {
     this.gossip.unsubscribeTopic({type: GossipType.voluntary_exit, fork});
     this.gossip.unsubscribeTopic({type: GossipType.proposer_slashing, fork});
     this.gossip.unsubscribeTopic({type: GossipType.attester_slashing, fork});
-    if (fork === ForkName.altair) {
+    // Any fork after altair included
+    if (fork !== ForkName.phase0) {
       this.gossip.unsubscribeTopic({type: GossipType.sync_committee_contribution_and_proof, fork});
     }
 

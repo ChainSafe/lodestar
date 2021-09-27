@@ -71,7 +71,6 @@ export class SyncnetsService implements ISubnetsService {
 
   /** Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork  */
   subscribeSubnetsToNextFork(nextFork: ForkName): void {
-    if (nextFork === ForkName.altair) return;
     this.logger.info("Suscribing to random attnets to next fork", {nextFork});
     for (const subnet of this.subscriptionsCommittee.getAll()) {
       this.gossip.subscribeTopic({type: gossipType, fork: nextFork, subnet});
@@ -80,7 +79,6 @@ export class SyncnetsService implements ISubnetsService {
 
   /** Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork */
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void {
-    if (prevFork === ForkName.phase0) return;
     this.logger.info("Unsuscribing to random attnets from prev fork", {prevFork});
     for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
       if (!this.opts?.subscribeAllSubnets) {

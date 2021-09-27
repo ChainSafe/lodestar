@@ -44,8 +44,8 @@ export class MetadataController {
     if (this.enr) {
       this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
       this.enr.set("attnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
-      // TODO: Generalize to all forks
-      if (currentFork === ForkName.altair) {
+      // Any fork after altair included
+      if (currentFork !== ForkName.phase0) {
         // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
         // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
         this.enr.set("syncnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
