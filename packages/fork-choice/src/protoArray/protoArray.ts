@@ -1,4 +1,4 @@
-import {Epoch, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 
 import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
@@ -38,45 +38,19 @@ export class ProtoArray {
     this.indices = new Map<string, number>();
   }
 
-  static initialize({
-    slot,
-    parentRoot,
-    stateRoot,
-    blockRoot,
-    justifiedEpoch,
-    justifiedRoot,
-    finalizedEpoch,
-    finalizedRoot,
-  }: {
-    slot: Slot;
-    parentRoot: RootHex;
-    stateRoot: RootHex;
-    blockRoot: RootHex;
-    justifiedEpoch: Epoch;
-    justifiedRoot: RootHex;
-    finalizedEpoch: Epoch;
-    finalizedRoot: RootHex;
-  }): ProtoArray {
+  static initialize(block: Omit<IProtoBlock, "targetRoot">): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
+      justifiedEpoch: block.justifiedEpoch,
+      justifiedRoot: block.justifiedRoot,
+      finalizedEpoch: block.finalizedEpoch,
+      finalizedRoot: block.finalizedRoot,
     });
-    const block: IProtoBlock = {
-      slot,
-      blockRoot,
-      parentRoot,
-      stateRoot,
+    protoArray.onBlock({
+      ...block,
       // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
-      targetRoot: blockRoot,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
-    };
-    protoArray.onBlock(block);
+      targetRoot: block.blockRoot,
+    });
     return protoArray;
   }
 

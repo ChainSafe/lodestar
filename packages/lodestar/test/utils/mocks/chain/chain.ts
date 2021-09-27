@@ -195,6 +195,7 @@ function mockForkChoice(): IForkChoice {
     parentRoot: rootHex,
     stateRoot: rootHex,
     targetRoot: rootHex,
+    executionPayloadBlockHash: null,
     justifiedEpoch: 0,
     justifiedRoot: rootHex,
     finalizedEpoch: 0,

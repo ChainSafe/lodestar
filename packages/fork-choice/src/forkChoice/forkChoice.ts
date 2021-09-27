@@ -374,6 +374,9 @@ export class ForkChoice implements IForkChoice {
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
+      executionPayloadBlockHash: merge.isMergeBlockBodyType(block.body)
+        ? toHexString(block.body.executionPayload.blockHash)
+        : null,
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,

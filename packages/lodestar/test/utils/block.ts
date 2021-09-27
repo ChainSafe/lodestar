@@ -69,6 +69,7 @@ export function generateEmptyProtoBlock(): IProtoBlock {
     parentRoot: rootHex,
     stateRoot: rootHex,
     targetRoot: rootHex,
+    executionPayloadBlockHash: null,
     justifiedEpoch: 0,
     justifiedRoot: rootHex,
     finalizedEpoch: 0,

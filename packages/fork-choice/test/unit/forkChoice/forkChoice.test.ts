@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, ProtoArray} from "../../../src";
+import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
@@ -18,6 +18,7 @@ describe("Forkchoice", function () {
     stateRoot,
     parentRoot,
     blockRoot: finalizedRoot,
+    executionPayloadBlockHash: null,
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
@@ -25,12 +26,13 @@ describe("Forkchoice", function () {
   });
 
   // Add block that is a finalized descendant.
-  const block = {
+  const block: IProtoBlock = {
     slot: genesisSlot + 1,
     blockRoot: finalizedDesc,
     parentRoot: finalizedRoot,
     stateRoot,
     targetRoot: finalizedRoot,
+    executionPayloadBlockHash: null,
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
