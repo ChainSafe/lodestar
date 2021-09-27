@@ -1,10 +1,20 @@
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {hexToNumber, numberToHex} from "../eth1/provider/utils";
 import {IExecutionEngine} from "./interface";
 
-/**
+export type ExecutionEngineHttpOpts = {
+  urls: string[];
+  timeout?: number;
+};
+
+export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
+  urls: ["http://localhost:8550"],
+};
+
+export /**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
  * - Supported communication protocols (HTTP and WebSocket)
  * - Message format and encoding notation
@@ -13,8 +23,17 @@ import {IExecutionEngine} from "./interface";
  * Client software MUST expose Engine API at a port independent from JSON-RPC API. The default port for the Engine API is 8550 for HTTP and 8551 for WebSocket.
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
-export class ExecutionEngineHttp implements IExecutionEngine {
-  constructor(private readonly rpc: JsonRpcHttpClient) {}
+class ExecutionEngineHttp implements IExecutionEngine {
+  private readonly rpc: JsonRpcHttpClient;
+
+  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: JsonRpcHttpClient) {
+    this.rpc =
+      rpc ??
+      new JsonRpcHttpClient(opts.urls, {
+        signal,
+        timeout: opts.timeout,
+      });
+  }
 
   /**
    * `engine_executePayload`

@@ -30,6 +30,7 @@ export class JsonRpcHttpClient {
     private readonly urls: string[],
     private readonly opts: {
       signal: AbortSignal;
+      timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
     }
@@ -105,7 +106,7 @@ export class JsonRpcHttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-    }, opts?.timeout ?? REQUEST_TIMEOUT);
+    }, opts?.timeout ?? this.opts.timeout ?? REQUEST_TIMEOUT);
 
     const onParentSignalAbort = (): void => controller.abort();
 
