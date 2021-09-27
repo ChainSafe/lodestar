@@ -1,6 +1,8 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {config} from "@chainsafe/lodestar-config/default";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
@@ -16,19 +18,28 @@ describe("blockAssembly - body", function () {
   function getStubs() {
     const sandbox = sinon.createSandbox();
     const state = generateCachedState();
-    const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
-    eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
     const chain = sandbox.createStubInstance(BeaconChain);
-    const opPool = sandbox.createStubInstance(OpPool);
+
     const aggregatedAttestationPool = sinon.createStubInstance(AggregatedAttestationPool);
     ((chain as unknown) as {
       aggregatedAttestationPool: SinonStubbedInstance<AggregatedAttestationPool>;
     }).aggregatedAttestationPool = aggregatedAttestationPool;
+
+    const opPool = sandbox.createStubInstance(OpPool);
     ((chain as unknown) as {
       opPool: SinonStubbedInstance<OpPool>;
     }).opPool = opPool;
-    (chain as {config: typeof config}).config = config;
-    ((chain as unknown) as {eth1: typeof eth1}).eth1 = eth1;
+
+    const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);
+    eth1.getEth1DataAndDeposits.resolves({eth1Data: state.eth1Data, deposits: [generateDeposit()]});
+    ((chain as unknown) as {
+      eth1: SinonStubbedInstance<Eth1ForBlockProduction>;
+    }).eth1 = eth1;
+
+    ((chain as unknown) as {
+      config: IChainForkConfig;
+    }).config = config;
+
     return {chain, aggregatedAttestationPool, dbStub: new StubbedBeaconDb(), eth1, opPool};
   }
 
