@@ -2,7 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IEth1Provider, EthJsonRpcBlockRaw} from "./interface";
-import {hexToBigint, hexToDecimal, validateHexRoot} from "./provider/eth1Provider";
+import {hexToBigint, hexToNumber, validateHexRoot} from "./provider/utils";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
@@ -318,7 +318,7 @@ export function toPowBlock(block: EthJsonRpcBlockRaw): PowMergeBlock {
   validateHexRoot(block.parentHash);
 
   return {
-    number: hexToDecimal(block.number),
+    number: hexToNumber(block.number),
     blockhash: block.hash,
     parentHash: block.parentHash,
     totalDifficulty: hexToBigint(block.totalDifficulty),

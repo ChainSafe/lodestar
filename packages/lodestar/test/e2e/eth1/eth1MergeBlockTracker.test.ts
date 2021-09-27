@@ -7,7 +7,7 @@ import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBloc
 import {Eth1Options} from "../../../src/eth1/options";
 import {testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
-import {hexToBigint} from "../../../src/eth1/provider/eth1Provider";
+import {hexToBigint} from "../../../src/eth1/provider/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

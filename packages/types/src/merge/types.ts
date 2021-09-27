@@ -1,5 +1,5 @@
 import * as altair from "../altair/types";
-import {Root, Bytes20, Bytes32, Number64} from "../primitive/types";
+import {Root, Bytes32, Number64, ExecutionAddress} from "../primitive/types";
 
 export type OpaqueTransaction = Uint8Array;
 
@@ -8,7 +8,7 @@ export type Transaction = OpaqueTransaction;
 type ExecutionPayloadFields = {
   // Execution block header fields
   parentHash: Root;
-  coinbase: Bytes20;
+  coinbase: ExecutionAddress;
   stateRoot: Bytes32;
   receiptRoot: Bytes32;
   logsBloom: Uint8Array;
@@ -17,6 +17,7 @@ type ExecutionPayloadFields = {
   gasLimit: Number64;
   gasUsed: Number64;
   timestamp: Number64;
+  extraData: Uint8Array;
   baseFeePerGas: Bytes32;
   // Extra payload fields
   blockHash: Bytes32;

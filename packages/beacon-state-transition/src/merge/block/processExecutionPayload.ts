@@ -86,6 +86,7 @@ export function processExecutionPayload(
     gasLimit: payload.gasLimit,
     gasUsed: payload.gasUsed,
     timestamp: payload.timestamp,
+    extraData: payload.extraData,
     baseFeePerGas: payload.baseFeePerGas,
     blockHash: payload.blockHash,
     transactionsRoot: ssz.merge.Transactions.hashTreeRoot(payload.transactions as List<Uint8Array>),
