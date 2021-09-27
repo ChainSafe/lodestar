@@ -1,9 +1,10 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, computeStartSlotAtEpoch, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
+import {IExecutionEngine} from "../../executionEngine";
 import {BlockError, BlockErrorCode} from "../errors";
 import {IBeaconClock} from "../clock";
 import {BlockProcessOpts} from "../options";
@@ -13,6 +14,7 @@ import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
+  executionEngine: IExecutionEngine;
   regen: IStateRegenerator;
   clock: IBeaconClock;
   forkChoice: IForkChoice;
@@ -133,6 +135,18 @@ export async function verifyBlockStateTransition(
 
     if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
+    }
+  }
+
+  if (
+    merge.isMergeStateType(postState) &&
+    merge.isMergeBlockBodyType(block.message.body) &&
+    merge.isExecutionEnabled(postState, block.message.body)
+  ) {
+    // TODO: Handle better executePayload() returning error is syncing
+    const isValid = await chain.executionEngine.executePayload(block.message.body.executionPayload);
+    if (!isValid) {
+      throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
     }
   }
 

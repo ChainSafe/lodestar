@@ -144,6 +144,7 @@ export class BeaconChain implements IBeaconChain {
         clock,
         bls,
         regen,
+        executionEngine,
         eth1,
         db,
         forkChoice,

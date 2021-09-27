@@ -55,6 +55,8 @@ export enum BlockErrorCode {
   SAME_PARENT_HASH = "BLOCK_ERROR_SAME_PARENT_HASH",
   /** Total size of executionPayload.transactions exceed a sane limit to prevent DOS attacks */
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
+  /** Execution engine returned not valid after executePayload() call */
+  EXECUTION_PAYLOAD_NOT_VALID = "BLOCK_ERROR_EXECUTION_PAYLOAD_NOT_VALID",
 }
 
 export type BlockErrorType =
@@ -86,7 +88,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_TIMESTAMP; timestamp: number; expectedTimestamp: number}
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
-  | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number};
+  | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
+  | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
