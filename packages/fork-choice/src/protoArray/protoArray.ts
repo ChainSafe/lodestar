@@ -622,37 +622,49 @@ export class ProtoArray {
     return false;
   }
 
-  getCommonAncestor(prevNode: IProtoNode, newNode: IProtoNode): IProtoNode | null {
-    const isPrevNodeLower = prevNode.slot <= newNode.slot;
-    let lowNode = isPrevNodeLower ? prevNode : newNode;
-    let highNode = isPrevNodeLower ? newNode : prevNode;
+  /**
+   * Returns a common ancestor for nodeA or nodeB or null if there's none
+   */
+  getCommonAncestor(nodeA: IProtoNode, nodeB: IProtoNode): IProtoNode | null {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // If nodeA is higher than nodeB walk up nodeA tree
+      if (nodeA.slot > nodeB.slot) {
+        if (!nodeA.parent) {
+          return null;
+        }
 
-    highNode = this.getAncestorAtSlot(highNode, lowNode.slot);
-
-    // Now lowNode and highNode are at the same slot
-    while (lowNode.parent !== undefined && highNode.parent !== undefined) {
-      if (lowNode.blockRoot === highNode.blockRoot) {
-        return lowNode;
+        nodeA = this.getNodeFromIndex(nodeA.parent);
       }
 
-      lowNode = this.getNodeFromIndex(lowNode.parent);
-      highNode = this.getNodeFromIndex(highNode.parent);
-    }
+      // If nodeB is higher than nodeA walk up nodeB tree
+      else if (nodeA.slot < nodeB.slot) {
+        if (!nodeB.parent) {
+          return null;
+        }
 
-    return null;
+        nodeB = this.getNodeFromIndex(nodeB.parent);
+      }
+
+      // If both node trees are at the same height, if same root == common ancestor.
+      // Otherwise, keep walking up until there's a match or no parent.
+      else {
+        if (nodeA.blockRoot === nodeB.blockRoot) {
+          return nodeA;
+        }
+
+        if (!nodeA.parent || !nodeB.parent) {
+          return null;
+        }
+
+        nodeA = this.getNodeFromIndex(nodeA.parent);
+        nodeB = this.getNodeFromIndex(nodeB.parent);
+      }
+    }
   }
 
   length(): number {
     return this.indices.size;
-  }
-
-  private getAncestorAtSlot(node: IProtoNode, slot: number): IProtoNode {
-    for (const parentNode of this.iterateAncestorNodesFromNode(node)) {
-      if (parentNode.slot === slot) {
-        return parentNode;
-      }
-    }
-    throw Error("slot less than finalized block");
   }
 
   private getNodeFromIndex(index: number): IProtoNode {
