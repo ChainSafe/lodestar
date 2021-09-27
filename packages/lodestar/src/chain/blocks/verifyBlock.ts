@@ -3,6 +3,7 @@ import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chai
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
 import {IExecutionEngine} from "../../executionEngine";
 import {BlockError, BlockErrorCode} from "../errors";
@@ -17,6 +18,7 @@ export type VerifyBlockModules = {
   executionEngine: IExecutionEngine;
   regen: IStateRegenerator;
   clock: IBeaconClock;
+  logger: ILogger;
   forkChoice: IForkChoice;
   config: IChainForkConfig;
   metrics: IMetrics | null;
@@ -108,56 +110,78 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
   });
 
-  // STFN - per_slot_processing() + per_block_processing()
-  // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
-  const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-  const postState = allForks.stateTransition(
-    preState,
-    block,
-    {
-      // false because it's verified below with better error typing
-      verifyStateRoot: false,
-      // if block is trusted don't verify proposer or op signature
-      verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-      verifySignatures: !useBlsBatchVerify && !validSignatures,
-    },
-    chain.metrics
-  );
-
-  // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
-  // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
-  // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
-  // so the attester and proposer shufflings are correct.
-  if (useBlsBatchVerify && !validSignatures) {
-    const signatureSets = validProposerSignature
-      ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-      : allForks.getAllBlockSignatureSets(postState as CachedBeaconState<allForks.BeaconState>, block);
-
-    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
-      throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
-    }
-  }
-
-  if (
-    merge.isMergeStateType(postState) &&
+  // TODO: Review mergeBlock conditions
+  /** Not null if execution is enabled */
+  const executionPayloadEnabled =
+    merge.isMergeStateType(preState) &&
     merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isExecutionEnabled(postState, block.message.body)
-  ) {
-    // TODO: Handle better executePayload() returning error is syncing
-    const isValid = await chain.executionEngine.executePayload(block.message.body.executionPayload);
-    if (!isValid) {
-      throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+    merge.isExecutionEnabled(preState, block.message.body)
+      ? block.message.body.executionPayload
+      : null;
+
+  // Wrap with try / catch to notify errors to execution client
+  try {
+    // STFN - per_slot_processing() + per_block_processing()
+    // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
+    const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
+    const postState = allForks.stateTransition(
+      preState,
+      block,
+      {
+        // false because it's verified below with better error typing
+        verifyStateRoot: false,
+        // if block is trusted don't verify proposer or op signature
+        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+        verifySignatures: !useBlsBatchVerify && !validSignatures,
+      },
+      chain.metrics
+    );
+
+    // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
+    // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
+    // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
+    // so the attester and proposer shufflings are correct.
+    if (useBlsBatchVerify && !validSignatures) {
+      const signatureSets = validProposerSignature
+        ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
+        : allForks.getAllBlockSignatureSets(postState as CachedBeaconState<allForks.BeaconState>, block);
+
+      if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+        throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
+      }
     }
-  }
 
-  // Check state root matches
-  if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
-    throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
-  }
+    if (executionPayloadEnabled) {
+      // TODO: Handle better executePayload() returning error is syncing
+      const isValid = await chain.executionEngine.executePayload(executionPayloadEnabled);
+      if (!isValid) {
+        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+      }
+    }
 
-  return {
-    block,
-    postState,
-    skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
-  };
+    // Check state root matches
+    if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
+      throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+    }
+
+    // Block is fully valid for consensus, import block to execution client
+    if (executionPayloadEnabled)
+      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
+        chain.logger.error("Error on notifyConsensusValidated", {valid: true}, e);
+      });
+
+    return {
+      block,
+      postState,
+      skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
+    };
+  } catch (e) {
+    // Notify of consensus invalid block to execution client
+    if (executionPayloadEnabled)
+      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
+        chain.logger.error("Error on notifyConsensusValidated", {valid: false}, e);
+      });
+
+    throw e;
+  }
 }
