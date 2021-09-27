@@ -4,6 +4,7 @@ import {
   allForks,
   getAttesterSlashableIndices,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -44,16 +45,25 @@ export class OpPool {
   }
 
   async toPersisted(db: IBeaconDb): Promise<void> {
-    // TODO: Only write new content
     await Promise.all([
-      db.attesterSlashing.batchPut(
+      persistDiff(
+        db.attesterSlashing,
         Array.from(this.attesterSlashings.entries()).map(([key, value]) => ({
           key: fromHexString(key),
           value: value.attesterSlashing,
-        }))
+        })),
+        toHexString
       ),
-      db.proposerSlashing.batchPut(Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value}))),
-      db.voluntaryExit.batchPut(Array.from(this.voluntaryExits.entries()).map(([key, value]) => ({key, value}))),
+      persistDiff(
+        db.proposerSlashing,
+        Array.from(this.proposerSlashings.entries()).map(([key, value]) => ({key, value})),
+        (index) => index
+      ),
+      persistDiff(
+        db.voluntaryExit,
+        Array.from(this.voluntaryExits.entries()).map(([key, value]) => ({key, value})),
+        (index) => index
+      ),
     ]);
   }
 
@@ -155,12 +165,36 @@ export class OpPool {
     return voluntaryExits;
   }
 
+  /** For beacon pool API */
+  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
+    return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
+  }
+
+  /** For beacon pool API */
+  getAllProposerSlashings(): phase0.ProposerSlashing[] {
+    return Array.from(this.proposerSlashings.values());
+  }
+
+  /** For beacon pool API */
+  getAllVoluntaryExits(): phase0.SignedVoluntaryExit[] {
+    return Array.from(this.voluntaryExits.values());
+  }
+
+  /**
+   * Prune all types of transactions given the latest head state
+   */
+  pruneAll(headState: allForks.BeaconState): void {
+    this.pruneAttesterSlashings(headState);
+    this.pruneProposerSlashings(headState);
+    this.pruneVoluntaryExits(headState);
+  }
+
   /**
    * Prune attester slashings for all slashed or withdrawn validators.
    */
-  pruneAttesterSlashings(headState: phase0.BeaconState): void {
+  private pruneAttesterSlashings(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
+    attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings.entries()) {
       // Slashings that don't slash any validators can be dropped
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
@@ -176,19 +210,19 @@ export class OpPool {
       }
 
       // All intersecting indices are not slashable
-      // PRUNE
+      this.attesterSlashings.delete(key);
     }
   }
 
   /**
    * Prune proposer slashings for validators which are exited in the finalized epoch.
    */
-  pruneProposerSlashings(headState: phase0.BeaconState): void {
+  private pruneProposerSlashings(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    for (const proposerSlashing of this.proposerSlashings.values()) {
+    for (const [key, proposerSlashing] of this.proposerSlashings.entries()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
       if (headState.validators[index].exitEpoch <= finalizedEpoch) {
-        // PRUNE
+        this.proposerSlashings.delete(key);
       }
     }
   }
@@ -197,32 +231,48 @@ export class OpPool {
    * Call after finalizing
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
-  pruneVoluntaryExits(headState: phase0.BeaconState): void {
+  private pruneVoluntaryExits(headState: allForks.BeaconState): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-    for (const voluntaryExit of this.voluntaryExits.values()) {
+    for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
       // TODO: Improve this simplistic condition
       if (voluntaryExit.message.epoch <= finalizedEpoch) {
-        // PRUNE
+        this.voluntaryExits.delete(key);
       }
     }
-  }
-
-  /** For beacon pool API */
-  getAllAttesterSlashings(): phase0.AttesterSlashing[] {
-    return Array.from(this.attesterSlashings.values()).map((attesterSlashings) => attesterSlashings.attesterSlashing);
-  }
-
-  /** For beacon pool API */
-  getAllProposerSlashings(): phase0.ProposerSlashing[] {
-    return Array.from(this.proposerSlashings.values());
-  }
-
-  /** For beacon pool API */
-  getAllVoluntaryExits(): phase0.SignedVoluntaryExit[] {
-    return Array.from(this.voluntaryExits.values());
   }
 }
 
 function isSlashableAtEpoch(validator: phase0.Validator, epoch: Epoch): boolean {
   return !validator.slashed && validator.activationEpoch <= epoch && epoch < validator.withdrawableEpoch;
+}
+
+/**
+ * Persist target items `items` in `dbRepo` doing minimum put and delete writes.
+ * Reads all keys in repository to compute the diff between current persisted data and target data.
+ */
+async function persistDiff<K extends Id, V>(
+  dbRepo: Repository<K, V>,
+  items: {key: K; value: V}[],
+  serializeKey: (key: K) => number | string
+): Promise<void> {
+  const persistedKeys = await dbRepo.keys();
+  const itemsToPut: {key: K; value: V}[] = [];
+  const keysToDelete: K[] = [];
+
+  const persistedKeysSerialized = new Set(persistedKeys.map(serializeKey));
+  for (const item of items) {
+    if (!persistedKeysSerialized.has(serializeKey(item.key))) {
+      itemsToPut.push(item);
+    }
+  }
+
+  const targetKeysSerialized = new Set(items.map((item) => serializeKey(item.key)));
+  for (const persistedKey of persistedKeys) {
+    if (!targetKeysSerialized.has(serializeKey(persistedKey))) {
+      keysToDelete.push(persistedKey);
+    }
+  }
+
+  if (itemsToPut.length > 0) await dbRepo.batchPut(itemsToPut);
+  if (keysToDelete.length > 0) await dbRepo.batchDelete(keysToDelete);
 }
