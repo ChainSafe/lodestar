@@ -22,19 +22,23 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     depositContractDeployBlock: 0,
   };
 
-  // Set time units to 1s to make the test faster
-  const config = ({
-    SECONDS_PER_ETH1_BLOCK: 1000,
-    SECONDS_PER_SLOT: 1000,
-    DEPOSIT_CONTRACT_ADDRESS: Buffer.alloc(32, 0),
-  } as Partial<IChainConfig>) as IChainConfig;
+  function getConfig(ttd: bigint): IChainConfig {
+    return ({
+      // Set time units to 1s to make the test faster
+      SECONDS_PER_ETH1_BLOCK: 1000,
+      SECONDS_PER_SLOT: 1000,
+      DEPOSIT_CONTRACT_ADDRESS: Buffer.alloc(32, 0),
+      TERMINAL_TOTAL_DIFFICULTY: ttd,
+    } as Partial<IChainConfig>) as IChainConfig;
+  }
+  const configNoTtd = getConfig(BigInt(0));
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
   it("Should find merge block polling future 'latest' blocks", async () => {
-    const eth1Provider = new Eth1Provider(config, eth1Options, controller.signal);
+    const eth1Provider = new Eth1Provider(configNoTtd, eth1Options, controller.signal);
     const latestBlock = await eth1Provider.getBlockByNumber("latest");
     if (!latestBlock) throw Error("No latestBlock");
 
@@ -43,7 +47,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
-        config,
+        config: getConfig(terminalTotalDifficulty),
         logger,
         signal: controller.signal,
         clockEpoch: 0,
@@ -71,7 +75,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
   });
 
   it("Should find merge block fetching past blocks", async () => {
-    const eth1Provider = new Eth1Provider(config, eth1Options, controller.signal);
+    const eth1Provider = new Eth1Provider(configNoTtd, eth1Options, controller.signal);
     const latestBlock = await eth1Provider.getBlockByNumber("latest");
     if (!latestBlock) throw Error("No latestBlock");
 
@@ -80,7 +84,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
-        config,
+        config: getConfig(terminalTotalDifficulty),
         logger,
         signal: controller.signal,
         clockEpoch: 0,
