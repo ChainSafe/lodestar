@@ -135,12 +135,9 @@ export interface IForkChoice {
 }
 
 export type PowBlock = {
-  blockhash: Root;
-  parentHash: Root;
-  isProcessed: boolean;
-  isValid: boolean;
+  blockhash: RootHex;
+  parentHash: RootHex;
   totalDifficulty: bigint;
-  difficulty: bigint;
 };
 
 export type OnBlockPrecachedData = {

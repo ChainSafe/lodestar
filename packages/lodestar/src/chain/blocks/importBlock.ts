@@ -5,11 +5,13 @@ import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
   getEffectiveBalances,
+  merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
+import {IEth1ForBlockProduction} from "../../eth1";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {ChainEvent} from "../emitter";
@@ -20,6 +22,7 @@ import {FullyVerifiedBlock} from "./types";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
+  eth1: IEth1ForBlockProduction;
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
@@ -76,9 +79,21 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
   }
 
-  // TODO: Figure out how to fetch for merge
-  //  powBlock: undefined,
-  //  powBlockParent: undefined,
+  if (
+    merge.isMergeStateType(postState) &&
+    merge.isMergeBlockBodyType(block.message.body) &&
+    merge.isMergeBlock(postState, block.message.body)
+  ) {
+    // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
+    const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
+    const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
+    if (!powBlock) throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
+    // pow_parent = get_pow_block(pow_block.parent_hash)
+    const powBlockParent = await chain.eth1.getPowBlock(powBlock.parentHash);
+    if (!powBlockParent) throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
+    onBlockPrecachedData.powBlock = powBlock;
+    onBlockPrecachedData.powBlockParent = powBlockParent;
+  }
 
   chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
 

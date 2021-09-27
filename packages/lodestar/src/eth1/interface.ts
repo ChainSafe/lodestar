@@ -3,7 +3,7 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, Root} from "@chainsafe/lodestar-types";
+import {allForks, phase0, Root, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 
 export type EthJsonRpcBlockRaw = {
@@ -47,7 +47,16 @@ export interface IEth1ForBlockProduction {
   getPowBlockAtTotalDifficulty(): Root | null;
   /** Call when merge is irrevocably completed to stop polling unnecessary data from the eth1 node */
   mergeCompleted(): void;
+  /** Get a POW block by hash checking the local cache first */
+  getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
 }
+
+export type PowMergeBlock = {
+  number: number;
+  blockhash: RootHex;
+  parentHash: RootHex;
+  totalDifficulty: bigint;
+};
 
 export interface IBatchDepositEvents {
   depositEvents: phase0.DepositEvent[];

@@ -2,7 +2,7 @@ import {CachedBeaconState, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/
 import {allForks, Root} from "@chainsafe/lodestar-types";
 import {merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
-import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider} from "./interface";
+import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker";
 import {Eth1Options} from "./options";
@@ -86,6 +86,10 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   mergeCompleted(): void {
     this.eth1MergeBlockTracker.mergeCompleted();
   }
+
+  getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null> {
+    return this.eth1MergeBlockTracker.getPowBlock(powBlockHash);
+  }
 }
 
 /**
@@ -110,5 +114,10 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
 
   mergeCompleted(): void {
     // Ignore
+  }
+
+  /** Will not be able to validate the merge block */
+  async getPowBlock(): Promise<never> {
+    throw Error("eth1 must be enabled to verify merge block");
   }
 }
