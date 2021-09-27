@@ -12,6 +12,7 @@ export type ExecutionEngineHttpOpts = {
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   urls: ["http://localhost:8550"],
+  timeout: 12000,
 };
 
 export /**
