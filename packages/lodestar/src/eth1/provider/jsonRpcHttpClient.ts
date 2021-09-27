@@ -2,7 +2,7 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {IRpcPayload, ReqOpts} from "../interface";
+import {IJson, IRpcPayload, ReqOpts} from "../interface";
 import {ErrorAborted, TimeoutError, toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
@@ -48,7 +48,7 @@ export class JsonRpcHttpClient {
   /**
    * Perform RPC request
    */
-  async fetch<R>(payload: IRpcPayload, opts?: ReqOpts): Promise<R> {
+  async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: 1, ...payload}, opts);
     return parseRpcResponse(res, payload);
   }
@@ -147,7 +147,7 @@ export class JsonRpcHttpClient {
   }
 }
 
-function parseRpcResponse<R>(res: IRpcResponse<R>, payload: IRpcPayload): R {
+function parseRpcResponse<R, P>(res: IRpcResponse<R>, payload: IRpcPayload<P>): R {
   if (res.result !== undefined) return res.result;
   throw new ErrorJsonRpcResponse(res, payload);
 }
@@ -171,10 +171,10 @@ export class ErrorParseJson extends Error {
   }
 }
 
-export class ErrorJsonRpcResponse extends Error {
+export class ErrorJsonRpcResponse<P> extends Error {
   response: IRpcResponseError;
-  payload: IRpcPayload;
-  constructor(res: IRpcResponseError, payload: IRpcPayload) {
+  payload: IRpcPayload<P>;
+  constructor(res: IRpcResponseError, payload: IRpcPayload<P>) {
     const errorMessage = res.error
       ? typeof res.error.message === "string"
         ? res.error.message

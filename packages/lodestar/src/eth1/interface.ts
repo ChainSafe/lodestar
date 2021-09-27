@@ -68,9 +68,9 @@ export type IEth1StreamParams = Pick<
 
 export type IJson = string | number | boolean | undefined | IJson[] | {[key: string]: IJson};
 
-export interface IRpcPayload {
+export interface IRpcPayload<P = IJson[]> {
   method: string;
-  params: IJson[];
+  params: P;
 }
 
 export type ReqOpts = {

@@ -5,21 +5,20 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {chunkifyInclusiveRange} from "../../util/chunkify";
 import {linspace} from "../../util/numpy";
 import {retry} from "../../util/retry";
-import {ErrorParseJson, JsonRpcHttpClient} from "./jsonRpcHttpClient";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
 import {IEth1Provider} from "../interface";
 import {Eth1Options} from "../options";
 import {isValidAddress} from "../../util/address";
 import {EthJsonRpcBlockRaw} from "../interface";
+import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
+import {numberToHex, isJsonRpcTruncatedError, hexToNumber, validateHexRoot} from "./utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
-
-export const rootHexRegex = /^0x[a-fA-F0-9]{64}$/;
 
 /**
  * Binds return types to Ethereum JSON RPC methods
  */
-interface IEthJsonRpcTypes {
+interface IEthJsonRpcReturnTypes {
   eth_getBlockByNumber: EthJsonRpcBlockRaw | null;
   eth_getBlockByHash: EthJsonRpcBlockRaw | null;
   eth_blockNumber: string;
@@ -107,8 +106,8 @@ export class Eth1Provider implements IEth1Provider {
         const blockRanges = chunkifyInclusiveRange(fromBlock, toBlock, chunkCount);
         return Promise.all(
           blockRanges.map(([from, to]) =>
-            this.rpc.fetchBatch<IEthJsonRpcTypes[typeof method]>(
-              linspace(from, to).map((blockNumber) => ({method, params: [toHex(blockNumber), false]}))
+            this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
+              linspace(from, to).map((blockNumber) => ({method, params: [numberToHex(blockNumber), false]}))
             )
           )
         );
@@ -129,8 +128,8 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
-    const blockNumberHex = typeof blockNumber === "string" ? blockNumber : toHex(blockNumber);
-    return await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({
+    const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numberToHex(blockNumber);
+    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({
       method,
       // false = include only transaction roots, not full objects
       params: [blockNumberHex, false],
@@ -139,7 +138,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByHash(blockHashHex: string): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByHash";
-    return await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({
+    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({
       method,
       // false = include only transaction roots, not full objects
       params: [blockHashHex, false],
@@ -148,13 +147,13 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockNumber(): Promise<number> {
     const method = "eth_blockNumber";
-    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({method, params: []});
+    const blockNumberRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: []});
     return parseInt(blockNumberRaw, 16);
   }
 
   async getCode(address: string): Promise<string> {
     const method = "eth_getCode";
-    return await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({method, params: [address, "latest"]});
+    return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [address, "latest"]});
   }
 
   async getLogs(options: {
@@ -166,10 +165,10 @@ export class Eth1Provider implements IEth1Provider {
     const method = "eth_getLogs";
     const hexOptions = {
       ...options,
-      fromBlock: toHex(options.fromBlock),
-      toBlock: toHex(options.toBlock),
+      fromBlock: numberToHex(options.fromBlock),
+      toBlock: numberToHex(options.toBlock),
     };
-    const logsRaw = await this.rpc.fetch<IEthJsonRpcTypes[typeof method]>({method, params: [hexOptions]});
+    const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [hexOptions]});
     return logsRaw.map((logRaw) => ({
       blockNumber: parseInt(logRaw.blockNumber, 16),
       data: logRaw.data,
@@ -178,45 +177,12 @@ export class Eth1Provider implements IEth1Provider {
   }
 }
 
-function toHex(n: number): string {
-  return "0x" + n.toString(16);
-}
-
 export function parseEth1Block(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
   if (typeof blockRaw !== "object") throw Error("block is not an object");
   validateHexRoot(blockRaw.hash);
   return {
     blockHash: fromHexString(blockRaw.hash),
-    blockNumber: hexToDecimal(blockRaw.number, "block.number"),
-    timestamp: hexToDecimal(blockRaw.timestamp, "block.timestamp"),
+    blockNumber: hexToNumber(blockRaw.number, "block.number"),
+    timestamp: hexToNumber(blockRaw.timestamp, "block.timestamp"),
   };
-}
-
-export function isJsonRpcTruncatedError(error: Error): boolean {
-  return (
-    // Truncated responses usually get as 200 but since it's truncated the JSON will be invalid
-    error instanceof ErrorParseJson ||
-    // Otherwise guess Infura error message of too many events
-    (error instanceof Error && error.message.includes("query returned more than 10000 results"))
-  );
-}
-
-/** Safe parser of hex decimal positive integers */
-export function hexToDecimal(hex: string, id = ""): number {
-  const num = parseInt(hex, 16);
-  if (isNaN(num) || num < 0) throw Error(`Invalid hex decimal ${id} '${hex}'`);
-  return num;
-}
-
-/** Typesafe fn to convert hex string to bigint. The BigInt constructor param is any */
-export function hexToBigint(hex: string, id = ""): bigint {
-  try {
-    return BigInt(hex);
-  } catch (e) {
-    throw Error(`Invalid hex bigint ${id} '${hex}': ${(e as Error).message}`);
-  }
-}
-
-export function validateHexRoot(hex: string, id = ""): void {
-  if (!rootHexRegex.test(hex)) throw Error(`Invalid hex root ${id} '${hex}'`);
 }
