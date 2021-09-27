@@ -112,7 +112,7 @@ export async function validateGossipBlock(
     // [REJECT] Gas used is less than the gas limit -- i.e. execution_payload.gas_used <= execution_payload.gas_limit.
     if (executionPayload.gasUsed > executionPayload.gasLimit) {
       throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.TO_MUCH_GAS_USED,
+        code: BlockErrorCode.TOO_MUCH_GAS_USED,
         gasUsed: executionPayload.gasUsed,
         gasLimit: executionPayload.gasLimit,
       });

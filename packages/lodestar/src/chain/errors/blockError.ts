@@ -48,13 +48,13 @@ export enum BlockErrorCode {
   KNOWN_BAD_BLOCK = "BLOCK_ERROR_KNOWN_BAD_BLOCK",
   // Merge p2p
   /** executionPayload.timestamp is not the expected value */
-  INCORRECT_TIMESTAMP = "INCORRECT_TIMESTAMP",
+  INCORRECT_TIMESTAMP = "BLOCK_ERROR_INCORRECT_TIMESTAMP",
   /** executionPayload.gasUsed > executionPayload.gasLimit */
-  TO_MUCH_GAS_USED = "TO_MUCH_GAS_USED",
+  TOO_MUCH_GAS_USED = "BLOCK_ERROR_TOO_MUCH_GAS_USED",
   /** executionPayload.blockHash == executionPayload.parentHash */
-  SAME_PARENT_HASH = "SAME_PARENT_HASH",
+  SAME_PARENT_HASH = "BLOCK_ERROR_SAME_PARENT_HASH",
   /** Total size of executionPayload.transactions exceed a sane limit to prevent DOS attacks */
-  TRANSACTIONS_TOO_BIG = "TRANSACTIONS_TOO_BIG",
+  TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
 }
 
 export type BlockErrorType =
@@ -84,7 +84,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: BlockErrorCode.KNOWN_BAD_BLOCK}
   | {code: BlockErrorCode.INCORRECT_TIMESTAMP; timestamp: number; expectedTimestamp: number}
-  | {code: BlockErrorCode.TO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
+  | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number};
 
