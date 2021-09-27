@@ -50,6 +50,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.clockSlot]: onClockSlot,
     [ChainEvent.errorAttestation]: onErrorAttestation,
     [ChainEvent.errorBlock]: onErrorBlock,
+    [ChainEvent.skippedBlock]: onSkippedBlock,
     [ChainEvent.finalized]: onFinalized,
     [ChainEvent.forkChoiceFinalized]: onForkChoiceFinalized,
     [ChainEvent.forkChoiceHead]: onForkChoiceHead,
@@ -282,4 +283,13 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
       postStatePath,
     });
   }
+}
+
+export async function onSkippedBlock(this: BeaconChain, err: BlockError): Promise<void> {
+  if (!(err instanceof BlockError)) {
+    this.logger.error("Non BlockError received", {}, err);
+    return;
+  }
+
+  this.logger.debug("Block skipped", {slot: err.signedBlock.message.slot, errCode: err.type.code});
 }

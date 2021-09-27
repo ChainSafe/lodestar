@@ -102,6 +102,12 @@ export enum ChainEvent {
    * This event is guaranteed to be triggered after any block fed to the chain fails at any stage of processing.
    */
   errorBlock = "error:block",
+  /**
+   * This event signals that the chain has skipped or ignored a block when it erroed while processing.
+   *
+   * This event is guaranteed to be triggered after any block fed to the chain fails block processing and is deemed not to be relevant to the chain as per sync configuration.
+   */
+  skippedBlock = "skip:block",
 }
 
 export interface IChainEvents {
@@ -112,6 +118,7 @@ export interface IChainEvents {
   ) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
+  [ChainEvent.skippedBlock]: (error: BlockError) => void;
 
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
   [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;

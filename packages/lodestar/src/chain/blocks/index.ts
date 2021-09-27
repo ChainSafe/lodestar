@@ -3,6 +3,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {allForks} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainEvent} from "../emitter";
+import {PendingEvents} from "./utils/pendingEvents";
 import {JobItemQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {verifyBlock, VerifyBlockModules} from "./verifyBlock";
@@ -67,18 +68,10 @@ export async function processBlock(
     // above functions should only throw BlockError
     const err = getBlockError(e, partiallyVerifiedBlock.block);
 
-    if (
-      partiallyVerifiedBlock.ignoreIfKnown &&
-      (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
-    ) {
-      // Flag ignoreIfKnown causes BlockErrorCodes ALREADY_KNOWN, GENESIS_BLOCK to resolve.
-      // Return before emitting to not cause loud logging.
-      return;
-    }
+    const blockEvent = getBlockErrorEvent(err, partiallyVerifiedBlock);
+    modules.emitter.emit(blockEvent, err);
 
-    modules.emitter.emit(ChainEvent.errorBlock, err);
-
-    throw err;
+    if (blockEvent === ChainEvent.errorBlock) throw err;
   }
 }
 
@@ -94,6 +87,7 @@ export async function processChainSegment(
   assertLinearChainSegment(modules.config, blocks);
 
   let importedBlocks = 0;
+  const pendingEvents = new PendingEvents(modules.emitter);
 
   for (const partiallyVerifiedBlock of partiallyVerifiedBlocks) {
     try {
@@ -107,25 +101,33 @@ export async function processChainSegment(
     } catch (e) {
       // above functions should only throw BlockError
       const err = getBlockError(e, partiallyVerifiedBlock.block);
-
-      if (
-        partiallyVerifiedBlock.ignoreIfKnown &&
-        (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)
-      ) {
-        continue;
+      const blockEvent = getBlockErrorEvent(err, partiallyVerifiedBlock);
+      if (blockEvent === ChainEvent.errorBlock) {
+        modules.emitter.emit(blockEvent, err);
+        // Convert to ChainSegmentError to append `importedBlocks` data
+        const chainSegmentError = new ChainSegmentError(partiallyVerifiedBlock.block, err.type, importedBlocks);
+        chainSegmentError.stack = err.stack;
+        throw chainSegmentError;
       }
-      if (partiallyVerifiedBlock.ignoreIfFinalized && err.type.code == BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT) {
-        continue;
-      }
-
-      modules.emitter.emit(ChainEvent.errorBlock, err);
-
-      // Convert to ChainSegmentError to append `importedBlocks` data
-      const chainSegmentError = new ChainSegmentError(partiallyVerifiedBlock.block, err.type, importedBlocks);
-      chainSegmentError.stack = err.stack;
-      throw chainSegmentError;
+      pendingEvents.push(blockEvent, err);
     }
   }
+  pendingEvents.emit();
+}
+
+function getBlockErrorEvent(
+  err: BlockError,
+  partiallyVerifiedBlock: PartiallyVerifiedBlock
+): ChainEvent.skippedBlock | ChainEvent.errorBlock {
+  // above functions should only throw BlockError
+  if (
+    (partiallyVerifiedBlock.ignoreIfKnown &&
+      (err.type.code === BlockErrorCode.ALREADY_KNOWN || err.type.code === BlockErrorCode.GENESIS_BLOCK)) ||
+    (partiallyVerifiedBlock.ignoreIfFinalized && err.type.code == BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT)
+  ) {
+    return ChainEvent.skippedBlock;
+  }
+  return ChainEvent.errorBlock;
 }
 
 function getBlockError(e: unknown, block: allForks.SignedBeaconBlock): BlockError {
