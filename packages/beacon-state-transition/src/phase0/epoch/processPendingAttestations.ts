@@ -23,7 +23,7 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
   targetFlag: number,
   headFlag: number
 ): void {
-  const {epochCtx} = state;
+  const {epochCtx, slot: stateSlot} = state;
   const rootType = ssz.Root;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   if (attestations.length === 0) {
@@ -40,7 +40,8 @@ export function statusProcessEpoch<T extends allForks.BeaconState>(
     const attBeaconBlockRoot = attData.beaconBlockRoot;
     const attTarget = attData.target;
     const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
-    const attVotedHeadRoot = rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
+    const attVotedHeadRoot =
+      attSlot < stateSlot && rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
     const participants = zipIndexesCommitteeBits(committee, aggregationBits);
 
