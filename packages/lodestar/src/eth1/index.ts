@@ -78,8 +78,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
   }
 
-  getMergeBlockHash(): Root | null {
-    const block = this.eth1MergeBlockTracker.getMergeBlock();
+  getPowBlockAtTotalDifficulty(): Root | null {
+    const block = this.eth1MergeBlockTracker.getPowBlockAtTotalDifficulty();
     return block && fromHexString(block.blockhash);
   }
 
@@ -104,7 +104,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   /**
    * Will miss the oportunity to propose the merge block but will still produce valid blocks
    */
-  getMergeBlockHash(): Root | null {
+  getPowBlockAtTotalDifficulty(): Root | null {
     return null;
   }
 

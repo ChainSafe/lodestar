@@ -58,7 +58,15 @@ describe("block assembly", function () {
     ((chainStub as unknown) as {eth1: typeof eth1}).eth1 = eth1;
     ((chainStub as unknown) as {config: typeof config}).config = config;
 
-    const result = await assembleBlock({chain: chainStub, metrics: null}, 1, Buffer.alloc(96, 0));
+    const result = await assembleBlock(
+      {chain: chainStub, metrics: null},
+      {
+        randaoReveal: Buffer.alloc(96, 0),
+        graffiti: Buffer.alloc(32, 0),
+        slot: 1,
+        feeRecipient: Buffer.alloc(20, 0),
+      }
+    );
     expect(result).to.not.be.null;
     expect(result.slot).to.equal(1);
     expect(result.proposerIndex).to.equal(2);

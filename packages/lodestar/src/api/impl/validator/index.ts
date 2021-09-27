@@ -141,7 +141,16 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       await waitForSlot(slot); // Must never request for a future slot > currentSlot
 
       timer = metrics?.blockProductionTime.startTimer();
-      const block = await assembleBlock({chain, metrics}, slot, randaoReveal, toGraffitiBuffer(graffiti || ""));
+      const block = await assembleBlock(
+        {chain, metrics},
+        {
+          slot,
+          randaoReveal,
+          graffiti: toGraffitiBuffer(graffiti || ""),
+          // TODO - TEMP
+          feeRecipient: Buffer.alloc(20, 0),
+        }
+      );
       metrics?.blockProductionSuccess.inc();
       return {data: block, version: config.getForkName(block.slot)};
     } finally {

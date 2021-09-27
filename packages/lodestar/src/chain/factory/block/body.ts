@@ -4,7 +4,19 @@
 
 import xor from "buffer-xor";
 import {List, hash} from "@chainsafe/ssz";
-import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot, BLSSignature, ssz} from "@chainsafe/lodestar-types";
+import {
+  Bytes96,
+  Bytes32,
+  phase0,
+  allForks,
+  altair,
+  Root,
+  Slot,
+  BLSSignature,
+  ssz,
+  ExecutionAddress,
+  PayloadId,
+} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -18,10 +30,21 @@ import {IBeaconChain} from "../../interface";
 export async function assembleBody(
   chain: IBeaconChain,
   currentState: CachedBeaconState<allForks.BeaconState>,
-  randaoReveal: Bytes96,
-  graffiti: Bytes32,
-  blockSlot: Slot,
-  syncAggregateData: {parentSlot: Slot; parentBlockRoot: Root}
+  {
+    randaoReveal,
+    graffiti,
+    blockSlot,
+    parentSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {
+    randaoReveal: Bytes96;
+    graffiti: Bytes32;
+    blockSlot: Slot;
+    parentSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: ExecutionAddress;
+  }
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -57,17 +80,28 @@ export async function assembleBody(
 
   if (blockEpoch >= chain.config.ALTAIR_FORK_EPOCH) {
     (blockBody as altair.BeaconBlockBody).syncAggregate = chain.syncContributionAndProofPool.getAggregate(
-      syncAggregateData.parentSlot,
-      syncAggregateData.parentBlockRoot
+      parentSlot,
+      parentBlockRoot
     );
   }
 
   if (blockEpoch >= chain.config.MERGE_FORK_EPOCH) {
-    (blockBody as merge.BeaconBlockBody).executionPayload = await getExecutionPayload(
+    // TODO: Optimize this flow
+    // - Call prepareExecutionPayload as early as possible
+    // - Call prepareExecutionPayload again if parameters change
+
+    const payloadId = await prepareExecutionPayload(
       chain,
       currentState as merge.BeaconState,
+      feeRecipient,
       randaoReveal
     );
+
+    if (payloadId) {
+      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
+    } else {
+      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+    }
   }
 
   return blockBody;
@@ -78,41 +112,32 @@ export async function assembleBody(
  *
  * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
  */
-async function getExecutionPayload(
+async function prepareExecutionPayload(
   chain: IBeaconChain,
   state: merge.BeaconState,
+  feeRecipient: ExecutionAddress,
   randaoReveal: BLSSignature
-): Promise<merge.ExecutionPayload> {
+): Promise<PayloadId | null> {
+  // Use different POW block hash parent for block production based on merge status.
+  // Returned value of null == using an empty ExecutionPayload value
+  let parentHash: Root;
   if (!merge.isMergeComplete(state)) {
-    const terminalPowBlockHash = chain.eth1.getMergeBlockHash();
+    const terminalPowBlockHash = chain.eth1.getPowBlockAtTotalDifficulty();
     if (terminalPowBlockHash === null) {
-      // Pre-merge, empty payload
-      ssz.merge.ExecutionPayload.defaultValue();
+      // Pre-merge, no prepare payload call is needed
+      return null;
     } else {
       // Signify merge via producing on top of the last PoW block
-      const parentHash = terminalPowBlockHash;
-      return produceExecutionPayload(chain, state, parentHash, randaoReveal);
+      parentHash = terminalPowBlockHash;
     }
+  } else {
+    // Post-merge, normal payload
+    parentHash = state.latestExecutionPayloadHeader.blockHash;
   }
 
-  // Post-merge, normal payload
-  const parentHash = state.latestExecutionPayloadHeader.blockHash;
-  return produceExecutionPayload(chain, state, parentHash, randaoReveal);
-}
-
-async function produceExecutionPayload(
-  chain: IBeaconChain,
-  state: merge.BeaconState,
-  parentHash: Root,
-  randaoReveal: BLSSignature
-): Promise<merge.ExecutionPayload> {
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const randaoMix = computeRandaoMix(state, randaoReveal);
-
-  // NOTE: This is a naive implementation that does not give sufficient time to the eth1 block to produce an optimal
-  // block. Probably in the future there will exist mechanisms to optimize block production, such as giving a heads
-  // up to the execution client, then calling assembleBlock. Stay up to spec updates and update accordingly.
-  return chain.executionEngine.assembleBlock(parentHash, timestamp, randaoMix);
+  const random = computeRandaoMix(state, randaoReveal);
+  return chain.executionEngine.preparePayload(parentHash, timestamp, random, feeRecipient);
 }
 
 function computeRandaoMix(state: merge.BeaconState, randaoReveal: BLSSignature): Bytes32 {

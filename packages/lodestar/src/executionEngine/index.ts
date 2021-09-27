@@ -1,4 +1,4 @@
-import {Bytes32, merge, Root} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, PayloadId} from "@chainsafe/lodestar-types";
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -46,16 +46,30 @@ export interface IExecutionEngine {
   notifyForkchoiceUpdate(blockHash: Root): Promise<boolean>;
 
   /**
-   * Produces a new instance of an execution payload, with the specified timestamp, on top of the execution payload
-   * chain tip identified by block_hash.
+   * Given the set of execution payload attributes, prepare_payload initiates a process of building an execution
+   * payload on top of the execution chain tip identified by parent_hash.
    *
    * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/validator.md#assemble_block
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#prepare_payload
    *
    * Must be called close to the slot associated with the validator's block producing to get the blockHash and
    * random correct
    */
-  assembleBlock(blockHash: Root, timestamp: number, random: Bytes32): Promise<merge.ExecutionPayload>;
+  preparePayload(
+    parentHash: Root,
+    timestamp: number,
+    random: Bytes32,
+    feeRecipient: ExecutionAddress
+  ): Promise<PayloadId>;
+
+  /**
+   * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
+   * since the corresponding call to prepare_payload method.
+   *
+   * Required for block producing
+   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
+   */
+  getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload>;
 }
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
@@ -71,7 +85,11 @@ export class ExecutionEngineDisabled implements IExecutionEngine {
     throw Error("Execution engine disabled");
   }
 
-  async assembleBlock(): Promise<merge.ExecutionPayload> {
+  async preparePayload(): Promise<PayloadId> {
+    throw Error("Execution engine disabled");
+  }
+
+  async getPayload(): Promise<merge.ExecutionPayload> {
     throw Error("Execution engine disabled");
   }
 }

@@ -1,7 +1,6 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
-import {config} from "@chainsafe/lodestar-config/default";
 import {assembleBody} from "../../../../../src/chain/factory/block/body";
 import {generateCachedState} from "../../../../utils/state";
 import {generateEmptyAttestation} from "../../../../utils/attestation";
@@ -43,9 +42,13 @@ describe("blockAssembly - body", function () {
     opPool.getVoluntaryExits.returns([generateEmptySignedVoluntaryExit()]);
     dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
 
-    const result = await assembleBody(chain, generateCachedState(), Buffer.alloc(96, 0), Buffer.alloc(32, 0), 1, {
+    const result = await assembleBody(chain, generateCachedState(), {
+      randaoReveal: Buffer.alloc(96, 0),
+      graffiti: Buffer.alloc(32, 0),
+      blockSlot: 1,
       parentSlot: 0,
       parentBlockRoot: Buffer.alloc(32, 0),
+      feeRecipient: Buffer.alloc(20, 0),
     });
     expect(result).to.not.be.null;
     expect(result.randaoReveal.length).to.be.equal(96);

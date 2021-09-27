@@ -99,7 +99,7 @@ export class Eth1MergeBlockTracker {
   /**
    * Returns the most recent POW block that satisfies the merge block condition
    */
-  getMergeBlock(): PowMergeBlock | null {
+  getPowBlockAtTotalDifficulty(): PowMergeBlock | null {
     // For better debugging in case this module stops searching too early
     if (this.mergeBlock === null && this.status === StatusCode.POST_MERGE) {
       throw Error("Eth1MergeBlockFinder is on POST_MERGE status and found no mergeBlock");

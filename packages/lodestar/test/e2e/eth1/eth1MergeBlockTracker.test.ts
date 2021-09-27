@@ -43,7 +43,6 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
-        transitionStore: {initialized: true, terminalTotalDifficulty},
         config,
         logger,
         signal: controller.signal,
@@ -55,7 +54,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     // Wait for Eth1MergeBlockTracker to find at least one merge block
     while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getMergeBlock()) break;
+      if (eth1MergeBlockTracker.getPowBlockAtTotalDifficulty()) break;
       await sleep(500, controller.signal);
     }
 
@@ -63,7 +62,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    const mergeBlock = eth1MergeBlockTracker.getMergeBlock();
+    const mergeBlock = eth1MergeBlockTracker.getPowBlockAtTotalDifficulty();
     if (!mergeBlock) throw Error("mergeBlock not found");
     expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
       true,
@@ -81,7 +80,6 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
-        transitionStore: {initialized: true, terminalTotalDifficulty},
         config,
         logger,
         signal: controller.signal,
@@ -93,7 +91,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
 
     // Wait for Eth1MergeBlockTracker to find at least one merge block
     while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getMergeBlock()) break;
+      if (eth1MergeBlockTracker.getPowBlockAtTotalDifficulty()) break;
       await sleep(500, controller.signal);
     }
 
@@ -101,7 +99,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
 
     // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    const mergeBlock = eth1MergeBlockTracker.getMergeBlock();
+    const mergeBlock = eth1MergeBlockTracker.getPowBlockAtTotalDifficulty();
     if (!mergeBlock) throw Error("mergeBlock not found");
     expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
       true,
