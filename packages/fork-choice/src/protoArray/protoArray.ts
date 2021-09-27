@@ -652,7 +652,7 @@ export class ProtoArray {
         return parentNode;
       }
     }
-    throw Error("slot less than finalized block");
+    throw Error(`cannot get ancestor for block ${node.blockRoot} at slot ${slot}`);
   }
 
   private getNodeFromIndex(index: number): IProtoNode {
