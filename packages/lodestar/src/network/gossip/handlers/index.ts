@@ -55,7 +55,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
   const {chain, config, metrics, network, logger} = modules;
 
   return {
-    [GossipType.beacon_block]: async (signedBlock, _topic, peerIdStr, seenTimestampSec) => {
+    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       logger.verbose("Received gossip block", {
@@ -65,7 +65,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       });
 
       try {
-        await validateGossipBlock(config, chain, signedBlock);
+        await validateGossipBlock(config, chain, signedBlock, topic.fork);
       } catch (e) {
         if (e instanceof BlockGossipError) {
           if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {

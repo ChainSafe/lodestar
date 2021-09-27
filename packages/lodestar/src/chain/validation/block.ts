@@ -1,17 +1,23 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeStartSlotAtEpoch, computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, computeTimeAtSlot, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
+import {byteArrayEquals} from "../../util/bytes";
+
+// TODO - TEMP: Placeholder, to be agreed with other clients
+const MAX_TRANSACTIONS_SIZE = 50e6; // 50MB
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
   chain: IBeaconChain,
-  signedBlock: allForks.SignedBeaconBlock
+  signedBlock: allForks.SignedBeaconBlock,
+  fork: ForkName
 ): Promise<void> {
   const block = signedBlock.message;
   const blockSlot = block.slot;
@@ -87,6 +93,52 @@ export async function validateGossipBlock(
     });
   }
 
+  // Extra conditions for merge fork blocks
+  if (fork === ForkName.merge) {
+    if (!merge.isMergeBlockBodyType(block.body)) throw Error("Not merge block type");
+    const executionPayload = block.body.executionPayload;
+
+    // [REJECT] The block's execution payload timestamp is correct with respect to the slot
+    // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+    const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
+    if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.INCORRECT_TIMESTAMP,
+        timestamp: executionPayload.timestamp,
+        expectedTimestamp,
+      });
+    }
+
+    // [REJECT] Gas used is less than the gas limit -- i.e. execution_payload.gas_used <= execution_payload.gas_limit.
+    if (executionPayload.gasUsed > executionPayload.gasLimit) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TOO_MUCH_GAS_USED,
+        gasUsed: executionPayload.gasUsed,
+        gasLimit: executionPayload.gasLimit,
+      });
+    }
+
+    // [REJECT] The execution payload block hash is not equal to the parent hash
+    // -- i.e. execution_payload.block_hash != execution_payload.parent_hash.
+    if (byteArrayEquals(executionPayload.blockHash, executionPayload.parentHash)) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.SAME_PARENT_HASH,
+        blockHash: toHexString(executionPayload.blockHash),
+      });
+    }
+
+    // [REJECT] The execution payload transaction list data is within expected size limits, the data MUST NOT be larger
+    // than the SSZ list-limit, and a client MAY be more strict.
+    const totalTransactionSize = getTotalTransactionsSize(executionPayload.transactions);
+    if (totalTransactionSize > MAX_TRANSACTIONS_SIZE) {
+      throw new BlockGossipError(GossipAction.REJECT, {
+        code: BlockErrorCode.TRANSACTIONS_TOO_BIG,
+        size: totalTransactionSize,
+        max: MAX_TRANSACTIONS_SIZE,
+      });
+    }
+  }
+
   // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
@@ -128,4 +180,12 @@ export async function validateGossipBlock(
   }
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex);
+}
+
+function getTotalTransactionsSize(transactions: Uint8Array[]): number {
+  let totalSize = 0;
+  for (const transaction of transactions) {
+    totalSize += transaction.length;
+  }
+  return totalSize;
 }
