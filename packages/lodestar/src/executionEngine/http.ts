@@ -15,7 +15,7 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
   timeout: 12000,
 };
 
-export /**
+/**
  * based on Ethereum JSON-RPC API and inherits the following properties of this standard:
  * - Supported communication protocols (HTTP and WebSocket)
  * - Message format and encoding notation
@@ -24,7 +24,7 @@ export /**
  * Client software MUST expose Engine API at a port independent from JSON-RPC API. The default port for the Engine API is 8550 for HTTP and 8551 for WebSocket.
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
-class ExecutionEngineHttp implements IExecutionEngine {
+export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: JsonRpcHttpClient;
 
   constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: JsonRpcHttpClient) {
