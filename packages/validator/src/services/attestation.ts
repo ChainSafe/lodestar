@@ -1,13 +1,14 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 import {extendError, IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -94,8 +95,8 @@ export class AttestationService {
     for (const {duty} of duties) {
       const logCtxValidator = {
         ...logCtx,
-        head: prettyBytes(attestation.beaconBlockRoot),
-        validator: prettyBytes(duty.pubkey),
+        head: toHexString(attestation.beaconBlockRoot),
+        validatorIndex: duty.validatorIndex,
       };
       try {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
@@ -148,7 +149,7 @@ export class AttestationService {
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
     for (const {duty, selectionProof} of duties) {
-      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
+      const logCtxValidator = {...logCtx, validator: toHexString(duty.pubkey), validatorIndex: duty.validatorIndex};
       try {
         // Produce signed aggregates only for validators that are subscribed aggregators.
         if (selectionProof !== null) {
