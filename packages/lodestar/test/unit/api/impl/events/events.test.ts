@@ -5,7 +5,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {BeaconChain, ChainEvent, ChainEventEmitter, IBeaconChain} from "../../../../../src/chain";
 import {getEventsApi} from "../../../../../src/api/impl/events";
-import {generateBlockSummary, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
+import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateCachedState} from "../../../../utils/state";
 
@@ -37,9 +37,9 @@ describe("Events api impl", function () {
     it("should ignore not sent topics", async function () {
       const events = getEvents([routes.events.EventType.head]);
 
-      const headSummary = generateBlockSummary();
-      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headSummary, headSummary, 2);
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
+      const headBlock = generateProtoBlock();
+      chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
@@ -49,8 +49,8 @@ describe("Events api impl", function () {
     it("should process head event", async function () {
       const events = getEvents([routes.events.EventType.head]);
 
-      const headSummary = generateBlockSummary();
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headSummary);
+      const headBlock = generateProtoBlock();
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
@@ -61,7 +61,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.block]);
 
       const block = generateSignedBlock();
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.block);
@@ -85,7 +85,7 @@ describe("Events api impl", function () {
       const exit = generateEmptySignedVoluntaryExit();
       const block = generateEmptySignedBlock();
       block.message.body.voluntaryExits.push(exit);
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.voluntaryExit);
@@ -108,8 +108,8 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.chainReorg]);
 
       const depth = 3;
-      const oldHead = generateBlockSummary({slot: 4});
-      const newHead = generateBlockSummary({slot: 3});
+      const oldHead = generateProtoBlock({slot: 4});
+      const newHead = generateProtoBlock({slot: 3});
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, oldHead, newHead, depth);
 
       expect(events).to.have.length(1, "Wrong num of received events");

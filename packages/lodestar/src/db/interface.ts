@@ -2,7 +2,6 @@
  * @module db/api/beacon
  */
 
-import {allForks} from "@chainsafe/lodestar-types";
 import {IDbMetrics} from "@chainsafe/lodestar-db";
 
 import {
@@ -26,7 +25,6 @@ import {
   LatestFinalizedUpdate,
   LatestNonFinalizedUpdate,
 } from "./single";
-import {PendingBlockRepository} from "./repositories/pendingBlock";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -38,9 +36,6 @@ export interface IBeaconDb {
 
   // unfinalized blocks
   block: BlockRepository;
-
-  // pending block
-  pendingBlock: PendingBlockRepository;
 
   // finalized blocks
   blockArchive: BlockArchiveRepository;
@@ -69,8 +64,6 @@ export interface IBeaconDb {
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
-
-  processBlockOperations(signedBlock: allForks.SignedBeaconBlock): Promise<void>;
 
   /**
    * Start the connection to the db instance and open the db store.

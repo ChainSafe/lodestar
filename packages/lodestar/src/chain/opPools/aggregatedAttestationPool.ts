@@ -76,7 +76,7 @@ export class AggregatedAttestationPool {
   }
 
   /**
-   * Get attestations to be included in a block.
+   * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
    */
   getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
     const stateSlot = state.slot;

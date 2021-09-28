@@ -43,12 +43,13 @@ describe("getTotalBalance", () => {
 describe("increaseBalance", () => {
   it("should add to a validators balance", () => {
     const state = generateCachedState();
+
     state.validators.push(generateValidators(1)[0]);
-    state.balances.push(0);
+    state.balanceList.push(0);
     const delta = 5;
     for (let i = 1; i < 10; i++) {
       increaseBalance(state, 0, delta);
-      assert(state.balances[0] === delta * i);
+      expect(state.balanceList.get(0)).to.be.equal(delta * i);
     }
   });
 });
@@ -58,21 +59,21 @@ describe("decreaseBalance", () => {
     const state = generateCachedState();
     state.validators.push(generateValidators(1)[0]);
     const initial = 100;
-    state.balances.push(initial);
+    state.balanceList.push(initial);
     const delta = 5;
     for (let i = 1; i < 10; i++) {
       decreaseBalance(state, 0, delta);
-      assert(state.balances[0] === initial - delta * i);
+      expect(state.balanceList.get(0)).to.be.equal(initial - delta * i);
     }
   });
   it("should not make a validators balance < 0", () => {
     const state = generateCachedState();
     state.validators.push(generateValidators(1)[0]);
     const initial = 10;
-    state.balances.push(initial);
+    state.balanceList.push(initial);
     const delta = 11;
     decreaseBalance(state, 0, delta);
-    assert(state.balances[0] === 0);
+    expect(state.balanceList.get(0)).to.be.equal(0);
   });
 });
 

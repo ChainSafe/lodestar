@@ -1,12 +1,12 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
-import {TreeBacked} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ForkChoice, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
@@ -16,16 +16,14 @@ import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/sta
 import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
-import {BlockPool} from "../../../../src/chain/blocks";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
-import {generateEmptyBlockSummary} from "../../block";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {testLogger} from "../../logger";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
   SeenAggregators,
   SeenAttesters,
+  SeenBlockProposers,
   SeenContributionAndProof,
   SeenSyncCommitteeMessages,
 } from "../../../../src/chain/seenCache";
@@ -33,8 +31,11 @@ import {
   SyncCommitteeMessagePool,
   SyncContributionAndProofPool,
   AggregatedAttestationPool,
+  OpPool,
 } from "../../../../src/chain/opPools";
 import {LightClientIniter} from "../../../../src/chain/lightClient";
+import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
+import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -43,12 +44,16 @@ export interface IMockChainParams {
   chainId: Uint16;
   networkId: Uint64;
   state: TreeBacked<allForks.BeaconState>;
-  config: IChainForkConfig;
+  config: IBeaconConfig;
 }
 
 export class MockBeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly eth1 = new Eth1ForBlockProductionDisabled();
+  readonly executionEngine = new ExecutionEngineDisabled();
+  readonly config: IBeaconConfig;
+
   readonly bls: IBlsVerifier;
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
@@ -58,7 +63,6 @@ export class MockBeaconChain implements IBeaconChain {
   clock: IBeaconClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -68,19 +72,19 @@ export class MockBeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly opPool = new OpPool();
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
   private state: TreeBacked<allForks.BeaconState>;
-  private config: IChainForkConfig;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
-    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -99,11 +103,9 @@ export class MockBeaconChain implements IBeaconChain {
     this.forkChoice = mockForkChoice();
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});
-    this.pendingBlocks = new BlockPool(config, logger);
-    const db = new StubbedBeaconDb(sinon);
+    const db = new StubbedBeaconDb();
     this.regen = new StateRegenerator({
       config: this.config,
-      emitter: this.emitter,
       forkChoice: this.forkChoice,
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
@@ -120,19 +122,11 @@ export class MockBeaconChain implements IBeaconChain {
     });
   }
 
-  async getHeadBlock(): Promise<null> {
-    return null;
-  }
-
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
     return createCachedBeaconState(this.config, this.state);
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return createCachedBeaconState(this.config, this.state);
-  }
-
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return createCachedBeaconState(this.config, this.state);
   }
 
@@ -147,10 +141,6 @@ export class MockBeaconChain implements IBeaconChain {
       return [];
     }
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
-  }
-
-  getFinalizedCheckpoint(): phase0.Checkpoint {
-    return this.state.finalizedCheckpoint;
   }
 
   getHeadForkDigest(): ForkDigest {
@@ -179,10 +169,7 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   async persistToDisk(): Promise<void> {}
-
-  async getStateByBlockRoot(): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    return null;
-  }
+  async loadFromDisk(): Promise<void> {}
 
   getStatus(): phase0.Status {
     return {
@@ -201,15 +188,27 @@ export class MockBeaconChain implements IBeaconChain {
 
 function mockForkChoice(): IForkChoice {
   const root = ssz.Root.defaultValue() as Uint8Array;
-  const blockSummary = generateEmptyBlockSummary();
-  const checkpoint = ssz.phase0.Checkpoint.defaultValue();
+  const rootHex = toHexString(root);
+  const block: IProtoBlock = {
+    slot: 0,
+    blockRoot: rootHex,
+    parentRoot: rootHex,
+    stateRoot: rootHex,
+    targetRoot: rootHex,
+    executionPayloadBlockHash: null,
+    justifiedEpoch: 0,
+    justifiedRoot: rootHex,
+    finalizedEpoch: 0,
+    finalizedRoot: rootHex,
+  };
+  const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
   return {
-    getAncestor: () => root,
-    getHeadRoot: () => root,
-    getHead: () => blockSummary,
-    updateHead: () => blockSummary,
-    getHeads: () => [blockSummary],
+    getAncestor: () => rootHex,
+    getHeadRoot: () => rootHex,
+    getHead: () => block,
+    updateHead: () => block,
+    getHeads: () => [block],
     getFinalizedCheckpoint: () => checkpoint,
     getJustifiedCheckpoint: () => checkpoint,
     onBlock: () => {},
@@ -218,18 +217,24 @@ function mockForkChoice(): IForkChoice {
     updateTime: () => {},
     getTime: () => 0,
     hasBlock: () => true,
-    getBlock: () => blockSummary,
-    getFinalizedBlock: () => blockSummary,
-    getJustifiedBlock: () => blockSummary,
+    hasBlockHex: () => true,
+    getBlock: () => block,
+    getBlockHex: () => block,
+    getFinalizedBlock: () => block,
+    getJustifiedBlock: () => block,
     isDescendantOfFinalized: () => true,
     isDescendant: () => true,
-    prune: () => [blockSummary],
+    prune: () => [block],
     setPruneThreshold: () => {},
-    iterateBlockSummaries: () => [blockSummary],
-    iterateNonAncestors: () => [blockSummary],
-    getCanonicalBlockSummaryAtSlot: () => blockSummary,
-    forwardIterateBlockSummaries: () => [blockSummary],
-    getBlockSummariesByParentRoot: () => [blockSummary],
-    getBlockSummariesAtSlot: () => [blockSummary],
+    iterateAncestorBlocks: function* () {
+      yield block;
+    },
+    getAllAncestorBlocks: () => [block],
+    getAllNonAncestorBlocks: () => [block],
+    getCanonicalBlockAtSlot: () => block,
+    forwarditerateAncestorBlocks: () => [block],
+    getBlockSummariesByParentRoot: () => [block],
+    getBlockSummariesAtSlot: () => [block],
+    getCommonAncestorDistance: () => null,
   };
 }

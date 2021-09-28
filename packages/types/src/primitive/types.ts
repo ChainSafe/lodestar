@@ -35,6 +35,9 @@ export type Domain = Bytes32;
 export type BLSPubkey = Bytes48;
 export type BLSSecretKey = Bytes32;
 export type BLSSignature = Bytes96;
-export type BlockRootHex = string;
-export type AttestationRootHex = string;
 export type ParticipationFlags = Uint8;
+export type ExecutionAddress = Bytes20;
+export type PayloadId = Number64;
+
+/** Common non-spec type to represent roots as strings */
+export type RootHex = string;

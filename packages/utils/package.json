@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.29.3",
+  "version": "0.30.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -38,9 +38,9 @@
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/ssz": "^0.8.17",
-    "any-signal": "2.1.1",
+    "any-signal": "2.1.2",
     "bigint-buffer": "^1.1.5",
-    "chalk": "^2.4.2",
+    "chalk": "^4.1.2",
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",

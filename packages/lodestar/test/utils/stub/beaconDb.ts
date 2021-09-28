@@ -1,5 +1,4 @@
-import {SinonSandbox, SinonStubbedInstance} from "sinon";
-import {phase0} from "@chainsafe/lodestar-types";
+import {SinonStubbedInstance} from "sinon";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {BeaconDb} from "../../../src/db";
@@ -13,17 +12,14 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  PendingBlockRepository,
 } from "../../../src/db/repositories";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
-import {SignedBeaconBlock} from "@chainsafe/lodestar-types/phase0";
 import {createStubInstance} from "../types";
 
 export class StubbedBeaconDb extends BeaconDb {
   db!: SinonStubbedInstance<LevelDbController>;
 
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
-  pendingBlock: SinonStubbedInstance<PendingBlockRepository> & PendingBlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;
 
@@ -35,15 +31,11 @@ export class StubbedBeaconDb extends BeaconDb {
   depositDataRoot: SinonStubbedInstance<DepositDataRootRepository> & DepositDataRootRepository;
   eth1Data: SinonStubbedInstance<Eth1DataRepository> & Eth1DataRepository;
 
-  processBlockOperations: SinonStubbedInstance<(signedBlock: phase0.SignedBeaconBlock) => Promise<void>> &
-    ((signedBlock: phase0.SignedBeaconBlock) => Promise<void>);
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  constructor(sinon: SinonSandbox, config = minimalConfig) {
+  constructor(config = minimalConfig) {
     // eslint-disable-next-line
     super({config, controller: {} as any});
     this.block = createStubInstance(BlockRepository);
-    this.pendingBlock = createStubInstance(PendingBlockRepository);
     this.blockArchive = createStubInstance(BlockArchiveRepository);
     this.stateArchive = createStubInstance(StateArchiveRepository);
 
@@ -54,8 +46,5 @@ export class StubbedBeaconDb extends BeaconDb {
 
     this.depositDataRoot = createStubInstance(DepositDataRootRepository);
     this.eth1Data = createStubInstance(Eth1DataRepository);
-    this.processBlockOperations = sinon.stub(this, "processBlockOperations") as (
-      signedBlock: SignedBeaconBlock
-    ) => Promise<void>;
   }
 }

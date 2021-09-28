@@ -7,6 +7,10 @@ export const chainConfig: IChainConfig = {
   // Extends the minimal preset
   PRESET_BASE: PresetName.minimal,
 
+  // Transition
+  // TBD, 2**256-1 is a placeholder
+  TERMINAL_TOTAL_DIFFICULTY: BigInt(115792089237316195423570985008687907853269984665640564039457584007913129639935),
+
   // Genesis
   // ---------------------------------------------------------------
   // [customized]
@@ -25,7 +29,7 @@ export const chainConfig: IChainConfig = {
 
   // Altair
   ALTAIR_FORK_VERSION: b("0x01000001"),
-  ALTAIR_FORK_EPOCH: Infinity,
+  ALTAIR_FORK_EPOCH: 74240, // Oct 27, 2021, 10:56:23am UTC
   // Merge
   MERGE_FORK_VERSION: b("0x02000001"),
   MERGE_FORK_EPOCH: Infinity,

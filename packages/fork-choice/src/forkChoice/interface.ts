@@ -1,5 +1,11 @@
-import {Epoch, Slot, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
-import {IBlockSummary} from "./blockSummary";
+import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
+import {IProtoBlock} from "../protoArray/interface";
+import {CheckpointWithHex} from "./store";
+
+export type CheckpointHex = {
+  epoch: Epoch;
+  root: RootHex;
+};
 
 export interface IForkChoice {
   /**
@@ -12,7 +18,7 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
    */
-  getAncestor(blockRoot: phase0.Root, ancestorSlot: Slot): Uint8Array;
+  getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex;
   /**
    * Run the fork choice rule to determine the head.
    *
@@ -22,15 +28,15 @@ export interface IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
    */
-  getHeadRoot(): Uint8Array;
-  getHead(): IBlockSummary;
-  updateHead(): IBlockSummary;
+  getHeadRoot(): RootHex;
+  getHead(): IProtoBlock;
+  updateHead(): IProtoBlock;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).
    */
-  getHeads(): IBlockSummary[];
-  getFinalizedCheckpoint(): phase0.Checkpoint;
-  getJustifiedCheckpoint(): phase0.Checkpoint;
+  getHeads(): IProtoBlock[];
+  getFinalizedCheckpoint(): CheckpointWithHex;
+  getJustifiedCheckpoint(): CheckpointWithHex;
   /**
    * Add `block` to the fork choice DAG.
    *
@@ -47,10 +53,10 @@ export interface IForkChoice {
    *
    * The supplied block **must** pass the `state_transition` function as it will not be run here.
    *
-   * `justifiedBalances` validator balances of justified checkpoint which is updated synchronously.
-   * This ensures that the forkchoice is never out of sync.
+   * `preCachedData` includes data necessary for validation included in the spec but some data is
+   * pre-fetched in advance to keep the fork-choice fully syncronous
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, justifiedBalances?: number[]): void;
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *
@@ -83,49 +89,79 @@ export interface IForkChoice {
   /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
-  hasBlock(blockRoot: phase0.Root): boolean;
+  hasBlock(blockRoot: Root): boolean;
+  hasBlockHex(blockRoot: RootHex): boolean;
   /**
-   * Returns a `IBlockSummary` if the block is known **and** a descendant of the finalized root.
+   * Returns a `IProtoBlock` if the block is known **and** a descendant of the finalized root.
    */
-  getBlock(blockRoot: phase0.Root): IBlockSummary | null;
-  getFinalizedBlock(): IBlockSummary;
-  getJustifiedBlock(): IBlockSummary;
+  getBlock(blockRoot: Root): IProtoBlock | null;
+  getBlockHex(blockRoot: RootHex): IProtoBlock | null;
+  getFinalizedBlock(): IProtoBlock;
+  getJustifiedBlock(): IProtoBlock;
   /**
    * Return `true` if `block_root` is equal to the finalized root, or a known descendant of it.
    */
-  isDescendantOfFinalized(blockRoot: phase0.Root): boolean;
+  isDescendantOfFinalized(blockRoot: RootHex): boolean;
   /**
    * Returns true if the `descendantRoot` has an ancestor with `ancestorRoot`.
    *
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot===descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: phase0.Root, descendantRoot: phase0.Root): boolean;
+  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean;
   /**
    * Prune items up to a finalized root.
    */
-  prune(finalizedRoot: phase0.Root): IBlockSummary[];
+  prune(finalizedRoot: RootHex): IProtoBlock[];
   setPruneThreshold(threshold: number): void;
   /**
-   * Iterates backwards through block summaries, starting from a block root
+   * Iterates backwards through ancestor block summaries, starting from a block root
    */
-  iterateBlockSummaries(blockRoot: phase0.Root): IBlockSummary[];
+  iterateAncestorBlocks(blockRoot: RootHex): IterableIterator<IProtoBlock>;
+  getAllAncestorBlocks(blockRoot: RootHex): IProtoBlock[];
   /**
-   * The same to iterateBlockSummaries but this gets non-ancestor nodes instead of ancestor nodes.
+   * The same to iterateAncestorBlocks but this gets non-ancestor nodes instead of ancestor nodes.
    */
-  iterateNonAncestors(blockRoot: phase0.Root): IBlockSummary[];
-  getCanonicalBlockSummaryAtSlot(slot: Slot): IBlockSummary | null;
+  getAllNonAncestorBlocks(blockRoot: RootHex): IProtoBlock[];
+  getCanonicalBlockAtSlot(slot: Slot): IProtoBlock | null;
   /**
    * Iterates forwards through block summaries, exact order is not guaranteed
    */
-  forwardIterateBlockSummaries(): IBlockSummary[];
-  getBlockSummariesByParentRoot(parentRoot: phase0.Root): IBlockSummary[];
-  getBlockSummariesAtSlot(slot: Slot): IBlockSummary[];
+  forwarditerateAncestorBlocks(): IProtoBlock[];
+  getBlockSummariesByParentRoot(parentRoot: RootHex): IProtoBlock[];
+  getBlockSummariesAtSlot(slot: Slot): IProtoBlock[];
+  /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
+  getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
 }
+
+export type PowBlock = {
+  blockhash: RootHex;
+  parentHash: RootHex;
+  totalDifficulty: bigint;
+};
+
+export type OnBlockPrecachedData = {
+  /** `justifiedBalances` balances of justified state which is updated synchronously. */
+  justifiedBalances?: number[];
+  /**
+   * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
+   * ```ts
+   * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
+   * ```
+   */
+  powBlock?: PowBlock;
+  /**
+   * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
+   * ```ts
+   * const powParent = getPowBlock(powBlock.parentHash);
+   * ```
+   */
+  powBlockParent?: PowBlock;
+};
 
 export interface ILatestMessage {
   epoch: Epoch;
-  root: phase0.Root;
+  root: RootHex;
 }
 
 /**
@@ -135,6 +171,6 @@ export interface ILatestMessage {
 export interface IQueuedAttestation {
   slot: Slot;
   attestingIndices: ValidatorIndex[];
-  blockRoot: Uint8Array;
+  blockRoot: RootHex;
   targetEpoch: Epoch;
 }

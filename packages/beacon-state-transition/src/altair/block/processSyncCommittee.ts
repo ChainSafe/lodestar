@@ -39,7 +39,7 @@ export function processSyncAggregate(
   for (const unparticipantIndex of unparticipantIndices) {
     accumulateDelta(deltaByIndex, unparticipantIndex, -syncParticipantReward);
   }
-  state.balances.applyDeltaInBatch(deltaByIndex);
+  state.balanceList.applyDeltaInBatch(deltaByIndex);
 }
 
 export function getSyncCommitteeSignatureSet(

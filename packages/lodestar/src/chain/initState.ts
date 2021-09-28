@@ -21,6 +21,7 @@ import {IMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
+import {Eth1Options} from "../eth1/options";
 
 export async function persistGenesisResult(
   db: IBeaconDb,
@@ -70,13 +71,19 @@ export function createGenesisBlock(
 /**
  * Initialize and persist a genesis state and related data
  */
-export async function initStateFromEth1(
-  config: IChainForkConfig,
-  db: IBeaconDb,
-  logger: ILogger,
-  eth1Provider: Eth1Provider,
-  signal: AbortSignal
-): Promise<TreeBacked<allForks.BeaconState>> {
+export async function initStateFromEth1({
+  config,
+  db,
+  logger,
+  opts,
+  signal,
+}: {
+  config: IChainForkConfig;
+  db: IBeaconDb;
+  logger: ILogger;
+  opts: Eth1Options;
+  signal: AbortSignal;
+}): Promise<TreeBacked<allForks.BeaconState>> {
   logger.info("Listening to eth1 for genesis state");
 
   const statePreGenesis = await db.preGenesisState.get();
@@ -85,7 +92,7 @@ export async function initStateFromEth1(
 
   const builder = new GenesisBuilder({
     config,
-    eth1Provider,
+    eth1Provider: new Eth1Provider(config, opts, signal),
     logger,
     signal,
     pendingStatus:

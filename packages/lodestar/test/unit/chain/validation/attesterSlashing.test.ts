@@ -1,34 +1,32 @@
-import sinon from "sinon";
+import sinon, {SinonStubbedInstance} from "sinon";
 
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
-import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
+import {StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/attesterSlashing";
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
+import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {List} from "@chainsafe/ssz";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb, chainStub: StubbedChain;
+  let chainStub: StubbedChain;
+  let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
-  before(() => {
+  beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     chainStub.bls = {verifySignatureSets: async () => true};
-    dbStub = new StubbedBeaconDb(sandbox);
-    dbStub.attesterSlashing.hasAll.resolves(false);
+    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
+    (chainStub as {opPool: OpPool}).opPool = opPool;
 
     const state = generateCachedState();
     chainStub.getHeadState.returns(state);
-  });
-
-  afterEach(() => {
-    dbStub.attesterSlashing.hasAll.resolves(false);
   });
 
   after(() => {
@@ -38,10 +36,10 @@ describe("GossipMessageValidator", () => {
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
-      dbStub.attesterSlashing.hasAll.resolves(true);
+      opPool.hasSeenAttesterSlashing.returns(true);
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub, attesterSlashing),
         AttesterSlashingErrorCode.ALREADY_EXISTS
       );
     });
@@ -50,7 +48,7 @@ describe("GossipMessageValidator", () => {
       const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
-        validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing),
+        validateGossipAttesterSlashing(chainStub, attesterSlashing),
         AttesterSlashingErrorCode.INVALID
       );
     });
@@ -70,7 +68,7 @@ describe("GossipMessageValidator", () => {
         },
       };
 
-      await validateGossipAttesterSlashing(chainStub, dbStub, attesterSlashing);
+      await validateGossipAttesterSlashing(chainStub, attesterSlashing);
     });
   });
 });

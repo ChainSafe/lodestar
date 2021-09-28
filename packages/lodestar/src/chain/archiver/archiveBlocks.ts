@@ -1,8 +1,8 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {fromHexString} from "@chainsafe/ssz";
+import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconDb} from "../../db";
+import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories";
 
 /**
  * Archives finalized blocks from active bucket to archive bucket.
@@ -17,35 +17,40 @@ export async function archiveBlocks(
   db: IBeaconDb,
   forkChoice: IForkChoice,
   logger: ILogger,
-  finalized: phase0.Checkpoint
+  finalized: CheckpointWithHex
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
-  const allCanonicalSummaries = forkChoice.iterateBlockSummaries(finalized.root);
-  // 1st block in iterateBlockSummaries() is the finalized block itself
+  const allCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalized.rootHex);
+  // 1st block in iterateAncestorBlocks() is the finalized block itself
   // we move it to blockArchive but forkchoice still have it to check next onBlock calls
-  // the next iterateBlockSummaries call does not return this block
+  // the next iterateAncestorBlocks call does not return this block
   let i = 0;
   // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
   const BATCH_SIZE = 1000;
   // process in chunks to avoid OOM
-  while (i < allCanonicalSummaries.length) {
-    const upperBound = Math.min(i + BATCH_SIZE, allCanonicalSummaries.length);
-    const canonicalSummaries = allCanonicalSummaries.slice(i, upperBound);
+  while (i < allCanonicalBlocks.length) {
+    const upperBound = Math.min(i + BATCH_SIZE, allCanonicalBlocks.length);
+    const canonicalBlocks = allCanonicalBlocks.slice(i, upperBound);
 
     // processCanonicalBlocks
-    if (!canonicalSummaries) return;
+    if (canonicalBlocks.length === 0) return;
+
     // load Buffer instead of SignedBeaconBlock to improve performance
-    const canonicalBlockEntries = (
+    const canonicalBlockEntries: BlockArchiveBatchPutBinaryItem[] = (
       await Promise.all(
-        canonicalSummaries.map(async (summary) => {
-          const blockBuffer = await db.block.getBinary(summary.blockRoot);
+        canonicalBlocks.map(async (block) => {
+          const blockRootHex = block.blockRoot;
+          const blockRoot = fromHexString(blockRootHex);
+          const blockBuffer = await db.block.getBinary(blockRoot);
           if (!blockBuffer) {
-            throw Error(`No block found for slot ${summary.slot} root ${toHexString(summary.blockRoot)}`);
+            throw Error(`No block found for slot ${block.slot} root ${block.blockRoot}`);
           }
           return {
-            key: summary.slot,
+            key: block.slot,
             value: blockBuffer,
-            summary,
+            slot: block.slot,
+            blockRoot,
+            parentRoot: fromHexString(block.parentRoot),
           };
         })
       )
@@ -53,27 +58,27 @@ export async function archiveBlocks(
     // put to blockArchive db and delete block db
     await Promise.all([
       db.blockArchive.batchPutBinary(canonicalBlockEntries),
-      db.block.batchDelete(canonicalSummaries.map((summary) => summary.blockRoot)),
+      db.block.batchDelete(canonicalBlocks.map((block) => fromHexString(block.blockRoot))),
     ]);
     logger.verbose("Archive Blocks: processed chunk", {
       lowerBound: i,
       upperBound,
-      size: allCanonicalSummaries.length,
+      size: allCanonicalBlocks.length,
     });
     i = upperBound;
   }
 
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
-  const nonCanonicalSummaries = forkChoice.iterateNonAncestors(finalized.root);
+  const nonCanonicalSummaries = forkChoice.getAllNonAncestorBlocks(finalized.rootHex);
   if (nonCanonicalSummaries && nonCanonicalSummaries.length > 0) {
-    await db.block.batchDelete(nonCanonicalSummaries.map((summary) => summary.blockRoot));
+    await db.block.batchDelete(nonCanonicalSummaries.map((summary) => fromHexString(summary.blockRoot)));
     logger.verbose("deleteNonCanonicalBlocks", {
       slots: nonCanonicalSummaries.map((summary) => summary.slot).join(","),
     });
   }
   logger.verbose("Archiving of finalized blocks complete", {
-    totalArchived: allCanonicalSummaries.length,
+    totalArchived: allCanonicalBlocks.length,
     finalizedEpoch: finalized.epoch,
   });
 }

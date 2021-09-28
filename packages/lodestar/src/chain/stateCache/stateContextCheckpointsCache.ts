@@ -1,9 +1,12 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
+import {MapDef} from "../../util/map";
 
+type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
 const MAX_EPOCHS = 10;
 
 /**
@@ -15,7 +18,7 @@ const MAX_EPOCHS = 10;
 export class CheckpointStateCache {
   private readonly cache: MapTracker<string, CachedBeaconState<allForks.BeaconState>>;
   /** Epoch -> Set<blockRoot> */
-  private readonly epochIndex = new Map<Epoch, Set<string>>();
+  private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
   private readonly metrics: IMetrics["cpStateCache"] | null | undefined;
 
   constructor({metrics}: {metrics?: IMetrics | null}) {
@@ -27,7 +30,7 @@ export class CheckpointStateCache {
     }
   }
 
-  get(cp: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
+  get(cp: CheckpointHex): CachedBeaconState<allForks.BeaconState> | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(toCheckpointKey(cp));
     if (item) this.metrics?.hits.inc();
@@ -35,34 +38,27 @@ export class CheckpointStateCache {
   }
 
   add(cp: phase0.Checkpoint, item: CachedBeaconState<allForks.BeaconState>): void {
-    const key = toCheckpointKey(cp);
+    const cpHex = toCheckpointHex(cp);
+    const key = toCheckpointKey(cpHex);
     if (this.cache.has(key)) {
       return;
     }
     this.metrics?.adds.inc();
     this.cache.set(key, item.clone());
-    const epochKey = toHexString(cp.root);
-    const value = this.epochIndex.get(cp.epoch);
-    if (value) {
-      value.add(epochKey);
-    } else {
-      this.epochIndex.set(cp.epoch, new Set([epochKey]));
-    }
+    this.epochIndex.getOrDefault(cp.epoch).add(cpHex.rootHex);
   }
 
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest({root, epoch}: phase0.Checkpoint): CachedBeaconState<allForks.BeaconState> | null {
-    const hexRoot = toHexString(root);
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconState<allForks.BeaconState> | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)
-      .filter((e) => e <= epoch);
+      .filter((e) => e <= maxEpoch);
     for (const epoch of epochs) {
-      const rootSet = this.epochIndex.get(epoch);
-      if (rootSet && rootSet.has(hexRoot)) {
-        return this.get({root, epoch});
+      if (this.epochIndex.get(epoch)?.has(rootHex)) {
+        return this.get({rootHex, epoch});
       }
     }
     return null;
@@ -88,7 +84,7 @@ export class CheckpointStateCache {
   }
 
   delete(cp: phase0.Checkpoint): void {
-    this.cache.delete(toCheckpointKey(cp));
+    this.cache.delete(toCheckpointKey(toCheckpointHex(cp)));
     const epochKey = toHexString(cp.root);
     const value = this.epochIndex.get(cp.epoch);
     if (value) {
@@ -100,8 +96,8 @@ export class CheckpointStateCache {
   }
 
   deleteAllEpochItems(epoch: Epoch): void {
-    for (const hexRoot of this.epochIndex.get(epoch) || []) {
-      this.cache.delete(toCheckpointHexKey({root: hexRoot, epoch}));
+    for (const rootHex of this.epochIndex.get(epoch) || []) {
+      this.cache.delete(toCheckpointKey({rootHex, epoch}));
     }
     this.epochIndex.delete(epoch);
   }
@@ -112,20 +108,23 @@ export class CheckpointStateCache {
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
-  dumpSummary(): {slot: number; root: Uint8Array; reads: number; lastRead: number}[] {
+  dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: state.hashTreeRoot(),
+      root: toHexString(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
     }));
   }
 }
 
-function toCheckpointKey(cp: phase0.Checkpoint): string {
-  return `${toHexString(cp.root)}:${cp.epoch}`;
+export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
+  return {
+    epoch: checkpoint.epoch,
+    rootHex: toHexString(checkpoint.root),
+  };
 }
 
-function toCheckpointHexKey(cp: {root: string; epoch: Epoch}): string {
-  return `${cp.root}:${cp.epoch}`;
+function toCheckpointKey(cp: CheckpointHex): string {
+  return `${cp.rootHex}:${cp.epoch}`;
 }

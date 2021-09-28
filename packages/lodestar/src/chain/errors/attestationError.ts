@@ -1,4 +1,4 @@
-import {CommitteeIndex, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {GossipActionError} from "./gossipValidation";
 
 export enum AttestationErrorCode {
@@ -157,7 +157,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS}
   | {code: AttestationErrorCode.KNOWN_BAD_BLOCK}
-  | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: Uint8Array; expected: Uint8Array | null}
+  | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: RootHex; expected: string | null}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
   | {code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE; error: Error}

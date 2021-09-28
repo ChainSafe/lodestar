@@ -1,6 +1,6 @@
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 
-import {HexRoot, IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
+import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
@@ -10,11 +10,11 @@ export class ProtoArray {
   // Small prunes simply waste time
   pruneThreshold: number;
   justifiedEpoch: Epoch;
-  justifiedRoot: HexRoot;
+  justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
-  finalizedRoot: HexRoot;
+  finalizedRoot: RootHex;
   nodes: IProtoNode[];
-  indices: Map<HexRoot, number>;
+  indices: Map<RootHex, number>;
 
   constructor({
     pruneThreshold,
@@ -25,9 +25,9 @@ export class ProtoArray {
   }: {
     pruneThreshold: number;
     justifiedEpoch: Epoch;
-    justifiedRoot: HexRoot;
+    justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
-    finalizedRoot: HexRoot;
+    finalizedRoot: RootHex;
   }) {
     this.pruneThreshold = pruneThreshold;
     this.justifiedEpoch = justifiedEpoch;
@@ -38,45 +38,19 @@ export class ProtoArray {
     this.indices = new Map<string, number>();
   }
 
-  static initialize({
-    slot,
-    parentRoot,
-    stateRoot,
-    blockRoot,
-    justifiedEpoch,
-    justifiedRoot,
-    finalizedEpoch,
-    finalizedRoot,
-  }: {
-    slot: Slot;
-    parentRoot: HexRoot;
-    stateRoot: HexRoot;
-    blockRoot: HexRoot;
-    justifiedEpoch: Epoch;
-    justifiedRoot: HexRoot;
-    finalizedEpoch: Epoch;
-    finalizedRoot: HexRoot;
-  }): ProtoArray {
+  static initialize(block: Omit<IProtoBlock, "targetRoot">): ProtoArray {
     const protoArray = new ProtoArray({
       pruneThreshold: DEFAULT_PRUNE_THRESHOLD,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
+      justifiedEpoch: block.justifiedEpoch,
+      justifiedRoot: block.justifiedRoot,
+      finalizedEpoch: block.finalizedEpoch,
+      finalizedRoot: block.finalizedRoot,
     });
-    const block: IProtoBlock = {
-      slot,
-      blockRoot,
-      parentRoot,
-      stateRoot,
+    protoArray.onBlock({
+      ...block,
       // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
-      targetRoot: blockRoot,
-      justifiedEpoch,
-      justifiedRoot,
-      finalizedEpoch,
-      finalizedRoot,
-    };
-    protoArray.onBlock(block);
+      targetRoot: block.blockRoot,
+    });
     return protoArray;
   }
 
@@ -104,9 +78,9 @@ export class ProtoArray {
   }: {
     deltas: number[];
     justifiedEpoch: Epoch;
-    justifiedRoot: HexRoot;
+    justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
-    finalizedRoot: HexRoot;
+    finalizedRoot: RootHex;
   }): void {
     if (deltas.length !== this.indices.size) {
       throw new ProtoArrayError({
@@ -212,7 +186,7 @@ export class ProtoArray {
   /**
    * Follows the best-descendant links to find the best-block (i.e., head-block).
    */
-  findHead(justifiedRoot: HexRoot): HexRoot {
+  findHead(justifiedRoot: RootHex): RootHex {
     const justifiedIndex = this.indices.get(justifiedRoot);
     if (justifiedIndex === undefined) {
       throw new ProtoArrayError({
@@ -276,7 +250,7 @@ export class ProtoArray {
    * - The finalized epoch is equal to the current one, but the finalized root is different.
    * - There is some internal error relating to invalid indices inside `this`.
    */
-  maybePrune(finalizedRoot: HexRoot): IProtoBlock[] {
+  maybePrune(finalizedRoot: RootHex): IProtoBlock[] {
     const finalizedIndex = this.indices.get(finalizedRoot);
     if (finalizedIndex === undefined) {
       throw new ProtoArrayError({
@@ -291,13 +265,10 @@ export class ProtoArray {
     }
 
     // Remove the this.indices key/values for all the to-be-deleted nodes
-    for (const nodeIndex of Array.from({length: finalizedIndex}, (_, i) => i)) {
+    for (let nodeIndex = 0; nodeIndex < finalizedIndex; nodeIndex++) {
       const node = this.nodes[nodeIndex];
       if (node === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
-          index: nodeIndex,
-        });
+        throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index: nodeIndex});
       }
       this.indices.delete(node.blockRoot);
     }
@@ -319,7 +290,8 @@ export class ProtoArray {
     }
 
     // Iterate through all the existing nodes and adjust their indices to match the new layout of this.nodes
-    for (const node of this.nodes) {
+    for (let i = 0, len = this.nodes.length; i < len; i++) {
+      const node = this.nodes[i];
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
         // If node.parent is less than finalizedIndex, set it to undefined
@@ -491,7 +463,37 @@ export class ProtoArray {
   /**
    * Iterate from a block root backwards over nodes
    */
-  iterateNodes(blockRoot: HexRoot): IProtoNode[] {
+  *iterateAncestorNodes(blockRoot: RootHex): IterableIterator<IProtoNode> {
+    const startIndex = this.indices.get(blockRoot);
+    if (startIndex === undefined) {
+      return;
+    }
+
+    const node = this.nodes[startIndex];
+    if (node === undefined) {
+      throw new ProtoArrayError({
+        code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+        index: startIndex,
+      });
+    }
+
+    yield* this.iterateAncestorNodesFromNode(node);
+  }
+
+  /**
+   * Iterate from a block root backwards over nodes
+   */
+  *iterateAncestorNodesFromNode(node: IProtoNode): IterableIterator<IProtoNode> {
+    while (node.parent !== undefined) {
+      node = this.getNodeFromIndex(node.parent);
+      yield node;
+    }
+  }
+
+  /**
+   * Get all nodes from a block root backwards
+   */
+  getAllAncestorNodes(blockRoot: RootHex): IProtoNode[] {
     const startIndex = this.indices.get(blockRoot);
     if (startIndex === undefined) {
       return [];
@@ -504,19 +506,15 @@ export class ProtoArray {
         index: startIndex,
       });
     }
-    const result: IProtoNode[] = [node];
+
+    const nodes = [node];
+
     while (node.parent !== undefined) {
-      const nodeParent = node.parent;
-      node = this.nodes[nodeParent];
-      if (node === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
-          index: nodeParent,
-        });
-      }
-      result.push(node);
+      node = this.getNodeFromIndex(node.parent);
+      nodes.push(node);
     }
-    return result;
+
+    return nodes;
   }
 
   /**
@@ -524,7 +522,7 @@ export class ProtoArray {
    * iterateNodes is to find ancestor nodes of a blockRoot.
    * this is to find non-ancestor nodes of a blockRoot.
    */
-  iterateNonAncestorNodes(blockRoot: HexRoot): IProtoNode[] {
+  getAllNonAncestorNodes(blockRoot: RootHex): IProtoNode[] {
     const startIndex = this.indices.get(blockRoot);
     if (startIndex === undefined) {
       return [];
@@ -541,13 +539,7 @@ export class ProtoArray {
     let nodeIndex = startIndex;
     while (node.parent !== undefined) {
       const parentIndex = node.parent;
-      node = this.nodes[parentIndex];
-      if (node === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
-          index: parentIndex,
-        });
-      }
+      node = this.getNodeFromIndex(parentIndex);
       // nodes between nodeIndex and parentIndex means non-ancestor nodes
       result.push(...this.getNodesBetween(nodeIndex, parentIndex));
       nodeIndex = parentIndex;
@@ -556,45 +548,11 @@ export class ProtoArray {
     return result;
   }
 
-  nodesAtSlot(slot: Slot): IProtoNode[] {
-    const result: IProtoNode[] = [];
-    for (const node of this.nodes) {
-      if (node.slot === slot) {
-        result.push(node);
-      }
-    }
-    return result;
-  }
-
-  hasBlock(blockRoot: HexRoot): boolean {
+  hasBlock(blockRoot: RootHex): boolean {
     return this.indices.has(blockRoot);
   }
 
-  getNodeByIndex(blockIndex: number): IProtoNode | undefined {
-    const node = this.nodes[blockIndex];
-    if (!node) {
-      return undefined;
-    }
-
-    return node;
-  }
-
-  getNodesBetween(upperIndex: number, lowerIndex: number): IProtoNode[] {
-    const result = [];
-    for (let index = upperIndex - 1; index > lowerIndex; index--) {
-      const node = this.nodes[index];
-      if (node === undefined) {
-        throw new ProtoArrayError({
-          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
-          index,
-        });
-      }
-      result.push(node);
-    }
-    return result;
-  }
-
-  getNode(blockRoot: HexRoot): IProtoNode | undefined {
+  getNode(blockRoot: RootHex): IProtoNode | undefined {
     const blockIndex = this.indices.get(blockRoot);
     if (blockIndex === undefined) {
       return undefined;
@@ -602,7 +560,7 @@ export class ProtoArray {
     return this.getNodeByIndex(blockIndex);
   }
 
-  getBlock(blockRoot: HexRoot): IProtoBlock | undefined {
+  getBlock(blockRoot: RootHex): IProtoBlock | undefined {
     const node = this.getNode(blockRoot);
     if (!node) {
       return undefined;
@@ -617,12 +575,17 @@ export class ProtoArray {
    * Always returns `false` if either input roots are unknown.
    * Still returns `true` if `ancestorRoot` === `descendantRoot` (and the roots are known)
    */
-  isDescendant(ancestorRoot: HexRoot, descendantRoot: HexRoot): boolean {
+  isDescendant(ancestorRoot: RootHex, descendantRoot: RootHex): boolean {
     const ancestorNode = this.getNode(ancestorRoot);
     if (!ancestorNode) {
       return false;
     }
-    for (const node of this.iterateNodes(descendantRoot)) {
+
+    if (ancestorRoot === descendantRoot) {
+      return true;
+    }
+
+    for (const node of this.iterateAncestorNodes(descendantRoot)) {
       if (node.slot < ancestorNode.slot) {
         return false;
       }
@@ -633,7 +596,80 @@ export class ProtoArray {
     return false;
   }
 
+  /**
+   * Returns a common ancestor for nodeA or nodeB or null if there's none
+   */
+  getCommonAncestor(nodeA: IProtoNode, nodeB: IProtoNode): IProtoNode | null {
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // If nodeA is higher than nodeB walk up nodeA tree
+      if (nodeA.slot > nodeB.slot) {
+        if (!nodeA.parent) {
+          return null;
+        }
+
+        nodeA = this.getNodeFromIndex(nodeA.parent);
+      }
+
+      // If nodeB is higher than nodeA walk up nodeB tree
+      else if (nodeA.slot < nodeB.slot) {
+        if (!nodeB.parent) {
+          return null;
+        }
+
+        nodeB = this.getNodeFromIndex(nodeB.parent);
+      }
+
+      // If both node trees are at the same height, if same root == common ancestor.
+      // Otherwise, keep walking up until there's a match or no parent.
+      else {
+        if (nodeA.blockRoot === nodeB.blockRoot) {
+          return nodeA;
+        }
+
+        if (!nodeA.parent || !nodeB.parent) {
+          return null;
+        }
+
+        nodeA = this.getNodeFromIndex(nodeA.parent);
+        nodeB = this.getNodeFromIndex(nodeB.parent);
+      }
+    }
+  }
+
   length(): number {
     return this.indices.size;
+  }
+
+  private getNodeFromIndex(index: number): IProtoNode {
+    const node = this.nodes[index];
+    if (node === undefined) {
+      throw new ProtoArrayError({code: ProtoArrayErrorCode.INVALID_NODE_INDEX, index});
+    }
+    return node;
+  }
+
+  private getNodeByIndex(blockIndex: number): IProtoNode | undefined {
+    const node = this.nodes[blockIndex];
+    if (!node) {
+      return undefined;
+    }
+
+    return node;
+  }
+
+  private getNodesBetween(upperIndex: number, lowerIndex: number): IProtoNode[] {
+    const result = [];
+    for (let index = upperIndex - 1; index > lowerIndex; index--) {
+      const node = this.nodes[index];
+      if (node === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index,
+        });
+      }
+      result.push(node);
+    }
+    return result;
   }
 }

@@ -8,8 +8,7 @@ import {sleep} from "@chainsafe/lodestar-utils";
 
 import {getReqRespHandlers, Network} from "../../../src/network";
 import {INetworkOptions} from "../../../src/network/options";
-import {GossipHandlers} from "../../../src/network/gossip/handlers";
-import {GossipType} from "../../../src/network/gossip";
+import {GossipType, GossipHandlers} from "../../../src/network/gossip";
 
 import {generateEmptySignedBlock} from "../../utils/block";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
@@ -55,8 +54,8 @@ describe("network", function () {
     });
 
     const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
-    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config});
-    const db = new StubbedBeaconDb(sinon, config);
+    const chain = new MockBeaconChain({genesisTime: 0, chainId: 0, networkId: BigInt(0), state, config: beaconConfig});
+    const db = new StubbedBeaconDb(config);
     const reqRespHandlers = getReqRespHandlers({db, chain});
     const gossipHandlers = gossipHandlersPartial as GossipHandlers;
 

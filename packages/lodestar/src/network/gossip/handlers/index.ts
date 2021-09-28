@@ -1,19 +1,20 @@
 import {toHexString} from "@chainsafe/ssz";
+import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
-import {IBeaconDb} from "../../../db";
 import {IBeaconChain} from "../../../chain";
 import {
   AttestationError,
+  BlockError,
   BlockErrorCode,
   BlockGossipError,
   GossipAction,
   SyncCommitteeError,
 } from "../../../chain/errors";
-import {GossipTopicMap, GossipType, GossipTypeMap} from "../interface";
+import {GossipHandlers, GossipType} from "../interface";
 import {
   validateGossipAggregateAndProof,
   validateGossipAttestation,
@@ -25,16 +26,12 @@ import {
   validateGossipVoluntaryExit,
 } from "../../../chain/validation";
 import {INetwork} from "../../interface";
-
-export type GossipHandlerFn = (object: GossipTypeMap[GossipType], topic: GossipTopicMap[GossipType]) => Promise<void>;
-export type GossipHandlers = {
-  [K in GossipType]: (object: GossipTypeMap[K], topic: GossipTopicMap[K]) => Promise<void>;
-};
+import {NetworkEvent} from "../../events";
+import {PeerAction} from "../../peers";
 
 type ValidatorFnsModules = {
   chain: IBeaconChain;
   config: IBeaconConfig;
-  db: IBeaconDb;
   logger: ILogger;
   network: INetwork;
   metrics: IMetrics | null;
@@ -55,11 +52,10 @@ type ValidatorFnsModules = {
  * - Eth2.0 gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers {
-  const {chain, db, config, metrics, network, logger} = modules;
+  const {chain, config, metrics, network, logger} = modules;
 
   return {
-    [GossipType.beacon_block]: async (signedBlock) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
       logger.verbose("Received gossip block", {
@@ -67,32 +63,18 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
       });
+
       try {
-        await validateGossipBlock(config, chain, db, {
-          signedBlock,
-          reprocess: false,
-          prefinalized: false,
-          validSignatures: false,
-          validProposerSignature: false,
-        });
-
-        metrics?.registerBeaconBlock(OpSource.api, seenTimestampSec, signedBlock.message);
-
-        // Handler
-
-        try {
-          chain.receiveBlock(signedBlock);
-        } catch (e) {
-          logger.error("Error receiving block", {}, e as Error);
-        }
+        await validateGossipBlock(config, chain, signedBlock, topic.fork);
       } catch (e) {
-        if (
-          e instanceof BlockGossipError &&
-          (e.type.code === BlockErrorCode.FUTURE_SLOT || e.type.code === BlockErrorCode.PARENT_UNKNOWN)
-        ) {
-          logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
-          chain.receiveBlock(signedBlock);
-        } else if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
+        if (e instanceof BlockGossipError) {
+          if (e instanceof BlockGossipError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
+            logger.debug("Gossip block has error", {slot, root: blockHex, code: e.type.code});
+            network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, peerIdStr);
+          }
+        }
+
+        if (e instanceof BlockGossipError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
             "signedBlock",
             config.getForkTypes(slot).SignedBeaconBlock.serialize(signedBlock),
@@ -103,11 +85,39 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
 
         throw e;
       }
+
+      // Handler - MUST NOT `await`, to allow validation result to be propagated
+
+      metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
+
+      // `validProposerSignature = true`, in gossip validation the proposer signature is checked
+      chain
+        .processBlock(signedBlock, {validProposerSignature: true})
+        .then(() => {
+          // Returns the delay between the start of `block.slot` and `current time`
+          const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+          metrics?.gossipBlock.elappsedTimeTillProcessed.observe(delaySec);
+        })
+        .catch((e) => {
+          if (e instanceof BlockError) {
+            switch (e.type.code) {
+              case BlockErrorCode.ALREADY_KNOWN:
+              case BlockErrorCode.PARENT_UNKNOWN:
+              case BlockErrorCode.PRESTATE_MISSING:
+                break;
+              default:
+                network.peerRpcScores.applyAction(
+                  PeerId.createFromB58String(peerIdStr),
+                  PeerAction.LowToleranceError,
+                  "BadGossipBlock"
+                );
+            }
+          }
+          logger.error("Error receiving block", {slot, peer: peerIdStr}, e as Error);
+        });
     },
 
-    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof) => {
-      const seenTimestampSec = Date.now() / 1000;
-
+    [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
       try {
         const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
           chain,
@@ -153,8 +163,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
     },
 
-    [GossipType.beacon_attestation]: async (attestation, {subnet}) => {
-      const seenTimestampSec = Date.now() / 1000;
+    [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
       let indexedAttestation: phase0.IndexedAttestation | undefined = undefined;
       try {
         indexedAttestation = (await validateGossipAttestation(chain, attestation, subnet)).indexedAttestation;
@@ -187,34 +196,40 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       }
     },
 
-    [GossipType.voluntary_exit]: async (voluntaryExit) => {
-      await validateGossipVoluntaryExit(chain, db, voluntaryExit);
+    [GossipType.attester_slashing]: async (attesterSlashing) => {
+      await validateGossipAttesterSlashing(chain, attesterSlashing);
 
       // Handler
 
-      db.voluntaryExit.add(voluntaryExit).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertAttesterSlashing(attesterSlashing);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
     [GossipType.proposer_slashing]: async (proposerSlashing) => {
-      await validateGossipProposerSlashing(chain, db, proposerSlashing);
+      await validateGossipProposerSlashing(chain, proposerSlashing);
 
       // Handler
 
-      db.proposerSlashing.add(proposerSlashing).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertProposerSlashing(proposerSlashing);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
-    [GossipType.attester_slashing]: async (attesterSlashing) => {
-      await validateGossipAttesterSlashing(chain, db, attesterSlashing);
+    [GossipType.voluntary_exit]: async (voluntaryExit) => {
+      await validateGossipVoluntaryExit(chain, voluntaryExit);
 
       // Handler
 
-      db.attesterSlashing.add(attesterSlashing).catch((e: Error) => {
-        logger.error("Error adding attesterSlashing to pool", {}, e);
-      });
+      try {
+        chain.opPool.insertVoluntaryExit(voluntaryExit);
+      } catch (e) {
+        logger.error("Error adding attesterSlashing to pool", {}, e as Error);
+      }
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {

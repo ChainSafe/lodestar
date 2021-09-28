@@ -4,6 +4,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ZERO_HASH} from "../../../constants";
 import {ApiError} from "../errors";
+import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events
@@ -18,6 +19,8 @@ const chainEventMap = {
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
+  const ZERO_HASH_HEX = toHexString(ZERO_HASH);
+
   /**
    * Mapping to convert internal `ChainEvents` payload to the API spec events data
    */
@@ -33,13 +36,13 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         slot: head.slot,
         state: head.stateRoot,
         // Todo implement
-        previousDutyDependentRoot: ZERO_HASH,
-        currentDutyDependentRoot: ZERO_HASH,
+        previousDutyDependentRoot: ZERO_HASH_HEX,
+        currentDutyDependentRoot: ZERO_HASH_HEX,
       },
     ],
     [routes.events.EventType.block]: (block) => [
       {
-        block: config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message),
+        block: toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),
         slot: block.message.slot,
       },
     ],
@@ -47,9 +50,9 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     [routes.events.EventType.voluntaryExit]: (block) => Array.from(block.message.body.voluntaryExits),
     [routes.events.EventType.finalizedCheckpoint]: (checkpoint, state) => [
       {
-        block: checkpoint.root,
+        block: toHexString(checkpoint.root),
         epoch: checkpoint.epoch,
-        state: state.hashTreeRoot(),
+        state: toHexString(state.hashTreeRoot()),
       },
     ],
     [routes.events.EventType.chainReorg]: (oldHead, newHead, depth) => [

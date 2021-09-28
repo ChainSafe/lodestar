@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, ProtoArray, toBlockSummary} from "../../../src";
+import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
@@ -18,6 +18,7 @@ describe("Forkchoice", function () {
     stateRoot,
     parentRoot,
     blockRoot: finalizedRoot,
+    executionPayloadBlockHash: null,
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
@@ -25,12 +26,13 @@ describe("Forkchoice", function () {
   });
 
   // Add block that is a finalized descendant.
-  const block = {
+  const block: IProtoBlock = {
     slot: genesisSlot + 1,
     blockRoot: finalizedDesc,
     parentRoot: finalizedRoot,
     stateRoot,
     targetRoot: finalizedRoot,
+    executionPayloadBlockHash: null,
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
@@ -39,23 +41,17 @@ describe("Forkchoice", function () {
 
   const fcStore: IForkChoiceStore = {
     currentSlot: block.slot,
-    justifiedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
-    finalizedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
-    bestJustifiedCheckpoint: {root: fromHexString(finalizedRoot), epoch: genesisEpoch},
+    justifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
+    bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
   };
 
-  it("iterateBlockSummaries", function () {
+  it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);
-    const forkchoice = new ForkChoice({
-      config,
-      fcStore,
-      protoArray: protoArr,
-      queuedAttestations: new Set(),
-      justifiedBalances: [],
-    });
-    const summaries = forkchoice.iterateBlockSummaries(fromHexString(finalizedDesc));
-    // there are 2 blocks in protoArray but iterateBlockSummaries should only return non-finalized blocks
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, []);
+    const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
+    // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");
-    expect(summaries[0]).to.be.deep.equals(toBlockSummary(block), "the block summary is not correct");
+    expect(summaries[0]).to.be.deep.include(block, "the block summary is not correct");
   });
 });

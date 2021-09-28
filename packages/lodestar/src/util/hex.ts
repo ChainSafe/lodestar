@@ -1,4 +1,6 @@
-export function bufferToHex(buffer: Buffer): string {
+import {RootHex} from "@chainsafe/lodestar-types";
+
+export function bufferToHex(buffer: Buffer): RootHex {
   return "0x" + buffer.toString("hex");
 }
 

@@ -13,11 +13,11 @@ import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
-import {StateRegenerator} from "../../../../src/chain/regen";
-import {StubbedBeaconDb, StubbedChain} from "../../../utils/stub";
+import {StubbedChain} from "../../../utils/stub";
 import {generateState} from "../../../utils/state";
 import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/voluntaryExit";
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
+import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {PointFormat, SecretKey} from "@chainsafe/bls";
@@ -25,11 +25,10 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
-  let dbStub: StubbedBeaconDb;
   let chainStub: StubbedChain;
-  let regenStub: SinonStubbedInstance<StateRegenerator>;
   let state: CachedBeaconState<allForks.BeaconState>;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
+  let opPool: OpPool & SinonStubbedInstance<OpPool>;
 
   before(() => {
     const sk = SecretKey.fromKeygen();
@@ -70,12 +69,11 @@ describe("validate voluntary exit", () => {
   beforeEach(() => {
     chainStub = sandbox.createStubInstance(BeaconChain) as StubbedChain;
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
+    opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
+    (chainStub as {opPool: OpPool}).opPool = opPool;
+    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
     // TODO: Use actual BLS verification
     chainStub.bls = {verifySignatureSets: async () => true};
-    regenStub = chainStub.regen = sandbox.createStubInstance(StateRegenerator);
-    regenStub.getCheckpointState.resolves(state);
-    dbStub = new StubbedBeaconDb(sandbox);
-    dbStub.voluntaryExit.has.resolves(false);
   });
 
   afterEach(() => {
@@ -89,10 +87,10 @@ describe("validate voluntary exit", () => {
     };
 
     // Return SignedVoluntaryExit known
-    dbStub.voluntaryExit.has.resolves(true);
+    opPool.hasSeenVoluntaryExit.returns(true);
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalidSig),
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalidSig),
       VoluntaryExitErrorCode.ALREADY_EXISTS
     );
   });
@@ -108,12 +106,12 @@ describe("validate voluntary exit", () => {
     };
 
     await expectRejectedWithLodestarError(
-      validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExitInvalid),
+      validateGossipVoluntaryExit(chainStub, signedVoluntaryExitInvalid),
       VoluntaryExitErrorCode.INVALID
     );
   });
 
   it("should return valid Voluntary Exit", async () => {
-    await validateGossipVoluntaryExit(chainStub, dbStub, signedVoluntaryExit);
+    await validateGossipVoluntaryExit(chainStub, signedVoluntaryExit);
   });
 });

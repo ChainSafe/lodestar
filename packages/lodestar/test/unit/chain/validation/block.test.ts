@@ -1,167 +1,180 @@
-import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
-import {BeaconChain, ForkChoice, IBeaconChain} from "../../../../src/chain";
+import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
-import {generateSignedBlock, getNewBlockJob} from "../../../utils/block";
-import {StubbedBeaconDb} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {SinonStubFn} from "../../../utils/types";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {SeenBlockProposers} from "../../../../src/chain/seenCache";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants";
+import {ForkName} from "@chainsafe/lodestar-params";
 
 describe("gossip block validation", function () {
-  let chainStub: SinonStubbedInstance<IBeaconChain>;
-  let forkChoiceStub: SinonStubbedInstance<ForkChoice>;
-  let regenStub: SinonStubbedInstance<StateRegenerator>;
-  let dbStub: StubbedBeaconDb;
-  let verifySignatureStub: SinonStubFn<() => Promise<boolean>>;
+  let chain: SinonStubbedInstance<IBeaconChain>;
+  let forkChoice: SinonStubbedInstance<ForkChoice>;
+  let regen: SinonStubbedInstance<StateRegenerator>;
+  let verifySignature: SinonStubFn<() => Promise<boolean>>;
+  let job: allForks.SignedBeaconBlock;
+  const proposerIndex = 0;
+  const clockSlot = 32;
+  const block = ssz.phase0.BeaconBlock.defaultValue();
+  block.slot = clockSlot;
+  const signature = EMPTY_SIGNATURE;
 
   beforeEach(function () {
-    chainStub = sinon.createStubInstance(BeaconChain);
-    chainStub.clock = sinon.createStubInstance(LocalClock);
-    forkChoiceStub = sinon.createStubInstance(ForkChoice);
-    chainStub.forkChoice = forkChoiceStub;
-    regenStub = chainStub.regen = sinon.createStubInstance(StateRegenerator);
-    dbStub = new StubbedBeaconDb(sinon, config);
+    chain = sinon.createStubInstance(BeaconChain);
+    chain.clock = sinon.createStubInstance(LocalClock);
+    sinon.stub(chain.clock, "currentSlotWithGossipDisparity").get(() => clockSlot);
+    forkChoice = sinon.createStubInstance(ForkChoice);
+    forkChoice.getBlockHex.returns(null);
+    chain.forkChoice = forkChoice;
+    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
 
-    verifySignatureStub = sinon.stub();
-    verifySignatureStub.resolves(true);
-    chainStub.bls = {verifySignatureSets: verifySignatureStub};
+    verifySignature = sinon.stub();
+    verifySignature.resolves(true);
+    chain.bls = {verifySignatureSets: verifySignature};
+
+    forkChoice.getFinalizedCheckpoint.returns({epoch: 0, root: ZERO_HASH, rootHex: ""});
+
+    // Reset seen cache
+    (chain as {
+      seenBlockProposers: SeenBlockProposers;
+    }).seenBlockProposers = new SeenBlockProposers();
+
+    job = {signature, message: block};
   });
 
-  it("should throw error - block slot is finalized", async function () {
-    const signedBlock = generateSignedBlock();
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 1,
-      root: Buffer.alloc(32),
-    });
+  it("FUTURE_SLOT", async function () {
+    // Set the block slot to after the current clock
+    const signedBlock = {signature, message: {...block, slot: clockSlot + 1}};
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
+      validateGossipBlock(config, chain, signedBlock, ForkName.phase0),
+      BlockErrorCode.FUTURE_SLOT
+    );
+  });
+
+  it("WOULD_REVERT_FINALIZED_SLOT", async function () {
+    // Set finalized epoch to be greater than block's epoch
+    forkChoice.getFinalizedCheckpoint.returns({epoch: Infinity, root: ZERO_HASH, rootHex: ""});
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
     );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(chainStub.getGenesisTime.notCalled).to.be.true;
   });
 
-  it("should throw error - already proposed", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
-    dbStub.block.get.resolves(generateSignedBlock({message: {proposerIndex: signedBlock.message.proposerIndex}}));
+  it("ALREADY_KNOWN", async function () {
+    // Make the fork choice return a block summary for the proposed block
+    forkChoice.getBlockHex.returns({} as IProtoBlock);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.ALREADY_KNOWN
+    );
+  });
+
+  it("REPEAT_PROPOSAL", async function () {
+    // Register the proposer as known
+    chain.seenBlockProposers.add(job.message.slot, job.message.proposerIndex);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.REPEAT_PROPOSAL
     );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(regenStub.getBlockSlotState.notCalled).to.be.true;
   });
 
-  it("should throw error - missing parent", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
-    regenStub.getBlockSlotState.rejects();
+  it("PARENT_UNKNOWN (fork-choice)", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Return not known for parent block too
+    forkChoice.getBlockHex.onCall(1).returns(null);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
+      validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.PARENT_UNKNOWN
     );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
   });
 
-  it("should throw error - invalid signature", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
-    regenStub.getBlockSlotState.resolves(generateCachedState());
-    verifySignatureStub.resolves(false);
+  it("NOT_LATER_THAN_PARENT", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot + 1} as IProtoBlock);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.NOT_LATER_THAN_PARENT
+    );
+  });
+
+  it("PARENT_UNKNOWN (regen)", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
+    // Regen not able to get the parent block state
+    regen.getBlockSlotState.rejects();
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.PARENT_UNKNOWN
+    );
+  });
+
+  it("PROPOSAL_SIGNATURE_INVALID", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
+    // Regen returns some state
+    regen.getBlockSlotState.resolves(generateCachedState());
+    // BLS signature verifier returns invalid
+    verifySignature.resolves(false);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.PROPOSAL_SIGNATURE_INVALID
     );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
-    expect(chainStub.receiveBlock.calledOnce).to.be.false;
-    expect(verifySignatureStub.calledOnce).to.be.true;
   });
 
-  it("should throw error - wrong proposer", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.returns({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
+  it("INCORRECT_PROPOSER", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
+    // Regen returns some state
     const state = generateCachedState();
-    sinon.stub(state.epochCtx, "getBeaconProposer").returns(signedBlock.message.proposerIndex + 1);
-    regenStub.getBlockSlotState.resolves(state);
-    verifySignatureStub.resolves(true);
+    regen.getBlockSlotState.resolves(state);
+    // BLS signature verifier returns valid
+    verifySignature.resolves(true);
+    // Force proposer shuffling cache to return wrong value
+    sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex + 1);
 
     await expectRejectedWithLodestarError(
-      validateGossipBlock(config, chainStub, dbStub, job),
+      validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.INCORRECT_PROPOSER
     );
-
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
-    expect(chainStub.receiveBlock.calledOnce).to.be.false;
-    expect(verifySignatureStub.calledOnce).to.be.true;
-    expect(
-      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
-        signedBlock.message.slot
-      ).calledOnce
-    ).to.be.true;
   });
 
-  it("should accept - valid block", async function () {
-    sinon.stub(chainStub.clock, "currentSlotWithGossipDisparity").get(() => 1);
-    const signedBlock = generateSignedBlock({message: {slot: 1}});
-    const job = getNewBlockJob(signedBlock);
-    chainStub.getFinalizedCheckpoint.resolves({
-      epoch: 0,
-      root: Buffer.alloc(32),
-    });
-    chainStub.getCanonicalBlockAtSlot.resolves(null);
-    forkChoiceStub.isDescendantOfFinalized.returns(true);
+  it("valid", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Returned parent block is latter than proposed block
+    forkChoice.getBlockHex.onCall(1).returns({slot: clockSlot - 1} as IProtoBlock);
+    // Regen returns some state
     const state = generateCachedState();
-    sinon.stub(state.epochCtx, "getBeaconProposer").returns(signedBlock.message.proposerIndex);
-    regenStub.getBlockSlotState.resolves(state);
-    verifySignatureStub.resolves(true);
-    forkChoiceStub.getAncestor.resolves(Buffer.alloc(32));
-    const validationTest = await validateGossipBlock(config, chainStub, dbStub, job);
-    expect(validationTest).to.not.throw;
-    expect(chainStub.getFinalizedCheckpoint.calledOnce).to.be.true;
-    expect(regenStub.getBlockSlotState.calledOnce).to.be.true;
-    expect(verifySignatureStub.calledOnce).to.be.true;
-    expect(
-      (state.epochCtx.getBeaconProposer as SinonStubFn<typeof state.epochCtx["getBeaconProposer"]>).withArgs(
-        signedBlock.message.slot
-      ).calledOnce
-    ).to.be.true;
+    regen.getBlockSlotState.resolves(state);
+    // BLS signature verifier returns valid
+    verifySignature.resolves(true);
+    // Force proposer shuffling cache to return wrong value
+    sinon.stub(state.epochCtx, "getBeaconProposer").returns(proposerIndex);
+
+    await validateGossipBlock(config, chain, job, ForkName.phase0);
   });
 });

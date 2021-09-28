@@ -1,5 +1,5 @@
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Slot} from "@chainsafe/lodestar-types";
+import {allForks, RootHex, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {routes} from "@chainsafe/lodestar-api";
 import {INetwork} from "../network";
@@ -55,4 +55,18 @@ export interface ISyncModules {
   metrics: IMetrics | null;
   logger: ILogger;
   chain: IBeaconChain;
+}
+
+export type PendingBlock = {
+  blockRootHex: RootHex;
+  parentBlockRootHex: RootHex;
+  signedBlock: allForks.SignedBeaconBlock;
+  peerIdStrs: Set<string>;
+  status: PendingBlockStatus;
+  downloadAttempts: number;
+};
+export enum PendingBlockStatus {
+  pending = "pending",
+  fetching = "fetching",
+  processing = "processing",
 }

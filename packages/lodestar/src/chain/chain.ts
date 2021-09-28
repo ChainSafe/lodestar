@@ -9,50 +9,58 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
-import {BlockPool, BlockProcessor} from "./blocks";
+import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
 import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
-import {LodestarForkChoice} from "./forkChoice";
+import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
-import {SeenAttesters, SeenAggregators, SeenSyncCommitteeMessages, SeenContributionAndProof} from "./seenCache";
-import {AttestationPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
+import {
+  SeenAttesters,
+  SeenAggregators,
+  SeenBlockProposers,
+  SeenSyncCommitteeMessages,
+  SeenContributionAndProof,
+} from "./seenCache";
+import {
+  AggregatedAttestationPool,
+  AttestationPool,
+  SyncCommitteeMessagePool,
+  SyncContributionAndProofPool,
+  OpPool,
+} from "./opPools";
 import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
-import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {Archiver} from "./archiver";
-
-export interface IBeaconChainModules {
-  config: IBeaconConfig;
-  db: IBeaconDb;
-  logger: ILogger;
-  metrics: IMetrics | null;
-  anchorState: TreeBacked<allForks.BeaconState>;
-}
+import {IEth1ForBlockProduction} from "../eth1";
+import {IExecutionEngine} from "../executionEngine";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
   readonly genesisValidatorsRoot: Root;
+  readonly eth1: IEth1ForBlockProduction;
+  readonly executionEngine: IExecutionEngine;
+  // Expose config for convenience in modularized functions
+  readonly config: IBeaconConfig;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
-  emitter = new ChainEventEmitter();
+  emitter: ChainEventEmitter;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  pendingBlocks: BlockPool;
   forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -62,28 +70,43 @@ export class BeaconChain implements IBeaconChain {
   readonly aggregatedAttestationPool = new AggregatedAttestationPool();
   readonly syncCommitteeMessagePool = new SyncCommitteeMessagePool();
   readonly syncContributionAndProofPool = new SyncContributionAndProofPool();
+  readonly opPool = new OpPool();
 
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
   protected readonly blockProcessor: BlockProcessor;
-  protected readonly config: IBeaconConfig;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
   protected readonly opts: IChainOptions;
-  /**
-   * Internal event emitter is used internally to the chain to update chain state
-   * Once event have been handled internally, they are re-emitted externally for downstream consumers
-   */
-  protected internalEmitter = new ChainEventEmitter();
   private readonly archiver: Archiver;
   private abortController = new AbortController();
 
-  constructor(opts: IChainOptions, {config, db, logger, metrics, anchorState}: IBeaconChainModules) {
+  constructor(
+    opts: IChainOptions,
+    {
+      config,
+      db,
+      logger,
+      metrics,
+      anchorState,
+      eth1,
+      executionEngine,
+    }: {
+      config: IBeaconConfig;
+      db: IBeaconDb;
+      logger: ILogger;
+      metrics: IMetrics | null;
+      anchorState: TreeBacked<allForks.BeaconState>;
+      eth1: IEth1ForBlockProduction;
+      executionEngine: IExecutionEngine;
+    }
+  ) {
     this.opts = opts;
     this.config = config;
     this.db = db;
@@ -91,11 +114,13 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
+    this.eth1 = eth1;
+    this.executionEngine = executionEngine;
 
     this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
     const signal = this.abortController.signal;
-    const emitter = this.internalEmitter; // All internal compoments emit to the internal emitter first
+    const emitter = new ChainEventEmitter();
     const bls = opts.useSingleThreadVerifier
       ? new BlsSingleThreadVerifier()
       : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
@@ -104,16 +129,9 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = new LodestarForkChoice({
-      config,
-      emitter,
-      currentSlot: clock.currentSlot,
-      state: cachedState,
-      metrics,
-    });
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
-      emitter,
       forkChoice,
       stateCache,
       checkpointStateCache,
@@ -121,19 +139,25 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
-    this.pendingBlocks = new BlockPool(config, logger);
-    this.blockProcessor = new BlockProcessor({
-      config,
-      forkChoice,
-      clock,
-      regen,
-      bls,
-      metrics,
-      emitter,
-      checkpointStateCache,
-      signal,
+    this.blockProcessor = new BlockProcessor(
+      {
+        clock,
+        bls,
+        regen,
+        executionEngine,
+        eth1,
+        db,
+        forkChoice,
+        stateCache,
+        checkpointStateCache,
+        emitter,
+        config,
+        logger,
+        metrics,
+      },
       opts,
-    });
+      signal
+    );
 
     this.forkChoice = forkChoice;
     this.clock = clock;
@@ -141,6 +165,7 @@ export class BeaconChain implements IBeaconChain {
     this.bls = bls;
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
+    this.emitter = emitter;
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
@@ -155,8 +180,15 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointStateCache.clear();
   }
 
+  /** Populate in-memory caches with persisted data. Call at least once on startup */
+  async loadFromDisk(): Promise<void> {
+    await this.opPool.fromPersisted(this.db);
+  }
+
+  /** Persist in-memory data to the DB. Call at least once before stopping the process */
   async persistToDisk(): Promise<void> {
     await this.archiver.persistToDisk();
+    await this.opPool.toPersisted(this.db);
   }
 
   getGenesisTime(): Number64 {
@@ -167,10 +199,7 @@ export class BeaconChain implements IBeaconChain {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
-      this.checkpointStateCache.getLatest({
-        root: head.blockRoot,
-        epoch: Infinity,
-      }) || this.stateCache.get(head.stateRoot);
+      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
     if (!headState) throw Error("headState does not exist");
     return headState;
   }
@@ -179,24 +208,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getProposerAttesterDuties);
-  }
-
-  async getHeadStateAtCurrentSlot(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    return await this.regen.getBlockSlotState(
-      this.forkChoice.getHeadRoot(),
-      this.clock.currentSlot,
-      RegenCaller.getProposerAttesterDuties
-    );
-  }
-
-  async getHeadBlock(): Promise<allForks.SignedBeaconBlock | null> {
-    const headSummary = this.forkChoice.getHead();
-    const unfinalizedBlock = await this.db.block.get(headSummary.blockRoot);
-    if (unfinalizedBlock) {
-      return unfinalizedBlock;
-    }
-    return await this.db.blockArchive.get(headSummary.slot);
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
@@ -204,23 +216,11 @@ export class BeaconChain implements IBeaconChain {
     if (finalizedBlock.slot > slot) {
       return this.db.blockArchive.get(slot);
     }
-    const summary = this.forkChoice.getCanonicalBlockSummaryAtSlot(slot);
-    if (!summary) {
+    const block = this.forkChoice.getCanonicalBlockAtSlot(slot);
+    if (!block) {
       return null;
     }
-    return await this.db.block.get(summary.blockRoot);
-  }
-
-  async getStateByBlockRoot(blockRoot: Root): Promise<CachedBeaconState<allForks.BeaconState> | null> {
-    const blockSummary = this.forkChoice.getBlock(blockRoot);
-    if (!blockSummary) {
-      return null;
-    }
-    try {
-      return await this.regen.getState(blockSummary.stateRoot, RegenCaller.getStateByBlockRoot);
-    } catch (e) {
-      return null;
-    }
+    return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
   /** Returned blocks have the same ordering as `slots` */
@@ -230,12 +230,15 @@ export class BeaconChain implements IBeaconChain {
     }
 
     const slotsSet = new Set(slots);
+    const minSlot = Math.min(...slots); // Slots must have length > 0
     const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
 
     // these blocks are on the same chain to head
-    for (const summary of this.forkChoice.iterateBlockSummaries(this.forkChoice.getHeadRoot())) {
-      if (slotsSet.has(summary.slot)) {
-        blockRootsPerSlot.set(summary.slot, this.db.block.get(summary.blockRoot));
+    for (const block of this.forkChoice.iterateAncestorBlocks(this.forkChoice.getHeadRoot())) {
+      if (block.slot < minSlot) {
+        break;
+      } else if (slotsSet.has(block.slot)) {
+        blockRootsPerSlot.set(block.slot, this.db.block.get(fromHexString(block.blockRoot)));
       }
     }
 
@@ -243,46 +246,12 @@ export class BeaconChain implements IBeaconChain {
     return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
   }
 
-  getFinalizedCheckpoint(): phase0.Checkpoint {
-    return this.forkChoice.getFinalizedCheckpoint();
+  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
+    return await this.blockProcessor.processBlockJob({...flags, block});
   }
 
-  receiveBlock(signedBlock: allForks.SignedBeaconBlock, trusted = false): void {
-    this.blockProcessor
-      .processBlockJob({
-        signedBlock,
-        reprocess: false,
-        prefinalized: trusted,
-        validSignatures: trusted,
-        validProposerSignature: trusted,
-      })
-      .catch(() => /* unreachable */ ({}));
-  }
-
-  async processBlock(
-    signedBlock: allForks.SignedBeaconBlock,
-    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void> {
-    return await this.blockProcessor.processBlockJob({
-      signedBlock,
-      reprocess: false,
-      prefinalized,
-      validSignatures: trusted,
-      validProposerSignature: trusted,
-    });
-  }
-
-  async processChainSegment(
-    signedBlocks: allForks.SignedBeaconBlock[],
-    {prefinalized, trusted = false}: {prefinalized: boolean; trusted: boolean}
-  ): Promise<void> {
-    return await this.blockProcessor.processChainSegment({
-      signedBlocks,
-      reprocess: false,
-      prefinalized,
-      validSignatures: trusted,
-      validProposerSignature: trusted,
-    });
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
+    return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
   }
 
   getHeadForkName(): ForkName {
@@ -309,7 +278,8 @@ export class BeaconChain implements IBeaconChain {
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
-      headRoot: head.blockRoot,
+      // TODO: PERFORMANCE: Memoize to prevent re-computing every time
+      headRoot: fromHexString(head.blockRoot),
       headSlot: head.slot,
     };
   }

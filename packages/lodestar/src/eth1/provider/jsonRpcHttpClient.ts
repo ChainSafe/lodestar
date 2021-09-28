@@ -2,8 +2,8 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {IRpcPayload, ReqOpts} from "../interface";
-import {toJson, toString} from "@chainsafe/lodestar-utils";
+import {IJson, IRpcPayload, ReqOpts} from "../interface";
+import {ErrorAborted, TimeoutError, toJson, toString} from "@chainsafe/lodestar-utils";
 import {Json} from "@chainsafe/ssz";
 
 /**
@@ -30,6 +30,7 @@ export class JsonRpcHttpClient {
     private readonly urls: string[],
     private readonly opts: {
       signal: AbortSignal;
+      timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
     }
@@ -48,7 +49,7 @@ export class JsonRpcHttpClient {
   /**
    * Perform RPC request
    */
-  async fetch<R>(payload: IRpcPayload, opts?: ReqOpts): Promise<R> {
+  async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
     const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: 1, ...payload}, opts);
     return parseRpcResponse(res, payload);
   }
@@ -105,7 +106,7 @@ export class JsonRpcHttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-    }, opts?.timeout ?? REQUEST_TIMEOUT);
+    }, opts?.timeout ?? this.opts.timeout ?? REQUEST_TIMEOUT);
 
     const onParentSignalAbort = (): void => controller.abort();
 
@@ -113,28 +114,41 @@ export class JsonRpcHttpClient {
       this.opts.signal.addEventListener("abort", onParentSignalAbort, {once: true});
     }
 
-    const res = await fetch(url, {
-      method: "post",
-      body: JSON.stringify(json),
-      headers: {"Content-Type": "application/json"},
-      signal: controller.signal,
-    }).finally(() => {
-      clearTimeout(timeout);
-      this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
-    });
+    try {
+      const res = await fetch(url, {
+        method: "post",
+        body: JSON.stringify(json),
+        headers: {"Content-Type": "application/json"},
+        signal: controller.signal,
+      }).finally(() => {
+        clearTimeout(timeout);
+        this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
+      });
 
-    const body = await res.text();
-    if (!res.ok) {
-      // Infura errors:
-      // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
-      throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+      const body = await res.text();
+      if (!res.ok) {
+        // Infura errors:
+        // - No project ID: Forbidden: {"jsonrpc":"2.0","id":0,"error":{"code":-32600,"message":"project ID is required","data":{"reason":"project ID not provided","see":"https://infura.io/dashboard"}}}
+        throw new HttpRpcError(res.status, `${res.statusText}: ${body.slice(0, maxStringLengthToPrint)}`);
+      }
+
+      return parseJson(body);
+    } catch (e) {
+      if (controller.signal.aborted) {
+        // controller will abort on both parent signal abort + timeout of this specific request
+        if (this.opts.signal.aborted) {
+          throw new ErrorAborted("request");
+        } else {
+          throw new TimeoutError("request");
+        }
+      } else {
+        throw e;
+      }
     }
-
-    return parseJson(body);
   }
 }
 
-function parseRpcResponse<R>(res: IRpcResponse<R>, payload: IRpcPayload): R {
+function parseRpcResponse<R, P>(res: IRpcResponse<R>, payload: IRpcPayload<P>): R {
   if (res.result !== undefined) return res.result;
   throw new ErrorJsonRpcResponse(res, payload);
 }
@@ -158,10 +172,10 @@ export class ErrorParseJson extends Error {
   }
 }
 
-export class ErrorJsonRpcResponse extends Error {
+export class ErrorJsonRpcResponse<P> extends Error {
   response: IRpcResponseError;
-  payload: IRpcPayload;
-  constructor(res: IRpcResponseError, payload: IRpcPayload) {
+  payload: IRpcPayload<P>;
+  constructor(res: IRpcResponseError, payload: IRpcPayload<P>) {
     const errorMessage = res.error
       ? typeof res.error.message === "string"
         ? res.error.message

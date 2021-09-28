@@ -4,6 +4,7 @@
 
 import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
+import {Registry} from "prom-client";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -17,10 +18,10 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
+import {ExecutionEngineHttp} from "../executionEngine";
+import {initializeEth1ForBlockProduction} from "../eth1";
 import {IBeaconNodeOptions} from "./options";
-import {Eth1ForBlockProduction, Eth1ForBlockProductionDisabled, Eth1Provider} from "../eth1";
 import {runNodeNotifier} from "./notifier";
-import {Registry} from "prom-client";
 
 export * from "./options";
 
@@ -131,14 +132,23 @@ export class BeaconNode {
       logger: logger.child(opts.logger.chain),
       metrics,
       anchorState,
+      eth1: initializeEth1ForBlockProduction(
+        opts.eth1,
+        {config, db, logger: logger.child(opts.logger.eth1), signal},
+        anchorState
+      ),
+      executionEngine: new ExecutionEngineHttp(opts.executionEngine, signal),
     });
+
+    // Load persisted data from disk to in-memory caches
+    await chain.loadFromDisk();
+
     const network = new Network(opts.network, {
       config,
       libp2p,
       logger: logger.child(opts.logger.network),
       metrics,
       chain,
-      db,
       reqRespHandlers: getReqRespHandlers({db, chain}),
       signal,
     });
@@ -155,16 +165,6 @@ export class BeaconNode {
       config,
       logger: logger.child(opts.logger.api),
       db,
-      eth1: opts.eth1.enabled
-        ? new Eth1ForBlockProduction({
-            config,
-            db,
-            eth1Provider: new Eth1Provider(config, opts.eth1, controller.signal),
-            logger: logger.child(opts.logger.eth1),
-            opts: opts.eth1,
-            signal,
-          })
-        : new Eth1ForBlockProductionDisabled(),
       sync,
       network,
       chain,

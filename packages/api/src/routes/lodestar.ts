@@ -1,4 +1,4 @@
-import {Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
 import {
   jsonType,
@@ -40,14 +40,14 @@ export type RegenQueueItem = {
 };
 
 export type BlockProcessorQueueItem = {
-  blocks: Slot[];
-  jobOpts: Json;
+  blockSlots: Slot[];
+  jobOpts: Record<string, boolean | undefined>;
   addedTimeMs: number;
 };
 
 export type StateCacheItem = {
   slot: Slot;
-  root: Uint8Array;
+  root: RootHex;
   /** Total number of reads */
   reads: number;
   /** Unix timestamp (ms) of the last read */
@@ -73,6 +73,10 @@ export type Api = {
   getStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
+  /** Run GC with `global.gc()` */
+  runGC(): Promise<void>;
+  /** Drop all states in the state cache */
+  dropStateCache(): Promise<void>;
 };
 
 /**
@@ -80,7 +84,7 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getWtfNode: {url: "/eth/v1/lodestar/wtfnode", method: "GET"},
-  writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "GET"},
+  writeHeapdump: {url: "/eth/v1/lodestar/writeheapdump", method: "POST"},
   getLatestWeakSubjectivityCheckpointEpoch: {url: "/eth/v1/lodestar/ws_epoch", method: "GET"},
   getSyncChainsDebugState: {url: "/eth/v1/lodestar/sync-chains-debug-state", method: "GET"},
   getGossipQueueItems: {url: "/eth/v1/lodestar/gossip-queue-items/:gossipType", method: "GET"},
@@ -88,6 +92,8 @@ export const routesData: RoutesData<Api> = {
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
+  runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
+  dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
 };
 
 export type ReqTypes = {
@@ -100,6 +106,8 @@ export type ReqTypes = {
   getBlockProcessorQueueItems: ReqEmpty;
   getStateCacheItems: ReqEmpty;
   getCheckpointStateCacheItems: ReqEmpty;
+  runGC: ReqEmpty;
+  dropStateCache: ReqEmpty;
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -121,6 +129,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getBlockProcessorQueueItems: reqEmpty,
     getStateCacheItems: reqEmpty,
     getCheckpointStateCacheItems: reqEmpty,
+    runGC: reqEmpty,
+    dropStateCache: reqEmpty,
   };
 }
 
@@ -136,13 +146,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
-  const StateCacheItem = new ContainerType<StateCacheItem>({
-    fields: {
-      slot: ssz.Slot,
-      root: ssz.Root,
-    },
-  });
-
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
@@ -151,7 +154,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getGossipQueueItems: ArrayOf(GossipQueueItem),
     getRegenQueueItems: jsonType(),
     getBlockProcessorQueueItems: jsonType(),
-    getStateCacheItems: ArrayOf(StateCacheItem),
-    getCheckpointStateCacheItems: ArrayOf(StateCacheItem),
+    getStateCacheItems: jsonType(),
+    getCheckpointStateCacheItems: jsonType(),
   };
 }

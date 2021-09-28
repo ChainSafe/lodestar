@@ -1,10 +1,12 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
-import {Epoch, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
 
 const MAX_STATES = 3 * 32;
+
 /**
  * In memory cache of CachedBeaconState
  *
@@ -30,9 +32,9 @@ export class StateContextCache {
     }
   }
 
-  get(root: ByteVector): CachedBeaconState<allForks.BeaconState> | null {
+  get(rootHex: RootHex): CachedBeaconState<allForks.BeaconState> | null {
     this.metrics?.lookups.inc();
-    const item = this.cache.get(toHexString(root));
+    const item = this.cache.get(rootHex);
     if (!item) {
       return null;
     }
@@ -70,6 +72,7 @@ export class StateContextCache {
 
   clear(): void {
     this.cache.clear();
+    this.epochIndex.clear();
   }
 
   get size(): number {
@@ -80,10 +83,9 @@ export class StateContextCache {
    * TODO make this more robust.
    * Without more thought, this currently breaks our assumptions about recent state availablity
    */
-  prune(headStateRoot: ByteVector): void {
+  prune(headStateRootHex: RootHex): void {
     const keys = Array.from(this.cache.keys());
     if (keys.length > this.maxStates) {
-      const headStateRootHex = toHexString(headStateRoot);
       // object keys are stored in insertion order, delete keys starting from the front
       for (const key of keys.slice(0, keys.length - this.maxStates)) {
         if (key !== headStateRootHex) {
@@ -109,18 +111,18 @@ export class StateContextCache {
   }
 
   /** ONLY FOR DEBUGGING PURPOSES. For lodestar debug API */
-  dumpSummary(): {slot: number; root: Uint8Array; reads: number; lastRead: number}[] {
+  dumpSummary(): routes.lodestar.StateCacheItem[] {
     return Array.from(this.cache.entries()).map(([key, state]) => ({
       slot: state.slot,
-      root: state.hashTreeRoot(),
+      root: toHexString(state.hashTreeRoot()),
       reads: this.cache.readCount.get(key) ?? 0,
       lastRead: this.cache.lastRead.get(key) ?? 0,
     }));
   }
 
   private deleteAllEpochItems(epoch: Epoch): void {
-    for (const hexRoot of this.epochIndex.get(epoch) || []) {
-      this.cache.delete(hexRoot);
+    for (const rootHex of this.epochIndex.get(epoch) || []) {
+      this.cache.delete(rootHex);
     }
     this.epochIndex.delete(epoch);
   }

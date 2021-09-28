@@ -1,4 +1,4 @@
-import {Epoch, Number64, phase0, Slot, Root, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, Number64, phase0, Slot, ssz, StringType, RootHex} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, Type} from "@chainsafe/ssz";
 import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
@@ -27,23 +27,23 @@ export enum EventType {
 export type EventData = {
   [EventType.head]: {
     slot: Slot;
-    block: Root;
-    state: Root;
+    block: RootHex;
+    state: RootHex;
     epochTransition: boolean;
-    previousDutyDependentRoot: Root;
-    currentDutyDependentRoot: Root;
+    previousDutyDependentRoot: RootHex;
+    currentDutyDependentRoot: RootHex;
   };
-  [EventType.block]: {slot: Slot; block: Root};
+  [EventType.block]: {slot: Slot; block: RootHex};
   [EventType.attestation]: phase0.Attestation;
   [EventType.voluntaryExit]: phase0.SignedVoluntaryExit;
-  [EventType.finalizedCheckpoint]: {block: Root; state: Root; epoch: Epoch};
+  [EventType.finalizedCheckpoint]: {block: RootHex; state: RootHex; epoch: Epoch};
   [EventType.chainReorg]: {
     slot: Slot;
     depth: Number64;
-    oldHeadBlock: Root;
-    newHeadBlock: Root;
-    oldHeadState: Root;
-    newHeadState: Root;
+    oldHeadBlock: RootHex;
+    newHeadBlock: RootHex;
+    oldHeadState: RootHex;
+    newHeadState: RootHex;
     epoch: Epoch;
   };
 };
@@ -77,22 +77,23 @@ export type ReqTypes = {
 // The request is very simple: (topics) => {query: {topics}}, and the test will ensure compatibility server - client
 
 export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
+  const stringType = new StringType();
   return {
     [EventType.head]: new ContainerType<EventData[EventType.head]>({
       fields: {
         slot: ssz.Slot,
-        block: ssz.Root,
-        state: ssz.Root,
+        block: stringType,
+        state: stringType,
         epochTransition: ssz.Boolean,
-        previousDutyDependentRoot: ssz.Root,
-        currentDutyDependentRoot: ssz.Root,
+        previousDutyDependentRoot: stringType,
+        currentDutyDependentRoot: stringType,
       },
     }),
 
     [EventType.block]: new ContainerType<EventData[EventType.block]>({
       fields: {
         slot: ssz.Slot,
-        block: ssz.Root,
+        block: stringType,
       },
     }),
 
@@ -101,8 +102,8 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
 
     [EventType.finalizedCheckpoint]: new ContainerType<EventData[EventType.finalizedCheckpoint]>({
       fields: {
-        block: ssz.Root,
-        state: ssz.Root,
+        block: stringType,
+        state: stringType,
         epoch: ssz.Epoch,
       },
     }),
@@ -111,10 +112,10 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       fields: {
         slot: ssz.Slot,
         depth: ssz.Number64,
-        oldHeadBlock: ssz.Root,
-        newHeadBlock: ssz.Root,
-        oldHeadState: ssz.Root,
-        newHeadState: ssz.Root,
+        oldHeadBlock: stringType,
+        newHeadBlock: stringType,
+        oldHeadState: stringType,
+        newHeadState: stringType,
         epoch: ssz.Epoch,
       },
     }),

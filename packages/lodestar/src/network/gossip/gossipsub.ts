@@ -11,7 +11,15 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IMetrics} from "../../metrics";
-import {GossipJobQueues, GossipTopic, GossipTopicMap, GossipType, GossipTypeMap, ValidatorFnsByType} from "./interface";
+import {
+  GossipJobQueues,
+  GossipTopic,
+  GossipTopicMap,
+  GossipType,
+  GossipTypeMap,
+  ValidatorFnsByType,
+  GossipHandlers,
+} from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
@@ -19,16 +27,31 @@ import {GossipValidationError} from "./errors";
 import {IForkDigestContext} from "../../util/forkDigestContext";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByType} from "./validation";
-import {GossipHandlers} from "./handlers";
 import {Map2d, Map2dArr} from "../../util/map";
+import pipe from "it-pipe";
+import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
+import BufferList from "bl";
+// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
+import {RPC} from "libp2p-gossipsub/src/message/rpc";
+import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
-interface IGossipsubModules {
+import {
+  computeGossipPeerScoreParams,
+  gossipScoreThresholds,
+  GOSSIP_D,
+  GOSSIP_D_HIGH,
+  GOSSIP_D_LOW,
+} from "./scoringParameters";
+import {Eth2Context} from "../../chain";
+
+export interface IGossipsubModules {
   config: IChainForkConfig;
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
   signal: AbortSignal;
   forkDigestContext: IForkDigestContext;
+  eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
 }
 
@@ -64,10 +87,12 @@ export class Eth2Gossipsub extends Gossipsub {
     super(modules.libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: "StrictNoSign" as const,
-      D: 8,
-      Dlo: 6,
-      Dhi: 12,
+      D: GOSSIP_D,
+      Dlo: GOSSIP_D_LOW,
+      Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
+      scoreParams: computeGossipPeerScoreParams(modules),
+      scoreThresholds: gossipScoreThresholds,
     });
     const {config, forkDigestContext, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
@@ -121,6 +146,84 @@ export class Eth2Gossipsub extends Gossipsub {
     return msgId;
   }
 
+  // Temporaly reverts https://github.com/libp2p/js-libp2p-interfaces/pull/103 while a proper fixed is done upstream
+  // await-ing _processRpc causes messages to be processed 10-20 seconds latter than when received. This kills the node
+  async _processMessages(
+    idB58Str: string,
+    stream: AsyncIterable<Uint8Array | BufferList>,
+    peerStreams: PeerStreams
+  ): Promise<void> {
+    try {
+      await pipe(stream, async (source) => {
+        for await (const data of source) {
+          const rpcBytes = data instanceof Uint8Array ? data : data.slice();
+          const rpcMsg = this._decodeRpc(rpcBytes);
+
+          this._processRpc(idB58Str, peerStreams, rpcMsg).catch((e) => {
+            this.log("_processRpc error", (e as Error).stack);
+          });
+        }
+      });
+    } catch (err) {
+      this._onPeerDisconnected(peerStreams.id, err as Error);
+    }
+  }
+
+  // Temporaly reverts https://github.com/libp2p/js-libp2p-interfaces/pull/103 while a proper fixed is done upstream
+  // await-ing _processRpc causes messages to be processed 10-20 seconds latter than when received. This kills the node
+  async _processRpc(idB58Str: string, peerStreams: PeerStreams, rpc: RPC): Promise<boolean> {
+    this.log("rpc from", idB58Str);
+    const subs = rpc.subscriptions;
+    const msgs = rpc.msgs;
+
+    if (subs.length) {
+      // update peer subscriptions
+      subs.forEach((subOpt) => {
+        this._processRpcSubOpt(idB58Str, subOpt);
+      });
+      this.emit("pubsub:subscription-change", peerStreams.id, subs);
+    }
+
+    if (!this._acceptFrom(idB58Str)) {
+      this.log("received message from unacceptable peer %s", idB58Str);
+      return false;
+    }
+
+    if (msgs.length) {
+      await Promise.all(
+        msgs.map(async (message) => {
+          if (
+            !(
+              this.canRelayMessage ||
+              (message.topicIDs && message.topicIDs.some((topic) => this.subscriptions.has(topic)))
+            )
+          ) {
+            this.log("received message we didn't subscribe to. Dropping.");
+            return;
+          }
+          const msg = normalizeInRpcMessage(message, idB58Str);
+          await this._processRpcMessage(msg);
+        })
+      );
+    }
+    // not a direct implementation of js-libp2p-gossipsub, this is from gossipsub
+    // https://github.com/ChainSafe/js-libp2p-gossipsub/blob/751ea73e9b7dc2287ca56786857d32ec2ce796b9/ts/index.ts#L366
+    if (rpc.control) {
+      super._processRpcControlMessage(idB58Str, rpc.control);
+    }
+    return true;
+  }
+
+  // // Snippet of _processRpcMessage from https://github.com/libp2p/js-libp2p-interfaces/blob/92245d66b0073f0a72fed9f7abcf4b533102f1fd/packages/interfaces/src/pubsub/index.js#L442
+  // async _processRpcMessage(msg: InMessage): Promise<void> {
+  //   try {
+  //     await this.validate(msg);
+  //   } catch (err) {
+  //     this.log("Message is invalid, dropping it. %O", err);
+  //     return;
+  //   }
+  // }
+
   /**
    * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
    * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
@@ -151,8 +254,11 @@ export class Eth2Gossipsub extends Gossipsub {
       // Also validates that the topicStr is known
       const topic = this.gossipTopicCache.getTopic(topicStr);
 
+      // Get seenTimestamp before adding the message to the queue or add async delays
+      const seenTimestampSec = Date.now() / 1000;
+
       // No error here means that the incoming object is valid
-      await this.validatorFnsByType[topic.type](topic, message);
+      await this.validatorFnsByType[topic.type](topic, message, seenTimestampSec);
     } catch (e) {
       // JobQueue may throw non-typed errors
       const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;

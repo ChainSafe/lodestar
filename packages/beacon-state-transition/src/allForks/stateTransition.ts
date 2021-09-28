@@ -1,8 +1,9 @@
 /* eslint-disable import/namespace */
-import {allForks, phase0 as phase0Types, Slot, ssz} from "@chainsafe/lodestar-types";
-import {ForkName, GENESIS_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {allForks, Slot, ssz} from "@chainsafe/lodestar-types";
+import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
+import * as merge from "../merge";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
 import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
@@ -11,7 +12,8 @@ import {computeEpochAtSlot} from "../util";
 import {toHexString} from "@chainsafe/ssz";
 
 type StateAllForks = CachedBeaconState<allForks.BeaconState>;
-type StatePhase0 = CachedBeaconState<phase0Types.BeaconState>;
+type StatePhase0 = CachedBeaconState<phase0.BeaconState>;
+type StateAltair = CachedBeaconState<altair.BeaconState>;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
 type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
@@ -19,11 +21,13 @@ type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => voi
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
   [ForkName.altair]: altair.processBlock as ProcessBlockFn,
+  [ForkName.merge]: merge.processBlock as ProcessBlockFn,
 };
 
 const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.phase0]: phase0.processEpoch as ProcessEpochFn,
   [ForkName.altair]: altair.processEpoch as ProcessEpochFn,
+  [ForkName.merge]: altair.processEpoch as ProcessEpochFn,
 };
 
 // Multifork capable state transition
@@ -156,12 +160,12 @@ function processSlotsWithTransientCache(
       }
 
       // Upgrade state if exactly at epoch boundary
-      switch (computeEpochAtSlot(postState.slot)) {
-        case GENESIS_EPOCH:
-          break; // Don't do any upgrades at genesis epoch
-        case config.ALTAIR_FORK_EPOCH:
-          postState = altair.upgradeState(postState as StatePhase0) as StateAllForks;
-          break;
+      const stateSlot = computeEpochAtSlot(postState.slot);
+      if (stateSlot === config.ALTAIR_FORK_EPOCH) {
+        postState = altair.upgradeState(postState as StatePhase0) as StateAllForks;
+      }
+      if (stateSlot === config.MERGE_FORK_EPOCH) {
+        postState = merge.upgradeState(postState as StateAltair) as StateAllForks;
       }
     } else {
       postState.slot++;

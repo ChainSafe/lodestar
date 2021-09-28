@@ -5,12 +5,12 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IBlockSummary, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../src/chain";
 import {IStateRegenerator} from "../../../src/chain/regen";
-import {ZERO_HASH} from "../../../src/constants";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
@@ -21,6 +21,7 @@ import {BlsSingleThreadVerifier} from "../../../src/chain/bls";
 import {signCached} from "../cache";
 import {ClockStatic} from "../clock";
 import {toSingleBit} from "../aggregationBits";
+import {toHexString} from "@chainsafe/ssz";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;
@@ -50,14 +51,17 @@ export function getAttestationValidData(
   const clock = new ClockStatic(currentSlot);
 
   // Add block to forkChoice
-  const headBlock: IBlockSummary = {
+  const headBlock: IProtoBlock = {
     slot: attSlot,
-    blockRoot: beaconBlockRoot,
-    parentRoot: ZERO_HASH,
-    stateRoot: ZERO_HASH,
-    targetRoot: targetRoot,
+    blockRoot: toHexString(beaconBlockRoot),
+    parentRoot: ZERO_HASH_HEX,
+    stateRoot: ZERO_HASH_HEX,
+    targetRoot: toHexString(targetRoot),
+    executionPayloadBlockHash: null,
     justifiedEpoch: 0,
+    justifiedRoot: ZERO_HASH_HEX,
     finalizedEpoch: 0,
+    finalizedRoot: ZERO_HASH_HEX,
   };
   const forkChoice = ({
     getBlock: (root) => {

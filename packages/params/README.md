@@ -38,6 +38,7 @@ let forkName = "phase0";
 switch (forkName) {
   case ForkName.phase0:
   case ForkName.altair:
+  case ForkName.merge:
   default:
 }
 ```

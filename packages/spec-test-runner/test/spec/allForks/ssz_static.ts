@@ -5,7 +5,7 @@ import {Bytes32, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 import {CompositeType, ContainerType, Type} from "@chainsafe/ssz";
 import {IBaseSSZStaticTestCase} from "../ssz/type";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {ACTIVE_PRESET, ForkName, PresetName} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */

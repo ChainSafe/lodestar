@@ -44,7 +44,7 @@ async function resolveBlockIdOrNull(
   blockId = String(blockId).toLowerCase();
   if (blockId === "head") {
     const head = forkChoice.getHead();
-    return db.block.get(head.blockRoot);
+    return db.block.get(fromHexString(head.blockRoot));
   }
 
   if (blockId === "genesis") {
@@ -68,7 +68,7 @@ async function resolveBlockIdOrNull(
     if (isNaN(blockSlot) && isNaN(blockSlot - 0)) {
       throw new ValidationError(`Invalid block id '${blockId}'`, "blockId");
     }
-    blockSummary = forkChoice.getCanonicalBlockSummaryAtSlot(blockSlot);
+    blockSummary = forkChoice.getCanonicalBlockAtSlot(blockSlot);
     getBlockByBlockArchive = async () => await db.blockArchive.get(blockSlot);
   }
 
@@ -79,7 +79,7 @@ async function resolveBlockIdOrNull(
     if (blockSummary.slot === finalized.slot) {
       return await db.blockArchive.get(finalized.slot);
     } else {
-      return await db.block.get(blockSummary.blockRoot);
+      return await db.block.get(fromHexString(blockSummary.blockRoot));
     }
   } else {
     // Blocks not in the fork choice are in the block archive

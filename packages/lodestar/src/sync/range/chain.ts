@@ -10,7 +10,7 @@ import {ItTrigger} from "../../util/itTrigger";
 import {byteArrayEquals} from "../../util/bytes";
 import {PeerMap} from "../../util/peerMap";
 import {wrapError} from "../../util/wrapError";
-import {RangeSyncType} from "../utils";
+import {RangeSyncType} from "../utils/remoteSyncType";
 import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch";
 import {

@@ -5,7 +5,6 @@ import {CachedBeaconState} from "../../allForks/util";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
 import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";
-import {BlockProcess} from "../../util/blockProcess";
 
 /**
  * Process a ProposerSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -17,12 +16,11 @@ export function processProposerSlashing(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,
   proposerSlashing: phase0.ProposerSlashing,
-  blockProcess: BlockProcess,
   verifySignatures = true
 ): void {
   assertValidProposerSlashing(state as CachedBeaconState<allForks.BeaconState>, proposerSlashing, verifySignatures);
 
-  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex, blockProcess);
+  slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
 
 export function assertValidProposerSlashing(

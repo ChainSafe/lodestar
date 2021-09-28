@@ -6,6 +6,7 @@ import axios from "axios";
 import tar from "tar";
 import stream from "stream";
 import {promisify} from "util";
+import retry from "async-retry";
 
 export type TestToDownload = "general" | "mainnet" | "minimal";
 export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
@@ -62,10 +63,12 @@ export async function downloadGenericSpecTests<TestNames extends string>(
 
   if (existingVersion && existingVersion === specVersion) {
     return log(`version ${specVersion} already downloaded`);
+  } else {
+    log(`Downloading new version ${specVersion}`);
   }
 
   if (fs.existsSync(outputDir)) {
-    log(`Cleaning ${outputDir}`);
+    log(`Cleaning existing version ${existingVersion} at ${outputDir}`);
     rimraf.sync(outputDir);
   }
 
@@ -75,20 +78,33 @@ export async function downloadGenericSpecTests<TestNames extends string>(
     testsToDownload.map(async (test) => {
       const url = `${specTestsRepoUrl ?? defaultSpecTestsRepoUrl}/releases/download/${specVersion}/${test}.tar.gz`;
 
+      await retry(
+        // async (bail) => {
+        async () => {
+          const {data, headers} = await axios({
+            method: "get",
+            url,
+            responseType: "stream",
+            timeout: 30 * 60 * 1000,
+          });
+
+          const totalSize = headers["content-length"];
+          log(`Downloading ${url} - ${totalSize} bytes`);
+
+          // extract tar into output directory
+          await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
+
+          log(`Downloaded  ${url}`);
+        },
+        {
+          retries: 3,
+          onRetry: (e, attempt) => {
+            log(`Download attempt ${attempt} for ${url} failed: ${e.message}`);
+          },
+        }
+      );
+
       // download tar
-      const {data, headers} = await axios({
-        method: "get",
-        url,
-        responseType: "stream",
-      });
-
-      const totalSize = headers["content-length"];
-      log(`Downloading ${url} - ${totalSize} bytes`);
-
-      // extract tar into output directory
-      await promisify(stream.pipeline)(data, tar.x({cwd: outputDir}));
-
-      log(`Downloaded  ${url}`);
     })
   );
 

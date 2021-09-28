@@ -2,34 +2,49 @@
  * @module chain/blockAssembly
  */
 
-import {List} from "@chainsafe/ssz";
+import xor from "buffer-xor";
+import {List, hash} from "@chainsafe/ssz";
 import {
-  ForkName,
-  MAX_ATTESTATIONS,
-  MAX_ATTESTER_SLASHINGS,
-  MAX_PROPOSER_SLASHINGS,
-  MAX_VOLUNTARY_EXITS,
-} from "@chainsafe/lodestar-params";
-import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-
-import {IBeaconDb} from "../../../db";
-import {IEth1ForBlockProduction} from "../../../eth1";
+  Bytes96,
+  Bytes32,
+  phase0,
+  allForks,
+  altair,
+  Root,
+  Slot,
+  BLSSignature,
+  ssz,
+  ExecutionAddress,
+  PayloadId,
+} from "@chainsafe/lodestar-types";
+import {
+  CachedBeaconState,
+  computeEpochAtSlot,
+  computeTimeAtSlot,
+  getCurrentEpoch,
+  getRandaoMix,
+  merge,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 
 export async function assembleBody(
-  {
-    chain,
-    config,
-    db,
-    eth1,
-  }: {chain: IBeaconChain; config: IChainForkConfig; db: IBeaconDb; eth1: IEth1ForBlockProduction},
+  chain: IBeaconChain,
   currentState: CachedBeaconState<allForks.BeaconState>,
-  randaoReveal: Bytes96,
-  graffiti: Bytes32,
-  blockSlot: Slot,
-  syncAggregateData: {parentSlot: Slot; parentBlockRoot: Root}
+  {
+    randaoReveal,
+    graffiti,
+    blockSlot,
+    parentSlot,
+    parentBlockRoot,
+    feeRecipient,
+  }: {
+    randaoReveal: Bytes96;
+    graffiti: Bytes32;
+    blockSlot: Slot;
+    parentSlot: Slot;
+    parentBlockRoot: Root;
+    feeRecipient: ExecutionAddress;
+  }
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -43,15 +58,14 @@ export async function assembleBody(
   //   }
   // }
 
-  const [proposerSlashings, attesterSlashings, attestations, voluntaryExits, {eth1Data, deposits}] = await Promise.all([
-    db.proposerSlashing.values({limit: MAX_PROPOSER_SLASHINGS}),
-    db.attesterSlashing.values({limit: MAX_ATTESTER_SLASHINGS}),
-    chain.aggregatedAttestationPool.getAttestationsForBlock(currentState).slice(0, MAX_ATTESTATIONS),
-    db.voluntaryExit.values({limit: MAX_VOLUNTARY_EXITS}),
-    eth1.getEth1DataAndDeposits(currentState as CachedBeaconState<allForks.BeaconState>),
-  ]);
+  const [attesterSlashings, proposerSlashings] = chain.opPool.getSlashings(currentState);
+  const voluntaryExits = chain.opPool.getVoluntaryExits(currentState);
+  const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
+  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(
+    currentState as CachedBeaconState<allForks.BeaconState>
+  );
 
-  const blockBodyPhase0: phase0.BeaconBlockBody = {
+  const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
     graffiti,
     eth1Data,
@@ -62,25 +76,73 @@ export async function assembleBody(
     voluntaryExits: voluntaryExits as List<phase0.SignedVoluntaryExit>,
   };
 
-  const blockFork = config.getForkName(blockSlot);
-  switch (blockFork) {
-    case ForkName.phase0:
-      return blockBodyPhase0;
+  const blockEpoch = computeEpochAtSlot(blockSlot);
 
-    case ForkName.altair: {
-      const block: altair.BeaconBlockBody = {
-        ...blockBodyPhase0,
-        syncAggregate: chain.syncContributionAndProofPool.getAggregate(
-          syncAggregateData.parentSlot,
-          syncAggregateData.parentBlockRoot
-        ),
-      };
-      return block;
-    }
-
-    default:
-      throw new Error(`Block processing not implemented for fork ${blockFork}`);
+  if (blockEpoch >= chain.config.ALTAIR_FORK_EPOCH) {
+    (blockBody as altair.BeaconBlockBody).syncAggregate = chain.syncContributionAndProofPool.getAggregate(
+      parentSlot,
+      parentBlockRoot
+    );
   }
+
+  if (blockEpoch >= chain.config.MERGE_FORK_EPOCH) {
+    // TODO: Optimize this flow
+    // - Call prepareExecutionPayload as early as possible
+    // - Call prepareExecutionPayload again if parameters change
+
+    const payloadId = await prepareExecutionPayload(
+      chain,
+      currentState as merge.BeaconState,
+      feeRecipient,
+      randaoReveal
+    );
+
+    if (payloadId) {
+      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
+    } else {
+      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+    }
+  }
+
+  return blockBody;
+}
+
+/**
+ * Produce ExecutionPayload for pre-merge, merge, and post-merge.
+ *
+ * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
+ */
+async function prepareExecutionPayload(
+  chain: IBeaconChain,
+  state: merge.BeaconState,
+  feeRecipient: ExecutionAddress,
+  randaoReveal: BLSSignature
+): Promise<PayloadId | null> {
+  // Use different POW block hash parent for block production based on merge status.
+  // Returned value of null == using an empty ExecutionPayload value
+  let parentHash: Root;
+  if (!merge.isMergeComplete(state)) {
+    const terminalPowBlockHash = chain.eth1.getPowBlockAtTotalDifficulty();
+    if (terminalPowBlockHash === null) {
+      // Pre-merge, no prepare payload call is needed
+      return null;
+    } else {
+      // Signify merge via producing on top of the last PoW block
+      parentHash = terminalPowBlockHash;
+    }
+  } else {
+    // Post-merge, normal payload
+    parentHash = state.latestExecutionPayloadHeader.blockHash;
+  }
+
+  const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
+  const random = computeRandaoMix(state, randaoReveal);
+  return chain.executionEngine.preparePayload(parentHash, timestamp, random, feeRecipient);
+}
+
+function computeRandaoMix(state: merge.BeaconState, randaoReveal: BLSSignature): Bytes32 {
+  const epoch = getCurrentEpoch(state);
+  return xor(Buffer.from(getRandaoMix(state, epoch) as Uint8Array), Buffer.from(hash(randaoReveal as Uint8Array)));
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

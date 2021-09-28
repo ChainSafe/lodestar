@@ -2,10 +2,10 @@ import {join} from "path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
-import {altair, ssz, Uint64} from "@chainsafe/lodestar-types";
+import {merge, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
 
@@ -49,7 +49,7 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
       let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
       const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-        const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as merge.SignedBeaconBlock;
         wrappedState = allForks.stateTransition(
           wrappedState,
           ssz[fork].SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),

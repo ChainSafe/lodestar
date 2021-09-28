@@ -1,5 +1,5 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, Slot, Root, ssz} from "@chainsafe/lodestar-types";
+import {allForks, Slot, RootHex, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {StateId} from "./beacon/state";
 import {
@@ -18,7 +18,7 @@ import {
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
-type SlotRoot = {slot: Slot; root: Root};
+type SlotRoot = {slot: Slot; root: RootHex};
 export type StateFormat = "json" | "ssz";
 export const mimeTypeSSZ = "application/octet-stream";
 
@@ -114,10 +114,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
+  const stringType = new StringType();
   const SlotRoot = new ContainerType<SlotRoot>({
     fields: {
       slot: ssz.Slot,
-      root: ssz.Root,
+      root: stringType,
     },
   });
 

@@ -45,7 +45,7 @@ export enum Bucket {
   phase0_slashingProtectionAttestationLowerBound = 22,
   index_slashingProtectionMinSpanDistance = 23,
   index_slashingProtectionMaxSpanDistance = 24,
-  allForks_pendingBlock = 25, // Root -> SignedBeaconBlock
+  // allForks_pendingBlock = 25, // Root -> SignedBeaconBlock // DEPRECATED on v0.30.0
 
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
@@ -58,7 +58,9 @@ export enum Bucket {
   altair_lightclientFinalizedCheckpoint = 33, // Epoch -> FinalizedCheckpointData
   // Note: this is the state root for the checkpoint block, NOT necessarily the state root at the epoch boundary
   altair_lightClientInitProof = 34, // Epoch -> Proof
-  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod -> Proof
+  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod ->
+
+  validator_metaData = 41,
 }
 
 export enum Key {

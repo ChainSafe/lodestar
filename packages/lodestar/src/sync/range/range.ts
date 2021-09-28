@@ -8,9 +8,10 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {IMetrics} from "../../metrics";
-import {RangeSyncType, getRangeSyncType} from "../utils";
+import {RangeSyncType, getRangeSyncType} from "../utils/remoteSyncType";
 import {updateChains, shouldRemoveChain} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
+import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -184,7 +185,14 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   /** Convenience method for `SyncChain` */
   private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
     // Not trusted, verify signatures
-    const flags = {prefinalized: true, trusted: false};
+    const flags: PartiallyVerifiedBlockFlags = {
+      // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
+      skipImportingAttestations: true,
+      // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
+      ignoreIfKnown: true,
+      // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
+      ignoreIfFinalized: true,
+    };
 
     if (this.opts?.disableProcessAsChainSegment) {
       // Should only be used for debugging or testing

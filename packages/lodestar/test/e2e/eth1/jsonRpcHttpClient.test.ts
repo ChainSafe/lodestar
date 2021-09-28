@@ -22,6 +22,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
     payload?: IRpcPayload;
     requestListener?: http.RequestListener;
     abort?: true;
+    timeout?: number;
     error: any;
   }[] = [
     {
@@ -89,12 +90,20 @@ describe("eth1 / jsonRpcHttpClient", function () {
       error: "no result",
     },
     {
-      id: "Abort request",
+      id: "Aborted request",
       abort: true,
       requestListener: () => {
         // leave the request open until aborted
       },
-      error: "The user aborted a request",
+      error: "Aborted request",
+    },
+    {
+      id: "Timeout request",
+      timeout: 1,
+      requestListener: () => {
+        // leave the request open until timeout
+      },
+      error: "Timeout request",
     },
   ];
 
@@ -112,7 +121,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
   });
 
   for (const testCase of testCases) {
-    const {id, requestListener, abort} = testCase;
+    const {id, requestListener, abort, timeout} = testCase;
     const error = testCase.error as Error;
     let {url, payload} = testCase;
 
@@ -139,7 +148,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
       const controller = new AbortController();
       if (abort) setTimeout(() => controller.abort(), 50);
       const eth1JsonRpcClient = new JsonRpcHttpClient([url], {signal: controller.signal});
-      await expect(eth1JsonRpcClient.fetch(payload)).to.be.rejectedWith(error);
+      await expect(eth1JsonRpcClient.fetch(payload, {timeout})).to.be.rejectedWith(error);
     });
   }
 });

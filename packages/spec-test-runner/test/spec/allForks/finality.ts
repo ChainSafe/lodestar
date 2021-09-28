@@ -2,9 +2,9 @@ import {join} from "path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconState, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {ssz, Uint64} from "@chainsafe/lodestar-types";
+import {merge, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
@@ -21,7 +21,7 @@ export function finality(fork: ForkName): void {
       ) as CachedBeaconState<allForks.BeaconState>;
       const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
-        const signedBlock = testcase[`blocks_${i}`] as altair.SignedBeaconBlock;
+        const signedBlock = testcase[`blocks_${i}`] as merge.SignedBeaconBlock;
 
         wrappedState = allForks.stateTransition(
           wrappedState,

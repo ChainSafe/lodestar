@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.29.3",
+  "version": "0.30.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -37,16 +37,16 @@
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.1",
-    "@chainsafe/lodestar-api": "^0.29.3",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.29.3",
-    "@chainsafe/lodestar-config": "^0.29.3",
-    "@chainsafe/lodestar-params": "^0.29.3",
-    "@chainsafe/lodestar-types": "^0.29.3",
-    "@chainsafe/lodestar-utils": "^0.29.3",
+    "@chainsafe/lodestar-api": "^0.30.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.30.0",
+    "@chainsafe/lodestar-config": "^0.30.0",
+    "@chainsafe/lodestar-params": "^0.30.0",
+    "@chainsafe/lodestar-types": "^0.30.0",
+    "@chainsafe/lodestar-utils": "^0.30.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.7",
     "@chainsafe/ssz": "^0.8.17",
     "cross-fetch": "^3.1.4",
-    "mitt": "^2.1.0"
+    "mitt": "^3.0.0"
   },
   "keywords": [
     "ethereum",

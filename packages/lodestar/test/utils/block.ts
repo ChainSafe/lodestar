@@ -1,12 +1,10 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {IBlockSummary} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-
-import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 import deepmerge from "deepmerge";
-import {IBlockJob} from "../../src/chain";
+import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
@@ -63,33 +61,24 @@ export function generateSignedBlock(
   );
 }
 
-export function generateEmptyBlockSummary(): IBlockSummary {
+export function generateEmptyProtoBlock(): IProtoBlock {
+  const rootHex = "0x" + "00".repeat(32);
   return {
     slot: 0,
-    blockRoot: Buffer.alloc(32),
-    parentRoot: Buffer.alloc(32),
-    stateRoot: Buffer.alloc(32),
-    targetRoot: Buffer.alloc(32),
+    blockRoot: rootHex,
+    parentRoot: rootHex,
+    stateRoot: rootHex,
+    targetRoot: rootHex,
+    executionPayloadBlockHash: null,
     justifiedEpoch: 0,
+    justifiedRoot: rootHex,
     finalizedEpoch: 0,
+    finalizedRoot: rootHex,
   };
 }
 
-export function generateBlockSummary(overrides: RecursivePartial<IBlockSummary> = {}): IBlockSummary {
-  return deepmerge<IBlockSummary, RecursivePartial<IBlockSummary>>(generateEmptyBlockSummary(), overrides, {
+export function generateProtoBlock(overrides: RecursivePartial<IProtoBlock> = {}): IProtoBlock {
+  return deepmerge<IProtoBlock, RecursivePartial<IProtoBlock>>(generateEmptyProtoBlock(), overrides, {
     isMergeableObject: isPlainObject,
   });
-}
-
-/**
- * Block job with all metadata set to false
- */
-export function getNewBlockJob(signedBlock: phase0.SignedBeaconBlock): IBlockJob {
-  return {
-    signedBlock,
-    reprocess: false,
-    prefinalized: false,
-    validSignatures: false,
-    validProposerSignature: false,
-  };
 }

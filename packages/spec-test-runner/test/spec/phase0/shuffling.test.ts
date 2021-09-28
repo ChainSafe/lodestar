@@ -3,7 +3,7 @@ import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
-import {SPEC_TEST_LOCATION} from "../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 
 describeDirectorySpecTest<IShufflingTestCase, number[]>(

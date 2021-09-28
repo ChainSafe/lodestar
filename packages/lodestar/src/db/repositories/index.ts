@@ -6,7 +6,6 @@ export * from "./attesterSlashing";
 export * from "./proposerSlashing";
 export * from "./voluntaryExit";
 export * from "./depositEvent";
-export * from "./pendingBlock";
 
 export * from "./depositDataRoot";
 export * from "./eth1Data";

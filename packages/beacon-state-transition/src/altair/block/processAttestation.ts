@@ -3,7 +3,7 @@ import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
 import {CachedBeaconState, EpochContext} from "../../allForks/util";
-import {IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
+import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   MIN_ATTESTATION_INCLUSION_DELAY,
@@ -15,7 +15,6 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
-import {BlockProcess} from "../../util/blockProcess";
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
@@ -23,8 +22,6 @@ const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIG
 export function processAttestations(
   state: CachedBeaconState<altair.BeaconState>,
   attestations: phase0.Attestation[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  blockProcess: BlockProcess,
   verifySignature = true
 ): void {
   const {epochCtx} = state;
@@ -34,6 +31,8 @@ export function processAttestations(
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
+  const previousEpochStatuses = new Map<number, IParticipationStatus>();
+  const currentEpochStatuses = new Map<number, IParticipationStatus>();
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -60,6 +59,8 @@ export function processAttestations(
       data.target.epoch === epochCtx.currentShuffling.epoch
         ? state.currentEpochParticipation
         : state.previousEpochParticipation;
+    const epochStatuses =
+      data.target.epoch === epochCtx.currentShuffling.epoch ? currentEpochStatuses : previousEpochStatuses;
 
     const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
       data,
@@ -72,13 +73,17 @@ export function processAttestations(
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalancesWithWeight = 0;
     for (const index of attestingIndices) {
-      const status = epochParticipation.getStatus(index) as IParticipationStatus;
+      const status = epochStatuses.get(index) || (epochParticipation.getStatus(index) as IParticipationStatus);
       const newStatus = {
         timelySource: status.timelySource || timelySource,
         timelyTarget: status.timelyTarget || timelyTarget,
         timelyHead: status.timelyHead || timelyHead,
       };
-      epochParticipation.setStatus(index, newStatus);
+      // For normal block, > 90% of attestations belong to current epoch
+      // At epoch boundary, 100% of attestations belong to previous epoch
+      // so we want to update the participation flag tree in batch
+      epochStatuses.set(index, newStatus);
+      // epochParticipation.setStatus(index, newStatus);
       /**
        * Spec:
        * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
@@ -100,6 +105,16 @@ export function processAttestations(
     const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
+  updateEpochParticipants(
+    previousEpochStatuses,
+    state.previousEpochParticipation,
+    epochCtx.previousShuffling.activeIndices.length
+  );
+  updateEpochParticipants(
+    currentEpochStatuses,
+    state.currentEpochParticipation,
+    epochCtx.currentShuffling.activeIndices.length
+  );
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
 }
@@ -174,5 +189,25 @@ export class RootCache {
       this.blockRootSlotCache.set(slot, root);
     }
     return root;
+  }
+}
+
+export function updateEpochParticipants(
+  epochStatuses: Map<number, IParticipationStatus>,
+  epochParticipation: CachedEpochParticipation,
+  numActiveValidators: number
+): void {
+  // all active validators are attesters, there are 32 slots per epoch
+  // if 1/2 of that or more are updated status, do that in batch, see the benchmark for more details
+  if (epochStatuses.size >= numActiveValidators / (2 * SLOTS_PER_EPOCH)) {
+    const transientVector = epochParticipation.persistent.asTransient();
+    for (const [index, status] of epochStatuses.entries()) {
+      transientVector.set(index, status);
+    }
+    epochParticipation.updateAllStatus(transientVector.vector);
+  } else {
+    for (const [index, status] of epochStatuses.entries()) {
+      epochParticipation.setStatus(index, status);
+    }
   }
 }

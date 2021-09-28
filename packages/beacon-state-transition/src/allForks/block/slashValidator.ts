@@ -13,13 +13,11 @@ import {
 import {decreaseBalance, increaseBalance} from "../../util";
 import {CachedBeaconState} from "../util";
 import {initiateValidatorExit} from ".";
-import {BlockProcess} from "../../util/blockProcess";
 
 export function slashValidatorAllForks(
   fork: ForkName,
   state: CachedBeaconState<allForks.BeaconState>,
   slashedIndex: ValidatorIndex,
-  blockProcess: BlockProcess,
   whistleblowerIndex?: ValidatorIndex
 ): void {
   const {epochCtx} = state;

@@ -12,6 +12,7 @@ import {
 export const Boolean = booleanType;
 export const Bytes4 = new ByteVectorType({length: 4});
 export const Bytes8 = new ByteVectorType({length: 8});
+export const Bytes20 = new ByteVectorType({length: 20});
 export const Bytes32 = new ByteVectorType({length: 32});
 export const Bytes48 = new ByteVectorType({length: 48});
 export const Bytes96 = new ByteVectorType({length: 96});
@@ -42,3 +43,5 @@ export const BLSPubkey = Bytes48;
 export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = Uint8;
+export const ExecutionAddress = Bytes20;
+export const PayloadId = Number64;

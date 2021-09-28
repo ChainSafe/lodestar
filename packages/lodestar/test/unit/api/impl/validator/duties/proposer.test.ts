@@ -3,11 +3,11 @@ import {use, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
-import {ForkChoice, IBeaconChain} from "../../../../../../src/chain";
+import {IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
-import {IEth1ForBlockProduction} from "../../../../../../src/eth1";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator";
 import {ApiModules} from "../../../../../../src/api/impl/types";
 import {generateInitialMaxBalances} from "../../../../../utils/balances";
@@ -24,7 +24,6 @@ use(chaiAsPromised);
 
 describe("get proposers api impl", function () {
   const logger = testLogger();
-  let eth1Stub: SinonStubbedInstance<IEth1ForBlockProduction>;
 
   let chainStub: SinonStubbedInstance<IBeaconChain>,
     syncStub: SinonStubbedInstance<IBeaconSync>,
@@ -46,7 +45,6 @@ describe("get proposers api impl", function () {
       chain: server.chainStub,
       config,
       db: server.dbStub,
-      eth1: eth1Stub,
       logger,
       network: server.networkStub,
       sync: syncStub,

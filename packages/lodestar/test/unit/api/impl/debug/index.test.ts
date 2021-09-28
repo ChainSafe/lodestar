@@ -1,14 +1,15 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import * as stateApiUtils from "../../../../../src/api/impl/beacon/state/utils";
 import {getDebugApi} from "../../../../../src/api/impl/debug";
 import {INetwork, Network} from "../../../../../src/network";
-import {IBeaconChain, LodestarForkChoice} from "../../../../../src/chain";
-import {generateBlockSummary} from "../../../../utils/block";
+import {IBeaconChain} from "../../../../../src/chain";
+import {generateProtoBlock} from "../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../utils/stub";
 import {generateState} from "../../../../utils/state";
 import {setupApiImplTestServer} from "../index.test";
@@ -26,9 +27,9 @@ describe("api - debug - beacon", function () {
     const server = setupApiImplTestServer();
     resolveStateIdStub = sinon.stub(stateApiUtils, "resolveStateId");
     chainStub = server.chainStub;
-    forkchoiceStub = sinon.createStubInstance(LodestarForkChoice);
+    forkchoiceStub = sinon.createStubInstance(ForkChoice);
     chainStub.forkChoice = forkchoiceStub;
-    dbStub = new StubbedBeaconDb(sinon);
+    dbStub = new StubbedBeaconDb();
     networkStub = sinon.createStubInstance(Network);
     debugApi = getDebugApi({chain: chainStub, db: dbStub, config, network: networkStub});
   });
@@ -38,9 +39,9 @@ describe("api - debug - beacon", function () {
   });
 
   it("getHeads - should return head", async function () {
-    forkchoiceStub.getHeads.returns([generateBlockSummary({slot: 1000})]);
+    forkchoiceStub.getHeads.returns([generateProtoBlock({slot: 1000})]);
     const {data: heads} = await debugApi.getHeads();
-    expect(heads).to.be.deep.equal([{slot: 1000, root: ZERO_HASH}]);
+    expect(heads).to.be.deep.equal([{slot: 1000, root: toHexString(ZERO_HASH)}]);
   });
 
   it("getState - should return state", async function () {

@@ -9,7 +9,6 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {processSyncAggregate} from "./processSyncCommittee";
-import {BlockProcess} from "../../util";
 
 export {
   processOperations,
@@ -26,10 +25,9 @@ export function processBlock(
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
-  const blockProcess: BlockProcess = {};
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
-  processOperations(state, block.body, blockProcess, verifySignatures);
+  processOperations(state, block.body, verifySignatures);
   processSyncAggregate(state, block, verifySignatures);
 }

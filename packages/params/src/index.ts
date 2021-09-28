@@ -136,6 +136,20 @@ export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 
+// Merge constants - Spec v1.0.1
+export const MAX_BYTES_PER_OPAQUE_TRANSACTION = 1048576; // 2**20;
+export const MAX_TRANSACTIONS_PER_PAYLOAD = 16384; // 2**14;
+export const BYTES_PER_LOGS_BLOOM = 256; // 2**8;
+export const GAS_LIMIT_DENOMINATOR = 1024; // 2**10;
+export const MIN_GAS_LIMIT = 5000;
+export const MAX_EXTRA_DATA_BYTES = 32; // 2**5
+
+// Merge constants - Spec v1.0.1
+// Genesis testing settings
+// Note: These configuration settings do not apply to the mainnet and are utilized only by pure Merge testing.
+export const GENESIS_GAS_LIMIT = 30000000;
+export const GENESIS_BASE_FEE_PER_GAS = "0x00ca9a3b00000000000000000000000000000000000000000000000000000000";
+
 //
 
 export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;

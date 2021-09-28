@@ -134,6 +134,11 @@ export const Eth1Data = new ContainerType<phase0.Eth1Data>({
   },
 });
 
+export const Eth1DataVotes = new ListType({
+  elementType: Eth1Data,
+  limit: EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH,
+});
+
 export const Eth1DataOrdered = new ContainerType<phase0.Eth1DataOrdered>({
   fields: {
     depositRoot: Root,
@@ -199,6 +204,9 @@ export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
 // Export as stand-alone for direct tree optimizations
 export const Validators = new ListType({elementType: Validator, limit: VALIDATOR_REGISTRY_LIMIT});
 export const Balances = new ListType({elementType: Number64, limit: VALIDATOR_REGISTRY_LIMIT});
+export const RandaoMixes = new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR});
+export const Slashings = new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR});
+export const JustificationBits = new BitVectorType({length: JUSTIFICATION_BITS_LENGTH});
 
 // Misc dependants
 
@@ -340,22 +348,19 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     }),
     // Eth1
     eth1Data: Eth1Data,
-    eth1DataVotes: new ListType({
-      elementType: Eth1Data,
-      limit: EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH,
-    }),
+    eth1DataVotes: Eth1DataVotes,
     eth1DepositIndex: Number64,
     // Registry
     validators: Validators,
     balances: Balances,
-    randaoMixes: new VectorType({elementType: Bytes32, length: EPOCHS_PER_HISTORICAL_VECTOR}),
+    randaoMixes: RandaoMixes,
     // Slashings
-    slashings: new VectorType({elementType: Gwei, length: EPOCHS_PER_SLASHINGS_VECTOR}),
+    slashings: Slashings,
     // Attestations
     previousEpochAttestations: EpochAttestations,
     currentEpochAttestations: EpochAttestations,
     // Finality
-    justificationBits: new BitVectorType({length: JUSTIFICATION_BITS_LENGTH}),
+    justificationBits: JustificationBits,
     previousJustifiedCheckpoint: Checkpoint,
     currentJustifiedCheckpoint: Checkpoint,
     finalizedCheckpoint: Checkpoint,

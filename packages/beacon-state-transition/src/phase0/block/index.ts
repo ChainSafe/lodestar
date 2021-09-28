@@ -7,7 +7,6 @@ import {processDeposit} from "./processDeposit";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {BlockProcess} from "../../util";
 
 // Extra utils used by other modules
 export {isValidIndexedAttestation} from "../../allForks/block";
@@ -27,9 +26,8 @@ export function processBlock(
   block: phase0.BeaconBlock,
   verifySignatures = true
 ): void {
-  const blockProcess: BlockProcess = {};
   processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
   processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
   processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
-  processOperations(state, block.body, blockProcess, verifySignatures);
+  processOperations(state, block.body, verifySignatures);
 }

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import {SPEC_TEST_LOCATION} from "../../../utils/specTestCases";
+import {SPEC_TEST_LOCATION} from "../../../specTestVersioning";
 import {join} from "path";
 import {
   BigIntUintType,

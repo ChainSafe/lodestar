@@ -1,8 +1,8 @@
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {phase0} from "@chainsafe/lodestar-types";
+import {Slot, Root} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
-import {toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 
 const {EventType} = routes.events;
 
@@ -10,20 +10,17 @@ const {EventType} = routes.events;
  * Track the head slot/root using the event stream api "head".
  */
 export class ChainHeaderTracker {
-  private headBlockSlot: phase0.Slot;
-  private headBlockRoot: phase0.Root | null;
+  private headBlockSlot: Slot = GENESIS_SLOT;
+  private headBlockRoot: Root | null = null;
 
-  constructor(private readonly logger: ILogger, private readonly api: Api) {
-    this.headBlockSlot = GENESIS_SLOT;
-    this.headBlockRoot = null;
-  }
+  constructor(private readonly logger: ILogger, private readonly api: Api) {}
 
   start(signal: AbortSignal): void {
     this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
     this.logger.verbose("Subscribed to head event");
   }
 
-  getCurrentChainHead(slot: phase0.Slot): phase0.Root | null {
+  getCurrentChainHead(slot: Slot): Root | null {
     if (slot >= this.headBlockSlot) {
       return this.headBlockRoot;
     }
@@ -35,11 +32,8 @@ export class ChainHeaderTracker {
     if (event.type === EventType.head) {
       const {message} = event;
       this.headBlockSlot = message.slot;
-      this.headBlockRoot = message.block;
-      this.logger.verbose("Found new chain head", {
-        slot: this.headBlockSlot,
-        blockRoot: toHexString(this.headBlockRoot),
-      });
+      this.headBlockRoot = fromHexString(message.block);
+      this.logger.verbose("Found new chain head", {slot: message.slot, blockRoot: message.block});
     }
   };
 }

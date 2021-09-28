@@ -5,8 +5,14 @@ import {Json} from "@chainsafe/ssz";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
-import {GossipHandlers, GossipHandlerFn} from "../handlers";
-import {GossipJobQueues, GossipType, GossipValidatorFn, ValidatorFnsByType} from "../interface";
+import {
+  GossipJobQueues,
+  GossipType,
+  GossipValidatorFn,
+  ValidatorFnsByType,
+  GossipHandlers,
+  GossipHandlerFn,
+} from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
@@ -39,8 +45,8 @@ export function createValidatorFnsByType(
   const validatorFnsByType = mapValues(
     jobQueues,
     (jobQueue): GossipValidatorFn => {
-      return async function gossipValidatorFnWithQueue(topic, gossipMsg) {
-        await jobQueue.push(topic, gossipMsg);
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg, seenTimestampsMs) {
+        await jobQueue.push(topic, gossipMsg, seenTimestampsMs);
       };
     }
   );
@@ -70,12 +76,13 @@ function getGossipValidatorFn<K extends GossipType>(
   const {config, logger, metrics, uncompressCache} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
-  return async function gossipValidatorFn(topic, gossipMsg) {
+  return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
+    // Define in scope above try {} to be used in catch {} if object was parsed
+    let gossipObject;
     try {
       const encoding = topic.encoding ?? DEFAULT_ENCODING;
 
       // Deserialize object from bytes ONLY after being picked up from the validation queue
-      let gossipObject;
       try {
         const sszType = getGossipSSZType(topic);
         const messageData = decodeMessageData(encoding, gossipMsg.data, uncompressCache);
@@ -89,7 +96,7 @@ function getGossipValidatorFn<K extends GossipType>(
         throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic);
+      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom, seenTimestampSec);
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);
@@ -100,14 +107,18 @@ function getGossipValidatorFn<K extends GossipType>(
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
       }
 
+      // If the gossipObject was deserialized include its short metadata with the error data
+      const metadata = gossipObject && getGossipObjectAcceptMetadata(config, gossipObject, topic);
+      const errorData = (typeof e.type === "object" && metadata ? {...metadata, ...e.type} : e.type) as Json;
+
       switch (e.action) {
         case GossipAction.IGNORE:
-          logger.debug(`gossip - ${type} - ignore`, e.type as Json);
+          logger.debug(`gossip - ${type} - ignore`, errorData);
           metrics?.gossipValidationIgnore.inc({topic: type}, 1);
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, e.message);
 
         case GossipAction.REJECT:
-          logger.debug(`gossip - ${type} - reject`, e.type as Json);
+          logger.debug(`gossip - ${type} - reject`, errorData);
           metrics?.gossipValidationReject.inc({topic: type}, 1);
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, e.message);
       }

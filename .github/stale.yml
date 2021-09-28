@@ -12,18 +12,17 @@ onlyLabels: []
 
 # Issues or Pull Requests with these labels will never be considered stale. Set to `[]` to disable
 exemptLabels:
-  - "PR state: on-ice"
-  - "Good First Issue"
-  - "Status: On Ice"
-  - "Priority: 4 - Low"
-  - "Priority: 3 - Medium"
-  - "Priority: 2 - High"
-  - "Priority: 1 - Critical"
-  - "discussion"
-  - "Discussion"
-  - "Epic"
-  - "Good First Issue"
-  - "help wanted"
+  - "meta-goodfirstissue"
+  - "meta-helpwanted"
+  - "meta-discussion"
+  - "prio0-critical"
+  - "prio2-high"
+  - "prio5-medium"
+  - "prio7-low"
+  - "status0-blocked"
+  - "status1-donotmerge"
+  - "status2-onice"
+  - "status7-opendiscussion"
 
 # Set to true to ignore issues in a project (defaults to false)
 exemptProjects: false
@@ -35,7 +34,7 @@ exemptMilestones: true
 exemptAssignees: true
 
 # Label to use when marking as stale
-staleLabel: bot:stale
+staleLabel: meta-stale
 
 # Comment to post when marking as stale. Set to `false` to disable
 markComment: >
