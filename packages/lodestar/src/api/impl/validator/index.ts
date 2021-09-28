@@ -275,6 +275,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // May request for an epoch that's in the future
       await waitForNextClosestEpoch();
 
+      // should not compare to headEpoch in order to handle skipped slots
       // Check if the epoch is in the future after waiting for requested slot
       if (epoch > chain.clock.currentEpoch + 1) {
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");

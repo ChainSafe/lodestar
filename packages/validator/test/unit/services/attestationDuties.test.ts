@@ -12,6 +12,7 @@ import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
+import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -21,6 +22,8 @@ describe("AttestationDutiesService", function () {
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
+  const chainHeadTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
+    sinon.SinonStubbedInstance<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
 
   // Sample validator
@@ -73,7 +76,14 @@ describe("AttestationDutiesService", function () {
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new AttestationDutiesService(loggerVc, api, clock, validatorStore, indicesService);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      chainHeadTracker
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -88,8 +98,8 @@ describe("AttestationDutiesService", function () {
     expect(Object.fromEntries(dutiesService["dutiesByEpochByIndex"].get(index) || new Map())).to.deep.equal(
       {
         // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        0: {dependentRoot: ZERO_HASH, dutyAndProof: {duty, selectionProof: null}},
-        1: {dependentRoot: ZERO_HASH, dutyAndProof: {duty, selectionProof: null}},
+        0: {duty, selectionProof: null},
+        1: {duty, selectionProof: null},
       },
       "Wrong dutiesService.attesters Map"
     );
