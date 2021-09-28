@@ -27,15 +27,16 @@ describe("block api utils", function () {
       expectedBuffer = Buffer.alloc(32, 2);
       expectedRootHex = toHexString(expectedBuffer);
       expectedSummary = {
+        slot: 0,
         blockRoot: expectedRootHex,
         parentRoot: expectedRootHex,
         targetRoot: expectedRootHex,
         stateRoot: expectedRootHex,
+        executionPayloadBlockHash: null,
         finalizedEpoch: 0,
         finalizedRoot: expectedRootHex,
         justifiedEpoch: 0,
         justifiedRoot: expectedRootHex,
-        slot: 0,
       };
     });
 

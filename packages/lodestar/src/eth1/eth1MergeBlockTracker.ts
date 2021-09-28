@@ -1,18 +1,10 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Epoch} from "@chainsafe/lodestar-types";
-import {IEth1Provider, EthJsonRpcBlockRaw} from "./interface";
-import {hexToBigint, hexToNumber, validateHexRoot} from "./provider/utils";
+import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-
-type RootHexPow = string;
-type PowMergeBlock = {
-  number: number;
-  blockhash: RootHexPow;
-  parentHash: RootHexPow;
-  totalDifficulty: bigint;
-};
+import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
+import {hexToBigint, hexToNumber, validateHexRoot} from "./provider/utils";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -57,7 +49,7 @@ export class Eth1MergeBlockTracker {
    * TODO: Accept multiple, but then handle long backwards searches properly after crossing TTD
    */
   private mergeBlock: PowMergeBlock | null = null;
-  private readonly blocksByHashCache = new Map<RootHexPow, PowMergeBlock>();
+  private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
 
   private status: StatusCode = StatusCode.PRE_MERGE;
   private readonly intervals: NodeJS.Timeout[] = [];

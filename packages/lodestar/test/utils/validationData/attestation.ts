@@ -57,6 +57,7 @@ export function getAttestationValidData(
     parentRoot: ZERO_HASH_HEX,
     stateRoot: ZERO_HASH_HEX,
     targetRoot: toHexString(targetRoot),
+    executionPayloadBlockHash: null,
     justifiedEpoch: 0,
     justifiedRoot: ZERO_HASH_HEX,
     finalizedEpoch: 0,

@@ -39,6 +39,12 @@ export interface IProtoBlock {
    * it also just exists for upstream components (namely attestation verification)
    */
   targetRoot: RootHex;
+  /**
+   * `executionPayloadBlockHash` is not necessary for ProtoArray either.
+   * Here to do ExecutionEngine.notify_forkchoice_updated() easier.
+   * TODO: Check with other teams if this is the optimal strategy
+   */
+  executionPayloadBlockHash: RootHex | null;
   justifiedEpoch: Epoch;
   justifiedRoot: RootHex;
   finalizedEpoch: Epoch;

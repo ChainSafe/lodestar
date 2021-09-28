@@ -23,6 +23,9 @@ describe("options / beaconNodeOptions", () => {
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
 
+      "execution.urls": ["http://localhost:8550"],
+      "execution.timeout": 12000,
+
       "logger.eth1.level": "debug",
       "logger.unknown.level": "debug",
 
@@ -65,6 +68,10 @@ describe("options / beaconNodeOptions", () => {
         enabled: true,
         providerUrls: ["http://my.node:8545"],
         depositContractDeployBlock: 1625314,
+      },
+      executionEngine: {
+        urls: ["http://localhost:8550"],
+        timeout: 12000,
       },
       logger: {
         eth1: {

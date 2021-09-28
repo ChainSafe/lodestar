@@ -4,6 +4,7 @@
 
 import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
+import {Registry} from "prom-client";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -17,11 +18,10 @@ import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
-import {IBeaconNodeOptions} from "./options";
+import {ExecutionEngineHttp} from "../executionEngine";
 import {initializeEth1ForBlockProduction} from "../eth1";
+import {IBeaconNodeOptions} from "./options";
 import {runNodeNotifier} from "./notifier";
-import {Registry} from "prom-client";
-import {ExecutionEngineDisabled} from "../executionEngine";
 
 export * from "./options";
 
@@ -137,7 +137,7 @@ export class BeaconNode {
         {config, db, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
-      executionEngine: new ExecutionEngineDisabled(),
+      executionEngine: new ExecutionEngineHttp(opts.executionEngine, signal),
     });
 
     // Load persisted data from disk to in-memory caches
