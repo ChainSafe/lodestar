@@ -1,3 +1,5 @@
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
@@ -5,8 +7,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {ChainHeaderTracker, SlotRoot} from "./chainHeaderTracker";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
@@ -211,6 +211,7 @@ export class AttestationDutiesService {
           this.logger.warn("Attester duties re-org. This may happen from time to time", {
             priorDependentRoot: toHexString(priorDependentRoot),
             dependentRoot: toHexString(dependentRoot),
+            epoch,
           });
         }
       }
@@ -219,6 +220,7 @@ export class AttestationDutiesService {
 
   private onNewHead = async ({slot, root}: SlotRoot): Promise<void> => {
     for (const [dutyEpoch, dependentRoot] of this.dependentRootByEpoch.entries()) {
+      // dependent root is the last block root of (dutyEpoch - 2) epoch
       if (computeEpochAtSlot(slot) === dutyEpoch - 2 && !ssz.Root.equals(root, dependentRoot)) {
         // last slot of epoch, we're sure it's the correct dependent root
         if ((slot + 1) % SLOTS_PER_EPOCH === 0) {
