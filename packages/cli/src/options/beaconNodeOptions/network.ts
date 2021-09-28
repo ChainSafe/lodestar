@@ -76,7 +76,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.localMultiaddrs": {
     type: "array",
     description: "Local listening addresses for req/resp and gossip",
-    defaultDescription: JSON.stringify(defaultOptions.network.localMultiaddrs),
+    defaultDescription: "/ip4/0.0.0.0/tcp/9000",
     group: "network",
   },
 
