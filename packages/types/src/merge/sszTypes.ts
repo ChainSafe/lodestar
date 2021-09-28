@@ -24,7 +24,7 @@ import {ssz as altairSsz} from "../altair";
 import * as merge from "./types";
 import {LazyVariable} from "../utils/lazyVar";
 
-const {Bytes20, Bytes32, Number64, Slot, ValidatorIndex, Root, BLSSignature} = primitiveSsz;
+const {Bytes20, Bytes32, Number64, Slot, ValidatorIndex, Root, BLSSignature, Uint8} = primitiveSsz;
 
 // So the expandedRoots can be referenced, and break the circular dependency
 const typesRef = new LazyVariable<{
@@ -61,7 +61,8 @@ const executionPayloadFields = {
   gasLimit: Number64,
   gasUsed: Number64,
   timestamp: Number64,
-  extraData: new ByteVectorType({length: MAX_EXTRA_DATA_BYTES}),
+  // TODO: if there is perf issue, consider making ByteListType
+  extraData: new ListType({limit: MAX_EXTRA_DATA_BYTES, elementType: Uint8}),
   baseFeePerGas: Bytes32,
   // Extra payload fields
   blockHash: Root,
