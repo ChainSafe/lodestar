@@ -222,6 +222,8 @@ export function initializeBeaconStateFromEth1(
 
   if (GENESIS_SLOT >= config.MERGE_FORK_EPOCH) {
     const stateMerge = state as TreeBacked<merge.BeaconState>;
+    // as of Sep 2021, this is for spec test only
+    stateMerge.fork.previousVersion = config.GENESIS_FORK_VERSION;
     stateMerge.latestExecutionPayloadHeader.blockHash = eth1BlockHash;
     stateMerge.latestExecutionPayloadHeader.timestamp = eth1Timestamp;
     stateMerge.latestExecutionPayloadHeader.random = eth1BlockHash;

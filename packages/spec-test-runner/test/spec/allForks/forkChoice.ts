@@ -21,7 +21,7 @@ import {
 // eslint-disable-next-line no-restricted-imports
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
@@ -82,8 +82,8 @@ export function forkChoiceTest(fork: ForkName): void {
             const {
               head: expectedHead,
               time: expectedTime,
-              justifiedCheckpointRoot,
-              finalizedCheckpointRoot,
+              justifiedCheckpoint,
+              finalizedCheckpoint,
               bestJustifiedCheckpoint,
             } = step.checks;
 
@@ -99,21 +99,24 @@ export function forkChoiceTest(fork: ForkName): void {
                 Number(expectedTime),
                 `Invalid forkchoice time at step ${i}`
               );
-            if (justifiedCheckpointRoot)
-              expect(toHexString(forkchoice.getJustifiedCheckpoint().root)).to.be.equal(
-                justifiedCheckpointRoot,
-                `Invalid justified checkpoint time at step ${i}`
+            if (justifiedCheckpoint) {
+              expect(toSpecTestCheckpoint(forkchoice.getJustifiedCheckpoint())).to.be.deep.equal(
+                justifiedCheckpoint,
+                `Invalid justified checkpoint at step ${i}`
               );
-            if (finalizedCheckpointRoot)
-              expect(toHexString(forkchoice.getFinalizedCheckpoint().root)).to.be.equal(
-                finalizedCheckpointRoot,
-                `Invalid finalized checkpoint time at step ${i}`
+            }
+            if (finalizedCheckpoint) {
+              expect(toSpecTestCheckpoint(forkchoice.getFinalizedCheckpoint())).to.be.deep.equal(
+                finalizedCheckpoint,
+                `Invalid finalized checkpoint at step ${i}`
               );
-            if (bestJustifiedCheckpoint)
-              expect(toHexString(forkchoice.getBestJustifiedCheckpoint().root)).to.be.equal(
+            }
+            if (bestJustifiedCheckpoint) {
+              expect(toSpecTestCheckpoint(forkchoice.getBestJustifiedCheckpoint())).to.be.deep.equal(
                 bestJustifiedCheckpoint,
-                `Invalid best justified checkpoint time at step ${i}`
+                `Invalid best justified checkpoint at step ${i}`
               );
+            }
           }
         }
       },
@@ -154,12 +157,6 @@ export function forkChoiceTest(fork: ForkName): void {
         timeout: 10000,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
-
-        shouldSkip: (_, n) =>
-          // we should enable this for next spec test release
-          // refer to https://github.com/hwwhww/consensus-spec-tests/tree/fork-choice-pr2577
-          n === "new_justified_is_later_than_store_justified" ||
-          n === "on_block_finalized_skip_slots_not_in_skip_chain",
       }
     );
   }
@@ -250,7 +247,16 @@ function cacheState(
   stateCache.set(toHexString(blockRoot), wrappedState);
 }
 
+function toSpecTestCheckpoint(checkpoint: CheckpointWithHex): SpecTestCheckpoint {
+  return {
+    epoch: BigInt(checkpoint.epoch),
+    root: checkpoint.rootHex,
+  };
+}
+
 type Step = OnTick | OnAttestation | OnBlock | Checks;
+
+type SpecTestCheckpoint = {epoch: BigInt; root: string};
 
 // This test executes steps in sequence. There may be multiple items of the following types:
 // on_tick execution step
@@ -279,9 +285,9 @@ type Checks = {
   checks: {
     head: {slot: number; root: string};
     time?: number;
-    justifiedCheckpointRoot?: string;
-    finalizedCheckpointRoot?: string;
-    bestJustifiedCheckpoint?: string;
+    justifiedCheckpoint?: SpecTestCheckpoint;
+    finalizedCheckpoint?: SpecTestCheckpoint;
+    bestJustifiedCheckpoint?: SpecTestCheckpoint;
   };
 };
 
