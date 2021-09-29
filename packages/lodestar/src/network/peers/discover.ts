@@ -33,6 +33,7 @@ export class PeerDiscovery {
   private peerRpcScores: IPeerRpcScoreStore;
   private logger: ILogger;
   private config: IBeaconConfig;
+  private activeDiscv5Query: boolean;
 
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   private maxPeers: number;
@@ -43,6 +44,7 @@ export class PeerDiscovery {
     this.logger = modules.logger;
     this.config = modules.config;
     this.maxPeers = opts.maxPeers;
+    this.activeDiscv5Query = false;
   }
 
   /**
@@ -58,7 +60,18 @@ export class PeerDiscovery {
     const discPeers = shuffle(notConnectedPeers).slice(0, maxPeersToDiscover);
     this.peersDiscovered(discPeers);
 
-    // TODO: Run a general discv5 query
+    // Run a general discv5 query if one is not already in progress
+    if (this.activeDiscv5Query) return;
+    const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
+    if (!discovery) return;
+    const discv5: Discv5 = discovery.discv5;
+
+    const randomNodeId = Array.from({length: 64}, () => Math.floor(Math.random() * 15).toString(16)).join();
+    this.activeDiscv5Query = true;
+    void discv5.findNode(randomNodeId).finally(() => {
+      this.activeDiscv5Query = false;
+    });
   }
 
   /**
