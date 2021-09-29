@@ -53,12 +53,13 @@ export class BlockProposingService {
     try {
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
       const graffiti = this.graffiti || "";
+      const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
-      this.logger.debug("Producing block", logCtx);
+      this.logger.debug("Producing block", debugLogCtx);
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
         throw extendError(e, "Failed to produce block");
       });
-      this.logger.debug("Produced block", logCtx);
+      this.logger.debug("Produced block", debugLogCtx);
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {

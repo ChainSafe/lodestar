@@ -1,7 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
-import {prettyBytes, sleep} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
 import {IClock, extendError, ILoggerVc} from "../util";
@@ -103,7 +103,7 @@ export class SyncCommitteeService {
     const signatures: altair.SyncCommitteeMessage[] = [];
 
     for (const {duty} of duties) {
-      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
+      const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
       try {
         signatures.push(
           await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, blockRoot)
@@ -159,7 +159,7 @@ export class SyncCommitteeService {
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
     for (const {duty, selectionProof} of duties) {
-      const logCtxValidator = {...logCtx, validator: prettyBytes(duty.pubkey)};
+      const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
       try {
         // Produce signed contributions only for validators that are subscribed aggregators.
         if (selectionProof !== null) {
