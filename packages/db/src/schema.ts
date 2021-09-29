@@ -57,8 +57,9 @@ export enum Bucket {
   // TODO: Review if it's really necessary
   altair_lightclientFinalizedCheckpoint = 33, // Epoch -> FinalizedCheckpointData
   // Note: this is the state root for the checkpoint block, NOT necessarily the state root at the epoch boundary
-  altair_lightClientInitProof = 34, // Epoch -> Proof
-  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod ->
+  altair_lightClientInitProof = 34, // Block root -> Proof
+  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod -> Sync Committee Proof
+  index_lightClientInitProof = 36, // Epoch + Block Root -> true
 
   validator_metaData = 41,
 }

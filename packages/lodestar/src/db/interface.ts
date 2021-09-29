@@ -18,6 +18,7 @@ import {
   LightclientFinalizedCheckpoint,
   LightClientInitProofRepository,
   LightClientSyncCommitteeProofRepository,
+  LightClientInitProofIndexRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -63,6 +64,7 @@ export interface IBeaconDb {
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
+  lightClientInitProofIndex: LightClientInitProofIndexRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   /**

@@ -1,12 +1,13 @@
 import {Proof, ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeSyncPeriodAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconDb} from "../../db";
 import {StateContextCache} from "../stateCache";
+import {intToBytes} from "@chainsafe/lodestar-utils";
 
 interface ILightClientIniterModules {
   config: IChainForkConfig;
@@ -45,13 +46,18 @@ export class LightClientIniter {
   }
 
   /**
-   * To be called in API route GET /eth/v1/lightclient/init_proof/:epoch
+   * To be called in API route GET /eth/v1/lightclient/init_proof/:blockRoot
    */
-  async getInitProofByEpoch(epoch: Epoch): Promise<Proof | null> {
-    const currentPeriod = computeSyncPeriodAtEpoch(epoch);
+  async getInitProofByBlockRoot(blockRoot: Uint8Array): Promise<Proof | null> {
+    const blockSlot =
+      this.forkChoice.getBlock(blockRoot)?.slot ?? (await this.db.blockArchive.getSlotByRoot(blockRoot));
+    if (blockSlot == null) {
+      return null;
+    }
+    const currentPeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(blockSlot));
     const nextPeriod = currentPeriod + 1;
     const [stateProof, currentSyncCommitteeProof, nextSyncCommitteeProof] = (await Promise.all([
-      this.db.lightClientInitProof.get(epoch),
+      this.db.lightClientInitProof.get(blockRoot),
       this.db.lightClientSyncCommitteeProof.get(currentPeriod),
       this.db.lightClientSyncCommitteeProof.get(nextPeriod),
     ])) as [TreeOffsetProof | null, TreeOffsetProof | null, TreeOffsetProof | null];
@@ -78,32 +84,33 @@ export class LightClientIniter {
   /**
    * Must subscribe to BeaconChain event `finalized`
    *
-   * On finalized, store a light client init proof and related indices
+   * Store a light client init proof and related indices and prune old entries
    */
   async onFinalized(checkpoint: phase0.Checkpoint): Promise<void> {
-    // discard any states that occur before altair
-    const finalizedSummary = this.forkChoice.getBlock(checkpoint.root);
-    if (!finalizedSummary) {
+    const checkpointRoot = checkpoint.root.valueOf() as Uint8Array;
+    const checkpointBlockSummary = this.forkChoice.getBlock(checkpointRoot);
+    if (!checkpointBlockSummary) {
       throw new Error("Block not found in fork choice");
     }
-    const finalizedBlockSlot = finalizedSummary.slot;
-    const finalizedBlockEpoch = Math.floor(finalizedBlockSlot / SLOTS_PER_EPOCH);
-    if (finalizedBlockEpoch < this.config.ALTAIR_FORK_EPOCH) {
+    const checkpointBlockSlot = checkpointBlockSummary.slot;
+    const checkpointBlockEpoch = Math.floor(checkpointBlockSlot / SLOTS_PER_EPOCH);
+    // discard any states that occur before altair
+    if (checkpointBlockEpoch < this.config.ALTAIR_FORK_EPOCH) {
       return;
     }
 
-    // fetch the state at the finalized block header, this state will be used to create the init proof
-    const finalizedStateRoot = finalizedSummary.stateRoot;
-    const finalizedState = this.stateCache.get(finalizedStateRoot);
-    if (!finalizedState) {
+    // fetch the state at the block header, this state will be used to create the init proof
+    const checkpointStateRoot = checkpointBlockSummary.stateRoot;
+    const checkpointState = this.stateCache.get(checkpointStateRoot);
+    if (!checkpointState) {
       throw new Error("State not found in cache");
     }
 
     // state proof
-    const stateProof = finalizedState.createProof(stateProofPaths) as TreeOffsetProof;
+    const stateProof = checkpointState.createProof(stateProofPaths) as TreeOffsetProof;
 
     // sync committees stored separately to deduplicate
-    const currentPeriod = computeSyncPeriodAtEpoch(finalizedBlockEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(checkpointBlockEpoch);
     const nextPeriod = currentPeriod + 1;
 
     // Create sync committee proofs by _splicing_ the committee sections out of the state proof
@@ -130,21 +137,30 @@ export class LightClientIniter {
     };
 
     // calculate beginning of weak subjectivity period to prune from there
-    const wsPeriod = allForks.computeWeakSubjectivityPeriodCachedState(this.config, finalizedState);
-    const wsEpoch = Math.max(0, finalizedBlockEpoch - wsPeriod);
+    const wsPeriod = allForks.computeWeakSubjectivityPeriodCachedState(this.config, checkpointState);
+    const wsEpoch = Math.max(0, checkpointState.finalizedCheckpoint.epoch - wsPeriod);
     const wsSyncPeriod = computeSyncPeriodAtEpoch(wsEpoch);
 
-    const [oldStateProofKeys, oldCommitteeProofKeys] = await Promise.all([
-      this.db.lightClientInitProof.keys({lt: wsEpoch}),
-      this.db.lightClientSyncCommitteeProof.keys({lt: wsSyncPeriod}),
-    ]);
+    // index stored as ${epoch}${blockRoot}
+    const oldStateProofIndexKeys = await this.db.lightClientInitProofIndex.keys({lt: intToBytes(wsEpoch, 8)});
+    // slice off epoch to retrieve block roots
+    const oldStateProofBlockRoots = oldStateProofIndexKeys.map((indexKey) => indexKey.subarray(8));
+    const oldCommitteeProofKeys = await this.db.lightClientSyncCommitteeProof.keys({lt: wsSyncPeriod});
+
+    // serialize the checkpoint for the init proof index
+    // For easy pruning, the epoch is first
+    const serializedCheckpoint = new Uint8Array(40);
+    serializedCheckpoint.set(ssz.Epoch.serialize(checkpoint.epoch));
+    serializedCheckpoint.set(checkpointRoot, 8);
 
     await Promise.all([
       // prune old proofs
-      this.db.lightClientInitProof.batchDelete(oldStateProofKeys),
+      this.db.lightClientInitProofIndex.batchDelete(oldStateProofIndexKeys),
+      this.db.lightClientInitProof.batchDelete(oldStateProofBlockRoots),
       this.db.lightClientSyncCommitteeProof.batchDelete(oldCommitteeProofKeys),
       // store state proof
-      this.db.lightClientInitProof.put(checkpoint.epoch, stateProof),
+      this.db.lightClientInitProofIndex.put(serializedCheckpoint, true),
+      this.db.lightClientInitProof.put(checkpointRoot, stateProof),
       // store sync committee proofs
       this.db.lightClientSyncCommitteeProof.batchPut([
         {key: currentPeriod, value: currentSyncCommitteeProof},

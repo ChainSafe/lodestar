@@ -41,7 +41,7 @@ describe("lightclient", () => {
       res: {data: lightClientUpdate},
     },
     getInitProof: {
-      args: [5],
+      args: ["0x00"],
       res: {
         data: {
           type: ProofType.treeOffset,

@@ -1,6 +1,6 @@
 import {Path} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {altair, Epoch, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {
   ArrayOf,
   reqEmpty,
@@ -27,7 +27,7 @@ export type Api = {
   /**
    * Fetch a proof needed for light client initialization
    */
-  getInitProof(epoch: Epoch): Promise<{data: Proof}>;
+  getInitProof(blockRoot: string): Promise<{data: Proof}>;
 };
 
 /**
@@ -38,7 +38,7 @@ export const routesData: RoutesData<Api> = {
   getBestUpdates: {url: "/eth/v1/lightclient/best_updates", method: "GET"},
   getLatestUpdateFinalized: {url: "/eth/v1/lightclient/latest_update_finalized", method: "GET"},
   getLatestUpdateNonFinalized: {url: "/eth/v1/lightclient/latest_update_nonfinalized", method: "GET"},
-  getInitProof: {url: "/eth/v1/lightclient/init_proof/:epoch", method: "GET"},
+  getInitProof: {url: "/eth/v1/lightclient/init_proof/:blockRoot", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -46,7 +46,7 @@ export type ReqTypes = {
   getBestUpdates: {query: {from: number; to: number}};
   getLatestUpdateFinalized: ReqEmpty;
   getLatestUpdateNonFinalized: ReqEmpty;
-  getInitProof: {params: {epoch: number}};
+  getInitProof: {params: {blockRoot: string}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -67,9 +67,9 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getLatestUpdateNonFinalized: reqEmpty,
 
     getInitProof: {
-      writeReq: (epoch) => ({params: {epoch}}),
-      parseReq: ({params}) => [params.epoch],
-      schema: {params: {epoch: Schema.UintRequired}},
+      writeReq: (blockRoot) => ({params: {blockRoot}}),
+      parseReq: ({params}) => [params.blockRoot],
+      schema: {params: {blockRoot: Schema.StringRequired}},
     },
   };
 }

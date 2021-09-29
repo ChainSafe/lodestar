@@ -18,6 +18,7 @@ import {
   LightclientFinalizedCheckpoint,
   LightClientInitProofRepository,
   LightClientSyncCommitteeProofRepository,
+  LightClientInitProofIndexRepository,
 } from "./repositories";
 import {
   PreGenesisState,
@@ -49,6 +50,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
   lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
   lightClientInitProof: LightClientInitProofRepository;
+  lightClientInitProofIndex: LightClientInitProofIndexRepository;
   lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
 
   constructor(opts: IDatabaseApiOptions) {
@@ -72,6 +74,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db, this.metrics);
     this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db, this.metrics);
     this.lightClientInitProof = new LightClientInitProofRepository(this.config, this.db, this.metrics);
+    this.lightClientInitProofIndex = new LightClientInitProofIndexRepository(this.config, this.db, this.metrics);
     this.lightClientSyncCommitteeProof = new LightClientSyncCommitteeProofRepository(
       this.config,
       this.db,

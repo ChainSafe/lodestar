@@ -4,7 +4,7 @@ import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
 import {linspace} from "../../../util/numpy";
-import {isCompositeType} from "@chainsafe/ssz";
+import {fromHexString, isCompositeType} from "@chainsafe/ssz";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {IApiOptions} from "../../options";
 
@@ -73,8 +73,8 @@ export function getLightclientApi(
 
     // Init API
 
-    async getInitProof(epoch) {
-      const proof = await chain.lightClientIniter.getInitProofByEpoch(Number(epoch));
+    async getInitProof(blockRoot) {
+      const proof = await chain.lightClientIniter.getInitProofByBlockRoot(fromHexString(blockRoot));
       if (!proof) {
         throw new ApiError(404, "No init proof available");
       }
