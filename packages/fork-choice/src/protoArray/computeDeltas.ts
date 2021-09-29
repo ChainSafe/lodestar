@@ -17,14 +17,16 @@ export function computeDeltas(
   newBalances: number[]
 ): number[] {
   const deltas = Array.from({length: indices.size}, () => 0);
-
-  for (const [vIndex, vote] of votes.entries()) {
+  const zeroHash = HEX_ZERO_HASH;
+  for (let vIndex = 0; vIndex < votes.length; vIndex++) {
+    const vote = votes[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
     if (!vote) {
       continue;
     }
-    if (vote.currentRoot === HEX_ZERO_HASH && vote.nextRoot === HEX_ZERO_HASH) {
+    const {currentRoot, nextRoot} = vote;
+    if (currentRoot === zeroHash && nextRoot === zeroHash) {
       continue;
     }
 
@@ -39,10 +41,10 @@ export function computeDeltas(
     // on-boarded fewer validators than the prior fork.
     const newBalance = newBalances[vIndex] || 0;
 
-    if (vote.currentRoot !== vote.nextRoot || oldBalance !== newBalance) {
+    if (currentRoot !== nextRoot || oldBalance !== newBalance) {
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      const currentDeltaIndex = indices.get(vote.currentRoot);
+      const currentDeltaIndex = indices.get(currentRoot);
       if (currentDeltaIndex !== undefined) {
         if (currentDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
@@ -54,7 +56,7 @@ export function computeDeltas(
       }
       // We ignore the vote if it is not known in `indices .
       // We assume that it is outside of our tree (ie: pre-finalization) and therefore not interesting
-      const nextDeltaIndex = indices.get(vote.nextRoot);
+      const nextDeltaIndex = indices.get(nextRoot);
       if (nextDeltaIndex !== undefined) {
         if (nextDeltaIndex >= deltas.length) {
           throw new ProtoArrayError({
@@ -65,8 +67,7 @@ export function computeDeltas(
         deltas[nextDeltaIndex] += newBalance;
       }
     }
-
-    vote.currentRoot = vote.nextRoot;
+    vote.currentRoot = nextRoot;
   }
 
   return deltas;
