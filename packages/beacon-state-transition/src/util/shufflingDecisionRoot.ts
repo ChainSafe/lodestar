@@ -1,6 +1,7 @@
 import {allForks, Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {CachedBeaconState} from "../allForks/util/cachedBeaconState";
 import {getBlockRootAtSlot} from "./blockRoot";
-import {computeEpochAtSlot, computeStartSlotAtEpoch, getCurrentEpoch, getPreviousEpoch} from "./epoch";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "./epoch";
 
 /**
  * Returns the block root which decided the proposer shuffling for the current epoch. This root
@@ -35,7 +36,10 @@ function proposerShufflingDecisionSlot(state: allForks.BeaconState): Slot {
  * Returns `null` on the one-off scenario where the genesis block decides its own shuffling.
  * It should be set to the latest block applied to this `state` or the genesis block root.
  */
-export function attesterShufflingDecisionRoot(state: allForks.BeaconState, requestedEpoch: Epoch): Root | null {
+export function attesterShufflingDecisionRoot(
+  state: CachedBeaconState<allForks.BeaconState>,
+  requestedEpoch: Epoch
+): Root | null {
   const decisionSlot = attesterShufflingDecisionSlot(state, requestedEpoch);
   if (state.slot == decisionSlot) {
     return null;
@@ -48,7 +52,7 @@ export function attesterShufflingDecisionRoot(state: allForks.BeaconState, reque
  * Returns the slot at which the proposer shuffling was decided. The block root at this slot
  * can be used to key the proposer shuffling for the current epoch.
  */
-function attesterShufflingDecisionSlot(state: allForks.BeaconState, requestedEpoch: Epoch): Slot {
+function attesterShufflingDecisionSlot(state: CachedBeaconState<allForks.BeaconState>, requestedEpoch: Epoch): Slot {
   const epoch = attesterShufflingDecisionEpoch(state, requestedEpoch);
   const slot = computeStartSlotAtEpoch(epoch);
   return Math.max(slot - 1, 0);
@@ -63,15 +67,16 @@ function attesterShufflingDecisionSlot(state: allForks.BeaconState, requestedEpo
  * - `EpochTooLow` when `requestedEpoch` is more than 1 prior to `currentEpoch`.
  * - `EpochTooHigh` when `requestedEpoch` is more than 1 after `currentEpoch`.
  */
-function attesterShufflingDecisionEpoch(state: allForks.BeaconState, requestedEpoch: Epoch): Epoch {
-  const currentEpoch = getCurrentEpoch(state);
+function attesterShufflingDecisionEpoch(state: CachedBeaconState<allForks.BeaconState>, requestedEpoch: Epoch): Epoch {
+  const currentEpoch = state.currentShuffling.epoch;
+  const previouEpoch = state.previousShuffling.epoch;
 
   // Next
-  if (requestedEpoch === currentEpoch + 1) return getCurrentEpoch(state);
+  if (requestedEpoch === currentEpoch + 1) return currentEpoch;
   // Current
-  if (requestedEpoch === currentEpoch) return getPreviousEpoch(state);
+  if (requestedEpoch === currentEpoch) return previouEpoch;
   // Previous
-  if (requestedEpoch === currentEpoch - 1) return Math.max(getPreviousEpoch(state) - 1, 0);
+  if (requestedEpoch === currentEpoch - 1) return Math.max(previouEpoch - 1, 0);
 
   if (requestedEpoch < currentEpoch) {
     throw Error(`EpochTooLow: current ${currentEpoch} requested ${requestedEpoch}`);

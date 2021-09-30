@@ -2,7 +2,7 @@ import {GAS_LIMIT_DENOMINATOR, MIN_GAS_LIMIT} from "@chainsafe/lodestar-params";
 import {merge, ssz} from "@chainsafe/lodestar-types";
 import {byteArrayEquals, List} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../../allForks";
-import {getCurrentEpoch, getRandaoMix} from "../../util";
+import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
 import {isMergeComplete} from "../utils";
 
@@ -51,7 +51,7 @@ export function processExecutionPayload(
   }
 
   // Verify random
-  if (!byteArrayEquals(payload.random as Uint8Array, getRandaoMix(state, getCurrentEpoch(state)) as Uint8Array)) {
+  if (!byteArrayEquals(payload.random as Uint8Array, getRandaoMix(state, state.currentShuffling.epoch) as Uint8Array)) {
     throw Error("Inconsistent execution payload random");
   }
 

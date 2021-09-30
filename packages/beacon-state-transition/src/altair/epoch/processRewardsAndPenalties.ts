@@ -1,5 +1,4 @@
 import {altair} from "@chainsafe/lodestar-types";
-import {getCurrentEpoch} from "../../util";
 import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {getRewardsPenaltiesDeltas} from "./balance";
@@ -14,7 +13,7 @@ export function processRewardsAndPenalties(
   state: CachedBeaconState<altair.BeaconState>,
   epochProcess: IEpochProcess
 ): void {
-  if (getCurrentEpoch(state) == GENESIS_EPOCH) {
+  if (state.currentShuffling.epoch == GENESIS_EPOCH) {
     return;
   }
 
