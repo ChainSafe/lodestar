@@ -41,7 +41,7 @@ export const options: ICliCommandOptions<IEth1Args> = {
   "eth1.providerUrls": {
     description: "Urls to Eth1 node with enabled rpc",
     type: "array",
-    defaultDescription: JSON.stringify(defaultOptions.eth1.providerUrls),
+    defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
     group: "eth1",
   },
 
