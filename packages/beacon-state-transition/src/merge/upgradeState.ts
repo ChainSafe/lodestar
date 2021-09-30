@@ -1,6 +1,5 @@
 import {altair, merge, ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
-import {getCurrentEpoch} from "../util";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -25,7 +24,7 @@ function upgradeTreeBackedState(
   postState.fork = {
     previousVersion: stateTB.fork.currentVersion,
     currentVersion: config.MERGE_FORK_VERSION,
-    epoch: getCurrentEpoch(stateTB),
+    epoch: state.currentShuffling.epoch,
   };
   // Execution-layer
   postState.latestExecutionPayloadHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked();

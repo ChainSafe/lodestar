@@ -1,6 +1,6 @@
 import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
-import {getCurrentEpoch, newZeroedArray} from "../util";
+import {newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
@@ -26,7 +26,7 @@ function upgradeTreeBackedState(
   const nextEpochActiveIndices = state.nextShuffling.activeIndices;
   const stateTB = ssz.phase0.BeaconState.createTreeBacked(state.tree);
   const validatorCount = stateTB.validators.length;
-  const epoch = getCurrentEpoch(stateTB);
+  const epoch = state.currentShuffling.epoch;
   // TODO: Does this preserve the hashing cache? In altair devnets memory spikes on the fork transition
   const postState = ssz.altair.BeaconState.createTreeBacked(stateTB.tree);
   postState.fork = {
