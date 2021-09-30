@@ -2,8 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import xor from "buffer-xor";
-import {List, hash} from "@chainsafe/ssz";
+import {List} from "@chainsafe/ssz";
 import {
   Bytes96,
   Bytes32,
@@ -12,7 +11,6 @@ import {
   altair,
   Root,
   Slot,
-  BLSSignature,
   ssz,
   ExecutionAddress,
   PayloadId,
@@ -21,7 +19,6 @@ import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeTimeAtSlot,
-  getCurrentEpoch,
   getRandaoMix,
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -92,9 +89,8 @@ export async function assembleBody(
 
     const payloadId = await prepareExecutionPayload(
       chain,
-      currentState as merge.BeaconState,
-      feeRecipient,
-      randaoReveal
+      currentState as CachedBeaconState<merge.BeaconState>,
+      feeRecipient
     );
 
     if (payloadId) {
@@ -114,9 +110,8 @@ export async function assembleBody(
  */
 async function prepareExecutionPayload(
   chain: IBeaconChain,
-  state: merge.BeaconState,
-  feeRecipient: ExecutionAddress,
-  randaoReveal: BLSSignature
+  state: CachedBeaconState<merge.BeaconState>,
+  feeRecipient: ExecutionAddress
 ): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
@@ -136,13 +131,8 @@ async function prepareExecutionPayload(
   }
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const random = computeRandaoMix(state, randaoReveal);
+  const random = getRandaoMix(state, state.currentShuffling.epoch);
   return chain.executionEngine.preparePayload(parentHash, timestamp, random, feeRecipient);
-}
-
-function computeRandaoMix(state: merge.BeaconState, randaoReveal: BLSSignature): Bytes32 {
-  const epoch = getCurrentEpoch(state);
-  return xor(Buffer.from(getRandaoMix(state, epoch) as Uint8Array), Buffer.from(hash(randaoReveal as Uint8Array)));
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
