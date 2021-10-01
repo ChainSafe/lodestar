@@ -1,13 +1,14 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
-import {ChainHeaderTracker, SlotRoot} from "./chainHeaderTracker";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
+import {RootHex} from "@chainsafe/lodestar-types/phase0";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -22,12 +23,12 @@ export type AttDutyAndProof = {
 export class AttestationDutiesService {
   /** Maps a validator public key to their duties for each epoch */
   private readonly dutiesByEpochByIndex = new Map<ValidatorIndex, Map<Epoch, AttDutyAndProof>>();
-  private readonly dependentRootByEpoch = new Map<Epoch, Root>();
+  private readonly dependentRootByEpoch = new Map<Epoch, RootHex>();
   /**
    * We may receive new dependentRoot of an epoch but it's not the last slot of epoch
    * so we have to wait for getting close to the next epoch to redownload new attesterDuties.
    */
-  private readonly pendingDependentRootByEpoch = new Map<Epoch, Root>();
+  private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
 
   constructor(
     private readonly logger: ILoggerVc,
@@ -74,7 +75,7 @@ export class AttestationDutiesService {
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dependentRootByEpoch.get(nextEpoch);
     const pendingDependentRoot = this.pendingDependentRootByEpoch.get(nextEpoch);
-    if (dependentRoot && pendingDependentRoot && !ssz.Root.equals(dependentRoot, pendingDependentRoot)) {
+    if (dependentRoot && pendingDependentRoot && dependentRoot !== pendingDependentRoot) {
       // this happens when pendingDependentRoot is not the last block of an epoch
       this.logger.info("Redownload attester duties when it's close to epoch boundary", {nextEpoch, slot});
       await this.handleDutiesReorg(nextEpoch, slot, dependentRoot, pendingDependentRoot);
@@ -173,14 +174,14 @@ export class AttestationDutiesService {
     const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
-    const dependentRoot = attesterDuties.dependentRoot;
+    const dependentRoot = toHexString(attesterDuties.dependentRoot);
     const relevantDuties = attesterDuties.data.filter((duty) =>
       this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
     );
 
     this.logger.debug("Downloaded attester duties", {
       epoch,
-      dependentRoot: toHexString(dependentRoot),
+      dependentRoot,
       count: relevantDuties.length,
     });
 
@@ -198,7 +199,7 @@ export class AttestationDutiesService {
       // - The dependent root has changed, signalling a re-org.
       const prior = dutiesByEpoch.get(epoch);
       const priorDependentRoot = this.dependentRootByEpoch.get(epoch);
-      const dependentRootChanged = priorDependentRoot && !ssz.Root.equals(priorDependentRoot, dependentRoot);
+      const dependentRootChanged = priorDependentRoot && priorDependentRoot !== dependentRoot;
 
       if (!prior || dependentRootChanged) {
         const dutyAndProof = await this.getDutyAndProof(duty);
@@ -209,8 +210,8 @@ export class AttestationDutiesService {
         if (prior && dependentRootChanged && !alreadyWarnedReorg) {
           alreadyWarnedReorg = true;
           this.logger.warn("Attester duties re-org. This may happen from time to time", {
-            priorDependentRoot: toHexString(priorDependentRoot),
-            dependentRoot: toHexString(dependentRoot),
+            priorDependentRoot: priorDependentRoot,
+            dependentRoot: dependentRoot,
             epoch,
           });
         }
@@ -218,40 +219,63 @@ export class AttestationDutiesService {
     }
   }
 
-  private onNewHead = async ({slot, root}: SlotRoot): Promise<void> => {
-    for (const [dutyEpoch, dependentRoot] of this.dependentRootByEpoch.entries()) {
-      // dependent root is the last block root of (dutyEpoch - 2) epoch
-      if (computeEpochAtSlot(slot) === dutyEpoch - 2 && !ssz.Root.equals(root, dependentRoot)) {
-        // last slot of epoch, we're sure it's the correct dependent root
-        if ((slot + 1) % SLOTS_PER_EPOCH === 0) {
-          this.logger.info("Found attesterDuties reorg through new head", {slot, dutyEpoch, root: toHexString(root)});
-          await this.handleDutiesReorg(dutyEpoch, slot, dependentRoot, root);
-        } else {
-          this.logger.debug("Potential attesterDuties reorg with new head", {slot, dutyEpoch, root: toHexString(root)});
-          // node may send adjacent onHead events while it's syncing
-          // wait for getting close to next epoch to make sure the dependRoot
-          this.pendingDependentRootByEpoch.set(dutyEpoch, root);
-        }
+  /**
+   * attester duties may be reorged due to 2 scenarios:
+   *   1. node is syncing (for nextEpoch duties)
+   *   2. node is reorged
+   */
+  private onNewHead = async ({
+    slot,
+    head,
+    previousDutyDependentRoot,
+    currentDutyDependentRoot,
+  }: HeadEventData): Promise<void> => {
+    const currentEpoch = computeEpochAtSlot(slot);
+    const nextEpoch = currentEpoch + 1;
+    const nextTwoEpoch = currentEpoch + 2;
+    const nextTwoEpochDependentRoot = this.dependentRootByEpoch.get(currentEpoch + 2);
+    // node is syncing, it may cause the attester duties reorg
+    if (nextTwoEpochDependentRoot && head !== nextTwoEpochDependentRoot) {
+      // last slot of epoch, we're sure it's the correct dependent root
+      if ((slot + 1) % SLOTS_PER_EPOCH === 0) {
+        this.logger.info("Next 2 epoch duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        await this.handleDutiesReorg(nextTwoEpoch, slot, nextTwoEpochDependentRoot, head);
+      } else {
+        this.logger.debug("Potential next 2 epoch duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        // node may send adjacent onHead events while it's syncing
+        // wait for getting close to next epoch to make sure the dependRoot
+        this.pendingDependentRootByEpoch.set(nextTwoEpoch, head);
       }
+    }
+    // node is reorg hence attester duties are changed
+    const nextEpochDependentRoot = this.dependentRootByEpoch.get(nextEpoch);
+    if (nextEpochDependentRoot && currentDutyDependentRoot !== nextEpochDependentRoot) {
+      this.logger.info("Next epoch duties reorg", {slot, dutyEpoch: nextEpoch, currentDutyDependentRoot});
+      await this.handleDutiesReorg(nextEpoch, slot, nextEpochDependentRoot, currentDutyDependentRoot);
+    }
+    const currentEpochDependentRoot = this.dependentRootByEpoch.get(currentEpoch);
+    if (currentEpochDependentRoot && currentEpochDependentRoot !== previousDutyDependentRoot) {
+      this.logger.info("Current epoch duties reorg", {slot, dutyEpoch: currentEpoch, previousDutyDependentRoot});
+      await this.handleDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
     }
   };
 
   private async handleDutiesReorg(
-    epoch: Epoch,
+    dutyEpoch: Epoch,
     slot: Slot,
-    oldDependentRoot: Root,
-    newDependentRoot: Root
+    oldDependentRoot: RootHex,
+    newDependentRoot: RootHex
   ): Promise<void> {
     const logContext = {
-      epoch,
+      dutyEpoch,
       slot,
-      oldDependentRoot: toHexString(oldDependentRoot),
-      newDependentRoot: toHexString(newDependentRoot),
+      oldDependentRoot: oldDependentRoot,
+      newDependentRoot: newDependentRoot,
     };
     this.logger.debug("handleDutiesReorg: redownload attester duties", logContext);
-    await this.pollBeaconAttestersForEpoch(epoch, this.indicesService.getAllLocalIndices())
+    await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())
       .then(() => {
-        this.pendingDependentRootByEpoch.delete(epoch);
+        this.pendingDependentRootByEpoch.delete(dutyEpoch);
       })
       .catch((e: Error) => {
         this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);

@@ -1,14 +1,19 @@
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Slot, Root} from "@chainsafe/lodestar-types";
+import {Slot, Root, RootHex} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {fromHexString} from "@chainsafe/ssz";
 
 const {EventType} = routes.events;
 
-export type SlotRoot = {slot: Slot; root: Root};
+export type HeadEventData = {
+  slot: Slot;
+  head: RootHex;
+  previousDutyDependentRoot: RootHex;
+  currentDutyDependentRoot: RootHex;
+};
 
-type RunEveryFn = (slotRoot: SlotRoot) => Promise<void>;
+type RunEveryFn = (event: HeadEventData) => Promise<void>;
 
 /**
  * Track the head slot/root using the event stream api "head".
@@ -40,12 +45,23 @@ export class ChainHeaderTracker {
   private onHeadUpdate = (event: routes.events.BeaconEvent): void => {
     if (event.type === EventType.head) {
       const {message} = event;
-      this.headBlockSlot = message.slot;
-      this.headBlockRoot = fromHexString(message.block);
+      const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
+      this.headBlockSlot = slot;
+      this.headBlockRoot = fromHexString(block);
       for (const fn of this.fns) {
-        void fn({slot: this.headBlockSlot, root: this.headBlockRoot});
+        void fn({
+          slot: this.headBlockSlot,
+          head: block,
+          previousDutyDependentRoot: previousDutyDependentRoot,
+          currentDutyDependentRoot: currentDutyDependentRoot,
+        });
       }
-      this.logger.verbose("Found new chain head", {slot: message.slot, blockRoot: message.block});
+      this.logger.verbose("Found new chain head", {
+        slot: slot,
+        head: block,
+        previouDuty: previousDutyDependentRoot,
+        currentDuty: currentDutyDependentRoot,
+      });
     }
   };
 }
