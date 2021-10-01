@@ -1,3 +1,4 @@
+import {ByteVector, fromHexString, toHexString} from "@chainsafe/ssz";
 import {ErrorParseJson} from "./jsonRpcHttpClient";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -35,4 +36,29 @@ export function hexToBigint(hex: string, id = ""): bigint {
 
 export function validateHexRoot(hex: string, id = ""): void {
   if (!rootHexRegex.test(hex)) throw Error(`Invalid hex root ${id} '${hex}'`);
+}
+
+export function hexToBytes(hex: string): Uint8Array {
+  // Handle special case in Ethereum hex formating where hex values may include a single letter
+  // 0x0, 0x1 are valid values
+  if (hex.length === 3 && hex.startsWith("0x")) {
+    hex = "0x0" + hex[2];
+  }
+
+  try {
+    return fromHexString(hex);
+  } catch (e) {
+    (e as Error).message = `Invalid hex string: ${(e as Error).message}`;
+    throw e;
+  }
+}
+
+export function bytesToHex(bytes: Uint8Array | ByteVector): string {
+  // Handle special case in Ethereum hex formating where hex values may include a single letter
+  // 0x0, 0x1 are valid values
+  if (bytes.length === 1 && bytes[0] <= 0xf) {
+    return "0x" + bytes[0].toString(16);
+  }
+
+  return toHexString(bytes);
 }

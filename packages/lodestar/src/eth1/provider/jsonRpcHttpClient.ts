@@ -4,7 +4,6 @@ import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
 import {ErrorAborted, TimeoutError, toJson, toString} from "@chainsafe/lodestar-utils";
-import {Json} from "@chainsafe/ssz";
 
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -25,7 +24,14 @@ interface IRpcResponseError {
   };
 }
 
-export class JsonRpcHttpClient {
+export interface IJsonRpcHttpClient {
+  fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R>;
+  fetchBatch<R>(rpcPayloadArr: IRpcPayload[], opts?: ReqOpts): Promise<R[]>;
+}
+
+export class JsonRpcHttpClient implements IJsonRpcHttpClient {
+  private id = 1;
+
   constructor(
     private readonly urls: string[],
     private readonly opts: {
@@ -50,7 +56,7 @@ export class JsonRpcHttpClient {
    * Perform RPC request
    */
   async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
-    const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: 1, ...payload}, opts);
+    const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
     return parseRpcResponse(res, payload);
   }
 
@@ -62,7 +68,7 @@ export class JsonRpcHttpClient {
     if (rpcPayloadArr.length === 0) return [];
 
     const resArr: IRpcResponse<R>[] = await this.fetchJson(
-      rpcPayloadArr.map(({method, params}, i) => ({jsonrpc: "2.0", method, params, id: i})),
+      rpcPayloadArr.map(({method, params}) => ({jsonrpc: "2.0", method, params, id: this.id++})),
       opts
     );
     return resArr.map((res, i) => parseRpcResponse(res, rpcPayloadArr[i]));
@@ -184,7 +190,7 @@ export class ErrorJsonRpcResponse<P> extends Error {
         : toString(toJson(res.error))
       : "no result";
 
-    super(`JSON RPC error: ${errorMessage}, ${toString(toJson((payload as unknown) as Json))}`);
+    super(`JSON RPC error: ${errorMessage}, ${payload.method}`);
 
     this.response = res;
     this.payload = payload;
