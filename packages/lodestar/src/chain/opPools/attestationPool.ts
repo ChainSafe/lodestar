@@ -173,7 +173,7 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
 
   aggregate.signature = Signature.aggregate([
     aggregate.signature,
-    bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array),
+    bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array, undefined, true),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -185,7 +185,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
   return {
     data: attestation.data,
     aggregationBits: Array.from(readonlyValues(attestation.aggregationBits)),
-    signature: bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array),
+    signature: bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array, undefined, true),
   };
 }
 

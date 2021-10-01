@@ -119,7 +119,7 @@ function aggregateSignatureInto(
 
   contribution.signature = Signature.aggregate([
     contribution.signature,
-    bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array),
+    bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array, undefined, true),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -141,6 +141,6 @@ function signatureToAggregate(
     beaconBlockRoot: signature.beaconBlockRoot,
     subCommitteeIndex: subnet,
     aggregationBits,
-    signature: bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array),
+    signature: bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array, undefined, true),
   };
 }

@@ -22,7 +22,7 @@ export type ISignatureSet =
 
 export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
   // All signatures are not trusted and must be group checked (p2.subgroup_check)
-  const signature = bls.Signature.fromBytes(signatureSet.signature);
+  const signature = bls.Signature.fromBytes(signatureSet.signature, undefined, true);
 
   switch (signatureSet.type) {
     case SignatureSetType.single:
