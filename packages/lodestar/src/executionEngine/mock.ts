@@ -5,6 +5,8 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {IExecutionEngine} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
+const INTEROP_GAS_LIMIT = 30e6;
+
 export type ExecutionEngineMockOpts = {
   genesisBlockHash: string;
 };
@@ -31,7 +33,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
       random: ZERO_HASH,
       blockNumber: 0,
-      gasLimit: 0,
+      gasLimit: INTEROP_GAS_LIMIT,
       gasUsed: 0,
       timestamp: 0,
       extraData: ZERO_HASH,
@@ -133,13 +135,15 @@ export class ExecutionEngineMock implements IExecutionEngine {
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
       random: random,
       blockNumber: parentPayload.blockNumber + 1,
-      gasLimit: 1000,
-      gasUsed: 1000,
+      gasLimit: INTEROP_GAS_LIMIT,
+      gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
       timestamp: timestamp,
       extraData: ZERO_HASH,
       baseFeePerGas: ZERO_HASH,
       blockHash: crypto.randomBytes(32),
-      transactions: [crypto.randomBytes(512)],
+      // TODO: Fill transactions once UnionType issues are fixed
+      // transactions: [crypto.randomBytes(512)],
+      transactions: [],
     };
     this.preparingPayloads.set(payloadId, payload);
 
