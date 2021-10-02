@@ -89,6 +89,6 @@ export function processExecutionPayload(
     extraData: payload.extraData,
     baseFeePerGas: payload.baseFeePerGas,
     blockHash: payload.blockHash,
-    transactionsRoot: ssz.merge.Transactions.hashTreeRoot(payload.transactions as List<Uint8Array>),
+    transactionsRoot: ssz.merge.Transactions.hashTreeRoot(payload.transactions as List<merge.Transaction>),
   };
 }
