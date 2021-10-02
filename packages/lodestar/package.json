@@ -41,6 +41,7 @@
     "test:sim:singleThread": "mocha 'test/sim/singleNodeSingleThread.test.ts'",
     "test:sim:singleThreadMultiNode": "mocha 'test/sim/multiNodeSingleThread.test.ts'",
     "test:sim:multiThread": "mocha 'test/sim/multiNodeMultiThread.test.ts'",
+    "test:sim:merge-interop": "mocha 'test/sim/merge-interop.test.ts'",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

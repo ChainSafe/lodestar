@@ -1,0 +1,52 @@
+name: Sim merge tests
+
+on: [pull_request, push]
+
+jobs:
+  sim-merge-tests:
+    name: Sim merge tests
+    runs-on: ubuntu-latest
+    steps:
+      # <common-build> - Uses YAML anchors in the future
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "lts/fermium"
+      - name: Node.js version
+        id: node
+        run: echo "::set-output name=v8CppApiVersion::$(node --print "process.versions.modules")"
+      - name: Restore dependencies
+        uses: actions/cache@master
+        id: cache-deps
+        with:
+          path: |
+            node_modules
+            packages/*/node_modules
+          key: ${{ runner.os }}-${{ steps.node.outputs.v8CppApiVersion }}-${{ hashFiles('**/yarn.lock', '**/package.json') }}
+      - name: Install & build
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile --ignore-optional && yarn build
+      - name: Build
+        run: yarn build
+        if: steps.cache-deps.outputs.cache-hit == 'true'
+      # </common-build>
+
+      # Install Geth merge interop
+      - uses: actions/setup-go@v2
+      - name: Clone Geth merge interop branch
+        run: git clone -b merge-interop-spec https://github.com/MariusVanDerWijden/go-ethereum.git
+      - name: Build Geth
+        run: cd go-ethereum && make
+
+      - name: Simulation query geth node
+        run: yarn test:sim:merge-interop
+        working-directory: packages/lodestar
+        env:
+          GETH_BINARY_PATH: ../../go-ethereum/build/bin/geth
+
+      - name: Upload debug log test files
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: debug-test-logs
+          path: packages/lodestar/test-logs
