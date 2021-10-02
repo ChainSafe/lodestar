@@ -182,10 +182,10 @@ export async function validateGossipBlock(
   chain.seenBlockProposers.add(blockSlot, proposerIndex);
 }
 
-function getTotalTransactionsSize(transactions: Uint8Array[]): number {
+function getTotalTransactionsSize(transactions: merge.Transaction[]): number {
   let totalSize = 0;
   for (const transaction of transactions) {
-    totalSize += transaction.length;
+    totalSize += transaction.value.length;
   }
   return totalSize;
 }

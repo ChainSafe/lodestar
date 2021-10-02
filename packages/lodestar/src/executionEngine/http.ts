@@ -249,7 +249,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
     // TODO: Review big-endian
     baseFeePerGas: bytesToHex(data.baseFeePerGas),
     blockHash: toHexString(data.blockHash),
-    transactions: data.transactions.map(toHexString),
+    transactions: data.transactions.map((tran) => toHexString(tran.value)),
   };
 }
 
@@ -269,6 +269,6 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.Executio
     // TODO: Review big-endian
     baseFeePerGas: hexToBytes(data.baseFeePerGas),
     blockHash: hexToBytes(data.blockHash),
-    transactions: data.transactions.map(hexToBytes),
+    transactions: data.transactions.map((tran) => ({selector: 0, value: hexToBytes(tran)})),
   };
 }

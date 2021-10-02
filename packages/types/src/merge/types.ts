@@ -3,7 +3,10 @@ import {Root, Bytes32, Number64, ExecutionAddress} from "../primitive/types";
 
 export type OpaqueTransaction = Uint8Array;
 
-export type Transaction = OpaqueTransaction;
+export type Transaction = {
+  selector: number;
+  value: OpaqueTransaction;
+};
 
 type ExecutionPayloadFields = {
   // Execution block header fields
