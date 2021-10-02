@@ -134,7 +134,8 @@ export interface IForkChoice {
   getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
 }
 
-export type PowBlock = {
+/** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
+export type PowBlockHex = {
   blockhash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
@@ -149,14 +150,14 @@ export type OnBlockPrecachedData = {
    * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
    * ```
    */
-  powBlock?: PowBlock;
+  powBlock?: PowBlockHex;
   /**
    * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts
    * const powParent = getPowBlock(powBlock.parentHash);
    * ```
    */
-  powBlockParent?: PowBlock;
+  powBlockParent?: PowBlockHex;
 };
 
 export interface ILatestMessage {
