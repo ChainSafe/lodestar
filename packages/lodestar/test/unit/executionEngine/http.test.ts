@@ -4,7 +4,7 @@ import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
-import {hexToNumber} from "../../../src/eth1/provider/utils";
+import {dataToBytes, quantityToNum} from "../../../src/eth1/provider/utils";
 
 chai.use(chaiAsPromised);
 
@@ -69,10 +69,10 @@ describe("ExecutionEngine / http", () => {
 
     const param0 = request.params[0];
     const payloadId = await executionEngine.preparePayload(
-      fromHexString(param0.parentHash),
-      hexToNumber(param0.timestamp),
-      fromHexString(param0.random),
-      fromHexString(param0.feeRecipient)
+      dataToBytes(param0.parentHash),
+      quantityToNum(param0.timestamp),
+      dataToBytes(param0.random),
+      dataToBytes(param0.feeRecipient)
     );
 
     expect(payloadId).to.equal(0, "Wrong returned payloadId");
@@ -198,7 +198,7 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    await expect(executionEngine.getPayload(hexToNumber(request.params[0]))).to.be.rejectedWith(
+    await expect(executionEngine.getPayload(quantityToNum(request.params[0]))).to.be.rejectedWith(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
   });

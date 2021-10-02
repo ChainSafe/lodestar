@@ -7,7 +7,7 @@ import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBloc
 import {Eth1Options} from "../../../src/eth1/options";
 import {testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
-import {hexToBigint} from "../../../src/eth1/provider/utils";
+import {quantityToBigint} from "../../../src/eth1/provider/utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -43,7 +43,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     if (!latestBlock) throw Error("No latestBlock");
 
     // Set TTD to current totalDifficulty + 1, so the next block is the merge block
-    const terminalTotalDifficulty = hexToBigint(latestBlock.totalDifficulty) + BigInt(1);
+    const terminalTotalDifficulty = quantityToBigint(latestBlock.totalDifficulty) + BigInt(1);
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
@@ -80,7 +80,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     if (!latestBlock) throw Error("No latestBlock");
 
     // Set TTD to current totalDifficulty + 1, so the previous block is the merge block
-    const terminalTotalDifficulty = hexToBigint(latestBlock.totalDifficulty) - BigInt(1);
+    const terminalTotalDifficulty = quantityToBigint(latestBlock.totalDifficulty) - BigInt(1);
 
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {

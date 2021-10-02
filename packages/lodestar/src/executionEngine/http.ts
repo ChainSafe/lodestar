@@ -1,10 +1,19 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {hexToNumber, numberToHex, hexToBytes, bytesToHex} from "../eth1/provider/utils";
+import {
+  bytesToData,
+  numToQuantity,
+  dataToBytes,
+  quantityToNum,
+  bytesToQuantity,
+  quantityToBytes,
+  DATA,
+  QUANTITY,
+} from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {IExecutionEngine} from "./interface";
+import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -73,7 +82,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const method = "engine_consensusValidated";
     return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
-      params: [{blockHash: toHexString(blockHash), status: valid ? "VALID" : "INVALID"}],
+      params: [{blockHash: bytesToData(blockHash), status: valid ? "VALID" : "INVALID"}],
     });
   }
 
@@ -115,15 +124,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       method,
       params: [
         {
-          parentHash: toHexString(parentHash),
-          timestamp: numberToHex(timestamp),
-          random: toHexString(random),
-          feeRecipient: toHexString(feeRecipient),
+          parentHash: bytesToData(parentHash),
+          timestamp: numToQuantity(timestamp),
+          random: bytesToData(random),
+          feeRecipient: bytesToData(feeRecipient),
         },
       ],
     });
 
-    return hexToNumber(payloadId);
+    return quantityToNum(payloadId);
   }
 
   /**
@@ -140,7 +149,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({
       method,
-      params: [numberToHex(payloadId)],
+      params: [numToQuantity(payloadId)],
     });
 
     return parseExecutionPayload(executionPayloadRpc);
@@ -191,11 +200,6 @@ type EngineApiRpcReturnTypes = {
   engine_getPayload: ExecutionPayloadRpc;
 };
 
-/** Hex encoded binary data */
-type DATA = string;
-/** Hex encoded big-endian number */
-type QUANTITY = string;
-
 enum ExecutePayloadStatus {
   /** given payload is valid */
   VALID = "VALID",
@@ -217,58 +221,58 @@ type PayloadAttributes = {
 };
 
 type ExecutionPayloadRpc = {
-  parentHash: DATA;
-  coinbase: DATA;
-  stateRoot: DATA;
-  receiptRoot: DATA;
-  logsBloom: DATA;
-  random: DATA;
+  parentHash: DATA; // 32 bytes
+  coinbase: DATA; // 20 bytes
+  stateRoot: DATA; // 32 bytes
+  receiptRoot: DATA; // 32 bytes
+  logsBloom: DATA; // 256 bytes
+  random: DATA; // 32 bytes
   blockNumber: QUANTITY;
   gasLimit: QUANTITY;
   gasUsed: QUANTITY;
   timestamp: QUANTITY;
-  extraData: DATA;
+  extraData: DATA; // 0 to 32 bytes
   baseFeePerGas: QUANTITY;
-  blockHash: DATA;
+  blockHash: DATA; // 32 bytes
   transactions: DATA[];
 };
 
 export function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
   return {
-    parentHash: toHexString(data.parentHash),
-    coinbase: toHexString(data.coinbase),
-    stateRoot: toHexString(data.stateRoot),
-    receiptRoot: toHexString(data.receiptRoot),
-    logsBloom: toHexString(data.logsBloom),
-    random: toHexString(data.random),
-    blockNumber: numberToHex(data.blockNumber),
-    gasLimit: numberToHex(data.gasLimit),
-    gasUsed: numberToHex(data.gasUsed),
-    timestamp: numberToHex(data.timestamp),
-    extraData: toHexString(data.extraData),
+    parentHash: bytesToData(data.parentHash),
+    coinbase: bytesToData(data.coinbase),
+    stateRoot: bytesToData(data.stateRoot),
+    receiptRoot: bytesToData(data.receiptRoot),
+    logsBloom: bytesToData(data.logsBloom),
+    random: bytesToData(data.random),
+    blockNumber: numToQuantity(data.blockNumber),
+    gasLimit: numToQuantity(data.gasLimit),
+    gasUsed: numToQuantity(data.gasUsed),
+    timestamp: numToQuantity(data.timestamp),
+    extraData: bytesToData(data.extraData),
     // TODO: Review big-endian
-    baseFeePerGas: bytesToHex(data.baseFeePerGas),
-    blockHash: toHexString(data.blockHash),
-    transactions: data.transactions.map((tran) => toHexString(tran.value)),
+    baseFeePerGas: bytesToQuantity(data.baseFeePerGas),
+    blockHash: bytesToData(data.blockHash),
+    transactions: data.transactions.map((tran) => bytesToData(tran.value)),
   };
 }
 
 export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
   return {
-    parentHash: hexToBytes(data.parentHash),
-    coinbase: hexToBytes(data.coinbase),
-    stateRoot: hexToBytes(data.stateRoot),
-    receiptRoot: hexToBytes(data.receiptRoot),
-    logsBloom: hexToBytes(data.logsBloom),
-    random: hexToBytes(data.random),
-    blockNumber: hexToNumber(data.blockNumber),
-    gasLimit: hexToNumber(data.gasLimit),
-    gasUsed: hexToNumber(data.gasUsed),
-    timestamp: hexToNumber(data.timestamp),
-    extraData: hexToBytes(data.extraData),
+    parentHash: dataToBytes(data.parentHash, 32),
+    coinbase: dataToBytes(data.coinbase, 20),
+    stateRoot: dataToBytes(data.stateRoot, 32),
+    receiptRoot: dataToBytes(data.receiptRoot, 32),
+    logsBloom: dataToBytes(data.logsBloom, BYTES_PER_LOGS_BLOOM),
+    random: dataToBytes(data.random, 32),
+    blockNumber: quantityToNum(data.blockNumber),
+    gasLimit: quantityToNum(data.gasLimit),
+    gasUsed: quantityToNum(data.gasUsed),
+    timestamp: quantityToNum(data.timestamp),
+    extraData: dataToBytes(data.extraData),
     // TODO: Review big-endian
-    baseFeePerGas: hexToBytes(data.baseFeePerGas),
-    blockHash: hexToBytes(data.blockHash),
-    transactions: data.transactions.map((tran) => ({selector: 0, value: hexToBytes(tran)})),
+    baseFeePerGas: quantityToBytes(data.baseFeePerGas),
+    blockHash: dataToBytes(data.blockHash, 32),
+    transactions: data.transactions.map((tran) => ({selector: 0, value: dataToBytes(tran)})),
   };
 }

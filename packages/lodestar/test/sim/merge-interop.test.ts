@@ -7,8 +7,8 @@ import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
-import {hexToNumber} from "../../src/eth1/provider/utils";
-import {ExecutionEngineHttp, parseExecutionPayload} from "../../src/executionEngine/http";
+import {dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
 import {testLogger, TestLoggerOpts} from "../utils/logger";
@@ -26,6 +26,8 @@ import {ZERO_HASH} from "../../src/constants";
 // ```
 // $ GETH_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin/geth ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
+
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
@@ -84,8 +86,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Kills geth process
     if (controller) controller.abort();
   });
-
-  /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
   it("Run for a few blocks", async () => {
     const validatorClientCount = 1;
@@ -203,62 +203,21 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     };
 
     const payloadId = await executionEngine.preparePayload(
-      fromHexString(preparePayloadParams.parentHash),
-      hexToNumber(preparePayloadParams.timestamp),
-      fromHexString(preparePayloadParams.random),
-      fromHexString(preparePayloadParams.feeRecipient)
+      dataToBytes(preparePayloadParams.parentHash),
+      quantityToNum(preparePayloadParams.timestamp),
+      dataToBytes(preparePayloadParams.random),
+      dataToBytes(preparePayloadParams.feeRecipient)
     );
 
     // 2. Get the payload
 
     const payload = await executionEngine.getPayload(payloadId);
-    const payloadResult = await executionEngine.executePayload(payload);
-    if (!payloadResult) {
-      throw Error("getPayload returned payload that executePayload deems invalid");
-    }
 
     // 3. Execute the payload
 
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_executePayload","params":[{
-     * "blockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-     * "parentHash":gensisBlockHash,
-     * "coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-     * "stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
-     * "receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-     * "logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-     * "random":"0x0000000000000000000000000000000000000000000000000000000000000000",
-     * "blockNumber":"0x1",
-     * "gasLimit":"0x1c9c380",
-     * "gasUsed":"0x0",
-     * "timestamp":"0x5",
-     * "extraData":"0x",
-     * "baseFeePerGas":"0x7",
-     * "transactions":[]
-     * }],"id":67}' http://localhost:8545
-     */
-
-    const payloadToTest = parseExecutionPayload({
-      blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-      parentHash: gensisBlockHash,
-      coinbase: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-      stateRoot: "0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
-      receiptRoot: "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-      logsBloom:
-        "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      random: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      blockNumber: "0x1",
-      gasLimit: "0x1c9c380",
-      gasUsed: "0x0",
-      timestamp: "0x5",
-      extraData: "0x",
-      baseFeePerGas: "0x7",
-      transactions: [],
-    });
-
-    const payloadToTestResult = await executionEngine.executePayload(payloadToTest);
-    if (!payloadToTestResult) {
-      throw Error("Test payload is invalid");
+    const payloadResult = await executionEngine.executePayload(payload);
+    if (!payloadResult) {
+      throw Error("getPayload returned payload that executePayload deems invalid");
     }
 
     // 4. Mark the payload as valid
@@ -270,7 +229,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * }],"id":67}' http://localhost:8545
      */
 
-    await executionEngine.notifyConsensusValidated(payloadToTest.blockHash, true);
+    await executionEngine.notifyConsensusValidated(payload.blockHash, true);
 
     // 5. Update the fork choice
 
@@ -281,10 +240,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * }],"id":67}' http://localhost:8545
      */
 
-    await executionEngine.notifyForkchoiceUpdate(
-      toHexString(payloadToTest.blockHash),
-      toHexString(payloadToTest.blockHash)
-    );
+    await executionEngine.notifyForkchoiceUpdate(toHexString(payload.blockHash), toHexString(payload.blockHash));
 
     // Error cases
     // 1. unknown payload
