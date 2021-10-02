@@ -1,7 +1,7 @@
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {interopDeposits} from "./interop/deposits";
-import {getInteropState} from "./interop/state";
+import {getInteropState, InteropStateOpts} from "./interop/state";
 import {mkdirSync, writeFileSync} from "fs";
 import {dirname} from "path";
 import {IBeaconDb} from "../../db";
@@ -11,15 +11,15 @@ export async function initDevState(
   config: IChainForkConfig,
   db: IBeaconDb,
   validatorCount: number,
-  genesisTime?: number
+  interopStateOpts: InteropStateOpts
 ): Promise<TreeBacked<allForks.BeaconState>> {
   const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultTreeBacked(), validatorCount);
   await storeDeposits(config, db, deposits);
   const state = getInteropState(
     config,
-    await db.depositDataRoot.getTreeBacked(validatorCount - 1),
-    genesisTime || Math.floor(Date.now() / 1000),
-    deposits
+    interopStateOpts,
+    deposits,
+    await db.depositDataRoot.getTreeBacked(validatorCount - 1)
   );
   return state;
 }
