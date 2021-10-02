@@ -141,9 +141,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       extraData: ZERO_HASH,
       baseFeePerGas: ZERO_HASH,
       blockHash: crypto.randomBytes(32),
-      // TODO: Fill transactions once UnionType issues are fixed
-      // transactions: [crypto.randomBytes(512)],
-      transactions: [],
+      transactions: [{selector: 0, value: crypto.randomBytes(512)}],
     };
     this.preparingPayloads.set(payloadId, payload);
 

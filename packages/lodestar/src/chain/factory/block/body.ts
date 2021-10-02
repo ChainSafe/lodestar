@@ -93,7 +93,7 @@ export async function assembleBody(
       feeRecipient
     );
 
-    if (payloadId) {
+    if (payloadId !== null) {
       (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     } else {
       (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
