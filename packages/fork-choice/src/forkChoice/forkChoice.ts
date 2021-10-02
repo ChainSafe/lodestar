@@ -16,7 +16,7 @@ import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlock} from "./interface";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
@@ -910,7 +910,7 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function isValidTerminalPowBlock(config: IChainConfig, block: PowBlock, parent: PowBlock): boolean {
+function isValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): boolean {
   const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
   return isTotalDifficultyReached && isParentTotalDifficultyValid;

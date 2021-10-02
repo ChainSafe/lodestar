@@ -24,7 +24,7 @@ const extraTypes = {
 };
 
 export function sszStatic(fork: ForkName): void {
-  const rootDir = path.join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/phase0/ssz_static`);
+  const rootDir = path.join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/ssz_static`);
   for (const typeName of fs.readdirSync(rootDir)) {
     const type =
       (ssz[fork] as Types)[typeName] ||

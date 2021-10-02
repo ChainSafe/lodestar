@@ -46,3 +46,10 @@ export interface SignedBeaconBlock extends altair.SignedBeaconBlock {
 export interface BeaconState extends altair.BeaconState {
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
 }
+
+export type PowBlock = {
+  blockHash: Root;
+  parentHash: Root;
+  totalDifficulty: bigint;
+  difficulty: bigint;
+};

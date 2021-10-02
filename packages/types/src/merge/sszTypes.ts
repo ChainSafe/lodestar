@@ -23,6 +23,7 @@ import {ssz as phase0Ssz, ts as phase0} from "../phase0";
 import {ssz as altairSsz} from "../altair";
 import * as merge from "./types";
 import {LazyVariable} from "../utils/lazyVar";
+import {Uint256} from "../primitive/sszTypes";
 
 const {Bytes20, Bytes32, Number64, Slot, ValidatorIndex, Root, BLSSignature, Uint8} = primitiveSsz;
 
@@ -136,6 +137,15 @@ export const SignedBeaconBlock = new ContainerType<merge.SignedBeaconBlock>({
   fields: {
     message: BeaconBlock,
     signature: BLSSignature,
+  },
+});
+
+export const PowBlock = new ContainerType<merge.BeaconState>({
+  fields: {
+    blockHash: Root,
+    parentHash: Root,
+    totalDifficulty: Uint256,
+    difficulty: Uint256,
   },
 });
 
