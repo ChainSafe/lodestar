@@ -5,6 +5,10 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {IExecutionEngine} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
+export type ExecutionEngineMockOpts = {
+  genesisBlockHash: string;
+};
+
 /**
  * Mock ExecutionEngine for fast prototyping and unit testing
  */
@@ -17,6 +21,25 @@ export class ExecutionEngineMock implements IExecutionEngine {
   private pendingPayloads = new Map<RootHex, merge.ExecutionPayload>();
   private preparingPayloads = new Map<number, merge.ExecutionPayload>();
   private payloadId = 0;
+
+  constructor(opts: ExecutionEngineMockOpts) {
+    this.knownBlocks.set(opts.genesisBlockHash, {
+      parentHash: ZERO_HASH,
+      coinbase: Buffer.alloc(20, 0),
+      stateRoot: ZERO_HASH,
+      receiptRoot: ZERO_HASH,
+      logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
+      random: ZERO_HASH,
+      blockNumber: 0,
+      gasLimit: 0,
+      gasUsed: 0,
+      timestamp: 0,
+      extraData: ZERO_HASH,
+      baseFeePerGas: ZERO_HASH,
+      blockHash: ZERO_HASH,
+      transactions: [],
+    });
+  }
 
   /**
    * `engine_executePayload`
@@ -114,7 +137,6 @@ export class ExecutionEngineMock implements IExecutionEngine {
       gasUsed: 1000,
       timestamp: timestamp,
       extraData: ZERO_HASH,
-      // TODO: Review big-endian
       baseFeePerGas: ZERO_HASH,
       blockHash: crypto.randomBytes(32),
       transactions: [crypto.randomBytes(512)],

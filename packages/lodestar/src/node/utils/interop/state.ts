@@ -3,8 +3,8 @@ import {allForks, phase0, Root} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
 
-const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
-const INTEROP_TIMESTAMP = Math.pow(2, 40);
+export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
+export const INTEROP_TIMESTAMP = Math.pow(2, 40);
 
 export function getInteropState(
   config: IChainForkConfig,
