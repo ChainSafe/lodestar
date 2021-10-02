@@ -17,14 +17,16 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   "execution.urls": {
     description: "Urls to execution client engine API",
     type: "array",
-    defaultDescription: defaultOptions.executionEngine.urls.join(" "),
+    defaultDescription:
+      defaultOptions.executionEngine.mode === "http" ? defaultOptions.executionEngine.urls.join(" ") : "",
     group: "execution",
   },
 
   "execution.timeout": {
     description: "Timeout in miliseconds for execution engine API HTTP client",
     type: "number",
-    defaultDescription: String(defaultOptions.executionEngine.timeout),
+    defaultDescription:
+      defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
     group: "execution",
   },
 };
