@@ -1,8 +1,9 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {hexToNumber, numberToHex} from "../eth1/provider/utils";
+import {hexToNumber, numberToHex, hexToBytes, bytesToHex} from "../eth1/provider/utils";
+import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {IExecutionEngine} from "./interface";
 
 export type ExecutionEngineHttpOpts = {
@@ -25,9 +26,9 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  * https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/interop/specification.md
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
-  private readonly rpc: JsonRpcHttpClient;
+  private readonly rpc: IJsonRpcHttpClient;
 
-  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: JsonRpcHttpClient) {
+  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
     this.rpc =
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
@@ -107,7 +108,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     feeRecipient: ExecutionAddress
   ): Promise<PayloadId> {
     const method = "engine_preparePayload";
-    const payloadId = await this.rpc.fetch<
+    const {payloadId} = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({
@@ -139,7 +140,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({
       method,
-      params: [payloadId],
+      params: [numberToHex(payloadId)],
     });
 
     return parseExecutionPayload(executionPayloadRpc);
@@ -172,7 +173,7 @@ type EngineApiRpcParamTypes = {
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
-  engine_getPayload: [PayloadId];
+  engine_getPayload: [QUANTITY];
 };
 
 type EngineApiRpcReturnTypes = {
@@ -186,18 +187,14 @@ type EngineApiRpcReturnTypes = {
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
-  engine_preparePayload: PayloadIdStr | RpcError;
+  engine_preparePayload: {payloadId: QUANTITY};
   engine_getPayload: ExecutionPayloadRpc;
 };
 
-type PayloadIdStr = string;
-type RpcError = string;
-/** "0x" prefixed hex encoded binary data */
-type HexStr = string;
 /** Hex encoded binary data */
-type DATA = HexStr;
+type DATA = string;
 /** Hex encoded big-endian number */
-type QUANTITY = HexStr;
+type QUANTITY = string;
 
 enum ExecutePayloadStatus {
   /** given payload is valid */
@@ -236,7 +233,7 @@ type ExecutionPayloadRpc = {
   transactions: DATA[];
 };
 
-function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
   return {
     parentHash: toHexString(data.parentHash),
     coinbase: toHexString(data.coinbase),
@@ -250,28 +247,28 @@ function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPaylo
     timestamp: numberToHex(data.timestamp),
     extraData: toHexString(data.extraData),
     // TODO: Review big-endian
-    baseFeePerGas: toHexString(data.baseFeePerGas),
+    baseFeePerGas: bytesToHex(data.baseFeePerGas),
     blockHash: toHexString(data.blockHash),
     transactions: data.transactions.map(toHexString),
   };
 }
 
-function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
+export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
   return {
-    parentHash: fromHexString(data.parentHash),
-    coinbase: fromHexString(data.coinbase),
-    stateRoot: fromHexString(data.stateRoot),
-    receiptRoot: fromHexString(data.receiptRoot),
-    logsBloom: fromHexString(data.logsBloom),
-    random: fromHexString(data.random),
+    parentHash: hexToBytes(data.parentHash),
+    coinbase: hexToBytes(data.coinbase),
+    stateRoot: hexToBytes(data.stateRoot),
+    receiptRoot: hexToBytes(data.receiptRoot),
+    logsBloom: hexToBytes(data.logsBloom),
+    random: hexToBytes(data.random),
     blockNumber: hexToNumber(data.blockNumber),
     gasLimit: hexToNumber(data.gasLimit),
     gasUsed: hexToNumber(data.gasUsed),
     timestamp: hexToNumber(data.timestamp),
-    extraData: fromHexString(data.extraData),
+    extraData: hexToBytes(data.extraData),
     // TODO: Review big-endian
-    baseFeePerGas: fromHexString(data.baseFeePerGas),
-    blockHash: fromHexString(data.blockHash),
-    transactions: data.transactions.map(fromHexString),
+    baseFeePerGas: hexToBytes(data.baseFeePerGas),
+    blockHash: hexToBytes(data.blockHash),
+    transactions: data.transactions.map(hexToBytes),
   };
 }
