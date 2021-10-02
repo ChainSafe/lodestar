@@ -127,6 +127,9 @@ export function getBeaconBlockApi({
           const state = chain.getHeadState();
           return {data: state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]};
         }
+      } else if (blockId === "head") {
+        const head = chain.forkChoice.getHead();
+        return {data: fromHexString(head.blockRoot)};
       }
 
       // Slow path

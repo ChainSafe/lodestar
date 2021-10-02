@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
@@ -11,6 +12,7 @@ import {simTestInfoTracker} from "../utils/node/simTest";
 import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -23,22 +25,26 @@ describe("Run single node single thread interop validators (no eth1) until check
     await initBLS();
   });
 
+  const validatorClientCount = 1;
+  const validatorsPerClient = 32;
+
   const testCases: {
-    validatorClientCount: number;
-    validatorsPerClient: number;
     event: ChainEvent.justified | ChainEvent.finalized;
-    altairForkEpoch: number;
+    altairEpoch: number;
+    mergeEpoch: number;
   }[] = [
     // phase0 fork only
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: Infinity},
+    {event: ChainEvent.finalized, altairEpoch: Infinity, mergeEpoch: Infinity},
     // altair fork only
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: 0},
+    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: Infinity},
     // altair fork at epoch 2
-    {validatorClientCount: 1, validatorsPerClient: 32, event: ChainEvent.finalized, altairForkEpoch: 2},
+    {event: ChainEvent.finalized, altairEpoch: 2, mergeEpoch: Infinity},
+    // merge fork at epoch 0
+    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: 0},
   ];
 
-  for (const {validatorClientCount, validatorsPerClient, event, altairForkEpoch} of testCases) {
-    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
+  for (const {event, altairEpoch, mergeEpoch} of testCases) {
+    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} merge ${mergeEpoch}`, async function () {
       // Should reach justification in 3 epochs max, and finalization in 4 epochs max
       const expectedEpochsToFinish = event === ChainEvent.justified ? 3 : 4;
       // 1 epoch of margin of error
@@ -59,7 +65,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const testLoggerOpts: TestLoggerOpts = {
         logLevel: LogLevel.info,
-        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairForkEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
+        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_merge-${mergeEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
@@ -70,8 +76,12 @@ describe("Run single node single thread interop validators (no eth1) until check
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
-        params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
-        options: {api: {rest: {enabled: true} as RestApiOptions}, sync: {isSingleNode: true}},
+        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, MERGE_FORK_EPOCH: mergeEpoch},
+        options: {
+          api: {rest: {enabled: true} as RestApiOptions},
+          sync: {isSingleNode: true},
+          executionEngine: {mode: "mock", genesisBlockHash: toHexString(INTEROP_BLOCK_HASH)},
+        },
         validatorCount: validatorClientCount * validatorsPerClient,
         logger: loggerNodeA,
         genesisTime,
