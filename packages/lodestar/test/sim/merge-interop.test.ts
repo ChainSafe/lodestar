@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
@@ -29,7 +30,8 @@ import {ZERO_HASH} from "../../src/constants";
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
-  const dataPath = "~/ethereum/taunus";
+  const homeDir = os.homedir();
+  const dataPath = path.join(homeDir, "ethereum/taunus");
   const genesisPath = path.join(dataPath, "genesis.json");
   const jsonRpcPort = 8545;
   const enginePort = 8545;
