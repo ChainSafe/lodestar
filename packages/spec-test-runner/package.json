@@ -50,7 +50,7 @@
     "@chainsafe/lodestar-types": "^0.31.0",
     "@chainsafe/lodestar-utils": "^0.31.0",
     "@chainsafe/lodestar-validator": "^0.31.0",
-    "@chainsafe/ssz": "^0.8.17",
+    "@chainsafe/ssz": "^0.8.18",
     "@chainsafe/persistent-merkle-tree": "^0.3.7",
     "@types/yargs": "^17.0.2"
   },
