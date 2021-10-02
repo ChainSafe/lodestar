@@ -128,7 +128,11 @@ export function replaceIfBetter(
 
   bestContribution.syncSubCommitteeBits = newSyncSubCommitteeBits;
   bestContribution.numParticipants = newNumParticipants;
-  bestContribution.syncSubCommitteeSignature = bls.Signature.fromBytes(contribution.signature.valueOf() as Uint8Array);
+  bestContribution.syncSubCommitteeSignature = bls.Signature.fromBytes(
+    contribution.signature.valueOf() as Uint8Array,
+    undefined,
+    true
+  );
   return InsertOutcome.NewData;
 }
 
@@ -149,7 +153,7 @@ export function contributionToFast(contribution: altair.SyncCommitteeContributio
   return {
     syncSubCommitteeBits,
     numParticipants,
-    syncSubCommitteeSignature: bls.Signature.fromBytes(contribution.signature.valueOf() as Uint8Array),
+    syncSubCommitteeSignature: bls.Signature.fromBytes(contribution.signature.valueOf() as Uint8Array, undefined, true),
   };
 }
 

@@ -121,7 +121,11 @@ describe("MatchingDataAttestationGroup", function () {
     const attestations = attestationGroup.getAttestations();
     expect(attestations.length).to.be.equal(1, "expect exactly 1 aggregated attestation");
     expect(attestations[0].aggregationBits).to.be.deep.equal([true, true, true], "incorrect aggregationBits");
-    const aggregatedSignature = bls.Signature.fromBytes(attestations[0].signature.valueOf() as Uint8Array);
+    const aggregatedSignature = bls.Signature.fromBytes(
+      attestations[0].signature.valueOf() as Uint8Array,
+      undefined,
+      true
+    );
     expect(
       aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
     ).to.be.equal(true, "invalid aggregated signature");
@@ -200,7 +204,11 @@ describe("aggregateInto", function () {
     aggregateInto(attWithIndex1, attWithIndex2, committee);
     expect(attWithIndex1.attestingIndices).to.be.deep.equal(new Set([100, 200]), "invalid aggregated attestingIndices");
     expect(attWithIndex1.attestation.aggregationBits).to.be.deep.equal([true, true], "invalid aggregationBits");
-    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature.valueOf() as Uint8Array);
+    const aggregatedSignature = bls.Signature.fromBytes(
+      attWithIndex1.attestation.signature.valueOf() as Uint8Array,
+      undefined,
+      true
+    );
     expect(
       aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
     ).to.be.equal(true, "invalid aggregated signature");

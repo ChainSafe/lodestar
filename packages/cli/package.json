@@ -49,7 +49,7 @@
   ],
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
-    "@chainsafe/bls": "6.0.1",
+    "@chainsafe/bls": "6.0.3",
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "2.0.0",
     "@chainsafe/blst": "^0.2.2",

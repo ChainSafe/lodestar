@@ -134,7 +134,7 @@ function isValidBlsAggregate(publicKeys: PublicKey[], message: Uint8Array, signa
 
   let sig: Signature;
   try {
-    sig = Signature.fromBytes(signature);
+    sig = Signature.fromBytes(signature, undefined, true);
   } catch (e) {
     (e as Error).message = `Error deserializing signature: ${(e as Error).message}`;
     throw e;

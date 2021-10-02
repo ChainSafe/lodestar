@@ -334,8 +334,16 @@ export function aggregateInto(
     attestation1.attestingIndices.has(committee[i])
   ) as List<boolean>;
 
-  const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature.valueOf() as Uint8Array);
-  const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature.valueOf() as Uint8Array);
+  const signature1 = bls.Signature.fromBytes(
+    attestation1.attestation.signature.valueOf() as Uint8Array,
+    undefined,
+    true
+  );
+  const signature2 = bls.Signature.fromBytes(
+    attestation2.attestation.signature.valueOf() as Uint8Array,
+    undefined,
+    true
+  );
   attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
 }
 

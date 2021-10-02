@@ -22,7 +22,7 @@ describeDirectorySpecTest<IAggregateSigsVerifyTestCase, boolean>(
   (testCase) => {
     const {pubkeys, message, signature} = testCase.data.input;
     try {
-      return bls.Signature.fromBytes(fromHexString(signature)).verifyAggregate(
+      return bls.Signature.fromBytes(fromHexString(signature), undefined, true).verifyAggregate(
         pubkeys.map((hex) => bls.PublicKey.fromBytes(fromHexString(hex), CoordType.jacobian, true)),
         fromHexString(message)
       );
