@@ -42,7 +42,7 @@ jobs:
         run: yarn test:sim:merge-interop
         working-directory: packages/lodestar
         env:
-          GETH_BINARY_PATH: ./go-ethereum/build/bin/geth
+          GETH_BINARY_PATH: ../../go-ethereum/build/bin/geth
 
       - name: Upload debug log test files
         if: ${{ always() }}
