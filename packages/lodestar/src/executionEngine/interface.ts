@@ -1,4 +1,8 @@
-import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
+
+// An execution engine can produce a payload id anywhere the the uint64 range
+// Since we do no processing with this id, we have no need to deserialize it
+export type PayloadId = string;
 
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:

@@ -3,18 +3,7 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {
-  Bytes96,
-  Bytes32,
-  phase0,
-  allForks,
-  altair,
-  Root,
-  Slot,
-  ssz,
-  ExecutionAddress,
-  PayloadId,
-} from "@chainsafe/lodestar-types";
+import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot, ssz, ExecutionAddress} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
@@ -23,6 +12,7 @@ import {
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
+import {PayloadId} from "../../../executionEngine/interface";
 
 export async function assembleBody(
   chain: IBeaconChain,

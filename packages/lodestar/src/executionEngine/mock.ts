@@ -1,8 +1,8 @@
 import crypto from "crypto";
-import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
-import {IExecutionEngine} from "./interface";
+import {IExecutionEngine, PayloadId} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -145,7 +145,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     };
     this.preparingPayloads.set(payloadId, payload);
 
-    return payloadId;
+    return payloadId.toString();
   }
 
   /**
@@ -156,7 +156,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
-    const payload = this.preparingPayloads.get(payloadId);
+    const payload = this.preparingPayloads.get(Number(payloadId));
     if (!payload) {
       throw Error(`Unknown payloadId ${payloadId}`);
     }
