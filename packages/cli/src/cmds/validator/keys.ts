@@ -43,7 +43,8 @@ export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
 
     const keystorePaths = args.importKeystoresPath
       .map((filepath) => (fs.lstatSync(filepath).isDirectory() ? fs.readdirSync(filepath) : [filepath]))
-      .flat(1);
+      .flat(1)
+      .filter((filepath) => filepath.endsWith(".json"));
 
     return await Promise.all(
       keystorePaths.map(async (keystorePath) =>
