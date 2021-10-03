@@ -1,4 +1,5 @@
 import fs from "fs";
+import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
@@ -41,10 +42,7 @@ export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
 
     const passphrase = stripOffNewlines(fs.readFileSync(args.importKeystoresPassword, "utf8"));
 
-    const keystorePaths = args.importKeystoresPath
-      .map((filepath) => (fs.lstatSync(filepath).isDirectory() ? fs.readdirSync(filepath) : [filepath]))
-      .flat(1)
-      .filter((filepath) => filepath.endsWith(".json"));
+    const keystorePaths = args.importKeystoresPath.map((filepath) => resolveKeystorePaths(filepath)).flat(1);
 
     return await Promise.all(
       keystorePaths.map(async (keystorePath) =>
@@ -58,5 +56,16 @@ export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
     return await validatorDirManager.decryptAllValidators({force: args.force});
+  }
+}
+
+function resolveKeystorePaths(fileOrDirPath: string): string[] {
+  if (fs.lstatSync(fileOrDirPath).isDirectory()) {
+    return fs
+      .readdirSync(fileOrDirPath)
+      .map((file) => path.join(fileOrDirPath, file))
+      .filter((filepath) => filepath.endsWith(".json"));
+  } else {
+    return [fileOrDirPath];
   }
 }
