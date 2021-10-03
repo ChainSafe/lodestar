@@ -2,6 +2,7 @@ import fs from "fs";
 import {promisify} from "util";
 import rimraf from "rimraf";
 import path from "path";
+import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
@@ -76,11 +77,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
     anchorState = await initStateFromAnchorState(config, db, logger, state);
   } else {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const eth1BlockHash = args.genesisEth1Hash ? fromHexString(args.genesisEth1Hash!) : undefined;
     anchorState = await initStateFromAnchorState(
       config,
       db,
       logger,
-      await nodeUtils.initDevState(config, db, validatorCount, {genesisTime})
+      await nodeUtils.initDevState(config, db, validatorCount, {genesisTime, eth1BlockHash})
     );
   }
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);

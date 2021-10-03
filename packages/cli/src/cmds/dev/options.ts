@@ -4,6 +4,7 @@ import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
 
 interface IDevOwnArgs {
+  genesisEth1Hash?: string;
   genesisValidators?: number;
   startValidators?: string;
   genesisTime?: number;
@@ -12,6 +13,12 @@ interface IDevOwnArgs {
 }
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+  genesisEth1Hash: {
+    description: "If present it will create genesis with this eth1 hash.",
+    type: "string",
+    group: "dev",
+  },
+
   genesisValidators: {
     alias: ["c"],
     description: "If present it will create genesis with interop validators and start chain.",
