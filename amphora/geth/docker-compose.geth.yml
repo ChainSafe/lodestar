@@ -1,0 +1,16 @@
+version: "3.4"
+services:
+  interop_geth:
+    image: amphora/geth:latest
+    build: .
+    restart: always
+    volumes:
+      - interop_geth:/root
+    #ports:
+    #  - "8545:8545"
+    #  - "30303:30303"
+    command: --catalyst --http --ws -http.api "engine,net" --datadir /data
+    network_mode: host
+
+volumes:
+  interop_geth:
