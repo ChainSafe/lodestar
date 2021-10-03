@@ -202,6 +202,16 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
+
+  // Send event to consensus client
+  // TODO: Should send update with 0x0000.. when finalized block is still not merge block?
+  const headBlockHash = head.executionPayloadBlockHash;
+  const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+  if (headBlockHash) {
+    this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+      this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+    });
+  }
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
