@@ -75,7 +75,7 @@ describe("ExecutionEngine / http", () => {
       dataToBytes(param0.feeRecipient)
     );
 
-    expect(payloadId).to.equal(0, "Wrong returned payloadId");
+    expect(payloadId).to.equal("0x0", "Wrong returned payloadId");
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 
@@ -108,7 +108,7 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = response;
 
-    const payload = await executionEngine.getPayload(0);
+    const payload = await executionEngine.getPayload("0x0");
 
     expect(serializeExecutionPayload(payload)).to.deep.equal(response.result, "Wrong returned payload");
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
@@ -198,7 +198,7 @@ describe("ExecutionEngine / http", () => {
     const response = {jsonrpc: "2.0", id: 67, error: {code: 5, message: "unknown payload"}};
     returnValue = response;
 
-    await expect(executionEngine.getPayload(quantityToNum(request.params[0]))).to.be.rejectedWith(
+    await expect(executionEngine.getPayload(request.params[0])).to.be.rejectedWith(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
   });

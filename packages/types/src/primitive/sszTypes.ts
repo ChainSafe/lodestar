@@ -44,4 +44,3 @@ export const BLSSignature = Bytes96;
 export const Domain = Bytes32;
 export const ParticipationFlags = Uint8;
 export const ExecutionAddress = Bytes20;
-export const PayloadId = Number64;

@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Bytes32, merge, Root, ExecutionAddress, PayloadId, RootHex} from "@chainsafe/lodestar-types";
+import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -12,7 +12,7 @@ import {
   QUANTITY,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {IExecutionEngine} from "./interface";
+import {IExecutionEngine, PayloadId} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -132,7 +132,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       ],
     });
 
-    return quantityToNum(payloadId);
+    return payloadId;
   }
 
   /**
@@ -149,7 +149,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       EngineApiRpcParamTypes[typeof method]
     >({
       method,
-      params: [numToQuantity(payloadId)],
+      params: [payloadId],
     });
 
     return parseExecutionPayload(executionPayloadRpc);
