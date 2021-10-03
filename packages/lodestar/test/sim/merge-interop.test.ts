@@ -272,7 +272,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
   });
 
-  it.only("Pre-merge, run for a few blocks", async function () {
+  it("Pre-merge, run for a few blocks", async function () {
     console.log("Merge test!");
     const {genesisBlockHash} = await runGethPreMerge();
     await runNodeWithGeth.bind(this)({
@@ -300,8 +300,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       SECONDS_PER_SLOT: 2,
     };
 
-    // Should reach justification in 3 epochs max, and finalization in 4 epochs max
-    const expectedEpochsToFinish = 4;
+    // Should reach justification in 6 epochs max.
+    // Merge block happens at epoch 2 slot 4. Then 4 epochs to finalize
+    const expectedEpochsToFinish = 6;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
     const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
@@ -359,6 +360,16 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     await Promise.all(validators.map((v) => v.start()));
+
+    await new Promise<void>((resolve) => {
+      bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
+        // Resolve only if the finalized checkpoint includes execution payload
+        const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
+        if (finalizedBlock?.executionPayloadBlockHash !== null) {
+          resolve();
+        }
+      });
+    });
 
     try {
       await justificationEventListener;
