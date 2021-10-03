@@ -260,6 +260,11 @@ export const AttesterSlashing = new ContainerType<phase0.AttesterSlashing>({
     attestation1: IndexedAttestation,
     attestation2: IndexedAttestation,
   },
+  // Declaration time casingMap for toJson/fromJson for container <=> json data
+  casingMap: {
+    attestation1: "attestation_1",
+    attestation2: "attestation_2",
+  },
 });
 
 export const Deposit = new ContainerType<phase0.Deposit>({
@@ -273,6 +278,11 @@ export const ProposerSlashing = new ContainerType<phase0.ProposerSlashing>({
   fields: {
     signedHeader1: SignedBeaconBlockHeader,
     signedHeader2: SignedBeaconBlockHeader,
+  },
+  // Declaration time casingMap for toJson/fromJson for container <=> json data
+  casingMap: {
+    signedHeader1: "signed_header_1",
+    signedHeader2: "signed_header_2",
   },
 });
 

@@ -47,7 +47,7 @@ export function mapValues<T extends {[K: string]: any}, R>(
 
 export function objectToExpectedCase<T extends Record<string, unknown> | Record<string, unknown>[]>(
   obj: T,
-  expectedCase: "snake" | "camel" = "camel"
+  expectedCase: "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform" = "camel"
 ): T {
   if (Array.isArray(obj)) {
     const newArr: unknown[] = [];

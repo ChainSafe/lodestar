@@ -44,7 +44,7 @@
     "@chainsafe/lodestar-types": "^0.31.0",
     "@chainsafe/lodestar-utils": "^0.31.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.7",
-    "@chainsafe/ssz": "^0.8.17",
+    "@chainsafe/ssz": "^0.8.18",
     "cross-fetch": "^3.1.4",
     "mitt": "^3.0.0"
   },
