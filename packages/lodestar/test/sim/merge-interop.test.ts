@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import http from "http";
 import os from "os";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -90,7 +91,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
       // Kills geth process
       if (controller) controller.abort();
-      await sleep(50);
+      // Wait for the P2P to be offline
+      await waitForGethOffline();
     });
 
     // Wait for Geth to be online
@@ -159,7 +161,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
       // Kills geth process
       if (controller) controller.abort();
-      await sleep(50);
+      // Wait for the P2P to be offline
+      await waitForGethOffline();
     });
 
     // Wait for Geth to be online
@@ -488,6 +491,30 @@ async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void
     }
   }
   throw Error("Geth not online in 60 seconds");
+}
+
+async function waitForGethOffline(): Promise<void> {
+  const server = http.createServer();
+
+  for (let i = 0; i < 60; i++) {
+    try {
+      console.log("Waiting for geth offline...");
+      await new Promise<void>((resolve) => {
+        server.listen(30303, resolve);
+      });
+    } catch (e) {
+      await sleep(1000);
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+    return;
+  }
+  throw Error("Geth not offline in 60 seconds");
 }
 
 async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
