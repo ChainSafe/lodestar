@@ -1,4 +1,4 @@
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
@@ -11,7 +11,7 @@ import {Eth1Options} from "../options";
 import {isValidAddress} from "../../util/address";
 import {EthJsonRpcBlockRaw} from "../interface";
 import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
-import {numberToHex, isJsonRpcTruncatedError, hexToNumber, validateHexRoot} from "./utils";
+import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -107,7 +107,7 @@ export class Eth1Provider implements IEth1Provider {
         return Promise.all(
           blockRanges.map(([from, to]) =>
             this.rpc.fetchBatch<IEthJsonRpcReturnTypes[typeof method]>(
-              linspace(from, to).map((blockNumber) => ({method, params: [numberToHex(blockNumber), false]}))
+              linspace(from, to).map((blockNumber) => ({method, params: [numToQuantity(blockNumber), false]}))
             )
           )
         );
@@ -128,7 +128,7 @@ export class Eth1Provider implements IEth1Provider {
 
   async getBlockByNumber(blockNumber: number | "latest"): Promise<EthJsonRpcBlockRaw | null> {
     const method = "eth_getBlockByNumber";
-    const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numberToHex(blockNumber);
+    const blockNumberHex = typeof blockNumber === "string" ? blockNumber : numToQuantity(blockNumber);
     return await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({
       method,
       // false = include only transaction roots, not full objects
@@ -165,8 +165,8 @@ export class Eth1Provider implements IEth1Provider {
     const method = "eth_getLogs";
     const hexOptions = {
       ...options,
-      fromBlock: numberToHex(options.fromBlock),
-      toBlock: numberToHex(options.toBlock),
+      fromBlock: numToQuantity(options.fromBlock),
+      toBlock: numToQuantity(options.toBlock),
     };
     const logsRaw = await this.rpc.fetch<IEthJsonRpcReturnTypes[typeof method]>({method, params: [hexOptions]});
     return logsRaw.map((logRaw) => ({
@@ -179,10 +179,9 @@ export class Eth1Provider implements IEth1Provider {
 
 export function parseEth1Block(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
   if (typeof blockRaw !== "object") throw Error("block is not an object");
-  validateHexRoot(blockRaw.hash);
   return {
-    blockHash: fromHexString(blockRaw.hash),
-    blockNumber: hexToNumber(blockRaw.number, "block.number"),
-    timestamp: hexToNumber(blockRaw.timestamp, "block.timestamp"),
+    blockHash: dataToBytes(blockRaw.hash, 32),
+    blockNumber: quantityToNum(blockRaw.number, "block.number"),
+    timestamp: quantityToNum(blockRaw.timestamp, "block.timestamp"),
   };
 }

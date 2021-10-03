@@ -1,11 +1,25 @@
 import fs from "fs";
 import path from "path";
-import {AbortController} from "@chainsafe/abort-controller";
+import os from "os";
+import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {hexToNumber} from "../../src/eth1/provider/utils";
-import {ExecutionEngineHttp, parseExecutionPayload} from "../../src/executionEngine/http";
+import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {IChainConfig} from "@chainsafe/lodestar-config";
+import {phase0} from "@chainsafe/lodestar-types";
+import {dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {ChainEvent} from "../../src/chain";
+import {testLogger, TestLoggerOpts} from "../utils/logger";
+import {logFilesDir} from "./params";
+import {getDevBeaconNode} from "../utils/node/beacon";
+import {RestApiOptions} from "../../src/api";
+import {simTestInfoTracker} from "../utils/node/simTest";
+import {waitForEvent} from "../utils/events/resolver";
+import {getAndInitDevValidators} from "../utils/node/validator";
+import {Eth1Provider} from "../../src";
+import {ZERO_HASH} from "../../src/constants";
 
 // NOTE: Must specify GETH_BINARY_PATH ENV
 // Example:
@@ -13,14 +27,20 @@ import {sleep} from "@chainsafe/lodestar-utils";
 // $ GETH_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin/geth ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
+/* eslint-disable no-console, @typescript-eslint/naming-convention */
+
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
-  const dataPath = "~/ethereum/taunus";
+  const homeDir = os.homedir();
+  const dataPath = path.join(homeDir, "ethereum/taunus");
   const genesisPath = path.join(dataPath, "genesis.json");
   const jsonRpcPort = 8545;
   const enginePort = 8545;
+  const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
+  const engineApiUrl = `http://localhost:${enginePort}`;
 
+  let gensisBlockHash: string;
   let gethProcError: Error | null = null;
   let controller: AbortController;
 
@@ -34,6 +54,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("GETH_BINARY_PATH ENV must be provided");
     }
 
+    await shell(`rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
     writeGenesisJson(genesisPath);
 
@@ -42,7 +63,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
 
     controller = new AbortController();
-    shell(`${process.env.GETH_BINARY_PATH} --catalyst --http --ws -http.api "engine,net" --datadir "${dataPath}"`, {
+    shell(`${process.env.GETH_BINARY_PATH} --catalyst --http --ws -http.api "engine,net,eth" --datadir "${dataPath}"`, {
       timeout: 10 * 60 * 1000,
       signal: controller.signal,
     }).catch((e) => {
@@ -50,17 +71,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     // Wait for Geth to be online
-    for (let i = 0; i < 60; i++) {
-      try {
-        await shell(
-          `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' http://localhost:${jsonRpcPort}`
-        );
-        return; // Done
-      } catch (e) {
-        await sleep(1000, controller.signal);
-      }
-    }
-    throw Error("Geth not online in 60 seconds");
+    await waitForGethOnline(jsonRpcUrl, controller.signal);
+
+    // Fetch genesis block hash
+    gensisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
   });
 
   after("Stop geth", () => {
@@ -73,18 +87,105 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (controller) controller.abort();
   });
 
+  it("Run for a few blocks", async () => {
+    const validatorClientCount = 1;
+    const validatorsPerClient = 32;
+    const event = ChainEvent.finalized;
+    const altairForkEpoch = 0;
+    const mergeForkEpoch = 0;
+
+    const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
+      SECONDS_PER_SLOT: 2,
+    };
+
+    // Should reach justification in 3 epochs max, and finalization in 4 epochs max
+    const expectedEpochsToFinish = 4;
+    // 1 epoch of margin of error
+    const epochsOfMargin = 1;
+    const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
+
+    // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+    const genesisSlotsDelay = 3;
+
+    const timeout =
+      ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
+      testParams.SECONDS_PER_SLOT *
+      1000;
+
+    this.timeout(timeout + 2 * timeoutSetupMargin);
+
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+
+    const testLoggerOpts: TestLoggerOpts = {
+      logLevel: LogLevel.info,
+      logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairForkEpoch}_merge-${mergeForkEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
+      timestampFormat: {
+        format: TimestampFormatCode.EpochSlot,
+        genesisTime,
+        slotsPerEpoch: SLOTS_PER_EPOCH,
+        secondsPerSlot: testParams.SECONDS_PER_SLOT,
+      },
+    };
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+    const bn = await getDevBeaconNode({
+      params: {...testParams, ALTAIR_FORK_EPOCH: 0, MERGE_FORK_EPOCH: 0, TERMINAL_TOTAL_DIFFICULTY: BigInt(0)},
+      options: {
+        api: {rest: {enabled: true} as RestApiOptions},
+        sync: {isSingleNode: true},
+        network: {disablePeerDiscovery: true},
+        executionEngine: {urls: [engineApiUrl]},
+      },
+      validatorCount: validatorClientCount * validatorsPerClient,
+      logger: loggerNodeA,
+      genesisTime,
+      eth1BlockHash: fromHexString(gensisBlockHash),
+    });
+
+    const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
+
+    const justificationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
+    const validators = await getAndInitDevValidators({
+      node: bn,
+      validatorsPerClient,
+      validatorClientCount,
+      startIndex: 0,
+      // At least one sim test must use the REST API for beacon <-> validator comms
+      useRestApi: true,
+      testLoggerOpts,
+    });
+
+    await Promise.all(validators.map((v) => v.start()));
+
+    try {
+      await justificationEventListener;
+      console.log(`\nGot event ${event}, stopping validators and nodes\n`);
+    } catch (e) {
+      (e as Error).message = `failed to get event: ${event}: ${(e as Error).message}`;
+      throw e;
+    } finally {
+      await Promise.all(validators.map((v) => v.stop()));
+
+      // wait for 1 slot
+      await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+      stopInfoTracker();
+      await bn.close();
+      console.log("\n\nDone\n\n");
+      await sleep(1000);
+    }
+  });
+
   it("Test against real geth", async () => {
     // Assume geth is already running
 
-    const gethUrl = `http://localhost:${enginePort}`;
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({urls: [gethUrl]}, controller.signal);
+    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl]}, controller.signal);
 
     // 1. Prepare a payload
 
     /**
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_preparePayload","params":[{
-     * "parentHash":"0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
+     * "parentHash":gensisBlockHash,
      * "timestamp":"0x5",
      * "random":"0x0000000000000000000000000000000000000000000000000000000000000000",
      * "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
@@ -95,69 +196,28 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const preparePayloadParams = {
       // Note: this is created with a pre-defined genesis.json
-      parentHash: "0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
+      parentHash: gensisBlockHash,
       timestamp: "0x5",
       random: "0x0000000000000000000000000000000000000000000000000000000000000000",
       feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
     };
 
     const payloadId = await executionEngine.preparePayload(
-      fromHexString(preparePayloadParams.parentHash),
-      hexToNumber(preparePayloadParams.timestamp),
-      fromHexString(preparePayloadParams.random),
-      fromHexString(preparePayloadParams.feeRecipient)
+      dataToBytes(preparePayloadParams.parentHash),
+      quantityToNum(preparePayloadParams.timestamp),
+      dataToBytes(preparePayloadParams.random),
+      dataToBytes(preparePayloadParams.feeRecipient)
     );
 
     // 2. Get the payload
 
     const payload = await executionEngine.getPayload(payloadId);
-    const payloadResult = await executionEngine.executePayload(payload);
-    if (!payloadResult) {
-      throw Error("getPayload returned payload that executePayload deems invalid");
-    }
 
     // 3. Execute the payload
 
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_executePayload","params":[{
-     * "blockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-     * "parentHash":"0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
-     * "coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-     * "stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
-     * "receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-     * "logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-     * "random":"0x0000000000000000000000000000000000000000000000000000000000000000",
-     * "blockNumber":"0x1",
-     * "gasLimit":"0x989680",
-     * "gasUsed":"0x0",
-     * "timestamp":"0x5",
-     * "extraData":"0x",
-     * "baseFeePerGas":"0x7",
-     * "transactions":[]
-     * }],"id":67}' http://localhost:8545
-     */
-
-    const payloadToTest = parseExecutionPayload({
-      blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-      parentHash: "0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
-      coinbase: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-      stateRoot: "0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45",
-      receiptRoot: "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
-      logsBloom:
-        "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-      random: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      blockNumber: "0x1",
-      gasLimit: "0x989680",
-      gasUsed: "0x0",
-      timestamp: "0x5",
-      extraData: "0x",
-      baseFeePerGas: "0x7",
-      transactions: [],
-    });
-
-    const payloadToTestResult = await executionEngine.executePayload(payloadToTest);
-    if (!payloadToTestResult) {
-      throw Error("Test payload is invalid");
+    const payloadResult = await executionEngine.executePayload(payload);
+    if (!payloadResult) {
+      throw Error("getPayload returned payload that executePayload deems invalid");
     }
 
     // 4. Mark the payload as valid
@@ -169,7 +229,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * }],"id":67}' http://localhost:8545
      */
 
-    await executionEngine.notifyConsensusValidated(payloadToTest.blockHash, true);
+    await executionEngine.notifyConsensusValidated(payload.blockHash, true);
 
     // 5. Update the fork choice
 
@@ -180,10 +240,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      * }],"id":67}' http://localhost:8545
      */
 
-    await executionEngine.notifyForkchoiceUpdate(
-      toHexString(payloadToTest.blockHash),
-      toHexString(payloadToTest.blockHash)
-    );
+    await executionEngine.notifyForkchoiceUpdate(toHexString(payload.blockHash), toHexString(payload.blockHash));
 
     // Error cases
     // 1. unknown payload
@@ -209,6 +266,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
 /**
  * From https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
+ *
+ * NOTE: Edited gasLimit to match 30_000_000 value is subsequent block generation
  */
 function writeGenesisJson(filepath: string): void {
   const data = `{
@@ -236,7 +295,7 @@ function writeGenesisJson(filepath: string): void {
   "nonce": "0x42",
   "timestamp": "0x0",
   "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  "gasLimit": "0x989680",
+  "gasLimit": "0x1c9c380",
   "difficulty": "0x400000000",
   "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "coinbase": "0x0000000000000000000000000000000000000000",
@@ -249,4 +308,33 @@ function writeGenesisJson(filepath: string): void {
   "baseFeePerGas": "0x7"
 }`;
   fs.writeFileSync(filepath, data);
+}
+
+async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void> {
+  for (let i = 0; i < 60; i++) {
+    try {
+      await shell(
+        `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' ${url}`
+      );
+      return; // Done
+    } catch (e) {
+      await sleep(1000, signal);
+    }
+  }
+  throw Error("Geth not online in 60 seconds");
+}
+
+async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
+  const eth1Provider = new Eth1Provider(
+    ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
+    {providerUrls: [url], enabled: true, depositContractDeployBlock: 0},
+    signal
+  );
+
+  const genesisBlock = await eth1Provider.getBlockByNumber(0);
+  if (!genesisBlock) {
+    throw Error("No genesis block available");
+  }
+
+  return genesisBlock.hash;
 }

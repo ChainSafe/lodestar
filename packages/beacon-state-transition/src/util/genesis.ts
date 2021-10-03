@@ -197,7 +197,8 @@ export function initializeBeaconStateFromEth1(
   config: IChainForkConfig,
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
-  deposits: phase0.Deposit[]
+  deposits: phase0.Deposit[],
+  fullDepositDataRootList?: TreeBacked<List<Root>>
 ): TreeBacked<allForks.BeaconState> {
   const state = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return TreeBacked<allForks.BeaconState> anyway
@@ -211,7 +212,7 @@ export function initializeBeaconStateFromEth1(
   applyEth1BlockHash(state, eth1BlockHash);
 
   // Process deposits
-  const activeValidatorIndices = applyDeposits(config, state, deposits);
+  const activeValidatorIndices = applyDeposits(config, state, deposits, fullDepositDataRootList);
 
   if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
     const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);

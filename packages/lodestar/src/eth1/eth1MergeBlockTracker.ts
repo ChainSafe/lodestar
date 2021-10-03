@@ -4,7 +4,7 @@ import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
-import {hexToBigint, hexToNumber, validateHexRoot} from "./provider/utils";
+import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -306,13 +306,10 @@ export class Eth1MergeBlockTracker {
 
 export function toPowBlock(block: EthJsonRpcBlockRaw): PowMergeBlock {
   // Validate untrusted data from API
-  validateHexRoot(block.hash);
-  validateHexRoot(block.parentHash);
-
   return {
-    number: hexToNumber(block.number),
-    blockhash: block.hash,
-    parentHash: block.parentHash,
-    totalDifficulty: hexToBigint(block.totalDifficulty),
+    number: quantityToNum(block.number),
+    blockhash: dataToRootHex(block.hash),
+    parentHash: dataToRootHex(block.parentHash),
+    totalDifficulty: quantityToBigint(block.totalDifficulty),
   };
 }

@@ -1,6 +1,6 @@
 import {GAS_LIMIT_DENOMINATOR, MIN_GAS_LIMIT} from "@chainsafe/lodestar-params";
 import {merge, ssz} from "@chainsafe/lodestar-types";
-import {byteArrayEquals, List} from "@chainsafe/ssz";
+import {byteArrayEquals, List, toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../../allForks";
 import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
@@ -40,19 +40,30 @@ export function processExecutionPayload(
   if (isMergeComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash as Uint8Array, latestExecutionPayloadHeader.blockHash as Uint8Array)) {
-      throw Error("Inconsistent execution payload parentHash");
+      throw Error(
+        `Invalid execution payload parentHash ${toHexString(payload.parentHash)} latest blockHash ${toHexString(
+          latestExecutionPayloadHeader.blockHash
+        )}`
+      );
     }
     if (payload.blockNumber !== latestExecutionPayloadHeader.blockNumber + 1) {
-      throw Error("Inconsistent execution payload blockNumber");
+      throw Error(
+        `Invalid execution payload blockNumber ${payload.blockNumber} parent=${latestExecutionPayloadHeader.blockNumber}`
+      );
     }
     if (!isValidGasLimit(payload, latestExecutionPayloadHeader)) {
-      throw Error("Inconsistent execution payload gas limit");
+      throw Error(
+        `Invalid gasLimit gasUsed=${payload.gasUsed} gasLimit=${payload.gasLimit} parentGasLimit=${latestExecutionPayloadHeader.gasLimit}`
+      );
     }
   }
 
   // Verify random
-  if (!byteArrayEquals(payload.random as Uint8Array, getRandaoMix(state, state.currentShuffling.epoch) as Uint8Array)) {
-    throw Error("Inconsistent execution payload random");
+  const expectedRandom = getRandaoMix(state, state.currentShuffling.epoch);
+  if (!byteArrayEquals(payload.random as Uint8Array, expectedRandom as Uint8Array)) {
+    throw Error(
+      `Invalid execution payload random ${toHexString(payload.random)} expected=${toHexString(expectedRandom)}`
+    );
   }
 
   // Verify timestamp
@@ -62,7 +73,7 @@ export function processExecutionPayload(
   //   slots_since_genesis = slot - GENESIS_SLOT
   //   return uint64(state.genesis_time + slots_since_genesis * SECONDS_PER_SLOT)
   if (payload.timestamp !== state.genesisTime + state.slot * state.config.SECONDS_PER_SLOT) {
-    throw Error("Invalid timestamp");
+    throw Error(`Invalid timestamp ${payload.timestamp} genesisTime=${state.genesisTime} slot=${state.slot}`);
   }
 
   // Verify the execution payload is valid

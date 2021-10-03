@@ -15,24 +15,21 @@ import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import PeerId from "peer-id";
+import {InteropStateOpts} from "../../../src/node/utils/interop/state";
 
-export async function getDevBeaconNode({
-  params,
-  options = {},
-  validatorCount = 8,
-  genesisTime,
-  logger,
-  peerId,
-  peerStoreDir,
-}: {
-  params: Partial<IChainConfig>;
-  options?: RecursivePartial<IBeaconNodeOptions>;
-  validatorCount?: number;
-  genesisTime?: number;
-  logger?: ILogger;
-  peerId?: PeerId;
-  peerStoreDir?: string;
-}): Promise<BeaconNode> {
+export async function getDevBeaconNode(
+  opts: {
+    params: Partial<IChainConfig>;
+    options?: RecursivePartial<IBeaconNodeOptions>;
+    validatorCount?: number;
+    logger?: ILogger;
+    peerId?: PeerId;
+    peerStoreDir?: string;
+  } & InteropStateOpts
+): Promise<BeaconNode> {
+  const {params, validatorCount = 8, peerStoreDir} = opts;
+  let {options = {}, logger, peerId} = opts;
+
   if (!peerId) peerId = await createPeerId();
   const tmpDir = tmp.dirSync({unsafeCleanup: true});
   const config = createIChainForkConfig({...minimalConfig, ...params});
@@ -70,7 +67,7 @@ export async function getDevBeaconNode({
     )
   );
 
-  const anchorState = await initDevState(config, db, validatorCount, genesisTime);
+  const anchorState = await initDevState(config, db, validatorCount, opts);
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,

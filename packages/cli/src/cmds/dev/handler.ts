@@ -80,7 +80,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       config,
       db,
       logger,
-      await nodeUtils.initDevState(config, db, validatorCount, genesisTime)
+      await nodeUtils.initDevState(config, db, validatorCount, {genesisTime})
     );
   }
   const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
