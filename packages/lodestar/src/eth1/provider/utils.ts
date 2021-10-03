@@ -83,8 +83,8 @@ export function quantityToBytes(hex: QUANTITY): Uint8Array {
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
  * Compress a 32 ByteVector into a QUANTITY
  */
-export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
-  const bn = bytesToBigInt(bytes, "le");
+export function bytesToQuantity(bytes: Uint8Array | ByteVector): QUANTITY {
+  const bn = bytesToBigInt(bytes as Uint8Array, "le");
   return numToQuantity(bn);
 }
 
