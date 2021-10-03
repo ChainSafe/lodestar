@@ -35,6 +35,13 @@ describe("eth1 / hex encoding", () => {
         num: 0xff00,
         bigint: BigInt(0xff00),
       },
+      // GENESIS_BASE_FEE_PER_GAS
+      {
+        quantity: "0x3b9aca00",
+        bytes: "00ca9a3b00000000000000000000000000000000000000000000000000000000",
+        num: 1000000000,
+        bigint: BigInt(1000000000),
+      },
       {
         quantity: "0xaabb",
         bytes: "bbaa000000000000000000000000000000000000000000000000000000000000",
