@@ -2,11 +2,11 @@
 
 To execution clients wanting to test against lodestar:
 
-- `git clone http://github.com/chainsafe/lodestar && cd lodestar`
+- `git clone --depth 1 http://github.com/chainsafe/lodestar && cd lodestar`
 - `docker-compose -f amphora/docker-compose.devnet.yml up`
 
 Alternatively, to run from source:
-- `git clone http://github.com/chainsafe/lodestar && cd lodestar`
+- `git clone --depth 1 http://github.com/chainsafe/lodestar && cd lodestar`
 - `yarn && yarn build`
 - `./amphora/run-devnet.sh`
 
