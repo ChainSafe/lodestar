@@ -1,4 +1,5 @@
 import {RootHex} from "@chainsafe/lodestar-types";
+import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {ByteVector, fromHexString, toHexString} from "@chainsafe/ssz";
 import {ErrorParseJson} from "./jsonRpcHttpClient";
 
@@ -74,42 +75,17 @@ export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
  * For compatibility with SSZ type of baseFeePerGas, always return a 32 ByteVector
  */
 export function quantityToBytes(hex: QUANTITY): Uint8Array {
-  if (typeof hex !== "string") {
-    throw new Error("Expected hex string to be a string");
-  }
-  if (hex.startsWith("0x")) {
-    hex = hex.slice(2);
-  }
-
-  // Force pad to 32 bytes
-  const bytes = new Uint8Array(32);
-
-  // Automatically handles special case in Ethereum hex formating where hex values may include a single letter
-  // 0x0, 0x1 are valid values
-  for (let i = 0; i < 32; i++) {
-    bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-
-  return bytes;
+  const bn = quantityToBigint(hex);
+  return bigIntToBytes(bn, 32, "le");
 }
 
 /**
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
  * Compress a 32 ByteVector into a QUANTITY
  */
-export function bytesToQuantity(bytes: Uint8Array | ByteVector): QUANTITY {
-  const hexWithPrefix = toHexString(bytes);
-  const hex = hexWithPrefix.slice(2);
-
-  // Find the index with a non-zero character
-  let i = 0;
-  for (; i < hex.length; i++) {
-    if (hex[i] !== "0") {
-      break;
-    }
-  }
-
-  return "0x" + hex.slice(i);
+export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
+  const bn = bytesToBigInt(bytes, "le");
+  return numToQuantity(bn);
 }
 
 /**

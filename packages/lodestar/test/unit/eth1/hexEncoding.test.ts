@@ -10,7 +10,13 @@ import {
 
 describe("eth1 / hex encoding", () => {
   describe("QUANTITY", () => {
-    const testCases: {quantity: QUANTITY; bytes: string; num?: number; bigint: bigint}[] = [
+    const testCases: {
+      quantity: QUANTITY;
+      /** SSZ representation in little endian */
+      bytes: string;
+      num?: number;
+      bigint: bigint;
+    }[] = [
       {
         quantity: "0x7",
         bytes: "0700000000000000000000000000000000000000000000000000000000000000",
@@ -24,32 +30,43 @@ describe("eth1 / hex encoding", () => {
         bigint: BigInt(0xff),
       },
       {
-        quantity: "0xffffffffffffffffffffffffffffffff00000000000000000000000000000000",
-        bytes: "ffffffffffffffffffffffffffffffff00000000000000000000000000000000",
-        bigint: BigInt(0xffffffffffffffffffffffffffffffff00000000000000000000000000000000),
+        quantity: "0xff00",
+        bytes: "00ff000000000000000000000000000000000000000000000000000000000000",
+        num: 0xff00,
+        bigint: BigInt(0xff00),
       },
       {
-        quantity: "0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff",
+        quantity: "0xaabb",
+        bytes: "bbaa000000000000000000000000000000000000000000000000000000000000",
+        bigint: BigInt(0xaabb),
+      },
+      {
+        quantity: "0xffffffffffffffffffffffffffffffff",
+        bytes: "ffffffffffffffffffffffffffffffff00000000000000000000000000000000",
+        bigint: BigInt("0xffffffffffffffffffffffffffffffff"),
+      },
+      {
+        quantity: "0xffffffffffffffffffffffffffffffff00000000000000000000000000000000",
         bytes: "00000000000000000000000000000000ffffffffffffffffffffffffffffffff",
-        bigint: BigInt(0x00000000000000000000000000000000ffffffffffffffffffffffffffffffff),
+        bigint: BigInt("0xffffffffffffffffffffffffffffffff00000000000000000000000000000000"),
       },
     ];
 
     for (const {quantity, bytes, num, bigint} of testCases) {
-      it(`${quantity} -> bytes`, () => {
+      it(`quantityToBytes - ${quantity}`, () => {
         expect(Buffer.from(quantityToBytes(quantity)).toString("hex")).to.equal(bytes);
       });
-      it(`${quantity} -> bigint`, () => {
+      it(`quantityToBigint - ${quantity}`, () => {
         expect(quantityToBigint(quantity)).to.equal(bigint);
       });
-      it(`${bytes} -> QUANTITY`, () => {
+      it(`bytesToQuantity - ${bytes}`, () => {
         expect(bytesToQuantity(Buffer.from(bytes, "hex"))).to.equal(quantity);
       });
       if (num !== undefined) {
-        it(`${quantity} -> num`, () => {
+        it(`quantityToNum - ${quantity}`, () => {
           expect(quantityToNum(quantity)).to.equal(num);
         });
-        it(`${num} -> QUANTITY`, () => {
+        it(`numToQuantity - ${num}`, () => {
           expect(numToQuantity(num)).to.equal(quantity);
         });
       }
