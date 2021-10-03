@@ -14,7 +14,7 @@ const defaultTimeout = 15 * 60 * 1000; // ms
  */
 export async function shell(
   cmd: string | string[],
-  options?: {timeout?: number; maxBuffer?: number; signal?: AbortSignal}
+  options?: {timeout?: number; maxBuffer?: number; signal?: AbortSignal; pipeToProcess?: boolean}
 ): Promise<string> {
   const timeout = options?.timeout || defaultTimeout;
   const maxBuffer = options?.maxBuffer;
@@ -28,6 +28,11 @@ export async function shell(
         resolve(stdout.trim());
       }
     });
+
+    if (options?.pipeToProcess) {
+      proc.stdout?.pipe(process.stdout);
+      proc.stderr?.pipe(process.stderr);
+    }
 
     if (options?.signal) {
       options.signal.addEventListener(
