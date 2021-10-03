@@ -1,7 +1,9 @@
 import fs from "fs";
 import path from "path";
-import http from "http";
+import net from "net";
 import os from "os";
+import {spawn} from "child_process";
+import {Context} from "mocha";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
@@ -21,7 +23,6 @@ import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
-import {Context} from "mocha";
 import {JsonRpcHttpClient} from "../../src/eth1/provider/jsonRpcHttpClient";
 
 // NOTE: Must specify GETH_BINARY_PATH ENV
@@ -30,7 +31,7 @@ import {JsonRpcHttpClient} from "../../src/eth1/provider/jsonRpcHttpClient";
 // $ GETH_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin/geth ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
-/* eslint-disable no-console, @typescript-eslint/naming-convention */
+/* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
 // MERGE_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
@@ -54,6 +55,45 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
+  /**
+   * Start Geth process, accumulate stdout stderr and kill the process on afterEach() hook
+   */
+  function startGethProcess(args: string[]): void {
+    if (!process.env.GETH_BINARY_PATH) {
+      throw Error("GETH_BINARY_PATH ENV must be provided");
+    }
+
+    const gethProc = spawn(process.env.GETH_BINARY_PATH, args);
+
+    let stdoutStr = "";
+    let stderrStr = "";
+
+    gethProc.stdout.on("data", (chunk) => {
+      stdoutStr += Buffer.from(chunk).toString("hex");
+    });
+    gethProc.stderr.on("data", (chunk) => {
+      stderrStr += Buffer.from(chunk).toString("hex");
+    });
+
+    gethProc.on("exit", (code) => {
+      if (code !== null && code > 0) {
+        console.log("\n\nGeth output\n\n", stdoutStr, "\n\n", stderrStr);
+      }
+    });
+
+    afterEachCallbacks.push(async function () {
+      if (gethProc.killed) {
+        throw Error("Geth is killed before end of test");
+      }
+
+      console.log("Killing Geth process", gethProc.pid);
+      await shell(`kill ${gethProc.pid}`);
+
+      // Wait for the P2P to be offline
+      await waitForGethOffline();
+    });
+  }
+
   // Ref: https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
   // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
   // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
@@ -73,29 +113,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // Note: Use double quotes on paths to let bash expand the ~ character
     await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
 
-    const controller = new AbortController();
-    let gethProcError: Error | null = null;
-
-    shell(`${process.env.GETH_BINARY_PATH} --catalyst --http --ws -http.api "engine,net,eth" --datadir "${dataPath}"`, {
-      timeout: 10 * 60 * 1000,
-      signal: controller.signal,
-    }).catch((e) => {
-      gethProcError = e as Error;
-    });
-
-    afterEachCallbacks.push(async function () {
-      if (gethProcError !== null) {
-        gethProcError.message = `Geth process stopped before end of test: ${gethProcError.message}`;
-        throw gethProcError;
-      }
-
-      // Kills geth process
-      if (controller) controller.abort();
-      // Wait for the P2P to be offline
-      await waitForGethOffline();
-    });
+    startGethProcess(["--catalyst", "--http", "--ws", "-http.api", "engine,net,eth", "--datadir", dataPath]);
 
     // Wait for Geth to be online
+    const controller = new AbortController();
+    afterEachCallbacks.push(() => controller?.abort());
     await waitForGethOnline(jsonRpcUrl, controller.signal);
 
     // Fetch genesis block hash
@@ -137,35 +159,25 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       `${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" account import "${skPath}" --password ${passwordPath}`
     );
 
-    const controller = new AbortController();
-    let gethProcError: Error | null = null;
-
-    // Start the node (and press enter once to unlock the account):
-    //  ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" --allow-insecure-unlock --unlock "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b" --password "" --nodiscover console
-    console.log("Starting Geth");
-    shell(
-      `${process.env.GETH_BINARY_PATH} --catalyst --http --ws -http.api "engine,net,eth,miner" --datadir "${dataPath}" --allow-insecure-unlock --unlock ${pubKey} --password ${passwordPath} --nodiscover`,
-      {
-        timeout: 10 * 60 * 1000,
-        signal: controller.signal,
-      }
-    ).catch((e) => {
-      gethProcError = e as Error;
-    });
-
-    afterEachCallbacks.push(async function () {
-      if (gethProcError !== null) {
-        gethProcError.message = `Geth process stopped before end of test: ${gethProcError.message}`;
-        throw gethProcError;
-      }
-
-      // Kills geth process
-      if (controller) controller.abort();
-      // Wait for the P2P to be offline
-      await waitForGethOffline();
-    });
+    startGethProcess([
+      "--catalyst",
+      "--http",
+      "--ws",
+      "-http.api",
+      "engine,net,eth,miner",
+      "--datadir",
+      dataPath,
+      "--allow-insecure-unlock",
+      "--unlock",
+      pubKey,
+      "--password",
+      passwordPath,
+      "--nodiscover",
+    ]);
 
     // Wait for Geth to be online
+    const controller = new AbortController();
+    afterEachCallbacks.push(() => controller?.abort());
     await waitForGethOnline(jsonRpcUrl, controller.signal);
 
     // In the geth console start the miner:
@@ -494,27 +506,39 @@ async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void
 }
 
 async function waitForGethOffline(): Promise<void> {
-  const server = http.createServer();
+  const port = 30303;
 
   for (let i = 0; i < 60; i++) {
-    try {
-      console.log("Waiting for geth offline...");
-      await new Promise<void>((resolve) => {
-        server.listen(30303, resolve);
-      });
-    } catch (e) {
-      await sleep(1000);
+    console.log("Waiting for geth offline...");
+    const isInUse = await isPortInUse(port);
+    if (!isInUse) {
+      return;
     }
-
-    await new Promise<void>((resolve, reject) => {
-      server.close((err) => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-    return;
+    await sleep(1000);
   }
   throw Error("Geth not offline in 60 seconds");
+}
+
+async function isPortInUse(port: number): Promise<boolean> {
+  return await new Promise<boolean>((resolve, reject) => {
+    const server = net.createServer();
+    server.once("error", function (err) {
+      if (((err as unknown) as {code: string}).code === "EADDRINUSE") {
+        resolve(true);
+      } else {
+        reject(err);
+      }
+    });
+
+    server.once("listening", function () {
+      // close the server if listening doesn't fail
+      server.close(() => {
+        resolve(false);
+      });
+    });
+
+    server.listen(port);
+  });
 }
 
 async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
