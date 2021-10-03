@@ -41,9 +41,9 @@ export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
 
     const passphrase = stripOffNewlines(fs.readFileSync(args.importKeystoresPassword, "utf8"));
 
-    const keystorePaths = fs.lstatSync(args.importKeystoresPath).isDirectory()
-      ? fs.readdirSync(args.importKeystoresPath)
-      : [args.importKeystoresPath];
+    const keystorePaths = args.importKeystoresPath
+      .map((filepath) => (fs.lstatSync(filepath).isDirectory() ? fs.readdirSync(filepath) : [filepath]))
+      .flat(1);
 
     return await Promise.all(
       keystorePaths.map(async (keystorePath) =>
