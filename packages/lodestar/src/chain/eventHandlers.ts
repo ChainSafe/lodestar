@@ -2,13 +2,13 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-
+import {IExecutionEngine} from "../executionEngine";
 import {ZERO_HASH_HEX} from "../constants";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
@@ -158,15 +158,8 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
     this.opPool.pruneAll(headState);
   }
 
-  // Send event to consensus client
-  // TODO: Should send update with 0x0000.. when finalized block is still not merge block?
-  const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash;
-  const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
-  if (headBlockHash) {
-    this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
-      this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-    });
-  }
+  // May or may not send notifyForkchoiceUpdate event
+  sendNotifyForkchoiceUpdate(this.forkChoice, this.executionEngine, this.logger);
 
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
@@ -203,15 +196,8 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
 
-  // Send event to consensus client
-  // TODO: Should send update with 0x0000.. when finalized block is still not merge block?
-  const headBlockHash = head.executionPayloadBlockHash;
-  const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
-  if (headBlockHash) {
-    this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
-      this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-    });
-  }
+  // May or may not send notifyForkchoiceUpdate event
+  sendNotifyForkchoiceUpdate(this.forkChoice, this.executionEngine, this.logger);
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
@@ -307,6 +293,32 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
       blockPath,
       preStatePath,
       postStatePath,
+    });
+  }
+}
+
+/**
+ * De-duplicate logic between onForkChoiceFinalized and onForkChoiceHead, both send the exact same event and a data.
+ * May or may not send notifyForkchoiceUpdate event.
+ */
+function sendNotifyForkchoiceUpdate(forkChoice: IForkChoice, executionEngine: IExecutionEngine, logger: ILogger): void {
+  /**
+   * On post MERGE_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+   * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
+   * So we must check that:
+   * - `headBlockHash !== null` -> Pre MERGE_EPOCH
+   * - `headBlockHash !== ZERO_HASH` -> Pre TTD
+   */
+  const headBlockHash = forkChoice.getHead().executionPayloadBlockHash;
+  /**
+   * After MERGE_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+   * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
+   * zero block hash (pre TTD)
+   */
+  const finalizedBlockHash = forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+  if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
+    executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+      logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
     });
   }
 }
