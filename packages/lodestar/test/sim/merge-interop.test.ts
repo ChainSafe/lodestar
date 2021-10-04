@@ -70,12 +70,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     gethProc.stdout.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
       stdoutStr += str;
-      console.log(`GETH: ${str}`);
+      process.stdout.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
     });
     gethProc.stderr.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
       stderrStr += str;
-      console.log(`GETH: ${str}`);
+      process.stderr.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
     });
 
     gethProc.on("exit", (code) => {
