@@ -132,6 +132,11 @@ export class Eth1MergeBlockTracker {
   }
 
   private setMergeBlock(mergeBlock: PowMergeBlock): void {
+    this.logger.info("Terminal POW block found!", {
+      hash: mergeBlock.blockhash,
+      number: mergeBlock.number,
+      totalDifficulty: mergeBlock.totalDifficulty,
+    });
     this.mergeBlock = mergeBlock;
     this.status = StatusCode.FOUND;
     this.close();
@@ -140,6 +145,10 @@ export class Eth1MergeBlockTracker {
   private startFinding(): void {
     if (this.status !== StatusCode.PRE_MERGE) return;
     this.status = StatusCode.SEARCHING;
+    this.logger.info("Starting search for terminal POW block", {
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
+    });
 
     // 1. Fetch current head chain until finding a block with total difficulty less than `transitionStore.terminalTotalDifficulty`
     this.fetchPreviousBlocks().catch((e) => {
@@ -249,6 +258,11 @@ export class Eth1MergeBlockTracker {
    * De-duplicates code between pollLatestBlock() and fetchPreviousBlocks().
    */
   private async fetchPotentialMergeBlock(block: PowMergeBlock): Promise<void> {
+    this.logger.debug("Potential terminal POW block", {
+      number: block.number,
+      hash: block.blockhash,
+      totalDifficulty: block.totalDifficulty,
+    });
     // Persist block for future searches
     this.blocksByHashCache.set(block.blockhash, block);
 
