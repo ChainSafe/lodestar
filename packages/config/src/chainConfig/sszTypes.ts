@@ -31,8 +31,6 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     SHARDING_FORK_VERSION: ssz.Version,
     SHARDING_FORK_EPOCH: ssz.Number64,
 
-    TRANSITION_TOTAL_DIFFICULTY: ssz.Number64,
-
     // Time parameters
     SECONDS_PER_SLOT: ssz.Number64,
     SECONDS_PER_ETH1_BLOCK: ssz.Number64,

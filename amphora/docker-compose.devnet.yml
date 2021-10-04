@@ -15,7 +15,7 @@ services:
       --logFile /logs/beacon.log --logLevelFile debug --logRotate --logMaxFiles 5
       --params.ALTAIR_FORK_EPOCH 0
       --params.MERGE_FORK_EPOCH 0
-      --params.TRANSITION_TOTAL_DIFFICULTY 0
+      --params.TERMINAL_TOTAL_DIFFICULTY 0
       --execution.urls http://localhost:8550
     # NodeJS applications have a default memory limit of 2.5GB.
     # This limit is bit tight for a Prater node, it is recommended to raise the limit

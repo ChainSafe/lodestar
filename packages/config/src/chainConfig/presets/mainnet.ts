@@ -37,9 +37,6 @@ export const chainConfig: IChainConfig = {
   SHARDING_FORK_VERSION: b("0x03000000"),
   SHARDING_FORK_EPOCH: Infinity,
 
-  // TBD, 2**32 is a placeholder. Merge transition approach is in active R&D.
-  TRANSITION_TOTAL_DIFFICULTY: 4294967296,
-
   // Time parameters
   // ---------------------------------------------------------------
   // 12 seconds

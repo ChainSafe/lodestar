@@ -27,8 +27,6 @@ export interface IChainConfig {
   SHARDING_FORK_VERSION: Uint8Array;
   SHARDING_FORK_EPOCH: number;
 
-  TRANSITION_TOTAL_DIFFICULTY: number;
-
   // Time parameters
   SECONDS_PER_SLOT: number;
   SECONDS_PER_ETH1_BLOCK: number;
