@@ -544,7 +544,7 @@ async function isPortInUse(port: number): Promise<boolean> {
 async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
   const eth1Provider = new Eth1Provider(
     ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
-    {providerUrls: [url], enabled: true, depositContractDeployBlock: 0},
+    {providerUrls: [url]},
     signal
   );
 
