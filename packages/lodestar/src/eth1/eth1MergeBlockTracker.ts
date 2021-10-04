@@ -156,11 +156,15 @@ export class Eth1MergeBlockTracker {
     });
 
     // 2. Subscribe to eth1 blocks and recursively fetch potential POW blocks
-    const intervalPoll = setInterval(() => {
-      this.pollLatestBlock().catch((e) => {
-        if (!isErrorAborted(e)) this.logger.error("Error fetching latest POW block", {}, e);
-      });
-    }, this.config.SECONDS_PER_ETH1_BLOCK);
+    const intervalPoll = setInterval(
+      () => {
+        this.pollLatestBlock().catch((e) => {
+          if (!isErrorAborted(e)) this.logger.error("Error fetching latest POW block", {}, e);
+        });
+      },
+      // Ensure setInterval is at minimum 1 second
+      (this.config.SECONDS_PER_ETH1_BLOCK ?? 1) * 1000
+    );
 
     // 3. Prune roughly every epoch
     const intervalPrune = setInterval(() => {
