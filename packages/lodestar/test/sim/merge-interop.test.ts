@@ -396,8 +396,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Stop chain and un-subscribe events so the execution engine won't update it's head
     // Allow some time to broadcast finalized events and complete the importBlock routine
-    await sleep(500);
+    await Promise.all(validators.map((v) => v.stop()));
     await bn.close();
+    await sleep(500);
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
