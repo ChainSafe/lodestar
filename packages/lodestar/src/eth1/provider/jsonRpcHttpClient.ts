@@ -34,8 +34,8 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
   constructor(
     private readonly urls: string[],
-    private readonly opts: {
-      signal: AbortSignal;
+    private readonly opts?: {
+      signal?: AbortSignal;
       timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
@@ -81,7 +81,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       try {
         return await this.fetchJsonOneUrl(url, json, opts);
       } catch (e) {
-        if (this.opts.shouldNotFallback?.(e as Error)) {
+        if (this.opts?.shouldNotFallback?.(e as Error)) {
           throw e;
         }
 
@@ -112,11 +112,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       controller.abort();
-    }, opts?.timeout ?? this.opts.timeout ?? REQUEST_TIMEOUT);
+    }, opts?.timeout ?? this.opts?.timeout ?? REQUEST_TIMEOUT);
 
     const onParentSignalAbort = (): void => controller.abort();
 
-    if (this.opts.signal) {
+    if (this.opts?.signal) {
       this.opts.signal.addEventListener("abort", onParentSignalAbort, {once: true});
     }
 
@@ -128,7 +128,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         signal: controller.signal,
       }).finally(() => {
         clearTimeout(timeout);
-        this.opts.signal?.removeEventListener("abort", onParentSignalAbort);
+        this.opts?.signal?.removeEventListener("abort", onParentSignalAbort);
       });
 
       const body = await res.text();
@@ -142,7 +142,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     } catch (e) {
       if (controller.signal.aborted) {
         // controller will abort on both parent signal abort + timeout of this specific request
-        if (this.opts.signal.aborted) {
+        if (this.opts?.signal?.aborted) {
           throw new ErrorAborted("request");
         } else {
           throw new TimeoutError("request");
