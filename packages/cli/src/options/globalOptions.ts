@@ -6,6 +6,7 @@ interface IGlobalSingleArgs {
   rootDir: string;
   network: NetworkName;
   paramsFile: string;
+  preset: string;
 }
 
 export const defaultNetwork: NetworkName = "mainnet";
@@ -25,6 +26,12 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
 
   paramsFile: {
     description: "Network configuration file",
+    type: "string",
+  },
+
+  // hidden option to allow for LODESTAR_PRESET to be set
+  preset: {
+    hidden: true,
     type: "string",
   },
 };
