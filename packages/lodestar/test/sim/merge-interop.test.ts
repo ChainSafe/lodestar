@@ -68,10 +68,14 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     let stderrStr = "";
 
     gethProc.stdout.on("data", (chunk) => {
-      stdoutStr += Buffer.from(chunk).toString("hex");
+      const str = Buffer.from(chunk).toString("utf8");
+      stdoutStr += str;
+      console.log(`GETH: ${str}`);
     });
     gethProc.stderr.on("data", (chunk) => {
-      stderrStr += Buffer.from(chunk).toString("hex");
+      const str = Buffer.from(chunk).toString("utf8");
+      stderrStr += str;
+      console.log(`GETH: ${str}`);
     });
 
     gethProc.on("exit", (code) => {
