@@ -10,6 +10,8 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     server: string;
     force: boolean;
     graffiti: string;
+    importKeystoresPath?: string[];
+    importKeystoresPassword?: string;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -41,6 +43,18 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   graffiti: {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
+    type: "string",
+  },
+
+  importKeystoresPath: {
+    description: "Path(s) to a directory or single filepath to validator keystores, i.e. Launchpad validators",
+    defaultDescription: "./keystores/*.json",
+    type: "array",
+  },
+
+  importKeystoresPassword: {
+    description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
+    defaultDescription: "./password.txt",
     type: "string",
   },
 
