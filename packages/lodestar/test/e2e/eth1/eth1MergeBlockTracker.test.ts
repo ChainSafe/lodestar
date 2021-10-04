@@ -25,8 +25,8 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
   function getConfig(ttd: bigint): IChainConfig {
     return ({
       // Set time units to 1s to make the test faster
-      SECONDS_PER_ETH1_BLOCK: 1000,
-      SECONDS_PER_SLOT: 1000,
+      SECONDS_PER_ETH1_BLOCK: 1,
+      SECONDS_PER_SLOT: 1,
       DEPOSIT_CONTRACT_ADDRESS: Buffer.alloc(32, 0),
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     } as Partial<IChainConfig>) as IChainConfig;
