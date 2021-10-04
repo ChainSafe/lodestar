@@ -9,7 +9,7 @@ import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
@@ -19,7 +19,6 @@ import {logFilesDir} from "./params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {RestApiOptions} from "../../src/api";
 import {simTestInfoTracker} from "../utils/node/simTest";
-import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
@@ -361,9 +360,13 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       eth1BlockHash: fromHexString(genesisBlockHash),
     });
 
+    afterEachCallbacks.push(async function () {
+      await bn.close();
+      await sleep(1000);
+    });
+
     const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
 
-    const justificationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
     const validators = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient,
@@ -374,6 +377,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testLoggerOpts,
     });
 
+    afterEachCallbacks.push(async function () {
+      await Promise.all(validators.map((v) => v.stop()));
+    });
+
     await Promise.all(validators.map((v) => v.start()));
 
     await new Promise<void>((resolve) => {
@@ -381,27 +388,38 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         // Resolve only if the finalized checkpoint includes execution payload
         const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
         if (finalizedBlock?.executionPayloadBlockHash !== null) {
+          console.log(`\nGot event ${event}, stopping validators and nodes\n`);
           resolve();
         }
       });
     });
 
-    try {
-      await justificationEventListener;
-      console.log(`\nGot event ${event}, stopping validators and nodes\n`);
-    } catch (e) {
-      (e as Error).message = `failed to get event: ${event}: ${(e as Error).message}`;
-      throw e;
-    } finally {
-      await Promise.all(validators.map((v) => v.stop()));
+    // Stop chain and un-subscribe events so the execution engine won't update it's head
+    await bn.close();
 
-      // wait for 1 slot
-      await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
-      stopInfoTracker();
-      await bn.close();
-      console.log("\n\nDone\n\n");
-      await sleep(1000);
+    // Assertions to make sure the end state is good
+    // 1. The proper head is set
+    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [jsonRpcUrl]});
+    const consensusHead = bn.chain.forkChoice.getHead();
+    const executionHeadBlockNumber = await rpc.getBlockNumber();
+    const executionHeadBlock = await rpc.getBlockByNumber(executionHeadBlockNumber);
+    if (!executionHeadBlock) throw Error("Execution has not head block");
+    if (consensusHead.executionPayloadBlockHash !== executionHeadBlock.hash) {
+      throw Error(
+        "Consensus head not equal to execution head: " +
+          JSON.stringify({
+            executionHeadBlockNumber,
+            executionHeadBlockHash: executionHeadBlock.hash,
+            consensusHeadExecutionPayloadBlockHash: consensusHead.executionPayloadBlockHash,
+            consensusHeadSlot: consensusHead.slot,
+          })
+      );
     }
+
+    // wait for 1 slot to print current epoch stats
+    await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+    stopInfoTracker();
+    console.log("\n\nDone\n\n");
   }
 });
 
