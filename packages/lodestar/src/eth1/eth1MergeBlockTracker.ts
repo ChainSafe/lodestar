@@ -151,7 +151,7 @@ export class Eth1MergeBlockTracker {
       this.pollLatestBlock().catch((e) => {
         if (!isErrorAborted(e)) this.logger.error("Error fetching latest POW block", {}, e);
       });
-    }, this.config.SECONDS_PER_ETH1_BLOCK);
+    }, this.config.SECONDS_PER_ETH1_BLOCK * 1000);
 
     // 3. Prune roughly every epoch
     const intervalPrune = setInterval(() => {
