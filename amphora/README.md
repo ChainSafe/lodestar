@@ -13,10 +13,10 @@ Alternatively, to run from source:
 
 By default, info-level logs will be printed to stdout, debug logs will be stored in a docker volume.
 
-Relevant options to configure
+Some relevant options you might configure
 
-- edit the docker-compose file if using docker, bash script if running from source
-- `--params.MERGE_FORK_EPOCH` - set to > 0 to set a merge fork post-genesis
-- `--params.TERMINAL_TOTAL_DIFFICULTY` - set to configure the total difficulty that triggers the merge transition
-- `--execution.urls` - set to change the host/port used to connect to the execution client
-- `--genesisEth1Hash` - set a genesis eth1 block hash (hex string)
+- edit amphora/devnet.rcconfig.yml
+- `params.MERGE_FORK_EPOCH` - set to > 0 to set a merge fork post-genesis
+- `params.TERMINAL_TOTAL_DIFFICULTY` - set to configure the total difficulty that triggers the merge transition
+- `execution.urls` & `eth1.providerUrls` - set to change the host/port used to connect to the execution client
+- `genesisEth1Hash` - set a genesis eth1 block hash (hex string) (useful for M2)
