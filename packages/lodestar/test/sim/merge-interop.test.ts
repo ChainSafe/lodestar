@@ -68,11 +68,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     gethProc.stdout.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      process.stdout.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
+      process.stdout.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
     });
     gethProc.stderr.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      process.stderr.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
+      process.stderr.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
     });
 
     gethProc.on("exit", (code) => {
@@ -89,6 +89,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
       // Wait for the P2P to be offline
       await waitForGethOffline();
+      console.log("Geth successfully killed!");
     });
   }
 
@@ -276,17 +277,18 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   });
 
   it("Post-merge, run for a few blocks", async function () {
+    console.log("\n\nPost-merge, run for a few blocks\n\n");
     const {genesisBlockHash} = await runGethPostMerge();
     await runNodeWithGeth.bind(this)({
       genesisBlockHash,
       mergeEpoch: 0,
       ttd: BigInt(0),
-      testName: "pre-merge",
+      testName: "post-merge",
     });
   });
 
   it("Pre-merge, run for a few blocks", async function () {
-    console.log("Merge test!");
+    console.log("\n\nPre-merge, run for a few blocks\n\n");
     const {genesisBlockHash} = await runGethPreMerge();
     await runNodeWithGeth.bind(this)({
       genesisBlockHash,
