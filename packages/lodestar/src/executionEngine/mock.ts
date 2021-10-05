@@ -156,10 +156,12 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
-    const payload = this.preparingPayloads.get(Number(payloadId));
+    const payloadIdNbr = Number(payloadId);
+    const payload = this.preparingPayloads.get(payloadIdNbr);
     if (!payload) {
       throw Error(`Unknown payloadId ${payloadId}`);
     }
+    this.preparingPayloads.delete(payloadIdNbr);
     return payload;
   }
 }
