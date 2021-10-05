@@ -20,6 +20,13 @@ export const Spec = new ContainerType<ISpec>({
     ...BeaconPreset.fields,
     ...ChainConfig.fields,
   },
+  casingMap: Object.keys({
+    ...BeaconPreset.fields,
+    ...ChainConfig.fields,
+  }).reduce((obj: Record<string, string>, key) => {
+    obj[key] = key;
+    return obj;
+  }, {}),
 });
 
 export type Api = {
