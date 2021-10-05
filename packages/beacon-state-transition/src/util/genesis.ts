@@ -1,12 +1,10 @@
-import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   ForkName,
-  GENESIS_BASE_FEE_PER_GAS,
   GENESIS_EPOCH,
-  GENESIS_GAS_LIMIT,
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
@@ -198,7 +196,8 @@ export function initializeBeaconStateFromEth1(
   eth1BlockHash: Bytes32,
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[],
-  fullDepositDataRootList?: TreeBacked<List<Root>>
+  fullDepositDataRootList?: TreeBacked<List<Root>>,
+  executionPayloadHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked()
 ): TreeBacked<allForks.BeaconState> {
   const state = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return TreeBacked<allForks.BeaconState> anyway
@@ -217,19 +216,17 @@ export function initializeBeaconStateFromEth1(
   if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
     const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
     const stateAltair = state as TreeBacked<altair.BeaconState>;
+    stateAltair.fork.previousVersion = config.ALTAIR_FORK_VERSION;
+    stateAltair.fork.currentVersion = config.ALTAIR_FORK_VERSION;
     stateAltair.currentSyncCommittee = syncCommittees;
     stateAltair.nextSyncCommittee = syncCommittees;
   }
 
   if (GENESIS_SLOT >= config.MERGE_FORK_EPOCH) {
     const stateMerge = state as TreeBacked<merge.BeaconState>;
-    // as of Sep 2021, this is for spec test only
-    stateMerge.fork.previousVersion = config.GENESIS_FORK_VERSION;
-    stateMerge.latestExecutionPayloadHeader.blockHash = eth1BlockHash;
-    stateMerge.latestExecutionPayloadHeader.timestamp = eth1Timestamp;
-    stateMerge.latestExecutionPayloadHeader.random = eth1BlockHash;
-    stateMerge.latestExecutionPayloadHeader.gasLimit = GENESIS_GAS_LIMIT;
-    stateMerge.latestExecutionPayloadHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
+    stateMerge.fork.previousVersion = config.MERGE_FORK_VERSION;
+    stateMerge.fork.currentVersion = config.MERGE_FORK_VERSION;
+    stateMerge.latestExecutionPayloadHeader = executionPayloadHeader;
   }
 
   return state;
