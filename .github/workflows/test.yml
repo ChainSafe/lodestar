@@ -31,7 +31,6 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-
       - name: Lint Grafana Dashboard
         run: yarn validate-gdash
       - name: Test root binary exists
@@ -46,7 +45,5 @@ jobs:
         run: yarn coverage
       - name: E2e tests
         run: yarn test:e2e
-      # Tool incompatible with current Typescript version
-      # See https://github.com/bbc/typescript-docs-verifier/issues/1
-      # - name: README check
-      #   run: yarn run check-readme
+      - name: README check
+        run: yarn run check-readme
