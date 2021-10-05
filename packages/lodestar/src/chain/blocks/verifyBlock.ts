@@ -178,7 +178,7 @@ export async function verifyBlockStateTransition(
   } catch (e) {
     // Notify of consensus invalid block to execution client
     if (executionPayloadEnabled)
-      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
+      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, false).catch((e) => {
         chain.logger.error("Error on notifyConsensusValidated", {valid: false}, e);
       });
 
