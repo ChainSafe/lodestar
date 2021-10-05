@@ -3520,7 +3520,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_stfn_epoch_transition_seconds_count",
               "interval": "",
               "legendFormat": "number of epoch transition",
