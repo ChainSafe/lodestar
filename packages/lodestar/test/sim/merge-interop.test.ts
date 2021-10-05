@@ -39,12 +39,15 @@ const terminalTotalDifficultyPreMerge = 20;
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
-  const homeDir = os.homedir();
-  const dataPath = path.join(homeDir, "ethereum/taunus");
+  const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
   const jsonRpcPort = 8545;
   const enginePort = 8545;
   const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
   const engineApiUrl = `http://localhost:${enginePort}`;
+
+  after(async () => {
+    await shell(`rm -rf ${dataPath}`);
+  });
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -64,24 +67,17 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const gethProc = spawn(process.env.GETH_BINARY_PATH, args);
 
-    let stdoutStr = "";
-    let stderrStr = "";
-
     gethProc.stdout.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      stdoutStr += str;
       process.stdout.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
     });
     gethProc.stderr.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      stderrStr += str;
       process.stderr.write(`GETH: ${str}`); // str already contains a new line. console.log adds a new line
     });
 
     gethProc.on("exit", (code) => {
-      if (code !== null && code > 0) {
-        console.log("\n\nGeth output\n\n", stdoutStr, "\n\n", stderrStr);
-      }
+      console.log("Geth exited", {code});
     });
 
     afterEachCallbacks.push(async function () {
