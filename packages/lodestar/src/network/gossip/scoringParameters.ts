@@ -171,6 +171,13 @@ function getAllTopicsScoreParams(
 
     const activeValidatorCount = eth2Context.activeValidatorCount;
     const {aggregatorsPerslot, committeesPerSlot} = expectedAggregatorCountPerSlot(activeValidatorCount);
+
+    // Checks to prevent unwanted errors in gossipsub
+    // Error: invalid score parameters for topic /eth2/4a26c58b/beacon_attestation_0/ssz_snappy: invalid FirstMessageDeliveriesCap; must be positive
+    //   at Object.validatePeerScoreParams (/usr/app/node_modules/libp2p-gossipsub/src/score/peer-score-params.js:62:27)
+    if (activeValidatorCount === 0) throw Error("activeValidatorCount === 0");
+    if (aggregatorsPerslot === 0) throw Error("aggregatorsPerslot === 0");
+
     const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
     topicsParams[
       stringifyGossipTopic(forkDigestContext, {
