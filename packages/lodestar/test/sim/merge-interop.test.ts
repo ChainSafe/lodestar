@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import net from "net";
-import os from "os";
 import {spawn} from "child_process";
 import {Context} from "mocha";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
