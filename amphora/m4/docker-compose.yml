@@ -1,7 +1,9 @@
 version: "3.4"
 services:
   beacon_node:
-    image: chainsafe/lodestar:next
+    build:
+      context: ../../
+      dockerfile: docker/from_source.Dockerfile
     network_mode: host
     volumes:
       - ./:/amphora
@@ -12,7 +14,9 @@ services:
       LODESTAR_PRESET: minimal
 
   geth:
-    build: ./geth
+    build:
+      context: .
+      dockerfile: geth/Dockerfile
     network_mode: host
     volumes:
       - geth:/data

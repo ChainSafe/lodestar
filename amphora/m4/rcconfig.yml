@@ -1,13 +1,14 @@
 #####################
-# MUST UPDATE WITH EXECUTION LAYER GENESIS BLOCK HASH
-genesisEth1Hash: "0x0000000000000000000000000000000000000000000000000000000000000000"
+# MUST UPDATE
+genesisStateFile: /amphora/genesis.ssz
+network.bootMultiaddrs: /ip4/35.178.114.73/tcp/9000/p2p/16Uiu2HAkz6oRBK6aKRA2uv9vxJEPhc2Rmznd5D1DqE4DoCYNqnf3
 #####################
 
 # Spec
 params.PRESET_BASE: minimal
 params.ALTAIR_FORK_EPOCH: "0"
-params.MERGE_FORK_EPOCH: "0"
-params.TERMINAL_TOTAL_DIFFICULTY: 0
+params.MERGE_FORK_EPOCH: "1"
+params.TERMINAL_TOTAL_DIFFICULTY: 16
 
 # Execution engine
 eth1.enabled: true
@@ -15,7 +16,6 @@ eth1.providerUrls: http://localhost:8545
 execution.urls: http://localhost:8545
 
 # Other opts
-logLevel: info
 api.rest.enabled: true
 api.rest.host: 0.0.0.0
 logFile: beacon.log

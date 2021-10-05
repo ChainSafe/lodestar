@@ -8,8 +8,8 @@ RUN cd /go-ethereum && go run build/ci.go install ./cmd/geth
 
 FROM alpine:latest
 
-COPY ./genesis.json /genesis.json
-COPY ./run.sh /run.sh
+COPY genesis.json /genesis.json
+COPY geth/run.sh /run.sh
 COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 
 EXPOSE 8545 8546 30303 30303/udp
