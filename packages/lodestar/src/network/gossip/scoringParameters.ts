@@ -189,25 +189,26 @@ function getAllTopicsScoreParams(
       },
     });
 
+    const beaconAttestationParams = getTopicScoreParams(config, precomputedParams, {
+      topicWeight: beaconAttestationSubnetWeight,
+      expectedMessageRate: activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
+      firstMessageDecayTime: multipleBurstsPerSubnetPerEpoch ? epochDurationMs : epochDurationMs * 4,
+      meshMessageInfo: {
+        decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
+        capFactor: 16,
+        activationWindow: multipleBurstsPerSubnetPerEpoch
+          ? slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
+          : epochDurationMs,
+        currentSlot: eth2Context.currentSlot,
+      },
+    });
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
       const topicStr = stringifyGossipTopic(forkDigestContext, {
         type: GossipType.beacon_attestation,
         fork,
         subnet,
       });
-      topicsParams[topicStr] = getTopicScoreParams(config, precomputedParams, {
-        topicWeight: beaconAttestationSubnetWeight,
-        expectedMessageRate: activeValidatorCount / ATTESTATION_SUBNET_COUNT / SLOTS_PER_EPOCH,
-        firstMessageDecayTime: multipleBurstsPerSubnetPerEpoch ? epochDurationMs : epochDurationMs * 4,
-        meshMessageInfo: {
-          decaySlots: multipleBurstsPerSubnetPerEpoch ? SLOTS_PER_EPOCH * 4 : SLOTS_PER_EPOCH * 16,
-          capFactor: 16,
-          activationWindow: multipleBurstsPerSubnetPerEpoch
-            ? slotDurationMs * (SLOTS_PER_EPOCH / 2 + 1)
-            : epochDurationMs,
-          currentSlot: eth2Context.currentSlot,
-        },
-      });
+      topicsParams[topicStr] = beaconAttestationParams;
     }
   }
   return topicsParams;
