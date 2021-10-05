@@ -1,7 +1,8 @@
-import {List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, Bytes32, Number64, phase0, Root} from "@chainsafe/lodestar-types";
+import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
+import {allForks, Bytes32, Number64, phase0, Root, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
+import {GENESIS_BASE_FEE_PER_GAS, GENESIS_GAS_LIMIT} from "@chainsafe/lodestar-params";
 
 export const INTEROP_BLOCK_HASH = Buffer.alloc(32, "B");
 export const INTEROP_TIMESTAMP = Math.pow(2, 40);
@@ -22,7 +23,21 @@ export function getInteropState(
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): TreeBacked<allForks.BeaconState> {
-  const state = initializeBeaconStateFromEth1(config, eth1BlockHash, eth1Timestamp, deposits, fullDepositDataRootList);
+  const latestBlockHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked();
+  // TODO: when having different test options, consider modifying these values
+  latestBlockHeader.blockHash = eth1BlockHash;
+  latestBlockHeader.timestamp = eth1Timestamp;
+  latestBlockHeader.random = eth1BlockHash;
+  latestBlockHeader.gasLimit = GENESIS_GAS_LIMIT;
+  latestBlockHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
+  const state = initializeBeaconStateFromEth1(
+    config,
+    eth1BlockHash,
+    eth1Timestamp,
+    deposits,
+    fullDepositDataRootList,
+    latestBlockHeader
+  );
   state.genesisTime = genesisTime;
   return state;
 }
