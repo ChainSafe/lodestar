@@ -8,14 +8,14 @@ RUN cd /usr/app/go-ethereum && go run build/ci.go install ./cmd/geth
 
 # Pull Geth into a second stage deploy alpine container
 FROM alpine:latest
+RUN apk add --no-cache bash curl
 
 RUN apk add --no-cache ca-certificates
 COPY --from=builder usr/app/go-ethereum/build/bin/geth /usr/local/bin/
 
 WORKDIR /usr/app
-COPY genesis.json genesis.json
+#COPY genesis.json genesis.json
 
-RUN geth --catalyst --datadir /data init genesis.json
-EXPOSE 8545 8546 30303 30303/udp
-ENTRYPOINT ["geth"]
-#RUN apk add --no-cache bash curl
+#RUN geth --catalyst --datadir /data init genesis.json
+EXPOSE 30303 30303/udp
+#ENTRYPOINT ["geth"]
