@@ -67,7 +67,9 @@ export class Clock implements IClock {
     let slotOrEpoch = timeItem === TimeItem.Slot ? slot : computeEpochAtSlot(slot);
     while (!signal.aborted) {
       // Must catch fn() to ensure `sleep()` is awaited both for resolve and reject
-      await fn(slotOrEpoch, signal).catch((e: Error) => this.logger.error("Error on runEvery fn", {}, e));
+      await fn(slotOrEpoch, signal).catch((e: Error) => {
+        if (!isErrorAborted(e)) this.logger.error("Error on runEvery fn", {}, e);
+      });
 
       try {
         await sleep(this.timeUntilNext(timeItem), signal);

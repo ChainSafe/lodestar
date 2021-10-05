@@ -18,7 +18,6 @@ describe("Eth1 streams", function () {
     return new Eth1Provider(
       config,
       {
-        enabled: true,
         providerUrls: [testnet.providerUrl],
         depositContractDeployBlock: testnet.depositBlock,
       },

@@ -8,6 +8,7 @@ import {Eth1Options} from "../../../src/eth1/options";
 import {testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
 import {quantityToBigint} from "../../../src/eth1/provider/utils";
+import {ZERO_HASH} from "../../../src/constants";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -31,14 +32,14 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
       TERMINAL_TOTAL_DIFFICULTY: ttd,
     } as Partial<IChainConfig>) as IChainConfig;
   }
-  const configNoTtd = getConfig(BigInt(0));
+  const eth1Config = {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH};
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
   it("Should find merge block polling future 'latest' blocks", async () => {
-    const eth1Provider = new Eth1Provider(configNoTtd, eth1Options, controller.signal);
+    const eth1Provider = new Eth1Provider(eth1Config, eth1Options, controller.signal);
     const latestBlock = await eth1Provider.getBlockByNumber("latest");
     if (!latestBlock) throw Error("No latestBlock");
 
@@ -75,7 +76,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
   });
 
   it("Should find merge block fetching past blocks", async () => {
-    const eth1Provider = new Eth1Provider(configNoTtd, eth1Options, controller.signal);
+    const eth1Provider = new Eth1Provider(eth1Config, eth1Options, controller.signal);
     const latestBlock = await eth1Provider.getBlockByNumber("latest");
     if (!latestBlock) throw Error("No latestBlock");
 

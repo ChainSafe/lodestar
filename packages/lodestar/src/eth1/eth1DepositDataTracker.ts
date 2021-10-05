@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
@@ -124,7 +124,7 @@ export class Eth1DepositDataTracker {
         if (e instanceof HttpRpcError && e.status === 429) {
           this.logger.debug("Eth1 provider rate limited", {}, e);
           await sleep(RATE_LIMITED_WAIT_MS, this.signal);
-        } else {
+        } else if (!isErrorAborted(e)) {
           this.logger.error("Error updating eth1 chain cache", {}, e as Error);
           await sleep(MIN_WAIT_ON_ERORR_MS, this.signal);
         }

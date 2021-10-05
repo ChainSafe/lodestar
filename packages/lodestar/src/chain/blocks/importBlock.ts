@@ -12,6 +12,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {IEth1ForBlockProduction} from "../../eth1";
+import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {ChainEvent} from "../emitter";
@@ -19,6 +20,7 @@ import {ChainEventEmitter} from "../emitter";
 import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
+import {ZERO_HASH_HEX} from "../../constants";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
@@ -26,6 +28,7 @@ export type ImportBlockModules = {
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
+  executionEngine: IExecutionEngine;
   emitter: ChainEventEmitter;
   config: IChainForkConfig;
   logger: ILogger;
@@ -95,6 +98,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     onBlockPrecachedData.powBlockParent = powBlockParent;
   }
 
+  const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
 
   // - Register state and block to the validator monitor
@@ -144,6 +148,31 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       // chain reorg
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
+    }
+  }
+
+  // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
+  // Notify execution layer of head and finalized updates
+  const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+  if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
+    /**
+     * On post MERGE_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+     * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
+     * So we must check that:
+     * - `headBlockHash !== null` -> Pre MERGE_EPOCH
+     * - `headBlockHash !== ZERO_HASH` -> Pre TTD
+     */
+    const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash;
+    /**
+     * After MERGE_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+     * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
+     * zero block hash (pre TTD)
+     */
+    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+    if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
+      chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+        chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+      });
     }
   }
 
