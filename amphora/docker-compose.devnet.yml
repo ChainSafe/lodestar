@@ -2,7 +2,7 @@ version: "3.4"
 services:
   beacon_node:
     image: chainsafe/lodestar:next
-    restart: always
+    network_mode: host
     volumes:
       - ./:/amphora
       - beacon_node:/data
@@ -21,8 +21,14 @@ services:
     environment:
       NODE_OPTIONS: --max_old_space_size=6144
       LODESTAR_PRESET: minimal
+
+  geth:
+    build: ./geth
     network_mode: host
+    volumes:
+      - geth:/data
 
 volumes:
   beacon_node:
   logs:
+  geth:

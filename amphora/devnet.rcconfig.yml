@@ -1,5 +1,4 @@
 ---
-
 params.PRESET_BASE: minimal # 8 slots per epoch
 genesisValidators: 32
 startValidators: 0:31
@@ -15,6 +14,5 @@ params.SECONDS_PER_ETH1_BLOCK: 4
 params.TERMINAL_TOTAL_DIFFICULTY: 16
 params.SECONDS_PER_SLOT: 4
 eth1.enabled: true
-eth1.providerUrls: http://localhost:8550
-execution.urls: http://localhost:8550
-
+eth1.providerUrls: http://localhost:8545
+execution.urls: http://localhost:8545

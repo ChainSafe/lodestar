@@ -23,7 +23,6 @@ import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
-import {JsonRpcHttpClient} from "../../src/eth1/provider/jsonRpcHttpClient";
 
 // NOTE: Must specify GETH_BINARY_PATH ENV
 // Example:
@@ -173,16 +172,14 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       "--password",
       passwordPath,
       "--nodiscover",
+      // Automatically start mining
+      "--mine",
     ]);
 
     // Wait for Geth to be online
     const controller = new AbortController();
     afterEachCallbacks.push(() => controller?.abort());
     await waitForGethOnline(jsonRpcUrl, controller.signal);
-
-    // In the geth console start the miner:
-    //  > miner.start()
-    await gethStartMiner(jsonRpcUrl, controller.signal);
 
     // Fetch genesis block hash
     const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
@@ -554,9 +551,4 @@ async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<st
   }
 
   return genesisBlock.hash;
-}
-
-async function gethStartMiner(url: string, signal: AbortSignal): Promise<void> {
-  const rpc = new JsonRpcHttpClient([url], {signal});
-  await rpc.fetch({method: "miner_start", params: []});
 }
