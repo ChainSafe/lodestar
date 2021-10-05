@@ -1,0 +1,25 @@
+---
+#####################
+# MUST UPDATE WITH EXECUTION LAYER GENESIS BLOCK HASH
+genesisEth1Hash: "0x0000000000000000000000000000000000000000000000000000000000000000"
+#####################
+
+# Spec
+params.PRESET_BASE: minimal
+params.ALTAIR_FORK_EPOCH: "0"
+params.MERGE_FORK_EPOCH: "0"
+params.TERMINAL_TOTAL_DIFFICULTY: 0
+
+# Execution engine
+eth1.enabled: true
+eth1.providerUrls: http://localhost:8545
+execution.urls: http://localhost:8545
+
+# Other opts
+logLevel: info
+api.rest.enabled: true
+api.rest.host: 0.0.0.0
+logFile: beacon.log
+logLevelFile: debug
+logRotate: true
+logMaxFiles: 5

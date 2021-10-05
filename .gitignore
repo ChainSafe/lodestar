@@ -53,3 +53,5 @@ packages/lodestar/.tmpdb/
 
 # Git artifacts
 packages/cli/.git-data.json
+
+temp/

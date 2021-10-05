@@ -1,18 +1,20 @@
 version: "3.4"
 services:
   beacon_node:
-    image: chainsafe/lodestar:next
+    build:
+      context: ../
+      dockerfile: docker/from_source.Dockerfile
     network_mode: host
     volumes:
       - ./:/amphora
       - beacon_node:/data
       - logs:/logs
-    #ports:
+    # ports:
     #  - "9000:9000" # P2P port
     #  - "9596:9596" # REST API port
     command: >
-      dev
-        --rcConfig /amphora/devnet.rcconfig.yml
+      beacon
+        --rcConfig /amphora/rcconfig.yml
         --rootDir /data
         --logFile /logs/beacon.log
     # NodeJS applications have a default memory limit of 2.5GB.
