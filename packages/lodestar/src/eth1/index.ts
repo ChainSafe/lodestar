@@ -60,7 +60,7 @@ export function initializeEth1ForBlockProduction(
   }
 }
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
-  private readonly eth1DepositDataTracker: Eth1DepositDataTracker;
+  private readonly eth1DepositDataTracker: Eth1DepositDataTracker | null;
   private readonly eth1MergeBlockTracker: Eth1MergeBlockTracker;
 
   constructor(
@@ -69,13 +69,19 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
   ) {
     const eth1Provider = modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal);
 
-    this.eth1DepositDataTracker = new Eth1DepositDataTracker(opts, modules, eth1Provider);
+    this.eth1DepositDataTracker = opts.disableEth1DepositDataTracker
+      ? null
+      : new Eth1DepositDataTracker(opts, modules, eth1Provider);
 
     this.eth1MergeBlockTracker = new Eth1MergeBlockTracker(modules, eth1Provider);
   }
 
   async getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits> {
-    return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
+    if (this.eth1DepositDataTracker === null) {
+      return {eth1Data: state.eth1Data, deposits: []};
+    } else {
+      return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
+    }
   }
 
   getPowBlockAtTotalDifficulty(): Root | null {

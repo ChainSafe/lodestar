@@ -1,5 +1,6 @@
 export type Eth1Options = {
   enabled: boolean;
+  disableEth1DepositDataTracker?: boolean;
   providerUrls: string[];
   depositContractDeployBlock?: number;
 };

@@ -6,6 +6,7 @@ export interface IEth1Args {
   "eth1.providerUrl": string;
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
+  "eth1.disableEth1DepositDataTracker": boolean;
 }
 
 export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
@@ -20,6 +21,7 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
     enabled: args["eth1.enabled"],
     providerUrls: providerUrls,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
+    disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
   };
 }
 
@@ -49,6 +51,14 @@ export const options: ICliCommandOptions<IEth1Args> = {
     description: "Block number at which the deposit contract contract was deployed",
     type: "number",
     defaultDescription: String(defaultOptions.eth1.depositContractDeployBlock),
+    group: "eth1",
+  },
+
+  "eth1.disableEth1DepositDataTracker": {
+    hidden: true,
+    description: "Disable Eth1DepositDataTracker modules",
+    type: "boolean",
+    defaultDescription: String(defaultOptions.eth1.disableEth1DepositDataTracker),
     group: "eth1",
   },
 };
