@@ -1,12 +1,11 @@
 import {AbortController} from "@chainsafe/abort-controller";
-
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {createDbMetrics, createDiscv5Metrics} from "@chainsafe/lodestar/lib/metrics";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
 import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
@@ -52,6 +51,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   }, logger.info.bind(logger));
 
   logger.info("Lodestar", {version: version, network: args.network});
+  if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
   let discv5Metrics: null | ReturnType<typeof createDiscv5Metrics> = null;

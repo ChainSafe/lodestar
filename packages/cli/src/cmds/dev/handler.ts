@@ -8,6 +8,10 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {SecretKey} from "@chainsafe/bls";
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId} from "../../config";
 import {IGlobalArgs} from "../../options";
@@ -16,9 +20,6 @@ import {initializeOptionsAndConfig} from "../init/handler";
 import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
-import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {SecretKey} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {getVersion} from "../../util/version";
 
 /**
@@ -66,6 +67,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
   logger.info("Lodestar", {version: getVersion(), network: args.network});
+  if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});
   await db.start();
