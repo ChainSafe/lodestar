@@ -1,0 +1,16 @@
+---
+
+api.rest.enabled: true
+api.rest.host: 0.0.0.0
+api.rest.api: "*"
+logFile: beacon.log
+logLevelFile: debug
+logRotate: true
+logMaxFiles: 5
+eth1.enabled: true
+eth1.providerUrls: http://localhost:8545
+execution.urls: http://localhost:8545
+paramsFile: amphora/v2/config.yaml
+genesisStateFile: amphora/v2/genesis.ssz
+network.bootMultiaddrs: /ip4/35.178.114.73/tcp/9000/p2p/16Uiu2HAmLzmg7WXGtXwZrfLZAbBn8rdY3MWWfvoN4FfeYR4vrQpV
+network.discv5.bootEnrs: enr:-K24QJ7fj53ZVzBvfJvVMyFeW3yzn9cb30LqdkdbhZShHn71ApVXv_auGba8uhVICD2bTQvQoiB3SkmAfTz-8NMMHY0Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC_4NP0AgAAAf__________gmlkgnY0iXNlY3AyNTZrMaEDe-7HhtJ_OuFY2feuHsXuMsPVoHzn7tU9QHqFRIzo7FaIc3luY25ldHMAg3RjcIIjKA

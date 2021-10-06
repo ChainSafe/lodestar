@@ -1,0 +1,19 @@
+version: "3.4"
+services:
+  beacon_node:
+    build:
+      context: ../..
+      dockerfile: docker/from_source.Dockerfile
+    network_mode: host
+    volumes:
+      - .:/usr/app/amphora/v2
+      - beacon_node:/data
+      - logs:/logs
+    command: beacon --rcConfig /usr/app/amphora/v2/rcconfig.yml --rootDir /data --logFile /logs/beacon.log
+    environment:
+      LODESTAR_PRESET: minimal
+
+volumes:
+  beacon_node:
+  logs:
+  geth:
