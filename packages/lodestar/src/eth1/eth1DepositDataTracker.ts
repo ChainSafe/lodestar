@@ -17,6 +17,8 @@ const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;
 /** Eth1 blocks happen every 14s approx, not need to update too often once synced */
 const AUTO_UPDATE_PERIOD_MS = 60 * 1000;
+/** Prevent infinite loops */
+const MIN_UPDATE_PERIOD_MS = 1 * 1000;
 /** Miliseconds to wait after getting 429 Too Many Requests */
 const RATE_LIMITED_WAIT_MS = 30 * 1000;
 /** Min time to wait on auto update loop on unknown error */
@@ -113,11 +115,11 @@ export class Eth1DepositDataTracker {
       lastRunMs = Date.now();
 
       try {
-        const hasCatchedUp = await this.update();
+        const hasCaughtUp = await this.update();
 
-        if (hasCatchedUp) {
-          const sleepTime = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), 0);
-          await sleep(sleepTime, this.signal);
+        if (hasCaughtUp) {
+          const sleepTimeMs = Math.max(AUTO_UPDATE_PERIOD_MS + lastRunMs - Date.now(), MIN_UPDATE_PERIOD_MS);
+          await sleep(sleepTimeMs, this.signal);
         }
       } catch (e) {
         // From Infura: 429 Too Many Requests
@@ -139,9 +141,9 @@ export class Eth1DepositDataTracker {
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
     const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE);
-    const catchedUpDeposits = await this.updateDepositCache(remoteFollowBlock);
-    const catchedUpBlocks = await this.updateBlockCache(remoteFollowBlock);
-    return catchedUpDeposits && catchedUpBlocks;
+    const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
+    const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
+    return hasCaughtUpDeposits && hasCaughtUpBlocks;
   }
 
   /**
@@ -150,7 +152,9 @@ export class Eth1DepositDataTracker {
    */
   private async updateDepositCache(remoteFollowBlock: number): Promise<boolean> {
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
-    const fromBlock = this.getFromBlockToFetch(lastProcessedDepositBlockNumber);
+    // The DB may contain deposits from a different chain making lastProcessedDepositBlockNumber > current chain tip
+    // The Math.min() fixes those rare scenarios where fromBlock > toBlock
+    const fromBlock = Math.min(remoteFollowBlock, this.getFromBlockToFetch(lastProcessedDepositBlockNumber));
     const toBlock = Math.min(remoteFollowBlock, fromBlock + MAX_BLOCKS_PER_LOG_QUERY - 1);
 
     const depositEvents = await this.eth1Provider.getDepositEvents(fromBlock, toBlock);
@@ -173,16 +177,24 @@ export class Eth1DepositDataTracker {
    */
   private async updateBlockCache(remoteFollowBlock: number): Promise<boolean> {
     const lastCachedBlock = await this.eth1DataCache.getHighestCachedBlockNumber();
+    // lastProcessedDepositBlockNumber sets the upper bound of the possible block range to fetch in this update
     const lastProcessedDepositBlockNumber = await this.getLastProcessedDepositBlockNumber();
+    // lowestEventBlockNumber set a lower bound of possible block range to fetch in this update
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
 
-    // Do not fetch any blocks if no deposits have been fetched yet
-    // depositCount data is available only after the first deposit event
+    // If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
+    // So there's not useful blocks to fetch until at least 1 deposit is found. So updateBlockCache() returns true
+    // because is has caught up to all possible data to fetch which is none.
     if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
-      return false;
+      return true;
     }
 
-    const fromBlock = Math.max(this.getFromBlockToFetch(lastCachedBlock), lowestEventBlockNumber);
+    // Cap the upper limit of fromBlock with remoteFollowBlock in case deployBlock is set to a different network value
+    const fromBlock = Math.min(
+      remoteFollowBlock,
+      // Fetch from the last cached block or the lowest known deposit block number
+      Math.max(this.getFromBlockToFetch(lastCachedBlock), lowestEventBlockNumber)
+    );
     const toBlock = Math.min(
       remoteFollowBlock,
       fromBlock + MAX_BLOCKS_PER_BLOCK_QUERY - 1, // Block range is inclusive
@@ -200,11 +212,15 @@ export class Eth1DepositDataTracker {
   }
 
   private getFromBlockToFetch(lastCachedBlock: number | null): number {
-    return Math.max(lastCachedBlock ? lastCachedBlock + 1 : 0, this.eth1Provider.deployBlock || 0);
+    if (lastCachedBlock === null) {
+      return this.eth1Provider.deployBlock ?? 0;
+    } else {
+      return lastCachedBlock + 1;
+    }
   }
 
   private async getLastProcessedDepositBlockNumber(): Promise<number | null> {
-    if (!this.lastProcessedDepositBlockNumber) {
+    if (this.lastProcessedDepositBlockNumber === null) {
       this.lastProcessedDepositBlockNumber = await this.depositsCache.getHighestDepositEventBlockNumber();
     }
     return this.lastProcessedDepositBlockNumber;
