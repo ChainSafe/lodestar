@@ -16,7 +16,7 @@ interface IBeaconExtraArgs {
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   port: {
-    description: "P2P port for discv5 and lipbp",
+    description: "P2P port for discv5 and libp2p",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: "9000",
