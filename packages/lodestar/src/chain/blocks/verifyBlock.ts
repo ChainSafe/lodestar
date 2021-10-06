@@ -168,7 +168,22 @@ export async function verifyBlockStateTransition(
         case ExecutePayloadStatus.INVALID:
           throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
         case ExecutePayloadStatus.SYNCING:
-          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
+          // It's okay to ignore SYNCING status because:
+          // - We MUST verify execution payloads of blocks we attest
+          // - We are NOT REQUIRED to check the execution payload of blocks we don't attest
+          // When EL syncs from genesis to a chain post-merge, it doesn't know what the head, CL knows. However, we
+          // must verify (complete this fn) and import a block to sync. Since we are syncing we only need to verify
+          // consensus and trust that whatever the chain agrees is valid, is valid; no need to verify. When we
+          // verify consensus up to the head we notify forkchoice update head and then EL can sync to our head. At that
+          // point regular EL sync kicks in and it does verify the execution payload (EL blocks). If after syncing EL
+          // gets to an invalid payload or we can prepare payloads on what we consider the head that's a critical error
+          //
+          // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
+          if (partiallyVerifiedBlock.fromRangeSync) {
+            break;
+          } else {
+            throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
+          }
       }
     }
 
