@@ -2,6 +2,7 @@
 
 api.rest.enabled: true
 api.rest.host: 0.0.0.0
+api.rest.api: "*"
 logFile: beacon.log
 logLevelFile: debug
 logRotate: true
