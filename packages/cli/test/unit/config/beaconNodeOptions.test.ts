@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {defaultOptions} from "@chainsafe/lodestar";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {BeaconNodeOptions} from "../../../src/config";
 import {bootEnrs as pyrmontBootEnrs} from "../../../src/networks/pyrmont";
 
@@ -16,8 +17,8 @@ describe("config / beaconNodeOptions", () => {
   });
 
   it("Should return added partial options", () => {
-    const initialPartialOptions = {eth1: {enabled: true}};
-    const editedPartialOptions = {eth1: {enabled: false}};
+    const initialPartialOptions = {eth1: {mode: "rpcClient"}} as RecursivePartial<IBeaconNodeOptions>;
+    const editedPartialOptions = {eth1: {mode: "disabled"}} as RecursivePartial<IBeaconNodeOptions>;
 
     const beaconNodeOptions = new BeaconNodeOptions({
       beaconNodeOptionsCli: initialPartialOptions,

@@ -41,11 +41,7 @@ export class Eth1Provider implements IEth1Provider {
   private readonly depositContractAddress: string;
   private readonly rpc: JsonRpcHttpClient;
 
-  constructor(
-    config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Eth1Options,
-    signal?: AbortSignal
-  ) {
+  constructor(config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">, opts: Eth1Options, signal?: AbortSignal) {
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
     if (opts.mode !== "rpcClient") {

@@ -18,7 +18,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
 
-      "eth1.enabled": true,
+      "eth1.mode": "rpcClient",
       "eth1.providerUrl": "http://my.node:8545",
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
@@ -66,7 +66,7 @@ describe("options / beaconNodeOptions", () => {
         persistInvalidSszObjects: true,
       },
       eth1: {
-        enabled: true,
+        mode: "rpcClient",
         providerUrls: ["http://my.node:8545"],
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,

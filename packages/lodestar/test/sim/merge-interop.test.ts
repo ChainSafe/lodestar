@@ -400,7 +400,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
-    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {mode: "rpcClient", providerUrls: [jsonRpcUrl]});
+    const rpc = new Eth1Provider(
+      {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH},
+      {mode: "rpcClient", providerUrls: [jsonRpcUrl]}
+    );
     const consensusHead = bn.chain.forkChoice.getHead();
     const executionHeadBlockNumber = await rpc.getBlockNumber();
     const executionHeadBlock = await rpc.getBlockByNumber(executionHeadBlockNumber);
