@@ -1,3 +1,5 @@
+import PeerId from "peer-id";
+import {Multiaddr} from "multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
@@ -135,6 +137,17 @@ export function getLodestarApi({
     async dropStateCache() {
       chain.stateCache.clear();
       chain.checkpointStateCache.clear();
+    },
+
+    async connectPeer(peerIdStr, multiaddrStrs) {
+      const peerId = PeerId.createFromB58String(peerIdStr);
+      const multiaddrs = multiaddrStrs.map((multiaddrStr) => new Multiaddr(multiaddrStr));
+      await network.connectToPeer(peerId, multiaddrs);
+    },
+
+    async disconnectPeer(peerIdStr) {
+      const peerId = PeerId.createFromB58String(peerIdStr);
+      await network.disconnectPeer(peerId);
     },
   };
 }
