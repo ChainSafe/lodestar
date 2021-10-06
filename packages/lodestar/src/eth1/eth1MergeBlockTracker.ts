@@ -1,12 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Epoch, RootHex, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
-import {ZERO_HASH} from "../constants";
-import {toHexString} from "@chainsafe/ssz";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -50,7 +49,7 @@ export class Eth1MergeBlockTracker {
    * First found mergeBlock.
    * TODO: Accept multiple, but then handle long backwards searches properly after crossing TTD
    */
-  private terminalPowBlock: PowMergeBlock | null = null;
+  private mergeBlock: PowMergeBlock | null = null;
   private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
 
   private status: StatusCode = StatusCode.PRE_MERGE;
@@ -75,7 +74,18 @@ export class Eth1MergeBlockTracker {
       return;
     }
 
-    void this.initialize(clockEpoch);
+    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
+    if (startEpoch <= clockEpoch) {
+      // Start now
+      void this.startFinding();
+    } else {
+      // Set a timer to start in the future
+      const intervalToStart = setInterval(() => {
+        void this.startFinding();
+      }, (startEpoch - clockEpoch) * SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
+      this.intervals.push(intervalToStart);
+    }
+
     signal.addEventListener("abort", () => this.close(), {once: true});
   }
 
@@ -84,11 +94,11 @@ export class Eth1MergeBlockTracker {
    */
   getTerminalPowBlock(): PowMergeBlock | null {
     // For better debugging in case this module stops searching too early
-    if (this.terminalPowBlock === null && this.status === StatusCode.POST_MERGE) {
+    if (this.mergeBlock === null && this.status === StatusCode.POST_MERGE) {
       throw Error("Eth1MergeBlockFinder is on POST_MERGE status and found no mergeBlock");
     }
 
-    return this.terminalPowBlock;
+    return this.mergeBlock;
   }
 
   /**
@@ -118,61 +128,31 @@ export class Eth1MergeBlockTracker {
     return null;
   }
 
-  private async initialize(clockEpoch: Epoch): Promise<void> {
-    // Terminal block hash override takes precedence over terminal total difficulty
-    if (!ssz.Root.equals(this.config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
-      try {
-        const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
-        if (powBlockOverride) {
-          return this.setTerminalPowBlock(powBlockOverride);
-        }
-      } catch (e) {
-        if (!isErrorAborted(e))
-          this.logger.error(
-            "Unable to search for TERMINAL_BLOCK_HASH block",
-            {terminalBlockHash: toHexString(this.config.TERMINAL_BLOCK_HASH)},
-            e as Error
-          );
-        throw e;
-      }
-    }
-
-    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
-    if (startEpoch <= clockEpoch) {
-      // Start now
-      this.startFinding();
-    } else {
-      // Set a timer to start in the future
-      const intervalToStart = setInterval(() => {
-        this.startFinding();
-      }, (startEpoch - clockEpoch) * SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT * 1000);
-      this.intervals.push(intervalToStart);
-    }
-  }
-
   private close(): void {
     this.intervals.forEach(clearInterval);
   }
 
-  private setTerminalPowBlock(terminalPowBlock: PowMergeBlock): void {
+  private setTerminalPowBlock(mergeBlock: PowMergeBlock): void {
     this.logger.info("Terminal POW block found!", {
-      hash: terminalPowBlock.blockhash,
-      number: terminalPowBlock.number,
-      totalDifficulty: terminalPowBlock.totalDifficulty,
+      hash: mergeBlock.blockhash,
+      number: mergeBlock.number,
+      totalDifficulty: mergeBlock.totalDifficulty,
     });
-    this.terminalPowBlock = terminalPowBlock;
+    this.mergeBlock = mergeBlock;
     this.status = StatusCode.FOUND;
     this.close();
   }
 
-  private startFinding(): void {
+  private async startFinding(): Promise<void> {
     if (this.status !== StatusCode.PRE_MERGE) return;
+    const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
+    if (powBlockOverride) {
+      return this.setTerminalPowBlock(powBlockOverride);
+    }
     this.status = StatusCode.SEARCHING;
     this.logger.info("Starting search for terminal POW block", {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      TERMINAL_BLOCK_HASH: toHexString(this.config.TERMINAL_BLOCK_HASH),
     });
 
     // 1. Fetch current head chain until finding a block with total difficulty less than `transitionStore.terminalTotalDifficulty`
