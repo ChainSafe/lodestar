@@ -27,7 +27,7 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
 
 export const options: ICliCommandOptions<IEth1Args> = {
   "eth1.mode": {
-    description: "'rpcClient' to follow the eth1 chain, or 'mock' or 'disable'",
+    description: "'rpcClient' to follow the eth1 chain, or 'disable'",
     type: "string",
     defaultDescription: String(defaultOptions.eth1.mode),
     group: "eth1",
