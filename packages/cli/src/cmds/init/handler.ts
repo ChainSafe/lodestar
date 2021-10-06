@@ -50,6 +50,16 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     }
   }
 
+  // Apply port option
+  if (args.port !== undefined) {
+    beaconNodeOptions.set({
+      network: {
+        discv5: {bindAddr: `/ip4/0.0.0.0/${args.port}`},
+        localMultiaddrs: [`/ip4/0.0.0.0/tcp/${args.port}`],
+      },
+    });
+  }
+
   // initialize params file, if it doesn't exist
   const config = getBeaconConfigFromArgs(args);
 

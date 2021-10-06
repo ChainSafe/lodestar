@@ -5,6 +5,7 @@ import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {ICliCommandOptions, ILogArgs} from "../../util";
 
 interface IBeaconExtraArgs {
+  port?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
@@ -14,6 +15,13 @@ interface IBeaconExtraArgs {
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
+  port: {
+    description: "P2P port for discv5 and lipbp",
+    type: "number",
+    // TODO: Derive from BeaconNode defaults
+    defaultDescription: "9000",
+  },
+
   forceGenesis: {
     description: "Force beacon to create genesis without file",
     type: "boolean",
