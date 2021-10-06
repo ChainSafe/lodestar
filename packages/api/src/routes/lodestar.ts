@@ -99,8 +99,8 @@ export const routesData: RoutesData<Api> = {
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
-  connectPeer: {url: "/eth/v1/node/connect_peer", method: "GET"},
-  disconnectPeer: {url: "/eth/v1/node/disconnect_peer", method: "GET"},
+  connectPeer: {url: "/eth/v1/node/connect_peer", method: "POST"},
+  disconnectPeer: {url: "/eth/v1/node/disconnect_peer", method: "POST"},
 };
 
 export type ReqTypes = {
