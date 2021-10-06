@@ -153,7 +153,13 @@ export async function verifyBlockStateTransition(
 
     if (executionPayloadEnabled) {
       // TODO: Handle better executePayload() returning error is syncing
-      const isValid = await chain.executionEngine.executePayload(executionPayloadEnabled);
+      const isValid = await chain.executionEngine.executePayload(
+        // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
+        // For clarity and since it's needed anyway, just send the struct representation at this level such that
+        // executePayload() can expect a regular JS object.
+        // TODO: If blocks are no longer TreeBacked, remove.
+        executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
+      );
       if (!isValid) {
         throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
       }
