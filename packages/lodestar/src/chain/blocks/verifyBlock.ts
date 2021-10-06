@@ -12,6 +12,7 @@ import {BlockProcessOpts} from "../options";
 import {IStateRegenerator, RegenCaller} from "../regen";
 import {IBlsVerifier} from "../bls";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
+import {ExecutePayloadStatus} from "../../executionEngine/interface";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
@@ -153,15 +154,21 @@ export async function verifyBlockStateTransition(
 
     if (executionPayloadEnabled) {
       // TODO: Handle better executePayload() returning error is syncing
-      const isValid = await chain.executionEngine.executePayload(
+      const status = await chain.executionEngine.executePayload(
         // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
         // For clarity and since it's needed anyway, just send the struct representation at this level such that
         // executePayload() can expect a regular JS object.
         // TODO: If blocks are no longer TreeBacked, remove.
         executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
       );
-      if (!isValid) {
-        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+
+      switch (status) {
+        case ExecutePayloadStatus.VALID:
+          break; // OK
+        case ExecutePayloadStatus.INVALID:
+          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+        case ExecutePayloadStatus.SYNCING:
+          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
       }
     }
 

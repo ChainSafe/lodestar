@@ -12,7 +12,7 @@ import {
   QUANTITY,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {IExecutionEngine, PayloadId} from "./interface";
+import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -57,7 +57,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<boolean> {
+  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
     const method = "engine_executePayload";
     const {status} = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
@@ -67,8 +67,14 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       params: [serializeExecutionPayload(executionPayload)],
     });
 
-    // TODO: Handle invalid status
-    return status === ExecutePayloadStatus.VALID;
+    switch (status) {
+      case ExecutePayloadStatus.VALID:
+        return ExecutePayloadStatus.VALID;
+      case ExecutePayloadStatus.INVALID:
+        return ExecutePayloadStatus.INVALID;
+      case ExecutePayloadStatus.SYNCING:
+        return ExecutePayloadStatus.SYNCING;
+    }
   }
 
   /**
@@ -199,15 +205,6 @@ type EngineApiRpcReturnTypes = {
   engine_preparePayload: {payloadId: QUANTITY};
   engine_getPayload: ExecutionPayloadRpc;
 };
-
-enum ExecutePayloadStatus {
-  /** given payload is valid */
-  VALID = "VALID",
-  /** given payload is invalid */
-  INVALID = "INVALID",
-  /** sync process is in progress */
-  SYNCING = "SYNCING",
-}
 
 type PayloadAttributes = {
   /** DATA, 32 Bytes - hash of the parent block */
