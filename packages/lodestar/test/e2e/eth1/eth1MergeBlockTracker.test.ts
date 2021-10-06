@@ -49,7 +49,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     config.TERMINAL_BLOCK_HASH = fromHexString(latestBlock.hash);
     const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
       {
-        config: getConfig(terminalTotalDifficulty),
+        config,
         logger,
         signal: controller.signal,
         clockEpoch: 0,
@@ -71,7 +71,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     const mergeBlock = eth1MergeBlockTracker.getTerminalPowBlock();
     if (!mergeBlock) throw Error("terminal pow block not found");
     expect(mergeBlock.totalDifficulty).to.equal(
-      terminalTotalDifficulty,
+      quantityToBigint(latestBlock.totalDifficulty),
       "terminalPowBlock.totalDifficulty is not correct"
     );
   });
