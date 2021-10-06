@@ -131,7 +131,7 @@ export class Eth1MergeBlockTracker {
           this.logger.error(
             "Unable to search for TERMINAL_BLOCK_HASH block",
             {terminalBlockHash: toHexString(this.config.TERMINAL_BLOCK_HASH)},
-            e
+            e as Error
           );
         throw e;
       }
