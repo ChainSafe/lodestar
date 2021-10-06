@@ -21,6 +21,7 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
     enabled: args["eth1.enabled"],
     providerUrls: providerUrls,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
+    disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
   };
 }
 
