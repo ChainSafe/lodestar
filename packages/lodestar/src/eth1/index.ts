@@ -3,10 +3,16 @@ import {allForks, Root} from "@chainsafe/lodestar-types";
 import {merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface";
-import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker";
+import {
+  Eth1DepositDataTracker,
+  Eth1DepositDataTrackerDisabled,
+  Eth1DepositDataTrackerModules,
+  IEth1DepositDataTracker,
+} from "./eth1DepositDataTracker";
 import {Eth1MergeBlockTracker, Eth1MergeBlockTrackerModules} from "./eth1MergeBlockTracker";
 import {Eth1Options} from "./options";
 import {Eth1Provider} from "./provider/eth1Provider";
+import {Eth1ProviderMock} from "./provider/eth1Provider/mock";
 export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 
 // This module encapsulates all consumer functionality to the execution node (formerly eth1). The execution client
@@ -46,7 +52,9 @@ export function initializeEth1ForBlockProduction(
   modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "logger" | "signal">,
   anchorState: allForks.BeaconState
 ): IEth1ForBlockProduction {
-  if (opts.enabled) {
+  if (opts.mode === "disabled") {
+    return new Eth1ForBlockProductionDisabled();
+  } else {
     return new Eth1ForBlockProduction(opts, {
       config: modules.config,
       db: modules.db,
@@ -55,8 +63,6 @@ export function initializeEth1ForBlockProduction(
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
       isMergeComplete: merge.isMergeStateType(anchorState) && merge.isMergeComplete(anchorState),
     });
-  } else {
-    return new Eth1ForBlockProductionDisabled();
   }
 }
 export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
@@ -67,7 +73,14 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     opts: Eth1Options,
     modules: Eth1DepositDataTrackerModules & Eth1MergeBlockTrackerModules & {eth1Provider?: IEth1Provider}
   ) {
-    const eth1Provider = modules.eth1Provider || new Eth1Provider(modules.config, opts, modules.signal);
+    // never happen
+    if (opts.mode === "disabled") {
+      throw Error("Eth1 option should not be disabled");
+    }
+    const eth1Provider =
+      modules.eth1Provider || opts.mode === "rpcClient"
+        ? new Eth1Provider(modules.config, opts, modules.signal)
+        : new Eth1ProviderMock(opts);
 
     this.eth1DepositDataTracker = opts.disableEth1DepositDataTracker
       ? null
@@ -103,12 +116,16 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
  * May produce invalid blocks by not adding new deposits and voting for the same eth1Data
  */
 export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
+  private readonly eth1DepositDataTracker: IEth1DepositDataTracker;
+  constructor() {
+    this.eth1DepositDataTracker = new Eth1DepositDataTrackerDisabled();
+  }
   /**
    * Returns same eth1Data as in state and no deposits
    * May produce invalid blocks if deposits have to be added
    */
   async getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits> {
-    return {eth1Data: state.eth1Data, deposits: []};
+    return this.eth1DepositDataTracker.getEth1DataAndDeposits(state);
   }
 
   /**

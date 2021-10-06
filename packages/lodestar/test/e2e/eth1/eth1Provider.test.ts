@@ -12,7 +12,7 @@ describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
 
   const eth1Options: Eth1Options = {
-    enabled: true,
+    mode: "rpcClient",
     providerUrls: [testnet.providerUrl],
     depositContractDeployBlock: 0,
   };

@@ -349,7 +349,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         api: {rest: {enabled: true} as RestApiOptions},
         sync: {isSingleNode: true},
         network: {disablePeerDiscovery: true},
-        eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
+        eth1: {mode: "rpcClient", providerUrls: [jsonRpcUrl]},
         executionEngine: {urls: [engineApiUrl]},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
@@ -400,7 +400,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
-    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [jsonRpcUrl]});
+    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {mode: "rpcClient", providerUrls: [jsonRpcUrl]});
     const consensusHead = bn.chain.forkChoice.getHead();
     const executionHeadBlockNumber = await rpc.getBlockNumber();
     const executionHeadBlock = await rpc.getBlockByNumber(executionHeadBlockNumber);
@@ -563,7 +563,7 @@ async function isPortInUse(port: number): Promise<boolean> {
 async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
   const eth1Provider = new Eth1Provider(
     ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
-    {providerUrls: [url]},
+    {providerUrls: [url], mode: "rpcClient"},
     signal
   );
 

@@ -2,7 +2,7 @@ import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
 export interface IEth1Args {
-  "eth1.enabled": boolean;
+  "eth1.mode": "rpcClient" | "disabled";
   "eth1.providerUrl": string;
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
@@ -18,7 +18,7 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
   }
 
   return {
-    enabled: args["eth1.enabled"],
+    mode: args["eth1.mode"],
     providerUrls: providerUrls,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
@@ -26,10 +26,10 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
 }
 
 export const options: ICliCommandOptions<IEth1Args> = {
-  "eth1.enabled": {
-    description: "Whether to follow the eth1 chain",
-    type: "boolean",
-    defaultDescription: String(defaultOptions.eth1.enabled),
+  "eth1.mode": {
+    description: "'rpcClient' to follow the eth1 chain, or 'mock' or 'disable'",
+    type: "string",
+    defaultDescription: String(defaultOptions.eth1.mode),
     group: "eth1",
   },
 
@@ -43,7 +43,7 @@ export const options: ICliCommandOptions<IEth1Args> = {
   "eth1.providerUrls": {
     description: "Urls to Eth1 node with enabled rpc",
     type: "array",
-    defaultDescription: defaultOptions.eth1.providerUrls.join(" "),
+    defaultDescription: defaultOptions.eth1.mode === "rpcClient" ? defaultOptions.eth1.providerUrls.join(" ") : "",
     group: "eth1",
   },
 

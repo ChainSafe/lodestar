@@ -59,7 +59,7 @@ export async function getDevBeaconNode(
     deepmerge(
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false},
+        eth1: {mode: "disabled"},
         metrics: {enabled: false},
         network: {disablePeerDiscovery: true},
       } as Partial<IBeaconNodeOptions>,

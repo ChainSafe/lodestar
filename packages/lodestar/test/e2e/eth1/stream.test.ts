@@ -18,6 +18,7 @@ describe("Eth1 streams", function () {
     return new Eth1Provider(
       config,
       {
+        mode: "rpcClient",
         providerUrls: [testnet.providerUrl],
         depositContractDeployBlock: testnet.depositBlock,
       },

@@ -2,16 +2,16 @@ import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {chunkifyInclusiveRange} from "../../util/chunkify";
-import {linspace} from "../../util/numpy";
-import {retry} from "../../util/retry";
-import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
-import {IEth1Provider} from "../interface";
-import {Eth1Options} from "../options";
-import {isValidAddress} from "../../util/address";
-import {EthJsonRpcBlockRaw} from "../interface";
-import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
-import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils";
+import {chunkifyInclusiveRange} from "../../../util/chunkify";
+import {linspace} from "../../../util/numpy";
+import {retry} from "../../../util/retry";
+import {depositEventTopics, parseDepositLog} from "../../utils/depositContract";
+import {IEth1Provider} from "../../interface";
+import {Eth1Options} from "../../options";
+import {isValidAddress} from "../../../util/address";
+import {EthJsonRpcBlockRaw} from "../../interface";
+import {JsonRpcHttpClient} from "../jsonRpcHttpClient";
+import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "../utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -43,11 +43,14 @@ export class Eth1Provider implements IEth1Provider {
 
   constructor(
     config: Pick<IChainConfig, "DEPOSIT_CONTRACT_ADDRESS">,
-    opts: Pick<Eth1Options, "depositContractDeployBlock" | "providerUrls">,
+    opts: Eth1Options,
     signal?: AbortSignal
   ) {
     this.deployBlock = opts.depositContractDeployBlock ?? 0;
     this.depositContractAddress = toHexString(config.DEPOSIT_CONTRACT_ADDRESS);
+    if (opts.mode !== "rpcClient") {
+      throw Error("Invalid eth1 mode");
+    }
     this.rpc = new JsonRpcHttpClient(opts.providerUrls, {
       signal,
       // Don't fallback with is truncated error. Throw early and let the retry on this class handle it

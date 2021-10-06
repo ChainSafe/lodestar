@@ -31,11 +31,15 @@ export type Eth1DepositDataTrackerModules = {
   signal: AbortSignal;
 };
 
+export interface IEth1DepositDataTracker {
+  getEth1DataAndDeposits: (state: CachedBeaconState<allForks.BeaconState>) => Promise<Eth1DataAndDeposits>;
+}
+
 /**
  * Main class handling eth1 data fetching, processing and storing
  * Upon instantiation, starts fetcheing deposits and blocks at regular intervals
  */
-export class Eth1DepositDataTracker {
+export class Eth1DepositDataTracker implements IEth1DepositDataTracker {
   private config: IChainForkConfig;
   private logger: ILogger;
   private signal: AbortSignal;
@@ -224,5 +228,16 @@ export class Eth1DepositDataTracker {
       this.lastProcessedDepositBlockNumber = await this.depositsCache.getHighestDepositEventBlockNumber();
     }
     return this.lastProcessedDepositBlockNumber;
+  }
+}
+
+/** Disabled version of Eth1DepositDataTracker */
+export class Eth1DepositDataTrackerDisabled implements IEth1DepositDataTracker {
+  /**
+   * Returns same eth1Data as in state and no deposits
+   * May produce invalid blocks if deposits have to be added
+   */
+  async getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits> {
+    return {eth1Data: state.eth1Data, deposits: []};
   }
 }

@@ -96,7 +96,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     if (!this.knownBlocks.has(headBlockHash)) {
       throw Error(`Unknown headBlockHash ${headBlockHash}`);
     }
-    if (!this.knownBlocks.has(finalizedBlockHash)) {
+    if (finalizedBlockHash != ZERO_HASH_HEX && !this.knownBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
 

@@ -76,8 +76,8 @@ const externalOptionsOverrides: {[k: string]: Options} = {
     defaultDescription: undefined,
     default: 1,
   },
-  "eth1.enabled": {
-    ...beaconNodeOptions["eth1.enabled"],
+  "eth1.mode": {
+    ...beaconNodeOptions["eth1.mode"],
     defaultDescription: undefined,
     default: false,
   },
