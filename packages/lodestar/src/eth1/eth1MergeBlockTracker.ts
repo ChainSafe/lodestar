@@ -1,10 +1,12 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Epoch, RootHex} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
+import {ZERO_HASH} from "../constants";
+import {toHexString} from "@chainsafe/ssz";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -48,7 +50,7 @@ export class Eth1MergeBlockTracker {
    * First found mergeBlock.
    * TODO: Accept multiple, but then handle long backwards searches properly after crossing TTD
    */
-  private mergeBlock: PowMergeBlock | null = null;
+  private terminalPowBlock: PowMergeBlock | null = null;
   private readonly blocksByHashCache = new Map<RootHex, PowMergeBlock>();
 
   private status: StatusCode = StatusCode.PRE_MERGE;
@@ -91,13 +93,13 @@ export class Eth1MergeBlockTracker {
   /**
    * Returns the most recent POW block that satisfies the merge block condition
    */
-  getPowBlockAtTotalDifficulty(): PowMergeBlock | null {
+  getTerminalPowBlock(): PowMergeBlock | null {
     // For better debugging in case this module stops searching too early
-    if (this.mergeBlock === null && this.status === StatusCode.POST_MERGE) {
+    if (this.terminalPowBlock === null && this.status === StatusCode.POST_MERGE) {
       throw Error("Eth1MergeBlockFinder is on POST_MERGE status and found no mergeBlock");
     }
 
-    return this.mergeBlock;
+    return this.terminalPowBlock;
   }
 
   /**
@@ -131,13 +133,13 @@ export class Eth1MergeBlockTracker {
     this.intervals.forEach(clearInterval);
   }
 
-  private setMergeBlock(mergeBlock: PowMergeBlock): void {
+  private setTerminalPowBlock(terminalPowBlock: PowMergeBlock): void {
     this.logger.info("Terminal POW block found!", {
-      hash: mergeBlock.blockhash,
-      number: mergeBlock.number,
-      totalDifficulty: mergeBlock.totalDifficulty,
+      hash: terminalPowBlock.blockhash,
+      number: terminalPowBlock.number,
+      totalDifficulty: terminalPowBlock.totalDifficulty,
     });
-    this.mergeBlock = mergeBlock;
+    this.terminalPowBlock = terminalPowBlock;
     this.status = StatusCode.FOUND;
     this.close();
   }
@@ -148,6 +150,8 @@ export class Eth1MergeBlockTracker {
     this.logger.info("Starting search for terminal POW block", {
       // eslint-disable-next-line @typescript-eslint/naming-convention
       TERMINAL_TOTAL_DIFFICULTY: this.config.TERMINAL_TOTAL_DIFFICULTY,
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      TERMINAL_BLOCK_HASH: toHexString(this.config.TERMINAL_BLOCK_HASH),
     });
 
     // 1. Fetch current head chain until finding a block with total difficulty less than `transitionStore.terminalTotalDifficulty`
@@ -172,6 +176,13 @@ export class Eth1MergeBlockTracker {
   }
 
   private async fetchPreviousBlocks(): Promise<void> {
+    // Terminal block hash override takes precedence over terminal total difficulty
+    if (!ssz.Root.equals(this.config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
+      const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
+      if (powBlockOverride) {
+        return this.setTerminalPowBlock(powBlockOverride);
+      }
+    }
     // If latest block is under TTD, stop. Subscriptions will pick future blocks
     // If latest block is over TTD, go backwards until finding a merge block
     // Note: Must ensure parent relationship
@@ -215,7 +226,7 @@ export class Eth1MergeBlockTracker {
             // Is terminal total difficulty block
             if (childBlock.parentHash === parentBlock.blockhash) {
               // AND has verified block -> parent relationship
-              return this.setMergeBlock(childBlock);
+              return this.setTerminalPowBlock(childBlock);
             } else {
               // WARNING! Re-org while doing getBlocksByNumber() call. Ensure that this block is the merge block
               // and not some of its parents.
@@ -280,7 +291,7 @@ export class Eth1MergeBlockTracker {
         parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY
       ) {
         // Is terminal total difficulty block AND has verified block -> parent relationship
-        return this.setMergeBlock(block);
+        return this.setTerminalPowBlock(block);
       }
 
       // Guard against infinite loops

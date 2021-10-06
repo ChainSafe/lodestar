@@ -84,8 +84,8 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     }
   }
 
-  getPowBlockAtTotalDifficulty(): Root | null {
-    const block = this.eth1MergeBlockTracker.getPowBlockAtTotalDifficulty();
+  getTerminalPowBlock(): Root | null {
+    const block = this.eth1MergeBlockTracker.getTerminalPowBlock();
     return block && fromHexString(block.blockhash);
   }
 
@@ -114,7 +114,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
   /**
    * Will miss the oportunity to propose the merge block but will still produce valid blocks
    */
-  getPowBlockAtTotalDifficulty(): Root | null {
+  getTerminalPowBlock(): Root | null {
     return null;
   }
 

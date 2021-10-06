@@ -44,7 +44,7 @@ export interface IEth1ForBlockProduction {
   getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits>;
 
   /** Returns the most recent POW block that satisfies the merge block condition */
-  getPowBlockAtTotalDifficulty(): Root | null;
+  getTerminalPowBlock(): Root | null;
   /** Call when merge is irrevocably completed to stop polling unnecessary data from the eth1 node */
   mergeCompleted(): void;
   /** Get a POW block by hash checking the local cache first */
