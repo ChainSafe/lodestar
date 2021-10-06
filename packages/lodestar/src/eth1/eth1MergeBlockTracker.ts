@@ -75,18 +75,7 @@ export class Eth1MergeBlockTracker {
       return;
     }
 
-    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
-    if (startEpoch <= clockEpoch) {
-      // Start now
-      this.startFinding();
-    } else {
-      // Set a timer to start in the future
-      const intervalToStart = setInterval(() => {
-        this.startFinding();
-      }, (startEpoch - clockEpoch) * SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
-      this.intervals.push(intervalToStart);
-    }
-
+    void this.initialize(clockEpoch);
     signal.addEventListener("abort", () => this.close(), {once: true});
   }
 
@@ -127,6 +116,38 @@ export class Eth1MergeBlockTracker {
     }
 
     return null;
+  }
+
+  private async initialize(clockEpoch: Epoch): Promise<void> {
+    // Terminal block hash override takes precedence over terminal total difficulty
+    if (!ssz.Root.equals(this.config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
+      try {
+        const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
+        if (powBlockOverride) {
+          return this.setTerminalPowBlock(powBlockOverride);
+        }
+      } catch (e) {
+        if (!isErrorAborted(e))
+          this.logger.error(
+            "Unable to search for TERMINAL_BLOCK_HASH block",
+            {terminalBlockHash: toHexString(this.config.TERMINAL_BLOCK_HASH)},
+            e
+          );
+        throw e;
+      }
+    }
+
+    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
+    if (startEpoch <= clockEpoch) {
+      // Start now
+      this.startFinding();
+    } else {
+      // Set a timer to start in the future
+      const intervalToStart = setInterval(() => {
+        this.startFinding();
+      }, (startEpoch - clockEpoch) * SLOTS_PER_EPOCH * this.config.SECONDS_PER_SLOT * 1000);
+      this.intervals.push(intervalToStart);
+    }
   }
 
   private close(): void {
@@ -176,13 +197,6 @@ export class Eth1MergeBlockTracker {
   }
 
   private async fetchPreviousBlocks(): Promise<void> {
-    // Terminal block hash override takes precedence over terminal total difficulty
-    if (!ssz.Root.equals(this.config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
-      const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
-      if (powBlockOverride) {
-        return this.setTerminalPowBlock(powBlockOverride);
-      }
-    }
     // If latest block is under TTD, stop. Subscriptions will pick future blocks
     // If latest block is over TTD, go backwards until finding a merge block
     // Note: Must ensure parent relationship

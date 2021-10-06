@@ -1,6 +1,7 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {sleep} from "@chainsafe/lodestar-utils";
+import {fromHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {Eth1Provider, IEth1Provider} from "../../../src";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker";
@@ -9,7 +10,6 @@ import {testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
 import {quantityToBigint} from "../../../src/eth1/provider/utils";
 import {ZERO_HASH} from "../../../src/constants";
-import {fromHexString} from "@chainsafe/ssz";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
