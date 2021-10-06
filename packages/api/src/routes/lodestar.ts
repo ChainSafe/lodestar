@@ -99,8 +99,8 @@ export const routesData: RoutesData<Api> = {
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
-  connectPeer: {url: "/eth/v1/node/connect_peer", method: "POST"},
-  disconnectPeer: {url: "/eth/v1/node/disconnect_peer", method: "POST"},
+  connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
+  disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
 };
 
 export type ReqTypes = {
@@ -143,12 +143,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     connectPeer: {
       writeReq: (peerId, multiaddr) => ({query: {peerId, multiaddr}}),
       parseReq: ({query}) => [query.peerId, query.multiaddr],
-      schema: {params: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
+      schema: {query: {peerId: Schema.StringRequired, multiaddr: Schema.StringArray}},
     },
     disconnectPeer: {
       writeReq: (peerId) => ({query: {peerId}}),
       parseReq: ({query}) => [query.peerId],
-      schema: {params: {peerId: Schema.StringRequired}},
+      schema: {query: {peerId: Schema.StringRequired}},
     },
   };
 }
