@@ -52,12 +52,11 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 
   // Apply port option
   if (args.port !== undefined) {
-    beaconNodeOptions.set({
-      network: {
-        discv5: {bindAddr: `/ip4/0.0.0.0/${args.port}`},
-        localMultiaddrs: [`/ip4/0.0.0.0/tcp/${args.port}`],
-      },
-    });
+    beaconNodeOptions.set({network: {localMultiaddrs: [`/ip4/0.0.0.0/tcp/${args.port}`]}});
+    const discoveryPort = args.discoveryPort ?? args.port;
+    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/${discoveryPort}`}}});
+  } else if (args.discoveryPort !== undefined) {
+    beaconNodeOptions.set({network: {discv5: {bindAddr: `/ip4/0.0.0.0/${args.discoveryPort}`}}});
   }
 
   // initialize params file, if it doesn't exist

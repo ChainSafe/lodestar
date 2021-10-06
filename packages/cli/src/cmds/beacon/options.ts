@@ -6,6 +6,7 @@ import {ICliCommandOptions, ILogArgs} from "../../util";
 
 interface IBeaconExtraArgs {
   port?: number;
+  discoveryPort?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
   weakSubjectivityStateFile?: string;
@@ -16,10 +17,16 @@ interface IBeaconExtraArgs {
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   port: {
-    description: "P2P port for discv5 and libp2p",
+    description: "The TCP/UDP port to listen on. The UDP port can be modified by the --discovery-port flag.",
     type: "number",
     // TODO: Derive from BeaconNode defaults
     defaultDescription: "9000",
+  },
+
+  discoveryPort: {
+    description: "The UDP port that discovery will listen on. Defaults to `port`",
+    type: "number",
+    defaultDescription: "`port`",
   },
 
   forceGenesis: {
