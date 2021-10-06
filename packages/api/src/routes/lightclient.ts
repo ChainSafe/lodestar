@@ -23,7 +23,7 @@ export type Api = {
   /** TODO: description */
   getLatestUpdateFinalized(): Promise<{data: altair.LightClientUpdate}>;
   /** TODO: description */
-  getLatestUpdateNonFinalized(): Promise<{data: altair.LightClientUpdate}>;
+  getLatestUpdateNonFinalized(): Promise<{data: altair.LightClientUpdateLatest}>;
   /**
    * Fetch a proof needed for light client initialization
    */
@@ -80,7 +80,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateProof: sameType(),
     getBestUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getLatestUpdateFinalized: ContainerData(ssz.altair.LightClientUpdate),
-    getLatestUpdateNonFinalized: ContainerData(ssz.altair.LightClientUpdate),
+    getLatestUpdateNonFinalized: ContainerData(ssz.altair.LightClientUpdateLatest),
     // Just sent the proof JSON as-is
     getInitProof: sameType(),
   };

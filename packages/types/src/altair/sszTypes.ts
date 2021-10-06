@@ -1,5 +1,6 @@
 import {
   JUSTIFICATION_BITS_LENGTH,
+  LATEST_EXECUTION_BLOCK_HASH_INDEX_FLOORLOG2,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   SYNC_COMMITTEE_SUBNET_COUNT,
@@ -216,6 +217,27 @@ export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
     }),
     finalityHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorType({elementType: Bytes32, length: FINALIZED_ROOT_INDEX_FLOORLOG2}),
+    syncCommitteeBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE}),
+    syncCommitteeSignature: BLSSignature,
+    forkVersion: Version,
+  },
+});
+
+export const LightClientUpdateLatest = new ContainerType<altair.LightClientUpdateLatest>({
+  fields: {
+    header: phase0Ssz.BeaconBlockHeader,
+    nextSyncCommittee: SyncCommittee,
+    nextSyncCommitteeBranch: new VectorType({
+      elementType: Bytes32,
+      length: NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+    }),
+    finalityHeader: phase0Ssz.BeaconBlockHeader,
+    finalityBranch: new VectorType({elementType: Bytes32, length: FINALIZED_ROOT_INDEX_FLOORLOG2}),
+    latestExecutionBlockHash: primitiveSsz.Bytes32,
+    latestExecutionBlockHashBranch: new VectorType({
+      elementType: Bytes32,
+      length: LATEST_EXECUTION_BLOCK_HASH_INDEX_FLOORLOG2,
+    }),
     syncCommitteeBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE}),
     syncCommitteeSignature: BLSSignature,
     forkVersion: Version,

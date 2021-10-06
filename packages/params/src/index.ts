@@ -179,3 +179,15 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 55;
  * ```
  */
 export const NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2 = 5;
+/**
+ * ```ts
+ * ssz.merge.BeaconState.getPathGindex(["latestExecutionPayloadHeader", "blockHash"])
+ * ```
+ */
+export const LATEST_EXECUTION_BLOCK_HASH_INDEX = 908;
+/**
+ * ```ts
+ * Math.floor(Math.log2(LATEST_EXECUTION_BLOCK_HASH_INDEX))
+ * ```
+ */
+export const LATEST_EXECUTION_BLOCK_HASH_INDEX_FLOORLOG2 = 9;

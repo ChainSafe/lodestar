@@ -1,12 +1,17 @@
-import {altair, Epoch, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
-import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {altair, Epoch, merge, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import {byteArrayEquals, ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
   computeSyncPeriodAtSlot,
   getBlockRootAtSlot,
   getForkVersion,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
+import {
+  FINALIZED_ROOT_INDEX,
+  LATEST_EXECUTION_BLOCK_HASH_INDEX,
+  LATEST_EXECUTION_BLOCK_HASH_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_INDEX,
+} from "@chainsafe/lodestar-params";
 import {toBlockHeader} from "../utils/utils";
 import {isBetterUpdate, isLatestBestFinalizedUpdate, isLatestBestNonFinalizedUpdate} from "./utils";
 
@@ -14,8 +19,13 @@ type DbRepo<K, T> = {put(key: K, data: T): Promise<void>; get(key: K): Promise<T
 type DbItem<T> = {put(data: T): Promise<void>; get(): Promise<T | null>};
 
 export type SyncAttestedData = Pick<
-  altair.LightClientUpdate,
-  "finalityBranch" | "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch"
+  altair.LightClientUpdateLatest,
+  | "finalityBranch"
+  | "header"
+  | "nextSyncCommittee"
+  | "nextSyncCommitteeBranch"
+  | "latestExecutionBlockHash"
+  | "latestExecutionBlockHashBranch"
 > & {finalizedCheckpoint: altair.Checkpoint};
 
 export type FinalizedCheckpointData = Pick<
@@ -42,7 +52,7 @@ export type LightClientUpdaterDb = {
    */
   bestUpdatePerCommitteePeriod: DbRepo<altair.SyncPeriod, altair.LightClientUpdate>;
   latestFinalizedUpdate: DbItem<altair.LightClientUpdate>;
-  latestNonFinalizedUpdate: DbItem<altair.LightClientUpdate>;
+  latestNonFinalizedUpdate: DbItem<altair.LightClientUpdateLatest>;
 };
 
 /**
@@ -104,7 +114,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   /**
    * To be called in API route GET /eth/v1/lightclient/latest_update_nonfinalized/
    */
-  async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null> {
+  async getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdateLatest | null> {
     return this.db.latestNonFinalizedUpdate.get();
   }
 
@@ -120,6 +130,14 @@ export class LightClientUpdater implements ILightClientUpdater {
   async onHead(block: altair.BeaconBlock, postState: TreeBacked<altair.BeaconState>): Promise<void> {
     // Store a proof expected to be attested by the sync committee in a future block
     // Prove that the `finalizedCheckpointRoot` belongs in that block
+    const latestExecutionBlockHash =
+      (((postState as unknown) as merge.BeaconState).latestExecutionPayloadHeader?.blockHash.valueOf() as Uint8Array) ??
+      new Uint8Array(32);
+    const latestExecutionBlockHashBranch = byteArrayEquals(latestExecutionBlockHash, new Uint8Array(32))
+      ? Array.from({length: LATEST_EXECUTION_BLOCK_HASH_INDEX_FLOORLOG2}, () => new Uint8Array(32))
+      : ((postState as unknown) as TreeBacked<merge.BeaconState>).tree.getSingleProof(
+          BigInt(LATEST_EXECUTION_BLOCK_HASH_INDEX)
+        );
     this.prevHeadData.set(toHexString(ssz.altair.BeaconBlock.hashTreeRoot(block)), {
       finalizedCheckpoint: postState.finalizedCheckpoint,
       finalityBranch: postState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX)),
@@ -127,6 +145,8 @@ export class LightClientUpdater implements ILightClientUpdater {
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
       nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),
+      latestExecutionBlockHash,
+      latestExecutionBlockHashBranch,
     });
 
     // Store syncAggregate associated to the attested blockRoot
@@ -250,12 +270,14 @@ export class LightClientUpdater implements ILightClientUpdater {
       return;
     }
 
-    const newUpdate: altair.LightClientUpdate = {
+    const newUpdate: altair.LightClientUpdateLatest = {
       header: syncAttestedData.header,
       nextSyncCommittee: syncAttestedData.nextSyncCommittee,
       nextSyncCommitteeBranch: syncAttestedData.nextSyncCommitteeBranch,
       finalityHeader: this.zero.finalityHeader,
       finalityBranch: this.zero.finalityBranch,
+      latestExecutionBlockHash: syncAttestedData.latestExecutionBlockHash,
+      latestExecutionBlockHashBranch: syncAttestedData.latestExecutionBlockHashBranch,
       syncCommitteeBits: signatureData.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: signatureData.syncAggregate.syncCommitteeSignature,
       forkVersion: signatureData.forkVersion,

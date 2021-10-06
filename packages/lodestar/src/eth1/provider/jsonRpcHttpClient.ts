@@ -56,6 +56,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
    * Perform RPC request
    */
   async fetch<R, P = IJson[]>(payload: IRpcPayload<P>, opts?: ReqOpts): Promise<R> {
+    //console.log("ENGINE SEND REQUEST", JSON.stringify(payload, null, 2));
     const res: IRpcResponse<R> = await this.fetchJson({jsonrpc: "2.0", id: this.id++, ...payload}, opts);
     return parseRpcResponse(res, payload);
   }
