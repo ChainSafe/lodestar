@@ -145,9 +145,18 @@ export class Eth1MergeBlockTracker {
 
   private async startFinding(): Promise<void> {
     if (this.status !== StatusCode.PRE_MERGE) return;
-    const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
-    if (powBlockOverride) {
-      return this.setTerminalPowBlock(powBlockOverride);
+    try {
+      const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
+      if (powBlockOverride) {
+        return this.setTerminalPowBlock(powBlockOverride);
+      }
+    } catch (e) {
+      if (!isErrorAborted(e))
+        this.logger.error(
+          "Error fetching POW block from terminal block hash",
+          {terminalBlockHash: toHexString(this.config.TERMINAL_BLOCK_HASH)},
+          e as Error
+        );
     }
     this.status = StatusCode.SEARCHING;
     this.logger.info("Starting search for terminal POW block", {
