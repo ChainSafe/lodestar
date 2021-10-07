@@ -47,3 +47,6 @@ docker-compose.yml
 **/*.log
 .idea
 .tmp
+
+# Merge interop
+amphora
