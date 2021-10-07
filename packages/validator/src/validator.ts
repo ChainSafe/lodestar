@@ -3,7 +3,7 @@ import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Genesis, Root} from "@chainsafe/lodestar-types/phase0";
+import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {Clock, IClock} from "./util/clock";
@@ -95,7 +95,7 @@ export class Validator {
     const {data: nodeParams} = await api.config.getSpec();
     assertEqualParams(config, nodeParams);
     opts.logger.info("Verified node and validator have same config");
-    await assertEqualGenesisValidatorsRoot(opts, genesis.genesisValidatorsRoot);
+    await assertEqualGenesis(opts, genesis);
     opts.logger.info("Verified node and validator have same genesisValidatorRoot");
     return new Validator(opts, genesis);
   }
@@ -140,12 +140,14 @@ export class Validator {
   };
 }
 
-async function assertEqualGenesisValidatorsRoot(opts: ValidatorOptions, nodeGenesisValidatorRoot: Root): Promise<void> {
+/** Assert the same genesisValidatorRoot and genesisTime */
+async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Promise<void> {
+  const nodeGenesisValidatorRoot = genesis.genesisValidatorsRoot;
   const metaDataRepository = new MetaDataRepository(opts.dbOps);
   const genesisValidatorsRoot = await metaDataRepository.getGenesisValidatorsRoot();
   if (genesisValidatorsRoot) {
     if (!ssz.Root.equals(genesisValidatorsRoot, nodeGenesisValidatorRoot)) {
-      // this happens when the existing validator db serves another network before
+      // this happens when the existing validator db served another network before
       opts.logger.error("Not the same genesisValidatorRoot", {
         expected: toHexString(nodeGenesisValidatorRoot),
         actual: toHexString(genesisValidatorsRoot),
@@ -155,5 +157,17 @@ async function assertEqualGenesisValidatorsRoot(opts: ValidatorOptions, nodeGene
   } else {
     await metaDataRepository.setGenesisValidatorsRoot(nodeGenesisValidatorRoot);
     opts.logger.info("Persisted genesisValidatorRoot", toHexString(nodeGenesisValidatorRoot));
+  }
+
+  const nodeGenesisTime = genesis.genesisTime;
+  const genesisTime = await metaDataRepository.getGenesisTime();
+  if (genesisTime) {
+    if (genesisTime !== nodeGenesisTime) {
+      opts.logger.error("Not the same genesisTime", {expected: nodeGenesisTime, actual: genesisTime});
+      throw new NotEqualParamsError("Not the same genesisTime");
+    }
+  } else {
+    await metaDataRepository.setGenesisTime(nodeGenesisTime);
+    opts.logger.info("Persisted genesisTime", nodeGenesisTime);
   }
 }
