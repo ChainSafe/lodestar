@@ -192,6 +192,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       ignoreIfKnown: true,
       // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
       ignoreIfFinalized: true,
+      // We won't attest to this block so it's okay to ignore a SYNCING message from execution layer
+      fromRangeSync: true,
     };
 
     if (this.opts?.disableProcessAsChainSegment) {

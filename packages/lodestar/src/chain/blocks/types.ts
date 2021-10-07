@@ -29,6 +29,10 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
    * Metadata: `true` if all the signatures including the proposer signature have been verified
    */
   validSignatures?: boolean;
+  /**
+   * From RangeSync module, we won't attest to this block so it's okay to ignore a SYNCING message from execution layer
+   */
+  fromRangeSync?: boolean;
 };
 
 /**

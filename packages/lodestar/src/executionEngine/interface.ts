@@ -4,6 +4,15 @@ import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodest
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
 
+export enum ExecutePayloadStatus {
+  /** given payload is valid */
+  VALID = "VALID",
+  /** given payload is invalid */
+  INVALID = "INVALID",
+  /** sync process is in progress */
+  SYNCING = "SYNCING",
+}
+
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -20,7 +29,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  executePayload(executionPayload: merge.ExecutionPayload): Promise<boolean>;
+  executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus>;
 
   /**
    * Signals that the beacon block containing the execution payload is valid with respect to the consensus rule set.
