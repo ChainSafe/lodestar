@@ -6,12 +6,62 @@ services:
       dockerfile: docker/from_source.Dockerfile
     network_mode: host
     volumes:
-      - .:/usr/app/amphora/v2
+      - .:/amphora/v2/
+      - ../../:/app/
       - beacon_node:/data
       - logs:/logs
-    command: beacon --rcConfig /usr/app/amphora/v2/rcconfig.yml --rootDir /data --logFile /logs/beacon.log
+    command: >
+      /app/packages/cli/bin/lodestar beacon
+      --rcConfig /amphora/v2/rcconfig.yml
+      --rootDir /data
+      --logFile /logs/beacon.log
+      --network.bootMultiaddrs: /ip4/35.178.114.73/tcp/9000/p2p/16Uiu2HAmLzmg7WXGtXwZrfLZAbBn8rdY3MWWfvoN4FfeYR4vrQpV
+      --network.discv5.bootEnrs: enr:-K24QJ7fj53ZVzBvfJvVMyFeW3yzn9cb30LqdkdbhZShHn71ApVXv_auGba8uhVICD2bTQvQoiB3SkmAfTz-8NMMHY0Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC_4NP0AgAAAf__________gmlkgnY0iXNlY3AyNTZrMaEDe-7HhtJ_OuFY2feuHsXuMsPVoHzn7tU9QHqFRIzo7FaIc3luY25ldHMAg3RjcIIjKA
+      --paramsFile: amphora/v2/config.yaml
+      --genesisStateFile: amphora/v2/genesis.ssz
     environment:
       LODESTAR_PRESET: minimal
+    cmd: >
+      beacon
+      --rootDir $DATA
+      --paramsFile: amphora/v2/config.yaml
+      --genesisStateFile: amphora/v2/genesis.ssz
+      --network.bootMultiaddrs: /ip4/35.178.114.73/tcp/9000/p2p/16Uiu2HAmLzmg7WXGtXwZrfLZAbBn8rdY3MWWfvoN4FfeYR4vrQpV
+      --network.discv5.bootEnrs: enr:-K24QJ7fj53ZVzBvfJvVMyFeW3yzn9cb30LqdkdbhZShHn71ApVXv_auGba8uhVICD2bTQvQoiB3SkmAfTz-8NMMHY0Bh2F0dG5ldHOIAAAAAAAAAACEZXRoMpC_4NP0AgAAAf__________gmlkgnY0iXNlY3AyNTZrMaEDe-7HhtJ_OuFY2feuHsXuMsPVoHzn7tU9QHqFRIzo7FaIc3luY25ldHMAg3RjcIIjKA
+      --port $PORT
+      --eth1.enabled: true
+      --eth1.disableEth1DepositDataTracker: true
+      --eth1.providerUrls: http://localhost:8545
+      --execution.urls: http://localhost:8545
+      --api.rest.enabled: true
+      --api.rest.host: 0.0.0.0
+      --api.rest.api: "*"
+      --logLevel info
+      --logLevelFile debug
+      --logFile /logs/validator.log
+      --logRotate
+      --logMaxFiles 5
+
+    cmd: >
+      validator
+      --rootDir /data
+      --keystoresDir /keystores
+      --secretsDir /keystores/password.txt
+      --server http://beacon_node:9596
+      --logFile /logs/validator.log
+      --logLevelFile debug
+      --logRotate
+      --logMaxFiles 5
+
+  geth:
+    build:
+      context: .
+      dockerfile: geth/Dockerfile
+    network_mode: host
+    volumes:
+      - geth:/data
+    environment:
+      BOOTNODE: enode://ead4b0e2afd49a70ca57a017a59611675ca4464c9d551396711020cea09d6ce974072c7ec0766cc38f4817a33fafcc7f8cbd070feb1ea84e798ee92dfee24675@35.178.114.73:30303
 
 volumes:
   beacon_node:
