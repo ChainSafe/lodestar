@@ -6,6 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
+import {ZERO_HASH_HEX} from "../constants";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -145,19 +146,24 @@ export class Eth1MergeBlockTracker {
 
   private async startFinding(): Promise<void> {
     if (this.status !== StatusCode.PRE_MERGE) return;
-    try {
-      const powBlockOverride = await this.getPowBlock(toHexString(this.config.TERMINAL_BLOCK_HASH));
-      if (powBlockOverride) {
-        return this.setTerminalPowBlock(powBlockOverride);
+
+    // Terminal block hash override takes precedence over terminal total difficulty
+    const terminalBlockHash = toHexString(this.config.TERMINAL_BLOCK_HASH);
+    if (terminalBlockHash !== ZERO_HASH_HEX) {
+      try {
+        const powBlockOverride = await this.getPowBlock(terminalBlockHash);
+        if (powBlockOverride) {
+          this.setTerminalPowBlock(powBlockOverride);
+        }
+      } catch (e) {
+        if (!isErrorAborted(e)) {
+          this.logger.error("Error fetching POW block from terminal block hash", {terminalBlockHash}, e as Error);
+        }
       }
-    } catch (e) {
-      if (!isErrorAborted(e))
-        this.logger.error(
-          "Error fetching POW block from terminal block hash",
-          {terminalBlockHash: toHexString(this.config.TERMINAL_BLOCK_HASH)},
-          e as Error
-        );
+      // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
+      return;
     }
+
     this.status = StatusCode.SEARCHING;
     this.logger.info("Starting search for terminal POW block", {
       // eslint-disable-next-line @typescript-eslint/naming-convention
