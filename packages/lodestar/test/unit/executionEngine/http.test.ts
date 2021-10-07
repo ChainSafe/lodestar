@@ -144,9 +144,9 @@ describe("ExecutionEngine / http", () => {
     };
     returnValue = {jsonrpc: "2.0", id: 67, result: {status: "VALID"}};
 
-    const isValid = await executionEngine.executePayload(parseExecutionPayload(request.params[0]));
+    const status = await executionEngine.executePayload(parseExecutionPayload(request.params[0]));
 
-    expect(isValid).to.equal(true, "Wrong returned execute payload result");
+    expect(status).to.equal("VALID", "Wrong returned execute payload result");
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 
