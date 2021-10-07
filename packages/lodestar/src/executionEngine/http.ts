@@ -67,14 +67,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       params: [serializeExecutionPayload(executionPayload)],
     });
 
-    switch (status) {
-      case ExecutePayloadStatus.VALID:
-        return ExecutePayloadStatus.VALID;
-      case ExecutePayloadStatus.INVALID:
-        return ExecutePayloadStatus.INVALID;
-      case ExecutePayloadStatus.SYNCING:
-        return ExecutePayloadStatus.SYNCING;
+    // Validate status is known
+    const statusEnum = ExecutePayloadStatus[status];
+    if (statusEnum === undefined) {
+      throw Error(`Unknown status ${status}`);
     }
+
+    return statusEnum;
   }
 
   /**
