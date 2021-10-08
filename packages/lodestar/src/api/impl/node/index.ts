@@ -3,8 +3,9 @@ import {createKeypairFromPeerId} from "@chainsafe/discv5";
 import {formatNodePeer} from "./utils";
 import {ApiError} from "../errors";
 import {ApiModules} from "../types";
+import {IApiOptions} from "../../options";
 
-export function getNodeApi({network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
+export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
   return {
     async getNetworkIdentity() {
       const enr = network.getEnr();
@@ -64,7 +65,7 @@ export function getNodeApi({network, sync}: Pick<ApiModules, "network" | "sync">
     async getNodeVersion() {
       return {
         data: {
-          version: `Lodestar/${process.env.npm_package_version || "dev"}`,
+          version: `Lodestar/${opts.version || "dev"}`,
         },
       };
     },
