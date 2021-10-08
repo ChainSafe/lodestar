@@ -2,7 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, ForkDigest, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -17,7 +17,6 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
-import {ForkName} from "@chainsafe/lodestar-params";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
   SeenAggregators,
@@ -140,19 +139,6 @@ export class MockBeaconChain implements IBeaconChain {
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 
-  getHeadForkDigest(): ForkDigest {
-    return ssz.ForkDigest.defaultValue();
-  }
-  getClockForkDigest(): ForkDigest {
-    return ssz.ForkDigest.defaultValue();
-  }
-  getHeadForkName(): ForkName {
-    return ForkName.phase0;
-  }
-  getClockForkName(): ForkName {
-    return ForkName.phase0;
-  }
-
   getGenesisTime(): Number64 {
     return Math.floor(Date.now() / 1000);
   }
@@ -170,7 +156,7 @@ export class MockBeaconChain implements IBeaconChain {
 
   getStatus(): phase0.Status {
     return {
-      forkDigest: this.getHeadForkDigest(),
+      forkDigest: Buffer.alloc(4),
       finalizedRoot: Buffer.alloc(32),
       finalizedEpoch: 0,
       headRoot: Buffer.alloc(32),

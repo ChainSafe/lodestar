@@ -3,11 +3,10 @@
  */
 
 import fs from "fs";
-import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, ForkDigest, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
@@ -248,19 +247,6 @@ export class BeaconChain implements IBeaconChain {
 
   async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
     return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
-  }
-
-  getHeadForkName(): ForkName {
-    return this.config.getForkName(this.forkChoice.getHead().slot);
-  }
-  getClockForkName(): ForkName {
-    return this.config.getForkName(this.clock.currentSlot);
-  }
-  getHeadForkDigest(): ForkDigest {
-    return this.config.forkName2ForkDigest(this.getHeadForkName());
-  }
-  getClockForkDigest(): ForkDigest {
-    return this.config.forkName2ForkDigest(this.getClockForkName());
   }
 
   getStatus(): phase0.Status {
