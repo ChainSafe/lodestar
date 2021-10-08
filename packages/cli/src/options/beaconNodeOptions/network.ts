@@ -10,6 +10,7 @@ export interface INetworkArgs {
   "network.bootMultiaddrs": string[];
   "network.localMultiaddrs": string[];
   "network.subscribeAllSubnets": boolean;
+  "network.connectToDiscv5Bootnodes": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -84,6 +85,13 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     type: "boolean",
     description: "Subscribe to all subnets regardless of validator count",
     defaultDescription: String(defaultOptions.network.subscribeAllSubnets === true),
+    group: "network",
+  },
+
+  "network.connectToDiscv5Bootnodes": {
+    type: "boolean",
+    description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
+    defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
     group: "network",
   },
 };
