@@ -6,7 +6,6 @@ import {INetwork} from "../network";
 import {IBeaconSync, SyncState} from "../sync";
 import {prettyTimeDiff} from "../util/time";
 import {TimeSeries} from "../util/timeSeries";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;
@@ -48,23 +47,17 @@ export async function runNodeNotifier({
       const clockSlot = chain.clock.currentSlot;
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
-      const finalizedBlock = computeStartSlotAtEpoch(headState.finalizedCheckpoint.epoch);
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
       const finalizedRoot = headState.finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
       timeSeries.addPoint(headSlot, Date.now());
 
-      let currentRow = `block: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-
-      // Give info about empty slots if head < clock
-      if (headInfo.slot < clockSlot) {
-        currentRow = `block: ${clockSlot}   … (empty)`;
-      }
-
       const peersRow = `peers: ${connectedPeerCount}`;
-      const finalizedCheckpointRow = `finalized: ${finalizedBlock} ${prettyBytes(finalizedRoot)} (${finalizedEpoch})`;
+      const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const clockSlotRow = `clockSlot: ${clockSlot}`;
+      // Give info about empty slots if head < clock
+      const skippedSlots = clockSlot - headInfo.slot;
+      const clockSlotRow = `slot: ${clockSlot}` + (skippedSlots > 0 ? ` (skipped ${skippedSlots})` : "");
 
       let nodeState: string[];
       switch (sync.state) {
@@ -74,25 +67,28 @@ export async function runNodeNotifier({
           const distance = Math.max(clockSlot - headSlot, 0);
           const secondsLeft = distance / slotsPerSecond;
           const timeLeft = isFinite(secondsLeft) ? prettyTimeDiff(1000 * secondsLeft) : "?";
+          // Syncing - time left - speed - head - finalized - clock - peers
           nodeState = [
             "Syncing",
             `${timeLeft} left`,
             `${slotsPerSecond.toPrecision(3)} slots/s`,
+            clockSlotRow,
             headRow,
             finalizedCheckpointRow,
-            clockSlotRow,
             peersRow,
           ];
           break;
         }
 
         case SyncState.Synced: {
-          nodeState = ["Synced", currentRow, headRow, finalizedCheckpointRow, peersRow];
+          // Synced - clock - head - finalized - peers
+          nodeState = ["Synced", clockSlotRow, headRow, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
-          nodeState = ["Searching for peers", peersRow, headRow, finalizedCheckpointRow, clockSlotRow];
+          // Searching peers - peers - head - finalized - clock
+          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));
