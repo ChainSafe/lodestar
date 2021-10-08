@@ -9,13 +9,16 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   const domainCache = new Map<ForkName, Map<DomainType, Buffer>>();
 
   const forkDigestByForkName = new Map<ForkName, ForkDigest>();
+  const forkDigestHexByForkName = new Map<ForkName, ForkDigestHex>();
   /** Map of ForkDigest in hex format without prefix: `0011aabb` */
   const forkNameByForkDigest = new Map<ForkDigestHex, ForkName>();
 
   for (const fork of Object.values(chainForkConfig.forks)) {
     const forkDigest = computeForkDigest(fork.version, genesisValidatorsRoot);
-    forkNameByForkDigest.set(toHexStringNoPrefix(forkDigest), fork.name);
+    const forkDigestHex = toHexStringNoPrefix(forkDigest);
+    forkNameByForkDigest.set(forkDigestHex, fork.name);
     forkDigestByForkName.set(fork.name, forkDigest);
+    forkDigestHexByForkName.set(fork.name, forkDigestHex);
   }
 
   return {
@@ -49,6 +52,14 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
         throw Error(`No precomputed forkDigest for ${forkName}`);
       }
       return forkDigest;
+    },
+
+    forkName2ForkDigestHex(forkName: ForkName): ForkDigestHex {
+      const forkDigestHex = forkDigestHexByForkName.get(forkName);
+      if (!forkDigestHex) {
+        throw Error(`No precomputed forkDigest for ${forkName}`);
+      }
+      return toHexStringNoPrefix(forkDigestHex);
     },
   };
 }
