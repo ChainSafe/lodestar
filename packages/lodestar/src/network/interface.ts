@@ -2,7 +2,7 @@
  * @module network
  */
 import {Connection} from "libp2p";
-import {ENR} from "@chainsafe/discv5";
+import {Discv5, ENR} from "@chainsafe/discv5";
 import {Multiaddr} from "multiaddr";
 import PeerId from "peer-id";
 import {INetworkEventBus} from "./events";
@@ -23,6 +23,7 @@ export interface INetwork {
   attnetsService: IAttnetsService;
   syncnetsService: ISubnetsService;
   gossip: Eth2Gossipsub;
+  discv5?: Discv5;
   metadata: MetadataController;
   peerRpcScores: IPeerRpcScoreStore;
   peerMetadata: IPeerMetadataStore;
