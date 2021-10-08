@@ -1,0 +1,1702 @@
+
+<!DOCTYPE html>
+
+<html class="no-js" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
+<link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_nodejs.nodejsnode/" rel="canonical"/>
+<link href="../../../../assets/round-icon.ico" rel="icon"/>
+<meta content="mkdocs-1.2.2, mkdocs-material-7.3.2" name="generator"/>
+<title>Network nodejs.nodejsnode - Lodestar documentation</title>
+<link href="../../../../assets/stylesheets/main.24c991ad.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
+<style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+<link href="../../../../stylesheets/extras.css" rel="stylesheet"/>
+</head>
+<body data-md-color-accent="deep-purple" data-md-color-primary="black" data-md-color-scheme="preference" dir="ltr">
+<script>function __prefix(e){return new URL("../../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
+<script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
+<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
+<label class="md-overlay" for="__drawer"></label>
+<div data-md-component="skip">
+<a class="md-skip" href="#class-nodejsnode">
+          Skip to content
+        </a>
+</div>
+<div data-md-component="announce">
+</div>
+<header class="md-header" data-md-component="header">
+<nav aria-label="Header" class="md-header__inner md-grid">
+<a aria-label="Lodestar documentation" class="md-header__button md-logo" data-md-component="logo" href="../../../.." title="Lodestar documentation">
+<img alt="logo" src="../../../../assets/lodestar_icon_300.png"/>
+</a>
+<label class="md-header__button md-icon" for="__drawer">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2z"></path></svg>
+</label>
+<div class="md-header__title" data-md-component="header-title">
+<div class="md-header__ellipsis">
+<div class="md-header__topic">
+<span class="md-ellipsis">
+            Lodestar documentation
+          </span>
+</div>
+<div class="md-header__topic" data-md-component="header-topic">
+<span class="md-ellipsis">
+            
+              Network nodejs.nodejsnode
+            
+          </span>
+</div>
+</div>
+</div>
+<form class="md-header__option" data-md-component="palette">
+<input aria-label="Switch to dark mode" class="md-option" data-md-color-accent="deep-purple" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="black" data-md-color-scheme="preference" id="__palette_1" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_2" hidden="" title="Switch to dark mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31z"></path></svg>
+</label>
+<input aria-label="Switch to light mode" class="md-option" data-md-color-accent="deep-purple" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="black" data-md-color-scheme="slate" id="__palette_2" name="__palette" type="radio"/>
+<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Switch to light mode">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22z"></path></svg>
+</label>
+</form>
+<label class="md-header__button md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"></path></svg>
+</label>
+<div class="md-search" data-md-component="search" role="dialog">
+<label class="md-search__overlay" for="__search"></label>
+<div class="md-search__inner" role="search">
+<form class="md-search__form" name="search">
+<input aria-label="Search" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Search" required="" spellcheck="false" type="text"/>
+<label class="md-search__icon md-icon" for="__search">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5z"></path></svg>
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"></path></svg>
+</label>
+<nav aria-label="Search" class="md-search__options">
+<button aria-label="Clear" class="md-search__icon md-icon" tabindex="-1" type="reset">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z"></path></svg>
+</button>
+</nav>
+</form>
+<div class="md-search__output">
+<div class="md-search__scrollwrap" data-md-scrollfix="">
+<div class="md-search-result" data-md-component="search-result">
+<div class="md-search-result__meta">
+            Initializing search
+          </div>
+<ol class="md-search-result__list"></ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="md-header__source">
+<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar/" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
+</div>
+<div class="md-source__repository">
+    chainsafe/lodestar
+  </div>
+</a>
+</div>
+</nav>
+</header>
+<div class="md-container" data-md-component="container">
+<main class="md-main" data-md-component="main">
+<div class="md-main__inner md-grid">
+<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Navigation" class="md-nav md-nav--primary" data-md-level="0">
+<label class="md-nav__title" for="__drawer">
+<a aria-label="Lodestar documentation" class="md-nav__button md-logo" data-md-component="logo" href="../../../.." title="Lodestar documentation">
+<img alt="logo" src="../../../../assets/lodestar_icon_300.png"/>
+</a>
+    Lodestar documentation
+  </label>
+<div class="md-nav__source">
+<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar/" title="Go to repository">
+<div class="md-source__icon md-icon">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
+</div>
+<div class="md-source__repository">
+    chainsafe/lodestar
+  </div>
+</a>
+</div>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../..">
+        Getting started
+      </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../installation/">
+        Installation
+      </a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" id="__nav_3" type="checkbox"/>
+<label class="md-nav__link" for="__nav_3">
+          CLI Usage
+          <span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-label="CLI Usage" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_3">
+<span class="md-nav__icon md-icon"></span>
+          CLI Usage
+        </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../usage/testnet/">
+        Mainnet or public testnet
+      </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../usage/local/">
+        Local testnet
+      </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../usage/key-management/">
+        Key management
+      </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../usage/prometheus-grafana/">
+        Prometheus &amp; Grafana Setup
+      </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" id="__nav_4" type="checkbox"/>
+<label class="md-nav__link" for="__nav_4">
+          Reference
+          <span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-label="Reference" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_4">
+<span class="md-nav__icon md-icon"></span>
+          Reference
+        </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../reference/cli/">
+        Command line
+      </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../libraries/">
+        Libraries
+      </a>
+</li>
+<li class="md-nav__item md-nav__item--nested">
+<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" id="__nav_6" type="checkbox"/>
+<label class="md-nav__link" for="__nav_6">
+          Design
+          <span class="md-nav__icon md-icon"></span>
+</label>
+<nav aria-label="Design" class="md-nav" data-md-level="1">
+<label class="md-nav__title" for="__nav_6">
+<span class="md-nav__icon md-icon"></span>
+          Design
+        </label>
+<ul class="md-nav__list" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../design/architecture/">
+        Beacon node architecture
+      </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../design/depgraph/">
+        Lodestar package structure
+      </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="../../../../contributing/">
+        Contributing
+      </a>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
+<div class="md-sidebar__scrollwrap">
+<div class="md-sidebar__inner">
+<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
+<label class="md-nav__title" for="__toc">
+<span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#hierarchy">
+    Hierarchy
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#index">
+    Index
+  </a>
+<nav aria-label="Index" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#references">
+    References
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructors">
+    Constructors
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#properties">
+    Properties
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#accessors">
+    Accessors
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#methods">
+    Methods
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#references_1">
+    References
+  </a>
+<nav aria-label="References" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#connection">
+    Connection
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#contentroutingmodule">
+    ContentRoutingModule
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#createoptions">
+    CreateOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#crypto">
+    Crypto
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#datastore">
+    Datastore
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#dhtoptions">
+    DhtOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#handlerprops">
+    HandlerProps
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#keychainoptions">
+    KeychainOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#libp2pconfig">
+    Libp2pConfig
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#libp2pmodules">
+    Libp2pModules
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#libp2poptions">
+    Libp2pOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#metricsoptions">
+    MetricsOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#muxedstream">
+    MuxedStream
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#muxerfactory">
+    MuxerFactory
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerdiscoveryfactory">
+    PeerDiscoveryFactory
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerroutingmodule">
+    PeerRoutingModule
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerstoreoptions">
+    PeerStoreOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#protector">
+    Protector
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#pubsub">
+    Pubsub
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#pubsublocaloptions">
+    PubsubLocalOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#pubsuboptions">
+    PubsubOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#randomwalkoptions">
+    RandomWalkOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#relayoptions">
+    RelayOptions
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#transportfactory">
+    TransportFactory
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructoroptions">
+    constructorOptions
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructors_1">
+    Constructors
+  </a>
+<nav aria-label="Constructors" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructor">
+    constructor
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#properties_1">
+    Properties
+  </a>
+<nav aria-label="Properties" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_config">
+    _config
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_dht">
+    _dht
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_discovery">
+    _discovery
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_isstarted">
+    _isStarted
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_modules">
+    _modules
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_options">
+    _options
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_transport">
+    _transport
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#addressmanager">
+    addressManager
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#addresses">
+    addresses
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#connectionmanager">
+    connectionManager
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#contentrouting">
+    contentRouting
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#datastore_1">
+    datastore
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#dialer">
+    dialer
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#identifyservice">
+    identifyService
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#keychain">
+    keychain
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#metrics">
+    metrics
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#natmanager">
+    natManager
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerid">
+    peerId
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerrouting">
+    peerRouting
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#peerstore">
+    peerStore
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#pubsub_1">
+    pubsub
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#registrar">
+    registrar
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#relay">
+    relay
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#transportmanager">
+    transportManager
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#upgrader">
+    upgrader
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#accessors_1">
+    Accessors
+  </a>
+<nav aria-label="Accessors" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#connections">
+    connections
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#multiaddrs">
+    multiaddrs
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#methods_1">
+    Methods
+  </a>
+<nav aria-label="Methods" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_dial">
+    _dial
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_onstarting">
+    _onStarting
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#addlistener">
+    addListener
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#dial">
+    dial
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#dialprotocol">
+    dialProtocol
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#emit">
+    emit
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#eventnames">
+    eventNames
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getmaxlisteners">
+    getMaxListeners
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#handle">
+    handle
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#hangup">
+    hangUp
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isstarted">
+    isStarted
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#listenercount">
+    listenerCount
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#listeners">
+    listeners
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#loadkeychain">
+    loadKeychain
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#off">
+    off
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#on">
+    on
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#once">
+    once
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ping">
+    ping
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#prependlistener">
+    prependListener
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#prependoncelistener">
+    prependOnceListener
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#rawlisteners">
+    rawListeners
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#removealllisteners">
+    removeAllListeners
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#removelistener">
+    removeListener
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#setmaxlisteners">
+    setMaxListeners
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#start">
+    start
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#stop">
+    stop
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#unhandle">
+    unhandle
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#static-create">
+    Static create
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+</div>
+<div class="md-content" data-md-component="content">
+<article class="md-content__inner md-typeset">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/classes/network_nodejs.nodejsnode.md" title="Edit this page">
+<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
+</a>
+<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/network_nodejs/">network/nodejs</a> › <a href="./">NodejsNode</a></p>
+<h1 id="class-nodejsnode">Class: NodejsNode<a class="headerlink" href="#class-nodejsnode" title="Permanent link">¶</a></h1>
+<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
+<ul>
+<li>Libp2p</li>
+</ul>
+<p>↳ <strong>NodejsNode</strong></p>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#connection">Connection</a></li>
+<li><a href="./#contentroutingmodule">ContentRoutingModule</a></li>
+<li><a href="./#createoptions">CreateOptions</a></li>
+<li><a href="./#crypto">Crypto</a></li>
+<li><a href="./#datastore">Datastore</a></li>
+<li><a href="./#dhtoptions">DhtOptions</a></li>
+<li><a href="./#handlerprops">HandlerProps</a></li>
+<li><a href="./#keychainoptions">KeychainOptions</a></li>
+<li><a href="./#libp2pconfig">Libp2pConfig</a></li>
+<li><a href="./#libp2pmodules">Libp2pModules</a></li>
+<li><a href="./#libp2poptions">Libp2pOptions</a></li>
+<li><a href="./#metricsoptions">MetricsOptions</a></li>
+<li><a href="./#muxedstream">MuxedStream</a></li>
+<li><a href="./#muxerfactory">MuxerFactory</a></li>
+<li><a href="./#peerdiscoveryfactory">PeerDiscoveryFactory</a></li>
+<li><a href="./#peerroutingmodule">PeerRoutingModule</a></li>
+<li><a href="./#peerstoreoptions">PeerStoreOptions</a></li>
+<li><a href="./#protector">Protector</a></li>
+<li><a href="./#pubsub">Pubsub</a></li>
+<li><a href="./#pubsublocaloptions">PubsubLocalOptions</a></li>
+<li><a href="./#pubsuboptions">PubsubOptions</a></li>
+<li><a href="./#randomwalkoptions">RandomWalkOptions</a></li>
+<li><a href="./#relayoptions">RelayOptions</a></li>
+<li><a href="./#transportfactory">TransportFactory</a></li>
+<li><a href="./#constructoroptions">constructorOptions</a></li>
+</ul>
+<h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#constructor">constructor</a></li>
+</ul>
+<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#_config">_config</a></li>
+<li><a href="./#_dht">_dht</a></li>
+<li><a href="./#_discovery">_discovery</a></li>
+<li><a href="./#_isstarted">_isStarted</a></li>
+<li><a href="./#_modules">_modules</a></li>
+<li><a href="./#_options">_options</a></li>
+<li><a href="./#_transport">_transport</a></li>
+<li><a href="./#addressmanager">addressManager</a></li>
+<li><a href="./#addresses">addresses</a></li>
+<li><a href="./#connectionmanager">connectionManager</a></li>
+<li><a href="./#contentrouting">contentRouting</a></li>
+<li><a href="./#datastore">datastore</a></li>
+<li><a href="./#dialer">dialer</a></li>
+<li><a href="./#identifyservice">identifyService</a></li>
+<li><a href="./#keychain">keychain</a></li>
+<li><a href="./#metrics">metrics</a></li>
+<li><a href="./#natmanager">natManager</a></li>
+<li><a href="./#peerid">peerId</a></li>
+<li><a href="./#peerrouting">peerRouting</a></li>
+<li><a href="./#peerstore">peerStore</a></li>
+<li><a href="./#pubsub">pubsub</a></li>
+<li><a href="./#registrar">registrar</a></li>
+<li><a href="./#relay">relay</a></li>
+<li><a href="./#transportmanager">transportManager</a></li>
+<li><a href="./#upgrader">upgrader</a></li>
+</ul>
+<h3 id="accessors">Accessors<a class="headerlink" href="#accessors" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#connections">connections</a></li>
+<li><a href="./#multiaddrs">multiaddrs</a></li>
+</ul>
+<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#_dial">_dial</a></li>
+<li><a href="./#_onstarting">_onStarting</a></li>
+<li><a href="./#addlistener">addListener</a></li>
+<li><a href="./#dial">dial</a></li>
+<li><a href="./#dialprotocol">dialProtocol</a></li>
+<li><a href="./#emit">emit</a></li>
+<li><a href="./#eventnames">eventNames</a></li>
+<li><a href="./#getmaxlisteners">getMaxListeners</a></li>
+<li><a href="./#handle">handle</a></li>
+<li><a href="./#hangup">hangUp</a></li>
+<li><a href="./#isstarted">isStarted</a></li>
+<li><a href="./#listenercount">listenerCount</a></li>
+<li><a href="./#listeners">listeners</a></li>
+<li><a href="./#loadkeychain">loadKeychain</a></li>
+<li><a href="./#off">off</a></li>
+<li><a href="./#on">on</a></li>
+<li><a href="./#once">once</a></li>
+<li><a href="./#ping">ping</a></li>
+<li><a href="./#prependlistener">prependListener</a></li>
+<li><a href="./#prependoncelistener">prependOnceListener</a></li>
+<li><a href="./#rawlisteners">rawListeners</a></li>
+<li><a href="./#removealllisteners">removeAllListeners</a></li>
+<li><a href="./#removelistener">removeListener</a></li>
+<li><a href="./#setmaxlisteners">setMaxListeners</a></li>
+<li><a href="./#start">start</a></li>
+<li><a href="./#stop">stop</a></li>
+<li><a href="./#unhandle">unhandle</a></li>
+<li><a href="./#static-create">create</a></li>
+</ul>
+<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
+<h3 id="connection">Connection<a class="headerlink" href="#connection" title="Permanent link">¶</a></h3>
+<p>• <strong>Connection</strong>:</p>
+<hr/>
+<h3 id="contentroutingmodule">ContentRoutingModule<a class="headerlink" href="#contentroutingmodule" title="Permanent link">¶</a></h3>
+<p>• <strong>ContentRoutingModule</strong>:</p>
+<hr/>
+<h3 id="createoptions">CreateOptions<a class="headerlink" href="#createoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>CreateOptions</strong>:</p>
+<hr/>
+<h3 id="crypto">Crypto<a class="headerlink" href="#crypto" title="Permanent link">¶</a></h3>
+<p>• <strong>Crypto</strong>:</p>
+<hr/>
+<h3 id="datastore">Datastore<a class="headerlink" href="#datastore" title="Permanent link">¶</a></h3>
+<p>• <strong>Datastore</strong>:</p>
+<hr/>
+<h3 id="dhtoptions">DhtOptions<a class="headerlink" href="#dhtoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>DhtOptions</strong>:</p>
+<hr/>
+<h3 id="handlerprops">HandlerProps<a class="headerlink" href="#handlerprops" title="Permanent link">¶</a></h3>
+<p>• <strong>HandlerProps</strong>:</p>
+<hr/>
+<h3 id="keychainoptions">KeychainOptions<a class="headerlink" href="#keychainoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>KeychainOptions</strong>:</p>
+<hr/>
+<h3 id="libp2pconfig">Libp2pConfig<a class="headerlink" href="#libp2pconfig" title="Permanent link">¶</a></h3>
+<p>• <strong>Libp2pConfig</strong>:</p>
+<hr/>
+<h3 id="libp2pmodules">Libp2pModules<a class="headerlink" href="#libp2pmodules" title="Permanent link">¶</a></h3>
+<p>• <strong>Libp2pModules</strong>:</p>
+<hr/>
+<h3 id="libp2poptions">Libp2pOptions<a class="headerlink" href="#libp2poptions" title="Permanent link">¶</a></h3>
+<p>• <strong>Libp2pOptions</strong>:</p>
+<hr/>
+<h3 id="metricsoptions">MetricsOptions<a class="headerlink" href="#metricsoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>MetricsOptions</strong>:</p>
+<hr/>
+<h3 id="muxedstream">MuxedStream<a class="headerlink" href="#muxedstream" title="Permanent link">¶</a></h3>
+<p>• <strong>MuxedStream</strong>:</p>
+<hr/>
+<h3 id="muxerfactory">MuxerFactory<a class="headerlink" href="#muxerfactory" title="Permanent link">¶</a></h3>
+<p>• <strong>MuxerFactory</strong>:</p>
+<hr/>
+<h3 id="peerdiscoveryfactory">PeerDiscoveryFactory<a class="headerlink" href="#peerdiscoveryfactory" title="Permanent link">¶</a></h3>
+<p>• <strong>PeerDiscoveryFactory</strong>:</p>
+<hr/>
+<h3 id="peerroutingmodule">PeerRoutingModule<a class="headerlink" href="#peerroutingmodule" title="Permanent link">¶</a></h3>
+<p>• <strong>PeerRoutingModule</strong>:</p>
+<hr/>
+<h3 id="peerstoreoptions">PeerStoreOptions<a class="headerlink" href="#peerstoreoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>PeerStoreOptions</strong>:</p>
+<hr/>
+<h3 id="protector">Protector<a class="headerlink" href="#protector" title="Permanent link">¶</a></h3>
+<p>• <strong>Protector</strong>:</p>
+<hr/>
+<h3 id="pubsub">Pubsub<a class="headerlink" href="#pubsub" title="Permanent link">¶</a></h3>
+<p>• <strong>Pubsub</strong>:</p>
+<hr/>
+<h3 id="pubsublocaloptions">PubsubLocalOptions<a class="headerlink" href="#pubsublocaloptions" title="Permanent link">¶</a></h3>
+<p>• <strong>PubsubLocalOptions</strong>:</p>
+<hr/>
+<h3 id="pubsuboptions">PubsubOptions<a class="headerlink" href="#pubsuboptions" title="Permanent link">¶</a></h3>
+<p>• <strong>PubsubOptions</strong>:</p>
+<hr/>
+<h3 id="randomwalkoptions">RandomWalkOptions<a class="headerlink" href="#randomwalkoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>RandomWalkOptions</strong>:</p>
+<hr/>
+<h3 id="relayoptions">RelayOptions<a class="headerlink" href="#relayoptions" title="Permanent link">¶</a></h3>
+<p>• <strong>RelayOptions</strong>:</p>
+<hr/>
+<h3 id="transportfactory">TransportFactory<a class="headerlink" href="#transportfactory" title="Permanent link">¶</a></h3>
+<p>• <strong>TransportFactory</strong>:</p>
+<hr/>
+<h3 id="constructoroptions">constructorOptions<a class="headerlink" href="#constructoroptions" title="Permanent link">¶</a></h3>
+<p>• <strong>constructorOptions</strong>:</p>
+<h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
+<h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
+<p>+ <strong>new NodejsNode</strong>(<code>options</code>: <a href="../../interfaces/network_nodejs.ilibp2poptions/">ILibp2pOptions</a>): <em><a href="./">NodejsNode</a></em></p>
+<p><em>Overrides void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/84ef48f/packages/lodestar/src/network/nodejs/bundle.ts#L35">packages/lodestar/src/network/nodejs/bundle.ts:35</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>options</code></td>
+<td><a href="../../interfaces/network_nodejs.ilibp2poptions/">ILibp2pOptions</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="./">NodejsNode</a></em></p>
+<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
+<h3 id="_config">_config<a class="headerlink" href="#_config" title="Permanent link">¶</a></h3>
+<p>• <strong>_config</strong>: <em>object &amp; <a href="./#libp2pconfig">Libp2pConfig</a></em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_config">_config</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:211</p>
+<hr/>
+<h3 id="_dht">_dht<a class="headerlink" href="#_dht" title="Permanent link">¶</a></h3>
+<p>• <strong>_dht</strong>: <em>any</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_dht">_dht</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:276</p>
+<hr/>
+<h3 id="_discovery">_discovery<a class="headerlink" href="#_discovery" title="Permanent link">¶</a></h3>
+<p>• <strong>_discovery</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹any, any›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_discovery">_discovery</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:258</p>
+<hr/>
+<h3 id="_isstarted">_isStarted<a class="headerlink" href="#_isstarted" title="Permanent link">¶</a></h3>
+<p>• <strong>_isStarted</strong>: <em>boolean | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_isstarted">_isStarted</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:302</p>
+<hr/>
+<h3 id="_modules">_modules<a class="headerlink" href="#_modules" title="Permanent link">¶</a></h3>
+<p>• <strong>_modules</strong>: <em><a href="./#libp2pmodules">Libp2pModules</a></em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_modules">_modules</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:210</p>
+<hr/>
+<h3 id="_options">_options<a class="headerlink" href="#_options" title="Permanent link">¶</a></h3>
+<p>• <strong>_options</strong>: <em>object &amp; <a href="./#libp2poptions">Libp2pOptions</a> &amp; <a href="./#constructoroptions">constructorOptions</a></em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_options">_options</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:113</p>
+<hr/>
+<h3 id="_transport">_transport<a class="headerlink" href="#_transport" title="Permanent link">¶</a></h3>
+<p>• <strong>_transport</strong>: <em>any[]</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_transport">_transport</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:257</p>
+<hr/>
+<h3 id="addressmanager">addressManager<a class="headerlink" href="#addressmanager" title="Permanent link">¶</a></h3>
+<p>• <strong>addressManager</strong>: <em>AddressManager</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#addressmanager">addressManager</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:209</p>
+<hr/>
+<h3 id="addresses">addresses<a class="headerlink" href="#addresses" title="Permanent link">¶</a></h3>
+<p>• <strong>addresses</strong>: <em>object &amp; AddressManager.AddressManagerOptions</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#addresses">addresses</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:203</p>
+<hr/>
+<h3 id="connectionmanager">connectionManager<a class="headerlink" href="#connectionmanager" title="Permanent link">¶</a></h3>
+<p>• <strong>connectionManager</strong>: <em>ConnectionManager</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#connectionmanager">connectionManager</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:259</p>
+<hr/>
+<h3 id="contentrouting">contentRouting<a class="headerlink" href="#contentrouting" title="Permanent link">¶</a></h3>
+<p>• <strong>contentRouting</strong>: <em>ContentRouting</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#contentrouting">contentRouting</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:280</p>
+<hr/>
+<h3 id="datastore_1">datastore<a class="headerlink" href="#datastore_1" title="Permanent link">¶</a></h3>
+<p>• <strong>datastore</strong>: <em>Datastore | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#datastore">datastore</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:201</p>
+<hr/>
+<h3 id="dialer">dialer<a class="headerlink" href="#dialer" title="Permanent link">¶</a></h3>
+<p>• <strong>dialer</strong>: <em>Dialer</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#dialer">dialer</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:273</p>
+<hr/>
+<h3 id="identifyservice">identifyService<a class="headerlink" href="#identifyservice" title="Permanent link">¶</a></h3>
+<p>• <strong>identifyService</strong>: <em>IdentifyService | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#identifyservice">identifyService</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:275</p>
+<hr/>
+<h3 id="keychain">keychain<a class="headerlink" href="#keychain" title="Permanent link">¶</a></h3>
+<p>• <strong>keychain</strong>: <em>Keychain | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#keychain">keychain</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:261</p>
+<hr/>
+<h3 id="metrics">metrics<a class="headerlink" href="#metrics" title="Permanent link">¶</a></h3>
+<p>• <strong>metrics</strong>: <em>Metrics | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#metrics">metrics</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:260</p>
+<hr/>
+<h3 id="natmanager">natManager<a class="headerlink" href="#natmanager" title="Permanent link">¶</a></h3>
+<p>• <strong>natManager</strong>: <em>NatManager</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#natmanager">natManager</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:264</p>
+<hr/>
+<h3 id="peerid">peerId<a class="headerlink" href="#peerid" title="Permanent link">¶</a></h3>
+<p>• <strong>peerId</strong>: <em>PeerId</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#peerid">peerId</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:200</p>
+<hr/>
+<h3 id="peerrouting">peerRouting<a class="headerlink" href="#peerrouting" title="Permanent link">¶</a></h3>
+<p>• <strong>peerRouting</strong>: <em>PeerRouting</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#peerrouting">peerRouting</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:279</p>
+<hr/>
+<h3 id="peerstore">peerStore<a class="headerlink" href="#peerstore" title="Permanent link">¶</a></h3>
+<p>• <strong>peerStore</strong>: <em>PeerStore</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#peerstore">peerStore</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:202</p>
+<hr/>
+<h3 id="pubsub_1">pubsub<a class="headerlink" href="#pubsub_1" title="Permanent link">¶</a></h3>
+<p>• <strong>pubsub</strong>: <em>PubsubBaseProtocol</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#pubsub">pubsub</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:278</p>
+<hr/>
+<h3 id="registrar">registrar<a class="headerlink" href="#registrar" title="Permanent link">¶</a></h3>
+<p>• <strong>registrar</strong>: <em>Registrar</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#registrar">registrar</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:265</p>
+<hr/>
+<h3 id="relay">relay<a class="headerlink" href="#relay" title="Permanent link">¶</a></h3>
+<p>• <strong>relay</strong>: <em>Relay | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#relay">relay</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:274</p>
+<hr/>
+<h3 id="transportmanager">transportManager<a class="headerlink" href="#transportmanager" title="Permanent link">¶</a></h3>
+<p>• <strong>transportManager</strong>: <em>TransportManager</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#transportmanager">transportManager</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:263</p>
+<hr/>
+<h3 id="upgrader">upgrader<a class="headerlink" href="#upgrader" title="Permanent link">¶</a></h3>
+<p>• <strong>upgrader</strong>: <em>Upgrader</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#upgrader">upgrader</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:262</p>
+<h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
+<h3 id="connections">connections<a class="headerlink" href="#connections" title="Permanent link">¶</a></h3>
+<p>• <strong>get connections</strong>(): <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Connection[]›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#connections">connections</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:318</p>
+<p>Gets a Map of the current connections. The keys are the stringified
+<code>PeerId</code> of the peer. The value is an array of Connections to that peer.</p>
+<p><strong>Returns:</strong> <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Connection[]›</em></p>
+<hr/>
+<h3 id="multiaddrs">multiaddrs<a class="headerlink" href="#multiaddrs" title="Permanent link">¶</a></h3>
+<p>• <strong>get multiaddrs</strong>(): <em>Multiaddr[]</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#multiaddrs">multiaddrs</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:365</p>
+<p>Get a deduplicated list of peer advertising multiaddrs by concatenating
+the listen addresses used by transports with any configured
+announce addresses as well as observed addresses reported by peers.</p>
+<p>If Announce addrs are specified, configured listen addresses will be
+ignored though observed addresses will still be included.</p>
+<p><strong>Returns:</strong> <em>Multiaddr[]</em></p>
+<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
+<h3 id="_dial">_dial<a class="headerlink" href="#_dial" title="Permanent link">¶</a></h3>
+<p>▸ <strong>_dial</strong>(<code>peer</code>: PeerId | Multiaddr | string, <code>options?</code>: object | undefined): <em>Promise‹Connection›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_dial">_dial</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:354</p>
+<p><strong><code>async</code></strong> </p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td>PeerId | Multiaddr | string</td>
+<td>The peer to dial</td>
+</tr>
+<tr>
+<td><code>options?</code></td>
+<td>object | undefined</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹Connection›</em></p>
+<hr/>
+<h3 id="_onstarting">_onStarting<a class="headerlink" href="#_onstarting" title="Permanent link">¶</a></h3>
+<p>▸ <strong>_onStarting</strong>(): <em>Promise‹void›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#_onstarting">_onStarting</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:387</p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="addlistener">addListener<a class="headerlink" href="#addlistener" title="Permanent link">¶</a></h3>
+<p>▸ <strong>addListener</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#addlistener">addListener</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:62</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="dial">dial<a class="headerlink" href="#dial" title="Permanent link">¶</a></h3>
+<p>▸ <strong>dial</strong>(<code>peer</code>: PeerId | Multiaddr | string, <code>options?</code>: object | undefined): <em>Promise‹Connection›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#dial">dial</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:328</p>
+<p>Dials to the provided peer. If successful, the known metadata of the
+peer will be added to the nodes <code>peerStore</code></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td>PeerId | Multiaddr | string</td>
+<td>The peer to dial</td>
+</tr>
+<tr>
+<td><code>options?</code></td>
+<td>object | undefined</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹Connection›</em></p>
+<hr/>
+<h3 id="dialprotocol">dialProtocol<a class="headerlink" href="#dialprotocol" title="Permanent link">¶</a></h3>
+<p>▸ <strong>dialProtocol</strong>(<code>peer</code>: PeerId | Multiaddr | string, <code>protocols</code>: string[] | string, <code>options?</code>: object | undefined): <em>Promise‹object›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#dialprotocol">dialProtocol</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:342</p>
+<p>Dials to the provided peer and tries to handshake with the given protocols in order.
+If successful, the known metadata of the peer will be added to the nodes <code>peerStore</code>,
+and the <code>MuxedStream</code> will be returned together with the successful negotiated protocol.</p>
+<p><strong><code>async</code></strong> </p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td>PeerId | Multiaddr | string</td>
+<td>The peer to dial</td>
+</tr>
+<tr>
+<td><code>protocols</code></td>
+<td>string[] | string</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>options?</code></td>
+<td>object | undefined</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹object›</em></p>
+<hr/>
+<h3 id="emit">emit<a class="headerlink" href="#emit" title="Permanent link">¶</a></h3>
+<p>▸ <strong>emit</strong>(<code>event</code>: string | symbol, ...<code>args</code>: any[]): <em>boolean</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#emit">emit</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:72</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>string | symbol</td>
+</tr>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="eventnames">eventNames<a class="headerlink" href="#eventnames" title="Permanent link">¶</a></h3>
+<p>▸ <strong>eventNames</strong>(): <em>Array‹string | symbol›</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#eventnames">eventNames</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:77</p>
+<p><strong>Returns:</strong> <em>Array‹string | symbol›</em></p>
+<hr/>
+<h3 id="getmaxlisteners">getMaxListeners<a class="headerlink" href="#getmaxlisteners" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getMaxListeners</strong>(): <em>number</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#getmaxlisteners">getMaxListeners</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:69</p>
+<p><strong>Returns:</strong> <em>number</em></p>
+<hr/>
+<h3 id="handle">handle<a class="headerlink" href="#handle" title="Permanent link">¶</a></h3>
+<p>▸ <strong>handle</strong>(<code>protocols</code>: string[] | string, <code>handler</code>: function): <em>void</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#handle">handle</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:272</p>
+<p>Registers the <code>handler</code> for each protocol</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>protocols</strong>: <em>string[] | string</em></p>
+<p>▪ <strong>handler</strong>: <em>function</em></p>
+<p>▸ (<code>props</code>: <a href="./#handlerprops">HandlerProps</a>): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>props</code></td>
+<td><a href="./#handlerprops">HandlerProps</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="hangup">hangUp<a class="headerlink" href="#hangup" title="Permanent link">¶</a></h3>
+<p>▸ <strong>hangUp</strong>(<code>peer</code>: PeerId | Multiaddr | string): <em>Promise‹void›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#hangup">hangUp</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:372</p>
+<p>Disconnects all connections to the given <code>peer</code></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td>PeerId | Multiaddr | string</td>
+<td>the peer to close connections to</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="isstarted">isStarted<a class="headerlink" href="#isstarted" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isStarted</strong>(): <em>boolean | undefined</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#isstarted">isStarted</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:311</p>
+<p><strong>Returns:</strong> <em>boolean | undefined</em></p>
+<hr/>
+<h3 id="listenercount">listenerCount<a class="headerlink" href="#listenercount" title="Permanent link">¶</a></h3>
+<p>▸ <strong>listenerCount</strong>(<code>event</code>: string | symbol): <em>number</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#listenercount">listenerCount</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:73</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>string | symbol</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>number</em></p>
+<hr/>
+<h3 id="listeners">listeners<a class="headerlink" href="#listeners" title="Permanent link">¶</a></h3>
+<p>▸ <strong>listeners</strong>(<code>event</code>: string | symbol): <em>Function[]</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#listeners">listeners</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:70</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>string | symbol</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Function[]</em></p>
+<hr/>
+<h3 id="loadkeychain">loadKeychain<a class="headerlink" href="#loadkeychain" title="Permanent link">¶</a></h3>
+<p>▸ <strong>loadKeychain</strong>(): <em>Promise‹void›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#loadkeychain">loadKeychain</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:310</p>
+<p>Load keychain keys from the datastore.
+Imports the private key as 'self', if needed.</p>
+<p><strong><code>async</code></strong> </p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="off">off<a class="headerlink" href="#off" title="Permanent link">¶</a></h3>
+<p>▸ <strong>off</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#off">off</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:66</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="on">on<a class="headerlink" href="#on" title="Permanent link">¶</a></h3>
+<p>▸ <strong>on</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#on">on</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:63</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="once">once<a class="headerlink" href="#once" title="Permanent link">¶</a></h3>
+<p>▸ <strong>once</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#once">once</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:64</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="ping">ping<a class="headerlink" href="#ping" title="Permanent link">¶</a></h3>
+<p>▸ <strong>ping</strong>(<code>peer</code>: PeerId | Multiaddr | string): <em>Promise‹number›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#ping">ping</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:379</p>
+<p>Pings the given peer in order to obtain the operation latency.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td>PeerId | Multiaddr | string</td>
+<td>The peer to ping</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹number›</em></p>
+<hr/>
+<h3 id="prependlistener">prependListener<a class="headerlink" href="#prependlistener" title="Permanent link">¶</a></h3>
+<p>▸ <strong>prependListener</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#prependlistener">prependListener</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:75</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="prependoncelistener">prependOnceListener<a class="headerlink" href="#prependoncelistener" title="Permanent link">¶</a></h3>
+<p>▸ <strong>prependOnceListener</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#prependoncelistener">prependOnceListener</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:76</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="rawlisteners">rawListeners<a class="headerlink" href="#rawlisteners" title="Permanent link">¶</a></h3>
+<p>▸ <strong>rawListeners</strong>(<code>event</code>: string | symbol): <em>Function[]</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#rawlisteners">rawListeners</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:71</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event</code></td>
+<td>string | symbol</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Function[]</em></p>
+<hr/>
+<h3 id="removealllisteners">removeAllListeners<a class="headerlink" href="#removealllisteners" title="Permanent link">¶</a></h3>
+<p>▸ <strong>removeAllListeners</strong>(<code>event?</code>: string | symbol): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#removealllisteners">removeAllListeners</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:67</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>event?</code></td>
+<td>string | symbol</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="removelistener">removeListener<a class="headerlink" href="#removelistener" title="Permanent link">¶</a></h3>
+<p>▸ <strong>removeListener</strong>(<code>event</code>: string | symbol, <code>listener</code>: function): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#removelistener">removeListener</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:65</p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>event</strong>: <em>string | symbol</em></p>
+<p>▪ <strong>listener</strong>: <em>function</em></p>
+<p>▸ (...<code>args</code>: any[]): <em>void</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>...args</code></td>
+<td>any[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="setmaxlisteners">setMaxListeners<a class="headerlink" href="#setmaxlisteners" title="Permanent link">¶</a></h3>
+<p>▸ <strong>setMaxListeners</strong>(<code>n</code>: number): <em>this</em></p>
+<p><em>Inherited from <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>.<a href="../network_gossip.eth2gossipsub/#setmaxlisteners">setMaxListeners</a></em></p>
+<p>Defined in node_modules/@types/node/events.d.ts:68</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n</code></td>
+<td>number</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>this</em></p>
+<hr/>
+<h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
+<p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#start">start</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:294</p>
+<p>Starts the libp2p node and all its subsystems</p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
+<p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#stop">stop</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:301</p>
+<p>Stop the libp2p node by closing its listeners and open connections</p>
+<p><strong><code>async</code></strong> </p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="unhandle">unhandle<a class="headerlink" href="#unhandle" title="Permanent link">¶</a></h3>
+<p>▸ <strong>unhandle</strong>(<code>protocols</code>: string[] | string): <em>void</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#unhandle">unhandle</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:386</p>
+<p>Removes the handler for each protocol. The protocol
+will no longer be supported on streams.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>protocols</code></td>
+<td>string[] | string</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="static-create"><code>Static</code> create<a class="headerlink" href="#static-create" title="Permanent link">¶</a></h3>
+<p>▸ <strong>create</strong>(<code>options</code>: <a href="./#libp2poptions">Libp2pOptions</a> &amp; <a href="./#createoptions">CreateOptions</a>): <em>Promise‹Libp2p›</em></p>
+<p><em>Inherited from <a href="./">NodejsNode</a>.<a href="./#static-create">create</a></em></p>
+<p>Defined in node_modules/libp2p/dist/src/index.d.ts:105</p>
+<p>Like <code>new Libp2p(options)</code> except it will create a <code>PeerId</code>
+instance if one is not provided in options.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>options</code></td>
+<td><a href="./#libp2poptions">Libp2pOptions</a> &amp; <a href="./#createoptions">CreateOptions</a></td>
+<td>Libp2p configuration options</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹Libp2p›</em></p>
+</article>
+</div>
+</div>
+</main>
+<footer class="md-footer">
+<div class="md-footer-meta md-typeset">
+<div class="md-footer-meta__inner md-grid">
+<div class="md-footer-copyright">
+        
+        
+          Made with
+          <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+            Material for MkDocs
+          </a>
+</div>
+<div class="md-footer-social">
+<a class="md-footer-social__link" href="https://github.com/ChainSafe/lodestar" rel="noopener" target="_blank" title="github.com">
+<svg viewbox="0 0 480 512" xmlns="http://www.w3.org/2000/svg"><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"></path></svg>
+</a>
+<a class="md-footer-social__link" href="https://twitter.com/ChainSafe" rel="noopener" target="_blank" title="twitter.com">
+<svg viewbox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"></path></svg>
+</a>
+<a class="md-footer-social__link" href="https://discord.gg/yjyvFRP" rel="noopener" target="_blank" title="discord.gg">
+<svg viewbox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541zM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241z"></path></svg>
+</a>
+<a class="md-footer-social__link" href="https://medium.com/ChainSafe" rel="noopener" target="_blank" title="medium.com">
+<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M0 32v448h448V32H0zm372.2 106.1-24 23c-2.1 1.6-3.1 4.2-2.7 6.7v169.3c-.4 2.6.6 5.2 2.7 6.7l23.5 23v5.1h-118V367l24.3-23.6c2.4-2.4 2.4-3.1 2.4-6.7V199.8l-67.6 171.6h-9.1L125 199.8v115c-.7 4.8 1 9.7 4.4 13.2l31.6 38.3v5.1H71.2v-5.1l31.6-38.3c3.4-3.5 4.9-8.4 4.1-13.2v-133c.4-3.7-1-7.3-3.8-9.8L75 138.1V133h87.3l67.4 148L289 133.1h83.2v5z"></path></svg>
+</a>
+</div>
+</div>
+</div>
+</footer>
+</div>
+<div class="md-dialog" data-md-component="dialog">
+<div class="md-dialog__inner md-typeset"></div>
+</div>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.e99e714c.min.js", "version": null}</script>
+<script src="../../../../assets/javascripts/bundle.bc35569b.min.js"></script>
+</body>
+</html>
