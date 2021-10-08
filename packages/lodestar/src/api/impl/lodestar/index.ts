@@ -149,6 +149,12 @@ export function getLodestarApi({
       const peerId = PeerId.createFromB58String(peerIdStr);
       await network.disconnectPeer(peerId);
     },
+
+    async discv5GetKadValues() {
+      return {
+        data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
+      };
+    },
   };
 }
 

@@ -50,11 +50,5 @@ export function getDebugApi({
       const peer = createFromB58String(peerIdStr);
       await network.disconnectPeer(peer);
     },
-
-    async discv5GetKadValues() {
-      return {
-        data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
-      };
-    },
   };
 }
