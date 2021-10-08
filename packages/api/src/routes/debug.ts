@@ -14,6 +14,7 @@ import {
   ReqSerializers,
   ReqEmpty,
   ReqSerializer,
+  jsonType,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -67,6 +68,12 @@ export type Api = {
    * Disconnect from a peer
    */
   disconnectPeer(peerIdStr: string): Promise<void>;
+
+  /**
+   * NOT IN SPEC
+   * Dump Discv5 Kad values
+   */
+  discv5GetKadValues(): Promise<{data: string[]}>;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -75,6 +82,7 @@ export const routesData: RoutesData<Api> = {
   getStateV2: {url: "/eth/v2/debug/beacon/states/:stateId", method: "GET"},
   connectToPeer: {url: "/eth/v1/debug/connect/:peerId", method: "POST"},
   disconnectPeer: {url: "/eth/v1/debug/disconnect/:peerId", method: "POST"},
+  discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -83,6 +91,7 @@ export type ReqTypes = {
   getStateV2: {params: {stateId: string}; headers: {accept?: string}};
   connectToPeer: {params: {peerId: string}; body: string[]};
   disconnectPeer: {params: {peerId: string}};
+  discv5GetKadValues: ReqEmpty;
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -109,6 +118,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params}) => [params.peerId],
       schema: {params: {peerId: Schema.StringRequired}},
     },
+    discv5GetKadValues: reqEmpty,
   };
 }
 
@@ -129,5 +139,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateV2: WithVersion(
       (fork: ForkName) => ssz[fork.toLowerCase() as ForkName].BeaconState as TypeJson<allForks.BeaconState>
     ),
+    discv5GetKadValues: jsonType(),
   };
 }
