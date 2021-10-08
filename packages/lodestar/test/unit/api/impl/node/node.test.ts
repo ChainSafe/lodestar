@@ -146,17 +146,6 @@ describe("node api implementation", function () {
     });
   });
 
-  describe("getSyncStatus", function () {
-    it("success", async function () {
-      syncStub.getSyncStatus.returns({
-        headSlot: 2,
-        syncDistance: 1,
-      });
-      const {data: syncStatus} = await api.getSyncingStatus();
-      expect(syncStatus).to.deep.equal({headSlot: 2, syncDistance: 1});
-    });
-  });
-
   describe("getVersion", function () {
     it("success", async function () {
       const {data} = await api.getNodeVersion();
