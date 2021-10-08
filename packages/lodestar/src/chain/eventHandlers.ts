@@ -54,7 +54,6 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.forkChoiceHead]: onForkChoiceHead,
     [ChainEvent.forkChoiceJustified]: onForkChoiceJustified,
     [ChainEvent.forkChoiceReorg]: onForkChoiceReorg,
-    [ChainEvent.forkVersion]: onForkVersion,
     [ChainEvent.justified]: onJustified,
   };
 

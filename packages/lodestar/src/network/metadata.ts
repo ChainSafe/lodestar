@@ -4,8 +4,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {ChainEvent, IBeaconChain} from "../chain";
+import {IBeaconChain} from "../chain";
 import {FAR_FUTURE_EPOCH} from "../constants";
 import {getCurrentAndNextFork} from "./forks";
 
@@ -41,20 +40,18 @@ export class MetadataController {
   start(enr: ENR | undefined, currentFork: ForkName): void {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getClockEnrForkId()));
+      // updateEth2Field() MUST be called with clock epoch
+      this.updateEth2Field(this.chain.clock.currentEpoch);
+
       this.enr.set("attnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included
+
       if (currentFork !== ForkName.phase0) {
         // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
         // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
         this.enr.set("syncnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
       }
     }
-    this.chain.emitter.on(ChainEvent.forkVersion, this.handleForkVersion);
-  }
-
-  stop(): void {
-    this.chain.emitter.off(ChainEvent.forkVersion, this.handleForkVersion);
   }
 
   get seqNumber(): bigint {
@@ -89,27 +86,23 @@ export class MetadataController {
     return this._metadata;
   }
 
-  private handleForkVersion(): void {
-    if (this.enr) {
-      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getClockEnrForkId()));
-    }
-  }
-
   /**
    * From spec:
+   *   fork_digest is compute_fork_digest(current_fork_version, genesis_validators_root) where
+   *   - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
+   *     necessarily the epoch to which the node is sync)
+   *   - genesis_validators_root is the static Root found in state.genesis_validators_root
    *
-   * fork_digest is compute_fork_digest(current_fork_version, genesis_validators_root) where
-   * - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
-   *   necessarily the epoch to which the node is sync)
-   * - genesis_validators_root is the static Root found in state.genesis_validators_root
+   * 1. MUST be called on start to populate ENR
+   * 2. Network MUST call this method on fork transition.
+   *    Current Clock implementation ensures no race conditions, epoch is correct if re-fetched
    */
-  private getClockEnrForkId(): phase0.ENRForkID {
-    const currentSlot = this.chain.clock.currentSlot;
-    const clockForkName = this.config.getForkName(currentSlot);
-    const forkDigest = this.config.forkName2ForkDigest(clockForkName);
-    this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
-    const currentEpoch = computeEpochAtSlot(currentSlot);
-    return getENRForkID(this.config, currentEpoch);
+  updateEth2Field(epoch: Epoch): void {
+    if (this.enr) {
+      const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
+      this.logger.verbose(`Updated ENR.eth2: ${toHexString(enrForkId)}`);
+      this.enr.set("eth2", enrForkId);
+    }
   }
 }
 

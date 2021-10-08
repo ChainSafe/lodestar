@@ -1,8 +1,7 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
-import {ForkName} from "@chainsafe/lodestar-params";
-import {phase0, Epoch, Slot, Version, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {AttestationError, BlockError} from "./errors";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -48,12 +47,6 @@ export enum ChainEvent {
    * This event is a derivative of the `checkpoint` event. Eg: in cases where the `checkpoint` state has an updated finalized checkpoint, this event is triggered.
    */
   finalized = "finalized",
-  /**
-   * This event signals that the chain has reached a new fork version.
-   *
-   * This event is guaranteed to be triggered after processing any block or checkpoint that updates the `state.fork.currentVersion` as a result of processing.
-   */
-  forkVersion = "forkVersion",
   /**
    * This event signals the start of a new slot, and that subsequent calls to `clock.currentSlot` will equal `slot`.
    *
@@ -116,7 +109,6 @@ export interface IChainEvents {
   [ChainEvent.checkpoint]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
   [ChainEvent.justified]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
   [ChainEvent.finalized]: (checkpoint: phase0.Checkpoint, state: CachedBeaconState<allForks.BeaconState>) => void;
-  [ChainEvent.forkVersion]: (version: Version, fork: ForkName) => void;
 
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;

@@ -146,7 +146,6 @@ export class Network implements INetwork {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     this.peerManager.stop();
-    this.metadata.stop();
     this.gossip.stop();
     this.reqResp.stop();
     this.attnetsService.stop();
@@ -264,6 +263,12 @@ export class Network implements INetwork {
           if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
           this.attnetsService.subscribeSubnetsToNextFork(nextFork);
           this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
+        }
+
+        // On fork transition
+        if (epoch === forkEpoch) {
+          // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
+          this.metadata.updateEth2Field(epoch);
         }
 
         // After fork transition
