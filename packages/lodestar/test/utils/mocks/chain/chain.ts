@@ -17,7 +17,6 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
-import {ForkDigestContext, IForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
 import {
@@ -63,7 +62,6 @@ export class MockBeaconChain implements IBeaconChain {
   clock: IBeaconClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
 
@@ -112,7 +110,6 @@ export class MockBeaconChain implements IBeaconChain {
       db,
       metrics: null,
     });
-    this.forkDigestContext = new ForkDigestContext(this.config, this.genesisValidatorsRoot);
     this.lightclientUpdater = new LightClientUpdater(db);
     this.lightClientIniter = new LightClientIniter({
       config: this.config,
