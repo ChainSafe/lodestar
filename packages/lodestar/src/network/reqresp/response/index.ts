@@ -3,7 +3,7 @@ import pipe from "it-pipe";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Libp2p} from "libp2p/src/connection-manager";
 import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
-import {IForkDigestContext} from "../../../util/forkDigestContext";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, ResponseBody} from "../types";
@@ -12,7 +12,6 @@ import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
 import {ResponseError} from "./errors";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export {ResponseError};
 
@@ -23,9 +22,8 @@ export type PerformRequestHandler = (
 ) => AsyncIterable<ResponseBody>;
 
 type HandleRequestModules = {
-  config: IChainForkConfig;
+  config: IBeaconConfig;
   logger: ILogger;
-  forkDigestContext: IForkDigestContext;
   libp2p: Libp2p;
 };
 
@@ -40,7 +38,7 @@ type HandleRequestModules = {
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
 export async function handleRequest(
-  {config, logger, forkDigestContext, libp2p}: HandleRequestModules,
+  {config, logger, libp2p}: HandleRequestModules,
   performRequestHandler: PerformRequestHandler,
   stream: Libp2pStream,
   peerId: PeerId,
@@ -76,7 +74,7 @@ export async function handleRequest(
           performRequestHandler(protocol, requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
           onChunk(() => logger.debug("Resp sending chunk", logCtx)),
-          responseEncodeSuccess(config, forkDigestContext, protocol)
+          responseEncodeSuccess(config, protocol)
         );
       } catch (e) {
         const status = e instanceof ResponseError ? e.status : RespStatus.SERVER_ERROR;

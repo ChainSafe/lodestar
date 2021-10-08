@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
-import {IForkDigestContext} from "../../util/forkDigestContext";
 import {FORK_EPOCH_LOOKAHEAD, getCurrentAndNextFork} from "../forks";
 import {IGossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
@@ -70,9 +69,8 @@ type TopicScoreInput = {
  */
 export function computeGossipPeerScoreParams({
   config,
-  forkDigestContext,
   eth2Context,
-}: Pick<IGossipsubModules, "config" | "forkDigestContext" | "eth2Context">): Partial<PeerScoreParams> {
+}: Pick<IGossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
@@ -86,7 +84,7 @@ export function computeGossipPeerScoreParams({
   const topicScoreCap = maxPositiveScore * 0.5;
 
   const params = {
-    topics: getAllTopicsScoreParams(config, eth2Context, forkDigestContext, {
+    topics: getAllTopicsScoreParams(config, eth2Context, {
       epochDurationMs,
       slotDurationMs,
       scoreParameterDecayFn,
@@ -107,9 +105,8 @@ export function computeGossipPeerScoreParams({
 }
 
 function getAllTopicsScoreParams(
-  config: IChainForkConfig,
+  config: IBeaconConfig,
   eth2Context: Eth2Context,
-  forkDigestContext: IForkDigestContext,
   precomputedParams: PreComputedParams
 ): Record<string, TopicScoreParams> {
   const {epochDurationMs, slotDurationMs} = precomputedParams;
@@ -121,7 +118,7 @@ function getAllTopicsScoreParams(
   for (const fork of forks.map((fork) => fork.name)) {
     //first all fixed topics
     topicsParams[
-      stringifyGossipTopic(forkDigestContext, {
+      stringifyGossipTopic(config, {
         type: GossipType.voluntary_exit,
         fork,
       })
@@ -131,7 +128,7 @@ function getAllTopicsScoreParams(
       firstMessageDecayTime: epochDurationMs * 100,
     });
     topicsParams[
-      stringifyGossipTopic(forkDigestContext, {
+      stringifyGossipTopic(config, {
         type: GossipType.attester_slashing,
         fork,
       })
@@ -141,7 +138,7 @@ function getAllTopicsScoreParams(
       firstMessageDecayTime: epochDurationMs * 100,
     });
     topicsParams[
-      stringifyGossipTopic(forkDigestContext, {
+      stringifyGossipTopic(config, {
         type: GossipType.proposer_slashing,
         fork,
       })
@@ -153,7 +150,7 @@ function getAllTopicsScoreParams(
 
     // other topics
     topicsParams[
-      stringifyGossipTopic(forkDigestContext, {
+      stringifyGossipTopic(config, {
         type: GossipType.beacon_block,
         fork,
       })
@@ -180,7 +177,7 @@ function getAllTopicsScoreParams(
 
     const multipleBurstsPerSubnetPerEpoch = committeesPerSlot >= (2 * ATTESTATION_SUBNET_COUNT) / SLOTS_PER_EPOCH;
     topicsParams[
-      stringifyGossipTopic(forkDigestContext, {
+      stringifyGossipTopic(config, {
         type: GossipType.beacon_aggregate_and_proof,
         fork,
       })
@@ -210,7 +207,7 @@ function getAllTopicsScoreParams(
       },
     });
     for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-      const topicStr = stringifyGossipTopic(forkDigestContext, {
+      const topicStr = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
         fork,
         subnet,
@@ -222,7 +219,7 @@ function getAllTopicsScoreParams(
 }
 
 function getTopicScoreParams(
-  config: IChainForkConfig,
+  config: IBeaconConfig,
   {epochDurationMs, slotDurationMs, scoreParameterDecayFn}: PreComputedParams,
   {topicWeight, expectedMessageRate, firstMessageDecayTime, meshMessageInfo}: TopicScoreInput
 ): TopicScoreParams {

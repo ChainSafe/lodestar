@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
 import all from "it-all";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {config} from "@chainsafe/lodestar-config/default";
 import {
   Method,
   Version,
@@ -16,7 +15,7 @@ import {responseDecode} from "../../../../../src/network/reqresp/encoders/respon
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
-import {ForkDigestContext} from "../../../../../src/util/forkDigestContext";
+import {config} from "../../../../utils/config";
 
 chai.use(chaiAsPromised);
 
@@ -35,7 +34,6 @@ describe("network / reqresp / encoders / responseTypes", () => {
 
   // TODO: Test endcoding through a fork
   const forkName = ForkName.phase0;
-  const forkDigestContext = new ForkDigestContext(config, Buffer.alloc(32, 0));
 
   for (const encoding of encodings) {
     for (const [_method, _responsesChunks] of Object.entries(testCases)) {
@@ -54,8 +52,8 @@ describe("network / reqresp / encoders / responseTypes", () => {
             const protocol = {method, version, encoding};
             const returnedResponses = await pipe(
               arrToSource(responseChunks),
-              responseEncodeSuccess(config, forkDigestContext, protocol),
-              responseDecode(forkDigestContext, protocol),
+              responseEncodeSuccess(config, protocol),
+              responseDecode(config, protocol),
               all
             );
 

@@ -4,7 +4,6 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IForkDigestContext} from "../../util/forkDigestContext";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
@@ -29,7 +28,6 @@ export interface IReqRespModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
   logger: ILogger;
-  forkDigestContext: IForkDigestContext;
   metadata: MetadataController;
   reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;

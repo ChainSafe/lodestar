@@ -1,28 +1,24 @@
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import sinon from "sinon";
-import {SinonStubbedInstance} from "sinon";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
 import {expect} from "chai";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
 import {GossipType} from "../../../../src/network";
 import {TopicScoreParams} from "libp2p-gossipsub/src/score";
+import {ZERO_HASH} from "../../../../src/constants";
 
 /**
  * Refer to Teku tests at
  * https://github.com/ConsenSys/teku/blob/e18ab9903442410aa04b590c4cc46734e13d3ffd/networking/eth2/src/test/java/tech/pegasys/teku/networking/eth2/gossip/config/GossipScoringConfiguratorTest.java#L38
  */
 describe("computeGossipPeerScoreParams", function () {
-  let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
-  const TOLERANCE = 0.00005;
+  const config = createIBeaconConfig(mainnetChainConfig, ZERO_HASH);
+  // Cheap stub on new IBeaconConfig instance
+  config.forkName2ForkDigest = () => Buffer.alloc(4, 1);
+  config.forkDigest2ForkName = () => ForkName.phase0;
 
-  beforeEach(async function () {
-    forkDigestContext = sinon.createStubInstance(ForkDigestContext);
-    forkDigestContext.forkName2ForkDigest.returns(Buffer.alloc(4, 1));
-    forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
-  });
+  const TOLERANCE = 0.00005;
 
   it("at genesis", () => {
     const eth2Context = {
@@ -35,11 +31,7 @@ describe("computeGossipPeerScoreParams", function () {
     expect(gossipScoreThresholds.graylistThreshold).to.be.equal(-16000);
     expect(gossipScoreThresholds.acceptPXThreshold).to.be.equal(100);
     expect(gossipScoreThresholds.opportunisticGraftThreshold).to.be.equal(5);
-    const params = computeGossipPeerScoreParams({
-      config: createIChainForkConfig(mainnetChainConfig),
-      forkDigestContext,
-      eth2Context,
-    });
+    const params = computeGossipPeerScoreParams({config, eth2Context});
     const allTopics = params.topics;
     if (!allTopics) {
       throw new Error("No scoring params for topics");
@@ -62,11 +54,7 @@ describe("computeGossipPeerScoreParams", function () {
     expect(gossipScoreThresholds.graylistThreshold).to.be.equal(-16000);
     expect(gossipScoreThresholds.acceptPXThreshold).to.be.equal(100);
     expect(gossipScoreThresholds.opportunisticGraftThreshold).to.be.equal(5);
-    const params = computeGossipPeerScoreParams({
-      config: createIChainForkConfig(mainnetChainConfig),
-      forkDigestContext,
-      eth2Context,
-    });
+    const params = computeGossipPeerScoreParams({config, eth2Context});
     const allTopics = params.topics;
     if (!allTopics) {
       throw new Error("No scoring params for topics");
@@ -79,7 +67,7 @@ describe("computeGossipPeerScoreParams", function () {
   });
 
   function validateVoluntaryExitTopicParams(topics: Record<string, TopicScoreParams>): void {
-    const topicString = stringifyGossipTopic(forkDigestContext, {
+    const topicString = stringifyGossipTopic(config, {
       type: GossipType.voluntary_exit,
       fork: ForkName.phase0,
     });
@@ -97,11 +85,11 @@ describe("computeGossipPeerScoreParams", function () {
   }
 
   function validateSlashingTopicParams(topics: Record<string, TopicScoreParams>): void {
-    const attesterSlashingTopicString = stringifyGossipTopic(forkDigestContext, {
+    const attesterSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.attester_slashing,
       fork: ForkName.phase0,
     });
-    const proposerSlashingTopicString = stringifyGossipTopic(forkDigestContext, {
+    const proposerSlashingTopicString = stringifyGossipTopic(config, {
       type: GossipType.proposer_slashing,
       fork: ForkName.phase0,
     });
@@ -123,7 +111,7 @@ describe("computeGossipPeerScoreParams", function () {
   }
 
   function validateAggregateTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
-    const topicString = stringifyGossipTopic(forkDigestContext, {
+    const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_aggregate_and_proof,
       fork: ForkName.phase0,
     });
@@ -157,7 +145,7 @@ describe("computeGossipPeerScoreParams", function () {
   }
 
   function validateBlockTopicParams(topics: Record<string, TopicScoreParams>, penaltiesActive: boolean): void {
-    const topicString = stringifyGossipTopic(forkDigestContext, {
+    const topicString = stringifyGossipTopic(config, {
       type: GossipType.beacon_block,
       fork: ForkName.phase0,
     });
@@ -195,7 +183,7 @@ describe("computeGossipPeerScoreParams", function () {
     penaltiesActive: boolean
   ): void {
     for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
-      const topicString = stringifyGossipTopic(forkDigestContext, {
+      const topicString = stringifyGossipTopic(config, {
         type: GossipType.beacon_attestation,
         fork: ForkName.phase0,
         subnet: i,

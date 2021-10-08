@@ -4,7 +4,7 @@ import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gos
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -24,7 +24,6 @@ import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic"
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
-import {IForkDigestContext} from "../../util/forkDigestContext";
 import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByType} from "./validation";
 import {Map2d, Map2dArr} from "../../util/map";
@@ -45,12 +44,11 @@ import {
 import {Eth2Context} from "../../chain";
 
 export interface IGossipsubModules {
-  config: IChainForkConfig;
+  config: IBeaconConfig;
   libp2p: Libp2p;
   logger: ILogger;
   metrics: IMetrics | null;
   signal: AbortSignal;
-  forkDigestContext: IForkDigestContext;
   eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
 }
@@ -70,8 +68,7 @@ export interface IGossipsubModules {
  */
 export class Eth2Gossipsub extends Gossipsub {
   readonly jobQueues: GossipJobQueues;
-  private readonly config: IChainForkConfig;
-  private readonly forkDigestContext: IForkDigestContext;
+  private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
 
   // Internal caches
@@ -94,11 +91,10 @@ export class Eth2Gossipsub extends Gossipsub {
       scoreParams: computeGossipPeerScoreParams(modules),
       scoreThresholds: gossipScoreThresholds,
     });
-    const {config, forkDigestContext, logger, metrics, signal, gossipHandlers} = modules;
+    const {config, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
-    this.forkDigestContext = forkDigestContext;
     this.logger = logger;
-    this.gossipTopicCache = new GossipTopicCache(forkDigestContext);
+    this.gossipTopicCache = new GossipTopicCache(config);
 
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
     // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
@@ -385,7 +381,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private getGossipTopicString(topic: GossipTopic): string {
-    return stringifyGossipTopic(this.forkDigestContext, topic);
+    return stringifyGossipTopic(this.config, topic);
   }
 
   private onScrapeMetrics(metrics: IMetrics): void {

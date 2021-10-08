@@ -4,7 +4,7 @@ import pipe from "it-pipe";
 import all from "it-all";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Method, Version, Encoding, Protocol, ResponseBody} from "../../../../../src/network/reqresp/types";
 import {getResponseSzzTypeByMethod} from "../../../../../src/network/reqresp/types";
@@ -16,8 +16,7 @@ import {
   responseEncodeSuccess,
 } from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {ResponseError} from "../../../../../src/network/reqresp/response";
-import {RespStatus} from "../../../../../src/constants";
-import {ForkDigestContext} from "../../../../../src/util/forkDigestContext";
+import {RespStatus, ZERO_HASH} from "../../../../../src/constants";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {arrToSource, expectEqualByteChunks} from "../utils";
@@ -45,9 +44,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   }
   const ALTAIR_FORK_EPOCH = Math.floor(slotBlockAltair / SLOTS_PER_EPOCH);
   // eslint-disable-next-line @typescript-eslint/naming-convention
-  const config = createIChainForkConfig({...chainConfig, ALTAIR_FORK_EPOCH});
-
-  const forkDigestContext = new ForkDigestContext(config, Buffer.alloc(32, 0));
+  const config = createIBeaconConfig({...chainConfig, ALTAIR_FORK_EPOCH}, ZERO_HASH);
 
   const testCases: {
     id: string;
@@ -115,7 +112,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
         // <result>
         Buffer.from([RespStatus.SUCCESS]),
         // <context-bytes>
-        forkDigestContext.forkName2ForkDigest(ForkName.phase0) as Buffer,
+        config.forkName2ForkDigest(ForkName.phase0) as Buffer,
         // <encoding-dependent-header> | <encoded-payload>
         ...sszSnappySignedBeaconBlockPhase0.chunks,
       ],
@@ -130,7 +127,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
         // <result>
         Buffer.from([RespStatus.SUCCESS]),
         // <context-bytes>
-        forkDigestContext.forkName2ForkDigest(ForkName.altair) as Buffer,
+        config.forkName2ForkDigest(ForkName.altair) as Buffer,
         // <encoding-dependent-header> | <encoded-payload>
         ...sszSnappySignedBeaconBlockAltair.chunks,
       ],
@@ -203,11 +200,11 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
       chunks: [
         // Chunk 0 - success block in phase0 with context bytes
         Buffer.from([RespStatus.SUCCESS]),
-        forkDigestContext.forkName2ForkDigest(ForkName.phase0) as Buffer,
+        config.forkName2ForkDigest(ForkName.phase0) as Buffer,
         ...sszSnappySignedBeaconBlockPhase0.chunks,
         // Chunk 1 - success block in altair with context bytes
         Buffer.from([RespStatus.SUCCESS]),
-        forkDigestContext.forkName2ForkDigest(ForkName.altair) as Buffer,
+        config.forkName2ForkDigest(ForkName.altair) as Buffer,
         ...sszSnappySignedBeaconBlockAltair.chunks,
       ],
     },
@@ -247,7 +244,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
     for (const chunk of responseChunks) {
       if (chunk.status === RespStatus.SUCCESS) {
-        yield* pipe(arrToSource([chunk.body]), responseEncodeSuccess(config, forkDigestContext, protocol));
+        yield* pipe(arrToSource([chunk.body]), responseEncodeSuccess(config, protocol));
       } else {
         yield* responseEncodeError(chunk.status, chunk.errorMessage);
       }
@@ -270,7 +267,7 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
 
     if (chunks) {
       it(`${id} - responseDecode`, async () => {
-        const responseDecodePromise = pipe(arrToSource(chunks), responseDecode(forkDigestContext, protocol), all);
+        const responseDecodePromise = pipe(arrToSource(chunks), responseDecode(config, protocol), all);
 
         if (decodeError) {
           await expectRejectedWithLodestarError(responseDecodePromise, decodeError);

@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {RespStatus, RpcResponseStatusError} from "../../../constants";
-import {IForkDigestContext} from "../../../util/forkDigestContext";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {writeEncodedPayload} from "../encodingStrategies";
 import {encodeErrorMessage} from "../utils";
 import {
@@ -13,7 +13,6 @@ import {
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
 } from "../types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`
@@ -25,8 +24,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
  * Note: `response` has zero or more chunks (denoted by `<>*`)
  */
 export function responseEncodeSuccess(
-  config: IChainForkConfig,
-  forkDigestContext: IForkDigestContext,
+  config: IBeaconConfig,
   protocol: Protocol
 ): (source: AsyncIterable<ResponseBody>) => AsyncIterable<Buffer> {
   const contextBytesType = contextBytesTypeByProtocol(protocol);
@@ -38,7 +36,7 @@ export function responseEncodeSuccess(
 
       // <context-bytes>
       const forkName = getForkNameFromResponseBody(config, protocol, chunk);
-      yield* writeContextBytes(forkDigestContext, contextBytesType, forkName);
+      yield* writeContextBytes(config, contextBytesType, forkName);
 
       // <encoding-dependent-header> | <encoded-payload>
       const type = getResponseSzzTypeByMethod(protocol, forkName);
@@ -75,7 +73,7 @@ export async function* responseEncodeError(
  * This item is mandatory but may be empty.
  */
 export async function* writeContextBytes(
-  forkDigestContext: IForkDigestContext,
+  config: IBeaconConfig,
   contextBytesType: ContextBytesType,
   forkName: ForkName
 ): AsyncGenerator<Buffer> {
@@ -86,12 +84,12 @@ export async function* writeContextBytes(
 
     // Yield a fixed-width 4 byte chunk, set to the `ForkDigest`
     case ContextBytesType.ForkDigest:
-      yield forkDigestContext.forkName2ForkDigest(forkName) as Buffer;
+      yield config.forkName2ForkDigest(forkName) as Buffer;
   }
 }
 
 export function getForkNameFromResponseBody<K extends Method>(
-  config: IChainForkConfig,
+  config: IBeaconConfig,
   protocol: Protocol,
   body: ResponseBodyByMethod[K]
 ): ForkName {

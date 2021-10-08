@@ -1,14 +1,10 @@
 import {expect} from "chai";
-import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {ssz} from "@chainsafe/lodestar-types";
 import {GossipType, GossipEncoding, GossipTopicMap} from "../../../../src/network/gossip";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {parseGossipTopic, stringifyGossipTopic} from "../../../../src/network/gossip/topic";
+import {config} from "../../../utils/config";
 
 describe("network / gossip / topic", function () {
-  const genesisValidatorsRoot = ssz.Root.defaultValue();
-  const forkDigestContext = new ForkDigestContext(config, genesisValidatorsRoot);
   const encoding = GossipEncoding.ssz_snappy;
 
   // Enforce with Typescript that we test all GossipType
@@ -68,12 +64,12 @@ describe("network / gossip / topic", function () {
 
     for (const {topic, topicStr} of topics) {
       it(`should encode gossip topic ${topic.type} ${topic.fork} ${topic.encoding}`, async () => {
-        const topicStrRes = stringifyGossipTopic(forkDigestContext, topic);
+        const topicStrRes = stringifyGossipTopic(config, topic);
         expect(topicStrRes).to.equal(topicStr);
       });
 
       it(`should decode gossip topic ${topicStr}`, async () => {
-        const outputTopic = parseGossipTopic(forkDigestContext, topicStr);
+        const outputTopic = parseGossipTopic(config, topicStr);
         expect(outputTopic).to.deep.equal(topic);
       });
     }
@@ -96,7 +92,7 @@ describe("network / gossip / topic", function () {
   ];
   for (const topicStr of badTopicStrings) {
     it(`should fail to decode invalid gossip topic string ${topicStr}`, async () => {
-      expect(() => parseGossipTopic(forkDigestContext, topicStr), topicStr).to.throw();
+      expect(() => parseGossipTopic(config, topicStr), topicStr).to.throw();
     });
   }
 });
