@@ -37,10 +37,6 @@ describe("debug", function () {
       args: ["peerId"],
       res: undefined,
     },
-    discv5GetKadValues: {
-      args: [],
-      res: {data: []},
-    },
   });
 
   // Get state by SSZ
