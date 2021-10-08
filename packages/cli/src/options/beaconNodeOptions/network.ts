@@ -27,6 +27,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     bootMultiaddrs: args["network.bootMultiaddrs"],
     localMultiaddrs: args["network.localMultiaddrs"],
     subscribeAllSubnets: args["network.subscribeAllSubnets"],
+    connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
   };
 }
 
