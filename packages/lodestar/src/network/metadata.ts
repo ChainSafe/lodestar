@@ -41,7 +41,7 @@ export class MetadataController {
   start(enr: ENR | undefined, currentFork: ForkName): void {
     this.enr = enr;
     if (this.enr) {
-      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
+      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getClockEnrForkId()));
       this.enr.set("attnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included
       if (currentFork !== ForkName.phase0) {
@@ -90,21 +90,31 @@ export class MetadataController {
   }
 
   private handleForkVersion(): void {
-    const forkDigest = this.chain.getHeadForkDigest();
-    this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
     if (this.enr) {
-      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getHeadEnrForkId()));
+      this.enr.set("eth2", ssz.phase0.ENRForkID.serialize(this.getClockEnrForkId()));
     }
   }
 
-  private getHeadEnrForkId(): phase0.ENRForkID {
-    const headEpoch = computeEpochAtSlot(this.chain.forkChoice.getHead().slot);
-    return getENRForkID(this.config, headEpoch);
+  /**
+   * From spec:
+   *
+   * fork_digest is compute_fork_digest(current_fork_version, genesis_validators_root) where
+   * - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not
+   *   necessarily the epoch to which the node is sync)
+   * - genesis_validators_root is the static Root found in state.genesis_validators_root
+   */
+  private getClockEnrForkId(): phase0.ENRForkID {
+    const currentSlot = this.chain.clock.currentSlot;
+    const clockForkName = this.config.getForkName(currentSlot);
+    const forkDigest = this.config.forkName2ForkDigest(clockForkName);
+    this.logger.verbose(`Metadata: received new fork digest ${toHexString(forkDigest)}`);
+    const currentEpoch = computeEpochAtSlot(currentSlot);
+    return getENRForkID(this.config, currentEpoch);
   }
 }
 
-export function getENRForkID(config: IBeaconConfig, epoch: Epoch): phase0.ENRForkID {
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
+export function getENRForkID(config: IBeaconConfig, clockEpoch: Epoch): phase0.ENRForkID {
+  const {currentFork, nextFork} = getCurrentAndNextFork(config, clockEpoch);
 
   return {
     // Current fork digest

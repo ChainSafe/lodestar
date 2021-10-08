@@ -1,4 +1,3 @@
-import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -90,15 +89,6 @@ export interface IBeaconChain {
   processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;
   /** Process a chain of blocks until complete */
   processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
-
-  /** Get the ForkName from the head state */
-  getHeadForkName(): ForkName;
-  /** Get the ForkName from the current slot */
-  getClockForkName(): ForkName;
-  /** Get ForkDigest from the head state */
-  getHeadForkDigest(): phase0.ForkDigest;
-  /** Get ForkDigest from the current slot */
-  getClockForkDigest(): phase0.ForkDigest;
 
   getStatus(): phase0.Status;
 
