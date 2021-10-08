@@ -10,7 +10,6 @@ export * from "./balance";
 export * from "./blockRoot";
 export * from "./domain";
 export * from "./epoch";
-export * from "./fork";
 export * from "./genesis";
 export * from "./interop";
 export * from "./proposer";
