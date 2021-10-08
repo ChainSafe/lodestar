@@ -562,15 +562,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="iglobalargs_1">IGlobalArgs<a class="headerlink" href="#iglobalargs_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IGlobalArgs</strong>: <em><a href="../../interfaces/options.iglobalsingleargs/">IGlobalSingleArgs</a> &amp; <a href="./#iparamsargs">IParamsArgs</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L45">packages/cli/src/options/globalOptions.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L45">packages/cli/src/options/globalOptions.ts:45</a></em></p>
 <hr/>
 <h3 id="iparamsargs_1">IParamsArgs<a class="headerlink" href="#iparamsargs_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IParamsArgs</strong>: <em>Record‹never, never›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/paramsOptions.ts#L9">packages/cli/src/options/paramsOptions.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/paramsOptions.ts#L9">packages/cli/src/options/paramsOptions.ts:9</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-defaultnetwork"><code>Const</code> defaultNetwork<a class="headerlink" href="#const-defaultnetwork" title="Permanent link">¶</a></h3>
 <p>• <strong>defaultNetwork</strong>: <em><a href="../networks/#networkname">NetworkName</a></em> = "mainnet"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L12">packages/cli/src/options/globalOptions.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L12">packages/cli/src/options/globalOptions.ts:12</a></em></p>
 <hr/>
 <h3 id="const-paramsoptions"><code>Const</code> paramsOptions<a class="headerlink" href="#const-paramsoptions" title="Permanent link">¶</a></h3>
 <p>• <strong>paramsOptions</strong>: <em>Record‹string, Options›</em> = ((ObjectKeys(ChainConfig.fields) as unknown) as (keyof IChainConfig)[]).reduce(
@@ -584,7 +584,7 @@
   }),
   {}
 )</string,></string,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/paramsOptions.ts#L24">packages/cli/src/options/paramsOptions.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/paramsOptions.ts#L24">packages/cli/src/options/paramsOptions.ts:24</a></em></p>
 <hr/>
 <h3 id="const-rcconfigoption"><code>Const</code> rcConfigOption<a class="headerlink" href="#const-rcconfigoption" title="Permanent link">¶</a></h3>
 <p>• <strong>rcConfigOption</strong>: <em>[string, string, function]</em> = [
@@ -592,11 +592,11 @@
   "RC file to supplement command line args, accepted formats: .yml, .yaml, .json",
   (configPath: string): Record<string, unknown=""> =&gt; readFile(configPath, ["json", "yml", "yaml"]),
 ]</string,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L39">packages/cli/src/options/globalOptions.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L39">packages/cli/src/options/globalOptions.ts:39</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="const-getargkey"><code>Const</code> getArgKey<a class="headerlink" href="#const-getargkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getArgKey</strong>(<code>key</code>: keyof IBeaconParamsUnparsed): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/paramsOptions.ts#L11">packages/cli/src/options/paramsOptions.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/paramsOptions.ts#L11">packages/cli/src/options/paramsOptions.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -616,7 +616,7 @@
 <hr/>
 <h3 id="parsebeaconparamsargs_1">parseBeaconParamsArgs<a class="headerlink" href="#parsebeaconparamsargs_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>parseBeaconParamsArgs</strong>(<code>args</code>: Record‹string, string | number›): <em><a href="../config/#ibeaconparamsunparsed">IBeaconParamsUnparsed</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/paramsOptions.ts#L13">packages/cli/src/options/paramsOptions.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/paramsOptions.ts#L13">packages/cli/src/options/paramsOptions.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -636,7 +636,7 @@
 <hr/>
 <h3 id="parseenrargs_1">parseEnrArgs<a class="headerlink" href="#parseenrargs_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>parseEnrArgs</strong>(<code>args</code>: <a href="../../interfaces/options.ienrargs/">IENRArgs</a>): <em><a href="../../interfaces/config.ienrjson/">IENRJson</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L13">packages/cli/src/options/enrOptions.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L13">packages/cli/src/options/enrOptions.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -656,9 +656,9 @@
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-enroptions"><code>Const</code> enrOptions<a class="headerlink" href="#const-enroptions" title="Permanent link">¶</a></h3>
 <h3 id="enroptions-object">▪ <strong>enrOptions</strong>: <em>object</em><a class="headerlink" href="#enroptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L24">packages/cli/src/options/enrOptions.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L24">packages/cli/src/options/enrOptions.ts:24</a></em></p>
 <p>▪ <strong>enr.ip</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L25">packages/cli/src/options/enrOptions.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L25">packages/cli/src/options/enrOptions.ts:25</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR IP entry"</p>
@@ -671,7 +671,7 @@
 </li>
 </ul>
 <p>▪ <strong>enr.ip6</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L40">packages/cli/src/options/enrOptions.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L40">packages/cli/src/options/enrOptions.ts:40</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR IPv6 entry"</p>
@@ -684,7 +684,7 @@
 </li>
 </ul>
 <p>▪ <strong>enr.tcp</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L30">packages/cli/src/options/enrOptions.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L30">packages/cli/src/options/enrOptions.ts:30</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR TCP entry"</p>
@@ -697,7 +697,7 @@
 </li>
 </ul>
 <p>▪ <strong>enr.tcp6</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L45">packages/cli/src/options/enrOptions.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L45">packages/cli/src/options/enrOptions.ts:45</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR (IPv6-specific) TCP entry"</p>
@@ -710,7 +710,7 @@
 </li>
 </ul>
 <p>▪ <strong>enr.udp</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L35">packages/cli/src/options/enrOptions.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L35">packages/cli/src/options/enrOptions.ts:35</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR UDP entry"</p>
@@ -723,7 +723,7 @@
 </li>
 </ul>
 <p>▪ <strong>enr.udp6</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/enrOptions.ts#L50">packages/cli/src/options/enrOptions.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/enrOptions.ts#L50">packages/cli/src/options/enrOptions.ts:50</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Override ENR (IPv6-specific) UDP entry"</p>
@@ -738,13 +738,13 @@
 <hr/>
 <h3 id="const-globaloptions"><code>Const</code> globalOptions<a class="headerlink" href="#const-globaloptions" title="Permanent link">¶</a></h3>
 <h3 id="globaloptions-object">▪ <strong>globalOptions</strong>: <em>object</em><a class="headerlink" href="#globaloptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L47">packages/cli/src/options/globalOptions.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L47">packages/cli/src/options/globalOptions.ts:47</a></em></p>
 <hr/>
 <h3 id="const-globalsingleoptions"><code>Const</code> globalSingleOptions<a class="headerlink" href="#const-globalsingleoptions" title="Permanent link">¶</a></h3>
 <h3 id="globalsingleoptions-object">▪ <strong>globalSingleOptions</strong>: <em>object</em><a class="headerlink" href="#globalsingleoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L14">packages/cli/src/options/globalOptions.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L14">packages/cli/src/options/globalOptions.ts:14</a></em></p>
 <p>▪ <strong>network</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L20">packages/cli/src/options/globalOptions.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L20">packages/cli/src/options/globalOptions.ts:20</a></em></p>
 <ul>
 <li>
 <p><strong>choices</strong>: <em><a href="../networks/#networkname">NetworkName</a>[]</em> = networkNames</p>
@@ -760,7 +760,7 @@
 </li>
 </ul>
 <p>▪ <strong>paramsFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L27">packages/cli/src/options/globalOptions.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L27">packages/cli/src/options/globalOptions.ts:27</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Network configuration file"</p>
@@ -770,7 +770,7 @@
 </li>
 </ul>
 <p>▪ <strong>preset</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L33">packages/cli/src/options/globalOptions.ts:33</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L33">packages/cli/src/options/globalOptions.ts:33</a></em></p>
 <ul>
 <li>
 <p><strong>hidden</strong>: <em>true</em> = true</p>
@@ -780,7 +780,7 @@
 </li>
 </ul>
 <p>▪ <strong>rootDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0c9c43c/packages/cli/src/options/globalOptions.ts#L15">packages/cli/src/options/globalOptions.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/cli/src/options/globalOptions.ts#L15">packages/cli/src/options/globalOptions.ts:15</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Lodestar root directory"</p>
