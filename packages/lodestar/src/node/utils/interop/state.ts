@@ -23,20 +23,20 @@ export function getInteropState(
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): TreeBacked<allForks.BeaconState> {
-  const latestBlockHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked();
+  const latestPayloadHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked();
   // TODO: when having different test options, consider modifying these values
-  latestBlockHeader.blockHash = eth1BlockHash;
-  latestBlockHeader.timestamp = eth1Timestamp;
-  latestBlockHeader.random = eth1BlockHash;
-  latestBlockHeader.gasLimit = GENESIS_GAS_LIMIT;
-  latestBlockHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
+  latestPayloadHeader.blockHash = eth1BlockHash;
+  latestPayloadHeader.timestamp = eth1Timestamp;
+  latestPayloadHeader.random = eth1BlockHash;
+  latestPayloadHeader.gasLimit = GENESIS_GAS_LIMIT;
+  latestPayloadHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
   const state = initializeBeaconStateFromEth1(
     config,
     eth1BlockHash,
     eth1Timestamp,
     deposits,
     fullDepositDataRootList,
-    latestBlockHeader
+    latestPayloadHeader
   );
   state.genesisTime = genesisTime;
   return state;
