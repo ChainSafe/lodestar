@@ -234,7 +234,7 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
         return sszType.deserialize(data);
       }
     } else {
-      throw Error("Cannot find ssz type for inputName" + inputName);
+      throw Error("Cannot find ssz type for inputName " + inputName);
     }
   }
 }
