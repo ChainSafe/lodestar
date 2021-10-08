@@ -55,6 +55,8 @@ export type SyncingStatus = {
   headSlot: Slot;
   /** How many slots node needs to process to reach head. 0 if synced. */
   syncDistance: Slot;
+  /** Set to true if the node is syncing, false if the node is synced. */
+  isSyncing: boolean;
 };
 
 /**

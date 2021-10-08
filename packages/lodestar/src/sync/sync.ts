@@ -73,11 +73,13 @@ export class BeaconSync implements IBeaconSync {
         return {
           headSlot: headSlot,
           syncDistance: currentSlot - headSlot,
+          isSyncing: true,
         };
       case SyncState.Synced:
         return {
           headSlot: headSlot,
           syncDistance: 0,
+          isSyncing: false,
         };
       default:
         throw new Error("Node is stopped, cannot get sync status");
