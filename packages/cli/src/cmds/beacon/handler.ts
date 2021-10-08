@@ -33,6 +33,8 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
   beaconNodeOptions.set({metrics: {metadata: {...gitData, version, network: args.network}}});
+  // Add detailed version string for API node/version endpoint
+  beaconNodeOptions.set({api: {version: version}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);

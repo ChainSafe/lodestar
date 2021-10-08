@@ -11,6 +11,7 @@ import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Multiaddr} from "multiaddr";
 import {MetadataController} from "../../../../../src/network/metadata";
+import {defaultApiOptions} from "../../../../../src/api/options";
 import {altair} from "@chainsafe/lodestar-types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
 import {routes} from "@chainsafe/lodestar-api";
@@ -42,7 +43,7 @@ describe("node api implementation", function () {
   beforeEach(async function () {
     networkStub = sinon.createStubInstance(Network);
     syncStub = sinon.createStubInstance(BeaconSync);
-    api = getNodeApi({network: networkStub, sync: syncStub});
+    api = getNodeApi(defaultApiOptions, {network: networkStub, sync: syncStub});
     peerId = await PeerId.create({keyType: "secp256k1"});
     sinon.stub(networkStub, "peerId").get(() => peerId);
     sinon.stub(networkStub, "localMultiaddrs").get(() => [new Multiaddr("/ip4/127.0.0.1/tcp/36000")]);
@@ -149,7 +150,7 @@ describe("node api implementation", function () {
   describe("getVersion", function () {
     it("success", async function () {
       const {data} = await api.getNodeVersion();
-      expect(data.version.startsWith("Lodestar")).to.be.true;
+      expect(data.version.startsWith("Lodestar"), `data must start with 'Lodestar': ${data.version}`).to.be.true;
     });
   });
 });

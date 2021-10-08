@@ -18,7 +18,7 @@ export function getApi(opts: IApiOptions, modules: ApiModules): Api {
     events: getEventsApi(modules),
     lightclient: getLightclientApi(opts, modules),
     lodestar: getLodestarApi(modules),
-    node: getNodeApi(modules),
+    node: getNodeApi(opts, modules),
     validator: getValidatorApi(modules),
   };
 }
