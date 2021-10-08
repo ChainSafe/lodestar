@@ -253,11 +253,11 @@
 <p>To quickly test and run Lodestar we recommend to start a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators</p>
 <p><strong>Terminal 1</strong></p>
 <p>Run a beacon node with 8 validators and default settings. State will be written to .tmp/state.ssz</p>
-<div class="highlight"><pre><span></span><code>./lodestar dev --dev.genesisValidators <span class="m">8</span> --dev.reset
+<div class="highlight"><pre><span></span><code>./lodestar dev --genesisValidators <span class="m">8</span> --reset
 </code></pre></div>
 <p><strong>Terminal 2</strong></p>
 <p>Connect to bootnode (node 1 default multiaddrs) but without starting validators.</p>
-<div class="highlight"><pre><span></span><code>./lodestar dev --dev.startValidators <span class="m">0</span>:0 <span class="se">\</span>
+<div class="highlight"><pre><span></span><code>./lodestar dev --startValidators <span class="m">0</span>:0 <span class="se">\</span>
   --genesisStateFile ./dev/genesis.ssz <span class="se">\</span>
   --network.localMultiaddrs /ip4/127.0.0.1/tcp/30607 <span class="se">\</span>
   --sync.minPeers <span class="m">1</span>
