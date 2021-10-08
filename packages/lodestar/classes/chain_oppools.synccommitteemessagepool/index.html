@@ -350,17 +350,17 @@ This stays in-memory and should be pruned per slot.</p>
 <blockquote>
 <p>(() =&gt; new MapDef<subnet, contributionfast="" map\<blockroothex,="">&gt;(() =&gt; new Map<blockroothex, contributionfast="">()))</blockroothex,></subnet,></p>
 </blockquote>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L41">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L41">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:41</a></em></p>
 <p>Each array item is respective to a subCommitteeIndex.
 Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">¶</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L45">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L45">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:45</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>subnet</code>: <a href="../../modules/chain_oppools/#subnet">Subnet</a>, <code>signature</code>: SyncCommitteeMessage, <code>indexInSubCommittee</code>: number): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L48">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L48">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:48</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -388,7 +388,7 @@ Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="getcontribution">getContribution<a class="headerlink" href="#getcontribution" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getContribution</strong>(<code>subnet</code>: phase0.SubCommitteeIndex, <code>slot</code>: phase0.Slot, <code>prevBlockRoot</code>: phase0.Root): <em>SyncCommitteeContribution | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L79">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L79">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:79</a></em></p>
 <p>This is for the aggregator to produce ContributionAndProof.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -417,7 +417,7 @@ Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L100">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:100</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L100">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:100</a></em></p>
 <p>Prune per clock slot.
 SyncCommittee signatures are only useful during a single slot according to our peer's clocks</p>
 <p><strong>Parameters:</strong></p>

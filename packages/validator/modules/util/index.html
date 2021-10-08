@@ -510,11 +510,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="iloggervc_1">ILoggerVc<a class="headerlink" href="#iloggervc_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ILoggerVc</strong>: <em>Pick‹ILogger, "error" | "warn" | "info" | "verbose" | "debug"› &amp; object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/logger.ts#L5">packages/validator/src/util/logger.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/logger.ts#L5">packages/validator/src/util/logger.ts:5</a></em></p>
 <hr/>
 <h3 id="runeveryfn">RunEveryFn<a class="headerlink" href="#runeveryfn" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>RunEveryFn</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/clock.ts#L8">packages/validator/src/util/clock.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/clock.ts#L8">packages/validator/src/util/clock.ts:8</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <p>▸ (<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>, <code>signal</code>: AbortSignal): <em>Promise‹void›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -539,7 +539,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assertequalparams_1">assertEqualParams<a class="headerlink" href="#assertequalparams_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertEqualParams</strong>(<code>currentParams</code>: IChainConfig, <code>expectedParams</code>: IChainConfig): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/params.ts#L8">packages/validator/src/util/params.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/params.ts#L8">packages/validator/src/util/params.ts:8</a></em></p>
 <p>Assert that two IBeaconParams are identical. Throws error otherwise</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -564,7 +564,7 @@
 <hr/>
 <h3 id="batchitems">batchItems<a class="headerlink" href="#batchitems" title="Permanent link">¶</a></h3>
 <p>▸ <strong>batchItems</strong>‹<strong>T</strong>›(<code>items</code>: T[], <code>opts</code>: object): <em>T[][]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/batch.ts#L5">packages/validator/src/util/batch.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/batch.ts#L5">packages/validator/src/util/batch.ts:5</a></em></p>
 <p>Divide pubkeys into batches, each batch contains at most 5 http requests,
 each request can work on at most 40 pubkeys.</p>
 <p><strong>Type parameters:</strong></p>
@@ -594,7 +594,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr/>
 <h3 id="differencehex_1">differenceHex<a class="headerlink" href="#differencehex_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>differenceHex</strong>‹<strong>T</strong>›(<code>prev</code>: T[], <code>next</code>: T[]): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/difference.ts#L7">packages/validator/src/util/difference.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/difference.ts#L7">packages/validator/src/util/difference.ts:7</a></em></p>
 <p>Return items included in <code>next</code> but not in <code>prev</code></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong>: <em>Uint8Array | Root</em></p>
@@ -621,7 +621,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr/>
 <h3 id="extenderror_1">extendError<a class="headerlink" href="#extenderror_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>extendError</strong>(<code>e</code>: <a href="../../classes/util.notequalparamserror/#static-error">Error</a>, <code>prependMessage</code>: string): <em><a href="../../classes/util.notequalparamserror/#static-error">Error</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/error.ts#L4">packages/validator/src/util/error.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/error.ts#L4">packages/validator/src/util/error.ts:4</a></em></p>
 <p>Extend an existing error by appending a string to its <code>e.message</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -646,7 +646,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr/>
 <h3 id="getcurrentslotaround_1">getCurrentSlotAround<a class="headerlink" href="#getcurrentslotaround_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCurrentSlotAround</strong>(<code>config</code>: IChainForkConfig, <code>genesisTime</code>: Number64): <em><a href="../../enums/util.timeitem/#slot">Slot</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/clock.ts#L113">packages/validator/src/util/clock.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/clock.ts#L113">packages/validator/src/util/clock.ts:113</a></em></p>
 <p>Same to the spec but we use Math.round instead of Math.floor.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -671,7 +671,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr/>
 <h3 id="getloggervc_1">getLoggerVc<a class="headerlink" href="#getloggervc_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getLoggerVc</strong>(<code>logger</code>: ILogger, <code>clock</code>: <a href="../../interfaces/util.iclock/">IClock</a>): <em><a href="./#iloggervc">ILoggerVc</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/logger.ts#L9">packages/validator/src/util/logger.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/logger.ts#L9">packages/validator/src/util/logger.ts:9</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -695,7 +695,7 @@ each request can work on at most 40 pubkeys.</p>
 <hr/>
 <h3 id="urljoin_1">urlJoin<a class="headerlink" href="#urljoin_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>urlJoin</strong>(...<code>args</code>: string[]): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/validator/src/util/url.ts#L8">packages/validator/src/util/url.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/validator/src/util/url.ts#L8">packages/validator/src/util/url.ts:8</a></em></p>
 <p>Joins multiple url parts safely
 - Does not break the protocol double slash //
 - Cleans double slashes at any point</p>

@@ -389,24 +389,24 @@ epoch transition.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="optional-balances"><code>Optional</code> balances<a class="headerlink" href="#optional-balances" title="Permanent link">¶</a></h3>
 <p>• <strong>balances</strong>? : <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L104">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:104</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L104">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:104</a></em></p>
 <hr/>
 <h3 id="baserewardperincrement">baseRewardPerIncrement<a class="headerlink" href="#baserewardperincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>baseRewardPerIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L46">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L46">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:46</a></em></p>
 <p>For altair</p>
 <hr/>
 <h3 id="currepochunslashedtargetstakebyincrement">currEpochUnslashedTargetStakeByIncrement<a class="headerlink" href="#currepochunslashedtargetstakebyincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>currEpochUnslashedTargetStakeByIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L48">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L48">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:48</a></em></p>
 <hr/>
 <h3 id="currentepoch">currentEpoch<a class="headerlink" href="#currentepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>currentEpoch</strong>: <em><a href="../../modules/phase0/#epoch">Epoch</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L40">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L40">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:40</a></em></p>
 <hr/>
 <h3 id="indiceseligibleforactivation">indicesEligibleForActivation<a class="headerlink" href="#indiceseligibleforactivation" title="Permanent link">¶</a></h3>
 <p>• <strong>indicesEligibleForActivation</strong>: <em><a href="../../modules/phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L92">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:92</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L92">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:92</a></em></p>
 <p>Indices of validators that may become active once churn and finaly allow.
 <div class="highlight"><pre><span></span><code>v.activationEpoch === FAR_FUTURE_EPOCH &amp;&amp; v.activationEligibilityEpoch &lt;= currentEpoch
 </code></pre></div>
@@ -415,7 +415,7 @@ For less than 327680 validators, churnLimit = 4 (minimum possible), so max proce
 <hr/>
 <h3 id="indiceseligibleforactivationqueue">indicesEligibleForActivationQueue<a class="headerlink" href="#indiceseligibleforactivationqueue" title="Permanent link">¶</a></h3>
 <p>• <strong>indicesEligibleForActivationQueue</strong>: <em><a href="../../modules/phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L83">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L83">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:83</a></em></p>
 <p>Indices of validators that just joinned and will be eligible for the active queue.
 <div class="highlight"><pre><span></span><code>v.activationEligibilityEpoch === FAR_FUTURE_EPOCH &amp;&amp; v.effectiveBalance === MAX_EFFECTIVE_BALANCE
 </code></pre></div>
@@ -427,7 +427,7 @@ For mainnet spec = 512</p>
 <hr/>
 <h3 id="indicestoeject">indicesToEject<a class="headerlink" href="#indicestoeject" title="Permanent link">¶</a></h3>
 <p>• <strong>indicesToEject</strong>: <em><a href="../../modules/phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L101">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:101</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L101">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:101</a></em></p>
 <p>Indices of validators that will be ejected due to low balance.
 <div class="highlight"><pre><span></span><code>status.active &amp;&amp; v.exitEpoch === FAR_FUTURE_EPOCH &amp;&amp; v.effectiveBalance &lt;= config.EJECTION_BALANCE
 </code></pre></div>
@@ -436,7 +436,7 @@ their validator object mutated. Exit queue churn delays exit, but the object is 
 <hr/>
 <h3 id="indicestoslash">indicesToSlash<a class="headerlink" href="#indicestoslash" title="Permanent link">¶</a></h3>
 <p>• <strong>indicesToSlash</strong>: <em><a href="../../modules/phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L70">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L70">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:70</a></em></p>
 <p>Indices which will receive the slashing penalty
 <div class="highlight"><pre><span></span><code>v.withdrawableEpoch === currentEpoch + EPOCHS_PER_SLASHINGS_VECTOR / 2
 </code></pre></div>
@@ -456,13 +456,13 @@ that happen to be in the same committee, which is very unlikely.</p>
 <hr/>
 <h3 id="isactivenextepoch">isActiveNextEpoch<a class="headerlink" href="#isactivenextepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>isActiveNextEpoch</strong>: <em>boolean[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L132">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:132</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L132">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:132</a></em></p>
 <p>Track by validator index if it's active in the next epoch.
 Used in <code>processEffectiveBalanceUpdates</code> to save one loop over validators after epoch process.</p>
 <hr/>
 <h3 id="nextepochshufflingactivevalidatorindices">nextEpochShufflingActiveValidatorIndices<a class="headerlink" href="#nextepochshufflingactivevalidatorindices" title="Permanent link">¶</a></h3>
 <p>• <strong>nextEpochShufflingActiveValidatorIndices</strong>: <em><a href="../../modules/phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L114">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:114</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L114">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:114</a></em></p>
 <p>Active validator indices for currentEpoch + 2.
 This is only used in <code>afterProcessEpoch</code> to compute epoch shuffling, it's not efficient to calculate it at that time
 since it requires 1 loop through validator.
@@ -473,7 +473,7 @@ since it requires 1 loop through validator.
 <hr/>
 <h3 id="nextepochtotalactivebalancebyincrement">nextEpochTotalActiveBalanceByIncrement<a class="headerlink" href="#nextepochtotalactivebalancebyincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>nextEpochTotalActiveBalanceByIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L126">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:126</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L126">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:126</a></em></p>
 <p>Altair specific, this is total active balances for the next epoch.
 This is only used in <code>afterProcessEpoch</code> to compute base reward and sync participant reward.
 It's not efficient to calculate it at that time since it requires looping through all active validators,
@@ -486,19 +486,19 @@ so we should calculate it during <code>processEffectiveBalancesUpdate</code> whi
 <hr/>
 <h3 id="prevepoch">prevEpoch<a class="headerlink" href="#prevepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>prevEpoch</strong>: <em><a href="../../modules/phase0/#epoch">Epoch</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L39">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L39">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:39</a></em></p>
 <hr/>
 <h3 id="prevepochunslashedstake">prevEpochUnslashedStake<a class="headerlink" href="#prevepochunslashedstake" title="Permanent link">¶</a></h3>
 <p>• <strong>prevEpochUnslashedStake</strong>: <em><a href="../allforks_util.iepochstakesummary/">IEpochStakeSummary</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L47">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L47">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:47</a></em></p>
 <hr/>
 <h3 id="statuses">statuses<a class="headerlink" href="#statuses" title="Permanent link">¶</a></h3>
 <p>• <strong>statuses</strong>: <em><a href="../allforks_util.iattesterstatus/">IAttesterStatus</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L103">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:103</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L103">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:103</a></em></p>
 <hr/>
 <h3 id="totalactivestakebyincrement">totalActiveStakeByIncrement<a class="headerlink" href="#totalactivestakebyincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>totalActiveStakeByIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d85cf0a/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L44">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1b3fd0d/packages/beacon-state-transition/src/allForks/util/epochProcess.ts#L44">packages/beacon-state-transition/src/allForks/util/epochProcess.ts:44</a></em></p>
 <p>This is sum of active validators' balance in eth.</p>
 </article>
 </div>
