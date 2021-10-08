@@ -11,7 +11,6 @@ import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {timeoutOptions} from "../../constants";
-import {IForkDigestContext} from "../../util/forkDigestContext";
 import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest} from "./response";
@@ -45,7 +44,6 @@ export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
   private logger: ILogger;
-  private forkDigestContext: IForkDigestContext;
   private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
@@ -61,7 +59,6 @@ export class ReqResp implements IReqResp {
     this.config = modules.config;
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
-    this.forkDigestContext = modules.forkDigestContext;
     this.reqRespHandlers = modules.reqRespHandlers;
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
@@ -147,7 +144,7 @@ export class ReqResp implements IReqResp {
 
       const encoding = this.peerMetadata.encoding.get(peerId) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
-        {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
+        {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p},
         peerId,
         method,
         encoding,
@@ -190,7 +187,7 @@ export class ReqResp implements IReqResp {
         this.metrics?.reqRespIncomingRequests.inc({method});
 
         await handleRequest(
-          {config: this.config, logger: this.logger, libp2p: this.libp2p, forkDigestContext: this.forkDigestContext},
+          {config: this.config, logger: this.logger, libp2p: this.libp2p},
           this.onRequest.bind(this),
           stream,
           peerId,

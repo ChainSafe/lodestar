@@ -1,18 +1,17 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {AbortController} from "@chainsafe/abort-controller";
-import {config} from "@chainsafe/lodestar-config/default";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RespStatus} from "../../../../../src/constants";
 import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types";
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response";
-import {ForkDigestContext} from "../../../../../src/util/forkDigestContext";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 import {testLogger} from "../../../../utils/logger";
 import {getValidPeerId} from "../../../../utils/peer";
 import {createNode} from "../../../../utils/network";
+import {config} from "../../../../utils/config";
 
 chai.use(chaiAsPromised);
 
@@ -61,7 +60,6 @@ describe("network / reqresp / response / handleRequest", async () => {
   ];
 
   const version = Version.V1;
-  const forkDigestContext = new ForkDigestContext(config, Buffer.alloc(32, 0));
 
   for (const {
     id,
@@ -76,7 +74,7 @@ describe("network / reqresp / response / handleRequest", async () => {
       const stream = new MockLibP2pStream(requestChunks);
 
       const resultPromise = handleRequest(
-        {config, logger, forkDigestContext, libp2p},
+        {config, logger, libp2p},
         performRequestHandler,
         stream,
         peerId,

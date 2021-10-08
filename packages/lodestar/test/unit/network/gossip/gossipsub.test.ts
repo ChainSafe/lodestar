@@ -1,19 +1,17 @@
 import {expect, assert} from "chai";
-import sinon, {SinonStubbedInstance} from "sinon";
 import Libp2p from "libp2p";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {AbortController} from "@chainsafe/abort-controller";
-import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 
 import {Eth2Gossipsub, GossipHandlers, GossipType, GossipEncoding} from "../../../../src/network/gossip";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
-import {ForkDigestContext} from "../../../../src/util/forkDigestContext";
 import {encodeMessageData} from "../../../../src/network/gossip/encoding";
 import {GossipValidationError} from "../../../../src/network/gossip/errors";
 
+import {config} from "../../../utils/config";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
@@ -28,7 +26,6 @@ describe("network / gossip / validation", function () {
   let message: InMessage;
   let topicString: string;
   let libp2p: Libp2p;
-  let forkDigestContext: SinonStubbedInstance<ForkDigestContext>;
   let eth2Context: Eth2Context;
 
   let controller: AbortController;
@@ -43,12 +40,8 @@ describe("network / gossip / validation", function () {
   afterEach(() => controller.abort());
 
   beforeEach(async function () {
-    forkDigestContext = sinon.createStubInstance(ForkDigestContext);
-    forkDigestContext.forkName2ForkDigest.returns(Buffer.alloc(4, 1));
-    forkDigestContext.forkDigest2ForkName.returns(ForkName.phase0);
-
     const signedBlock = generateEmptySignedBlock();
-    topicString = stringifyGossipTopic(forkDigestContext, {type: gossipType, fork: ForkName.phase0});
+    topicString = stringifyGossipTopic(config, {type: gossipType, fork: ForkName.phase0});
     message = {
       data: encodeMessageData(GossipEncoding.ssz_snappy, ssz.phase0.SignedBeaconBlock.serialize(signedBlock)),
       receivedFrom: "0",
@@ -70,7 +63,6 @@ describe("network / gossip / validation", function () {
       config,
       gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
-      forkDigestContext,
       libp2p,
       metrics,
       signal: controller.signal,
@@ -102,7 +94,6 @@ describe("network / gossip / validation", function () {
       config,
       gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
-      forkDigestContext,
       libp2p,
       metrics,
       signal: controller.signal,

@@ -1,9 +1,7 @@
 /**
  * @module chain/stateTransition/util
  */
-import {Epoch, Version, Root, DomainType, allForks} from "@chainsafe/lodestar-types";
-
-import {computeForkDataRoot} from "./fork";
+import {Epoch, Version, Root, DomainType, allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 
 // Only used by processDeposit +  lightclient
 /**
@@ -22,4 +20,15 @@ export function computeDomain(domainType: DomainType, forkVersion: Version, gene
  */
 export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch): Version {
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
+}
+
+/**
+ * Used primarily in signature domains to avoid collisions across forks/chains.
+ */
+export function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Root): Uint8Array {
+  const forkData: phase0.ForkData = {
+    currentVersion,
+    genesisValidatorsRoot,
+  };
+  return ssz.phase0.ForkData.hashTreeRoot(forkData);
 }

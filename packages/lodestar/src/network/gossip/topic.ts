@@ -3,7 +3,7 @@
  */
 
 import {ssz} from "@chainsafe/lodestar-types";
-import {IForkDigestContext, toHexStringNoPrefix} from "../../util/forkDigestContext";
+import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {GossipType, GossipTopic, GossipEncoding} from "./interface";
 import {DEFAULT_ENCODING} from "./constants";
 
@@ -37,8 +37,7 @@ export class GossipTopicCache implements IGossipTopicCache {
  * Stringify a GossipTopic into a spec-ed formated topic string
  */
 export function stringifyGossipTopic(forkDigestContext: IForkDigestContext, topic: GossipTopic): string {
-  const forkDigest = forkDigestContext.forkName2ForkDigest(topic.fork);
-  const forkDigestHexNoPrefix = toHexStringNoPrefix(forkDigest);
+  const forkDigestHexNoPrefix = forkDigestContext.forkName2ForkDigestHex(topic.fork);
   const topicType = stringifyGossipTopicType(topic);
   const encoding = topic.encoding ?? DEFAULT_ENCODING;
   return `/eth2/${forkDigestHexNoPrefix}/${topicType}/${encoding}`;

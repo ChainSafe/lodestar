@@ -2,12 +2,11 @@ import {ENR} from "@chainsafe/discv5";
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {FAR_FUTURE_EPOCH} from "../constants";
-import {IForkDigestContext} from "../util/forkDigestContext";
 import {getCurrentAndNextFork} from "./forks";
 
 export interface IMetadataOpts {
@@ -15,7 +14,7 @@ export interface IMetadataOpts {
 }
 
 export interface IMetadataModules {
-  config: IChainForkConfig;
+  config: IBeaconConfig;
   chain: IBeaconChain;
   logger: ILogger;
 }
@@ -27,7 +26,7 @@ export interface IMetadataModules {
  */
 export class MetadataController {
   private enr?: ENR;
-  private config: IChainForkConfig;
+  private config: IBeaconConfig;
   private chain: IBeaconChain;
   private _metadata: altair.Metadata;
   private logger: ILogger;
@@ -100,20 +99,16 @@ export class MetadataController {
 
   private getHeadEnrForkId(): phase0.ENRForkID {
     const headEpoch = computeEpochAtSlot(this.chain.forkChoice.getHead().slot);
-    return getENRForkID(this.config, this.chain.forkDigestContext, headEpoch);
+    return getENRForkID(this.config, headEpoch);
   }
 }
 
-export function getENRForkID(
-  config: IChainForkConfig,
-  forkDigestContext: IForkDigestContext,
-  epoch: Epoch
-): phase0.ENRForkID {
+export function getENRForkID(config: IBeaconConfig, epoch: Epoch): phase0.ENRForkID {
   const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch);
 
   return {
     // Current fork digest
-    forkDigest: forkDigestContext.forkName2ForkDigest(currentFork.name),
+    forkDigest: config.forkName2ForkDigest(currentFork.name),
     // next planned fork versin
     nextForkVersion: nextFork ? nextFork.version : currentFork.version,
     // next fork epoch

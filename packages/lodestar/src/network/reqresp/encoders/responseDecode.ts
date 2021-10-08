@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
+import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {RespStatus} from "../../../constants";
-import {IForkDigestContext} from "../../../util/forkDigestContext";
 import {BufferedSource, decodeErrorMessage} from "../utils";
 import {readEncodedPayload} from "../encodingStrategies";
 import {ResponseError} from "../response";

@@ -40,7 +40,6 @@ import {
   SyncContributionAndProofPool,
   OpPool,
 } from "./opPools";
-import {ForkDigestContext, IForkDigestContext} from "../util/forkDigestContext";
 import {LightClientIniter} from "./lightClient";
 import {Archiver} from "./archiver";
 import {IEth1ForBlockProduction} from "../eth1";
@@ -61,7 +60,6 @@ export class BeaconChain implements IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  forkDigestContext: IForkDigestContext;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
 
@@ -116,8 +114,6 @@ export class BeaconChain implements IBeaconChain {
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
-
-    this.forkDigestContext = new ForkDigestContext(config, this.genesisValidatorsRoot);
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
@@ -261,10 +257,10 @@ export class BeaconChain implements IBeaconChain {
     return this.config.getForkName(this.clock.currentSlot);
   }
   getHeadForkDigest(): ForkDigest {
-    return this.forkDigestContext.forkName2ForkDigest(this.getHeadForkName());
+    return this.config.forkName2ForkDigest(this.getHeadForkName());
   }
   getClockForkDigest(): ForkDigest {
-    return this.forkDigestContext.forkName2ForkDigest(this.getClockForkName());
+    return this.config.forkName2ForkDigest(this.getClockForkName());
   }
 
   getStatus(): phase0.Status {
@@ -274,7 +270,7 @@ export class BeaconChain implements IBeaconChain {
       // fork_digest: The node's ForkDigest (compute_fork_digest(current_fork_version, genesis_validators_root)) where
       // - current_fork_version is the fork version at the node's current epoch defined by the wall-clock time (not necessarily the epoch to which the node is sync)
       // - genesis_validators_root is the static Root found in state.genesis_validators_root
-      forkDigest: this.forkDigestContext.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
+      forkDigest: this.config.forkName2ForkDigest(this.config.getForkName(this.clock.currentSlot)),
       // finalized_root: state.finalized_checkpoint.root for the state corresponding to the head block (Note this defaults to Root(b'\x00' * 32) for the genesis finalized checkpoint).
       finalizedRoot: finalizedCheckpoint.epoch === GENESIS_EPOCH ? ZERO_HASH : finalizedCheckpoint.root,
       finalizedEpoch: finalizedCheckpoint.epoch,
