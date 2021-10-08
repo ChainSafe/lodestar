@@ -4,5 +4,23 @@ import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../r
 
 export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api, ReqTypes> {
   // All routes return JSON, use a server auto-generator
-  return getGenericJsonServer<Api, ReqTypes>({routesData, getReturnTypes, getReqSerializers}, config, api);
+  const serverRoutes = getGenericJsonServer<Api, ReqTypes>(
+    {routesData, getReturnTypes, getReqSerializers},
+    config,
+    api
+  );
+
+  return {
+    ...serverRoutes,
+
+    getHealth: {
+      ...serverRoutes.getHealth,
+      handler: async (req, res) => {
+        const healthCode = await api.getHealth();
+        res.raw.writeHead(healthCode);
+        res.raw.write(String(healthCode));
+        res.raw.end();
+      },
+    },
+  };
 }

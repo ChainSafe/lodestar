@@ -11,6 +11,7 @@ import {
   StringType,
   ReqSerializers,
   ReqEmpty,
+  sameType,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -59,6 +60,12 @@ export type SyncingStatus = {
   isSyncing: boolean;
 };
 
+export enum NodeHealth {
+  READY = 200,
+  SYNCING = 206,
+  NOT_INITIALIZED_OR_ISSUES = 503,
+}
+
 /**
  * Read information about the beacon node.
  */
@@ -105,8 +112,10 @@ export type Api = {
   /**
    * Get health check
    * Returns node health status in http status codes. Useful for load balancers.
+   *
+   * NOTE: This route does not return any value
    */
-  getHealth(): Promise<void>;
+  getHealth(): Promise<NodeHealth>;
 };
 
 export const routesData: RoutesData<Api> = {
@@ -176,5 +185,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getPeerCount: jsonType(),
     getNodeVersion: jsonType(),
     getSyncingStatus: jsonType(),
+    getHealth: sameType(),
   };
 }
