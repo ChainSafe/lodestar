@@ -3,9 +3,10 @@ import {PeerManagerOpts} from "./peers";
 
 export interface INetworkOptions extends PeerManagerOpts {
   localMultiaddrs: string[];
-  bootMultiaddrs: string[];
+  bootMultiaddrs?: string[];
   discv5?: IDiscv5DiscoveryInputOptions;
   subscribeAllSubnets?: boolean;
+  connectToDiscv5Bootnodes?: boolean;
 }
 
 export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {

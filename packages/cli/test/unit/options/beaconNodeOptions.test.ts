@@ -44,6 +44,7 @@ describe("options / beaconNodeOptions", () => {
       "network.bootMultiaddrs": [],
       "network.localMultiaddrs": [],
       "network.subscribeAllSubnets": true,
+      "network.connectToDiscv5Bootnodes": true,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -98,6 +99,7 @@ describe("options / beaconNodeOptions", () => {
         bootMultiaddrs: [],
         localMultiaddrs: [],
         subscribeAllSubnets: true,
+        connectToDiscv5Bootnodes: true,
       },
       sync: {
         isSingleNode: true,

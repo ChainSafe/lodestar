@@ -18,18 +18,18 @@ export type NodeJsLibp2pOpts = {
 /**
  *
  * @param peerIdOrPromise Create an instance of NodejsNode asynchronously
- * @param network
+ * @param networkOpts
  * @param peerStoreDir
  */
 export async function createNodeJsLibp2p(
   peerIdOrPromise: PeerId | Promise<PeerId>,
-  network: Partial<INetworkOptions> = {},
+  networkOpts: Partial<INetworkOptions> = {},
   nodeJsLibp2pOpts: NodeJsLibp2pOpts = {}
 ): Promise<LibP2p> {
   const peerId = await Promise.resolve(peerIdOrPromise);
-  const localMultiaddrs = network.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
-  const bootMultiaddrs = network.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
-  const enr = network.discv5?.enr;
+  const localMultiaddrs = networkOpts.localMultiaddrs || defaultNetworkOptions.localMultiaddrs;
+  const bootMultiaddrs = networkOpts.bootMultiaddrs || defaultNetworkOptions.bootMultiaddrs;
+  const enr = networkOpts.discv5?.enr;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
   if (enr && typeof enr !== "string") {
@@ -48,14 +48,28 @@ export async function createNodeJsLibp2p(
     await datastore.open();
   }
 
+  // Append discv5.bootEnrs to bootMultiaddrs if requested
+  if (networkOpts.connectToDiscv5Bootnodes) {
+    if (!networkOpts.bootMultiaddrs) networkOpts.bootMultiaddrs = [];
+    if (!networkOpts.discv5) networkOpts.discv5 = defaultDiscv5Options;
+
+    for (const enrOrStr of networkOpts.discv5.bootEnrs) {
+      const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
+      const multiaddrTCP = enr.getLocationMultiaddr("tcp");
+      const peerId = await enr.peerId();
+      const multiaddrWithPeerId = `${multiaddrTCP}/p2p/${peerId.toB58String()}`;
+      networkOpts.bootMultiaddrs.push(multiaddrWithPeerId);
+    }
+  }
+
   return new NodejsNode({
     peerId,
     addresses: {listen: localMultiaddrs},
     datastore,
     bootMultiaddrs: bootMultiaddrs,
-    discv5: network.discv5 || defaultDiscv5Options,
-    maxConnections: network.maxPeers,
-    minConnections: network.targetPeers,
+    discv5: networkOpts.discv5 || defaultDiscv5Options,
+    maxConnections: networkOpts.maxPeers,
+    minConnections: networkOpts.targetPeers,
     // If peer discovery is enabled let the default in NodejsNode
     peerDiscovery: disablePeerDiscovery ? [] : undefined,
   });
