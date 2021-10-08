@@ -111,105 +111,95 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
   });
 
+  // STFN - per_slot_processing() + per_block_processing()
+  // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
+  const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
+  const postState = allForks.stateTransition(
+    preState,
+    block,
+    {
+      // false because it's verified below with better error typing
+      verifyStateRoot: false,
+      // if block is trusted don't verify proposer or op signature
+      verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
+      verifySignatures: !useBlsBatchVerify && !validSignatures,
+    },
+    chain.metrics
+  );
+
   // TODO: Review mergeBlock conditions
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    merge.isMergeStateType(preState) &&
+    merge.isMergeStateType(postState) &&
     merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isExecutionEnabled(preState, block.message.body)
+    merge.isExecutionEnabled(postState, block.message.body)
       ? block.message.body.executionPayload
       : null;
 
-  // Wrap with try / catch to notify errors to execution client
-  try {
-    // STFN - per_slot_processing() + per_block_processing()
-    // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
-    const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
-    const postState = allForks.stateTransition(
-      preState,
-      block,
-      {
-        // false because it's verified below with better error typing
-        verifyStateRoot: false,
-        // if block is trusted don't verify proposer or op signature
-        verifyProposer: !useBlsBatchVerify && !validSignatures && !validProposerSignature,
-        verifySignatures: !useBlsBatchVerify && !validSignatures,
-      },
-      chain.metrics
+  // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
+  // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
+  // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
+  // so the attester and proposer shufflings are correct.
+  if (useBlsBatchVerify && !validSignatures) {
+    const signatureSets = validProposerSignature
+      ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
+      : allForks.getAllBlockSignatureSets(postState as CachedBeaconState<allForks.BeaconState>, block);
+
+    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+      throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
+    }
+  }
+
+  if (executionPayloadEnabled) {
+    // TODO: Handle better executePayload() returning error is syncing
+    const status = await chain.executionEngine.executePayload(
+      // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
+      // For clarity and since it's needed anyway, just send the struct representation at this level such that
+      // executePayload() can expect a regular JS object.
+      // TODO: If blocks are no longer TreeBacked, remove.
+      executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
     );
 
-    // Verify signatures after running state transition, so all SyncCommittee signed roots are known at this point.
-    // We must ensure block.slot <= state.slot before running getAllBlockSignatureSets().
-    // NOTE: If in the future multiple blocks signatures are verified at once, all blocks must be in the same epoch
-    // so the attester and proposer shufflings are correct.
-    if (useBlsBatchVerify && !validSignatures) {
-      const signatureSets = validProposerSignature
-        ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-        : allForks.getAllBlockSignatureSets(postState as CachedBeaconState<allForks.BeaconState>, block);
-
-      if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
-        throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
-      }
+    switch (status) {
+      case ExecutePayloadStatus.VALID:
+        break; // OK
+      case ExecutePayloadStatus.INVALID:
+        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+      case ExecutePayloadStatus.SYNCING:
+        // It's okay to ignore SYNCING status because:
+        // - We MUST verify execution payloads of blocks we attest
+        // - We are NOT REQUIRED to check the execution payload of blocks we don't attest
+        // When EL syncs from genesis to a chain post-merge, it doesn't know what the head, CL knows. However, we
+        // must verify (complete this fn) and import a block to sync. Since we are syncing we only need to verify
+        // consensus and trust that whatever the chain agrees is valid, is valid; no need to verify. When we
+        // verify consensus up to the head we notify forkchoice update head and then EL can sync to our head. At that
+        // point regular EL sync kicks in and it does verify the execution payload (EL blocks). If after syncing EL
+        // gets to an invalid payload or we can prepare payloads on what we consider the head that's a critical error
+        //
+        // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
+        if (partiallyVerifiedBlock.fromRangeSync) {
+          break;
+        } else {
+          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
+        }
     }
-
-    if (executionPayloadEnabled) {
-      // TODO: Handle better executePayload() returning error is syncing
-      const status = await chain.executionEngine.executePayload(
-        // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
-        // For clarity and since it's needed anyway, just send the struct representation at this level such that
-        // executePayload() can expect a regular JS object.
-        // TODO: If blocks are no longer TreeBacked, remove.
-        executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
-      );
-
-      switch (status) {
-        case ExecutePayloadStatus.VALID:
-          break; // OK
-        case ExecutePayloadStatus.INVALID:
-          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
-        case ExecutePayloadStatus.SYNCING:
-          // It's okay to ignore SYNCING status because:
-          // - We MUST verify execution payloads of blocks we attest
-          // - We are NOT REQUIRED to check the execution payload of blocks we don't attest
-          // When EL syncs from genesis to a chain post-merge, it doesn't know what the head, CL knows. However, we
-          // must verify (complete this fn) and import a block to sync. Since we are syncing we only need to verify
-          // consensus and trust that whatever the chain agrees is valid, is valid; no need to verify. When we
-          // verify consensus up to the head we notify forkchoice update head and then EL can sync to our head. At that
-          // point regular EL sync kicks in and it does verify the execution payload (EL blocks). If after syncing EL
-          // gets to an invalid payload or we can prepare payloads on what we consider the head that's a critical error
-          //
-          // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
-          if (partiallyVerifiedBlock.fromRangeSync) {
-            break;
-          } else {
-            throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
-          }
-      }
-    }
-
-    // Check state root matches
-    if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
-      throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
-    }
-
-    // Block is fully valid for consensus, import block to execution client
-    if (executionPayloadEnabled)
-      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
-        chain.logger.error("Error on notifyConsensusValidated", {valid: true}, e);
-      });
-
-    return {
-      block,
-      postState,
-      skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
-    };
-  } catch (e) {
-    // Notify of consensus invalid block to execution client
-    if (executionPayloadEnabled)
-      chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, false).catch((e) => {
-        chain.logger.error("Error on notifyConsensusValidated", {valid: false}, e);
-      });
-
-    throw e;
   }
+
+  // Check state root matches
+  if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
+    throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+  }
+
+  // Block is fully valid for consensus, import block to execution client
+  // TODO remove this once we're assured this endpoint is gone
+  if (executionPayloadEnabled)
+    chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
+      chain.logger.error("Error on notifyConsensusValidated", {valid: true}, e);
+    });
+
+  return {
+    block,
+    postState,
+    skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
+  };
 }
