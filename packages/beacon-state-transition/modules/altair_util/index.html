@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/altair_util/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.2, mkdocs-material-7.3.2" name="generator"/>
+<meta content="mkdocs-1.2.2, mkdocs-material-7.3.3" name="generator"/>
 <title>Altair util - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.24c991ad.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.5143246d.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -339,11 +339,11 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-max_random_byte"><code>Const</code> MAX_RANDOM_BYTE<a class="headerlink" href="#const-max_random_byte" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_RANDOM_BYTE</strong>: <em>number</em> = 2 ** 8 - 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L10">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L10">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:10</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="addflag">addFlag<a class="headerlink" href="#addflag" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addFlag</strong>(<code>flags</code>: <a href="../phase0/#participationflags">ParticipationFlags</a>, <code>flagIndex</code>: number): <em><a href="../phase0/#participationflags">ParticipationFlags</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/misc.ts#L5">packages/beacon-state-transition/src/altair/util/misc.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/misc.ts#L5">packages/beacon-state-transition/src/altair/util/misc.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -367,7 +367,7 @@
 <hr/>
 <h3 id="computebaserewardperincrement">computeBaseRewardPerIncrement<a class="headerlink" href="#computebaserewardperincrement" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeBaseRewardPerIncrement</strong>(<code>totalActiveStakeByIncrement</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/misc.ts#L19">packages/beacon-state-transition/src/altair/util/misc.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/misc.ts#L19">packages/beacon-state-transition/src/altair/util/misc.ts:19</a></em></p>
 <p>Before we manage bigIntSqrt(totalActiveStake) as BigInt and return BigInt.
 bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <p><strong>Parameters:</strong></p>
@@ -389,7 +389,7 @@ bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <hr/>
 <h3 id="getnextsynccommittee">getNextSyncCommittee<a class="headerlink" href="#getnextsynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNextSyncCommittee</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>, <code>activeValidatorIndices</code>: <a href="../phase0/#validatorindex">ValidatorIndex</a>[], <code>effectiveBalances</code>: MutableVector‹number›): <em>SyncCommittee</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L52">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L52">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:52</a></em></p>
 <p>Return the sync committee for a given state and epoch.</p>
 <p>SLOW CODE - 🐢</p>
 <p><strong>Parameters:</strong></p>
@@ -419,7 +419,7 @@ bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <hr/>
 <h3 id="getnextsynccommitteeindices">getNextSyncCommitteeIndices<a class="headerlink" href="#getnextsynccommitteeindices" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNextSyncCommitteeIndices</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>, <code>activeValidatorIndices</code>: <a href="../phase0/#validatorindex">ValidatorIndex</a>[], <code>effectiveBalances</code>: MutableVector‹number›): <em><a href="../phase0/#validatorindex">ValidatorIndex</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L22">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L22">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:22</a></em></p>
 <p>TODO: NAIVE</p>
 <p>Return the sync committee indices for a given state and epoch.
 Aligns <code>epoch</code> to <code>baseEpoch</code> so the result is the same with any <code>epoch</code> within a sync period.
@@ -453,7 +453,7 @@ Aligns <code>epoch</code> to <code>baseEpoch</code> so the result is the same wi
 <hr/>
 <h3 id="hasflag">hasFlag<a class="headerlink" href="#hasflag" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasFlag</strong>(<code>flags</code>: <a href="../phase0/#participationflags">ParticipationFlags</a>, <code>flagIndex</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a6f44/packages/beacon-state-transition/src/altair/util/misc.ts#L10">packages/beacon-state-transition/src/altair/util/misc.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a062322/packages/beacon-state-transition/src/altair/util/misc.ts#L10">packages/beacon-state-transition/src/altair/util/misc.ts:10</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -510,7 +510,7 @@ Aligns <code>epoch</code> to <code>baseEpoch</code> so the result is the same wi
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.e99e714c.min.js", "version": null}</script>
-<script src="../../../../assets/javascripts/bundle.bc35569b.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.8397ff9e.min.js", "version": null}</script>
+<script src="../../../../assets/javascripts/bundle.f89c2efe.min.js"></script>
 </body>
 </html>
