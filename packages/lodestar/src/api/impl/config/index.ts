@@ -14,8 +14,13 @@ export function getConfigApi({config}: Pick<ApiModules, "config">): routes.confi
   });
   return {
     async getForkSchedule() {
-      // @TODO: implement the actual fork schedule data get from config params once marin's altair PRs have been merged
-      return {data: []};
+      const forkInfos = Object.values(config.forks);
+      const forks = forkInfos.map((fi, ix) => ({
+        previousVersion: ix === 0 ? fi.version : forkInfos[ix - 1].version,
+        currentVersion: fi.version,
+        epoch: fi.epoch,
+      }));
+      return {data: forks};
     },
 
     async getDepositContract() {
