@@ -14,9 +14,8 @@ describe("config api implementation", function () {
 
   describe("getForkSchedule", function () {
     it("should get known scheduled forks", async function () {
-      // @TODO: implement the actual fork schedule data get from config params once marin's altair PRs have been merged
       const {data: forkSchedule} = await api.getForkSchedule();
-      expect(forkSchedule.length).to.equal(0);
+      expect(forkSchedule.length).to.equal(Object.keys(config.forks).length);
     });
   });
 
