@@ -22,7 +22,6 @@ import * as altair from "./types";
 const {
   Bytes32,
   Number64,
-  Uint64,
   Slot,
   SubCommitteeIndex,
   ValidatorIndex,
@@ -46,9 +45,13 @@ export const SyncSubnets = new BitVectorType({
 
 export const Metadata = new ContainerType<altair.Metadata>({
   fields: {
-    seqNumber: Uint64,
-    attnets: phase0Ssz.AttestationSubnets,
+    ...phase0Ssz.Metadata.fields,
     syncnets: SyncSubnets,
+  },
+  // New keys are strictly appended, phase0 key order is preserved
+  casingMap: {
+    ...phase0Ssz.Metadata.casingMap,
+    syncnets: "syncnets",
   },
 });
 
@@ -56,6 +59,10 @@ export const SyncCommittee = new ContainerType<altair.SyncCommittee>({
   fields: {
     pubkeys: new VectorType({elementType: BLSPubkey, length: SYNC_COMMITTEE_SIZE}),
     aggregatePubkey: BLSPubkey,
+  },
+  casingMap: {
+    pubkeys: "pubkeys",
+    aggregatePubkey: "aggregate_pubkey",
   },
 });
 
@@ -65,6 +72,12 @@ export const SyncCommitteeMessage = new ContainerType<altair.SyncCommitteeMessag
     beaconBlockRoot: Root,
     validatorIndex: ValidatorIndex,
     signature: BLSSignature,
+  },
+  casingMap: {
+    slot: "slot",
+    beaconBlockRoot: "beacon_block_root",
+    validatorIndex: "validator_index",
+    signature: "signature",
   },
 });
 
@@ -76,6 +89,13 @@ export const SyncCommitteeContribution = new ContainerType<altair.SyncCommitteeC
     aggregationBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
     signature: BLSSignature,
   },
+  casingMap: {
+    slot: "slot",
+    beaconBlockRoot: "beacon_block_root",
+    subCommitteeIndex: "subcommittee_index",
+    aggregationBits: "aggregation_bits",
+    signature: "signature",
+  },
 });
 
 export const ContributionAndProof = new ContainerType<altair.ContributionAndProof>({
@@ -84,6 +104,11 @@ export const ContributionAndProof = new ContainerType<altair.ContributionAndProo
     contribution: SyncCommitteeContribution,
     selectionProof: BLSSignature,
   },
+  casingMap: {
+    aggregatorIndex: "aggregator_index",
+    contribution: "contribution",
+    selectionProof: "selection_proof",
+  },
 });
 
 export const SignedContributionAndProof = new ContainerType<altair.SignedContributionAndProof>({
@@ -91,12 +116,17 @@ export const SignedContributionAndProof = new ContainerType<altair.SignedContrib
     message: ContributionAndProof,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 export const SyncAggregatorSelectionData = new ContainerType<altair.SyncAggregatorSelectionData>({
   fields: {
     slot: Slot,
     subCommitteeIndex: SubCommitteeIndex,
+  },
+  casingMap: {
+    slot: "slot",
+    subCommitteeIndex: "subcommittee_index",
   },
 });
 
@@ -108,6 +138,10 @@ export const SyncAggregate = new ContainerType<altair.SyncAggregate>({
   fields: {
     syncCommitteeBits: SyncCommitteeBits,
     syncCommitteeSignature: BLSSignature,
+  },
+  casingMap: {
+    syncCommitteeBits: "sync_committee_bits",
+    syncCommitteeSignature: "sync_committee_signature",
   },
 });
 
@@ -127,12 +161,17 @@ export const HistoricalBatch = new ContainerType<phase0Types.HistoricalBatch>({
     blockRoots: HistoricalBlockRoots,
     stateRoots: HistoricalStateRoots,
   },
+  casingMap: phase0Ssz.HistoricalBatch.casingMap,
 });
 
 export const BeaconBlockBody = new ContainerType<altair.BeaconBlockBody>({
   fields: {
     ...phase0Ssz.BeaconBlockBody.fields,
     syncAggregate: SyncAggregate,
+  },
+  casingMap: {
+    ...phase0Ssz.BeaconBlockBody.casingMap,
+    syncAggregate: "sync_aggregate",
   },
 });
 
@@ -145,6 +184,7 @@ export const BeaconBlock = new ContainerType<altair.BeaconBlock>({
     stateRoot: new RootType({expandedType: () => typesRef.get().BeaconState}),
     body: BeaconBlockBody,
   },
+  casingMap: phase0Ssz.BeaconBlock.casingMap,
 });
 
 export const SignedBeaconBlock = new ContainerType<altair.SignedBeaconBlock>({
@@ -152,6 +192,7 @@ export const SignedBeaconBlock = new ContainerType<altair.SignedBeaconBlock>({
     message: BeaconBlock,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 export const EpochParticipation = new ListType({elementType: ParticipationFlags, limit: VALIDATOR_REGISTRY_LIMIT});
@@ -197,6 +238,12 @@ export const BeaconState = new ContainerType<altair.BeaconState>({
     currentSyncCommittee: SyncCommittee,
     nextSyncCommittee: SyncCommittee,
   },
+  casingMap: {
+    ...phase0Ssz.BeaconState.casingMap,
+    inactivityScores: "inactivity_scores",
+    currentSyncCommittee: "current_sync_committee",
+    nextSyncCommittee: "next_sync_committee",
+  },
 });
 
 export const LightClientSnapshot = new ContainerType<altair.LightClientSnapshot>({
@@ -204,6 +251,11 @@ export const LightClientSnapshot = new ContainerType<altair.LightClientSnapshot>
     header: phase0Ssz.BeaconBlockHeader,
     nextSyncCommittee: SyncCommittee,
     currentSyncCommittee: SyncCommittee,
+  },
+  casingMap: {
+    header: "header",
+    nextSyncCommittee: "next_sync_committee",
+    currentSyncCommittee: "current_sync_committee",
   },
 });
 
@@ -221,6 +273,16 @@ export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
     syncCommitteeSignature: BLSSignature,
     forkVersion: Version,
   },
+  casingMap: {
+    header: "header",
+    nextSyncCommittee: "next_sync_committee",
+    nextSyncCommitteeBranch: "next_sync_committee_branch",
+    finalityHeader: "finality_header",
+    finalityBranch: "finality_branch",
+    syncCommitteeBits: "sync_committee_bits",
+    syncCommitteeSignature: "sync_committee_signature",
+    forkVersion: "fork_version",
+  },
 });
 
 export const LightClientStore = new ContainerType<altair.LightClientStore>({
@@ -230,6 +292,10 @@ export const LightClientStore = new ContainerType<altair.LightClientStore>({
       elementType: LightClientUpdate,
       limit: EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
     }),
+  },
+  casingMap: {
+    snapshot: "snapshot",
+    validUpdates: "valid_updates",
   },
 });
 

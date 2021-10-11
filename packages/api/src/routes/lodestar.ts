@@ -169,6 +169,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
       data: new ByteVectorType({length: 256}),
       addedTimeMs: ssz.Slot,
     },
+    // Custom type, not in the consensus specs
+    casingMap: {
+      topic: "topic",
+      receivedFrom: "received_from",
+      data: "data",
+      addedTimeMs: "added_time_ms",
+    },
   });
 
   return {

@@ -50,4 +50,6 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     DEPOSIT_NETWORK_ID: ssz.Number64,
     DEPOSIT_CONTRACT_ADDRESS: ByteVector20,
   },
+  // Expected and container fields are the same here
+  expectedCase: "notransform",
 });

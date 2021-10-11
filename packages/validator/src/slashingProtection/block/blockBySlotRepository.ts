@@ -23,6 +23,11 @@ export class BlockBySlotRepository {
         slot: ssz.Slot,
         signingRoot: ssz.Root,
       },
+      // Custom type, not in the consensus specs
+      casingMap: {
+        slot: "slot",
+        signingRoot: "signing_root",
+      },
     });
   }
 

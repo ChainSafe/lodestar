@@ -88,6 +88,15 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         previousDutyDependentRoot: stringType,
         currentDutyDependentRoot: stringType,
       },
+      // From beacon apis eventstream
+      casingMap: {
+        slot: "slot",
+        block: "block",
+        state: "state",
+        epochTransition: "epoch_transition",
+        previousDutyDependentRoot: "previous_duty_dependent_root",
+        currentDutyDependentRoot: "current_duty_dependent_root",
+      },
     }),
 
     [EventType.block]: new ContainerType<EventData[EventType.block]>({
@@ -95,6 +104,8 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         slot: ssz.Slot,
         block: stringType,
       },
+      // From beacon apis eventstream
+      expectedCase: "notransform",
     }),
 
     [EventType.attestation]: ssz.phase0.Attestation,
@@ -106,6 +117,8 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         state: stringType,
         epoch: ssz.Epoch,
       },
+      // From beacon apis eventstream
+      expectedCase: "notransform",
     }),
 
     [EventType.chainReorg]: new ContainerType<EventData[EventType.chainReorg]>({
@@ -117,6 +130,16 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         oldHeadState: stringType,
         newHeadState: stringType,
         epoch: ssz.Epoch,
+      },
+      // From beacon apis eventstream
+      casingMap: {
+        slot: "slot",
+        depth: "depth",
+        oldHeadBlock: "old_head_block",
+        newHeadBlock: "new_head_block",
+        oldHeadState: "old_head_state",
+        newHeadState: "new_head_state",
+        epoch: "epoch",
       },
     }),
   };

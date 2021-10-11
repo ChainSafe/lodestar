@@ -520,10 +520,10 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.8.18":
-  version "0.8.18"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.18.tgz#b281b5fde4b4ef31763e3e1d92555f396622a808"
-  integrity sha512-7efoXZOlDnWl5DpgcgJQPNudoAIHJkcKIhQWFElrmcTFqaoUZtdYsFoXTkXgsIqC0w7yGMp3wUtqGIopoj9C0w==
+"@chainsafe/ssz@^0.8.19":
+  version "0.8.19"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.19.tgz#a502143cbc88a417b1722ea669a82fd2f3e3a10f"
+  integrity sha512-TtUDcI2LPHs5VF5i5yIBmxqp1t07eAFv7cAC7ObOz76cA8xowuWtgJVT7lAoXKSyyQlJaz2EQTBpw5NV8CZyUg==
   dependencies:
     "@chainsafe/as-sha256" "^0.2.4"
     "@chainsafe/persistent-merkle-tree" "^0.3.7"

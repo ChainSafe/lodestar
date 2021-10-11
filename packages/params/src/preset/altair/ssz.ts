@@ -14,4 +14,6 @@ export const AltairPreset = new ContainerType<IAltairPreset>({
     MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: Number64,
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: Number64,
   },
+  // Expected and container fields are the same here
+  expectedCase: "notransform",
 });

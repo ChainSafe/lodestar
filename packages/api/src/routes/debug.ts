@@ -120,6 +120,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
       slot: ssz.Slot,
       root: stringType,
     },
+    // From beacon apis
+    expectedCase: "notransform",
   });
 
   return {

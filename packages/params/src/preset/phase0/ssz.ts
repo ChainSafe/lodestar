@@ -55,4 +55,6 @@ export const Phase0Preset = new ContainerType<IPhase0Preset>({
     MAX_DEPOSITS: Number64,
     MAX_VOLUNTARY_EXITS: Number64,
   },
+  // Expected and container fields are the same here
+  expectedCase: "notransform",
 });

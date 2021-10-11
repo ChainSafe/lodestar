@@ -11,4 +11,5 @@ export const BeaconPreset = new ContainerType<IBeaconPreset>({
     ...Phase0Preset.fields,
     ...AltairPreset.fields,
   },
+  expectedCase: "notransform",
 });

@@ -112,7 +112,7 @@ export function ArrayOf<T>(elementType: Type<T>, limit = 1e6): ListType<T[]> {
  * ```
  */
 export function ContainerData<T>(dataType: Type<T>): ContainerType<{data: T}> {
-  return new ContainerType({fields: {data: dataType}});
+  return new ContainerType({fields: {data: dataType}, expectedCase: "notransform"});
 }
 
 /**

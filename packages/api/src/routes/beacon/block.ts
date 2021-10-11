@@ -155,6 +155,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
       canonical: ssz.Boolean,
       header: ssz.phase0.SignedBeaconBlockHeader,
     },
+    //from beacon apis
+    expectedCase: "notransform",
   });
 
   return {

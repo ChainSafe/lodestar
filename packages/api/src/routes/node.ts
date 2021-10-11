@@ -171,6 +171,14 @@ export function getReturnTypes(): ReturnTypes<Api> {
       discoveryAddresses: ArrayOf(stringType),
       metadata: ssz.altair.Metadata,
     },
+    // From beacon apis
+    casingMap: {
+      peerId: "peer_id",
+      enr: "enr",
+      p2pAddresses: "p2p_addresses",
+      discoveryAddresses: "discovery_addresses",
+      metadata: "metadata",
+    },
   });
 
   return {
