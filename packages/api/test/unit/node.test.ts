@@ -57,7 +57,7 @@ describe("node", () => {
     },
     getHealth: {
       args: [],
-      res: undefined,
+      res: 200,
     },
   });
 });

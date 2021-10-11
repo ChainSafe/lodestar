@@ -75,7 +75,17 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
     },
 
     async getHealth() {
-      // Ok
+      if (sync.getSyncStatus().isSyncing) {
+        // 200: Node is ready
+        return routes.node.NodeHealth.SYNCING;
+      } else {
+        // 206: Node is syncing but can serve incomplete data
+        return routes.node.NodeHealth.READY;
+      }
+      // else {
+      //   503: Node not initialized or having issues
+      //   NOTE: Lodestar does not start its API until fully initialized, so this status can never be served
+      // }
     },
   };
 }
