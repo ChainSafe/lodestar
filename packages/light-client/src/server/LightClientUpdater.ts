@@ -1,4 +1,4 @@
-import {altair, Epoch, phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import {altair, Epoch, phase0, Slot, SyncPeriod, ssz} from "@chainsafe/lodestar-types";
 import {ByteVector, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {
   computeEpochAtSlot,
@@ -16,7 +16,7 @@ type DbItem<T> = {put(data: T): Promise<void>; get(): Promise<T | null>};
 export type SyncAttestedData = Pick<
   altair.LightClientUpdate,
   "finalityBranch" | "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch"
-> & {finalizedCheckpoint: altair.Checkpoint};
+> & {finalizedCheckpoint: phase0.Checkpoint};
 
 export type FinalizedCheckpointData = Pick<
   altair.LightClientUpdate,
@@ -40,7 +40,7 @@ export type LightClientUpdaterDb = {
    *
    * Must persist the best update for each committee period between the longest possible weak subjectivity epoch and now.
    */
-  bestUpdatePerCommitteePeriod: DbRepo<altair.SyncPeriod, altair.LightClientUpdate>;
+  bestUpdatePerCommitteePeriod: DbRepo<SyncPeriod, altair.LightClientUpdate>;
   latestFinalizedUpdate: DbItem<altair.LightClientUpdate>;
   latestNonFinalizedUpdate: DbItem<altair.LightClientUpdate>;
 };
@@ -51,7 +51,7 @@ export type LightClientUpdaterDb = {
 const PREV_DATA_MAX_SIZE = 64;
 
 export interface ILightClientUpdater {
-  getBestUpdates(periods: altair.SyncPeriod[]): Promise<altair.LightClientUpdate[]>;
+  getBestUpdates(periods: SyncPeriod[]): Promise<altair.LightClientUpdate[]>;
   getLatestUpdateFinalized(): Promise<altair.LightClientUpdate | null>;
   getLatestUpdateNonFinalized(): Promise<altair.LightClientUpdate | null>;
 }
@@ -85,7 +85,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   /**
    * To be called in API route GET /eth/v1/lightclient/best_update/:periods
    */
-  async getBestUpdates(periods: altair.SyncPeriod[]): Promise<altair.LightClientUpdate[]> {
+  async getBestUpdates(periods: SyncPeriod[]): Promise<altair.LightClientUpdate[]> {
     const updates: altair.LightClientUpdate[] = [];
     for (const period of periods) {
       const update = await this.db.bestUpdatePerCommitteePeriod.get(period);
@@ -190,7 +190,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   private async persistBestFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
     signatureData: CommitteeSignatureData
-  ): Promise<altair.SyncPeriod | null> {
+  ): Promise<SyncPeriod | null> {
     // Retrieve finality branch for attested finalized checkpoint
     const finalizedEpoch = syncAttestedData.finalizedCheckpoint.epoch;
     const finalizedData = await this.db.lightclientFinalizedCheckpoint.get(finalizedEpoch);
@@ -242,7 +242,7 @@ export class LightClientUpdater implements ILightClientUpdater {
   private async persistBestNonFinalizedUpdate(
     syncAttestedData: SyncAttestedData,
     signatureData: CommitteeSignatureData,
-    committeePeriodWithFinalized: altair.SyncPeriod | null
+    committeePeriodWithFinalized: SyncPeriod | null
   ): Promise<void> {
     const committeePeriod = computeSyncPeriodAtSlot(syncAttestedData.header.slot);
     const signaturePeriod = computeSyncPeriodAtSlot(signatureData.slot);

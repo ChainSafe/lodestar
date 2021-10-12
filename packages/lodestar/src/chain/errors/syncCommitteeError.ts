@@ -1,4 +1,4 @@
-import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
+import {altair, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {GossipActionError} from "./gossipValidation";
 
 export enum SyncCommitteeErrorCode {
@@ -16,12 +16,12 @@ export type SyncCommitteeErrorType =
   | {code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT; slot: Slot; currentSlot: Slot}
   | {code: SyncCommitteeErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; beaconBlockRoot: Uint8Array}
   | {code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN}
-  | {code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE; validatorIndex: phase0.ValidatorIndex}
+  | {code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE; validatorIndex: ValidatorIndex}
   | {code: SyncCommitteeErrorCode.INVALID_SIGNATURE}
   | {code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX; subCommitteeIndex: number}
   | {code: SyncCommitteeErrorCode.NO_PARTICIPANT}
-  | {code: SyncCommitteeErrorCode.INVALID_AGGREGATOR; aggregatorIndex: phase0.ValidatorIndex}
-  | {code: SyncCommitteeErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: phase0.ValidatorIndex};
+  | {code: SyncCommitteeErrorCode.INVALID_AGGREGATOR; aggregatorIndex: ValidatorIndex}
+  | {code: SyncCommitteeErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: ValidatorIndex};
 
 export interface ISyncCommitteeJob {
   signature: altair.SyncCommitteeMessage;

@@ -1,4 +1,4 @@
-import {BeaconBlockHeader, SyncPeriod} from "@chainsafe/lodestar-types/phase0";
+import {phase0, SyncPeriod} from "@chainsafe/lodestar-types";
 
 export enum LightclientEvent {
   newHeader = "newHeader",
@@ -6,7 +6,7 @@ export enum LightclientEvent {
 }
 
 export type LightclientEvents = {
-  [LightclientEvent.newHeader]: (newHeader: BeaconBlockHeader) => void;
+  [LightclientEvent.newHeader]: (newHeader: phase0.BeaconBlockHeader) => void;
   [LightclientEvent.advancedCommittee]: (newSnapshotPeriod: SyncPeriod) => void;
 };
 

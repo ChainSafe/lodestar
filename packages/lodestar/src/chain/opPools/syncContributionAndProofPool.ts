@@ -1,6 +1,6 @@
 import bls, {Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {phase0, altair, Slot, ssz} from "@chainsafe/lodestar-types";
+import {altair, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {newFilledArray, G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
@@ -38,7 +38,7 @@ type BlockRootHex = string;
  */
 export class SyncContributionAndProofPool {
   private readonly bestContributionBySubnetRootSlot = new MapDef<
-    phase0.Slot,
+    Slot,
     MapDef<BlockRootHex, Map<number, SyncContributionFast>>
   >(() => new MapDef<BlockRootHex, Map<number, SyncContributionFast>>(() => new Map<number, SyncContributionFast>()));
 
@@ -78,7 +78,7 @@ export class SyncContributionAndProofPool {
   /**
    * This is for the block factory, the same to process_sync_committee_contributions in the spec.
    */
-  getAggregate(slot: phase0.Slot, prevBlockRoot: phase0.Root): altair.SyncAggregate {
+  getAggregate(slot: Slot, prevBlockRoot: Root): altair.SyncAggregate {
     const bestContributionBySubnet = this.bestContributionBySubnetRootSlot.get(slot)?.get(toHexString(prevBlockRoot));
     if (!bestContributionBySubnet || bestContributionBySubnet.size === 0) {
       // TODO: Add metric for missing SyncAggregate

@@ -163,8 +163,8 @@ export function getAttestationParticipationStatus(
  * In normal network conditions the same root is read multiple times, specially the target.
  */
 export class RootCache {
-  readonly currentJustifiedCheckpoint: altair.Checkpoint;
-  readonly previousJustifiedCheckpoint: altair.Checkpoint;
+  readonly currentJustifiedCheckpoint: phase0.Checkpoint;
+  readonly previousJustifiedCheckpoint: phase0.Checkpoint;
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 

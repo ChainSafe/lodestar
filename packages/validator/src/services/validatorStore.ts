@@ -15,8 +15,18 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, BLSPubkey, BLSSignature, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
-import {Genesis, ValidatorIndex} from "@chainsafe/lodestar-types/phase0";
+import {
+  allForks,
+  altair,
+  BLSPubkey,
+  BLSSignature,
+  Epoch,
+  phase0,
+  Root,
+  Slot,
+  ValidatorIndex,
+  ssz,
+} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
@@ -34,7 +44,7 @@ export class ValidatorStore {
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     secretKeys: SecretKey[],
-    genesis: Genesis
+    genesis: phase0.Genesis
   ) {
     this.validators = mapSecretKeysToValidators(secretKeys);
     this.slashingProtection = slashingProtection;

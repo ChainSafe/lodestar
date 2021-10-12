@@ -1,4 +1,4 @@
-import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
+import {phase0, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {BitList, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
@@ -54,7 +54,7 @@ type DataRootHex = string;
  * receives and it can be triggered manually.
  */
 export class AttestationPool {
-  private readonly attestationByRootBySlot = new MapDef<phase0.Slot, Map<DataRootHex, AggregateFast>>(
+  private readonly attestationByRootBySlot = new MapDef<Slot, Map<DataRootHex, AggregateFast>>(
     () => new Map<DataRootHex, AggregateFast>()
   );
   private lowestPermissibleSlot = 0;
@@ -110,7 +110,7 @@ export class AttestationPool {
   /**
    * For validator API to get an aggregate
    */
-  getAggregate(slot: phase0.Slot, dataRoot: phase0.Root): phase0.Attestation {
+  getAggregate(slot: Slot, dataRoot: Root): phase0.Attestation {
     const dataRootHex = toHexString(dataRoot);
     const aggregate = this.attestationByRootBySlot.get(slot)?.get(dataRootHex);
     if (!aggregate) {

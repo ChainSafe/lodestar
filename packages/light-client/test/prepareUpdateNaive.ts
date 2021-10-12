@@ -1,10 +1,10 @@
-import {altair, Root} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {computeEpochAtSlot, getBlockRootAtSlot, getForkVersion} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX} from "@chainsafe/lodestar-params";
 
 export interface IBeaconChainLc {
-  getBlockHeaderByRoot(blockRoot: Root): Promise<altair.BeaconBlockHeader>;
+  getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader>;
   getStateByRoot(stateRoot: Root): Promise<TreeBacked<altair.BeaconState>>;
 }
 

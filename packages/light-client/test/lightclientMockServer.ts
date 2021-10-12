@@ -26,7 +26,7 @@ export class LightclientMockServer {
   // Mock chain state
   private readonly syncCommitteesKeys = new Map<SyncPeriod, SyncCommitteeKeys>();
   private readonly checkpoints = new Map<Epoch, {block: altair.BeaconBlock; state: altair.BeaconState}>();
-  private finalizedCheckpoint: altair.Checkpoint | null = null;
+  private finalizedCheckpoint: phase0.Checkpoint | null = null;
   private prevBlock: altair.BeaconBlock | null = null;
   private prevState: TreeBacked<altair.BeaconState> | null = null;
 

@@ -8,7 +8,7 @@ import {validateGossipSyncCommittee} from "../../../../src/chain/validation/sync
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateCachedState} from "../../../utils/state";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
-import {phase0} from "@chainsafe/lodestar-types";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache";
@@ -19,7 +19,7 @@ describe("Sync Committee Signature validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let clockStub: SinonStubbedInstance<LocalClock>;
   // let computeSubnetsForSyncCommitteeStub: SinonStubFn<typeof syncCommitteeUtils["computeSubnetsForSyncCommittee"]>;
-  let altairForkEpochBk: phase0.Epoch;
+  let altairForkEpochBk: Epoch;
   const altairForkEpoch = 2020;
   const currentSlot = SLOTS_PER_EPOCH * (altairForkEpoch + 1);
   // eslint-disable-next-line @typescript-eslint/naming-convention

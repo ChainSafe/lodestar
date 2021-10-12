@@ -1,5 +1,5 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {altair, Slot} from "@chainsafe/lodestar-types";
+import {altair, Slot, Root} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {validateLightClientUpdate} from "./validation";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../utils/utils";
@@ -51,7 +51,7 @@ export function processLightClientUpdate(
   store: LightClientStoreFast,
   update: altair.LightClientUpdate,
   currentSlot: Slot,
-  genesisValidatorsRoot: altair.Root
+  genesisValidatorsRoot: Root
 ): void {
   validateLightClientUpdate(store.snapshot, update, genesisValidatorsRoot);
 

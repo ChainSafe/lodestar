@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
-import {altair, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {processLightClientUpdate} from "../../src/client/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
@@ -103,16 +103,16 @@ describe("Lightclient flow", () => {
  * Throws for any unknown root
  */
 class MockBeaconChainLc implements IBeaconChainLc {
-  private readonly blockHeaders = new Map<string, altair.BeaconBlockHeader>();
+  private readonly blockHeaders = new Map<string, phase0.BeaconBlockHeader>();
   private readonly states = new Map<string, altair.BeaconState>();
 
-  constructor(blockHeaders: altair.BeaconBlockHeader[], states: altair.BeaconState[]) {
+  constructor(blockHeaders: phase0.BeaconBlockHeader[], states: altair.BeaconState[]) {
     for (const blockHeader of blockHeaders)
       this.blockHeaders.set(toHexString(ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader)), blockHeader);
     for (const state of states) this.states.set(toHexString(ssz.altair.BeaconState.hashTreeRoot(state)), state);
   }
 
-  async getBlockHeaderByRoot(blockRoot: Root): Promise<altair.BeaconBlockHeader> {
+  async getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader> {
     const rootHex = toHexString(blockRoot);
     const blockHeader = this.blockHeaders.get(rootHex);
     if (!blockHeader) throw Error(`No blockHeader for ${rootHex}`);
