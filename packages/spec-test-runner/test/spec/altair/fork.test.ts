@@ -39,7 +39,7 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
     },
 
     timeout: 10000,
-    shouldError: (testCase) => !testCase.post,
+    shouldError: (testCase) => testCase.post === undefined,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
       expectEqualBeaconState(ForkName.altair, expected, actual);

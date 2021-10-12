@@ -17,7 +17,7 @@ export async function getEth1DataForBlocks(
   lastProcessedDepositBlockNumber: BlockNumber | null
 ): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
-  if (lastProcessedDepositBlockNumber) {
+  if (lastProcessedDepositBlockNumber !== null) {
     blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
   }
 

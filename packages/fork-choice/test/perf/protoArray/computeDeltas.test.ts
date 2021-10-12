@@ -21,10 +21,10 @@ describe("computeDeltas", () => {
     }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
     const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
       .toArray()
-      .filter((part) => part && part.timelySource).length;
+      .filter((part) => part !== undefined && part.timelySource).length;
     const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
       .toArray()
-      .filter((part) => part && part.timelySource).length;
+      .filter((part) => part !== undefined && part.timelySource).length;
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");

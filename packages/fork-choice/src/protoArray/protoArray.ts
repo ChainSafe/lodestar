@@ -604,7 +604,7 @@ export class ProtoArray {
     while (true) {
       // If nodeA is higher than nodeB walk up nodeA tree
       if (nodeA.slot > nodeB.slot) {
-        if (!nodeA.parent) {
+        if (nodeA.parent === undefined) {
           return null;
         }
 
@@ -613,7 +613,7 @@ export class ProtoArray {
 
       // If nodeB is higher than nodeA walk up nodeB tree
       else if (nodeA.slot < nodeB.slot) {
-        if (!nodeB.parent) {
+        if (nodeB.parent === undefined) {
           return null;
         }
 
@@ -627,7 +627,7 @@ export class ProtoArray {
           return nodeA;
         }
 
-        if (!nodeA.parent || !nodeB.parent) {
+        if (nodeA.parent === undefined || nodeB.parent === undefined) {
           return null;
         }
 
@@ -651,7 +651,7 @@ export class ProtoArray {
 
   private getNodeByIndex(blockIndex: number): IProtoNode | undefined {
     const node = this.nodes[blockIndex];
-    if (!node) {
+    if (node === undefined) {
       return undefined;
     }
 

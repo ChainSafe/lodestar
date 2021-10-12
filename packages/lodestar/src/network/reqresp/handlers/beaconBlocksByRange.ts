@@ -56,9 +56,9 @@ export async function* injectRecentBlocks(
     slot += request.step;
   }
 
-  const blocks = (await chain.getUnfinalizedBlocksAtSlots(slots)) || [];
+  const blocks = await chain.getUnfinalizedBlocksAtSlots(slots);
   for (const block of blocks) {
-    if (block) {
+    if (block !== undefined) {
       totalBlock++;
       yield block;
     }

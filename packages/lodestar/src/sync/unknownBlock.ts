@@ -103,7 +103,7 @@ export class UnknownBlockSync {
     const blocks = this.pendingBlocks.size > 0 && getLowestPendingUnknownParents(this.pendingBlocks);
 
     // Cheap early stop to prevent calling the network.getConnectedPeers()
-    if (!blocks) {
+    if (blocks === false) {
       return;
     }
 
@@ -230,7 +230,7 @@ export class UnknownBlockSync {
         const [signedBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot] as List<Root>);
 
         // Peer does not have the block, try with next peer
-        if (!signedBlock) {
+        if (signedBlock === undefined) {
           continue;
         }
 

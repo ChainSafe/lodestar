@@ -62,7 +62,7 @@ export class PeerDiscovery {
 
     // Run a general discv5 query if one is not already in progress
     if (this.activeDiscv5Query) return;
-    const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    const discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery | undefined;
     // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
     if (!discovery) return;
     const discv5: Discv5 = discovery.discv5;
@@ -106,7 +106,7 @@ export class PeerDiscovery {
    * List existing peers that declare being part of a target subnet
    */
   async getCachedDiscoveryPeersOnSubnet(subnet: number, maxPeersToDiscover: number): Promise<PeerIdStr[]> {
-    const discovery: Discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
+    const discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery | undefined;
     // if disablePeerDiscovery = true, libp2p will not have any "discv5" module
     if (!discovery) return [];
     const discv5: Discv5 = discovery.discv5;

@@ -29,7 +29,7 @@ export function epochProcessing(fork: ForkName, epochProcessFns: Record<string, 
   const rootDir = join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/epoch_processing`);
   for (const testDir of fs.readdirSync(rootDir)) {
     const epochProcessFn = epochProcessFns[testDir];
-    if (!epochProcessFn) {
+    if (epochProcessFn === undefined) {
       throw Error(`No epochProcessFn for ${testDir}`);
     }
 

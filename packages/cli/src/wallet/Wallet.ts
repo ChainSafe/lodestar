@@ -32,8 +32,8 @@ export class Wallet extends Keystore {
   constructor(keystore: Partial<IWalletKeystoreJson>) {
     super(keystore as IKeystore);
     this.name = keystore.name;
-    this.nextaccount = keystore.nextaccount || 0;
-    this.version = keystore.version || 1;
+    this.nextaccount = keystore.nextaccount ?? 0;
+    this.version = keystore.version ?? 1;
     this.type = keystore.type || "hierarchical deterministic";
   }
 

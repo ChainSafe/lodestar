@@ -67,7 +67,7 @@ export class GenesisBuilder implements IGenesisBuilder {
     this.signal = signal;
     this.eth1Params = {
       ...config,
-      maxBlocksPerPoll: maxBlocksPerPoll || 10000,
+      maxBlocksPerPoll: maxBlocksPerPoll ?? 10000,
     };
 
     if (pendingStatus) {

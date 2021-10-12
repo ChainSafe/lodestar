@@ -16,7 +16,7 @@ export async function shell(
   cmd: string | string[],
   options?: {timeout?: number; maxBuffer?: number; signal?: AbortSignal; pipeToProcess?: boolean}
 ): Promise<string> {
-  const timeout = options?.timeout || defaultTimeout;
+  const timeout = options?.timeout ?? defaultTimeout;
   const maxBuffer = options?.maxBuffer;
   const cmdStr = Array.isArray(cmd) ? cmd.join(" ") : cmd;
 

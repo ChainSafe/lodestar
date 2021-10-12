@@ -96,7 +96,7 @@ export async function initStateFromEth1({
     logger,
     signal,
     pendingStatus:
-      statePreGenesis && depositTree && lastProcessedBlockNumber != null
+      statePreGenesis && depositTree !== undefined && lastProcessedBlockNumber != null
         ? {state: statePreGenesis, depositTree, lastProcessedBlockNumber}
         : undefined,
   });

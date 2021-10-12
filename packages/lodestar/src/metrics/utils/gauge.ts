@@ -58,9 +58,9 @@ export class GaugeChild<T extends string> implements IGauge {
   set(labels: Labels<T>, value: number): void;
   set(arg1?: Labels<T> | number, arg2?: number): void {
     if (typeof arg1 === "object") {
-      this.gauge.set({...this.labelsParent, ...arg1}, arg2 || 0);
+      this.gauge.set({...this.labelsParent, ...arg1}, arg2 ?? 0);
     } else {
-      this.gauge.set(this.labelsParent, arg1 || 0);
+      this.gauge.set(this.labelsParent, arg1 ?? 0);
     }
   }
 

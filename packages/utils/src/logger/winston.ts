@@ -33,7 +33,7 @@ export class WinstonLogger implements ILogger {
     this.winston = createLogger({
       level: options?.level || defaultLogLevel,
       defaultMeta: {module: options?.module || ""} as DefaultMeta,
-      format: getFormat(options || {}),
+      format: getFormat(options),
       transports: transportOptsArr.map((transportOpts) => fromTransportOpts(transportOpts)),
       exitOnError: false,
     });

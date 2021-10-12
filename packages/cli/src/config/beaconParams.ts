@@ -79,5 +79,5 @@ export function writeBeaconParams(filepath: string, params: IChainConfig): void 
 }
 
 function readBeaconParams(filepath: string): IBeaconParamsUnparsed {
-  return readFile(filepath) || {};
+  return readFile(filepath) ?? {};
 }

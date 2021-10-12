@@ -13,7 +13,7 @@ export class DepositEventRepository extends Repository<number, phase0.DepositEve
 
   async deleteOld(depositCount: number): Promise<void> {
     const firstDepositIndex = await this.firstKey();
-    if (firstDepositIndex !== 0 && !firstDepositIndex) {
+    if (firstDepositIndex === null) {
       return;
     }
     await this.batchDelete(Array.from({length: depositCount - firstDepositIndex}, (_, i) => i + firstDepositIndex));

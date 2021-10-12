@@ -12,7 +12,7 @@ const uint8ByteToBitBooleanArrays: boolean[][] = [];
  *     5 => [true false true false false fase false false]
  */
 export function getUint8ByteToBitBooleanArray(byte: number): boolean[] {
-  if (!uint8ByteToBitBooleanArrays[byte]) {
+  if (uint8ByteToBitBooleanArrays[byte] === undefined) {
     uint8ByteToBitBooleanArrays[byte] = computeUint8ByteToBitBooleanArray(byte);
   }
   return uint8ByteToBitBooleanArrays[byte];

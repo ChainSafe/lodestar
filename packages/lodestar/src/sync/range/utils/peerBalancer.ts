@@ -41,6 +41,9 @@ export class ChainPeersBalancer {
    * Return peers with 0 or no active requests
    */
   idlePeers(): PeerId[] {
-    return this.peers.filter((peer) => !this.activeRequestsByPeer.get(peer));
+    return this.peers.filter((peer) => {
+      const activeRequests = this.activeRequestsByPeer.get(peer);
+      return activeRequests === undefined || activeRequests === 0;
+    });
   }
 }

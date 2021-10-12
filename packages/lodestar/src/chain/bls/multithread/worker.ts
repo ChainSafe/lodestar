@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "worker_threads";
 import {expose} from "threads/worker";
 import {bls, init, CoordType} from "@chainsafe/bls";

@@ -137,11 +137,11 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
 
       const committes = getEpochBeaconCommittees(state, filters?.epoch ?? computeEpochAtSlot(state.slot));
       const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
-        if (filters?.index && filters.index !== committeeIndex) {
+        if (filters?.index !== undefined && filters.index !== committeeIndex) {
           return [];
         }
         return slotCommittees.flatMap((committee, slot) => {
-          if (filters?.slot && filters.slot !== slot) {
+          if (filters?.slot !== undefined && filters.slot !== slot) {
             return [];
           }
           return [

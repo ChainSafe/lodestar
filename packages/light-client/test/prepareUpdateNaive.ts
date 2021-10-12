@@ -75,7 +75,7 @@ export async function prepareUpdateNaive(
 
   // Get the state that was processed with blockA
   const stateWithSyncAggregate = await chain.getStateByRoot(blockWithSyncAggregate.stateRoot);
-  if (!stateWithSyncAggregate) {
+  if (stateWithSyncAggregate === undefined) {
     throw Error("No state for blockA");
   }
 

@@ -18,7 +18,8 @@ lodestar
       }
     }
 
-    const errorMessage = err ? (err instanceof YargsError ? err.message : err.stack) : msg || "Unknown error";
+    const errorMessage =
+      err !== undefined ? (err instanceof YargsError ? err.message : err.stack) : msg || "Unknown error";
 
     // eslint-disable-next-line no-console
     console.error(` ✖ ${errorMessage}\n`);

@@ -58,7 +58,7 @@ export class Eth1DepositDataTracker {
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.lastProcessedDepositBlockNumber = null;
 
-    if (!opts.depositContractDeployBlock) {
+    if (opts.depositContractDeployBlock === undefined) {
       this.logger.warn("No depositContractDeployBlock provided");
     }
 

@@ -33,7 +33,7 @@ export async function getGenesisValidatorsRoot(args: IGlobalArgs & ISlashingProt
   const api = getClient(config, {baseUrl: server});
   const genesis = await api.beacon.getGenesis();
 
-  if (genesis) {
+  if (genesis !== undefined) {
     return genesis.data.genesisValidatorsRoot;
   } else {
     if (args.force) {

@@ -11,7 +11,7 @@ export function getLodestarCliTestRunner() {
         })
         // Method to execute when a failure occurs, rather than printing the failure message.
         .fail((msg, err) => {
-          if (err) reject(err);
+          if (err !== undefined) reject(err);
           else if (msg) reject(Error(msg));
           else reject(Error("Unknown error"));
         })

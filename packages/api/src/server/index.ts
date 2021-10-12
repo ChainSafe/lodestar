@@ -44,7 +44,7 @@ export function registerRoutes(
 
   for (const namespace of enabledNamespaces) {
     const routes = routesByNamespace[namespace];
-    if (!routes) {
+    if (routes === undefined) {
       throw Error(`Unknown api namespace ${namespace}`);
     }
 

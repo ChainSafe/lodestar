@@ -25,7 +25,7 @@ export function collectResponses<T extends ResponseBody | ResponseBody[]>(
     for await (const response of source) {
       responses.push(response);
 
-      if (maxResponses && responses.length >= maxResponses) {
+      if (maxResponses !== undefined && responses.length >= maxResponses) {
         break;
       }
     }

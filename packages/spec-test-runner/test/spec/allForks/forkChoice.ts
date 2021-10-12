@@ -94,7 +94,7 @@ export function forkChoiceTest(fork: ForkName): void {
             expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
 
             // time in spec mapped to Slot in our forkchoice implementation
-            if (expectedTime)
+            if (expectedTime !== undefined && expectedTime > 0)
               expect(forkchoice.getTime() * config.SECONDS_PER_SLOT).to.be.equal(
                 Number(expectedTime),
                 `Invalid forkchoice time at step ${i}`

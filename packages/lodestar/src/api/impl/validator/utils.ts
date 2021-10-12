@@ -26,7 +26,7 @@ export function getSyncComitteeValidatorIndexMap(
   const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
   const requestPeriod = computeSyncPeriodAtEpoch(requestedEpoch);
 
-  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
+  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx !== undefined) {
     switch (requestPeriod) {
       case statePeriod:
         return (state as CachedBeaconState<altair.BeaconState>).currentSyncCommittee.validatorIndexMap;

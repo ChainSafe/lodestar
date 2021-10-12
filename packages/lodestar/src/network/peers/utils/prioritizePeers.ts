@@ -42,7 +42,7 @@ export function prioritizePeers(
         for (const subnetId of subnets) {
           if (peer[subnetKey][subnetId]) {
             peerHasDuty.set(peer.id.toB58String(), true);
-            peersPerSubnet.set(subnetId, 1 + (peersPerSubnet.get(subnetId) || 0));
+            peersPerSubnet.set(subnetId, 1 + (peersPerSubnet.get(subnetId) ?? 0));
           }
         }
       }

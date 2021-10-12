@@ -457,7 +457,7 @@ export async function getNetworkCachedState(
   if (fs.existsSync(filepath)) {
     stateSsz = fs.readFileSync(filepath);
   } else {
-    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout || 300_000});
+    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout ?? 300_000});
     stateSsz = await client.debug.getState(String(slot), "ssz");
     fs.writeFileSync(filepath, stateSsz);
   }

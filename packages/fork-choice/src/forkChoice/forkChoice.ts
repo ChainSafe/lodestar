@@ -204,7 +204,7 @@ export class ForkChoice implements IForkChoice {
 
   /** Very expensive function, iterates the entire ProtoArray. Called only in debug API */
   getHeads(): IProtoBlock[] {
-    return this.protoArray.nodes.filter((node) => !node.bestChild);
+    return this.protoArray.nodes.filter((node) => node.bestChild === undefined);
   }
 
   getFinalizedCheckpoint(): CheckpointWithHex {
@@ -448,7 +448,7 @@ export class ForkChoice implements IForkChoice {
 
   getLatestMessage(validatorIndex: ValidatorIndex): ILatestMessage | undefined {
     const vote = this.votes[validatorIndex];
-    if (!vote) {
+    if (vote === undefined) {
       return undefined;
     }
     return {
@@ -840,7 +840,7 @@ export class ForkChoice implements IForkChoice {
   private addLatestMessage(validatorIndex: ValidatorIndex, nextEpoch: Epoch, nextRoot: RootHex): void {
     this.synced = false;
     const vote = this.votes[validatorIndex];
-    if (!vote) {
+    if (vote === undefined) {
       this.votes[validatorIndex] = {
         currentRoot: HEX_ZERO_HASH,
         nextRoot,

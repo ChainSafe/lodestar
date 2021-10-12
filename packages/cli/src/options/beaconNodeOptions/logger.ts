@@ -31,7 +31,7 @@ export const options: ICliCommandOptions<ILoggerArgs> = ObjectKeys(defaultOption
       type: "string",
       choices: LogLevels,
       description: `Logging verbosity level for ${logModule}`,
-      defaultDescription: (defaultOptions.logger[logModule] || {}).level,
+      defaultDescription: (defaultOptions.logger[logModule] ?? {}).level,
       group: "log",
     },
   }),

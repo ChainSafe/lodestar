@@ -206,7 +206,7 @@ describe("surroundTests", () => {
           throw Error("Should slash");
         } catch (e) {
           if (e instanceof SurroundAttestationError) {
-            if (slashableEpoch) {
+            if (slashableEpoch !== undefined) {
               expect(e.type.attestation2Target).to.equal(slashableEpoch, "Wrong slashableEpoch");
             }
           } else {

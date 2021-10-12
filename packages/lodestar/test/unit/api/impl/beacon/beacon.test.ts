@@ -31,7 +31,7 @@ describe("beacon api implementation", function () {
       (server.chainStub as any).genesisTime = 0;
       (server.chainStub as any).genesisValidatorsRoot = Buffer.alloc(32);
       const {data: genesis} = await api.getGenesis();
-      if (!genesis) throw Error("Genesis is nullish");
+      if (genesis === null || genesis === undefined) throw Error("Genesis is nullish");
       expect(genesis.genesisForkVersion).to.not.be.undefined;
       expect(genesis.genesisTime).to.not.be.undefined;
       expect(genesis.genesisValidatorsRoot).to.not.be.undefined;

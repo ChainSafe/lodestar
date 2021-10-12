@@ -58,7 +58,7 @@ describe("network / reqresp / encoders / responseTypes", () => {
             );
 
             const type = getResponseSzzTypeByMethod(protocol, forkName);
-            if (!type) throw Error("no type");
+            if (type === undefined) throw Error("no type");
 
             expectIsEqualSszTypeArr(type, returnedResponses, responseChunks, "Response chunks");
           });

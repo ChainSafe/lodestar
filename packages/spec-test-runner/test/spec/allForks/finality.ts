@@ -19,7 +19,7 @@ export function finality(fork: ForkName): void {
         getConfig(fork),
         testcase.pre as TreeBacked<allForks.BeaconState>
       ) as CachedBeaconState<allForks.BeaconState>;
-      const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
+      const verify = testcase.meta !== undefined && testcase.meta.blsSetting === BigInt(1);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
         const signedBlock = testcase[`blocks_${i}`] as merge.SignedBeaconBlock;
 
@@ -59,5 +59,5 @@ interface IFinalityTestCase extends IBaseSpecTest {
     blsSetting: BigInt;
   };
   pre: altair.BeaconState;
-  post: altair.BeaconState;
+  post?: altair.BeaconState;
 }

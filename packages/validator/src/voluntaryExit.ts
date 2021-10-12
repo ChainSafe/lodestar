@@ -23,12 +23,12 @@ export async function signAndSubmitVoluntaryExit(
   const stateValidatorRes = await api.beacon.getStateValidators("head", {indices: [publicKey]});
   const stateValidator = stateValidatorRes.data[0];
 
-  if (!stateValidator) {
+  if (stateValidator === undefined) {
     throw new Error("Validator not found in beacon chain.");
   }
 
   const {data: fork} = await api.beacon.getStateFork("head");
-  if (!fork) {
+  if (fork === undefined) {
     throw new Error("VoluntaryExit: Fork not found");
   }
 

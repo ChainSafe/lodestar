@@ -82,7 +82,7 @@ export function getLodestarApi({
 
     async getGossipQueueItems(gossipType: GossipType) {
       const jobQueue = network.gossip.jobQueues[gossipType];
-      if (!jobQueue) {
+      if (jobQueue === undefined) {
         throw Error(`Unknown gossipType ${gossipType}, known values: ${Object.keys(jobQueue).join(", ")}`);
       }
 
@@ -130,6 +130,7 @@ export function getLodestarApi({
     },
 
     async runGC() {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!global.gc) throw Error("You must expose GC running the Node.js process with 'node --expose_gc'");
       global.gc();
     },

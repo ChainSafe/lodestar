@@ -56,7 +56,7 @@ export function pickEth1Vote(state: allForks.BeaconState, votesToConsider: phase
       ];
     }
   } else {
-    return votesToConsider[votesToConsider.length - 1] || state.eth1Data;
+    return votesToConsider[votesToConsider.length - 1] ?? state.eth1Data;
   }
 }
 

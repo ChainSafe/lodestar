@@ -68,7 +68,7 @@ export function responseTimeoutsHandler<T>(
       );
     } finally {
       clearTimeout(timeoutTTFB);
-      if (timeoutRESP) clearTimeout(timeoutRESP);
+      if (timeoutRESP !== null) clearTimeout(timeoutRESP);
     }
   };
 }

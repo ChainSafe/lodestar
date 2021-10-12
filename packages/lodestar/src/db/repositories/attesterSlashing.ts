@@ -14,7 +14,7 @@ export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.At
   }
 
   async hasAll(attesterIndices: ValidatorIndex[] = []): Promise<boolean> {
-    const attesterSlashings = (await this.values()) || [];
+    const attesterSlashings = (await this.values()) ?? [];
     const indices = new Set<ValidatorIndex>();
     for (const slashing of attesterSlashings) {
       for (const index of slashing.attestation1.attestingIndices) indices.add(index);

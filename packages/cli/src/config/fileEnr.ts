@@ -36,7 +36,7 @@ export class FileENR extends ENR {
   }
 
   saveToFile(): void {
-    if (!this.localPeerId) return;
+    if (this.localPeerId === null || this.localPeerId === undefined) return;
     const keypair = createKeypairFromPeerId(this.localPeerId);
     writeFile(this.filename, this.encodeTxt(keypair.privateKey));
   }

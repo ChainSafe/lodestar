@@ -147,7 +147,7 @@ export abstract class Repository<I extends Id, T> {
   async keys(opts?: IFilterOptions<I>): Promise<I[]> {
     this.dbReadsMetrics?.inc();
     const data = await this.db.keys(this.dbFilterOptions(opts));
-    return (data || []).map((data) => this.decodeKey(data));
+    return (data ?? []).map((data) => this.decodeKey(data));
   }
   async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
     this.dbReadsMetrics?.inc();
@@ -160,7 +160,7 @@ export abstract class Repository<I extends Id, T> {
   async values(opts?: IFilterOptions<I>): Promise<T[]> {
     this.dbReadsMetrics?.inc();
     const data = await this.db.values(this.dbFilterOptions(opts));
-    return (data || []).map((data) => this.decodeValue(data));
+    return (data ?? []).map((data) => this.decodeValue(data));
   }
   async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
     this.dbReadsMetrics?.inc();
@@ -173,7 +173,7 @@ export abstract class Repository<I extends Id, T> {
   async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
     this.dbReadsMetrics?.inc();
     const data = await this.db.entries(this.dbFilterOptions(opts));
-    return (data || []).map((data) => ({
+    return (data ?? []).map((data) => ({
       key: this.decodeKey(data.key),
       value: this.decodeValue(data.value),
     }));
@@ -254,16 +254,16 @@ export abstract class Repository<I extends Id, T> {
       lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
     };
     if (opts) {
-      if (opts.lt || opts.lt === 0) {
+      if (opts.lt !== undefined) {
         _opts.lt = this.encodeKey(opts.lt);
-      } else if (opts.lte || opts.lte === 0) {
+      } else if (opts.lte !== undefined) {
         delete _opts.lt;
         _opts.lte = this.encodeKey(opts.lte);
       }
-      if (opts.gt || opts.gt === 0) {
+      if (opts.gt !== undefined) {
         delete _opts.gte;
         _opts.gt = this.encodeKey(opts.gt);
-      } else if (opts.gte || opts.gte === 0) {
+      } else if (opts.gte !== undefined) {
         _opts.gte = this.encodeKey(opts.gte);
       }
       _opts.reverse = opts.reverse;

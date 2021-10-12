@@ -32,7 +32,7 @@ export class HttpMetricsServer implements IMetricsServer {
 
   async start(): Promise<void> {
     const {serverPort, listenAddr} = this.opts;
-    this.logger.info("Starting metrics HTTP server", {port: serverPort || null});
+    this.logger.info("Starting metrics HTTP server", {port: serverPort ?? null});
     const listen = this.http.listen.bind(this.http);
     return new Promise((resolve, reject) => {
       listen(serverPort, listenAddr).once("listening", resolve).once("error", reject);

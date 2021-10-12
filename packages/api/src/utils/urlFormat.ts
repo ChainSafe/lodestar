@@ -23,7 +23,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
     const currentToken: Token | undefined = tokens[tokens.length - 1];
     switch (path[i]) {
       case ":": {
-        if (currentToken && currentToken.type === TokenType.Variable) {
+        if (currentToken !== undefined && currentToken.type === TokenType.Variable) {
           throw Error(`Invalid path token ':' not closed: ${path}`);
         }
         tokens.push({type: TokenType.Variable, start: i});
@@ -31,14 +31,14 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
       }
 
       case "/": {
-        if (!currentToken || currentToken.type === TokenType.Variable) {
+        if (currentToken === undefined || currentToken.type === TokenType.Variable) {
           tokens.push({type: TokenType.String, start: i});
         }
         break;
       }
 
       default: {
-        if (!currentToken) {
+        if (currentToken === undefined) {
           tokens.push({type: TokenType.String, start: i});
         }
       }
@@ -51,7 +51,7 @@ export function compileRouteUrlFormater(path: string): (arg: Args) => string {
   }
 
   const fns = tokens.map((token, i) => {
-    const ending = tokens[i + 1] ? tokens[i + 1].start : path.length;
+    const ending = tokens[i + 1] !== undefined ? tokens[i + 1].start : path.length;
     const part = path.slice(token.start, ending);
 
     switch (token.type) {

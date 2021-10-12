@@ -58,7 +58,7 @@ describe("sync / range / chain", () => {
   const reportPeer: SyncChainFns["reportPeer"] = () => {};
 
   afterEach(() => {
-    if (interval) clearInterval(interval);
+    if (interval !== null) clearInterval(interval);
   });
 
   for (const {id, startEpoch, targetEpoch, badBlocks, skippedSlots} of testCases) {

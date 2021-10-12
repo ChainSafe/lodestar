@@ -77,13 +77,13 @@ describe("Lightclient flow", () => {
   });
 
   it("Prepare altair update", async () => {
-    if (!updateData) throw Error("Prev test failed");
+    if (updateData === undefined) throw Error("Prev test failed");
 
     update = await prepareUpdateNaive(updateData.chain, updateData.blockWithSyncAggregate);
   });
 
   it("Process altair update", () => {
-    if (!update) throw Error("Prev test failed");
+    if (update === undefined) throw Error("Prev test failed");
 
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),

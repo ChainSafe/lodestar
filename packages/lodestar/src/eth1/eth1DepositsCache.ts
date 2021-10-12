@@ -38,7 +38,7 @@ export class Eth1DepositsCache {
 
     const lastLog = await this.db.depositEvent.lastValue();
     const firstEvent = depositEvents[0];
-    if (lastLog && firstEvent) {
+    if (lastLog !== null && firstEvent !== undefined) {
       const newIndex = firstEvent.index;
       const prevIndex = lastLog.index;
       if (newIndex <= prevIndex) {

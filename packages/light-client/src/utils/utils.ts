@@ -42,7 +42,7 @@ export function getParticipantPubkeys<T>(pubkeys: ArrayLike<T>, bits: BitVector)
   const participantPubkeys: T[] = [];
   for (let i = 0; i < bits.length; i++) {
     if (bits[i]) {
-      if (!pubkeys[i]) throw Error(`No pubkey ${i} in syncCommittee`);
+      if (pubkeys[i] === undefined) throw Error(`No pubkey ${i} in syncCommittee`);
       participantPubkeys.push(pubkeys[i]);
     }
   }

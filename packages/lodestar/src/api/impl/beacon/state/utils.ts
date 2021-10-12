@@ -121,7 +121,7 @@ export function getEpochBeaconCommittees(
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[][][] {
-  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
+  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx !== undefined) {
     const stateEpoch = computeEpochAtSlot(state.slot);
     switch (epoch) {
       case stateEpoch:
@@ -152,7 +152,7 @@ export function getSyncCommittees(
   const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
   const requestPeriod = computeSyncPeriodAtEpoch(epoch);
 
-  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx) {
+  if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx !== undefined) {
     switch (requestPeriod) {
       case statePeriod:
         return (state as CachedBeaconState<altair.BeaconState>).currentSyncCommittee.validatorIndices;
@@ -235,7 +235,7 @@ export function filterStateValidatorsByStatuses(
   const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
   for (const validator of readonlyValues(filteredValidators)) {
     const validatorIndex = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (validatorIndex && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
+    if (validatorIndex !== undefined && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
       responses.push(toValidatorResponse(validatorIndex, validator, state.balances[validatorIndex], currentEpoch));
     }
   }
@@ -294,7 +294,7 @@ export function getStateValidatorIndex(
   } else {
     validatorIndex = pubkey2index.get(id) ?? undefined;
     // validator added later than given stateId
-    if (validatorIndex && validatorIndex >= state.validators.length) {
+    if (validatorIndex !== undefined && validatorIndex >= state.validators.length) {
       validatorIndex = undefined;
     }
   }
