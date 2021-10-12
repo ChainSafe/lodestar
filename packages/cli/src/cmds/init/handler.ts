@@ -30,17 +30,10 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
   });
 
   // Auto-setup network
-  // Only download files if params file does not exist
+  // Only download files if network.discv5.bootEnrs arg is not specified
   const bOpts = beaconNodeOptions.get();
   const bOptsEnrs = bOpts && bOpts.network && bOpts.network.discv5 && bOpts.network.discv5.bootEnrs;
-  if (
-    args.network &&
-    (!beaconPaths.configFile ||
-      !fs.existsSync(beaconPaths.configFile) ||
-      !beaconPaths.paramsFile ||
-      !fs.existsSync(beaconPaths.paramsFile) ||
-      !(bOptsEnrs && bOptsEnrs.length > 0))
-  ) {
+  if (args.network && !(bOptsEnrs && bOptsEnrs.length > 0)) {
     try {
       const bootEnrs = await fetchBootnodes(args.network);
       beaconNodeOptions.set({network: {discv5: {bootEnrs}}});
