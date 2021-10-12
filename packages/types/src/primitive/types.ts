@@ -1,8 +1,8 @@
+import {ByteVector} from "@chainsafe/ssz";
+
 // Each type exported here contains both a compile-time type
 // (a typescript interface) and a run-time ssz type (a javascript variable)
 // For more information, see ./index.ts
-
-import {ByteVector} from "@chainsafe/ssz";
 
 export type Bytes4 = ByteVector;
 export type Bytes8 = ByteVector;

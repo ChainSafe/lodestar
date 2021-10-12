@@ -1,4 +1,15 @@
 import {
+  BitListType,
+  BitVectorType,
+  ContainerLeafNodeStructType,
+  ContainerType,
+  List,
+  ListType,
+  RootType,
+  Vector,
+  VectorType,
+} from "@chainsafe/ssz";
+import {
   ATTESTATION_SUBNET_COUNT,
   DEPOSIT_CONTRACT_TREE_DEPTH,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
@@ -17,18 +28,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
-import {
-  BitListType,
-  BitVectorType,
-  ContainerLeafNodeStructType,
-  ContainerType,
-  List,
-  ListType,
-  RootType,
-  Vector,
-  VectorType,
-} from "@chainsafe/ssz";
-import {ssz as primitiveSsz} from "../primitive";
+import {ssz as primitiveSsz, ts as primitiveTs} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
 import * as phase0 from "./types";
 
@@ -91,7 +91,7 @@ export const CommitteeBits = new BitListType({
   limit: MAX_VALIDATORS_PER_COMMITTEE,
 });
 
-export const CommitteeIndices = new ListType<List<phase0.ValidatorIndex>>({
+export const CommitteeIndices = new ListType<List<primitiveTs.ValidatorIndex>>({
   elementType: ValidatorIndex,
   limit: MAX_VALIDATORS_PER_COMMITTEE,
 });
@@ -113,7 +113,7 @@ export const DepositData = new ContainerType<phase0.DepositData>({
   },
 });
 
-export const DepositDataRootList = new ListType<List<phase0.Root>>({
+export const DepositDataRootList = new ListType<List<primitiveTs.Root>>({
   elementType: new RootType({expandedType: DepositData}),
   limit: 2 ** DEPOSIT_CONTRACT_TREE_DEPTH,
 });
@@ -171,12 +171,12 @@ export const ENRForkID = new ContainerType<phase0.ENRForkID>({
   },
 });
 
-export const HistoricalBlockRoots = new VectorType<Vector<phase0.Root>>({
+export const HistoricalBlockRoots = new VectorType<Vector<primitiveTs.Root>>({
   elementType: new RootType({expandedType: () => typesRef.get().BeaconBlock}),
   length: SLOTS_PER_HISTORICAL_ROOT,
 });
 
-export const HistoricalStateRoots = new VectorType<Vector<phase0.Root>>({
+export const HistoricalStateRoots = new VectorType<Vector<primitiveTs.Root>>({
   elementType: new RootType({expandedType: () => typesRef.get().BeaconState}),
   length: SLOTS_PER_HISTORICAL_ROOT,
 });
