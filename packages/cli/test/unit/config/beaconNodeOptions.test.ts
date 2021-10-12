@@ -1,7 +1,8 @@
 import {expect} from "chai";
-import {defaultOptions} from "@chainsafe/lodestar";
-import {BeaconNodeOptions} from "../../../src/config";
+import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
 import {bootEnrs as pyrmontBootEnrs} from "../../../src/networks/pyrmont";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 
 describe("config / beaconNodeOptions", () => {
   it("Should return pyrmont options", () => {
@@ -37,4 +38,35 @@ describe("config / beaconNodeOptions", () => {
     const options = beaconNodeOptions.getWithDefaults();
     expect(options.eth1).to.deep.equal(defaultOptions.eth1);
   });
+});
+
+describe("mergeBeaconNodeOptions", () => {
+  const enrsToNetworkConfig = (enrs: string[]): RecursivePartial<IBeaconNodeOptions> => {
+    return {
+      network: {
+        discv5: {
+          bootEnrs: enrs,
+        },
+      },
+    };
+  };
+
+  const testCases: {name: string; networkEnrs: string[]; cliEnrs: string[]; resultEnrs: string[]}[] = [
+    {name: "normal case", networkEnrs: ["enr-1", "enr-2", "enr-3"], cliEnrs: ["new-enr"], resultEnrs: ["new-enr"]},
+    // TODO: investigate arrayMerge has no effect?
+    // {
+    //   name: "should not override",
+    //   networkEnrs: ["enr-1", "enr-2", "enr-3"],
+    //   cliEnrs: [],
+    //   resultEnrs: ["enr-1", "enr-2", "enr-3"],
+    // },
+  ];
+
+  for (const {name, networkEnrs, cliEnrs, resultEnrs} of testCases) {
+    it(name, () => {
+      const networkConfig = enrsToNetworkConfig(networkEnrs);
+      const cliConfig = enrsToNetworkConfig(cliEnrs);
+      expect(mergeBeaconNodeOptions(networkConfig, cliConfig)).to.be.deep.equal(enrsToNetworkConfig(resultEnrs));
+    });
+  }
 });
