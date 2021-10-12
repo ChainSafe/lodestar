@@ -1,4 +1,4 @@
-import {phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {MapDef} from "../../util/map";
 
 /**
