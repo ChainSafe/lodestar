@@ -1,5 +1,5 @@
 import {FastifyInstance} from "fastify";
-import {computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {altair, phase0, Epoch, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
@@ -48,7 +48,7 @@ export class LightclientMockServer {
     state: TreeBacked<altair.BeaconState>;
   }): Promise<void> {
     const {checkpoint, block, state} = initialFinalizedCheckpoint;
-    void this.lightClientUpdater.onFinalized(checkpoint, block, state);
+    void this.lightClientUpdater.onFinalized(checkpoint, blockToHeader(this.config, block), state);
     this.stateRegen.add(state);
     this.blockCache.add(block);
     this.prevState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
@@ -133,7 +133,7 @@ export class LightclientMockServer {
         // Feed new finalized block and state to the LightClientUpdater
         await this.lightClientUpdater.onFinalized(
           this.finalizedCheckpoint,
-          finalizedData.block,
+          blockToHeader(this.config, finalizedData.block),
           ssz.altair.BeaconState.createTreeBackedFromStruct(finalizedData.state)
         );
       }
