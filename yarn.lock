@@ -503,10 +503,10 @@
   dependencies:
     "@chainsafe/as-sha256" "^0.2.3"
 
-"@chainsafe/persistent-ts@^0.19.0":
-  version "0.19.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.0.tgz#9cc7e93f91329e0c9a8a035ec99880b77d503abf"
-  integrity sha512-A3q/o9aMoMkfX11JzEMfjO3+Ms0F+gVDBsNpM90i2HWvIYQYRnbzGe5UUPMleRj3LQkAjFjipQ7L27fdDUf+rw==
+"@chainsafe/persistent-ts@^0.19.1":
+  version "0.19.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.1.tgz#53d03aa31ef7698b09327f74eef01e286b97bae3"
+  integrity sha512-fUFFFFxdcpYkMAHnjm83EYL/R/smtVmEkJr3FGSI6dwPk4ue9rXjEHf7FTd3V8AbVOcTJGriN4cYf2V+HOYkjQ==
 
 "@chainsafe/snappy-stream@5.0.0":
   version "5.0.0"
