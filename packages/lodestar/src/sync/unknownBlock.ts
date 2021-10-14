@@ -100,10 +100,8 @@ export class UnknownBlockSync {
    * Gather tip parent blocks with unknown parent and do a search for all of them
    */
   private triggerUnknownBlockSearch = (): void => {
-    const blocks = this.pendingBlocks.size > 0 && getLowestPendingUnknownParents(this.pendingBlocks);
-
     // Cheap early stop to prevent calling the network.getConnectedPeers()
-    if (blocks === false) {
+    if (this.pendingBlocks.size === 0) {
       return;
     }
 
@@ -113,7 +111,7 @@ export class UnknownBlockSync {
       return;
     }
 
-    for (const block of blocks) {
+    for (const block of getLowestPendingUnknownParents(this.pendingBlocks)) {
       this.downloadParentBlock(block, connectedPeers).catch((e) => {
         this.logger.error("Unexpect error - downloadParentBlock", {}, e);
       });
