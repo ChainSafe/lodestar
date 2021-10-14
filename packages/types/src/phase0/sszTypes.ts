@@ -71,6 +71,13 @@ export const BeaconBlockHeader = new ContainerType<phase0.BeaconBlockHeader>({
     stateRoot: Root,
     bodyRoot: Root,
   },
+  casingMap: {
+    slot: "slot",
+    proposerIndex: "proposer_index",
+    parentRoot: "parent_root",
+    stateRoot: "state_root",
+    bodyRoot: "body_root",
+  },
 });
 
 export const SignedBeaconBlockHeader = new ContainerType<phase0.SignedBeaconBlockHeader>({
@@ -78,6 +85,7 @@ export const SignedBeaconBlockHeader = new ContainerType<phase0.SignedBeaconBloc
     message: BeaconBlockHeader,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 export const Checkpoint = new ContainerType<phase0.Checkpoint>({
@@ -85,6 +93,7 @@ export const Checkpoint = new ContainerType<phase0.Checkpoint>({
     epoch: Epoch,
     root: Root,
   },
+  expectedCase: "notransform",
 });
 
 export const CommitteeBits = new BitListType({
@@ -102,14 +111,22 @@ export const DepositMessage = new ContainerType<phase0.DepositMessage>({
     withdrawalCredentials: Bytes32,
     amount: Number64,
   },
+  casingMap: {
+    pubkey: "pubkey",
+    withdrawalCredentials: "withdrawal_credentials",
+    amount: "amount",
+  },
 });
 
 export const DepositData = new ContainerType<phase0.DepositData>({
   fields: {
-    pubkey: BLSPubkey,
-    withdrawalCredentials: Bytes32,
-    amount: Number64,
+    // Fields order is strickly preserved
+    ...DepositMessage.fields,
     signature: BLSSignature,
+  },
+  casingMap: {
+    ...DepositMessage.casingMap,
+    signature: "signature",
   },
 });
 
@@ -124,6 +141,12 @@ export const DepositEvent = new ContainerType<phase0.DepositEvent>({
     blockNumber: Number64,
     index: Number64,
   },
+  // Custom type, not in the consensus specs
+  casingMap: {
+    depositData: "deposit_data",
+    blockNumber: "block_number",
+    index: "index",
+  },
 });
 
 export const Eth1Data = new ContainerType<phase0.Eth1Data>({
@@ -131,6 +154,11 @@ export const Eth1Data = new ContainerType<phase0.Eth1Data>({
     depositRoot: Root,
     depositCount: Number64,
     blockHash: Bytes32,
+  },
+  casingMap: {
+    depositRoot: "deposit_root",
+    depositCount: "deposit_count",
+    blockHash: "block_hash",
   },
 });
 
@@ -141,10 +169,14 @@ export const Eth1DataVotes = new ListType({
 
 export const Eth1DataOrdered = new ContainerType<phase0.Eth1DataOrdered>({
   fields: {
-    depositRoot: Root,
-    depositCount: Number64,
-    blockHash: Bytes32,
+    // Fields order is strickly preserved
+    ...Eth1Data.fields,
     blockNumber: Number64,
+  },
+  // Custom type, not in the consensus specs
+  casingMap: {
+    ...Eth1Data.casingMap,
+    blockNumber: "block_number",
   },
 });
 
@@ -154,12 +186,21 @@ export const Fork = new ContainerType<phase0.Fork>({
     currentVersion: Version,
     epoch: Epoch,
   },
+  casingMap: {
+    previousVersion: "previous_version",
+    currentVersion: "current_version",
+    epoch: "epoch",
+  },
 });
 
 export const ForkData = new ContainerType<phase0.ForkData>({
   fields: {
     currentVersion: Version,
     genesisValidatorsRoot: Root,
+  },
+  casingMap: {
+    currentVersion: "current_version",
+    genesisValidatorsRoot: "genesis_validators_root",
   },
 });
 
@@ -168,6 +209,11 @@ export const ENRForkID = new ContainerType<phase0.ENRForkID>({
     forkDigest: ForkDigest,
     nextForkVersion: Version,
     nextForkEpoch: Epoch,
+  },
+  casingMap: {
+    forkDigest: "fork_digest",
+    nextForkVersion: "next_fork_version",
+    nextForkEpoch: "next_fork_epoch",
   },
 });
 
@@ -186,6 +232,10 @@ export const HistoricalBatch = new ContainerType<phase0.HistoricalBatch>({
     blockRoots: HistoricalBlockRoots,
     stateRoots: HistoricalStateRoots,
   },
+  casingMap: {
+    blockRoots: "block_roots",
+    stateRoots: "state_roots",
+  },
 });
 
 export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
@@ -198,6 +248,16 @@ export const Validator = new ContainerLeafNodeStructType<phase0.Validator>({
     activationEpoch: Epoch,
     exitEpoch: Epoch,
     withdrawableEpoch: Epoch,
+  },
+  casingMap: {
+    pubkey: "pubkey",
+    withdrawalCredentials: "withdrawal_credentials",
+    effectiveBalance: "effective_balance",
+    slashed: "slashed",
+    activationEligibilityEpoch: "activation_eligibility_epoch",
+    activationEpoch: "activation_epoch",
+    exitEpoch: "exit_epoch",
+    withdrawableEpoch: "withdrawable_epoch",
   },
 });
 
@@ -218,6 +278,13 @@ export const AttestationData = new ContainerType<phase0.AttestationData>({
     source: Checkpoint,
     target: Checkpoint,
   },
+  casingMap: {
+    slot: "slot",
+    index: "index",
+    beaconBlockRoot: "beacon_block_root",
+    source: "source",
+    target: "target",
+  },
 });
 
 export const IndexedAttestation = new ContainerType<phase0.IndexedAttestation>({
@@ -225,6 +292,11 @@ export const IndexedAttestation = new ContainerType<phase0.IndexedAttestation>({
     attestingIndices: CommitteeIndices,
     data: AttestationData,
     signature: BLSSignature,
+  },
+  casingMap: {
+    attestingIndices: "attesting_indices",
+    data: "data",
+    signature: "signature",
   },
 });
 
@@ -235,12 +307,22 @@ export const PendingAttestation = new ContainerType<phase0.PendingAttestation>({
     inclusionDelay: Slot,
     proposerIndex: ValidatorIndex,
   },
+  casingMap: {
+    aggregationBits: "aggregation_bits",
+    data: "data",
+    inclusionDelay: "inclusion_delay",
+    proposerIndex: "proposer_index",
+  },
 });
 
 export const SigningData = new ContainerType<phase0.SigningData>({
   fields: {
     objectRoot: Root,
     domain: Domain,
+  },
+  casingMap: {
+    objectRoot: "object_root",
+    domain: "domain",
   },
 });
 
@@ -252,6 +334,11 @@ export const Attestation = new ContainerType<phase0.Attestation>({
     aggregationBits: CommitteeBits,
     data: AttestationData,
     signature: BLSSignature,
+  },
+  casingMap: {
+    aggregationBits: "aggregation_bits",
+    data: "data",
+    signature: "signature",
   },
 });
 
@@ -272,6 +359,7 @@ export const Deposit = new ContainerType<phase0.Deposit>({
     proof: new VectorType({elementType: Bytes32, length: DEPOSIT_CONTRACT_TREE_DEPTH + 1}),
     data: DepositData,
   },
+  expectedCase: "notransform",
 });
 
 export const ProposerSlashing = new ContainerType<phase0.ProposerSlashing>({
@@ -291,6 +379,10 @@ export const VoluntaryExit = new ContainerType<phase0.VoluntaryExit>({
     epoch: Epoch,
     validatorIndex: ValidatorIndex,
   },
+  casingMap: {
+    epoch: "epoch",
+    validatorIndex: "validator_index",
+  },
 });
 
 export const SignedVoluntaryExit = new ContainerType<phase0.SignedVoluntaryExit>({
@@ -298,6 +390,7 @@ export const SignedVoluntaryExit = new ContainerType<phase0.SignedVoluntaryExit>
     message: VoluntaryExit,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 // Block types
@@ -314,6 +407,16 @@ export const BeaconBlockBody = new ContainerType<phase0.BeaconBlockBody>({
     deposits: new ListType({elementType: Deposit, limit: MAX_DEPOSITS}),
     voluntaryExits: new ListType({elementType: SignedVoluntaryExit, limit: MAX_VOLUNTARY_EXITS}),
   },
+  casingMap: {
+    randaoReveal: "randao_reveal",
+    eth1Data: "eth1_data",
+    graffiti: "graffiti",
+    proposerSlashings: "proposer_slashings",
+    attesterSlashings: "attester_slashings",
+    attestations: "attestations",
+    deposits: "deposits",
+    voluntaryExits: "voluntary_exits",
+  },
 });
 
 export const BeaconBlock = new ContainerType<phase0.BeaconBlock>({
@@ -324,6 +427,13 @@ export const BeaconBlock = new ContainerType<phase0.BeaconBlock>({
     stateRoot: new RootType({expandedType: () => typesRef.get().BeaconState}),
     body: BeaconBlockBody,
   },
+  casingMap: {
+    slot: "slot",
+    proposerIndex: "proposer_index",
+    parentRoot: "parent_root",
+    stateRoot: "state_root",
+    body: "body",
+  },
 });
 
 export const SignedBeaconBlock = new ContainerType<phase0.SignedBeaconBlock>({
@@ -331,6 +441,7 @@ export const SignedBeaconBlock = new ContainerType<phase0.SignedBeaconBlock>({
     message: BeaconBlock,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 // State types
@@ -375,6 +486,29 @@ export const BeaconState = new ContainerType<phase0.BeaconState>({
     currentJustifiedCheckpoint: Checkpoint,
     finalizedCheckpoint: Checkpoint,
   },
+  casingMap: {
+    genesisTime: "genesis_time",
+    genesisValidatorsRoot: "genesis_validators_root",
+    slot: "slot",
+    fork: "fork",
+    latestBlockHeader: "latest_block_header",
+    blockRoots: "block_roots",
+    stateRoots: "state_roots",
+    historicalRoots: "historical_roots",
+    eth1Data: "eth1_data",
+    eth1DataVotes: "eth1_data_votes",
+    eth1DepositIndex: "eth1_deposit_index",
+    validators: "validators",
+    balances: "balances",
+    randaoMixes: "randao_mixes",
+    slashings: "slashings",
+    previousEpochAttestations: "previous_epoch_attestations",
+    currentEpochAttestations: "current_epoch_attestations",
+    justificationBits: "justification_bits",
+    previousJustifiedCheckpoint: "previous_justified_checkpoint",
+    currentJustifiedCheckpoint: "current_justified_checkpoint",
+    finalizedCheckpoint: "finalized_checkpoint",
+  },
 });
 
 // Validator types
@@ -386,6 +520,12 @@ export const CommitteeAssignment = new ContainerType<phase0.CommitteeAssignment>
     committeeIndex: CommitteeIndex,
     slot: Slot,
   },
+  // Custom type, not in the consensus specs
+  casingMap: {
+    validators: "validators",
+    committeeIndex: "committee_index",
+    slot: "slot",
+  },
 });
 
 export const AggregateAndProof = new ContainerType<phase0.AggregateAndProof>({
@@ -394,6 +534,11 @@ export const AggregateAndProof = new ContainerType<phase0.AggregateAndProof>({
     aggregate: Attestation,
     selectionProof: BLSSignature,
   },
+  casingMap: {
+    aggregatorIndex: "aggregator_index",
+    aggregate: "aggregate",
+    selectionProof: "selection_proof",
+  },
 });
 
 export const SignedAggregateAndProof = new ContainerType<phase0.SignedAggregateAndProof>({
@@ -401,6 +546,7 @@ export const SignedAggregateAndProof = new ContainerType<phase0.SignedAggregateA
     message: AggregateAndProof,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
 // ReqResp types
@@ -414,6 +560,13 @@ export const Status = new ContainerType<phase0.Status>({
     headRoot: Root,
     headSlot: Slot,
   },
+  casingMap: {
+    forkDigest: "fork_digest",
+    finalizedRoot: "finalized_root",
+    finalizedEpoch: "finalized_epoch",
+    headRoot: "head_root",
+    headSlot: "head_slot",
+  },
 });
 
 export const Goodbye = Uint64;
@@ -425,6 +578,10 @@ export const Metadata = new ContainerType<phase0.Metadata>({
     seqNumber: Uint64,
     attnets: AttestationSubnets,
   },
+  casingMap: {
+    seqNumber: "seq_number",
+    attnets: "attnets",
+  },
 });
 
 export const BeaconBlocksByRangeRequest = new ContainerType<phase0.BeaconBlocksByRangeRequest>({
@@ -432,6 +589,11 @@ export const BeaconBlocksByRangeRequest = new ContainerType<phase0.BeaconBlocksB
     startSlot: Slot,
     count: Number64,
     step: Number64,
+  },
+  casingMap: {
+    startSlot: "start_slot",
+    count: "count",
+    step: "step",
   },
 });
 
@@ -445,6 +607,12 @@ export const Genesis = new ContainerType<phase0.Genesis>({
     genesisValidatorsRoot: Root,
     genesisTime: Uint64,
     genesisForkVersion: Version,
+  },
+  // From beacon-apis
+  casingMap: {
+    genesisValidatorsRoot: "genesis_validators_root",
+    genesisTime: "genesis_time",
+    genesisForkVersion: "genesis_fork_version",
   },
 });
 

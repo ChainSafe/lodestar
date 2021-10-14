@@ -20,13 +20,7 @@ export const Spec = new ContainerType<ISpec>({
     ...BeaconPreset.fields,
     ...ChainConfig.fields,
   },
-  casingMap: Object.keys({
-    ...BeaconPreset.fields,
-    ...ChainConfig.fields,
-  }).reduce((obj: Record<string, string>, key) => {
-    obj[key] = key;
-    return obj;
-  }, {}),
+  expectedCase: "notransform",
 });
 
 export type Api = {
@@ -75,6 +69,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     fields: {
       chainId: ssz.Number64,
       address: new ByteVectorType({length: 20}),
+    },
+    // From beacon apis
+    casingMap: {
+      chainId: "chain_id",
+      address: "address",
     },
   });
 

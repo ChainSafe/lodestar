@@ -232,6 +232,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
       currentJustified: ssz.phase0.Checkpoint,
       finalized: ssz.phase0.Checkpoint,
     },
+    // From beacon apis
+    casingMap: {
+      previousJustified: "previous_justified",
+      currentJustified: "current_justified",
+      finalized: "finalized",
+    },
   });
 
   const ValidatorResponse = new ContainerType<ValidatorResponse>({
@@ -241,6 +247,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
       status: new StringType<ValidatorStatus>(),
       validator: ssz.phase0.Validator,
     },
+    // From beacon apis
+    expectedCase: "notransform",
   });
 
   const ValidatorBalance = new ContainerType<ValidatorBalance>({
@@ -248,6 +256,8 @@ export function getReturnTypes(): ReturnTypes<Api> {
       index: ssz.ValidatorIndex,
       balance: ssz.Number64,
     },
+    // From beacon apis
+    expectedCase: "notransform",
   });
 
   const EpochCommitteeResponse = new ContainerType<EpochCommitteeResponse>({

@@ -68,6 +68,21 @@ const executionPayloadFields = {
   // Extra payload fields
   blockHash: Root,
 };
+const executionPayloadCasingMap = {
+  parentHash: "parent_hash",
+  coinbase: "coinbase",
+  stateRoot: "state_root",
+  receiptRoot: "receipt_root",
+  logsBloom: "logs_bloom",
+  random: "random",
+  blockNumber: "block_number",
+  gasLimit: "gas_limit",
+  gasUsed: "gas_used",
+  timestamp: "timestamp",
+  extraData: "extra_data",
+  baseFeePerGas: "base_fee_per_gas",
+  blockHash: "block_hash",
+};
 
 /**
  * ```python
@@ -97,6 +112,10 @@ export const ExecutionPayload = new ContainerType<merge.ExecutionPayload>({
     ...executionPayloadFields,
     transactions: Transactions,
   },
+  casingMap: {
+    ...executionPayloadCasingMap,
+    transactions: "transactions",
+  },
 });
 
 /**
@@ -113,12 +132,20 @@ export const ExecutionPayloadHeader = new ContainerType<merge.ExecutionPayloadHe
     ...executionPayloadFields,
     transactionsRoot: Root,
   },
+  casingMap: {
+    ...executionPayloadCasingMap,
+    transactionsRoot: "transactions_root",
+  },
 });
 
 export const BeaconBlockBody = new ContainerType<merge.BeaconBlockBody>({
   fields: {
     ...altairSsz.BeaconBlockBody.fields,
     executionPayload: ExecutionPayload,
+  },
+  casingMap: {
+    ...altairSsz.BeaconBlockBody.casingMap,
+    executionPayload: "execution_payload",
   },
 });
 
@@ -131,6 +158,7 @@ export const BeaconBlock = new ContainerType<merge.BeaconBlock>({
     stateRoot: new RootType({expandedType: () => typesRef.get().BeaconState}),
     body: BeaconBlockBody,
   },
+  casingMap: altairSsz.BeaconBlock.casingMap,
 });
 
 export const SignedBeaconBlock = new ContainerType<merge.SignedBeaconBlock>({
@@ -138,14 +166,21 @@ export const SignedBeaconBlock = new ContainerType<merge.SignedBeaconBlock>({
     message: BeaconBlock,
     signature: BLSSignature,
   },
+  expectedCase: "notransform",
 });
 
-export const PowBlock = new ContainerType<merge.BeaconState>({
+export const PowBlock = new ContainerType<merge.PowBlock>({
   fields: {
     blockHash: Root,
     parentHash: Root,
     totalDifficulty: Uint256,
     difficulty: Uint256,
+  },
+  casingMap: {
+    blockHash: "block_hash",
+    parentHash: "parent_hash",
+    totalDifficulty: "total_difficulty",
+    difficulty: "difficulty",
   },
 });
 
@@ -165,6 +200,7 @@ export const HistoricalBatch = new ContainerType<phase0.HistoricalBatch>({
     blockRoots: HistoricalBlockRoots,
     stateRoots: HistoricalStateRoots,
   },
+  casingMap: phase0Ssz.HistoricalBatch.casingMap,
 });
 
 // we don't reuse phase0.BeaconState fields since we need to replace some keys
@@ -208,6 +244,10 @@ export const BeaconState = new ContainerType<merge.BeaconState>({
     nextSyncCommittee: altairSsz.SyncCommittee,
     // Execution
     latestExecutionPayloadHeader: ExecutionPayloadHeader, // [New in Merge]
+  },
+  casingMap: {
+    ...altairSsz.BeaconState.casingMap,
+    latestExecutionPayloadHeader: "latest_execution_payload_header",
   },
 });
 

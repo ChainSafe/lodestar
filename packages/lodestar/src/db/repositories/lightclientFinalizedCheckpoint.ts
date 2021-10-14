@@ -14,6 +14,8 @@ export class LightclientFinalizedCheckpoint extends Repository<SyncPeriod, Final
         nextSyncCommittee: ssz.altair.LightClientUpdate.getPropertyType("nextSyncCommittee"),
         nextSyncCommitteeBranch: ssz.altair.LightClientUpdate.getPropertyType("nextSyncCommitteeBranch"),
       },
+      // Custom type, subset of LightClientUpdate
+      casingMap: ssz.altair.LightClientUpdate.casingMap,
     });
     super(config, db, Bucket.altair_lightclientFinalizedCheckpoint, type, metrics);
   }

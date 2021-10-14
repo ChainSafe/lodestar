@@ -24,6 +24,12 @@ export class AttestationByTargetRepository {
         targetEpoch: ssz.Epoch,
         signingRoot: ssz.Root,
       },
+      // Custom type, not in the consensus specs
+      casingMap: {
+        sourceEpoch: "source_epoch",
+        targetEpoch: "target_epoch",
+        signingRoot: "signing_root",
+      },
     });
   }
 

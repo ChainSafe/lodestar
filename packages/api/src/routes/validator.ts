@@ -246,6 +246,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       slot: ssz.Slot,
       isAggregator: ssz.Boolean,
     },
+    // From beacon apis
+    casingMap: {
+      validatorIndex: "validator_index",
+      committeeIndex: "committee_index",
+      committeesAtSlot: "committees_at_slot",
+      slot: "slot",
+      isAggregator: "is_aggregator",
+    },
   });
 
   const SyncCommitteeSubscription = new ContainerType<SyncCommitteeSubscription>({
@@ -253,6 +261,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       validatorIndex: ssz.ValidatorIndex,
       syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
       untilEpoch: ssz.Epoch,
+    },
+    // From beacon apis
+    casingMap: {
+      validatorIndex: "validator_index",
+      syncCommitteeIndices: "sync_committee_indices",
+      untilEpoch: "until_epoch",
     },
   });
 
@@ -349,6 +363,16 @@ export function getReturnTypes(): ReturnTypes<Api> {
       validatorCommitteeIndex: ssz.Number64,
       slot: ssz.Slot,
     },
+    // From beacon apis
+    casingMap: {
+      pubkey: "pubkey",
+      validatorIndex: "validator_index",
+      committeeIndex: "committee_index",
+      committeeLength: "committee_length",
+      committeesAtSlot: "committees_at_slot",
+      validatorCommitteeIndex: "validator_committee_index",
+      slot: "slot",
+    },
   });
 
   const ProposerDuty = new ContainerType<ProposerDuty>({
@@ -357,6 +381,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
       validatorIndex: ssz.ValidatorIndex,
       pubkey: ssz.BLSPubkey,
     },
+    // From beacon apis
+    casingMap: {
+      slot: "slot",
+      validatorIndex: "validator_index",
+      pubkey: "pubkey",
+    },
   });
 
   const SyncDuty = new ContainerType<SyncDuty>({
@@ -364,6 +394,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
       pubkey: ssz.BLSPubkey,
       validatorIndex: ssz.ValidatorIndex,
       validatorSyncCommitteeIndices: ArrayOf(ssz.Number64),
+    },
+    // From beacon apis
+    casingMap: {
+      pubkey: "pubkey",
+      validatorIndex: "validator_index",
+      validatorSyncCommitteeIndices: "validator_sync_committee_indices",
     },
   });
 

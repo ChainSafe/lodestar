@@ -26,6 +26,11 @@ export class AttestationLowerBoundRepository {
         minSourceEpoch: ssz.Epoch,
         minTargetEpoch: ssz.Epoch,
       },
+      // Custom type, not in the consensus specs
+      casingMap: {
+        minSourceEpoch: "min_source_epoch",
+        minTargetEpoch: "min_target_epoch",
+      },
     });
   }
 
