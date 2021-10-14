@@ -12,6 +12,7 @@ import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {RegenCaller} from "./regen";
+import {ZERO_HASH} from "../constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -159,17 +160,11 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
       const state = await this.regen.getCheckpointState(cp, RegenCaller.onForkChoiceFinalized);
-      // using state.slot is not correct for a checkpoint with skipped slot
-      const block = await this.getCanonicalBlockAtSlot(state.latestBlockHeader.slot);
-      if (!block) {
-        throw Error(`No block found for checkpoint ${cp.epoch} : ${cp.rootHex}`);
+      const latestHeader = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
+      if (ssz.Root.equals(latestHeader.stateRoot, ZERO_HASH)) {
+        latestHeader.stateRoot = state.hashTreeRoot();
       }
-
-      await this.lightclientUpdater.onFinalized(
-        cp,
-        block.message as altair.BeaconBlock,
-        state as TreeBacked<altair.BeaconState>
-      );
+      await this.lightclientUpdater.onFinalized(cp, latestHeader, state as TreeBacked<altair.BeaconState>);
     } catch (e) {
       this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e as Error);
     }

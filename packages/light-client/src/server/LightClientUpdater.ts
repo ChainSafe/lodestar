@@ -169,12 +169,12 @@ export class LightClientUpdater implements ILightClientUpdater {
    */
   async onFinalized(
     checkpoint: phase0.Checkpoint,
-    block: altair.BeaconBlock,
+    blockHeader: phase0.BeaconBlockHeader,
     postState: TreeBacked<altair.BeaconState>
   ): Promise<void> {
     // Pre-compute the nextSyncCommitteeBranch for this checkpoint, it will never change
     await this.db.lightclientFinalizedCheckpoint.put(checkpoint.epoch, {
-      header: toBlockHeader(block),
+      header: blockHeader,
       nextSyncCommittee: postState.nextSyncCommittee,
       // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
       nextSyncCommitteeBranch: postState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX)),
