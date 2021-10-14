@@ -1,5 +1,5 @@
+import {Epoch} from "@chainsafe/lodestar-types";
 import {IAttesterStatus} from "./allForks";
-import {Epoch} from "./phase0";
 
 export interface IBeaconStateTransitionMetrics {
   stfnEpochTransition: IHistogram;

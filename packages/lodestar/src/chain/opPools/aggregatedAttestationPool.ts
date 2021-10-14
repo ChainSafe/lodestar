@@ -40,10 +40,9 @@ const MAX_ATTESTATIONS_PER_GROUP = 2;
  * Note that we want to remove attestations with attesters that were included in the chain.
  */
 export class AggregatedAttestationPool {
-  private readonly attestationGroupByDataHashBySlot = new MapDef<
-    phase0.Slot,
-    Map<DataRootHex, MatchingDataAttestationGroup>
-  >(() => new Map<DataRootHex, MatchingDataAttestationGroup>());
+  private readonly attestationGroupByDataHashBySlot = new MapDef<Slot, Map<DataRootHex, MatchingDataAttestationGroup>>(
+    () => new Map<DataRootHex, MatchingDataAttestationGroup>()
+  );
   private lowestPermissibleSlot = 0;
 
   add(attestation: phase0.Attestation, attestingIndices: ValidatorIndex[], committee: ValidatorIndex[]): InsertOutcome {

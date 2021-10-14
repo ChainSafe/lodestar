@@ -1,4 +1,4 @@
-import {altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
@@ -19,7 +19,7 @@ import {LightClientSnapshotFast} from "./types";
 export function validateLightClientUpdate(
   snapshot: LightClientSnapshotFast,
   update: altair.LightClientUpdate,
-  genesisValidatorsRoot: altair.Root
+  genesisValidatorsRoot: Root
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state

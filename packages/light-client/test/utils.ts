@@ -1,7 +1,7 @@
 import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {altair, Bytes4, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, Bytes4, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
 
@@ -19,13 +19,13 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 export function getSyncAggregateSigningRoot(
   genesisValidatorsRoot: Root,
   forkVersion: Bytes4,
-  syncAttestedBlockHeader: altair.BeaconBlockHeader
+  syncAttestedBlockHeader: phase0.BeaconBlockHeader
 ): Uint8Array {
   const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
   return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 
-export function defaultBeaconBlockHeader(slot: Slot): altair.BeaconBlockHeader {
+export function defaultBeaconBlockHeader(slot: Slot): phase0.BeaconBlockHeader {
   const header = ssz.phase0.BeaconBlockHeader.defaultValue();
   header.slot = slot;
   return header;
@@ -78,7 +78,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Generates a single fake validator, for tests purposes only.
  */
-export function generateValidator(opts: Partial<altair.Validator> = {}): altair.Validator {
+export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.Validator {
   return {
     pubkey: fromHexString(
       // randomly pregenerated pubkey
@@ -98,8 +98,8 @@ export function generateValidator(opts: Partial<altair.Validator> = {}): altair.
 /**
  * Generates n number of validators, for tests purposes only.
  */
-export function generateValidators(n: number, opts?: Partial<altair.Validator>): List<altair.Validator> {
-  return Array.from({length: n}, () => generateValidator(opts)) as List<altair.Validator>;
+export function generateValidators(n: number, opts?: Partial<phase0.Validator>): List<phase0.Validator> {
+  return Array.from({length: n}, () => generateValidator(opts)) as List<phase0.Validator>;
 }
 
 export function generateBalances(n: number): List<number> {

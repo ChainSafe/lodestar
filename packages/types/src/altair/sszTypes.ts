@@ -1,3 +1,4 @@
+import {BitVectorType, ContainerType, VectorType, ListType, RootType, Vector} from "@chainsafe/ssz";
 import {
   JUSTIFICATION_BITS_LENGTH,
   FINALIZED_ROOT_INDEX_FLOORLOG2,
@@ -12,8 +13,8 @@ import {
   EPOCHS_PER_SLASHINGS_VECTOR,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
 } from "@chainsafe/lodestar-params";
-import {BitVectorType, ContainerType, VectorType, ListType, RootType, Vector} from "@chainsafe/ssz";
-import {ssz as phase0Ssz} from "../phase0";
+import {Root} from "../primitive/types";
+import {ssz as phase0Ssz, ts as phase0Types} from "../phase0";
 import {ssz as primitiveSsz} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
 import * as altair from "./types";
@@ -111,17 +112,17 @@ export const SyncAggregate = new ContainerType<altair.SyncAggregate>({
 });
 
 // Re-declare with the new expanded type
-export const HistoricalBlockRoots = new VectorType<Vector<altair.Root>>({
+export const HistoricalBlockRoots = new VectorType<Vector<Root>>({
   elementType: new RootType({expandedType: () => typesRef.get().BeaconBlock}),
   length: SLOTS_PER_HISTORICAL_ROOT,
 });
 
-export const HistoricalStateRoots = new VectorType<Vector<altair.Root>>({
+export const HistoricalStateRoots = new VectorType<Vector<Root>>({
   elementType: new RootType({expandedType: () => typesRef.get().BeaconState}),
   length: SLOTS_PER_HISTORICAL_ROOT,
 });
 
-export const HistoricalBatch = new ContainerType<altair.HistoricalBatch>({
+export const HistoricalBatch = new ContainerType<phase0Types.HistoricalBatch>({
   fields: {
     blockRoots: HistoricalBlockRoots,
     stateRoots: HistoricalStateRoots,

@@ -1,7 +1,7 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair, phase0, Slot} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
@@ -26,7 +26,7 @@ type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits"
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
-type Subnet = phase0.SubCommitteeIndex;
+type Subnet = SubCommitteeIndex;
 
 /**
  * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
@@ -39,7 +39,7 @@ export class SyncCommitteeMessagePool {
    * Preaggregate into SyncCommitteeContribution.
    * */
   private readonly contributionsByRootBySubnetBySlot = new MapDef<
-    phase0.Slot,
+    Slot,
     MapDef<Subnet, Map<BlockRootHex, ContributionFast>>
   >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
@@ -76,11 +76,7 @@ export class SyncCommitteeMessagePool {
   /**
    * This is for the aggregator to produce ContributionAndProof.
    */
-  getContribution(
-    subnet: phase0.SubCommitteeIndex,
-    slot: phase0.Slot,
-    prevBlockRoot: phase0.Root
-  ): altair.SyncCommitteeContribution | null {
+  getContribution(subnet: SubCommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
     const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
     if (!contribution) {
       return null;

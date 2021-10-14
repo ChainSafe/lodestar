@@ -4,7 +4,7 @@ import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {altair, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {LightclientMockServer} from "../lightclientMockServer";
 import {processLightClientUpdate} from "../../src/client/update";
@@ -20,7 +20,7 @@ describe("Lightclient flow with LightClientUpdater", () => {
   let lightclientServer: LightclientMockServer;
   let genesisStateRoot: Root;
   let genesisValidatorsRoot: Root;
-  let genesisCheckpoint: altair.Checkpoint;
+  let genesisCheckpoint: phase0.Checkpoint;
 
   // Create blocks and state
   const fromSlot = 1;

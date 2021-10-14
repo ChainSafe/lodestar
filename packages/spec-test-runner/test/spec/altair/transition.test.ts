@@ -1,6 +1,6 @@
 import {join} from "path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair, phase0, Uint64, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, Uint64, Epoch, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
@@ -78,7 +78,7 @@ interface ITransitionTestCase extends IBaseSpecTest {
   [k: string]: altair.SignedBeaconBlock | unknown | null | undefined;
   meta: {
     postFork: ForkName;
-    forkEpoch: phase0.Epoch;
+    forkEpoch: Epoch;
     forkBlock: Uint64;
     blocksCount: Uint64;
     blsSetting?: BigInt;

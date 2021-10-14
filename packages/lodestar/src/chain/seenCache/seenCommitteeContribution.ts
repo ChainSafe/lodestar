@@ -1,4 +1,4 @@
-import {phase0, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {MapDef} from "../../util/map";
 
 /**
@@ -15,9 +15,7 @@ type AggregatorSubnetKey = string;
  * This stays in-memory and should be pruned per slot.
  */
 export class SeenContributionAndProof {
-  private readonly seenCacheBySlot = new MapDef<phase0.Slot, Set<AggregatorSubnetKey>>(
-    () => new Set<AggregatorSubnetKey>()
-  );
+  private readonly seenCacheBySlot = new MapDef<Slot, Set<AggregatorSubnetKey>>(() => new Set<AggregatorSubnetKey>());
 
   /**
    * Gossip validation requires to check:
