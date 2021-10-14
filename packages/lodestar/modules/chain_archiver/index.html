@@ -343,22 +343,22 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-persist_state_every_epochs"><code>Const</code> PERSIST_STATE_EVERY_EPOCHS<a class="headerlink" href="#const-persist_state_every_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>PERSIST_STATE_EVERY_EPOCHS</strong>: <em>1024</em> = 1024</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dbb5afb/packages/lodestar/src/chain/archiver/archiveStates.ts#L14">packages/lodestar/src/chain/archiver/archiveStates.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/513a6de/packages/lodestar/src/chain/archiver/archiveStates.ts#L14">packages/lodestar/src/chain/archiver/archiveStates.ts:14</a></em></p>
 <p>Minimum number of epochs between archived states</p>
 <hr/>
 <h3 id="const-persist_temp_state_every_epochs"><code>Const</code> PERSIST_TEMP_STATE_EVERY_EPOCHS<a class="headerlink" href="#const-persist_temp_state_every_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>PERSIST_TEMP_STATE_EVERY_EPOCHS</strong>: <em>32</em> = 32</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dbb5afb/packages/lodestar/src/chain/archiver/archiveStates.ts#L19">packages/lodestar/src/chain/archiver/archiveStates.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/513a6de/packages/lodestar/src/chain/archiver/archiveStates.ts#L19">packages/lodestar/src/chain/archiver/archiveStates.ts:19</a></em></p>
 <p>Minimum number of epochs between single temp archived states
 These states will be pruned once a new state is persisted</p>
 <hr/>
 <h3 id="const-process_finalized_checkpoint_queue_len"><code>Const</code> PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN<a class="headerlink" href="#const-process_finalized_checkpoint_queue_len" title="Permanent link">¶</a></h3>
 <p>• <strong>PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN</strong>: <em>256</em> = 256</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dbb5afb/packages/lodestar/src/chain/archiver/index.ts#L11">packages/lodestar/src/chain/archiver/index.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/513a6de/packages/lodestar/src/chain/archiver/index.ts#L11">packages/lodestar/src/chain/archiver/index.ts:11</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="archiveblocks">archiveBlocks<a class="headerlink" href="#archiveblocks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>archiveBlocks</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>forkChoice</code>: IForkChoice, <code>logger</code>: ILogger, <code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dbb5afb/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L16">packages/lodestar/src/chain/archiver/archiveBlocks.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/513a6de/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L16">packages/lodestar/src/chain/archiver/archiveBlocks.ts:16</a></em></p>
 <p>Archives finalized blocks from active bucket to archive bucket.</p>
 <p>Only archive blocks on the same chain to the finalized checkpoint.
 Each run should move all finalized blocks to blockArhive db to make it consistent
@@ -396,7 +396,7 @@ the next run should not reprocess finalzied block of this run.</p>
 <hr/>
 <h3 id="computeepochstodelete">computeEpochsToDelete<a class="headerlink" href="#computeepochstodelete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeEpochsToDelete</strong>(<code>storedEpochs</code>: number[], <code>persistEveryEpochs</code>: number): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dbb5afb/packages/lodestar/src/chain/archiver/archiveStates.ts#L82">packages/lodestar/src/chain/archiver/archiveStates.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/513a6de/packages/lodestar/src/chain/archiver/archiveStates.ts#L82">packages/lodestar/src/chain/archiver/archiveStates.ts:82</a></em></p>
 <p>Keeps first epoch per interval of persistEveryEpochs, deletes the rest</p>
 <p><strong>Parameters:</strong></p>
 <table>
