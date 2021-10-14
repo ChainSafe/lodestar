@@ -463,7 +463,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new BeaconSync</strong>(<code>opts</code>: <a href="../../modules/sync/#syncoptions">SyncOptions</a>, <code>modules</code>: <a href="../../interfaces/sync.isyncmodules/">ISyncModules</a>): <em><a href="./">BeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L32">packages/lodestar/src/sync/sync.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L32">packages/lodestar/src/sync/sync.ts:32</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -487,27 +487,27 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-chain"><code>Private</code> <code>Readonly</code> chain<a class="headerlink" href="#private-readonly-chain" title="Permanent link">¶</a></h3>
 <p>• <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L18">packages/lodestar/src/sync/sync.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L18">packages/lodestar/src/sync/sync.ts:18</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L16">packages/lodestar/src/sync/sync.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L16">packages/lodestar/src/sync/sync.ts:16</a></em></p>
 <hr/>
 <h3 id="private-readonly-network"><code>Private</code> <code>Readonly</code> network<a class="headerlink" href="#private-readonly-network" title="Permanent link">¶</a></h3>
 <p>• <strong>network</strong>: <em><a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L17">packages/lodestar/src/sync/sync.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L17">packages/lodestar/src/sync/sync.ts:17</a></em></p>
 <hr/>
 <h3 id="private-readonly-opts"><code>Private</code> <code>Readonly</code> opts<a class="headerlink" href="#private-readonly-opts" title="Permanent link">¶</a></h3>
 <p>• <strong>opts</strong>: <em><a href="../../modules/sync/#syncoptions">SyncOptions</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L19">packages/lodestar/src/sync/sync.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L19">packages/lodestar/src/sync/sync.ts:19</a></em></p>
 <hr/>
 <h3 id="private-readonly-rangesync"><code>Private</code> <code>Readonly</code> rangeSync<a class="headerlink" href="#private-readonly-rangesync" title="Permanent link">¶</a></h3>
 <p>• <strong>rangeSync</strong>: <em><a href="../sync_range.rangesync/">RangeSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L21">packages/lodestar/src/sync/sync.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L21">packages/lodestar/src/sync/sync.ts:21</a></em></p>
 <hr/>
 <h3 id="private-readonly-slotimporttolerance"><code>Private</code> <code>Readonly</code> slotImportTolerance<a class="headerlink" href="#private-readonly-slotimporttolerance" title="Permanent link">¶</a></h3>
 <p>• <strong>slotImportTolerance</strong>: <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L32">packages/lodestar/src/sync/sync.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L32">packages/lodestar/src/sync/sync.ts:32</a></em></p>
 <p>The number of slots ahead of us that is allowed before starting a RangeSync
 If a peer is within this tolerance (forwards or backwards), it is treated as a fully sync'd peer.</p>
 <p>This means that we consider ourselves synced (and hence subscribe to all subnets and block
@@ -516,16 +516,16 @@ blocks for.</p>
 <hr/>
 <h3 id="private-readonly-unknownblocksync"><code>Private</code> <code>Readonly</code> unknownBlockSync<a class="headerlink" href="#private-readonly-unknownblocksync" title="Permanent link">¶</a></h3>
 <p>• <strong>unknownBlockSync</strong>: <em><a href="../sync.unknownblocksync/">UnknownBlockSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L22">packages/lodestar/src/sync/sync.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L22">packages/lodestar/src/sync/sync.ts:22</a></em></p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
 <h3 id="state">state<a class="headerlink" href="#state" title="Permanent link">¶</a></h3>
 <p>• <strong>get state</strong>(): <em><a href="../../modules/sync/#syncstate">SyncState</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L98">packages/lodestar/src/sync/sync.ts:98</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L98">packages/lodestar/src/sync/sync.ts:98</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync/#syncstate">SyncState</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-addpeer"><code>Private</code> addPeer<a class="headerlink" href="#private-addpeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addPeer</strong>(<code>peerId</code>: PeerId, <code>peerStatus</code>: Status): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L143">packages/lodestar/src/sync/sync.ts:143</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L143">packages/lodestar/src/sync/sync.ts:143</a></em></p>
 <p>A peer has connected which has blocks that are unknown to us.</p>
 <p>This function handles the logic associated with the connection of a new peer. If the peer
 is sufficiently ahead of our current head, a range-sync (batch) sync is started and
@@ -557,42 +557,42 @@ ours that we consider it fully sync'd with respect to our current chain.</p>
 <h3 id="close">close<a class="headerlink" href="#close" title="Permanent link">¶</a></h3>
 <p>▸ <strong>close</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/sync.ibeaconsync/">IBeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L58">packages/lodestar/src/sync/sync.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L58">packages/lodestar/src/sync/sync.ts:58</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="getsyncchainsdebugstate">getSyncChainsDebugState<a class="headerlink" href="#getsyncchainsdebugstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSyncChainsDebugState</strong>(): <em><a href="../../modules/sync/#syncchaindebugstate">SyncChainDebugState</a>[]</em></p>
 <p><em>Implementation of <a href="../../interfaces/sync.ibeaconsync/">IBeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L128">packages/lodestar/src/sync/sync.ts:128</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L128">packages/lodestar/src/sync/sync.ts:128</a></em></p>
 <p>Full debug state for lodestar API</p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync/#syncchaindebugstate">SyncChainDebugState</a>[]</em></p>
 <hr/>
 <h3 id="getsyncstatus">getSyncStatus<a class="headerlink" href="#getsyncstatus" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSyncStatus</strong>(): <em><a href="../../modules/sync/#syncingstatus">SyncingStatus</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/sync.ibeaconsync/">IBeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L66">packages/lodestar/src/sync/sync.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L66">packages/lodestar/src/sync/sync.ts:66</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync/#syncingstatus">SyncingStatus</a></em></p>
 <hr/>
 <h3 id="issynced">isSynced<a class="headerlink" href="#issynced" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isSynced</strong>(): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/sync.ibeaconsync/">IBeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L94">packages/lodestar/src/sync/sync.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L94">packages/lodestar/src/sync/sync.ts:94</a></em></p>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="issyncing">isSyncing<a class="headerlink" href="#issyncing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isSyncing</strong>(): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/sync.ibeaconsync/">IBeaconSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L89">packages/lodestar/src/sync/sync.ts:89</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L89">packages/lodestar/src/sync/sync.ts:89</a></em></p>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="private-onclockepoch"><code>Private</code> onClockEpoch<a class="headerlink" href="#private-onclockepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onClockEpoch</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L188">packages/lodestar/src/sync/sync.ts:188</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L188">packages/lodestar/src/sync/sync.ts:188</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="private-removepeer"><code>Private</code> removePeer<a class="headerlink" href="#private-removepeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>removePeer</strong>(<code>peerId</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L157">packages/lodestar/src/sync/sync.ts:157</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L157">packages/lodestar/src/sync/sync.ts:157</a></em></p>
 <p>Must be called by libp2p when a peer is removed from the peer manager</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -613,7 +613,7 @@ ours that we consider it fully sync'd with respect to our current chain.</p>
 <hr/>
 <h3 id="private-updatesyncstate"><code>Private</code> updateSyncState<a class="headerlink" href="#private-updatesyncstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateSyncState</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/27997d2/packages/lodestar/src/sync/sync.ts#L164">packages/lodestar/src/sync/sync.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/da65ab0/packages/lodestar/src/sync/sync.ts#L164">packages/lodestar/src/sync/sync.ts:164</a></em></p>
 <p>Run this function when the sync state can potentially change.</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
