@@ -87,7 +87,7 @@ export function forceUpdateGitData(): Partial<GitData> {
 function getGitData(): Partial<GitData> {
   const numCommits: number | undefined = getCommitsSinceRelease();
   let strCommits = "";
-  if (numCommits && numCommits > 0) {
+  if (numCommits !== undefined && numCommits > 0) {
     strCommits = `+${numCommits}`;
   }
   return {

@@ -31,7 +31,7 @@ export function operations<BeaconState extends allForks.BeaconState>(
   const rootDir = join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/operations`);
   for (const testDir of fs.readdirSync(rootDir)) {
     const operationFn = operationFns[testDir];
-    if (!operationFn) {
+    if (operationFn === undefined) {
       throw Error(`No operationFn for ${testDir}`);
     }
 
@@ -62,7 +62,7 @@ export function operations<BeaconState extends allForks.BeaconState>(
           // Provide types for new objects
           ...sszTypes,
         },
-        shouldError: (testCase) => !testCase.post,
+        shouldError: (testCase) => testCase.post === undefined,
         getExpected: (testCase) => testCase.post,
         expectFunc: (testCase, expected, actual) => {
           expectEqualBeaconState(fork, expected, actual);

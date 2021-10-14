@@ -77,7 +77,7 @@ export const CachedInactivityScoreListProxyHandler: ProxyHandler<CachedInactivit
   get(target: CachedInactivityScoreList, key: PropertyKey): unknown {
     if (!Number.isNaN(Number(String(key)))) {
       return target.get(key as number);
-    } else if (target[key as keyof CachedInactivityScoreList]) {
+    } else if (target[key as keyof CachedInactivityScoreList] !== undefined) {
       return target[key as keyof CachedInactivityScoreList];
     } else {
       const treeBacked = target.type.createTreeBacked(target.tree);

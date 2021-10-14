@@ -27,10 +27,10 @@ export function sszStatic(fork: ForkName): void {
   const rootDir = path.join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/ssz_static`);
   for (const typeName of fs.readdirSync(rootDir)) {
     const type =
-      (ssz[fork] as Types)[typeName] ||
-      (ssz.altair as Types)[typeName] ||
-      (ssz.phase0 as Types)[typeName] ||
-      (extraTypes as Types)[typeName];
+      ((ssz[fork] as Types)[typeName] as Type<any> | undefined) ||
+      ((ssz.altair as Types)[typeName] as Type<any> | undefined) ||
+      ((ssz.phase0 as Types)[typeName] as Type<any> | undefined) ||
+      ((extraTypes as Types)[typeName] as Type<any> | undefined);
     if (!type) {
       throw Error(`No type for ${typeName}`);
     }

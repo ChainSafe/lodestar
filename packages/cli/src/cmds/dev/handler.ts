@@ -45,7 +45,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
   // Remove slashing protection db. Otherwise the validators won't be able to propose nor attest
   // until the clock reach a higher slot than the previous run of the dev command
-  if (!args.genesisTime) {
+  if (args.genesisTime === undefined) {
     await promisify(rimraf)(beaconDbDir);
     await promisify(rimraf)(validatorsDbDir);
   }
@@ -58,8 +58,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const options = beaconNodeOptions.getWithDefaults();
 
   // Genesis params
-  const validatorCount = args.genesisValidators || 8;
-  const genesisTime = args.genesisTime || Math.floor(Date.now() / 1000) + 5;
+  const validatorCount = args.genesisValidators ?? 8;
+  const genesisTime = args.genesisTime ?? Math.floor(Date.now() / 1000) + 5;
   // Set logger format to Eph with provided genesisTime
   if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
 

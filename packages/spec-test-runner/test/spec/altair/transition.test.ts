@@ -48,7 +48,7 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
         ...generateBlocksSZZTypeMapping(meta),
       };
     },
-    shouldError: (testCase) => !testCase.post,
+    shouldError: (testCase) => testCase.post === undefined,
     timeout: 10000,
     getExpected: (testCase) => testCase.post,
     expectFunc: (testCase, expected, actual) => {
@@ -63,7 +63,7 @@ type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlo
  * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
  */
 function generateBlocksSZZTypeMapping(meta: ITransitionTestCase["meta"]): BlocksSZZTypeMapping {
-  if (!meta) {
+  if (meta === undefined) {
     throw new Error("No meta data found");
   }
   const blocksMapping: BlocksSZZTypeMapping = {};

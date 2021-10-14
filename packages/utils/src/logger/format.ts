@@ -86,8 +86,8 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    info.context ? printStackTraceLast(info.context) : undefined,
-    info.error ? printStackTraceLast(info.error) : undefined,
+    info.context !== undefined ? printStackTraceLast(info.context) : undefined,
+    info.error !== undefined ? printStackTraceLast(info.error) : undefined,
     info.durationMs && ` - duration=${info.durationMs}ms`,
   ];
 
@@ -98,7 +98,7 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
  * Extract stack property from context to allow appending at the end of the log
  */
 export function printStackTraceLast(context?: Context | Error): string {
-  if (!context) {
+  if (context === undefined) {
     return "";
   }
 

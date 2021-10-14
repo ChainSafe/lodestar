@@ -267,9 +267,6 @@ export class BeaconChain implements IBeaconChain {
   }
 
   persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {
-    if (!this.persistInvalidSszObject) {
-      return null;
-    }
     const now = new Date();
     // yyyy-MM-dd
     const date = now.toISOString().split("T")[0];

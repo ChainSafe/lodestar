@@ -131,7 +131,7 @@ describe("node api implementation", function () {
       networkStub.getConnectionsByPeer.returns(connectionsByPeer);
 
       const {data: peer} = await api.getPeer(peer1.toB58String());
-      if (!peer) throw Error("getPeer returned no peer");
+      if (peer === undefined) throw Error("getPeer returned no peer");
       expect(peer.peerId).to.equal(peer1.toB58String());
       expect(peer.lastSeenP2pAddress).not.empty;
       expect(peer.peerId).not.empty;

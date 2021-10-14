@@ -29,7 +29,7 @@ export class SubnetMap {
    **/
   request(requestedSubnet: RequestedSubnet): void {
     const {subnet, toSlot} = requestedSubnet;
-    this.subnets.set(subnet, Math.max(this.subnets.get(subnet) || 0, toSlot));
+    this.subnets.set(subnet, Math.max(this.subnets.get(subnet) ?? 0, toSlot));
   }
 
   /**

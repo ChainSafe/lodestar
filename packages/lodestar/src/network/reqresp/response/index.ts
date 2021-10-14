@@ -99,7 +99,7 @@ export async function handleRequest(
   // It has only happened when doing a request too fast upon immediate connection on inbound peer
   // investigate a potential race condition there
 
-  if (responseError) {
+  if (responseError !== null) {
     logger.verbose("Resp error", logCtx, responseError);
     throw responseError;
   } else {

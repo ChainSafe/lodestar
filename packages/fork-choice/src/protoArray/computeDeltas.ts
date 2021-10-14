@@ -22,7 +22,7 @@ export function computeDeltas(
     const vote = votes[vIndex];
     // There is no need to create a score change if the validator has never voted or both of their
     // votes are for the zero hash (genesis block)
-    if (!vote) {
+    if (vote === undefined) {
       continue;
     }
     const {currentRoot, nextRoot} = vote;

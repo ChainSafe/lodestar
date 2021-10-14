@@ -11,7 +11,7 @@ export class MinMaxSurround implements IMinMaxSurround {
 
   constructor(store: IDistanceStore, options?: {maxEpochLookback?: number}) {
     this.store = store;
-    this.maxEpochLookback = options?.maxEpochLookback || Infinity;
+    this.maxEpochLookback = options?.maxEpochLookback ?? Infinity;
   }
 
   async assertNoSurround(pubKey: BLSPubkey, attestation: MinMaxSurroundAttestation): Promise<void> {
@@ -35,7 +35,7 @@ export class MinMaxSurround implements IMinMaxSurround {
     for (let epoch = attestation.sourceEpoch - 1; epoch >= untilEpoch; epoch--) {
       const minSpan = await this.store.minSpan.get(pubKey, epoch);
       const distance = attestation.targetEpoch - epoch;
-      if (!minSpan || distance < minSpan) {
+      if (minSpan === null || distance < minSpan) {
         values.push({source: epoch, distance});
       } else {
         break;
@@ -65,7 +65,7 @@ export class MinMaxSurround implements IMinMaxSurround {
     for (let epoch = attestation.sourceEpoch + 1; epoch < attestation.targetEpoch; epoch++) {
       const maxSpan = await this.store.maxSpan.get(pubKey, epoch);
       const distance = attestation.targetEpoch - epoch;
-      if (!maxSpan || distance > maxSpan) {
+      if (maxSpan === null || distance > maxSpan) {
         values.push({source: epoch, distance});
       } else {
         break;

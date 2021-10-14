@@ -19,7 +19,7 @@ export interface IValidatorGeneratorOpts {
  */
 export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch = opts.activation || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
+  const activationEpoch = opts.activation !== undefined || opts.activation === 0 ? opts.activation : FAR_FUTURE_EPOCH;
   return {
     pubkey: fromHexString(
       // randomly pregenerated pubkey
@@ -28,10 +28,10 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Va
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
-    exitEpoch: opts.exit || randNum(),
+    exitEpoch: opts.exit ?? randNum(),
     withdrawableEpoch: opts.withdrawableEpoch ?? randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.balance || 0,
+    effectiveBalance: opts.balance ?? 0,
   };
 }
 

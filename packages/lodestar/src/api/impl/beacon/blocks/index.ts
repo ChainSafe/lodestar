@@ -51,13 +51,13 @@ export function getBeaconBlockApi({
           data: result.filter(
             (item) =>
               // skip if no slot filter
-              !(filters.slot && filters.slot !== 0) || item.header.message.slot === filters.slot
+              !(filters.slot !== undefined && filters.slot !== 0) || item.header.message.slot === filters.slot
           ),
         };
       }
 
       const headSlot = chain.forkChoice.getHead().slot;
-      if (!filters.parentRoot && !filters.slot && filters.slot !== 0) {
+      if (!filters.parentRoot && filters.slot === undefined) {
         filters.slot = headSlot;
       }
 

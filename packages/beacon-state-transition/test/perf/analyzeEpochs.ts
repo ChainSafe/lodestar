@@ -77,7 +77,7 @@ async function analyzeEpochs(network: string, fromEpoch?: number): Promise<void>
   const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
-  const maxEpoch = fromEpoch || Math.max(1, ...currCsv.map((row) => row.epoch));
+  const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));
 
   const {data: header} = await client.beacon.getBlockHeader("head");
   const currentEpoch = computeEpochAtSlot(header.header.message.slot);

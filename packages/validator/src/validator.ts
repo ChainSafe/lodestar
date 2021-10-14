@@ -161,7 +161,7 @@ async function assertEqualGenesis(opts: ValidatorOptions, genesis: Genesis): Pro
 
   const nodeGenesisTime = genesis.genesisTime;
   const genesisTime = await metaDataRepository.getGenesisTime();
-  if (genesisTime) {
+  if (genesisTime !== null) {
     if (genesisTime !== nodeGenesisTime) {
       opts.logger.error("Not the same genesisTime", {expected: nodeGenesisTime, actual: genesisTime});
       throw new NotEqualParamsError("Not the same genesisTime");

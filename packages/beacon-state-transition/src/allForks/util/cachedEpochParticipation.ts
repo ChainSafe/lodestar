@@ -147,7 +147,7 @@ export const CachedEpochParticipationProxyHandler: ProxyHandler<CachedEpochParti
   get(target: CachedEpochParticipation, key: PropertyKey): unknown {
     if (!Number.isNaN(Number(String(key)))) {
       return target.get(key as number);
-    } else if (target[key as keyof CachedEpochParticipation]) {
+    } else if (target[key as keyof CachedEpochParticipation] !== undefined) {
       return target[key as keyof CachedEpochParticipation];
     } else {
       if (target.type && target.tree) {

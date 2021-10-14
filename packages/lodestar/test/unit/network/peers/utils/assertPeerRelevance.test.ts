@@ -99,7 +99,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
           headSlot: 0,
         }),
         clock: {
-          currentSlot: currentSlot || 0,
+          currentSlot: currentSlot ?? 0,
         } as Partial<IBeaconClock>,
       } as Partial<MockBeaconChain>) as MockBeaconChain;
 

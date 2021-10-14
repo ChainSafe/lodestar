@@ -2,7 +2,7 @@ import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
-import {ICliCommand, initBLS, YargsError} from "../../../../util";
+import {ICliCommand, initBLS} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
@@ -92,7 +92,6 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
     console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
     const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
-    if (!secretKey) throw new YargsError("No validator keystores found");
     console.log(`Decrypted keystore for validator ${publicKey}`);
 
     const validatorPaths = getValidatorPaths(args);

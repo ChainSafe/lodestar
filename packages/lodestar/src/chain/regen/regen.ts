@@ -170,7 +170,7 @@ export class StateRegenerator implements IStateRegenerator {
         throw Error(`No block found for ${b.blockRoot}`);
       }
       const block = this.modules.config.getForkTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
-      if (!block) {
+      if (block === undefined) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,
           blockRoot: b.blockRoot,
@@ -209,7 +209,7 @@ export class StateRegenerator implements IStateRegenerator {
 
   private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {
     for (const block of this.modules.forkChoice.forwarditerateAncestorBlocks()) {
-      if (block) {
+      if (block !== undefined) {
         return block;
       }
     }

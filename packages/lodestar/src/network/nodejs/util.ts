@@ -32,7 +32,7 @@ export async function createNodeJsLibp2p(
   const enr = networkOpts.discv5?.enr;
   const {peerStoreDir, disablePeerDiscovery} = nodeJsLibp2pOpts;
 
-  if (enr && typeof enr !== "string") {
+  if (enr !== undefined && typeof enr !== "string") {
     if (enr instanceof ENR) {
       if (enr.getLocationMultiaddr("udp") && !isLocalMultiAddr(enr.getLocationMultiaddr("udp"))) {
         clearMultiaddrUDP(enr);

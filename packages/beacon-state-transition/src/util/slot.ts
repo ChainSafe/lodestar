@@ -13,7 +13,7 @@ export function getCurrentSlot(config: IChainForkConfig, genesisTime: Number64):
 }
 
 export function computeSlotsSinceEpochStart(slot: Slot, epoch?: Epoch): number {
-  const computeEpoch = epoch ? epoch : computeEpochAtSlot(slot);
+  const computeEpoch = epoch ?? computeEpochAtSlot(slot);
   return slot - computeStartSlotAtEpoch(computeEpoch);
 }
 

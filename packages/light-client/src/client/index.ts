@@ -133,7 +133,7 @@ export class Lightclient {
 
   async syncToLatest(): Promise<void> {
     const {data: update} = await this.api.lightclient.getLatestUpdateFinalized();
-    if (update) {
+    if (update !== undefined) {
       this.processLightClientUpdate(update);
     }
   }

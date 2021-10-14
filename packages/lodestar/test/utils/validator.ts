@@ -9,7 +9,7 @@ import {FAR_FUTURE_EPOCH} from "../../src/constants";
  */
 export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.Validator {
   const randNum = (): number => Math.floor(Math.random() * Math.floor(4));
-  const activationEpoch = opts.activationEpoch || opts.activationEpoch === 0 ? opts.activationEpoch : FAR_FUTURE_EPOCH;
+  const activationEpoch = opts.activationEpoch ?? FAR_FUTURE_EPOCH;
   return {
     pubkey:
       opts.pubkey ||
@@ -20,10 +20,10 @@ export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.
     withdrawalCredentials: Buffer.alloc(32),
     activationEpoch,
     activationEligibilityEpoch: activationEpoch,
-    exitEpoch: opts.exitEpoch || randNum(),
+    exitEpoch: opts.exitEpoch ?? randNum(),
     withdrawableEpoch: opts.withdrawableEpoch ?? randNum(),
     slashed: opts.slashed || false,
-    effectiveBalance: opts.effectiveBalance || 0,
+    effectiveBalance: opts.effectiveBalance ?? 0,
   };
 }
 

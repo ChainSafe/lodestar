@@ -71,7 +71,7 @@ export async function archiveBlocks(
   // deleteNonCanonicalBlocks
   // loop through forkchoice single time
   const nonCanonicalSummaries = forkChoice.getAllNonAncestorBlocks(finalized.rootHex);
-  if (nonCanonicalSummaries && nonCanonicalSummaries.length > 0) {
+  if (nonCanonicalSummaries.length > 0) {
     await db.block.batchDelete(nonCanonicalSummaries.map((summary) => fromHexString(summary.blockRoot)));
     logger.verbose("deleteNonCanonicalBlocks", {
       slots: nonCanonicalSummaries.map((summary) => summary.slot).join(","),

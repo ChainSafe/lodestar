@@ -228,13 +228,13 @@ export class Eth2Gossipsub extends Gossipsub {
   async validate(message: InMessage): Promise<void> {
     try {
       // messages must have a single topicID
-      const topicStr = (message.topicIDs || [])[0];
+      const topicStr = Array.isArray(message.topicIDs) ? message.topicIDs[0] : undefined;
 
       // message sanity check
       if (!topicStr || message.topicIDs.length > 1) {
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "Not exactly one topicID");
       }
-      if (!message.data) {
+      if (message.data === undefined) {
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "No message.data");
       }
       if (message.data.length > GOSSIP_MAX_SIZE) {

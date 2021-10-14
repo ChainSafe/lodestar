@@ -183,7 +183,7 @@ export function createValidatorMonitor(
         //     statuses.
         const index = monitoredValidator.index;
         const status = statuses[index];
-        if (!status) {
+        if (status === undefined) {
           continue;
         }
 

@@ -75,7 +75,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       for (const topic of topics) {
         const eventDataTransformer = eventDataTransformers[topic];
         const chainEvent = chainEventMap[topic];
-        if (!eventDataTransformer || !chainEvent) {
+        if (eventDataTransformer === undefined || !chainEvent) {
           throw new ApiError(400, `Unknown topic ${topic}`);
         }
 

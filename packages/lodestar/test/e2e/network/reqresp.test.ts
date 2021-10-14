@@ -183,7 +183,7 @@ describe("network / ReqResp", function () {
 
     const returnedBlocks = await netA.reqResp.beaconBlocksByRange(netB.peerId, req);
 
-    if (!returnedBlocks) throw Error("Returned null");
+    if (returnedBlocks === null) throw Error("Returned null");
     expect(returnedBlocks).to.have.length(req.count, "Wrong returnedBlocks lenght");
 
     for (const [i, returnedBlock] of returnedBlocks.entries()) {

@@ -47,7 +47,7 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
     (testcase) => {
       const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
       let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
-      const verify = !!testcase.meta && !!testcase.meta.blsSetting && testcase.meta.blsSetting === BigInt(1);
+      const verify = testcase.meta !== undefined && testcase.meta.blsSetting === BigInt(1);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
         const signedBlock = testcase[`blocks_${i}`] as merge.SignedBeaconBlock;
         wrappedState = allForks.stateTransition(
@@ -69,7 +69,7 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
         post: ssz[fork].BeaconState,
         ...generateBlocksSZZTypeMapping(fork, 99),
       },
-      shouldError: (testCase) => !testCase.post,
+      shouldError: (testCase) => testCase.post === undefined,
       timeout: 10000,
       getExpected: (testCase) => testCase.post,
       expectFunc: (testCase, expected, actual) => {

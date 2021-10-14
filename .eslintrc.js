@@ -92,6 +92,14 @@ module.exports = {
     "@typescript-eslint/no-unsafe-member-access": "error",
     "@typescript-eslint/no-unsafe-return": "error",
     "@typescript-eslint/no-non-null-assertion": "error",
+    "@typescript-eslint/strict-boolean-expressions": [
+      "error",
+      {
+        allowNullableBoolean: true,
+        allowNullableString: true,
+        allowAny: true,
+      }
+    ],
     "import/no-extraneous-dependencies": [
       "error",
       {

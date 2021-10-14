@@ -61,7 +61,7 @@ export async function downloadGenericSpecTests<TestNames extends string>(
   const versionFile = path.join(outputDir, "version.txt");
   const existingVersion = fs.existsSync(versionFile) && fs.readFileSync(versionFile, "utf8").trim();
 
-  if (existingVersion && existingVersion === specVersion) {
+  if (existingVersion === specVersion) {
     return log(`version ${specVersion} already downloaded`);
   } else {
     log(`Downloading new version ${specVersion}`);

@@ -93,7 +93,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.abortController = new AbortController();
     this.clock = new LocalClock({
       config: config,
-      genesisTime: genesisTime || state.genesisTime,
+      genesisTime: genesisTime === undefined || genesisTime === 0 ? state.genesisTime : genesisTime,
       emitter: this.emitter,
       signal: this.abortController.signal,
     });
@@ -132,10 +132,7 @@ export class MockBeaconChain implements IBeaconChain {
     return block;
   }
 
-  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]> {
-    if (!slots) {
-      return [];
-    }
+  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<allForks.SignedBeaconBlock[]> {
     return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
   }
 

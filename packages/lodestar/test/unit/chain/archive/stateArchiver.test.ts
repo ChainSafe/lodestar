@@ -36,7 +36,7 @@ describe("state archiver task", () => {
 
     for (const {id, storedEpochs, persistEveryEpochs, toDelete} of testCases) {
       it(id, () => {
-        expect(computeEpochsToDelete(storedEpochs, persistEveryEpochs || 1024)).to.deep.equal(toDelete);
+        expect(computeEpochsToDelete(storedEpochs, persistEveryEpochs ?? 1024)).to.deep.equal(toDelete);
       });
     }
   });

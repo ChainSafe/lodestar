@@ -32,7 +32,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
   // Auto-setup network
   // Only download files if network.discv5.bootEnrs arg is not specified
   const bOpts = beaconNodeOptions.get();
-  const bOptsEnrs = bOpts && bOpts.network && bOpts.network.discv5 && bOpts.network.discv5.bootEnrs;
+  const bOptsEnrs = bOpts.network && bOpts.network.discv5 && bOpts.network.discv5.bootEnrs;
   if (args.network && !(bOptsEnrs && bOptsEnrs.length > 0)) {
     try {
       const bootEnrs = await fetchBootnodes(args.network);

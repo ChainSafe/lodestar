@@ -24,7 +24,7 @@ export interface IRetryOptions {
  * @param opts
  */
 export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: IRetryOptions): Promise<A> {
-  const maxRetries = opts?.retries || 5;
+  const maxRetries = opts?.retries ?? 5;
   const shouldRetry = opts?.shouldRetry;
 
   let lastError: Error = Error("RetryError");

@@ -371,7 +371,7 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       return target.nextSyncCommittee;
     } else if (key === "inactivityScores") {
       return target.inactivityScores;
-    } else if (target.type.fields[key]) {
+    } else if (target.type.fields[key] !== undefined) {
       const propType = target.type.fields[key];
       const propValue = target.type.tree_getProperty(target.tree, key);
       if (!isCompositeType(propType)) {
@@ -402,7 +402,7 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       throw new Error("Cannot set currentEpochParticipation");
     } else if (key === "inactivityScores") {
       throw new Error("Cannot set inactivityScores");
-    } else if (target.type.fields[key]) {
+    } else if (target.type.fields[key] !== undefined) {
       const propType = target.type.fields[key];
       if (!isCompositeType(propType)) {
         return target.type.tree_setProperty(target.tree, key, value);

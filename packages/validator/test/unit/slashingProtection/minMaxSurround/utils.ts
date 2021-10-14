@@ -38,8 +38,8 @@ export async function storeToSpansPerEpoch(store: DistanceStoreMemory): Promise<
   const epochs = [...new Set([...minSpanEpochs, ...maxSpanEpochs])].sort();
   for (const epoch of epochs) {
     spansPerEpoch[epoch] = [
-      (await store.minSpan.get(emptyPubkey, epoch)) || 0,
-      (await store.maxSpan.get(emptyPubkey, epoch)) || 0,
+      (await store.minSpan.get(emptyPubkey, epoch)) ?? 0,
+      (await store.maxSpan.get(emptyPubkey, epoch)) ?? 0,
     ];
   }
   return spansPerEpoch;

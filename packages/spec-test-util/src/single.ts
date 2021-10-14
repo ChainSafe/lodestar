@@ -100,7 +100,7 @@ export function describeDirectorySpecTest<TestCase extends {meta?: any}, Result>
     throw new Error(`${testCaseDirectoryPath} is not directory`);
   }
   describe(name, function () {
-    if (options.timeout) {
+    if (options.timeout !== undefined) {
       this.timeout(options.timeout || "10 min");
     }
 
@@ -183,7 +183,7 @@ function loadInputFiles<TestCase extends {meta?: any}, Result>(
           break;
       }
       if (!options.inputProcessing) throw Error("inputProcessing is not defined");
-      if (options.inputProcessing[inputName]) {
+      if (options.inputProcessing[inputName] !== undefined) {
         testCase[inputName] = options.inputProcessing[inputName](testCase[inputName]);
       }
     });

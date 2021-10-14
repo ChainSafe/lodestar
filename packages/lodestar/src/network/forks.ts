@@ -56,8 +56,9 @@ export function getCurrentAndNextFork(
     if (epoch >= forks[i].epoch) currentForkIdx = i;
   }
   const nextForkIdx = currentForkIdx + 1;
-  const hasNextFork = forks[nextForkIdx] && forks[nextForkIdx].epoch !== Infinity;
+  const hasNextFork = forks[nextForkIdx] !== undefined && forks[nextForkIdx].epoch !== Infinity;
   return {
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     currentFork: forks[currentForkIdx] || forks[0],
     nextFork: hasNextFork ? forks[nextForkIdx] : undefined,
   };

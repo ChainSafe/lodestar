@@ -8,7 +8,7 @@ import {BlockError, BlockErrorCode} from "../../errors";
 export function assertLinearChainSegment(config: IChainForkConfig, blocks: allForks.SignedBeaconBlock[]): void {
   for (const [i, block] of blocks.entries()) {
     const child = blocks[i + 1];
-    if (child) {
+    if (child !== undefined) {
       // If this block has a child in this chain segment, ensure that its parent root matches
       // the root of this block.
       if (
