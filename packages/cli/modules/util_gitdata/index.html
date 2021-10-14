@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/cli/modules/util_gitdata/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.2, mkdocs-material-7.3.3" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-7.3.3" name="generator"/>
 <title>Util gitdata - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.5143246d.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
@@ -407,7 +407,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="gitdata">GitData<a class="headerlink" href="#gitdata" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>GitData</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/gitDataPath.ts#L16">packages/cli/src/util/gitData/gitDataPath.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/gitDataPath.ts#L16">packages/cli/src/util/gitData/gitDataPath.ts:16</a></em></p>
 <p>Git data type used to construct version information string and persistence.</p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
@@ -427,67 +427,67 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-gitdatapath"><code>Const</code> gitDataPath<a class="headerlink" href="#const-gitdatapath" title="Permanent link">¶</a></h3>
 <p>• <strong>gitDataPath</strong>: <em>string</em> = path.resolve(__dirname, "../../../.git-data.json")</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/gitDataPath.ts#L13">packages/cli/src/util/gitData/gitDataPath.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/gitDataPath.ts#L13">packages/cli/src/util/gitData/gitDataPath.ts:13</a></em></p>
 <p>WARNING!! If you change this path make sure to update:
 - 'packages/cli/package.json' -&gt; .files -&gt; <code>".git-data.json"</code></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="forceupdategitdata">forceUpdateGitData<a class="headerlink" href="#forceupdategitdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>forceUpdateGitData</strong>(): <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L82">packages/cli/src/util/gitData/index.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L82">packages/cli/src/util/gitData/index.ts:82</a></em></p>
 <p>Wrapper for updating git data. ONLY to be used with build scripts!</p>
 <p><strong>Returns:</strong> <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
 <hr/>
 <h3 id="getbranch">getBranch<a class="headerlink" href="#getbranch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBranch</strong>(): <em>string | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L17">packages/cli/src/util/gitData/index.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L17">packages/cli/src/util/gitData/index.ts:17</a></em></p>
 <p>Tries to get branch from git CLI.</p>
 <p><strong>Returns:</strong> <em>string | undefined</em></p>
 <hr/>
 <h3 id="getcommit">getCommit<a class="headerlink" href="#getcommit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommit</strong>(): <em>string | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L26">packages/cli/src/util/gitData/index.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L26">packages/cli/src/util/gitData/index.ts:26</a></em></p>
 <p>Tries to get commit from git from git CLI.</p>
 <p><strong>Returns:</strong> <em>string | undefined</em></p>
 <hr/>
 <h3 id="getcommitssincerelease">getCommitsSinceRelease<a class="headerlink" href="#getcommitssincerelease" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommitsSinceRelease</strong>(): <em>number | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L44">packages/cli/src/util/gitData/index.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L44">packages/cli/src/util/gitData/index.ts:44</a></em></p>
 <p>Gets number of commits since latest tag/release.</p>
 <p><strong>Returns:</strong> <em>number | undefined</em></p>
 <hr/>
 <h3 id="getgitdata">getGitData<a class="headerlink" href="#getgitdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getGitData</strong>(): <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L87">packages/cli/src/util/gitData/index.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L87">packages/cli/src/util/gitData/index.ts:87</a></em></p>
 <p>Gets git data containing current branch and commit info from CLI.</p>
 <p><strong>Returns:</strong> <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
 <hr/>
 <h3 id="getlatesttag">getLatestTag<a class="headerlink" href="#getlatesttag" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getLatestTag</strong>(): <em>string | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L35">packages/cli/src/util/gitData/index.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L35">packages/cli/src/util/gitData/index.ts:35</a></em></p>
 <p>Tries to get the latest tag from git CLI.</p>
 <p><strong>Returns:</strong> <em>string | undefined</em></p>
 <hr/>
 <h3 id="getpersistedgitdata">getPersistedGitData<a class="headerlink" href="#getpersistedgitdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPersistedGitData</strong>(): <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L102">packages/cli/src/util/gitData/index.ts:102</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L102">packages/cli/src/util/gitData/index.ts:102</a></em></p>
 <p>Gets git data containing current branch and commit info from persistent file.</p>
 <p><strong>Returns:</strong> <em>Partial‹<a href="./#gitdata">GitData</a>›</em></p>
 <hr/>
 <h3 id="readgitdatafile">readGitDataFile<a class="headerlink" href="#readgitdatafile" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readGitDataFile</strong>(): <em><a href="./#gitdata">GitData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/gitDataPath.ts#L33">packages/cli/src/util/gitData/gitDataPath.ts:33</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/gitDataPath.ts#L33">packages/cli/src/util/gitData/gitDataPath.ts:33</a></em></p>
 <p>Reads the persistent git data file.</p>
 <p><strong>Returns:</strong> <em><a href="./#gitdata">GitData</a></em></p>
 <hr/>
 <h3 id="readlodestargitdata">readLodestarGitData<a class="headerlink" href="#readlodestargitdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readLodestarGitData</strong>(): <em><a href="./#gitdata">GitData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L56">packages/cli/src/util/gitData/index.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L56">packages/cli/src/util/gitData/index.ts:56</a></em></p>
 <p>Reads git data from a persisted file or local git data at build time.</p>
 <p><strong>Returns:</strong> <em><a href="./#gitdata">GitData</a></em></p>
 <hr/>
 <h3 id="shell">shell<a class="headerlink" href="#shell" title="Permanent link">¶</a></h3>
 <p>▸ <strong>shell</strong>(<code>cmd</code>: string): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/index.ts#L10">packages/cli/src/util/gitData/index.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/index.ts#L10">packages/cli/src/util/gitData/index.ts:10</a></em></p>
 <p>Silent shell that won't pollute stdout, or stderr</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -508,7 +508,7 @@
 <hr/>
 <h3 id="writegitdatafile">writeGitDataFile<a class="headerlink" href="#writegitdatafile" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeGitDataFile</strong>(<code>gitData</code>: <a href="./#gitdata">GitData</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/cli/src/util/gitData/gitDataPath.ts#L28">packages/cli/src/util/gitData/gitDataPath.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/cli/src/util/gitData/gitDataPath.ts#L28">packages/cli/src/util/gitData/gitDataPath.ts:28</a></em></p>
 <p>Writes a persistent git data file.</p>
 <p><strong>Parameters:</strong></p>
 <table>

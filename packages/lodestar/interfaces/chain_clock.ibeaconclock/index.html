@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_clock.ibeaconclock/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.2, mkdocs-material-7.3.3" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-7.3.3" name="generator"/>
 <title>Chain clock.ibeaconclock - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.5143246d.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
@@ -362,20 +362,20 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="readonly-currentepoch"><code>Readonly</code> currentEpoch<a class="headerlink" href="#readonly-currentepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>currentEpoch</strong>: <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L17">packages/lodestar/src/chain/clock/interface.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L17">packages/lodestar/src/chain/clock/interface.ts:17</a></em></p>
 <hr/>
 <h3 id="readonly-currentslot"><code>Readonly</code> currentSlot<a class="headerlink" href="#readonly-currentslot" title="Permanent link">¶</a></h3>
 <p>• <strong>currentSlot</strong>: <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L12">packages/lodestar/src/chain/clock/interface.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L12">packages/lodestar/src/chain/clock/interface.ts:12</a></em></p>
 <hr/>
 <h3 id="readonly-currentslotwithgossipdisparity"><code>Readonly</code> currentSlotWithGossipDisparity<a class="headerlink" href="#readonly-currentslotwithgossipdisparity" title="Permanent link">¶</a></h3>
 <p>• <strong>currentSlotWithGossipDisparity</strong>: <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L16">packages/lodestar/src/chain/clock/interface.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L16">packages/lodestar/src/chain/clock/interface.ts:16</a></em></p>
 <p>If it's too close to next slot, maxCurrentSlot = currentSlot + 1</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="iscurrentslotgivengossipdisparity">isCurrentSlotGivenGossipDisparity<a class="headerlink" href="#iscurrentslotgivengossipdisparity" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isCurrentSlotGivenGossipDisparity</strong>(<code>slot</code>: Slot): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L23">packages/lodestar/src/chain/clock/interface.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L23">packages/lodestar/src/chain/clock/interface.ts:23</a></em></p>
 <p>Check if a slot is current slot given MAXIMUM_GOSSIP_CLOCK_DISPARITY.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -396,7 +396,7 @@
 <hr/>
 <h3 id="slotwithtolerance">slotWithTolerance<a class="headerlink" href="#slotwithtolerance" title="Permanent link">¶</a></h3>
 <p>▸ <strong>slotWithTolerance</strong>(<code>toleranceSec</code>: number): <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L19">packages/lodestar/src/chain/clock/interface.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L19">packages/lodestar/src/chain/clock/interface.ts:19</a></em></p>
 <p>Returns the slot if the internal clock were advanced by <code>toleranceSec</code>.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -417,7 +417,7 @@
 <hr/>
 <h3 id="waitforslot">waitForSlot<a class="headerlink" href="#waitforslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>waitForSlot</strong>(<code>slot</code>: Slot): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ea29946/packages/lodestar/src/chain/clock/interface.ts#L29">packages/lodestar/src/chain/clock/interface.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/578ca53/packages/lodestar/src/chain/clock/interface.ts#L29">packages/lodestar/src/chain/clock/interface.ts:29</a></em></p>
 <p>Returns a promise that waits until at least <code>slot</code> is reached
 Resolves when the current slot &gt;= <code>slot</code>
 Rejects if the clock is aborted</p>
