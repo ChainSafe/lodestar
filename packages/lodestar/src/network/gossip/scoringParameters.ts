@@ -289,8 +289,9 @@ function expectedAggregatorCountPerSlot(
   const largeCommitteeAggregatorPerEpoch = Math.floor((largerCommiteeeSize / moduloLarger) * largeCommitteesPerEpoch);
 
   return {
-    aggregatorsPerslot: Math.floor(
-      (smallCommitteeAggregatorPerEpoch + largeCommitteeAggregatorPerEpoch) / SLOTS_PER_EPOCH
+    aggregatorsPerslot: Math.max(
+      1,
+      Math.floor((smallCommitteeAggregatorPerEpoch + largeCommitteeAggregatorPerEpoch) / SLOTS_PER_EPOCH)
     ),
     committeesPerSlot,
   };
