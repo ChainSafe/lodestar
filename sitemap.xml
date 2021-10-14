@@ -2701,87 +2701,87 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/classes/root.stringtype/</loc>
-         <lastmod>2021-10-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/classes/utils.lazyvariable/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.beaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/classes/utils.stringtype/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.beaconblockbody/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconblock/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.beaconstate/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconblockbody/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.contributionandproof/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconstate/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.lightclientsnapshot/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.contributionandproof/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.lightclientstore/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientsnapshot/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.lightclientupdate/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientstore/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.metadata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientupdate/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.signedbeaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.metadata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.signedcontributionandproof/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.signedbeaconblock/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.syncaggregate/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.signedcontributionandproof/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.syncaggregatorselectiondata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.syncaggregate/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.synccommittee/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.syncaggregatorselectiondata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.synccommitteecontribution/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommittee/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair_types.synccommitteemessage/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommitteecontribution/</loc>
+         <lastmod>2021-10-14</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommitteemessage/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2806,177 +2806,177 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.aggregateandproof/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.aggregateandproof/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.attestation/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attestation/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.attestationdata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attestationdata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.attesterslashing/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attesterslashing/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.beaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblock/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.beaconblockbody/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblockbody/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.beaconblockheader/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblockheader/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.beaconblocksbyrangerequest/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblocksbyrangerequest/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.beaconstate/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconstate/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.checkpoint/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.checkpoint/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.committeeassignment/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.committeeassignment/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.deposit/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.deposit/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.depositdata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositdata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.depositevent/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositevent/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.depositmessage/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositmessage/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.enrforkid/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.enrforkid/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.eth1block/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1block/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.eth1data/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1data/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.eth1dataordered/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1dataordered/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.fork/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.fork/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.forkdata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.forkdata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.genesis/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.genesis/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.historicalbatch/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.historicalbatch/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.indexedattestation/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.indexedattestation/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.metadata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.metadata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.pendingattestation/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.pendingattestation/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.proposerslashing/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.proposerslashing/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.signedaggregateandproof/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedaggregateandproof/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.signedbeaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedbeaconblock/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.signedbeaconblockheader/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedbeaconblockheader/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.signedvoluntaryexit/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedvoluntaryexit/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.signingdata/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signingdata/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.status/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.status/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.validator/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.validator/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0_types.voluntaryexit/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.voluntaryexit/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2991,22 +2991,12 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/modules/altair_types/</loc>
-         <lastmod>2021-10-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/merge/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/phase0/</loc>
-         <lastmod>2021-10-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/modules/phase0_types/</loc>
          <lastmod>2021-10-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
