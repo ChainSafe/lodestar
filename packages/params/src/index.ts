@@ -87,7 +87,7 @@ export const JUSTIFICATION_BITS_LENGTH = 4;
 // Withdrawal prefixes
 
 export const BLS_WITHDRAWAL_PREFIX = Uint8Array.from([0]);
-export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = Uint8Array.from([0]);
+export const ETH1_ADDRESS_WITHDRAWAL_PREFIX = Uint8Array.from([1]);
 
 // Domain types
 
