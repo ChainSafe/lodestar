@@ -1,6 +1,6 @@
 import {getVersion} from "./version";
 
-const lodestarPackageName = "ChainSafe/Lodestar";
+const lodestarPackageName = "Lodestar";
 
 /**
  * Computes a default graffiti fetching dynamically the package info.
