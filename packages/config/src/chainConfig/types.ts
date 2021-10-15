@@ -9,6 +9,7 @@ export interface IChainConfig {
 
   // Transition
   TERMINAL_TOTAL_DIFFICULTY: bigint;
+  TERMINAL_BLOCK_HASH: Uint8Array;
 
   // Genesis
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: number;

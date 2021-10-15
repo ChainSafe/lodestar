@@ -107,7 +107,7 @@ async function prepareExecutionPayload(
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
   if (!merge.isMergeComplete(state)) {
-    const terminalPowBlockHash = chain.eth1.getPowBlockAtTotalDifficulty();
+    const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
       return null;

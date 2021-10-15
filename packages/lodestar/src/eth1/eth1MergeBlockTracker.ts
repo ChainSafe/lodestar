@@ -2,9 +2,11 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
+import {ZERO_HASH_HEX} from "../constants";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",
@@ -76,11 +78,11 @@ export class Eth1MergeBlockTracker {
     const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
     if (startEpoch <= clockEpoch) {
       // Start now
-      this.startFinding();
+      void this.startFinding();
     } else {
       // Set a timer to start in the future
       const intervalToStart = setInterval(() => {
-        this.startFinding();
+        void this.startFinding();
       }, (startEpoch - clockEpoch) * SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000);
       this.intervals.push(intervalToStart);
     }
@@ -91,7 +93,7 @@ export class Eth1MergeBlockTracker {
   /**
    * Returns the most recent POW block that satisfies the merge block condition
    */
-  getPowBlockAtTotalDifficulty(): PowMergeBlock | null {
+  getTerminalPowBlock(): PowMergeBlock | null {
     // For better debugging in case this module stops searching too early
     if (this.mergeBlock === null && this.status === StatusCode.POST_MERGE) {
       throw Error("Eth1MergeBlockFinder is on POST_MERGE status and found no mergeBlock");
@@ -131,7 +133,7 @@ export class Eth1MergeBlockTracker {
     this.intervals.forEach(clearInterval);
   }
 
-  private setMergeBlock(mergeBlock: PowMergeBlock): void {
+  private setTerminalPowBlock(mergeBlock: PowMergeBlock): void {
     this.logger.info("Terminal POW block found!", {
       hash: mergeBlock.blockhash,
       number: mergeBlock.number,
@@ -142,8 +144,26 @@ export class Eth1MergeBlockTracker {
     this.close();
   }
 
-  private startFinding(): void {
+  private async startFinding(): Promise<void> {
     if (this.status !== StatusCode.PRE_MERGE) return;
+
+    // Terminal block hash override takes precedence over terminal total difficulty
+    const terminalBlockHash = toHexString(this.config.TERMINAL_BLOCK_HASH);
+    if (terminalBlockHash !== ZERO_HASH_HEX) {
+      try {
+        const powBlockOverride = await this.getPowBlock(terminalBlockHash);
+        if (powBlockOverride) {
+          this.setTerminalPowBlock(powBlockOverride);
+        }
+      } catch (e) {
+        if (!isErrorAborted(e)) {
+          this.logger.error("Error fetching POW block from terminal block hash", {terminalBlockHash}, e as Error);
+        }
+      }
+      // if a TERMINAL_BLOCK_HASH other than ZERO_HASH is configured and we can't find it, return NONE
+      return;
+    }
+
     this.status = StatusCode.SEARCHING;
     this.logger.info("Starting search for terminal POW block", {
       // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -215,7 +235,7 @@ export class Eth1MergeBlockTracker {
             // Is terminal total difficulty block
             if (childBlock.parentHash === parentBlock.blockhash) {
               // AND has verified block -> parent relationship
-              return this.setMergeBlock(childBlock);
+              return this.setTerminalPowBlock(childBlock);
             } else {
               // WARNING! Re-org while doing getBlocksByNumber() call. Ensure that this block is the merge block
               // and not some of its parents.
@@ -280,7 +300,7 @@ export class Eth1MergeBlockTracker {
         parent.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY
       ) {
         // Is terminal total difficulty block AND has verified block -> parent relationship
-        return this.setMergeBlock(block);
+        return this.setTerminalPowBlock(block);
       }
 
       // Guard against infinite loops

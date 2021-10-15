@@ -911,6 +911,9 @@ export class ForkChoice implements IForkChoice {
 }
 
 function isValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): boolean {
+  if (block.blockhash === toHexString(config.TERMINAL_BLOCK_HASH)) {
+    return true;
+  }
   const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
   return isTotalDifficultyReached && isParentTotalDifficultyValid;
