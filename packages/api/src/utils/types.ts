@@ -125,11 +125,11 @@ export function ContainerData<T>(dataType: Type<T>): ContainerType<{data: T}> {
 export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> {
   return {
     toJson: ({data, version}, opts) => ({
-      data: getType(version).toJson(data, opts),
+      data: getType(version || ForkName.phase0).toJson(data, opts),
       version,
     }),
     fromJson: ({data, version}: {data: Json; version: string}, opts) => ({
-      data: getType(version as ForkName).fromJson(data, opts),
+      data: getType((version as ForkName) || ForkName.phase0).fromJson(data, opts),
       version: version as ForkName,
     }),
   };
