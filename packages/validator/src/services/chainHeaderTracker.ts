@@ -49,12 +49,12 @@ export class ChainHeaderTracker {
       this.headBlockSlot = slot;
       this.headBlockRoot = fromHexString(block);
       for (const fn of this.fns) {
-        void fn({
+        fn({
           slot: this.headBlockSlot,
           head: block,
           previousDutyDependentRoot: previousDutyDependentRoot,
           currentDutyDependentRoot: currentDutyDependentRoot,
-        });
+        }).catch((e) => this.logger.error("Error calling head event handler", e));
       }
       this.logger.verbose("Found new chain head", {
         slot: slot,

@@ -1,14 +1,13 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {BLSSignature, Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
-import {RootHex} from "@chainsafe/lodestar-types/phase0";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -78,7 +77,7 @@ export class AttestationDutiesService {
     if (dependentRoot && pendingDependentRoot && dependentRoot !== pendingDependentRoot) {
       // this happens when pendingDependentRoot is not the last block of an epoch
       this.logger.info("Redownload attester duties when it's close to epoch boundary", {nextEpoch, slot});
-      await this.handleDutiesReorg(nextEpoch, slot, dependentRoot, pendingDependentRoot);
+      await this.handleAttesterDutiesReorg(nextEpoch, slot, dependentRoot, pendingDependentRoot);
     }
   };
 
@@ -238,10 +237,10 @@ export class AttestationDutiesService {
     if (nextTwoEpochDependentRoot && head !== nextTwoEpochDependentRoot) {
       // last slot of epoch, we're sure it's the correct dependent root
       if ((slot + 1) % SLOTS_PER_EPOCH === 0) {
-        this.logger.info("Next 2 epoch duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
-        await this.handleDutiesReorg(nextTwoEpoch, slot, nextTwoEpochDependentRoot, head);
+        this.logger.info("Next 2 epoch attester duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        await this.handleAttesterDutiesReorg(nextTwoEpoch, slot, nextTwoEpochDependentRoot, head);
       } else {
-        this.logger.debug("Potential next 2 epoch duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        this.logger.debug("Potential next 2 epoch attester duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
         // node may send adjacent onHead events while it's syncing
         // wait for getting close to next epoch to make sure the dependRoot
         this.pendingDependentRootByEpoch.set(nextTwoEpoch, head);
@@ -250,17 +249,21 @@ export class AttestationDutiesService {
     // node is reorg hence attester duties are changed
     const nextEpochDependentRoot = this.dependentRootByEpoch.get(nextEpoch);
     if (nextEpochDependentRoot && currentDutyDependentRoot !== nextEpochDependentRoot) {
-      this.logger.info("Next epoch duties reorg", {slot, dutyEpoch: nextEpoch, currentDutyDependentRoot});
-      await this.handleDutiesReorg(nextEpoch, slot, nextEpochDependentRoot, currentDutyDependentRoot);
+      this.logger.info("Next epoch attester duties reorg", {slot, dutyEpoch: nextEpoch, currentDutyDependentRoot});
+      await this.handleAttesterDutiesReorg(nextEpoch, slot, nextEpochDependentRoot, currentDutyDependentRoot);
     }
     const currentEpochDependentRoot = this.dependentRootByEpoch.get(currentEpoch);
     if (currentEpochDependentRoot && currentEpochDependentRoot !== previousDutyDependentRoot) {
-      this.logger.info("Current epoch duties reorg", {slot, dutyEpoch: currentEpoch, previousDutyDependentRoot});
-      await this.handleDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
+      this.logger.info("Current epoch attester duties reorg", {
+        slot,
+        dutyEpoch: currentEpoch,
+        previousDutyDependentRoot,
+      });
+      await this.handleAttesterDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
     }
   };
 
-  private async handleDutiesReorg(
+  private async handleAttesterDutiesReorg(
     dutyEpoch: Epoch,
     slot: Slot,
     oldDependentRoot: RootHex,
@@ -272,7 +275,7 @@ export class AttestationDutiesService {
       oldDependentRoot: oldDependentRoot,
       newDependentRoot: newDependentRoot,
     };
-    this.logger.debug("handleDutiesReorg: redownload attester duties", logContext);
+    this.logger.debug("Redownload attester duties", logContext);
     await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())
       .then(() => {
         this.pendingDependentRootByEpoch.delete(dutyEpoch);
