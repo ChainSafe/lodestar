@@ -77,21 +77,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   /**
-   * `engine_consensusValidated`
-   *
-   * 1. The call of this method with VALID status maps on the POS_CONSENSUS_VALIDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
-   * 2. If the status in this call is INVALID the payload MUST be discarded disregarding its validity with respect to the execution environment rules.
-   * 3. Client software MUST respond with 4: Unknown block error if the payload identified by the blockHash is unknown.
-   */
-  notifyConsensusValidated(blockHash: Root, valid: boolean): Promise<void> {
-    const method = "engine_consensusValidated";
-    return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-      method,
-      params: [{blockHash: bytesToData(blockHash), status: valid ? "VALID" : "INVALID"}],
-    });
-  }
-
-  /**
    * `engine_forkchoiceUpdated`
    *
    * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.

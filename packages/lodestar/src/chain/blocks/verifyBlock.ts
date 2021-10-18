@@ -190,13 +190,6 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
   }
 
-  // Block is fully valid for consensus, import block to execution client
-  // TODO remove this once we're assured this endpoint is gone
-  if (executionPayloadEnabled)
-    chain.executionEngine.notifyConsensusValidated(executionPayloadEnabled.blockHash, true).catch((e) => {
-      chain.logger.error("Error on notifyConsensusValidated", {valid: true}, e);
-    });
-
   return {
     block,
     postState,

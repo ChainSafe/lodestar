@@ -230,18 +230,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       throw Error("getPayload returned payload that executePayload deems invalid");
     }
 
-    // 4. Mark the payload as valid
-
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_consensusValidated","params":[{
-     * "blockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-     * "status":"VALID"
-     * }],"id":67}' http://localhost:8545
-     */
-
-    await executionEngine.notifyConsensusValidated(payload.blockHash, true);
-
-    // 5. Update the fork choice
+    // 4. Update the fork choice
 
     /**
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{

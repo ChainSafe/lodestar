@@ -32,19 +32,6 @@ export interface IExecutionEngine {
   executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus>;
 
   /**
-   * Signals that the beacon block containing the execution payload is valid with respect to the consensus rule set.
-   *
-   * A call to notify_consensus_validated must be made after the state_transition function finishes. The value of the
-   * valid parameter must be set as follows:
-   * - True if state_transition function call succeeds
-   * - False if state_transition function call fails
-   *
-   * Note: The call of the notify_consensus_validated function with valid = True maps on the POS_CONSENSUS_VALIDATED event defined in the EIP-3675.
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/beacon-chain.md#notify_consensus_validated
-   */
-  notifyConsensusValidated(blockHash: Root, valid: boolean): Promise<void>;
-
-  /**
    * Signal fork choice updates
    * This function performs two actions atomically:
    * - Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
