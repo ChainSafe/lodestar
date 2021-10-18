@@ -64,7 +64,7 @@ const executionPayloadFields = {
   timestamp: Number64,
   // TODO: if there is perf issue, consider making ByteListType
   extraData: new ListType({limit: MAX_EXTRA_DATA_BYTES, elementType: Uint8}),
-  baseFeePerGas: Bytes32,
+  baseFeePerGas: Uint256,
   // Extra payload fields
   blockHash: Root,
 };

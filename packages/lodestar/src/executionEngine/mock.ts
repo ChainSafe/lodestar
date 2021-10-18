@@ -36,7 +36,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       gasUsed: 0,
       timestamp: 0,
       extraData: ZERO_HASH,
-      baseFeePerGas: ZERO_HASH,
+      baseFeePerGas: BigInt(0),
       blockHash: ZERO_HASH,
       transactions: [],
     });
@@ -116,7 +116,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
       timestamp: timestamp,
       extraData: ZERO_HASH,
-      baseFeePerGas: ZERO_HASH,
+      baseFeePerGas: BigInt(0),
       blockHash: crypto.randomBytes(32),
       transactions: [{selector: 0, value: crypto.randomBytes(512)}],
     };

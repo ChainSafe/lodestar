@@ -1,5 +1,5 @@
 import * as altair from "../altair/types";
-import {Root, Bytes32, Number64, ExecutionAddress} from "../primitive/types";
+import {Root, Bytes32, Number64, ExecutionAddress, Uint256} from "../primitive/types";
 
 export type OpaqueTransaction = Uint8Array;
 
@@ -21,7 +21,7 @@ type ExecutionPayloadFields = {
   gasUsed: Number64;
   timestamp: Number64;
   extraData: Uint8Array;
-  baseFeePerGas: Bytes32;
+  baseFeePerGas: Uint256;
   // Extra payload fields
   blockHash: Bytes32;
 };

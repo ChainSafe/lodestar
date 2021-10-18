@@ -1,4 +1,4 @@
-import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
+import {List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, Bytes32, Number64, phase0, Root, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {initializeBeaconStateFromEth1} from "@chainsafe/lodestar-beacon-state-transition";
@@ -29,7 +29,7 @@ export function getInteropState(
   latestPayloadHeader.timestamp = eth1Timestamp;
   latestPayloadHeader.random = eth1BlockHash;
   latestPayloadHeader.gasLimit = GENESIS_GAS_LIMIT;
-  latestPayloadHeader.baseFeePerGas = fromHexString(GENESIS_BASE_FEE_PER_GAS);
+  latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(
     config,
     eth1BlockHash,

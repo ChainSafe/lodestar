@@ -6,10 +6,9 @@ import {
   numToQuantity,
   dataToBytes,
   quantityToNum,
-  bytesToQuantity,
-  quantityToBytes,
   DATA,
   QUANTITY,
+  quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
@@ -231,8 +230,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
     gasUsed: numToQuantity(data.gasUsed),
     timestamp: numToQuantity(data.timestamp),
     extraData: bytesToData(data.extraData),
-    // TODO: Review big-endian
-    baseFeePerGas: bytesToQuantity(data.baseFeePerGas),
+    baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
     transactions: data.transactions.map((tran) => bytesToData(tran.value)),
   };
@@ -251,8 +249,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.Executio
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
     extraData: dataToBytes(data.extraData),
-    // TODO: Review big-endian
-    baseFeePerGas: quantityToBytes(data.baseFeePerGas),
+    baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => ({selector: 0, value: dataToBytes(tran)})),
   };
