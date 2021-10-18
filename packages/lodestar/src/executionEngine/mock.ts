@@ -20,7 +20,6 @@ export class ExecutionEngineMock implements IExecutionEngine {
   finalizedBlockRoot = ZERO_HASH_HEX;
 
   private knownBlocks = new Map<RootHex, merge.ExecutionPayload>();
-  private pendingPayloads = new Map<RootHex, merge.ExecutionPayload>();
   private preparingPayloads = new Map<number, merge.ExecutionPayload>();
   private payloadId = 0;
 
@@ -37,7 +36,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       gasUsed: 0,
       timestamp: 0,
       extraData: ZERO_HASH,
-      baseFeePerGas: ZERO_HASH,
+      baseFeePerGas: BigInt(0),
       blockHash: ZERO_HASH,
       transactions: [],
     });
@@ -60,30 +59,8 @@ export class ExecutionEngineMock implements IExecutionEngine {
       return ExecutePayloadStatus.INVALID;
     }
 
-    // Append to pending payloads, awaiting notifyConsensusValidated and return valid
-    this.pendingPayloads.set(toHexString(executionPayload.blockHash), executionPayload);
+    this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
     return ExecutePayloadStatus.VALID;
-  }
-
-  /**
-   * `engine_consensusValidated`
-   *
-   * 1. The call of this method with VALID status maps on the POS_CONSENSUS_VALIDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
-   * 2. If the status in this call is INVALID the payload MUST be discarded disregarding its validity with respect to the execution environment rules.
-   * 3. Client software MUST respond with 4: Unknown block error if the payload identified by the blockHash is unknown.
-   */
-  async notifyConsensusValidated(blockHash: Root, valid: boolean): Promise<void> {
-    const blockHashHex = toHexString(blockHash);
-    const payload = this.pendingPayloads.get(blockHashHex);
-    if (!payload) {
-      throw Error(`Unknown block root ${blockHashHex}`);
-    }
-
-    if (valid) {
-      this.knownBlocks.set(blockHashHex, payload);
-    }
-
-    this.pendingPayloads.delete(blockHashHex);
   }
 
   /**
@@ -139,7 +116,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
       timestamp: timestamp,
       extraData: ZERO_HASH,
-      baseFeePerGas: ZERO_HASH,
+      baseFeePerGas: BigInt(0),
       blockHash: crypto.randomBytes(32),
       transactions: [{selector: 0, value: crypto.randomBytes(512)}],
     };

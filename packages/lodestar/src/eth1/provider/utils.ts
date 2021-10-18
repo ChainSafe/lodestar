@@ -72,7 +72,6 @@ export function quantityToBigint(hex: QUANTITY, id = ""): bigint {
 
 /**
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
- * For compatibility with SSZ type of baseFeePerGas, always return a 32 ByteVector
  */
 export function quantityToBytes(hex: QUANTITY): Uint8Array {
   const bn = quantityToBigint(hex);

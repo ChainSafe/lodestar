@@ -148,7 +148,7 @@ export const MAX_EXTRA_DATA_BYTES = 32; // 2**5
 // Genesis testing settings
 // Note: These configuration settings do not apply to the mainnet and are utilized only by pure Merge testing.
 export const GENESIS_GAS_LIMIT = 30000000;
-export const GENESIS_BASE_FEE_PER_GAS = "0x00ca9a3b00000000000000000000000000000000000000000000000000000000";
+export const GENESIS_BASE_FEE_PER_GAS = BigInt(1000000000);
 
 //
 

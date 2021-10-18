@@ -6,10 +6,9 @@ import {
   numToQuantity,
   dataToBytes,
   quantityToNum,
-  bytesToQuantity,
-  quantityToBytes,
   DATA,
   QUANTITY,
+  quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
@@ -74,21 +73,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     }
 
     return statusEnum;
-  }
-
-  /**
-   * `engine_consensusValidated`
-   *
-   * 1. The call of this method with VALID status maps on the POS_CONSENSUS_VALIDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
-   * 2. If the status in this call is INVALID the payload MUST be discarded disregarding its validity with respect to the execution environment rules.
-   * 3. Client software MUST respond with 4: Unknown block error if the payload identified by the blockHash is unknown.
-   */
-  notifyConsensusValidated(blockHash: Root, valid: boolean): Promise<void> {
-    const method = "engine_consensusValidated";
-    return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-      method,
-      params: [{blockHash: bytesToData(blockHash), status: valid ? "VALID" : "INVALID"}],
-    });
   }
 
   /**
@@ -246,8 +230,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
     gasUsed: numToQuantity(data.gasUsed),
     timestamp: numToQuantity(data.timestamp),
     extraData: bytesToData(data.extraData),
-    // TODO: Review big-endian
-    baseFeePerGas: bytesToQuantity(data.baseFeePerGas),
+    baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
     transactions: data.transactions.map((tran) => bytesToData(tran.value)),
   };
@@ -266,8 +249,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.Executio
     gasUsed: quantityToNum(data.gasUsed),
     timestamp: quantityToNum(data.timestamp),
     extraData: dataToBytes(data.extraData),
-    // TODO: Review big-endian
-    baseFeePerGas: quantityToBytes(data.baseFeePerGas),
+    baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => ({selector: 0, value: dataToBytes(tran)})),
   };

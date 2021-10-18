@@ -2,7 +2,6 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
-import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
 import {dataToBytes, quantityToNum} from "../../../src/eth1/provider/utils";
 
@@ -150,23 +149,6 @@ describe("ExecutionEngine / http", () => {
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 
-  it("notifyConsensusValidated", async () => {
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_consensusValidated","params":[{"blockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "status":"VALID"}],"id":67}' http://localhost:8545
-     */
-
-    const request = {
-      jsonrpc: "2.0",
-      method: "engine_consensusValidated",
-      params: [{blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", status: "VALID"}],
-    };
-    returnValue = {jsonrpc: "2.0", id: 67, result: null};
-
-    await executionEngine.notifyConsensusValidated(fromHexString(request.params[0].blockHash), true);
-
-    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
-  });
-
   it("notifyForkchoiceUpdate", async () => {
     /**
      *  curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{"headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"}],"id":67}' http://localhost:8545
@@ -201,24 +183,5 @@ describe("ExecutionEngine / http", () => {
     await expect(executionEngine.getPayload(request.params[0])).to.be.rejectedWith(
       "JSON RPC error: unknown payload, engine_getPayload"
     );
-  });
-
-  it("error - unknown header", async () => {
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_consensusValidated","params":[{"blockHash":"0x0000000000000000000000000000000000000000000000000000000000000000", "status":"VALID"}],"id":67}' http://localhost:8545
-     */
-
-    const request = {
-      jsonrpc: "2.0",
-      method: "engine_consensusValidated",
-      params: [{blockHash: "0x0000000000000000000000000000000000000000000000000000000000000000", status: "VALID"}],
-      id: 67,
-    };
-    const response = {jsonrpc: "2.0", id: 67, error: {code: 4, message: "unknown header"}};
-    returnValue = response;
-
-    await expect(
-      executionEngine.notifyConsensusValidated(fromHexString(request.params[0].blockHash), true)
-    ).to.be.rejectedWith("JSON RPC error: unknown header, engine_consensusValidated");
   });
 });
