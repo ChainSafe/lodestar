@@ -37,7 +37,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       }
       const currentEpoch = state.currentShuffling.epoch;
       const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
-        toHexString(getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch) - 1))
+        toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
       );
       return [
         {

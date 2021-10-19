@@ -13,6 +13,7 @@ import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("AttestationDutiesService", function () {
   const sandbox = sinon.createSandbox();
@@ -59,6 +60,7 @@ describe("AttestationDutiesService", function () {
 
     // Reply with some duties
     const slot = 1;
+    const epoch = computeEpochAtSlot(slot);
     const duty: routes.validator.AttesterDuty = {
       slot: slot,
       committeeIndex: 1,
@@ -95,13 +97,23 @@ describe("AttestationDutiesService", function () {
     );
 
     // Duties for this and next epoch should be persisted
-    expect(Object.fromEntries(dutiesService["dutiesByEpochByIndex"].get(index) || new Map())).to.deep.equal(
+    expect(
+      Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch)?.dutiesByIndex || new Map())
+    ).to.deep.equal(
       {
         // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
-        0: {duty, selectionProof: null},
-        1: {duty, selectionProof: null},
+        [index]: {duty, selectionProof: null},
       },
-      "Wrong dutiesService.attesters Map"
+      "Wrong dutiesService.attesters Map at current epoch"
+    );
+    expect(
+      Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(epoch + 1)?.dutiesByIndex || new Map())
+    ).to.deep.equal(
+      {
+        // Since the ZERO_HASH won't pass the isAggregator test, selectionProof is null
+        [index]: {duty, selectionProof: null},
+      },
+      "Wrong dutiesService.attesters Map at next epoch"
     );
 
     expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
