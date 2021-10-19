@@ -42,7 +42,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.head]);
 
       const headBlock = generateProtoBlock();
-      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState());
+      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
@@ -55,7 +55,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.head]);
 
       const headBlock = generateProtoBlock();
-      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState());
+      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
       expect(events).to.have.length(1, "Wrong num of received events");
