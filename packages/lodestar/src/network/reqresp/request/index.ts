@@ -152,7 +152,8 @@ export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
       // NOTE: Only log once per request to verbose, intermediate steps to debug
       // NOTE: Do not log the response, logs get extremely cluttered
       // NOTE: add double space after "Req  " to align log with the "Resp " log
-      logger.verbose("Req  done", logCtx);
+      const numResponse = Array.isArray(responses) ? responses.length : 1;
+      logger.verbose("Req  done", {...logCtx, numResponse});
 
       return responses as T;
     } finally {
