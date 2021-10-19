@@ -5,9 +5,9 @@ import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../r
 /**
  * REST HTTP client for config routes
  */
-export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
+export function getClient(config: IChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();
-  const returnTypes = getReturnTypes();
+  const returnTypes = getReturnTypes(config);
   // All routes return JSON, use a client auto-generator
   return generateGenericJsonClient<Api, ReqTypes>(routesData, reqSerializers, returnTypes, httpClient);
 }
