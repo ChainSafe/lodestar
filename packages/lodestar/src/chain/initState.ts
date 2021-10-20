@@ -14,6 +14,7 @@ import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "../eth1";
@@ -224,7 +225,9 @@ export function computeAnchorCheckpoint(
   return {
     checkpoint: {
       root,
-      epoch: computeEpochAtSlot(anchorState.slot),
+      // the checkpoint epoch = computeEpochAtSlot(anchorState.slot) + 1 if slot is not at epoch boundary
+      // this is similar to a process_slots() call
+      epoch: Math.ceil(anchorState.slot / SLOTS_PER_EPOCH),
     },
     blockHeader,
   };
