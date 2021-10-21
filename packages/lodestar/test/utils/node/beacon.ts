@@ -16,6 +16,8 @@ import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
+import {TreeBacked} from "@chainsafe/ssz";
+import {allForks} from "@chainsafe/lodestar-types";
 
 export async function getDevBeaconNode(
   opts: {
@@ -25,6 +27,7 @@ export async function getDevBeaconNode(
     logger?: ILogger;
     peerId?: PeerId;
     peerStoreDir?: string;
+    anchorState?: TreeBacked<allForks.BeaconState>;
   } & InteropStateOpts
 ): Promise<BeaconNode> {
   const {params, validatorCount = 8, peerStoreDir} = opts;
@@ -67,14 +70,14 @@ export async function getDevBeaconNode(
     )
   );
 
-  const anchorState = await initDevState(config, db, validatorCount, opts);
-  const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
+  const state = opts.anchorState || (await initDevState(config, db, validatorCount, opts));
+  const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);
   return await BeaconNode.init({
     opts: options as IBeaconNodeOptions,
     config: beaconConfig,
     db,
     logger,
     libp2p,
-    anchorState,
+    anchorState: state,
   });
 }

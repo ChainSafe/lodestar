@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import {INetworkEventBus} from "./events";
 import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
-import {IPeerRpcScoreStore, IPeerMetadataStore} from "./peers";
+import {IPeerRpcScoreStore, IPeerMetadataStore, PeerAction} from "./peers";
 import {IReqResp} from "./reqresp";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets";
 
@@ -39,6 +39,7 @@ export interface INetwork {
   /** Subscribe, search peers, join long-lived syncnets */
   prepareSyncCommitteeSubnets(subscriptions: CommitteeSubscription[]): void;
   reStatusPeers(peers: PeerId[]): void;
+  reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void;
 
   // Gossip handler
   subscribeGossipCoreTopics(): void;

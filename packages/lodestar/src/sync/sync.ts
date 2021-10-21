@@ -11,8 +11,11 @@ import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {SyncOptions} from "./options";
 import {UnknownBlockSync} from "./unknownBlock";
+import {BackfillSync} from "./backfill";
 
 export class BeaconSync implements IBeaconSync {
+  readonly backfillSync: BackfillSync;
+
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
@@ -20,6 +23,9 @@ export class BeaconSync implements IBeaconSync {
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
+
+  // avoid finding same root at the same time
+  private readonly processingRoots = new Set<string>();
 
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
@@ -40,6 +46,7 @@ export class BeaconSync implements IBeaconSync {
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
     this.slotImportTolerance = SLOTS_PER_EPOCH;
+    this.backfillSync = new BackfillSync(modules);
 
     // Subscribe to RangeSync completing a SyncChain and recompute sync state
     if (!opts.disableRangeSync) {
@@ -61,6 +68,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain.emitter.off(ChainEvent.clockEpoch, this.onClockEpoch);
     this.rangeSync.close();
     this.unknownBlockSync.close();
+    this.backfillSync.close();
   }
 
   getSyncStatus(): SyncingStatus {
