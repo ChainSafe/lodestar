@@ -43,6 +43,7 @@ import {LightClientIniter} from "./lightClient";
 import {Archiver} from "./archiver";
 import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
+import {PrecomputeEpochScheduler} from "./precomputeEpoch";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
@@ -165,6 +166,7 @@ export class BeaconChain implements IBeaconChain {
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
     this.archiver = new Archiver(db, this, logger, signal);
+    new PrecomputeEpochScheduler(this, this.config, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
   }
