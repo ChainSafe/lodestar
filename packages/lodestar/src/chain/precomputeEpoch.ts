@@ -53,7 +53,8 @@ export class PrecomputeEpochScheduler {
     // we want to make sure headSlot === clockSlot to do early epoch transition
     const nextSlot = clockSlot + 1;
     this.logger.verbose("Precompute epoch transition", {nextEpoch, headSlot, nextSlot});
-    await this.chain.regen.getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch).catch((e) => {
+    // this takes ~2s as of Oct 2021, no need to wait for this or the clock drift
+    this.chain.regen.getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch).catch((e) => {
       this.logger.error("Failed to precompute epoch transition", nextEpoch, e);
     });
   };
