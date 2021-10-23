@@ -529,5 +529,9 @@ export function createLodestarMetrics(
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
     }),
+    unhandeledPromiseRejections: register.gauge({
+      name: "unhandeled_promise_rejections",
+      help: "UnhandeledPromiseRejection count",
+    }),
   };
 }
