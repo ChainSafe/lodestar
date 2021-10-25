@@ -33,6 +33,9 @@ export function createMetrics(
     const clockSlot = getCurrentSlot(config, genesisTime);
     validatorMonitor.scrapeMetrics(clockSlot);
   });
+  process.on("unhandledRejection", (_error) => {
+    lodestar.unhandeledPromiseRejections.inc();
+  });
 
   collectDefaultMetrics({
     register,
