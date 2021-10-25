@@ -203,9 +203,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
   };
 
-  private removePeer(peerId: PeerId): void {
+  private removePeer = (peerId: PeerId): void => {
     this.peers.delete(peerId);
-  }
+  };
 
   private async syncBlockByRoot(peer: PeerId, root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
