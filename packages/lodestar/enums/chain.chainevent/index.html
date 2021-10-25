@@ -370,80 +370,80 @@
 <h2 id="enumeration-members_1">Enumeration members<a class="headerlink" href="#enumeration-members_1" title="Permanent link">¶</a></h2>
 <h3 id="attestation">attestation<a class="headerlink" href="#attestation" title="Permanent link">¶</a></h3>
 <p>• <strong>attestation</strong>: = "attestation"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L24">packages/lodestar/src/chain/emitter.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L24">packages/lodestar/src/chain/emitter.ts:24</a></em></p>
 <p>This event signals that the chain has successfully processed a valid attestation.</p>
 <p>This event is guaranteed to be emitted after every attestation fed to the chain has successfully been passed to the fork choice.</p>
 <hr/>
 <h3 id="block">block<a class="headerlink" href="#block" title="Permanent link">¶</a></h3>
 <p>• <strong>block</strong>: = "block"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L30">packages/lodestar/src/chain/emitter.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L30">packages/lodestar/src/chain/emitter.ts:30</a></em></p>
 <p>This event signals that the chain has successfully processed a valid block.</p>
 <p>This event is guaranteed to be emitted after every block fed to the chain has successfully passed the state transition.</p>
 <hr/>
 <h3 id="checkpoint">checkpoint<a class="headerlink" href="#checkpoint" title="Permanent link">¶</a></h3>
 <p>• <strong>checkpoint</strong>: = "checkpoint"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L37">packages/lodestar/src/chain/emitter.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L37">packages/lodestar/src/chain/emitter.ts:37</a></em></p>
 <p>This event signals that the chain has processed (or reprocessed) a checkpoint.</p>
 <p>This event is not tied to clock events, but rather tied to generation (or regeneration) of state.
 This event is guaranteed to be called after <em>any</em> checkpoint is processed, including skip-slot checkpoints, checkpoints that are formed as a result of processing blocks, etc.</p>
 <hr/>
 <h3 id="clockepoch">clockEpoch<a class="headerlink" href="#clockepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>clockEpoch</strong>: = "clock:epoch"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L61">packages/lodestar/src/chain/emitter.ts:61</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L61">packages/lodestar/src/chain/emitter.ts:61</a></em></p>
 <p>This event signals the start of a new epoch, and that subsequent calls to <code>clock.currentEpoch</code> will return <code>epoch</code>.</p>
 <p>This event is guaranteed to be emitted every <code>SECONDS_PER_SLOT * SLOTS_PER_EPOCH</code> seconds.</p>
 <hr/>
 <h3 id="clockslot">clockSlot<a class="headerlink" href="#clockslot" title="Permanent link">¶</a></h3>
 <p>• <strong>clockSlot</strong>: = "clock:slot"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L55">packages/lodestar/src/chain/emitter.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L55">packages/lodestar/src/chain/emitter.ts:55</a></em></p>
 <p>This event signals the start of a new slot, and that subsequent calls to <code>clock.currentSlot</code> will equal <code>slot</code>.</p>
 <p>This event is guaranteed to be emitted every <code>SECONDS_PER_SLOT</code> seconds.</p>
 <hr/>
 <h3 id="errorattestation">errorAttestation<a class="headerlink" href="#errorattestation" title="Permanent link">¶</a></h3>
 <p>• <strong>errorAttestation</strong>: = "error:attestation"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L91">packages/lodestar/src/chain/emitter.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L91">packages/lodestar/src/chain/emitter.ts:91</a></em></p>
 <p>This event signals that the chain has errored while processing an attestation.</p>
 <p>This event is guaranteed to be triggered after any attestation fed to the chain fails at any stage of processing.</p>
 <hr/>
 <h3 id="errorblock">errorBlock<a class="headerlink" href="#errorblock" title="Permanent link">¶</a></h3>
 <p>• <strong>errorBlock</strong>: = "error:block"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L97">packages/lodestar/src/chain/emitter.ts:97</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L97">packages/lodestar/src/chain/emitter.ts:97</a></em></p>
 <p>This event signals that the chain has errored while processing a block.</p>
 <p>This event is guaranteed to be triggered after any block fed to the chain fails at any stage of processing.</p>
 <hr/>
 <h3 id="finalized">finalized<a class="headerlink" href="#finalized" title="Permanent link">¶</a></h3>
 <p>• <strong>finalized</strong>: = "finalized"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L49">packages/lodestar/src/chain/emitter.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L49">packages/lodestar/src/chain/emitter.ts:49</a></em></p>
 <p>This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated finalized checkpoint.</p>
 <p>This event is a derivative of the <code>checkpoint</code> event. Eg: in cases where the <code>checkpoint</code> state has an updated finalized checkpoint, this event is triggered.</p>
 <hr/>
 <h3 id="forkchoicefinalized">forkChoiceFinalized<a class="headerlink" href="#forkchoicefinalized" title="Permanent link">¶</a></h3>
 <p>• <strong>forkChoiceFinalized</strong>: = "forkChoice:finalized"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L85">packages/lodestar/src/chain/emitter.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L85">packages/lodestar/src/chain/emitter.ts:85</a></em></p>
 <p>This event signals that the fork choice store has been updated.</p>
 <p>This event is guaranteed to be triggered whenever the fork choice justified checkpoint is updated. This is in response to a newly processed block.</p>
 <hr/>
 <h3 id="forkchoicehead">forkChoiceHead<a class="headerlink" href="#forkchoicehead" title="Permanent link">¶</a></h3>
 <p>• <strong>forkChoiceHead</strong>: = "forkChoice:head"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L67">packages/lodestar/src/chain/emitter.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L67">packages/lodestar/src/chain/emitter.ts:67</a></em></p>
 <p>This event signals that the fork choice has been updated to a new head.</p>
 <p>This event is guaranteed to be emitted after every sucessfully processed block, if that block updates the head.</p>
 <hr/>
 <h3 id="forkchoicejustified">forkChoiceJustified<a class="headerlink" href="#forkchoicejustified" title="Permanent link">¶</a></h3>
 <p>• <strong>forkChoiceJustified</strong>: = "forkChoice:justified"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L79">packages/lodestar/src/chain/emitter.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L79">packages/lodestar/src/chain/emitter.ts:79</a></em></p>
 <p>This event signals that the fork choice store has been updated.</p>
 <p>This event is guaranteed to be triggered whenever the fork choice justified checkpoint is updated. This is either in response to a newly processed block or a new clock tick.</p>
 <hr/>
 <h3 id="forkchoicereorg">forkChoiceReorg<a class="headerlink" href="#forkchoicereorg" title="Permanent link">¶</a></h3>
 <p>• <strong>forkChoiceReorg</strong>: = "forkChoice:reorg"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L73">packages/lodestar/src/chain/emitter.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L73">packages/lodestar/src/chain/emitter.ts:73</a></em></p>
 <p>This event signals that the fork choice has been updated to a new head that is not a descendant of the previous head.</p>
 <p>This event is guaranteed to be emitted after every sucessfully processed block, if that block results results in a reorg.</p>
 <hr/>
 <h3 id="justified">justified<a class="headerlink" href="#justified" title="Permanent link">¶</a></h3>
 <p>• <strong>justified</strong>: = "justified"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4757534/packages/lodestar/src/chain/emitter.ts#L43">packages/lodestar/src/chain/emitter.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7d74477/packages/lodestar/src/chain/emitter.ts#L43">packages/lodestar/src/chain/emitter.ts:43</a></em></p>
 <p>This event signals that the chain has processed (or reprocessed) a checkpoint state with an updated justified checkpoint.</p>
 <p>This event is a derivative of the <code>checkpoint</code> event. Eg: in cases where the <code>checkpoint</code> state has an updated justified checkpoint, this event is triggered.</p>
 </article>
