@@ -18,7 +18,13 @@ import {
 } from "@chainsafe/lodestar-params";
 import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {assembleBlock} from "../../../chain/factory/block";
-import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  GossipAction,
+  SyncCommitteeError,
+  SyncCommitteeErrorCode,
+} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
 import {ZERO_HASH} from "../../../constants";
 import {SyncState} from "../../../sync";
@@ -382,7 +388,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      *   + Regen target state once
      *   + Do all validations without signature verification
      *   + Verify all signatures once
-     * If it's failed to validate once of signedAggregateAndProofs, do one by one
+     * If it's failed to validate one of signedAggregateAndProofs, do one by one
      */
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
@@ -509,6 +515,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      * POST `/eth/v1/validator/contribution_and_proofs`
      *
      * Publish multiple signed sync committee contribution and proofs
+     * Do batch verification first:
+     *   + Do all validations without signature verification
+     *   + Verify all signatures once
+     * If it's failed to validate one of contribution and proofs, do one by one
      *
      * https://github.com/ethereum/eth2.0-APIs/pull/137
      */
@@ -516,35 +526,62 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       notWhileSyncing();
 
       const errors: Error[] = [];
-
-      await Promise.all(
-        contributionAndProofs.map(async (contributionAndProof, i) => {
-          try {
-            // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+      const allSignatureSets: ISignatureSet[] = [];
+      try {
+        await Promise.all(
+          contributionAndProofs.map(async (contributionAndProof) => {
+            const signatureSets = await validateSyncCommitteeGossipContributionAndProof(
+              chain,
+              contributionAndProof,
+              true
+            );
+            allSignatureSets.push(...signatureSets);
+          })
+        );
+        if (!(await chain.bls.verifySignatureSets(allSignatureSets, {batchable: true}))) {
+          throw new SyncCommitteeError(GossipAction.REJECT, {
+            code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+          });
+        }
+        // all are validated
+        await Promise.all(
+          contributionAndProofs.map(async (contributionAndProof) => {
+            const {contribution, aggregatorIndex} = contributionAndProof.message;
+            const {subCommitteeIndex, slot} = contribution;
+            chain.seenContributionAndProof.add(slot, subCommitteeIndex, aggregatorIndex);
             chain.syncContributionAndProofPool.add(contributionAndProof.message);
             await network.gossip.publishContributionAndProof(contributionAndProof);
-          } catch (e) {
-            errors.push(e as Error);
-            logger.error(
-              `Error on publishContributionAndProofs [${i}]`,
-              {
-                slot: contributionAndProof.message.contribution.slot,
-                subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
-              },
-              e as Error
-            );
-            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "contributionAndProof",
-                ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
-                toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
+          })
+        );
+      } catch (e) {
+        await Promise.all(
+          contributionAndProofs.map(async (contributionAndProof, i) => {
+            try {
+              await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
+              chain.syncContributionAndProofPool.add(contributionAndProof.message);
+              await network.gossip.publishContributionAndProof(contributionAndProof);
+            } catch (e) {
+              errors.push(e as Error);
+              logger.error(
+                `Error on publishContributionAndProofs [${i}]`,
+                {
+                  slot: contributionAndProof.message.contribution.slot,
+                  subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
+                },
+                e as Error
               );
-              logger.debug("The submitted contribution adn proof was written to", archivedPath);
+              if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+                const archivedPath = chain.persistInvalidSszObject(
+                  "contributionAndProof",
+                  ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
+                  toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
+                );
+                logger.debug("The submitted contribution adn proof was written to", archivedPath);
+              }
             }
-          }
-        })
-      );
+          })
+        );
+      }
 
       if (errors.length > 1) {
         throw Error("Multiple errors on publishContributionAndProofs\n" + errors.map((e) => e.message).join("\n"));

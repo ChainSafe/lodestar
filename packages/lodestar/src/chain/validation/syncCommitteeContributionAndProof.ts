@@ -1,4 +1,4 @@
-import {CachedBeaconState, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, ISignatureSet, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
@@ -15,8 +15,9 @@ import {
  */
 export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
-  signedContributionAndProof: altair.SignedContributionAndProof
-): Promise<void> {
+  signedContributionAndProof: altair.SignedContributionAndProof,
+  verifyInBatch = false
+): Promise<ISignatureSet[]> {
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subCommitteeIndex, slot} = contribution;
@@ -77,12 +78,16 @@ export async function validateSyncCommitteeGossipContributionAndProof(
     getSyncCommitteeContributionSignatureSet(headState as CachedBeaconState<altair.BeaconState>, contribution, pubkeys),
   ];
 
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
-    });
+  if (!verifyInBatch) {
+    if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+      throw new SyncCommitteeError(GossipAction.REJECT, {
+        code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+      });
+    }
+
+    // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
+    chain.seenContributionAndProof.add(slot, subCommitteeIndex, aggregatorIndex);
   }
 
-  // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
-  chain.seenContributionAndProof.add(slot, subCommitteeIndex, aggregatorIndex);
+  return signatureSets;
 }
