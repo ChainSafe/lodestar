@@ -62,6 +62,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
         slot: slot,
         root: blockHex,
         curentSlot: chain.clock.currentSlot,
+        peerId: peerIdStr,
       });
 
       try {
