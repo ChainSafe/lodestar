@@ -47,7 +47,7 @@ export class PrecomputeEpochScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // node may be syncing or out of synced
     if (headSlot < clockSlot) {
-      this.logger.verbose("No need to precompute epoch transition", {nextEpoch, headSlot, slot: clockSlot});
+      this.logger.debug("No need to precompute epoch transition", {nextEpoch, headSlot, slot: clockSlot});
       return;
     }
     // we want to make sure headSlot === clockSlot to do early epoch transition
