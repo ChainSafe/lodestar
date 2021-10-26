@@ -150,12 +150,3 @@ export function sameType<T>(): TypeJson<T> {
     fromJson: (json) => (json as unknown) as T,
   };
 }
-
-/** Helper to fill missing fields that might not been activated, and thus can be missing
- * especially in interop with other client beacons */
-export function withJsonFilled<T>(dataType: Type<T>, fillWith: Json): TypeJson<{data: T}> {
-  return {
-    toJson: ({data}, opts) => ({data: dataType.toJson(data, opts)}),
-    fromJson: ({data}: {data: Json}, opts) => ({data: dataType.fromJson(Object.assign({}, fillWith, data), opts)}),
-  };
-}
