@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
@@ -11,7 +11,8 @@ import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCom
 import {ApiModules} from "../../types";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {toHexString} from "@chainsafe/ssz";
-import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
+import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
+import {RegenCaller} from "../../../../chain/regen";
 
 export function getBeaconPoolApi({
   chain,
@@ -43,39 +44,99 @@ export function getBeaconPoolApi({
       return {data: chain.opPool.getAllVoluntaryExits()};
     },
 
+    /**
+     * Do batch verification first:
+     *   + Regen target state once
+     *   + Do all validations without signature verification
+     *   + Verify all signatures once
+     * If it's failed to validate one of attestations, do one by one
+     */
     async submitPoolAttestations(attestations) {
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
-
-      await Promise.all(
-        attestations.map(async (attestation, i) => {
-          try {
-            const {indexedAttestation, subnet} = await validateGossipAttestation(chain, attestation, null);
-
-            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
-
-            await Promise.all([
-              network.gossip.publishBeaconAttestation(attestation, subnet),
-              chain.attestationPool.add(attestation),
-            ]);
-          } catch (e) {
-            errors.push(e as Error);
-            logger.error(
-              `Error on submitPoolAttestations [${i}]`,
-              {slot: attestation.data.slot, index: attestation.data.index},
-              e as Error
+      // validate in batch first to improve performance
+      if (attestations.length === 0) {
+        return;
+      }
+      // we want all attestations to have same target so that we can validate in batch
+      const attTarget = attestations[0].data.target;
+      for (let i = 1; i < attestations.length; i++) {
+        if (!ssz.phase0.Checkpoint.equals(attestations[i].data.target, attTarget)) {
+          throw Error("Target checkpoints are not unique");
+        }
+      }
+      try {
+        const targetState = await chain.regen.getCheckpointState(attTarget, RegenCaller.validateGossipAttestation);
+        const attestationsBySubnet = new Map<number, phase0.Attestation[]>();
+        const indexedAttestations: phase0.IndexedAttestation[] = [];
+        await Promise.all(
+          attestations.map(async (attestation) => {
+            const {indexedAttestation, subnet} = await validateGossipAttestation(
+              chain,
+              attestation,
+              null,
+              targetState,
+              true
             );
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "attestation",
-                ssz.phase0.Attestation.serialize(attestation),
-                toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
-              );
-              logger.debug("Submitted invalid attestation was written to", archivedPath);
+            indexedAttestations.push(indexedAttestation);
+            let attestationsGroup = attestationsBySubnet.get(subnet);
+            if (!attestationsGroup) {
+              attestationsGroup = [];
+              attestationsBySubnet.set(subnet, attestationsGroup);
             }
+            attestationsGroup.push(attestation);
+          })
+        );
+        const signatureSets = indexedAttestations.map((indexedAttestation) =>
+          allForks.getIndexedAttestationSignatureSet(targetState, indexedAttestation)
+        );
+        if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+        }
+        // all are validated
+        for (const indexedAttestation of indexedAttestations) {
+          metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
+          chain.seenAttesters.add(attTarget.epoch, indexedAttestation.attestingIndices[0]);
+        }
+        for (const [subnet, attestations] of attestationsBySubnet.entries()) {
+          await Promise.all(attestations.map((a) => network.gossip.publishBeaconAttestation(a, subnet)));
+          for (const attestation of attestations) {
+            chain.attestationPool.add(attestation);
           }
-        })
-      );
+        }
+      } catch (e) {
+        // failed to validate one of attestations
+        // this is slow due to we validate signatures separately and state regen queue
+        await Promise.all(
+          attestations.map(async (attestation, i) => {
+            try {
+              const {indexedAttestation, subnet} = await validateGossipAttestation(chain, attestation, null);
+
+              metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
+
+              await Promise.all([
+                network.gossip.publishBeaconAttestation(attestation, subnet),
+                chain.attestationPool.add(attestation),
+              ]);
+            } catch (e) {
+              errors.push(e as Error);
+              logger.error(
+                `Error on submitPoolAttestations [${i}]`,
+                {slot: attestation.data.slot, index: attestation.data.index},
+                e as Error
+              );
+              if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+                const archivedPath = chain.persistInvalidSszObject(
+                  "attestation",
+                  ssz.phase0.Attestation.serialize(attestation),
+                  toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
+                );
+                logger.debug("Submitted invalid attestation was written to", archivedPath);
+              }
+            }
+          })
+        );
+      }
 
       if (errors.length > 1) {
         throw Error("Multiple errors on submitPoolAttestations\n" + errors.map((e) => e.message).join("\n"));

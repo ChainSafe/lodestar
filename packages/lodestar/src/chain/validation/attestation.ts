@@ -9,6 +9,7 @@ import {
   getSingleBitIndex,
   AggregationBitsError,
   AggregationBitsErrorCode,
+  CachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
@@ -21,7 +22,10 @@ export async function validateGossipAttestation(
   chain: IBeaconChain,
   attestation: phase0.Attestation,
   /** Optional, to allow verifying attestations through API with unknown subnet */
-  subnet: number | null
+  subnet: number | null,
+  /** Optional, for batch validation */
+  targetState: CachedBeaconState<allForks.BeaconState> | null = null,
+  verifyInBatch = false
 ): Promise<{indexedAttestation: phase0.IndexedAttestation; subnet: number}> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
@@ -85,14 +89,14 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  const attestationTargetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
-    .catch((e: Error) => {
+  const attestationTargetState =
+    targetState ||
+    (await chain.regen.getCheckpointState(attTarget, RegenCaller.validateGossipAttestation).catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
         error: e as Error,
       });
-    });
+    }));
 
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
@@ -141,9 +145,11 @@ export async function validateGossipAttestation(
     data: attData,
     signature: attestation.signature,
   };
-  const signatureSet = getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
-  if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+  if (!verifyInBatch) {
+    const signatureSet = getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
+    if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    }
   }
 
   // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
@@ -159,7 +165,9 @@ export async function validateGossipAttestation(
     });
   }
 
-  chain.seenAttesters.add(targetEpoch, validatorIndex);
+  if (!verifyInBatch) {
+    chain.seenAttesters.add(targetEpoch, validatorIndex);
+  }
 
   return {indexedAttestation, subnet: expectedSubnet};
 }
