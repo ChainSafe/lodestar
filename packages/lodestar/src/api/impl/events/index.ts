@@ -1,11 +1,11 @@
-import {ApiModules} from "../types";
-import {ChainEvent, IChainEvents} from "../../../chain";
-import {routes} from "@chainsafe/lodestar-api";
 import {
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {ApiModules} from "../types";
+import {ChainEvent, IChainEvents} from "../../../chain";
+import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
 import {toHexString} from "@chainsafe/ssz";
 

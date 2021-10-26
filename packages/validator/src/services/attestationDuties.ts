@@ -67,7 +67,6 @@ export class AttestationDutiesService {
   /**
    * If a reorg dependent root comes at a slot other than last slot of epoch
    * just update this.pendingDependentRootByEpoch() and process here
-   * @returns
    */
   private prepareForNextEpoch = async (slot: Slot): Promise<void> => {
     // only interested in last slot of epoch
