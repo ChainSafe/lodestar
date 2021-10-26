@@ -94,9 +94,10 @@ export function getBeaconPoolApi({
           throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
         }
         // all are validated
+        const targetEpoch = attTarget.epoch;
         for (const indexedAttestation of indexedAttestations) {
           metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
-          chain.seenAttesters.add(attTarget.epoch, indexedAttestation.attestingIndices[0]);
+          chain.seenAttesters.add(targetEpoch, indexedAttestation.attestingIndices[0]);
         }
         for (const [subnet, attestations] of attestationsBySubnet.entries()) {
           await Promise.all(attestations.map((a) => network.gossip.publishBeaconAttestation(a, subnet)));

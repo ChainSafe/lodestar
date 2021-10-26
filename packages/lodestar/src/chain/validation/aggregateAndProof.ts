@@ -6,6 +6,8 @@ import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
+  CachedBeaconState,
+  ISignatureSet,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
@@ -13,10 +15,18 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
 import {RegenCaller} from "../regen";
 
+type ValidateGossipAggregateAndProofResult = {
+  indexedAttestation: phase0.IndexedAttestation;
+  committeeIndices: ValidatorIndex[];
+  signatureSets: ISignatureSet[];
+};
+
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,
-  signedAggregateAndProof: phase0.SignedAggregateAndProof
-): Promise<{indexedAttestation: phase0.IndexedAttestation; committeeIndices: ValidatorIndex[]}> {
+  signedAggregateAndProof: phase0.SignedAggregateAndProof,
+  targetCheckpointState: CachedBeaconState<allForks.BeaconState> | null = null,
+  verifyInBatch = false
+): Promise<ValidateGossipAggregateAndProofResult> {
   // Do checks in this order:
   // - do early checks (w/o indexed attestation)
   // - > obtain indexed attestation and committes per slot
@@ -61,14 +71,14 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  const targetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
-    .catch((e: Error) => {
+  const targetState =
+    targetCheckpointState ||
+    (await chain.regen.getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof).catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
         error: e as Error,
       });
-    });
+    }));
 
   const committeeIndices = getCommitteeIndices(targetState, attSlot, attData.index);
   const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregate.aggregationBits);
@@ -108,8 +118,10 @@ export async function validateGossipAggregateAndProof(
     getAggregateAndProofSignatureSet(targetState, attEpoch, aggregator, signedAggregateAndProof),
     allForks.getIndexedAttestationSignatureSet(targetState, indexedAttestation),
   ];
-  if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+  if (!verifyInBatch) {
+    if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    }
   }
 
   // It's important to double check that the attestation still hasn't been observed, since
@@ -123,7 +135,9 @@ export async function validateGossipAggregateAndProof(
     });
   }
 
-  chain.seenAggregators.add(targetEpoch, aggregatorIndex);
+  if (!verifyInBatch) {
+    chain.seenAggregators.add(targetEpoch, aggregatorIndex);
+  }
 
-  return {indexedAttestation, committeeIndices};
+  return {indexedAttestation, committeeIndices, signatureSets};
 }

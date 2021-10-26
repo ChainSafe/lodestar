@@ -6,6 +6,8 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
+  ISignatureSet,
+  phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -375,63 +377,127 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       };
     },
 
+    /**
+     * Do batch verification first:
+     *   + Regen target state once
+     *   + Do all validations without signature verification
+     *   + Verify all signatures once
+     * If it's failed to validate once of signedAggregateAndProofs, do one by one
+     */
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
       const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
-
-      await Promise.all(
-        signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
-          try {
-            // TODO: Validate in batch
-            const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+      // validate in batch first to improve performance
+      if (signedAggregateAndProofs.length === 0) {
+        return;
+      }
+      // we want all attestations to have same target so that we can validate in batch
+      const attTarget = signedAggregateAndProofs[0].message.aggregate.data.target;
+      for (let i = 1; i < signedAggregateAndProofs.length; i++) {
+        if (!ssz.phase0.Checkpoint.equals(signedAggregateAndProofs[i].message.aggregate.data.target, attTarget)) {
+          throw Error("Target checkpoints are not unique");
+        }
+      }
+      try {
+        const targetState = await chain.regen.getCheckpointState(
+          attTarget,
+          RegenCaller.validateGossipAggregateAndProof
+        );
+        const indexedAttestations: phase0.IndexedAttestation[] = [];
+        const allCommitteeIndices: ValidatorIndex[][] = [];
+        const allSignatureSets: ISignatureSet[] = [];
+        await Promise.all(
+          signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+            const {indexedAttestation, committeeIndices, signatureSets} = await validateGossipAggregateAndProof(
               chain,
-              signedAggregateAndProof
+              signedAggregateAndProof,
+              targetState,
+              true
             );
+            indexedAttestations[i] = indexedAttestation;
+            allCommitteeIndices[i] = committeeIndices;
+            allSignatureSets.push(...signatureSets);
+          })
+        );
+        if (!(await chain.bls.verifySignatureSets(allSignatureSets, {batchable: true}))) {
+          throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+        }
+        // all are validated
+        const targetEpoch = attTarget.epoch;
+        await Promise.all(
+          signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+            chain.seenAggregators.add(targetEpoch, signedAggregateAndProof.message.aggregatorIndex);
 
             metrics?.registerAggregatedAttestation(
               OpSource.api,
               seenTimestampSec,
               signedAggregateAndProof,
-              indexedAttestation
+              indexedAttestations[i]
             );
 
             await Promise.all([
               chain.aggregatedAttestationPool.add(
                 signedAggregateAndProof.message.aggregate,
-                indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[],
-                committeeIndices
+                indexedAttestations[i].attestingIndices.valueOf() as ValidatorIndex[],
+                allCommitteeIndices[i]
               ),
               network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
             ]);
-          } catch (e) {
-            if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
-              logger.debug("Ignoring known signedAggregateAndProof");
-              return; // Ok to submit the same aggregate twice
-            }
-
-            errors.push(e as Error);
-            logger.error(
-              `Error on publishAggregateAndProofs [${i}]`,
-              {
-                slot: signedAggregateAndProof.message.aggregate.data.slot,
-                index: signedAggregateAndProof.message.aggregate.data.index,
-              },
-              e as Error
-            );
-            if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "signedAggregatedAndProof",
-                ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
-                toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
+          })
+        );
+      } catch (e) {
+        await Promise.all(
+          signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
+            try {
+              const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
+                chain,
+                signedAggregateAndProof
               );
-              logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
-            }
-          }
-        })
-      );
 
+              metrics?.registerAggregatedAttestation(
+                OpSource.api,
+                seenTimestampSec,
+                signedAggregateAndProof,
+                indexedAttestation
+              );
+
+              await Promise.all([
+                chain.aggregatedAttestationPool.add(
+                  signedAggregateAndProof.message.aggregate,
+                  indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[],
+                  committeeIndices
+                ),
+                network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
+              ]);
+            } catch (e) {
+              if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
+                logger.debug("Ignoring known signedAggregateAndProof");
+                return; // Ok to submit the same aggregate twice
+              }
+
+              errors.push(e as Error);
+              logger.error(
+                `Error on publishAggregateAndProofs [${i}]`,
+                {
+                  slot: signedAggregateAndProof.message.aggregate.data.slot,
+                  index: signedAggregateAndProof.message.aggregate.data.index,
+                },
+                e as Error
+              );
+              if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
+                const archivedPath = chain.persistInvalidSszObject(
+                  "signedAggregatedAndProof",
+                  ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
+                  toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
+                );
+                logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
+              }
+            }
+          })
+        );
+      }
       if (errors.length > 1) {
         throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
       } else if (errors.length === 1) {
