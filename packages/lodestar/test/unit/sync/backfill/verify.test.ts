@@ -1,4 +1,4 @@
-import {BackfillSyncErrorCode} from "./../../../../src/sync/backfill/errors";
+import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors";
 import {Json} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
@@ -32,14 +32,15 @@ describe("backfill sync - verify block sequence", function () {
 
   it("should fail with sequence not linear", function () {
     const blocks = getBlocks();
-    expect(() =>
-      verifyBlockSequence(
+    expect(() => {
+      const {error} = verifyBlockSequence(
         beaconConfig,
         // remove middle block
         blocks.filter((b) => b.message.slot !== 2).slice(0, blocks.length - 2),
         blocks[blocks.length - 1].message.parentRoot
-      )
-    ).to.throw(BackfillSyncErrorCode.NOT_LINEAR);
+      );
+      if (error) throw new BackfillSyncError({code: error});
+    }).to.throw(BackfillSyncErrorCode.NOT_LINEAR);
   });
 
   //first 4 mainnet blocks

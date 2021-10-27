@@ -4,7 +4,7 @@ import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Root, Slot, allForks} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List, toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain";
@@ -65,8 +65,11 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
   private opts: BackfillSyncOpts;
-  /** last trusted block */
+
+  // At any given point, we should have either the anchorBlock, or anchorBlockRoot, the reversed head of the backfill sync, from where we need to backfill
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
+  private anchorBlockRoot?: Root | null = null;
+
   private processor = new ItTrigger();
   private peers = new PeerSet();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
@@ -114,24 +117,19 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
   /** Returns oldestSlotSynced */
   private async sync(): Promise<Slot> {
-    const {root, epoch} = this.chain.forkChoice.getFinalizedCheckpoint();
-    if (epoch <= 0) {
-      this.logger.debug("BackfillSync no necessary on genesis");
-      return 0;
-    }
-
-    this.logger.debug("BackfillSync initializing from cp", {epoch, root: toHexString(root)});
-
     //Initial check, could be issue if somebody stops and starts node later from WSS
     // as it will already contain genesis block but not blkocks in between
+
+    const {root, epoch} = this.chain.forkChoice.getFinalizedCheckpoint();
     const oldestBlock = await this.db.blockArchive.firstValue();
-    if (oldestBlock?.message.slot === GENESIS_SLOT) {
-      this.logger.debug("BackfillSync already synced to genesis block");
+
+    if (epoch <= 0 || oldestBlock?.message.slot === GENESIS_SLOT) {
+      this.logger.info("BackfillSync - already backfilled to genesis, exiting");
       return GENESIS_SLOT;
     }
+    this.logger.info("BackfillSync initializing from cp", {epoch, root: toHexString(root)});
 
     this.anchorBlock = oldestBlock ?? null;
-
     if (!this.anchorBlock) {
       // Attempt to find the anchor block in the DB
       try {
@@ -147,31 +145,39 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     for await (const _ of this.processor) {
       const peer = shuffleOne(this.peers.values());
       if (!peer) {
-        this.logger.debug("BackfillSync no peers yet");
+        this.logger.info("BackfillSync no peers yet");
         continue;
       }
 
       try {
-        // First get anchor block
         if (!this.anchorBlock) {
-          const anchorBlockRoot = this.chain.forkChoice.getFinalizedCheckpoint().root;
-          this.anchorBlock = await this.syncBlockByRoot(peer, anchorBlockRoot);
-          if (this.anchorBlock) {
-            this.logger.debug("BackfillSync fetched anchorBlock", {root: toHexString(anchorBlockRoot)});
-          } else {
-            // If syncBlockByRoot could not find anchorBlock, loop and try again with another peer
-            continue;
+          // In case of irrecoverable error, both anchorBlock and anchorBlockRoot could be nullified in order to start Backfill sync afresh!
+          if (!this.anchorBlockRoot) {
+            const anchorCp = this.chain.forkChoice.getFinalizedCheckpoint();
+            this.anchorBlockRoot = anchorCp.root;
+            this.logger.warn("BackfillSync - No anchor root, BackfillSync reset from chain's finalized checkpoint", {
+              root: toHexString(anchorCp.root),
+              epoch: anchorCp.epoch,
+            });
           }
+
+          this.anchorBlock = await this.syncBlockByRoot(peer, this.anchorBlockRoot);
+          if (!this.anchorBlock) continue; // Try from another peer
+          this.logger.info("BackfillSync - fetched new anchorBlock", {
+            root: toHexString(this.anchorBlockRoot),
+            slot: this.anchorBlock.message.slot,
+          });
         }
 
         //synced to genesis
         if (this.anchorBlock.message.slot === GENESIS_SLOT) {
+          this.logger.info("BackfillSync - successfully synced to genesis, exiting");
           return GENESIS_SLOT;
         }
 
         const toSlot = this.anchorBlock.message.slot;
         const fromSlot = Math.max(toSlot - this.opts.batchSize, GENESIS_SLOT);
-        this.logger.debug("BackfillSync syncing range", {fromSlot, toSlot});
+        this.logger.warn("BackfillSync syncing", {fromSlot, toSlot});
         await this.syncRange(peer, fromSlot, toSlot, this.anchorBlock.message.parentRoot);
       } catch (e) {
         this.metrics?.backfillSync.errors.inc();
@@ -179,9 +185,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         if (e instanceof BackfillSyncError) {
           switch (e.type.code) {
+            case BackfillSyncErrorCode.NOT_ANCHORED:
+              // Lets try to just get the parent of this anchorBlock as it might be couple of skipped steps behind
+              this.anchorBlockRoot = this.anchorBlock?.message.parentRoot;
+              this.anchorBlock = null;
+            /* falls through */
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
             case BackfillSyncErrorCode.NOT_LINEAR:
-            case BackfillSyncErrorCode.NOT_ANCHORED:
               this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
           }
         }
@@ -189,14 +199,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.processor.trigger();
       }
     }
-
     throw new ErrorAborted("BackfillSync");
   }
 
   private addPeer = (peerId: PeerId, peerStatus: phase0.Status): void => {
     const requiredSlot =
       this.anchorBlock?.message.slot ?? computeStartSlotAtEpoch(this.chain.forkChoice.getFinalizedCheckpoint().epoch);
-    this.logger.debug("BackfillSync add peer", {peerhead: peerStatus.headSlot, requiredSlot});
+    this.logger.info("BackfillSync add peer", {peerhead: peerStatus.headSlot, requiredSlot});
     if (peerStatus.headSlot >= requiredSlot) {
       this.peers.add(peerId);
       this.processor.trigger();
@@ -225,15 +234,26 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       verifyBlockSequence;
     }
 
-    verifyBlockSequence(this.config, blocks, anchorRoot);
-    await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), blocks);
+    const {nextAnchor, verifiedBlocks, error} = verifyBlockSequence(this.config, blocks, anchorRoot);
+    console.log("nextAnchor ", ssz.Root.toJson(nextAnchor), "error", error);
+    this.logger.warn(`BackfillSync - original length: ${blocks.length}  verified block seq ${verifiedBlocks.length}`);
 
-    await this.db.blockArchive.batchAdd(blocks);
-    this.metrics?.backfillSync.totalBlocks.inc(blocks.length);
-    // first block is oldest
+    // If any of the block's proposer signature fail, we can't trust this peer at all
+    if (verifiedBlocks.length > 0)
+      await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), verifiedBlocks);
+
+    await this.db.blockArchive.batchAdd(verifiedBlocks);
+    this.metrics?.backfillSync.totalBlocks.inc(verifiedBlocks.length);
+    // If no error, everything went good, linear chain, first block is oldest
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (blocks[0]) {
+    if (error === undefined && blocks[0]) {
       this.anchorBlock = blocks[0];
+      this.anchorBlockRoot = null;
+    } else {
+      // The next previous block be many skipped steps behind so lets set the anchorBlockRoot for main process for it to fetch it singleton
+      this.anchorBlock = null;
+      this.anchorBlockRoot = nextAnchor;
     }
+    if (error) throw new BackfillSyncError({code: error});
   }
 }
