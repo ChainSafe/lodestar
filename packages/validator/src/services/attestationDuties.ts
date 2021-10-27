@@ -50,11 +50,11 @@ export class AttestationDutiesService {
   getDutiesAtSlot(slot: Slot): AttDutyAndProof[] {
     const epoch = computeEpochAtSlot(slot);
     const duties: AttDutyAndProof[] = [];
-
     const epochDuties = this.dutiesByIndexByEpoch.get(epoch);
     if (epochDuties === undefined) {
       return duties;
     }
+
     for (const validatorDuty of epochDuties.dutiesByIndex.values()) {
       if (validatorDuty.duty.slot === slot) {
         duties.push(validatorDuty);
@@ -73,8 +73,10 @@ export class AttestationDutiesService {
     if ((slot + 1) % SLOTS_PER_EPOCH !== 0) {
       return;
     }
+
     // during the 1 / 3 of epoch, last block of epoch may come
     await sleep(this.clock.msToSlotFraction(slot, 1 / 3));
+
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
     const pendingDependentRoot = this.pendingDependentRootByEpoch.get(nextEpoch);
@@ -190,6 +192,7 @@ export class AttestationDutiesService {
     const prior = this.dutiesByIndexByEpoch.get(epoch);
     const priorDependentRoot = prior?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
+
     if (!prior || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
@@ -198,6 +201,7 @@ export class AttestationDutiesService {
       }
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
     }
+
     if (prior && dependentRootChanged) {
       this.logger.warn("Attester duties re-org. This may happen from time to time", {
         priorDependentRoot: priorDependentRoot,
@@ -281,7 +285,9 @@ export class AttestationDutiesService {
       oldDependentRoot,
       newDependentRoot,
     };
+
     this.logger.debug("Redownload attester duties", logContext);
+
     await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())
       .then(() => {
         this.pendingDependentRootByEpoch.delete(dutyEpoch);

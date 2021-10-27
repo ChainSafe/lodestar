@@ -35,10 +35,12 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       if (!state) {
         throw Error("cannot get state for head " + head.stateRoot);
       }
+
       const currentEpoch = state.currentShuffling.epoch;
       const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
         toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
       );
+
       return [
         {
           block: head.blockRoot,

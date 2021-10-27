@@ -48,6 +48,7 @@ export class ChainHeaderTracker {
       const {slot, block, previousDutyDependentRoot, currentDutyDependentRoot} = message;
       this.headBlockSlot = slot;
       this.headBlockRoot = fromHexString(block);
+
       for (const fn of this.fns) {
         fn({
           slot: this.headBlockSlot,
@@ -56,6 +57,7 @@ export class ChainHeaderTracker {
           currentDutyDependentRoot: currentDutyDependentRoot,
         }).catch((e) => this.logger.error("Error calling head event handler", e));
       }
+
       this.logger.verbose("Found new chain head", {
         slot: slot,
         head: block,
