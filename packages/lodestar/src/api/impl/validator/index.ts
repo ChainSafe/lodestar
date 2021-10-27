@@ -399,6 +399,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       if (signedAggregateAndProofs.length === 0) {
         return;
       }
+
       // we want all attestations to have same target so that we can validate in batch
       const attTarget = signedAggregateAndProofs[0].message.aggregate.data.target;
       for (let i = 1; i < signedAggregateAndProofs.length; i++) {
@@ -406,6 +407,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           throw Error("Target checkpoints are not unique");
         }
       }
+
       try {
         const targetState = await chain.regen.getCheckpointState(
           attTarget,
@@ -414,6 +416,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         const indexedAttestations: phase0.IndexedAttestation[] = [];
         const allCommitteeIndices: ValidatorIndex[][] = [];
         const allSignatureSets: ISignatureSet[] = [];
+
         await Promise.all(
           signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
             const {indexedAttestation, committeeIndices, signatureSets} = await validateGossipAggregateAndProof(
@@ -427,9 +430,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             allSignatureSets.push(...signatureSets);
           })
         );
+
         if (!(await chain.bls.verifySignatureSets(allSignatureSets, {batchable: true}))) {
           throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
         }
+
         // all are validated
         const targetEpoch = attTarget.epoch;
         await Promise.all(
@@ -539,11 +544,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             allSignatureSets.push(...signatureSets);
           })
         );
+
         if (!(await chain.bls.verifySignatureSets(allSignatureSets, {batchable: true}))) {
           throw new SyncCommitteeError(GossipAction.REJECT, {
             code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
           });
         }
+
         // all are validated
         await Promise.all(
           contributionAndProofs.map(async (contributionAndProof) => {
@@ -564,6 +571,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               await network.gossip.publishContributionAndProof(contributionAndProof);
             } catch (e) {
               errors.push(e as Error);
+
               logger.error(
                 `Error on publishContributionAndProofs [${i}]`,
                 {
@@ -572,6 +580,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
                 },
                 e as Error
               );
+
               if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
                 const archivedPath = chain.persistInvalidSszObject(
                   "contributionAndProof",

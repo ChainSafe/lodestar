@@ -67,6 +67,7 @@ export function getBeaconPoolApi({
       if (attestations.length === 0) {
         return;
       }
+
       // we want all attestations to have same target so that we can validate in batch
       const attTarget = attestations[0].data.target;
       for (let i = 1; i < attestations.length; i++) {
@@ -74,10 +75,12 @@ export function getBeaconPoolApi({
           throw Error("Target checkpoints are not unique");
         }
       }
+
       try {
         const targetState = await chain.regen.getCheckpointState(attTarget, RegenCaller.validateGossipAttestation);
         const attestationsBySubnet = new Map<number, phase0.Attestation[]>();
         const indexedAttestations: phase0.IndexedAttestation[] = [];
+
         await Promise.all(
           attestations.map(async (attestation) => {
             const {indexedAttestation, subnet} = await validateGossipAttestation(
@@ -96,12 +99,14 @@ export function getBeaconPoolApi({
             attestationsGroup.push(attestation);
           })
         );
+
         const signatureSets = indexedAttestations.map((indexedAttestation) =>
           allForks.getIndexedAttestationSignatureSet(targetState, indexedAttestation)
         );
         if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
           throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
         }
+
         // all are validated
         const targetEpoch = attTarget.epoch;
         for (const indexedAttestation of indexedAttestations) {
@@ -204,6 +209,7 @@ export function getBeaconPoolApi({
             code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
           });
         }
+
         // all are validated
         await Promise.all(
           syncCommitteeMessages.map(async (message) => {
