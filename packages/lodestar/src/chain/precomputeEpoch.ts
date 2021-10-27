@@ -40,9 +40,11 @@ export class PrecomputeEpochScheduler {
     if ((clockSlot + 1) % SLOTS_PER_EPOCH !== 0) {
       return;
     }
+
     // Precalculate epoch transition 2/3 of the way through the last slot of the epoch
     const msToPrecalculateTime = (this.config.SECONDS_PER_SLOT * 1000 * 2) / 3;
     await sleep(msToPrecalculateTime, this.signal);
+
     const {slot: headSlot, blockRoot} = this.chain.forkChoice.getHead();
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // node may be syncing or out of synced
@@ -50,6 +52,7 @@ export class PrecomputeEpochScheduler {
       this.logger.debug("No need to precompute epoch transition", {nextEpoch, headSlot, slot: clockSlot});
       return;
     }
+
     // we want to make sure headSlot === clockSlot to do early epoch transition
     const nextSlot = clockSlot + 1;
     this.logger.verbose("Precompute epoch transition", {nextEpoch, headSlot, nextSlot});
