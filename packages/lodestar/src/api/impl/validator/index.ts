@@ -454,6 +454,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           })
         );
       } catch (e) {
+        // if one failed validation, this is slower as we verify signatures one by one
         await Promise.all(
           signedAggregateAndProofs.map(async (signedAggregateAndProof, i) => {
             try {
@@ -554,6 +555,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           })
         );
       } catch (e) {
+        // if one failed validation, this is slower as we verify signatures one by one
         await Promise.all(
           contributionAndProofs.map(async (contributionAndProof, i) => {
             try {

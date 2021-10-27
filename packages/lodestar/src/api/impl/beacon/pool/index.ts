@@ -1,7 +1,7 @@
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
-import {Epoch, ssz} from "@chainsafe/lodestar-types";
-import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, Epoch, ssz} from "@chainsafe/lodestar-types";
+import {allForks, CachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
@@ -11,8 +11,17 @@ import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCom
 import {ApiModules} from "../../types";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {toHexString} from "@chainsafe/ssz";
-import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
+import {
+  AttestationError,
+  AttestationErrorCode,
+  GossipAction,
+  SyncCommitteeError,
+  SyncCommitteeErrorCode,
+} from "../../../../chain/errors";
 import {RegenCaller} from "../../../../chain/regen";
+import {getSyncCommitteeSignatureSet} from "../../../../chain/validation/signatureSets/syncCommittee";
+import {IBeaconChain} from "../../../../chain";
+import {INetwork} from "../../../../network";
 
 export function getBeaconPoolApi({
   chain,
@@ -174,61 +183,59 @@ export function getBeaconPoolApi({
      *
      * https://github.com/ethereum/eth2.0-APIs/pull/135
      */
-    async submitPoolSyncCommitteeSignatures(signatures) {
+    async submitPoolSyncCommitteeSignatures(syncCommitteeMessages) {
       // Fetch states for all slots of the `signatures`
       const slots = new Set<Epoch>();
-      for (const signature of signatures) {
+      for (const signature of syncCommitteeMessages) {
         slots.add(signature.slot);
       }
 
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
 
-      // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
       const errors: Error[] = [];
-
-      await Promise.all(
-        signatures.map(async (signature, i) => {
-          try {
-            const synCommittee = allForks.getIndexedSyncCommittee(state, signature.slot);
-            const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
-            if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
-              return; // Not a sync committee member
-            }
-
-            // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
-            // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
-            await validateSyncCommitteeSigOnly(chain, state, signature);
-
-            await Promise.all(
-              indexesInCommittee.map(async (indexInCommittee) => {
-                // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
-                const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-                const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-                chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubCommittee);
-                await network.gossip.publishSyncCommitteeSignature(signature, subnet);
-              })
-            );
-          } catch (e) {
-            errors.push(e as Error);
-            logger.error(
-              `Error on submitPoolSyncCommitteeSignatures [${i}]`,
-              {slot: signature.slot, validatorIndex: signature.validatorIndex},
-              e as Error
-            );
-            if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "syncCommittee",
-                ssz.altair.SyncCommitteeMessage.serialize(signature),
-                toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(signature))
+      // do batch verification first
+      try {
+        // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
+        // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
+        const signatureSets = syncCommitteeMessages.map((message) => getSyncCommitteeSignatureSet(state, message));
+        if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
+          throw new SyncCommitteeError(GossipAction.REJECT, {
+            code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+          });
+        }
+        // all are validated
+        await Promise.all(
+          syncCommitteeMessages.map(async (message) => {
+            await processSyncCommitteeMessage(chain, network, state, message, false);
+          })
+        );
+      } catch (e) {
+        // if any sync committee messages failed validation
+        // this is slower as we verify signatures one by one
+        await Promise.all(
+          syncCommitteeMessages.map(async (message, i) => {
+            try {
+              await processSyncCommitteeMessage(chain, network, state, message, true);
+            } catch (e) {
+              errors.push(e as Error);
+              logger.error(
+                `Error on submitPoolSyncCommitteeSignatures [${i}]`,
+                {slot: message.slot, validatorIndex: message.validatorIndex},
+                e as Error
               );
-              logger.debug("The submitted sync committee message was written to", archivedPath);
+              if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
+                const archivedPath = chain.persistInvalidSszObject(
+                  "syncCommittee",
+                  ssz.altair.SyncCommitteeMessage.serialize(message),
+                  toHexString(ssz.altair.SyncCommitteeMessage.hashTreeRoot(message))
+                );
+                logger.debug("The submitted sync committee message was written to", archivedPath);
+              }
             }
-          }
-        })
-      );
+          })
+        );
+      }
 
       if (errors.length > 1) {
         throw Error("Multiple errors on publishAggregateAndProofs\n" + errors.map((e) => e.message).join("\n"));
@@ -237,4 +244,37 @@ export function getBeaconPoolApi({
       }
     },
   };
+}
+
+async function processSyncCommitteeMessage(
+  chain: IBeaconChain,
+  network: INetwork,
+  state: CachedBeaconState<allForks.BeaconState>,
+  message: altair.SyncCommitteeMessage,
+  verifySignature: boolean
+): Promise<void> {
+  // TODO: Cache this value
+  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+
+  const synCommittee = allForks.getIndexedSyncCommittee(state, message.slot);
+  const indexesInCommittee = synCommittee.validatorIndexMap.get(message.validatorIndex);
+  if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
+    return; // Not a sync committee member
+  }
+
+  if (verifySignature) {
+    // Verify signature only, all other data is very likely to be correct, since the `signature` object is created by this node.
+    // Worst case if `signature` is not valid, gossip peers will drop it and slightly downscore us.
+    await validateSyncCommitteeSigOnly(chain, state, message);
+  }
+
+  await Promise.all(
+    indexesInCommittee.map(async (indexInCommittee) => {
+      // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
+      const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
+      const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
+      chain.syncCommitteeMessagePool.add(subnet, message, indexInSubCommittee);
+      await network.gossip.publishSyncCommitteeSignature(message, subnet);
+    })
+  );
 }
