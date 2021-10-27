@@ -189,11 +189,10 @@ export class AttestationDutiesService {
       count: relevantDuties.length,
     });
 
-    const prior = this.dutiesByIndexByEpoch.get(epoch);
-    const priorDependentRoot = prior?.dependentRoot;
+    const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
     const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
-    if (!prior || dependentRootChanged) {
+    if (!priorDependentRoot || dependentRootChanged) {
       const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
       for (const duty of relevantDuties) {
         const dutyAndProof = await this.getDutyAndProof(duty);
@@ -202,7 +201,7 @@ export class AttestationDutiesService {
       this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
     }
 
-    if (prior && dependentRootChanged) {
+    if (priorDependentRoot && dependentRootChanged) {
       this.logger.warn("Attester duties re-org. This may happen from time to time", {
         priorDependentRoot: priorDependentRoot,
         dependentRoot: dependentRoot,
