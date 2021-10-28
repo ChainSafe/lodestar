@@ -518,6 +518,11 @@ export function createLodestarMetrics(
       help: "Number of calls for regen functions",
       labelNames: ["entrypoint", "caller"],
     }),
+    regenFnQueuedTotal: register.gauge<"entrypoint" | "caller">({
+      name: "regen_fn_queued_total",
+      help: "Number of calls queued for regen functions",
+      labelNames: ["entrypoint", "caller"],
+    }),
     regenFnCallDuration: register.histogram<"entrypoint" | "caller">({
       name: "regen_fn_call_duration",
       help: "regen function duration",

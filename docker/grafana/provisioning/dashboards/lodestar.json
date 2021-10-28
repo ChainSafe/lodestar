@@ -9575,10 +9575,11 @@
         "x": 0,
         "y": 19
       },
-      "id": 193,
+      "id": 270,
       "panels": [
         {
           "datasource": null,
+          "description": "",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9589,10 +9590,9 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -9628,31 +9628,15 @@
                 ]
               }
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 21
           },
-          "id": 195,
+          "id": 273,
           "options": {
             "legend": {
               "calcs": [],
@@ -9661,29 +9645,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])) * 0",
+              "expr": "sum by (entrypoint)(12*rate(regen_fn_call_total[$__rate_interval]))",
               "interval": "",
-              "legendFormat": "Total Errors",
+              "legendFormat": "{{entrypoint}}",
               "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0 )",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
             }
           ],
-          "title": "getBlockSlotState Successes vs Errors (stacked)",
+          "title": "Call rate per slot(grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -9698,10 +9671,9 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -9743,9 +9715,9 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 28
+            "y": 21
           },
-          "id": 209,
+          "id": 275,
           "options": {
             "legend": {
               "calcs": [],
@@ -9754,21 +9726,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
+              "expr": "sum by (caller)(12*rate(regen_fn_call_total[$__rate_interval]))",
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "{{caller}}",
               "refId": "A"
             }
           ],
-          "title": "getBlockSlotState jobProcessing computes per slot (stacked)",
+          "title": "Call rate per slot(grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -9783,10 +9752,9 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -9820,33 +9788,18 @@
                     "value": 80
                   }
                 ]
-              }
+              },
+              "unit": "s"
             },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 36
+            "y": 29
           },
-          "id": 196,
+          "id": 277,
           "options": {
             "legend": {
               "calcs": [],
@@ -9855,21 +9808,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) * 0",
+              "expr": "sum by (entrypoint)(delta(regen_fn_call_duration_sum[$__rate_interval]))/sum by (entrypoint)(delta(regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "{{entrypoint}}",
               "refId": "A"
             }
           ],
-          "title": "getBlockSlotState  Errors (stacked)",
+          "title": "Regen job avg time(grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -9883,11 +9833,10 @@
                 "axisLabel": "",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
-                "drawStyle": "points",
+                "drawStyle": "line",
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -9930,9 +9879,9 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 36
+            "y": 29
           },
-          "id": 204,
+          "id": 279,
           "options": {
             "legend": {
               "calcs": [],
@@ -9941,21 +9890,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getBlockSlotState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval])",
+              "expr": "sum by (caller)(delta(regen_fn_call_duration_sum[$__rate_interval]))/sum by (caller)(delta(regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
-              "legendFormat": "From {{caller}}",
+              "legendFormat": "{{caller}}",
               "refId": "A"
             }
           ],
-          "title": "getBlockSlotState jobProcessing avg time (seconds)",
+          "title": "Regen job avg time(grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -9973,7 +9919,6 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -9996,12 +9941,17 @@
               },
               "mappings": [],
               "max": 1,
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
                   }
                 ]
               },
@@ -10011,11 +9961,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 44
+            "y": 37
           },
-          "id": 224,
+          "id": 281,
           "options": {
             "legend": {
               "calcs": [],
@@ -10024,410 +9974,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getBlockSlotState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getBlockSlotState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "",
-              "hide": false,
+              "expr": "sum by (entrypoint) (delta(regen_fn_queued_total[$__rate_interval]))/sum by (entrypoint)(delta(regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
-              "refId": "B"
-            }
-          ],
-          "title": "getBlockSlotState cache hit ratio",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 52
-          },
-          "id": 200,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])) * 0",
-              "interval": "",
-              "legendFormat": "Total Errors",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0 )",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getCheckpointState Successes vs Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 52
-          },
-          "id": 210,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
               "refId": "A"
             }
           ],
-          "title": "getCheckpointState jobProcessing computes per slot (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 60
-          },
-          "id": 202,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]) * 0",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState  Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "points",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 60
-          },
-          "id": 206,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getCheckpointState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getCheckpointState jobProcessing avg time (seconds)",
+          "title": "Cache miss (grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -10445,7 +10003,6 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -10468,12 +10025,17 @@
               },
               "mappings": [],
               "max": 1,
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
                   }
                 ]
               },
@@ -10483,11 +10045,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 68
+            "w": 12,
+            "x": 12,
+            "y": 37
           },
-          "id": 228,
+          "id": 282,
           "options": {
             "legend": {
               "calcs": [],
@@ -10496,410 +10058,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getCheckpointState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getCheckpointState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "",
-              "hide": false,
+              "expr": "sum by (caller) (delta(regen_fn_queued_total[$__rate_interval]))/sum by (caller)(delta(regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
-              "refId": "B"
-            }
-          ],
-          "title": "getCheckpointState cache hit ratio",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 76
-          },
-          "id": 197,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])) * 0",
-              "interval": "",
-              "legendFormat": "Total Errors",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0 )",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getPreState Successes vs Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 76
-          },
-          "id": 211,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
               "refId": "A"
             }
           ],
-          "title": "getPreState jobProcessing computes per slot (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 84
-          },
-          "id": 198,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getPreState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]) * 0",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getPreState  Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "points",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 84
-          },
-          "id": 205,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getPreState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getPreState jobProcessing avg time (seconds)",
+          "title": "Cache miss(grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -10917,7 +10087,6 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -10940,12 +10109,17 @@
               },
               "mappings": [],
               "max": 1,
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
                   }
                 ]
               },
@@ -10955,11 +10129,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
+            "w": 12,
             "x": 0,
-            "y": 92
+            "y": 45
           },
-          "id": 229,
+          "id": 284,
           "options": {
             "legend": {
               "calcs": [],
@@ -10968,410 +10142,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getPreState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getPreState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "",
-              "hide": false,
+              "expr": "sum by (entrypoint)(rate(regen_fn_total_errors[$__rate_interval]))/sum by (entrypoint)(rate(regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
-              "refId": "B"
-            }
-          ],
-          "title": "getPreState cache hit ratio",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 100
-          },
-          "id": 199,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "sum(rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval])) or  sum(rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])) * 0",
-              "interval": "",
-              "legendFormat": "Total Errors",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])-(rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval]) or rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]) * 0 )",
-              "hide": false,
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "B"
-            }
-          ],
-          "title": "getState Successes vs Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 100
-          },
-          "id": 212,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "12*rate(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
               "refId": "A"
             }
           ],
-          "title": "getState jobProcessing computes per slot (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              }
-            },
-            "overrides": [
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Total Errors"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "dark-red",
-                      "mode": "fixed"
-                    }
-                  }
-                ]
-              }
-            ]
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 108
-          },
-          "id": 201,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "rate(regen_fn_total_errors{entrypoint=\"getState\"}[$__rate_interval]) or  rate(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]) * 0",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getState  Errors (stacked)",
-          "type": "timeseries"
-        },
-        {
-          "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "points",
-                "fillOpacity": 0,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "graph": false,
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "lineInterpolation": "linear",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "auto",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "mappings": [],
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "s"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 12,
-            "y": 108
-          },
-          "id": 207,
-          "options": {
-            "legend": {
-              "calcs": [],
-              "displayMode": "list",
-              "placement": "bottom"
-            },
-            "tooltip": {
-              "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
-            }
-          },
-          "targets": [
-            {
-              "exemplar": false,
-              "expr": "delta(regen_fn_call_duration_sum{entrypoint=\"getState\"}[$__rate_interval])/delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval])",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            }
-          ],
-          "title": "getState jobProcessing avg time (seconds)",
+          "title": "Error rate(grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -11389,7 +10171,6 @@
                 "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
@@ -11412,12 +10193,17 @@
               },
               "mappings": [],
               "max": 1,
+              "min": 0,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
                   {
                     "color": "green",
                     "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
                   }
                 ]
               },
@@ -11427,11 +10213,11 @@
           },
           "gridPos": {
             "h": 8,
-            "w": 24,
-            "x": 0,
-            "y": 116
+            "w": 12,
+            "x": 12,
+            "y": 45
           },
-          "id": 230,
+          "id": 285,
           "options": {
             "legend": {
               "calcs": [],
@@ -11440,29 +10226,18 @@
             },
             "tooltip": {
               "mode": "single"
-            },
-            "tooltipOptions": {
-              "mode": "single"
             }
           },
           "targets": [
             {
               "exemplar": false,
-              "expr": "(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])-(delta(regen_fn_call_duration_count{entrypoint=\"getState\"}[$__rate_interval]) or delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval])*0))/(delta(regen_fn_call_total{entrypoint=\"getState\"}[$__rate_interval]))",
-              "interval": "",
-              "legendFormat": "From {{caller}}",
-              "refId": "A"
-            },
-            {
-              "exemplar": false,
-              "expr": "",
-              "hide": false,
+              "expr": "sum by (caller)(rate(regen_fn_total_errors[$__rate_interval]))/sum by (caller)(rate(regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
-              "refId": "B"
+              "refId": "A"
             }
           ],
-          "title": "getState cache hit ratio",
+          "title": "Error rate(grouped by caller)",
           "type": "timeseries"
         }
       ],
