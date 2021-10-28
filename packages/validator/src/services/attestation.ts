@@ -9,7 +9,8 @@ import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
 import {toHexString} from "@chainsafe/ssz";
-import {ChainHeaderTracker} from "./chainHeaderTracker";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
+import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -22,6 +23,7 @@ export class AttestationService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker
   ) {
@@ -42,8 +44,10 @@ export class AttestationService {
     // Fetch info first so a potential delay is absorved by the sleep() below
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
 
-    // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
-    await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
+    // A validator should create and broadcast the attestation to the associated attestation subnet when either
+    // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
+    // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
+    await Promise.race([sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal), this.waitForBlockSlot(slot)]);
 
     // await for all so if the Beacon node is overloaded it auto-throttles
     // TODO: This approach is convervative to reduce the node's load, review
@@ -56,6 +60,24 @@ export class AttestationService {
       })
     );
   };
+
+  private waitForBlockSlot(slot: Slot): Promise<void> {
+    let headListener: (head: HeadEventData) => void;
+
+    const onDone = (): void => {
+      this.emitter.off(ValidatorEvent.chainHead, headListener);
+    };
+
+    return new Promise((resolve) => {
+      headListener = (head: HeadEventData): void => {
+        if (head.slot >= slot) {
+          onDone();
+          resolve();
+        }
+      };
+      this.emitter.on(ValidatorEvent.chainHead, headListener);
+    });
+  }
 
   private async publishAttestationsAndAggregates(
     slot: Slot,

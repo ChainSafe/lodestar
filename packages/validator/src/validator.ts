@@ -19,6 +19,7 @@ import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
+import {ValidatorEventEmitter} from "./services/emitter";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -48,6 +49,7 @@ export class Validator {
   private readonly api: Api;
   private readonly secretKeys: SecretKey[];
   private readonly clock: IClock;
+  private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
@@ -68,10 +70,11 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
-    this.chainHeaderTracker = new ChainHeaderTracker(logger, api);
+    this.emitter = new ValidatorEventEmitter();
+    this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
     new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
-    new AttestationService(loggerVc, api, clock, validatorStore, indicesService, this.chainHeaderTracker);
+    new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
     this.config = config;
