@@ -1,8 +1,11 @@
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getBlockRootAtSlot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiModules} from "../types";
 import {ChainEvent, IChainEvents} from "../../../chain";
 import {routes} from "@chainsafe/lodestar-api";
-import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {ZERO_HASH} from "../../../constants";
 import {ApiError} from "../errors";
 import {toHexString} from "@chainsafe/ssz";
 
@@ -19,8 +22,6 @@ const chainEventMap = {
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
-  const ZERO_HASH_HEX = toHexString(ZERO_HASH);
-
   /**
    * Mapping to convert internal `ChainEvents` payload to the API spec events data
    */
@@ -29,17 +30,28 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       ...args: Parameters<IChainEvents[typeof chainEventMap[K]]>
     ) => routes.events.EventData[K][];
   } = {
-    [routes.events.EventType.head]: (head) => [
-      {
-        block: head.blockRoot,
-        epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
-        slot: head.slot,
-        state: head.stateRoot,
-        // Todo implement
-        previousDutyDependentRoot: ZERO_HASH_HEX,
-        currentDutyDependentRoot: ZERO_HASH_HEX,
-      },
-    ],
+    [routes.events.EventType.head]: (head) => {
+      const state = chain.stateCache.get(head.stateRoot);
+      if (!state) {
+        throw Error("cannot get state for head " + head.stateRoot);
+      }
+
+      const currentEpoch = state.currentShuffling.epoch;
+      const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
+        toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
+      );
+
+      return [
+        {
+          block: head.blockRoot,
+          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
+          slot: head.slot,
+          state: head.stateRoot,
+          previousDutyDependentRoot,
+          currentDutyDependentRoot,
+        },
+      ];
+    },
     [routes.events.EventType.block]: (block) => [
       {
         block: toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),

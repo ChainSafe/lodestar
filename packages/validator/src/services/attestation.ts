@@ -9,6 +9,7 @@ import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
 import {toHexString} from "@chainsafe/ssz";
+import {ChainHeaderTracker} from "./chainHeaderTracker";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -21,9 +22,17 @@ export class AttestationService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    indicesService: IndicesService
+    indicesService: IndicesService,
+    chainHeadTracker: ChainHeaderTracker
   ) {
-    this.dutiesService = new AttestationDutiesService(logger, api, clock, validatorStore, indicesService);
+    this.dutiesService = new AttestationDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      chainHeadTracker
+    );
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);

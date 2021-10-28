@@ -8,15 +8,19 @@ import {getEventsApi} from "../../../../../src/api/impl/events";
 import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from "../../../../utils/block";
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateCachedState} from "../../../../utils/state";
+import {StateContextCache} from "../../../../../src/chain/stateCache";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
     let chainStub: SinonStubbedInstance<IBeaconChain>;
+    let stateCacheStub: SinonStubbedInstance<StateContextCache>;
     let chainEventEmmitter: ChainEventEmitter;
     let api: ReturnType<typeof getEventsApi>;
 
     beforeEach(function () {
       chainStub = sinon.createStubInstance(BeaconChain);
+      stateCacheStub = sinon.createStubInstance(StateContextCache);
+      chainStub.stateCache = (stateCacheStub as unknown) as StateContextCache;
       chainEventEmmitter = new ChainEventEmitter();
       chainStub.emitter = chainEventEmmitter;
       api = getEventsApi({config, chain: chainStub});
@@ -38,6 +42,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.head]);
 
       const headBlock = generateProtoBlock();
+      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
@@ -50,6 +55,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.head]);
 
       const headBlock = generateProtoBlock();
+      stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
 
       expect(events).to.have.length(1, "Wrong num of received events");

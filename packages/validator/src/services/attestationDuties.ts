@@ -1,10 +1,13 @@
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
-import {BLSSignature, Epoch, Root, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -17,38 +20,72 @@ export type AttDutyAndProof = {
 };
 
 // To assist with readability
-type AttDutyAtEpoch = {dependentRoot: Root; dutyAndProof: AttDutyAndProof};
+type AttDutiesAtEpoch = {dependentRoot: RootHex; dutiesByIndex: Map<ValidatorIndex, AttDutyAndProof>};
 
 export class AttestationDutiesService {
   /** Maps a validator public key to their duties for each epoch */
-  private readonly dutiesByEpochByIndex = new Map<ValidatorIndex, Map<Epoch, AttDutyAtEpoch>>();
+  private readonly dutiesByIndexByEpoch = new Map<Epoch, AttDutiesAtEpoch>();
+  /**
+   * We may receive new dependentRoot of an epoch but it's not the last slot of epoch
+   * so we have to wait for getting close to the next epoch to redownload new attesterDuties.
+   */
+  private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
 
   constructor(
     private readonly logger: ILoggerVc,
     private readonly api: Api,
-    clock: IClock,
+    private clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService
+    private readonly indicesService: IndicesService,
+    chainHeadTracker: ChainHeaderTracker
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+    clock.runEverySlot(this.prepareForNextEpoch);
+    chainHeadTracker.runOnNewHead(this.onNewHead);
   }
 
   /** Returns all `ValidatorDuty` for the given `slot` */
   getDutiesAtSlot(slot: Slot): AttDutyAndProof[] {
     const epoch = computeEpochAtSlot(slot);
     const duties: AttDutyAndProof[] = [];
+    const epochDuties = this.dutiesByIndexByEpoch.get(epoch);
+    if (epochDuties === undefined) {
+      return duties;
+    }
 
-    for (const dutiesByEpoch of this.dutiesByEpochByIndex.values()) {
-      const dutyAtEpoch = dutiesByEpoch.get(epoch);
-      if (dutyAtEpoch && dutyAtEpoch.dutyAndProof.duty.slot === slot) {
-        duties.push(dutyAtEpoch.dutyAndProof);
+    for (const validatorDuty of epochDuties.dutiesByIndex.values()) {
+      if (validatorDuty.duty.slot === slot) {
+        duties.push(validatorDuty);
       }
     }
 
     return duties;
   }
+
+  /**
+   * If a reorg dependent root comes at a slot other than last slot of epoch
+   * just update this.pendingDependentRootByEpoch() and process here
+   */
+  private prepareForNextEpoch = async (slot: Slot): Promise<void> => {
+    // only interested in last slot of epoch
+    if ((slot + 1) % SLOTS_PER_EPOCH !== 0) {
+      return;
+    }
+
+    // during the 1 / 3 of epoch, last block of epoch may come
+    await sleep(this.clock.msToSlotFraction(slot, 1 / 3));
+
+    const nextEpoch = computeEpochAtSlot(slot) + 1;
+    const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
+    const pendingDependentRoot = this.pendingDependentRootByEpoch.get(nextEpoch);
+    if (dependentRoot && pendingDependentRoot && dependentRoot !== pendingDependentRoot) {
+      // this happens when pendingDependentRoot is not the last block of an epoch
+      this.logger.info("Redownload attester duties when it's close to epoch boundary", {nextEpoch, slot});
+      await this.handleAttesterDutiesReorg(nextEpoch, slot, dependentRoot, pendingDependentRoot);
+    }
+  };
 
   private runDutiesTasks = async (epoch: Epoch): Promise<void> => {
     await Promise.all([
@@ -104,10 +141,9 @@ export class AttestationDutiesService {
     // if the BN goes offline or we swap to a different one.
     const indexSet = new Set(indexArr);
     for (const epoch of [currentEpoch, nextEpoch]) {
-      for (const dutiesByEpoch of this.dutiesByEpochByIndex.values()) {
-        const dutyAtEpoch = dutiesByEpoch.get(epoch);
-        if (dutyAtEpoch) {
-          const {duty, selectionProof} = dutyAtEpoch.dutyAndProof;
+      const epochDuties = this.dutiesByIndexByEpoch.get(epoch)?.dutiesByIndex;
+      if (epochDuties) {
+        for (const {duty, selectionProof} of epochDuties.values()) {
           if (indexSet.has(duty.validatorIndex)) {
             beaconCommitteeSubscriptions.push({
               validatorIndex: duty.validatorIndex,
@@ -139,50 +175,125 @@ export class AttestationDutiesService {
       return;
     }
 
-    // TODO: Implement dependentRoot logic
     const attesterDuties = await this.api.validator.getAttesterDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain attester duty");
     });
-    const dependentRoot = attesterDuties.dependentRoot;
+    const dependentRoot = toHexString(attesterDuties.dependentRoot);
     const relevantDuties = attesterDuties.data.filter((duty) =>
       this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
     );
 
     this.logger.debug("Downloaded attester duties", {
       epoch,
-      dependentRoot: toHexString(dependentRoot),
+      dependentRoot,
       count: relevantDuties.length,
     });
 
-    let alreadyWarnedReorg = false;
-    for (const duty of relevantDuties) {
-      let dutiesByEpoch = this.dutiesByEpochByIndex.get(duty.validatorIndex);
-      if (!dutiesByEpoch) {
-        dutiesByEpoch = new Map<Epoch, AttDutyAtEpoch>();
-        this.dutiesByEpochByIndex.set(duty.validatorIndex, dutiesByEpoch);
-      }
+    const priorDependentRoot = this.dutiesByIndexByEpoch.get(epoch)?.dependentRoot;
+    const dependentRootChanged = priorDependentRoot !== undefined && priorDependentRoot !== dependentRoot;
 
-      // Only update the duties if either is true:
-      //
-      // - There were no known duties for this epoch.
-      // - The dependent root has changed, signalling a re-org.
-      const prior = dutiesByEpoch.get(epoch);
-      const dependentRootChanged = prior && !ssz.Root.equals(prior.dependentRoot, dependentRoot);
-
-      if (!prior || dependentRootChanged) {
+    if (!priorDependentRoot || dependentRootChanged) {
+      const dutiesByIndex = new Map<ValidatorIndex, AttDutyAndProof>();
+      for (const duty of relevantDuties) {
         const dutyAndProof = await this.getDutyAndProof(duty);
+        dutiesByIndex.set(duty.validatorIndex, dutyAndProof);
+      }
+      this.dutiesByIndexByEpoch.set(epoch, {dependentRoot, dutiesByIndex});
+    }
 
-        // Using `alreadyWarnedReorg` avoids excessive logs.
-        dutiesByEpoch.set(epoch, {dependentRoot, dutyAndProof});
-        if (prior && dependentRootChanged && !alreadyWarnedReorg) {
-          alreadyWarnedReorg = true;
-          this.logger.warn("Attester duties re-org. This may happen from time to time", {
-            priorDependentRoot: toHexString(prior.dependentRoot),
-            dependentRoot: toHexString(dependentRoot),
-          });
-        }
+    if (priorDependentRoot && dependentRootChanged) {
+      this.logger.warn("Attester duties re-org. This may happen from time to time", {
+        priorDependentRoot: priorDependentRoot,
+        dependentRoot: dependentRoot,
+        epoch,
+      });
+    }
+  }
+
+  /**
+   * attester duties may be reorged due to 2 scenarios:
+   *   1. node is syncing (for nextEpoch duties)
+   *   2. node is reorged
+   * previousDutyDependentRoot = get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch - 1) - 1)
+   *   => dependent root of current epoch
+   * currentDutyDependentRoot = get_block_root_at_slot(state, compute_start_slot_at_epoch(epoch) - 1)
+   *   => dependent root of next epoch
+   */
+  private onNewHead = async ({
+    slot,
+    head,
+    previousDutyDependentRoot,
+    currentDutyDependentRoot,
+  }: HeadEventData): Promise<void> => {
+    const currentEpoch = computeEpochAtSlot(slot);
+    const nextEpoch = currentEpoch + 1;
+    const nextTwoEpoch = currentEpoch + 2;
+    const nextTwoEpochDependentRoot = this.dutiesByIndexByEpoch.get(currentEpoch + 2)?.dependentRoot;
+
+    // this may happen ONLY when node is syncing
+    // it's safe to get attester duties at epoch n + 1 thanks to nextEpochShuffling cache
+    // but it's an issue to request attester duties for epoch n + 2 as dependent root keeps changing while node is syncing
+    // see https://github.com/ChainSafe/lodestar/issues/3211
+    if (nextTwoEpochDependentRoot && head !== nextTwoEpochDependentRoot) {
+      // last slot of epoch, we're sure it's the correct dependent root
+      if ((slot + 1) % SLOTS_PER_EPOCH === 0) {
+        this.logger.info("Next 2 epoch attester duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        await this.handleAttesterDutiesReorg(nextTwoEpoch, slot, nextTwoEpochDependentRoot, head);
+      } else {
+        this.logger.debug("Potential next 2 epoch attester duties reorg", {slot, dutyEpoch: nextTwoEpoch, head});
+        // node may send adjacent onHead events while it's syncing
+        // wait for getting close to next epoch to make sure the dependRoot
+        this.pendingDependentRootByEpoch.set(nextTwoEpoch, head);
       }
     }
+
+    // dependent root for next epoch changed
+    const nextEpochDependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
+    if (nextEpochDependentRoot && currentDutyDependentRoot !== nextEpochDependentRoot) {
+      this.logger.warn("Potential next epoch attester duties reorg", {
+        slot,
+        dutyEpoch: nextEpoch,
+        priorDependentRoot: nextEpochDependentRoot,
+        newDependentRoot: currentDutyDependentRoot,
+      });
+      await this.handleAttesterDutiesReorg(nextEpoch, slot, nextEpochDependentRoot, currentDutyDependentRoot);
+    }
+
+    // dependent root for current epoch changed
+    const currentEpochDependentRoot = this.dutiesByIndexByEpoch.get(currentEpoch)?.dependentRoot;
+    if (currentEpochDependentRoot && currentEpochDependentRoot !== previousDutyDependentRoot) {
+      this.logger.warn("Potential current epoch attester duties reorg", {
+        slot,
+        dutyEpoch: currentEpoch,
+        priorDependentRoot: currentEpochDependentRoot,
+        newDependentRoot: previousDutyDependentRoot,
+      });
+      await this.handleAttesterDutiesReorg(currentEpoch, slot, currentEpochDependentRoot, previousDutyDependentRoot);
+    }
+  };
+
+  private async handleAttesterDutiesReorg(
+    dutyEpoch: Epoch,
+    slot: Slot,
+    oldDependentRoot: RootHex,
+    newDependentRoot: RootHex
+  ): Promise<void> {
+    const logContext = {
+      dutyEpoch,
+      slot,
+      oldDependentRoot,
+      newDependentRoot,
+    };
+
+    this.logger.debug("Redownload attester duties", logContext);
+
+    await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())
+      .then(() => {
+        this.pendingDependentRootByEpoch.delete(dutyEpoch);
+      })
+      .catch((e: Error) => {
+        this.logger.error("Failed to redownload attester duties when reorg happens", logContext, e);
+      });
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
@@ -198,10 +309,10 @@ export class AttestationDutiesService {
 
   /** Run once per epoch to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
-    for (const attMap of this.dutiesByEpochByIndex.values()) {
-      for (const epoch of attMap.keys()) {
+    for (const byEpochMap of [this.dutiesByIndexByEpoch, this.pendingDependentRootByEpoch]) {
+      for (const epoch of byEpochMap.keys()) {
         if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
-          attMap.delete(epoch);
+          byEpochMap.delete(epoch);
         }
       }
     }
