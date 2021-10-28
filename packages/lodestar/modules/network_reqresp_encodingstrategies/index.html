@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encodingstrategies/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-7.3.4" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-7.3.5" name="generator"/>
 <title>Network reqresp encodingstrategies - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.db9e7362.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.cdeb8541.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -298,7 +298,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="readencodedpayload">readEncodedPayload<a class="headerlink" href="#readencodedpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readEncodedPayload</strong>‹<strong>T</strong>›(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>, <code>options?</code>: <a href="../../interfaces/network_reqresp_encodingstrategies_sszsnappy.isszsnappyoptions/">ISszSnappyOptions</a>): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6aed7b0/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L17">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/712d09c/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L17">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:17</a></em></p>
 <p>Consumes a stream source to read encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
@@ -335,7 +335,7 @@
 <hr/>
 <h3 id="writeencodedpayload">writeEncodedPayload<a class="headerlink" href="#writeencodedpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeEncodedPayload</strong>‹<strong>T</strong>›(<code>body</code>: T, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6aed7b0/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L38">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/712d09c/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L38">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:38</a></em></p>
 <p>Yields byte chunks for encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
