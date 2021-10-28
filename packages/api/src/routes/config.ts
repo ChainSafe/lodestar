@@ -2,8 +2,8 @@ import {IBeaconPreset, BeaconPreset} from "@chainsafe/lodestar-params";
 import {IChainConfig, ChainConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Number64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
-import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData} from "../utils";
+import {ByteVectorType, ContainerType, Json, Type} from "@chainsafe/ssz";
+import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, TypeJson} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -63,8 +63,15 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return mapValues(routesData, () => reqEmpty);
 }
 
+function withJsonFilled<T>(dataType: Type<T>, fillWith: Json): TypeJson<{data: T}> {
+  return {
+    toJson: ({data}, opts) => ({data: dataType.toJson(data, opts)}),
+    fromJson: ({data}: {data: Json}, opts) => ({data: dataType.fromJson(Object.assign({}, fillWith, data), opts)}),
+  };
+}
+
 /* eslint-disable @typescript-eslint/naming-convention */
-export function getReturnTypes(): ReturnTypes<Api> {
+export function getReturnTypes(config: IChainConfig): ReturnTypes<Api> {
   const DepositContract = new ContainerType<DepositContract>({
     fields: {
       chainId: ssz.Number64,
@@ -80,6 +87,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
   return {
     getDepositContract: ContainerData(DepositContract),
     getForkSchedule: ContainerData(ArrayOf(ssz.phase0.Fork)),
-    getSpec: ContainerData(Spec),
+    getSpec: withJsonFilled(Spec, ChainConfig.toJson(config)),
   };
 }
