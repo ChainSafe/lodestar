@@ -128,10 +128,15 @@ export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJs
       data: getType(version || ForkName.phase0).toJson(data, opts),
       version,
     }),
-    fromJson: ({data, version}: {data: Json; version: string}, opts) => ({
-      data: getType((version as ForkName) || ForkName.phase0).fromJson(data, opts),
-      version: version as ForkName,
-    }),
+    fromJson: ({data, version}: {data: Json; version: string}, opts) => {
+      // Un-safe external data, validate version is known ForkName value
+      if (!ForkName[version as ForkName]) throw Error(`Invalid version ${version}`);
+
+      return {
+        data: getType(version as ForkName).fromJson(data, opts),
+        version: version as ForkName,
+      };
+    },
   };
 }
 
