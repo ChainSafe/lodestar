@@ -501,7 +501,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new AttnetsService</strong>(<code>config</code>: IChainForkConfig, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>gossip</code>: <a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a>, <code>metadata</code>: <a href="../network.metadatacontroller/">MetadataController</a>, <code>logger</code>: ILogger, <code>opts?</code>: <a href="../../modules/network_subnets/#subnetsserviceopts">SubnetsServiceOpts</a>): <em><a href="./">AttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L48">packages/lodestar/src/network/subnets/attnetsService.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L48">packages/lodestar/src/network/subnets/attnetsService.ts:48</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -541,56 +541,56 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-chain"><code>Private</code> <code>Readonly</code> chain<a class="headerlink" href="#private-readonly-chain" title="Permanent link">¶</a></h3>
 <p>• <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L52">packages/lodestar/src/network/subnets/attnetsService.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L52">packages/lodestar/src/network/subnets/attnetsService.ts:52</a></em></p>
 <hr/>
 <h3 id="private-committeesubnets"><code>Private</code> committeeSubnets<a class="headerlink" href="#private-committeesubnets" title="Permanent link">¶</a></h3>
 <p>• <strong>committeeSubnets</strong>: <em><a href="../network_peers_utils.subnetmap/">SubnetMap</a>‹›</em> = new SubnetMap()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L33">packages/lodestar/src/network/subnets/attnetsService.ts:33</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L33">packages/lodestar/src/network/subnets/attnetsService.ts:33</a></em></p>
 <p>Committee subnets - PeerManager must find peers for those</p>
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L51">packages/lodestar/src/network/subnets/attnetsService.ts:51</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L51">packages/lodestar/src/network/subnets/attnetsService.ts:51</a></em></p>
 <hr/>
 <h3 id="private-readonly-gossip"><code>Private</code> <code>Readonly</code> gossip<a class="headerlink" href="#private-readonly-gossip" title="Permanent link">¶</a></h3>
 <p>• <strong>gossip</strong>: <em><a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L53">packages/lodestar/src/network/subnets/attnetsService.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L53">packages/lodestar/src/network/subnets/attnetsService.ts:53</a></em></p>
 <hr/>
 <h3 id="private-knownvalidators"><code>Private</code> knownValidators<a class="headerlink" href="#private-knownvalidators" title="Permanent link">¶</a></h3>
 <p>• <strong>knownValidators</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹number, number›</em> = new Map<number, slot="">()</number,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L48">packages/lodestar/src/network/subnets/attnetsService.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L48">packages/lodestar/src/network/subnets/attnetsService.ts:48</a></em></p>
 <p>A collection of seen validators. These dictate how many random subnets we should be
 subscribed to. As these time out, we unsubscribe from the required random subnets and update our ENR.
 This is a map of validator index and its last active slot.</p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L55">packages/lodestar/src/network/subnets/attnetsService.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L55">packages/lodestar/src/network/subnets/attnetsService.ts:55</a></em></p>
 <hr/>
 <h3 id="private-readonly-metadata"><code>Private</code> <code>Readonly</code> metadata<a class="headerlink" href="#private-readonly-metadata" title="Permanent link">¶</a></h3>
 <p>• <strong>metadata</strong>: <em><a href="../network.metadatacontroller/">MetadataController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L54">packages/lodestar/src/network/subnets/attnetsService.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L54">packages/lodestar/src/network/subnets/attnetsService.ts:54</a></em></p>
 <hr/>
 <h3 id="private-optional-readonly-opts"><code>Private</code> <code>Optional</code> <code>Readonly</code> opts<a class="headerlink" href="#private-optional-readonly-opts" title="Permanent link">¶</a></h3>
 <p>• <strong>opts</strong>? : <em><a href="../../modules/network_subnets/#subnetsserviceopts">SubnetsServiceOpts</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L56">packages/lodestar/src/network/subnets/attnetsService.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L56">packages/lodestar/src/network/subnets/attnetsService.ts:56</a></em></p>
 <hr/>
 <h3 id="private-subscriptionscommittee"><code>Private</code> subscriptionsCommittee<a class="headerlink" href="#private-subscriptionscommittee" title="Permanent link">¶</a></h3>
 <p>• <strong>subscriptionsCommittee</strong>: <em><a href="../network_peers_utils.subnetmap/">SubnetMap</a>‹›</em> = new SubnetMap()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L39">packages/lodestar/src/network/subnets/attnetsService.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L39">packages/lodestar/src/network/subnets/attnetsService.ts:39</a></em></p>
 <p>All currently subscribed short-lived subnets, for attestation aggregation
 This class will tell gossip to subscribe and un-subscribe
 If a value exists for <code>SubscriptionId</code> it means that gossip subscription is active in network.gossip</p>
 <hr/>
 <h3 id="private-subscriptionsrandom"><code>Private</code> subscriptionsRandom<a class="headerlink" href="#private-subscriptionsrandom" title="Permanent link">¶</a></h3>
 <p>• <strong>subscriptionsRandom</strong>: <em><a href="../network_peers_utils.subnetmap/">SubnetMap</a>‹›</em> = new SubnetMap()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L41">packages/lodestar/src/network/subnets/attnetsService.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L41">packages/lodestar/src/network/subnets/attnetsService.ts:41</a></em></p>
 <p>Same as <code>subscriptionsCommittee</code> but for long-lived subnets. May overlap with <code>subscriptionsCommittee</code></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="addcommitteesubscriptions">addCommitteeSubscriptions<a class="headerlink" href="#addcommitteesubscriptions" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addCommitteeSubscriptions</strong>(<code>subscriptions</code>: <a href="../../modules/network_subnets/#committeesubscription">CommitteeSubscription</a>[]): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L81">packages/lodestar/src/network/subnets/attnetsService.ts:81</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L81">packages/lodestar/src/network/subnets/attnetsService.ts:81</a></em></p>
 <p>Called from the API when validator is a part of a committee.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -612,13 +612,13 @@ If a value exists for <code>SubscriptionId</code> it means that gossip subscript
 <h3 id="getactivesubnets">getActiveSubnets<a class="headerlink" href="#getactivesubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getActiveSubnets</strong>(): <em>number[]</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L72">packages/lodestar/src/network/subnets/attnetsService.ts:72</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L72">packages/lodestar/src/network/subnets/attnetsService.ts:72</a></em></p>
 <p>Get all active subnets for the hearbeat.</p>
 <p><strong>Returns:</strong> <em>number[]</em></p>
 <hr/>
 <h3 id="private-onepoch"><code>Private</code> onEpoch<a class="headerlink" href="#private-onepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onEpoch</strong>(<code>epoch</code>: Epoch): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L150">packages/lodestar/src/network/subnets/attnetsService.ts:150</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L150">packages/lodestar/src/network/subnets/attnetsService.ts:150</a></em></p>
 <p>Run per epoch, clean-up operations that are not urgent</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -639,7 +639,7 @@ If a value exists for <code>SubscriptionId</code> it means that gossip subscript
 <hr/>
 <h3 id="private-onslot"><code>Private</code> onSlot<a class="headerlink" href="#private-onslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onSlot</strong>(<code>slot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L139">packages/lodestar/src/network/subnets/attnetsService.ts:139</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L139">packages/lodestar/src/network/subnets/attnetsService.ts:139</a></em></p>
 <p>Run per slot.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -660,7 +660,7 @@ If a value exists for <code>SubscriptionId</code> it means that gossip subscript
 <hr/>
 <h3 id="private-pruneexpiredknownvalidators"><code>Private</code> pruneExpiredKnownValidators<a class="headerlink" href="#private-pruneexpiredknownvalidators" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneExpiredKnownValidators</strong>(<code>currentSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L190">packages/lodestar/src/network/subnets/attnetsService.ts:190</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L190">packages/lodestar/src/network/subnets/attnetsService.ts:190</a></em></p>
 <p>A known validator has not sent a subscription in a while. They are considered offline and the
 beacon node no longer needs to be subscribed to the allocated random subnets.</p>
 <p>We don't keep track of a specific validator to random subnet, rather the ratio of active
@@ -685,7 +685,7 @@ allocated amount of random subnets.</p>
 <hr/>
 <h3 id="private-rebalancerandomsubnets"><code>Private</code> rebalanceRandomSubnets<a class="headerlink" href="#private-rebalancerandomsubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>rebalanceRandomSubnets</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L206">packages/lodestar/src/network/subnets/attnetsService.ts:206</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L206">packages/lodestar/src/network/subnets/attnetsService.ts:206</a></em></p>
 <p>Called when we have new validators or expired validators.
 knownValidators should be updated before this function.</p>
 <p><strong>Returns:</strong> <em>void</em></p>
@@ -693,7 +693,7 @@ knownValidators should be updated before this function.</p>
 <h3 id="shouldprocess">shouldProcess<a class="headerlink" href="#shouldprocess" title="Permanent link">¶</a></h3>
 <p>▸ <strong>shouldProcess</strong>(<code>subnet</code>: number, <code>slot</code>: Slot): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L114">packages/lodestar/src/network/subnets/attnetsService.ts:114</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L114">packages/lodestar/src/network/subnets/attnetsService.ts:114</a></em></p>
 <p>Check if a subscription is still active before handling a gossip object</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -719,19 +719,19 @@ knownValidators should be updated before this function.</p>
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L59">packages/lodestar/src/network/subnets/attnetsService.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L59">packages/lodestar/src/network/subnets/attnetsService.ts:59</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stop</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L64">packages/lodestar/src/network/subnets/attnetsService.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L64">packages/lodestar/src/network/subnets/attnetsService.ts:64</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="subscribesubnetstonextfork">subscribeSubnetsToNextFork<a class="headerlink" href="#subscribesubnetstonextfork" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribeSubnetsToNextFork</strong>(<code>nextFork</code>: ForkName): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L119">packages/lodestar/src/network/subnets/attnetsService.ts:119</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L119">packages/lodestar/src/network/subnets/attnetsService.ts:119</a></em></p>
 <p>Call ONLY ONCE: Two epoch before the fork, re-subscribe all existing random subscriptions to the new fork</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -752,7 +752,7 @@ knownValidators should be updated before this function.</p>
 <hr/>
 <h3 id="private-subscribetosubnets"><code>Private</code> subscribeToSubnets<a class="headerlink" href="#private-subscribetosubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribeToSubnets</strong>(<code>subnets</code>: number[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L264">packages/lodestar/src/network/subnets/attnetsService.ts:264</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L264">packages/lodestar/src/network/subnets/attnetsService.ts:264</a></em></p>
 <p>Tigger a gossip subcription only if not already subscribed</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -773,7 +773,7 @@ knownValidators should be updated before this function.</p>
 <hr/>
 <h3 id="private-unsubscribeexpiredcommitteesubnets"><code>Private</code> unsubscribeExpiredCommitteeSubnets<a class="headerlink" href="#private-unsubscribeexpiredcommitteesubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeExpiredCommitteeSubnets</strong>(<code>slot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L164">packages/lodestar/src/network/subnets/attnetsService.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L164">packages/lodestar/src/network/subnets/attnetsService.ts:164</a></em></p>
 <p>Unsubscribe to a committee subnet from subscribedCommitteeSubnets.
 If a random subnet is present, we do not unsubscribe from it.</p>
 <p><strong>Parameters:</strong></p>
@@ -795,7 +795,7 @@ If a random subnet is present, we do not unsubscribe from it.</p>
 <hr/>
 <h3 id="private-unsubscribeexpiredrandomsubnets"><code>Private</code> unsubscribeExpiredRandomSubnets<a class="headerlink" href="#private-unsubscribeexpiredrandomsubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeExpiredRandomSubnets</strong>(<code>slot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L174">packages/lodestar/src/network/subnets/attnetsService.ts:174</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L174">packages/lodestar/src/network/subnets/attnetsService.ts:174</a></em></p>
 <p>A random subnet has expired.
 This function selects a new subnet to join, or extends the expiry if there are no more
 available subnets to choose from.</p>
@@ -818,7 +818,7 @@ available subnets to choose from.</p>
 <hr/>
 <h3 id="private-unsubscribesubnets"><code>Private</code> unsubscribeSubnets<a class="headerlink" href="#private-unsubscribesubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeSubnets</strong>(<code>subnets</code>: number[], <code>slot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L276">packages/lodestar/src/network/subnets/attnetsService.ts:276</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L276">packages/lodestar/src/network/subnets/attnetsService.ts:276</a></em></p>
 <p>Trigger a gossip un-subscrition only if no-one is still subscribed</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -844,7 +844,7 @@ available subnets to choose from.</p>
 <h3 id="unsubscribesubnetsfromprevfork">unsubscribeSubnetsFromPrevFork<a class="headerlink" href="#unsubscribesubnetsfromprevfork" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeSubnetsFromPrevFork</strong>(<code>prevFork</code>: ForkName): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_subnets.iattnetsservice/">IAttnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L127">packages/lodestar/src/network/subnets/attnetsService.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L127">packages/lodestar/src/network/subnets/attnetsService.ts:127</a></em></p>
 <p>Call  ONLY ONCE: Two epochs after the fork, un-subscribe all subnets from the old fork</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -865,7 +865,7 @@ available subnets to choose from.</p>
 <hr/>
 <h3 id="private-updatemetadata"><code>Private</code> updateMetadata<a class="headerlink" href="#private-updatemetadata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateMetadata</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a5fef5c/packages/lodestar/src/network/subnets/attnetsService.ts#L251">packages/lodestar/src/network/subnets/attnetsService.ts:251</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/861f6e4/packages/lodestar/src/network/subnets/attnetsService.ts#L251">packages/lodestar/src/network/subnets/attnetsService.ts:251</a></em></p>
 <p>Update ENR</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
