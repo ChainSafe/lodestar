@@ -100,7 +100,7 @@ function getGossipValidatorFn<K extends GossipType>(
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);
-      metrics?.gossipValidationAccept.inc({topic: type}, 1);
+      metrics?.gossipValidationAccept.inc({topic: type});
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
         logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
@@ -114,12 +114,12 @@ function getGossipValidatorFn<K extends GossipType>(
       switch (e.action) {
         case GossipAction.IGNORE:
           logger.debug(`gossip - ${type} - ignore`, errorData);
-          metrics?.gossipValidationIgnore.inc({topic: type}, 1);
+          metrics?.gossipValidationIgnore.inc({topic: type});
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, e.message);
 
         case GossipAction.REJECT:
           logger.debug(`gossip - ${type} - reject`, errorData);
-          metrics?.gossipValidationReject.inc({topic: type}, 1);
+          metrics?.gossipValidationReject.inc({topic: type});
           throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, e.message);
       }
     }

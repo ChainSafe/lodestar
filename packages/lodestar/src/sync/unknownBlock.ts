@@ -61,7 +61,7 @@ export class UnknownBlockSync {
     try {
       this.addToPendingBlocks(signedBlock, peerIdStr);
       this.triggerUnknownBlockSearch();
-      this.metrics?.syncUnknownBlock.requests.inc(1);
+      this.metrics?.syncUnknownBlock.requests.inc();
     } catch (e) {
       this.logger.error("Error handling unknownBlockParent event", {}, e as Error);
     }
@@ -127,8 +127,8 @@ export class UnknownBlockSync {
     const res = await wrapError(this.fetchUnknownBlockRoot(fromHexString(block.parentBlockRootHex), connectedPeers));
     block.status = PendingBlockStatus.pending;
 
-    if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc(1);
-    else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc(1);
+    if (res.err) this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
+    else this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
 
     if (!res.err) {
       const {signedBlock, peerIdStr} = res.result;
@@ -167,8 +167,8 @@ export class UnknownBlockSync {
     const res = await wrapError(this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true}));
     pendingBlock.status = PendingBlockStatus.pending;
 
-    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc(1);
-    else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc(1);
+    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
+    else this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
 
     if (!res.err) {
       this.pendingBlocks.delete(pendingBlock.blockRootHex);
