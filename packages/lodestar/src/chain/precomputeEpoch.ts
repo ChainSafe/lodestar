@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot} from "@chainsafe/lodestar-types";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
@@ -17,7 +17,7 @@ import {RegenCaller} from "./regen";
 export class PrecomputeEpochScheduler {
   constructor(
     private readonly chain: IBeaconChain,
-    private readonly config: IBeaconConfig,
+    private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
     private readonly signal: AbortSignal
   ) {
@@ -35,7 +35,7 @@ export class PrecomputeEpochScheduler {
   /**
    * Use clockSlot instead of clockEpoch to schedule the task at more exact time.
    */
-  private prepareForNextEpoch = async (clockSlot: Slot): Promise<void> => {
+  prepareForNextEpoch = async (clockSlot: Slot): Promise<void> => {
     // only interested in last slot of epoch
     if ((clockSlot + 1) % SLOTS_PER_EPOCH !== 0) {
       return;
@@ -49,16 +49,28 @@ export class PrecomputeEpochScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // node may be syncing or out of synced
     if (headSlot < clockSlot) {
-      this.logger.debug("No need to precompute epoch transition", {nextEpoch, headSlot, slot: clockSlot});
+      this.logger.debug("Skipping PrecomputeEpochScheduler - head slot is not current slot", {
+        nextEpoch,
+        headSlot,
+        slot: clockSlot,
+      });
       return;
     }
 
     // we want to make sure headSlot === clockSlot to do early epoch transition
     const nextSlot = clockSlot + 1;
-    this.logger.verbose("Precompute epoch transition", {nextEpoch, headSlot, nextSlot});
-    // this takes ~2s as of Oct 2021, no need to wait for this or the clock drift
-    this.chain.regen.getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch).catch((e) => {
-      this.logger.error("Failed to precompute epoch transition", nextEpoch, e);
-    });
+    this.logger.verbose("Running PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
+    // this takes 2s - 4s as of Oct 2021, no need to wait for this or the clock drift
+    // assuming there is no reorg, it'd help avoid doing a full state transition in the next slot
+    //  + when gossip block comes, we need to validate and run state transition
+    //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
+    this.chain.regen
+      .getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch)
+      .then(() => {
+        this.logger.verbose("Completed PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
+      })
+      .catch((e) => {
+        this.logger.error("Failed to precompute epoch transition", nextEpoch, e);
+      });
   };
 }
