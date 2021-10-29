@@ -75,9 +75,8 @@ export class PrecomputeEpochScheduler {
         const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(blockRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.preComputeEpoch.waste.inc();
-        } else if (previousHits !== null && previousHits > 0) {
-          this.metrics?.preComputeEpoch.hits.set(previousHits);
         }
+        this.metrics?.preComputeEpoch.hits.set(previousHits ?? 0);
         this.logger.verbose("Completed PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
       })
       .catch((e) => {
