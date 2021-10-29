@@ -76,7 +76,7 @@ export class PrecomputeEpochScheduler {
         if (previousHits === 0) {
           this.metrics?.preComputeEpoch.waste.inc();
         } else if (previousHits !== null && previousHits > 0) {
-          this.metrics?.preComputeEpoch.hits.inc(previousHits);
+          this.metrics?.preComputeEpoch.hits.set(previousHits);
         }
         this.logger.verbose("Completed PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
       })

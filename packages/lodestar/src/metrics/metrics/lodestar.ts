@@ -546,7 +546,7 @@ export function createLodestarMetrics(
         labelNames: ["result"],
         help: "Number of precompute epoch skip/success/error",
       }),
-      hits: register.counter({
+      hits: register.gauge({
         name: "precompute_epoch_hits",
         help: "Number of calls use precomputed checkpoint",
       }),
