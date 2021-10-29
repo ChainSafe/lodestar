@@ -33,7 +33,7 @@ describe("PrecomputeEpochScheduler", () => {
       StateRegenerator;
     chainStub.regen = regenStub;
     loggerStub = sandbox.createStubInstance(WinstonLogger) as SinonStubbedInstance<WinstonLogger> & WinstonLogger;
-    preComputeScheduler = new PrecomputeEpochScheduler(chainStub, config, loggerStub, abortController.signal);
+    preComputeScheduler = new PrecomputeEpochScheduler(chainStub, config, null, loggerStub, abortController.signal);
   });
 
   afterEach(() => {

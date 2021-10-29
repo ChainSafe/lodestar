@@ -538,5 +538,22 @@ export function createLodestarMetrics(
       name: "lodestar_unhandeled_promise_rejections_total",
       help: "UnhandeledPromiseRejection total count",
     }),
+
+    // Precompute epoch
+    preComputeEpoch: {
+      count: register.counter<"result">({
+        name: "precompute_epoch_result",
+        labelNames: ["result"],
+        help: "Number of precompute epoch skip/success/error",
+      }),
+      hits: register.counter({
+        name: "precompute_epoch_hits",
+        help: "Number of calls use precomputed checkpoint",
+      }),
+      waste: register.counter({
+        name: "precompute_epoch_waste",
+        help: "Number of precompute epoch wasted",
+      }),
+    },
   };
 }

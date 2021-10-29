@@ -4,6 +4,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot} from "@chainsafe/lodestar-types";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
+import {IMetrics} from "../metrics";
 import {ChainEvent} from "./emitter";
 import {IBeaconChain} from "./interface";
 import {RegenCaller} from "./regen";
@@ -18,6 +19,7 @@ export class PrecomputeEpochScheduler {
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
+    private readonly metrics: IMetrics | null,
     private readonly logger: ILogger,
     private readonly signal: AbortSignal
   ) {
@@ -49,6 +51,7 @@ export class PrecomputeEpochScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // node may be syncing or out of synced
     if (headSlot < clockSlot) {
+      this.metrics?.preComputeEpoch.count.inc({result: "skip"}, 1);
       this.logger.debug("Skipping PrecomputeEpochScheduler - head slot is not current slot", {
         nextEpoch,
         headSlot,
@@ -60,16 +63,25 @@ export class PrecomputeEpochScheduler {
     // we want to make sure headSlot === clockSlot to do early epoch transition
     const nextSlot = clockSlot + 1;
     this.logger.verbose("Running PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
+
     // this takes 2s - 4s as of Oct 2021, no need to wait for this or the clock drift
-    // assuming there is no reorg, it'd help avoid doing a full state transition in the next slot
+    // assuming there is no reorg, it caches the checkpoint state & helps avoid doing a full state transition in the next slot
     //  + when gossip block comes, we need to validate and run state transition
     //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
     this.chain.regen
       .getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch)
       .then(() => {
+        this.metrics?.preComputeEpoch.count.inc({result: "success"}, 1);
+        const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(blockRoot, nextEpoch);
+        if (previousHits === 0) {
+          this.metrics?.preComputeEpoch.waste.inc();
+        } else if (previousHits !== null && previousHits > 0) {
+          this.metrics?.preComputeEpoch.hits.inc(previousHits);
+        }
         this.logger.verbose("Completed PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
       })
       .catch((e) => {
+        this.metrics?.preComputeEpoch.count.inc({result: "error"}, 1);
         this.logger.error("Failed to precompute epoch transition", nextEpoch, e);
       });
   };

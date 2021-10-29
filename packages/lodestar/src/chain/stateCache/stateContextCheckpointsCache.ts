@@ -20,6 +20,8 @@ export class CheckpointStateCache {
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
   private readonly metrics: IMetrics["cpStateCache"] | null | undefined;
+  private preComputedCheckpoint: string | null = null;
+  private preComputedCheckpointHits: number | null = null;
 
   constructor({metrics}: {metrics?: IMetrics | null}) {
     this.cache = new MapTracker(metrics?.cpStateCache);
@@ -32,8 +34,14 @@ export class CheckpointStateCache {
 
   get(cp: CheckpointHex): CachedBeaconState<allForks.BeaconState> | null {
     this.metrics?.lookups.inc();
-    const item = this.cache.get(toCheckpointKey(cp));
-    if (item) this.metrics?.hits.inc();
+    const cpKey = toCheckpointKey(cp);
+    const item = this.cache.get(cpKey);
+    if (item) {
+      this.metrics?.hits.inc();
+      if (cpKey === this.preComputedCheckpoint) {
+        this.preComputedCheckpointHits = (this.preComputedCheckpointHits ?? 0) + 1;
+      }
+    }
     return item ? item.clone() : null;
   }
 
@@ -62,6 +70,17 @@ export class CheckpointStateCache {
       }
     }
     return null;
+  }
+
+  /**
+   * Update the precomputed checkpoint and return the number of his for the
+   * previous one (if any).
+   */
+  updatePreComputedCheckpoint(rootHex: RootHex, epoch: Epoch): number | null {
+    const previousHits = this.preComputedCheckpointHits;
+    this.preComputedCheckpoint = toCheckpointKey({rootHex, epoch});
+    this.preComputedCheckpointHits = 0;
+    return previousHits;
   }
 
   pruneFinalized(finalizedEpoch: Epoch): void {

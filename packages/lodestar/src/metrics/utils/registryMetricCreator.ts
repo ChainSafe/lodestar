@@ -1,4 +1,4 @@
-import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration} from "prom-client";
+import {Gauge, GaugeConfiguration, Registry, HistogramConfiguration, CounterConfiguration, Counter} from "prom-client";
 import {AvgMinMax} from "./avgMinMax";
 import {GaugeExtra} from "./gauge";
 import {HistogramExtra} from "./histogram";
@@ -25,5 +25,9 @@ export class RegistryMetricCreator extends Registry {
   /** Static metric to send string-based data such as versions, config params, etc */
   static<T extends string>({name, help, value}: StaticConfiguration<T>): void {
     new Gauge({name, help, labelNames: Object.keys(value), registers: [this]}).set(value, 1);
+  }
+
+  counter<T extends string>(configuration: CounterConfiguration<T>): Counter<T> {
+    return new Counter<T>({...configuration, registers: [this]});
   }
 }
