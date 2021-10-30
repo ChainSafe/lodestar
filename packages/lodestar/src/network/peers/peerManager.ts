@@ -117,7 +117,8 @@ export class PeerManager {
     this.discovery = opts.discv5 && new PeerDiscovery(modules, {maxPeers: opts.maxPeers, discv5: opts.discv5});
   }
 
-  start(): void {
+  async start(): Promise<void> {
+    await this.discovery?.start();
     this.libp2p.connectionManager.on(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.on(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
@@ -130,7 +131,8 @@ export class PeerManager {
     ];
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
+    await this.discovery?.stop();
     this.libp2p.connectionManager.removeListener(Libp2pEvent.peerConnect, this.onLibp2pPeerConnect);
     this.libp2p.connectionManager.removeListener(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.off(NetworkEvent.reqRespRequest, this.onRequest);
