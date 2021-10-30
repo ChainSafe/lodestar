@@ -88,6 +88,19 @@ export function createLodestarMetrics(
     }),
 
     discovery: {
+      findNodeQueryStarts: register.gauge({
+        name: "lodestar_discovery_find_node_query_started_total",
+        help: "Total count of find node queries started",
+      }),
+      findNodeQueryTime: register.histogram({
+        name: "lodestar_discovery_find_node_query_time_seconds",
+        help: "Time to complete a find node query in seconds in seconds",
+        buckets: [5, 60],
+      }),
+      findNodeQueryEnrCount: register.gauge({
+        name: "lodestar_discovery_find_node_query_enrs_total",
+        help: "Total count of found ENRs in queries",
+      }),
       discoveredStatus: register.gauge<"status">({
         name: "lodestar_discovery_discovered_status_total_count",
         help: "Total count of status results of PeerDiscovery.onDiscovered() function",

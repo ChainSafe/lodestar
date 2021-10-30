@@ -169,14 +169,14 @@ export class PeerDiscovery {
 
     // Run a discv5 subnet query to try to discover new peers
     if (subnetsToDiscoverPeers.length > 0 || cachedENRsToDial.size < peersToConnect) {
-      this.runFindRandomNodeQuery();
+      void this.runFindRandomNodeQuery();
     }
   }
 
   /**
    * Request to find peers. First, looked at cached peers in peerStore
    */
-  private runFindRandomNodeQuery(): void {
+  private async runFindRandomNodeQuery(): Promise<void> {
     // Run a general discv5 query if one is not already in progress
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       return;
@@ -185,9 +185,18 @@ export class PeerDiscovery {
     const randomNodeId = crypto.randomBytes(64).toString("hex");
 
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
-    void this.discv5.findNode(randomNodeId).finally(() => {
+    this.metrics?.discovery.findNodeQueryStarts.inc();
+    const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
+
+    try {
+      const enrs = await this.discv5.findNode(randomNodeId);
+      this.metrics?.discovery.findNodeQueryEnrCount.inc(enrs.length);
+    } catch (e) {
+      this.logger.error("Error on discv5.findNode()", {}, e as Error);
+    } finally {
       this.randomNodeQuery = {code: QueryStatusCode.NotActive};
-    });
+      timer?.();
+    }
   }
 
   /**
