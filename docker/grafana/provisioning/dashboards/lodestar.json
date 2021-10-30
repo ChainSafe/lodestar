@@ -219,7 +219,7 @@
       "pluginVersion": "7.4.5",
       "targets": [
         {
-          "exemplar": true,
+          "exemplar": false,
           "expr": "round((time() - lodestar_genesis_time) / 12)",
           "hide": false,
           "instant": false,
@@ -7727,7 +7727,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_to_connect[$__rate_interval])",
               "interval": "",
               "legendFormat": "ENR count",
@@ -7825,7 +7825,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_to_disconnect[$__rate_interval])",
               "interval": "",
               "legendFormat": "ENR count",
@@ -7923,7 +7923,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_subnets_to_query[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{type}}",
@@ -8021,7 +8021,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_subnets_peers_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{type}}",
@@ -8280,7 +8280,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_discovery_discovered_status_total_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{status}}",
@@ -8397,7 +8397,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_discovery_dial_time_seconds_sum[$__rate_interval])/rate(lodestar_discovery_dial_time_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{status}}",
@@ -8483,7 +8483,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(lodestar_discovery_dial_time_seconds_count{status=\"error\"})/sum(lodestar_discovery_dial_time_seconds_count)",
               "interval": "",
               "legendFormat": "",
@@ -8569,7 +8569,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_discovery_total_dial_attempts[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
@@ -8655,7 +8655,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_discovery_find_node_query_requests_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{action}}",
@@ -8741,7 +8741,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_discovery_find_node_query_time_seconds_sum[$__rate_interval])/rate(lodestar_discovery_find_node_query_time_seconds_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{status}}",
@@ -9167,7 +9167,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_discv5_kad_table_size",
               "interval": "",
               "legendFormat": "ENR count",
@@ -9253,7 +9253,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_discovery_cached_enrs_size",
               "interval": "",
               "legendFormat": "ENR count",
