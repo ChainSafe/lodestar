@@ -24,13 +24,14 @@ import {CommitteeSubscription} from "../../../src/network/subnets";
 import {GossipHandlers} from "../../../src/network/gossip";
 import {ENRKey} from "../../../src/network/metadata";
 import {memoOnce} from "../../utils/cache";
+import {Multiaddr} from "multiaddr";
 
 let port = 9000;
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("network", function () {
   if (this.timeout() < 5000) this.timeout(5000);
-  this.retries(2); // This test fail sometimes, with a 5% rate.
+  // this.retries(2); // This test fail sometimes, with a 5% rate.
 
   const afterEachCallbacks: (() => Promise<void> | void)[] = [];
   afterEach(async () => {
@@ -45,14 +46,18 @@ describe("network", function () {
   afterEach(() => controller.abort());
 
   async function getOpts(peerId: PeerId): Promise<INetworkOptions> {
+    const bindAddrUdp = `/ip4/0.0.0.0/udp/${port++}`;
+    const enr = ENR.createFromPeerId(peerId);
+    enr.setLocationMultiaddr(new Multiaddr(bindAddrUdp));
+
     return {
       maxPeers: 1,
       targetPeers: 1,
       bootMultiaddrs: [],
       localMultiaddrs: [],
       discv5: {
-        enr: ENR.createFromPeerId(peerId),
-        bindAddr: `/ip4/0.0.0.0/udp/${port++}`,
+        enr,
+        bindAddr: bindAddrUdp,
         bootEnrs: [],
         enabled: true,
       },
@@ -162,13 +167,12 @@ describe("network", function () {
 
     // A knows about bootnode
     netA.discv5.addEnr(netBootnode.discv5.enr);
+    expect(netA.discv5.kadValues()).have.length(1, "wrong netA kad length");
     // bootnode knows about B
     netBootnode.discv5.addEnr(netB.discv5.enr);
 
     // const enrB = ENR.createFromPeerId(netB.peerId);
     // enrB.set(ENRKey.attnets, Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
-    // enrB.setLocationMultiaddr(netB.discv5.bindAddress);
-    // enrB.setLocationMultiaddr(netB["libp2p"].multiaddrs[0]);
 
     // Mock findNode to immediately find enrB when attempting to find nodes
     // netA.discv5.findNode = async () => {
