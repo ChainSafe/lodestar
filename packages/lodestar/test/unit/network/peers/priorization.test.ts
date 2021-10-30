@@ -1,11 +1,11 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {phase0, altair} from "@chainsafe/lodestar-types";
-import {AttSubnetQuery} from "../../../../src/network/peers/discover";
 import {prioritizePeers} from "../../../../src/network/peers/utils/prioritizePeers";
 import {getAttnets} from "../../../utils/network";
+import {RequestedSubnet} from "../../../../src/network/peers/utils";
 
-type Result = {peersToDisconnect: PeerId[]; peersToConnect: number; discv5Queries: AttSubnetQuery[]};
+type Result = ReturnType<typeof prioritizePeers>;
 
 describe("network / peers / priorization", () => {
   const peers: PeerId[] = [];
@@ -32,7 +32,8 @@ describe("network / peers / priorization", () => {
       expectedResult: {
         peersToDisconnect: [],
         peersToConnect: 1,
-        discv5Queries: [{subnetId: 3, maxPeersToDiscover: 1}],
+        attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
+        syncnetQueries: [],
       },
     },
     {
@@ -44,7 +45,8 @@ describe("network / peers / priorization", () => {
       expectedResult: {
         peersToDisconnect: [],
         peersToConnect: 0,
-        discv5Queries: [],
+        attnetQueries: [],
+        syncnetQueries: [],
       },
     },
     {
@@ -62,7 +64,8 @@ describe("network / peers / priorization", () => {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: [peers[3], peers[2], peers[1]],
         peersToConnect: 0,
-        discv5Queries: [],
+        attnetQueries: [],
+        syncnetQueries: [],
       },
     },
     {
@@ -84,7 +87,8 @@ describe("network / peers / priorization", () => {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: [peers[5], peers[3]],
         peersToConnect: 0,
-        discv5Queries: [{subnetId: 3, maxPeersToDiscover: 2}],
+        attnetQueries: [{subnet: 3, maxPeersToDiscover: 2, toSlot: 0}],
+        syncnetQueries: [],
       },
     },
 
@@ -93,17 +97,19 @@ describe("network / peers / priorization", () => {
 
   for (const {id, connectedPeers, activeAttnets, activeSyncnets, opts, expectedResult} of testCases) {
     it(id, () => {
-      const result = prioritizePeers(connectedPeers, activeAttnets, activeSyncnets, opts);
+      const result = prioritizePeers(connectedPeers, toReqSubnet(activeAttnets), toReqSubnet(activeSyncnets), opts);
       expect(cleanResult(result)).to.deep.equal(cleanResult(expectedResult));
     });
   }
 
-  function cleanResult(
-    res: Result
-  ): {peersToDisconnect: string[]; peersToConnect: number; discv5Queries: AttSubnetQuery[]} {
+  function cleanResult(res: Result): Omit<Result, "peersToDisconnect"> & {peersToDisconnect: string[]} {
     return {
       ...res,
       peersToDisconnect: res.peersToDisconnect.map((peer) => peer.toB58String()),
     };
+  }
+
+  function toReqSubnet(subnets: number[]): RequestedSubnet[] {
+    return subnets.map((subnet) => ({subnet, toSlot: 0}));
   }
 });

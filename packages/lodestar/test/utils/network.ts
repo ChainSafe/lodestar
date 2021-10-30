@@ -1,29 +1,16 @@
-import {ENR, Discv5Discovery} from "@chainsafe/discv5";
-import Bootstrap from "libp2p-bootstrap";
-import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {Network} from "../../src/network";
 import {NodejsNode} from "../../src/network/nodejs";
 import {createPeerId} from "../../src/network";
-import {defaultDiscv5Options} from "../../src/network/options";
 import {Libp2pEvent} from "../../src/constants";
 
-export async function createNode(
-  multiaddr: string,
-  inPeerId?: PeerId,
-  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[]
-): Promise<NodejsNode> {
+export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<NodejsNode> {
   const peerId = inPeerId || (await createPeerId());
-  const enr = ENR.createFromPeerId(peerId);
-  const randomPort = Math.round(Math.random() * 40000) + 1000;
-  const bindAddr = `/ip4/127.0.0.1/udp/${randomPort}`;
   return new NodejsNode({
     peerId,
     addresses: {listen: [multiaddr]},
-    discv5: {...defaultDiscv5Options, enr, bindAddr},
-    peerDiscovery,
   });
 }
 

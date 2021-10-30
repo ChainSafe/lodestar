@@ -4,7 +4,7 @@
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {collectDefaultMetrics, Counter, Gauge, Registry} from "prom-client";
+import {collectDefaultMetrics, Counter, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
@@ -12,7 +12,6 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
-import {IDiscv5Metrics} from "@chainsafe/discv5";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
 

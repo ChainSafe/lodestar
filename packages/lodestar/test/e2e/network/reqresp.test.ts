@@ -38,6 +38,7 @@ describe("network / ReqResp", function () {
     targetPeers: 1,
     bootMultiaddrs: [],
     localMultiaddrs: [],
+    discv5: null,
   };
   const state = generateState();
   const beaconConfig = createIBeaconConfig(config, state.genesisValidatorsRoot);

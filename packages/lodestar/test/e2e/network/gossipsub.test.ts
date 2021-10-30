@@ -25,6 +25,7 @@ const opts: INetworkOptions = {
   targetPeers: 1,
   bootMultiaddrs: [],
   localMultiaddrs: [],
+  discv5: null,
 };
 
 describe("network", function () {

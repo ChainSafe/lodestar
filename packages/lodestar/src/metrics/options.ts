@@ -4,7 +4,7 @@
 
 export interface IMetricsOptions {
   enabled: boolean;
-  timeout: number;
+  timeout?: number;
   serverPort?: number;
   gatewayUrl?: string;
   listenAddr?: string;
