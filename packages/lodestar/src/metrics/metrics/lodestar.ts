@@ -82,8 +82,8 @@ export function createLodestarMetrics(
       labelNames: ["type"],
     }),
     peersRequestedSubnetsPeerCount: register.gauge<"type">({
-      name: "lodestar_peers_requested_total_attnets_peers_count",
-      help: "Priorization results total peers in attnets to query and discover peers in",
+      name: "lodestar_peers_requested_total_subnets_peers_count",
+      help: "Priorization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
     }),
 
