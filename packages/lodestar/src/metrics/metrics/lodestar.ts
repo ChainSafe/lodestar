@@ -88,6 +88,10 @@ export function createLodestarMetrics(
     }),
 
     discovery: {
+      peersToConnect: register.gauge({
+        name: "lodestar_discovery_peers_to_connect",
+        help: "Current peers to connect count from discoverPeers requests",
+      }),
       cachedENRsSize: register.gauge({
         name: "lodestar_discovery_cached_enrs_size",
         help: "Current size of the cachedENRs Set",

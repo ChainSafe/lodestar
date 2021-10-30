@@ -110,7 +110,10 @@ export class PeerDiscovery {
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
 
     if (metrics) {
-      metrics.discovery.cachedENRsSize.addCollect(() => metrics.discovery.cachedENRsSize.set(this.cachedENRs.size));
+      metrics.discovery.cachedENRsSize.addCollect(() => {
+        metrics.discovery.cachedENRsSize.set(this.cachedENRs.size);
+        metrics.discovery.peersToConnect.set(this.peersToConnect);
+      });
     }
   }
 
