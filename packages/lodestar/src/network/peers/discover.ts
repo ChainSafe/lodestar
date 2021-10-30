@@ -84,11 +84,12 @@ export class PeerDiscovery {
   private maxPeers: number;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts) {
-    this.libp2p = modules.libp2p;
-    this.peerRpcScores = modules.peerRpcScores;
-    this.metrics = modules.metrics;
-    this.logger = modules.logger;
-    this.config = modules.config;
+    const {libp2p, peerRpcScores, metrics, logger, config} = modules;
+    this.libp2p = libp2p;
+    this.peerRpcScores = peerRpcScores;
+    this.metrics = metrics;
+    this.logger = logger;
+    this.config = config;
     this.maxPeers = opts.maxPeers;
 
     this.discv5 = Discv5.create({
@@ -103,6 +104,10 @@ export class PeerDiscovery {
     });
 
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
+
+    if (metrics) {
+      metrics.discovery.cachedENRsSize.addCollect(() => metrics.discovery.cachedENRsSize.set(this.cachedENRs.size));
+    }
   }
 
   async start(): Promise<void> {
