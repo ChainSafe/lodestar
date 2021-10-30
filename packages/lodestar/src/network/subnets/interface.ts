@@ -1,5 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {RequestedSubnet} from "../peers/utils";
 
 /** Generic CommitteeSubscription for both beacon attnets subs and syncnets subs */
 export type CommitteeSubscription = {
@@ -13,7 +14,7 @@ export interface ISubnetsService {
   start(): void;
   stop(): void;
   addCommitteeSubscriptions(subscriptions: CommitteeSubscription[]): void;
-  getActiveSubnets(): number[];
+  getActiveSubnets(): RequestedSubnet[];
   subscribeSubnetsToNextFork(nextFork: ForkName): void;
   unsubscribeSubnetsFromPrevFork(prevFork: ForkName): void;
 }

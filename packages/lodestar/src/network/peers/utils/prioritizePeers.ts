@@ -2,10 +2,13 @@ import PeerId from "peer-id";
 import {altair, phase0} from "@chainsafe/lodestar-types";
 import {shuffle} from "../../../util/shuffle";
 import {sortBy} from "../../../util/sortBy";
-import {AttSubnetQuery} from "../discover";
+import {SubnetType} from "../../metadata";
+import {RequestedSubnet} from "./subnetMap";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const MAX_TARGET_SUBNET_PEERS = 6;
+
+type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: number};
 
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
@@ -16,20 +19,26 @@ const MAX_TARGET_SUBNET_PEERS = 6;
  */
 export function prioritizePeers(
   connectedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[],
-  activeAttnets: number[],
-  activeSyncnets: number[],
+  activeAttnets: RequestedSubnet[],
+  activeSyncnets: RequestedSubnet[],
   {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number}
-): {peersToDisconnect: PeerId[]; peersToConnect: number; discv5Queries: AttSubnetQuery[]} {
-  const peersToDisconnect: PeerId[] = [];
+): {
+  peersToConnect: number;
+  peersToDisconnect: PeerId[];
+  attnetQueries: SubnetDiscvQuery[];
+  syncnetQueries: SubnetDiscvQuery[];
+} {
   let peersToConnect = 0;
-  const discv5Queries: AttSubnetQuery[] = [];
+  const peersToDisconnect: PeerId[] = [];
+  const attnetQueries: SubnetDiscvQuery[] = [];
+  const syncnetQueries: SubnetDiscvQuery[] = [];
 
   // To filter out peers that are part of 1+ attnets of interest from possible disconnection
   const peerHasDuty = new Map<string, boolean>();
 
-  for (const {subnets, subnetKey} of [
-    {subnets: activeAttnets, subnetKey: "attnets" as const},
-    {subnets: activeSyncnets, subnetKey: "syncnets" as const},
+  for (const {subnets, subnetKey, queries} of [
+    {subnets: activeAttnets, subnetKey: SubnetType.attnets, queries: attnetQueries},
+    {subnets: activeSyncnets, subnetKey: SubnetType.syncnets, queries: syncnetQueries},
   ]) {
     // Dynamically compute 1 <= TARGET_PEERS_PER_SUBNET <= MAX_TARGET_SUBNET_PEERS
     const targetPeersPerSubnet = Math.min(MAX_TARGET_SUBNET_PEERS, Math.max(1, Math.floor(maxPeers / subnets.length)));
@@ -39,19 +48,23 @@ export function prioritizePeers(
       const peersPerSubnet = new Map<number, number>();
 
       for (const peer of connectedPeers) {
-        for (const subnetId of subnets) {
-          if (peer[subnetKey][subnetId]) {
-            peerHasDuty.set(peer.id.toB58String(), true);
-            peersPerSubnet.set(subnetId, 1 + (peersPerSubnet.get(subnetId) ?? 0));
+        let hasDuty = false;
+        for (const {subnet} of subnets) {
+          if (peer[subnetKey][subnet]) {
+            hasDuty = true;
+            peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
           }
+        }
+        if (hasDuty) {
+          peerHasDuty.set(peer.id.toB58String(), true);
         }
       }
 
-      for (const subnetId of subnets) {
-        const peersInSubnet = peersPerSubnet.get(subnetId) ?? 0;
+      for (const {subnet, toSlot} of subnets) {
+        const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
         if (peersInSubnet < targetPeersPerSubnet) {
           // We need more peers
-          discv5Queries.push({subnetId, maxPeersToDiscover: targetPeersPerSubnet - peersInSubnet});
+          queries.push({subnet, toSlot, maxPeersToDiscover: targetPeersPerSubnet - peersInSubnet});
         }
       }
     }
@@ -80,8 +93,9 @@ export function prioritizePeers(
   }
 
   return {
-    peersToDisconnect,
     peersToConnect,
-    discv5Queries,
+    peersToDisconnect,
+    attnetQueries,
+    syncnetQueries,
   };
 }

@@ -11,7 +11,7 @@ import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {prettyPrintPeerId} from "../util";
 import {ISubnetsService} from "../subnets";
 import {Libp2pPeerMetadataStore} from "./metastore";
-import {PeerDiscovery} from "./discover";
+import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {
   getConnectedPeerIds,
@@ -21,6 +21,8 @@ import {
   prioritizePeers,
   IrrelevantPeerError,
 } from "./utils";
+import {SubnetType} from "../metadata";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -44,8 +46,10 @@ export type PeerManagerOpts = {
   targetPeers: number;
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   maxPeers: number;
-  /** Don't run discv5 queries, nor connect to cached peers in the peerStore */
-  disablePeerDiscovery?: boolean;
+  /**
+   * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
+   */
+  discv5: IDiscv5DiscoveryInputOptions | null;
 };
 
 export type PeerManagerModules = {
@@ -81,7 +85,8 @@ export class PeerManager {
   private config: IBeaconConfig;
   private peerMetadata: Libp2pPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
-  private discovery: PeerDiscovery;
+  /** If null, discovery is disabled */
+  private discovery: PeerDiscovery | null;
   private networkEventBus: INetworkEventBus;
 
   /** Map of PeerId -> Time of last PING'd request in ms */
@@ -108,7 +113,8 @@ export class PeerManager {
     this.networkEventBus = modules.networkEventBus;
     this.opts = opts;
 
-    this.discovery = new PeerDiscovery(modules, opts);
+    // opts.discv5 === null, discovery is disabled
+    this.discovery = opts.discv5 && new PeerDiscovery(modules, {maxPeers: opts.maxPeers, discv5: opts.discv5});
   }
 
   start(): void {
@@ -309,7 +315,7 @@ export class PeerManager {
       }
     }
 
-    const {peersToDisconnect, discv5Queries, peersToConnect} = prioritizePeers(
+    const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => ({
         id: peer,
         attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
@@ -322,16 +328,35 @@ export class PeerManager {
       this.opts
     );
 
-    if (discv5Queries.length > 0 && !this.opts.disablePeerDiscovery) {
-      // It's a promise due to crypto lib calls only
-      this.discovery.discoverSubnetPeers(discv5Queries).catch((e: Error) => {
-        this.logger.error("Error on discoverSubnetPeers", {}, e);
-      });
+    // Register results to metrics
+    this.metrics?.peersRequestedToDisconnect.inc(peersToDisconnect.length);
+    this.metrics?.peersRequestedToConnect.inc(peersToConnect);
+
+    const queriesMerged: SubnetDiscvQueryMs[] = [];
+    for (const {type, queries} of [
+      {type: SubnetType.attnets, queries: attnetQueries},
+      {type: SubnetType.syncnets, queries: syncnetQueries},
+    ]) {
+      if (queries.length > 0) {
+        let count = 0;
+        for (const query of queries) {
+          count += query.maxPeersToDiscover;
+          queriesMerged.push({
+            subnet: query.subnet,
+            type,
+            maxPeersToDiscover: query.maxPeersToDiscover,
+            toUnixMs: 1000 * (this.chain.genesisTime + query.toSlot * this.config.SECONDS_PER_SLOT),
+          });
+        }
+
+        this.metrics?.peersRequestedSubnetsToQuery.inc({type}, queries.length);
+        this.metrics?.peersRequestedSubnetsPeerCount.inc({type}, count);
+      }
     }
 
-    if (peersToConnect > 0 && !this.opts.disablePeerDiscovery) {
+    if (this.discovery) {
       try {
-        this.discovery.discoverPeers(peersToConnect);
+        this.discovery.discoverPeers(peersToConnect, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }

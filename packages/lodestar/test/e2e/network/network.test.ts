@@ -22,6 +22,7 @@ import {connect, disconnect, onPeerConnect, onPeerDisconnect} from "../../utils/
 import {testLogger} from "../../utils/logger";
 import {CommitteeSubscription} from "../../../src/network/subnets";
 import {GossipHandlers} from "../../../src/network/gossip";
+import {ENRKey} from "../../../src/network/metadata";
 
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
@@ -125,7 +126,7 @@ describe("network", function () {
     netB.metadata.attnets[subscription.subnet] = true;
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
     const enrB = ENR.createFromPeerId(netB.peerId);
-    enrB.set("attnets", Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
+    enrB.set(ENRKey.attnets, Buffer.from(ssz.phase0.AttestationSubnets.serialize(netB.metadata.attnets)));
     enrB.setLocationMultiaddr((netB["libp2p"]._discovery.get("discv5") as Discv5Discovery).discv5.bindAddress);
     enrB.setLocationMultiaddr(netB["libp2p"].multiaddrs[0]);
 

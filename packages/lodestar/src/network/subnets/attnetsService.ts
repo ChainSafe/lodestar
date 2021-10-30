@@ -69,10 +69,9 @@ export class AttnetsService implements IAttnetsService {
   /**
    * Get all active subnets for the hearbeat.
    */
-  getActiveSubnets(): number[] {
-    const currentSlot = this.chain.clock.currentSlot;
+  getActiveSubnets(): RequestedSubnet[] {
     // Omit subscriptionsRandom, not necessary to force the network component to keep peers on that subnets
-    return this.committeeSubnets.getActive(currentSlot);
+    return this.committeeSubnets.getActiveTtl(this.chain.clock.currentSlot);
   }
 
   /**

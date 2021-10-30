@@ -68,6 +68,67 @@ export function createLodestarMetrics(
       name: "lodestar_peers_total_unique_connected",
       help: "Total number of unique peers that have had a connection with",
     }),
+    peersRequestedToConnect: register.gauge({
+      name: "lodestar_peers_requested_total_to_connect",
+      help: "Priorization results total peers count requested to connect",
+    }),
+    peersRequestedToDisconnect: register.gauge({
+      name: "lodestar_peers_requested_total_to_disconnect",
+      help: "Priorization results total peers count requested to disconnect",
+    }),
+    peersRequestedSubnetsToQuery: register.gauge<"type">({
+      name: "lodestar_peers_requested_total_subnets_to_query",
+      help: "Priorization results total subnets to query and discover peers in",
+      labelNames: ["type"],
+    }),
+    peersRequestedSubnetsPeerCount: register.gauge<"type">({
+      name: "lodestar_peers_requested_total_attnets_peers_count",
+      help: "Priorization results total peers in attnets to query and discover peers in",
+      labelNames: ["type"],
+    }),
+
+    discovery: {
+      discoveredStatus: register.gauge<"status">({
+        name: "lodestar_discovery_discovered_status_total_count",
+        help: "Total count of status results of PeerDiscovery.onDiscovered() function",
+        labelNames: ["status"],
+      }),
+      dialAttempts: register.gauge({
+        name: "lodestar_discovery_total_dial_attempts",
+        help: "Total dial attempts by peer discovery",
+      }),
+      dialTime: register.histogram<"status">({
+        name: "lodestar_discovery_dial_time_seconds",
+        help: "Time to dial peers in seconds",
+        labelNames: ["status"],
+        buckets: [0.1, 5, 60],
+      }),
+    },
+
+    discv5: {
+      kadTableSize: register.gauge({
+        name: "lodestar_discv5_kad_table_size",
+        help: "Total size of the discv5 kad table",
+      }),
+      activeSessionCount: register.gauge({
+        name: "lodestar_discv5_active_session_count",
+        help: "Count of the discv5 active sessions",
+      }),
+      connectedPeerCount: register.gauge({
+        name: "lodestar_discv5_connected_peer_count",
+        help: "Count of the discv5 connected peers",
+      }),
+      sentMessageCount: register.gauge<"type">({
+        name: "lodestar_discv5_sent_message_count",
+        help: "Count of the discv5 messages sent by message type",
+        labelNames: ["type"],
+      }),
+      rcvdMessageCount: register.gauge<"type">({
+        name: "lodestar_discv5_rcvd_message_count",
+        help: "Count of the discv5 messages received by message type",
+        labelNames: ["type"],
+      }),
+    },
 
     gossipMeshPeersByType: register.gauge<"type" | "fork">({
       name: "lodestar_gossip_mesh_peers_by_type",
