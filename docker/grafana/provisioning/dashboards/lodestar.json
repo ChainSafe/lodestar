@@ -1352,7 +1352,7 @@
             "content": "",
             "mode": "markdown"
           },
-          "pluginVersion": "8.0.5",
+          "pluginVersion": "8.2.2",
           "targets": [
             {
               "exemplar": false,
@@ -1401,7 +1401,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1410,7 +1411,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1479,7 +1487,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1488,7 +1497,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1557,7 +1573,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1566,7 +1583,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1625,12 +1649,6 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
           "fill": 1,
           "fillGradient": 2,
           "gridPos": {
@@ -1657,7 +1675,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -1731,7 +1749,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1740,7 +1759,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1809,7 +1835,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1818,7 +1845,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1887,7 +1921,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1896,7 +1931,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -1965,7 +2007,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -1974,7 +2017,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -2059,7 +2109,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -2068,7 +2119,14 @@
                   "type": "linear"
                 },
                 "showPoints": "never",
-                "spanNulls": false
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -2128,12 +2186,6 @@
           "dashLength": 10,
           "dashes": false,
           "datasource": null,
-          "fieldConfig": {
-            "defaults": {
-              "custom": {}
-            },
-            "overrides": []
-          },
           "fill": 1,
           "fillGradient": 2,
           "gridPos": {
@@ -2160,7 +2212,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -2273,7 +2325,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 51
+            "y": 58
           },
           "id": 268,
           "options": {
@@ -8094,6 +8146,7 @@
                 "mode": "thresholds"
               },
               "mappings": [],
+              "min": 0.01,
               "thresholds": {
                 "mode": "absolute",
                 "steps": [
@@ -8108,9 +8161,9 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 10,
+            "w": 12,
             "x": 0,
-            "y": 14
+            "y": 29
           },
           "id": 68,
           "options": {
@@ -8144,7 +8197,35 @@
           "fieldConfig": {
             "defaults": {
               "color": {
-                "mode": "thresholds"
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
               },
               "mappings": [],
               "thresholds": {
@@ -8161,9 +8242,64 @@
           },
           "gridPos": {
             "h": 7,
-            "w": 14,
-            "x": 10,
-            "y": 14
+            "w": 12,
+            "x": 12,
+            "y": 29
+          },
+          "id": 298,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "lodestar_gossip_mesh_peers_by_type{type!~\"beacon_attestation\"}",
+              "format": "time_series",
+              "interval": "",
+              "legendFormat": "{{type}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Mesh Peers per Topic",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "decimals": 0,
+              "mappings": [],
+              "min": 0.01,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "semi-dark-green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 36
           },
           "id": 70,
           "options": {
@@ -8180,6 +8316,7 @@
           "pluginVersion": "8.2.2",
           "targets": [
             {
+              "exemplar": false,
               "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
               "interval": "",
               "legendFormat": "{{subnet}}",
@@ -8188,8 +8325,223 @@
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Beacon Attestation Mesh Peers per Subnet",
+          "title": "Attnet mesh peers per subnet",
           "type": "bargauge"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "thresholds"
+              },
+              "mappings": [],
+              "max": 2,
+              "min": 0.01,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "semi-dark-green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 4,
+            "w": 24,
+            "x": 0,
+            "y": 40
+          },
+          "id": 299,
+          "options": {
+            "displayMode": "lcd",
+            "orientation": "auto",
+            "reduceOptions": {
+              "calcs": ["last"],
+              "fields": "",
+              "values": false
+            },
+            "showUnfilled": true,
+            "text": {}
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "lodestar_gossip_mesh_peers_by_sync_committee_subnet",
+              "interval": "",
+              "legendFormat": "{{subnet}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "syncnet mesh peers per subnet",
+          "type": "bargauge"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "semi-dark-green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 0,
+            "y": 44
+          },
+          "id": 300,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "count(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet > 0)",
+              "interval": "",
+              "legendFormat": "{{subnet}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Attnet count with > 0 mesh peers",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "auto",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "semi-dark-green",
+                    "value": null
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 7,
+            "w": 12,
+            "x": 12,
+            "y": 44
+          },
+          "id": 301,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "count(lodestar_gossip_mesh_peers_by_beacon_attestation_subnet > 0)",
+              "interval": "",
+              "legendFormat": "{{subnet}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Syncnet count with > 0 mesh peers",
+          "type": "timeseries"
         }
       ],
       "title": "Gossip Stats",
@@ -8264,7 +8616,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 66
+            "y": 30
           },
           "id": 286,
           "options": {
@@ -8381,7 +8733,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 66
+            "y": 30
           },
           "id": 287,
           "options": {
@@ -8407,6 +8759,178 @@
           "timeFrom": null,
           "timeShift": null,
           "title": "dial time seconds",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 0,
+            "y": 38
+          },
+          "id": 302,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "sum(rate(lodestar_discovery_discovered_status_total_count{status=~\"attempt_dial|cached\"}[$__rate_interval]))\n/\nsum(rate(lodestar_discovery_discovered_status_total_count{status=~\"dropped|attempt_dial|cached\"}[$__rate_interval]))",
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Not dropped rate of useful ENRs",
+          "type": "timeseries"
+        },
+        {
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "opacity",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 12,
+            "y": 38
+          },
+          "id": 303,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "hidden",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
+          },
+          "pluginVersion": "8.2.2",
+          "targets": [
+            {
+              "exemplar": false,
+              "expr": "sum(rate(lodestar_discovery_discovered_status_total_count{status=~\"dropped|attempt_dial|cached\"}[$__rate_interval]))\n/\nsum(rate(lodestar_discovery_discovered_status_total_count[$__rate_interval]))",
+              "interval": "",
+              "legendFormat": "",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Useful ENRs rate vs all seen ENRs",
           "type": "timeseries"
         },
         {
@@ -8467,7 +8991,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 74
+            "y": 44
           },
           "id": 291,
           "options": {
@@ -8553,7 +9077,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 74
+            "y": 44
           },
           "id": 289,
           "options": {
@@ -8639,7 +9163,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 80
+            "y": 50
           },
           "id": 293,
           "options": {
@@ -8725,7 +9249,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 80
+            "y": 50
           },
           "id": 292,
           "options": {
@@ -8811,7 +9335,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 86
+            "y": 56
           },
           "id": 240,
           "options": {
@@ -8896,7 +9420,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 86
+            "y": 56
           },
           "id": 242,
           "options": {
@@ -8981,7 +9505,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 94
+            "y": 64
           },
           "id": 238,
           "options": {
@@ -9066,7 +9590,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 94
+            "y": 64
           },
           "id": 236,
           "options": {
@@ -9151,7 +9675,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 102
+            "y": 72
           },
           "id": 288,
           "options": {
@@ -9237,7 +9761,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 102
+            "y": 72
           },
           "id": 290,
           "options": {
@@ -10182,7 +10706,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 17
+            "y": 34
           },
           "id": 216,
           "options": {
@@ -10271,7 +10795,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 17
+            "y": 34
           },
           "id": 217,
           "options": {
@@ -10360,7 +10884,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 25
+            "y": 42
           },
           "id": 219,
           "options": {
@@ -10441,7 +10965,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 25
+            "y": 42
           },
           "id": 220,
           "options": {
@@ -10530,7 +11054,7 @@
             "h": 8,
             "w": 24,
             "x": 0,
-            "y": 33
+            "y": 50
           },
           "id": 222,
           "options": {
@@ -10635,7 +11159,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 21
+            "y": 35
           },
           "id": 273,
           "options": {
@@ -10716,7 +11240,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 21
+            "y": 35
           },
           "id": 275,
           "options": {
@@ -10798,7 +11322,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 29
+            "y": 43
           },
           "id": 277,
           "options": {
@@ -10880,7 +11404,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 29
+            "y": 43
           },
           "id": 279,
           "options": {
@@ -10964,7 +11488,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 37
+            "y": 51
           },
           "id": 281,
           "options": {
@@ -11048,7 +11572,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 37
+            "y": 51
           },
           "id": 282,
           "options": {
@@ -11132,7 +11656,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 45
+            "y": 59
           },
           "id": 284,
           "options": {
@@ -11216,7 +11740,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 45
+            "y": 59
           },
           "id": 285,
           "options": {
@@ -11493,7 +12017,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 22
+            "y": 69
           },
           "id": 250,
           "options": {
@@ -11574,7 +12098,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 22
+            "y": 69
           },
           "id": 254,
           "options": {
@@ -11655,7 +12179,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 30
+            "y": 77
           },
           "id": 256,
           "options": {
@@ -11736,7 +12260,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 30
+            "y": 77
           },
           "id": 258,
           "options": {
@@ -11817,7 +12341,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 38
+            "y": 85
           },
           "id": 260,
           "options": {
@@ -11898,7 +12422,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 38
+            "y": 85
           },
           "id": 262,
           "options": {
@@ -11979,7 +12503,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 46
+            "y": 93
           },
           "id": 264,
           "options": {
@@ -12060,7 +12584,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 46
+            "y": 93
           },
           "id": 266,
           "options": {
