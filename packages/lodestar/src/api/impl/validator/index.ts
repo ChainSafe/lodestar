@@ -133,7 +133,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   }
 
-  const produceBlock: routes.validator.Api["produceBlock"] = async function produceBlock(slot, randaoReveal, graffiti) {
+  const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
+    slot,
+    randaoReveal,
+    graffiti
+  ) {
     let timer;
     metrics?.blockProductionRequests.inc();
     try {

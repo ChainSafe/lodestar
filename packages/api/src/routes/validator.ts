@@ -123,11 +123,7 @@ export type Api = {
    * @returns any Success response
    * @throws ApiError
    */
-  produceBlock(
-    slot: Slot,
-    randaoReveal: BLSSignature,
-    graffiti: string
-  ): Promise<{data: allForks.BeaconBlock; version: ForkName}>;
+  produceBlock(slot: Slot, randaoReveal: BLSSignature, graffiti: string): Promise<{data: allForks.BeaconBlock}>;
 
   /**
    * Requests a beacon node to produce a valid block, which can then be signed by a validator.
@@ -403,14 +399,12 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
-  const produceBlock: ReturnTypes<Api>["produceBlock"] = WithVersion((fork: ForkName) => ssz[fork].BeaconBlock);
-
   return {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),
     getProposerDuties: WithDependentRoot(ArrayOf(ProposerDuty)),
     getSyncCommitteeDuties: WithDependentRoot(ArrayOf(SyncDuty)),
-    produceBlock: produceBlock,
-    produceBlockV2: produceBlock,
+    produceBlock: ContainerData(ssz.phase0.BeaconBlock),
+    produceBlockV2: WithVersion((fork: ForkName) => ssz[fork].BeaconBlock),
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),

@@ -7,7 +7,6 @@ import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {Root} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
-import {ForkName} from "@chainsafe/lodestar-params";
 import {generateEmptySignedBlock} from "@chainsafe/lodestar/test/utils/block";
 import {BlockProposingService} from "../../../src/services/block";
 import {ValidatorStore} from "../../../src/services/validatorStore";
@@ -53,7 +52,7 @@ describe("BlockDutiesService", function () {
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);
     validatorStore.signBlock.callsFake(async (_, block) => ({message: block, signature: signedBlock.signature}));
-    api.validator.produceBlock.resolves({data: signedBlock.message, version: ForkName.phase0});
+    api.validator.produceBlock.resolves({data: signedBlock.message});
     api.beacon.publishBlock.resolves();
 
     // Triger block production for slot 1
