@@ -6362,12 +6362,6 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {},
-              "custom": {},
-              "thresholds": {
-                "mode": "absolute",
-                "steps": []
-              },
               "unit": "percentunit"
             },
             "overrides": []
@@ -6378,7 +6372,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 25
+            "y": 26
           },
           "hiddenSeries": false,
           "id": 77,
@@ -6398,7 +6392,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -6463,12 +6457,6 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {},
-              "custom": {},
-              "thresholds": {
-                "mode": "absolute",
-                "steps": []
-              },
               "unit": "none"
             },
             "overrides": []
@@ -6479,7 +6467,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 25
+            "y": 26
           },
           "hiddenSeries": false,
           "id": 80,
@@ -6499,7 +6487,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -6564,12 +6552,6 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {},
-              "custom": {},
-              "thresholds": {
-                "mode": "absolute",
-                "steps": []
-              },
               "unit": "s"
             },
             "overrides": []
@@ -6580,7 +6562,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 33
+            "y": 34
           },
           "hiddenSeries": false,
           "id": 79,
@@ -6600,7 +6582,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -6675,7 +6657,8 @@
                 "hideFrom": {
                   "graph": false,
                   "legend": false,
-                  "tooltip": false
+                  "tooltip": false,
+                  "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
@@ -6708,7 +6691,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 33
+            "y": 34
           },
           "id": 78,
           "options": {
@@ -6744,12 +6727,6 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {},
-              "custom": {},
-              "thresholds": {
-                "mode": "absolute",
-                "steps": []
-              },
               "unit": "s"
             },
             "overrides": []
@@ -6760,7 +6737,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 41
+            "y": 42
           },
           "hiddenSeries": false,
           "id": 82,
@@ -6780,7 +6757,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -6846,12 +6823,6 @@
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "color": {},
-              "custom": {},
-              "thresholds": {
-                "mode": "absolute",
-                "steps": []
-              },
               "unit": "none"
             },
             "overrides": []
@@ -6862,7 +6833,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 41
+            "y": 42
           },
           "hiddenSeries": false,
           "id": 88,
@@ -6882,7 +6853,7 @@
             "alertThreshold": true
           },
           "percentage": false,
-          "pluginVersion": "7.4.5",
+          "pluginVersion": "8.2.2",
           "pointradius": 2,
           "points": false,
           "renderer": "flot",
@@ -9157,7 +9128,30 @@
               },
               "unit": "short"
             },
-            "overrides": []
+            "overrides": [
+              {
+                "__systemRef": "hideSeriesFrom",
+                "matcher": {
+                  "id": "byNames",
+                  "options": {
+                    "mode": "exclude",
+                    "names": ["start"],
+                    "prefix": "All except:",
+                    "readOnly": true
+                  }
+                },
+                "properties": [
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": false,
+                      "viz": true
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 6,
@@ -12622,7 +12616,7 @@
     "list": []
   },
   "time": {
-    "from": "now-12h",
+    "from": "now-3h",
     "to": "now"
   },
   "timepicker": {
@@ -12631,5 +12625,5 @@
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 6
+  "version": 3
 }
