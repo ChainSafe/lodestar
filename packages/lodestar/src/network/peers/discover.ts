@@ -33,8 +33,8 @@ export type PeerDiscoveryModules = {
 type PeerIdStr = string;
 
 enum QueryStatusCode {
-  Active,
   NotActive,
+  Active,
 }
 type QueryStatus = {code: QueryStatusCode.NotActive} | {code: QueryStatusCode.Active; count: number};
 
@@ -70,8 +70,8 @@ type CachedENR = {
  * Currently relies on discv5 automatic periodic queries.
  */
 export class PeerDiscovery {
+  readonly discv5: Discv5;
   private libp2p: LibP2p;
-  private discv5: Discv5;
   private peerRpcScores: IPeerRpcScoreStore;
   private metrics: IMetrics | null;
   private logger: ILogger;

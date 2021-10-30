@@ -1,8 +1,9 @@
 import LibP2p, {Connection} from "libp2p";
+import PeerId from "peer-id";
+import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import PeerId from "peer-id";
 import {IBeaconChain} from "../../chain";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
 import {IMetrics} from "../../metrics";
@@ -22,7 +23,6 @@ import {
   IrrelevantPeerError,
 } from "./utils";
 import {SubnetType} from "../metadata";
-import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;

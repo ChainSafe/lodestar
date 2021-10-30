@@ -9,7 +9,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {Discv5, Discv5Discovery, ENR} from "@chainsafe/discv5";
+import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {IMetrics} from "../metrics";
@@ -154,8 +154,8 @@ export class Network implements INetwork {
     await this.libp2p.stop();
   }
 
-  get discv5(): Discv5 {
-    return (this.libp2p._discovery.get("discv5") as Discv5Discovery)?.discv5;
+  get discv5(): Discv5 | undefined {
+    return this.peerManager["discovery"]?.discv5;
   }
 
   get localMultiaddrs(): Multiaddr[] {
@@ -167,8 +167,7 @@ export class Network implements INetwork {
   }
 
   getEnr(): ENR | undefined {
-    const discv5Discovery = this.libp2p._discovery.get("discv5") as Discv5Discovery;
-    return discv5Discovery?.discv5?.enr ?? undefined;
+    return this.peerManager["discovery"]?.discv5.enr;
   }
 
   getConnectionsByPeer(): Map<string, Connection[]> {
