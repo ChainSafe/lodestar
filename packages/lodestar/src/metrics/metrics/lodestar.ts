@@ -92,9 +92,10 @@ export function createLodestarMetrics(
         name: "lodestar_discovery_cached_enrs_size",
         help: "Current size of the cachedENRs Set",
       }),
-      findNodeQueryStarts: register.gauge({
-        name: "lodestar_discovery_find_node_query_started_total",
+      findNodeQueryRequests: register.gauge<"action">({
+        name: "lodestar_discovery_find_node_query_requests_total",
         help: "Total count of find node queries started",
+        labelNames: ["action"],
       }),
       findNodeQueryTime: register.histogram({
         name: "lodestar_discovery_find_node_query_time_seconds",

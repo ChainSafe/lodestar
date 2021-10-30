@@ -184,13 +184,15 @@ export class PeerDiscovery {
   private async runFindRandomNodeQuery(): Promise<void> {
     // Run a general discv5 query if one is not already in progress
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
+      this.metrics?.discovery.findNodeQueryRequests.inc({action: "ignore"});
       return;
+    } else {
+      this.metrics?.discovery.findNodeQueryRequests.inc({action: "start"});
     }
 
     const randomNodeId = crypto.randomBytes(64).toString("hex");
 
     this.randomNodeQuery = {code: QueryStatusCode.Active, count: 0};
-    this.metrics?.discovery.findNodeQueryStarts.inc();
     const timer = this.metrics?.discovery.findNodeQueryTime.startTimer();
 
     try {
