@@ -12,7 +12,10 @@ import {prettyPrintPeerId} from "../util";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {pruneSetToMax} from "../../util/map";
 
+/** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
+/** Max age a cached ENR will be considered for dial */
+const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
@@ -44,6 +47,7 @@ enum DiscoveredPeerStatus {
   error = "error",
   attempt_dial = "attempt_dial",
   cached = "cached",
+  dropped = "dropped",
 }
 
 type UnixMs = number;
@@ -125,9 +129,16 @@ export class PeerDiscovery {
    */
   discoverPeers(peersToConnect: number, subnetRequests: SubnetDiscvQueryMs[] = []): void {
     const subnetsToDiscoverPeers: SubnetDiscvQueryMs[] = [];
-    // Iterate in reverse to consider first the most recent ENRs
-    const cachedENRsReverse = Array.from(this.cachedENRs).reverse();
     const cachedENRsToDial = new Set<CachedENR>();
+    // Iterate in reverse to consider first the most recent ENRs
+    const cachedENRsReverse: CachedENR[] = [];
+    for (const cachedENR of this.cachedENRs) {
+      if (Date.now() - cachedENR.addedUnixMs > MAX_CACHED_ENR_AGE_MS) {
+        this.cachedENRs.delete(cachedENR);
+      } else {
+        cachedENRsReverse.unshift(cachedENR);
+      }
+    }
 
     this.peersToConnect += peersToConnect;
 
@@ -281,8 +292,9 @@ export class PeerDiscovery {
       } else {
         // Add to pending good peers with a last seen time
         this.cachedENRs.add(cachedPeer);
-        pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
-        return DiscoveredPeerStatus.cached;
+        const dropped = pruneSetToMax(this.cachedENRs, MAX_CACHED_ENRS);
+        // If the cache was already full, count the peer as dropped
+        return dropped > 0 ? DiscoveredPeerStatus.dropped : DiscoveredPeerStatus.cached;
       }
     } catch (e) {
       this.logger.error("Error onDiscovered", {}, e as Error);
