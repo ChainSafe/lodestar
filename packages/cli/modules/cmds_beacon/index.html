@@ -481,20 +481,20 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconargs">IBeaconArgs<a class="headerlink" href="#ibeaconargs" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IBeaconArgs</strong>: <em><a href="../../interfaces/cmds_beacon.ibeaconextraargs/">IBeaconExtraArgs</a> &amp; <a href="../../interfaces/util.ilogargs/">ILogArgs</a> &amp; <a href="../../interfaces/cmds_beacon.ibeaconpaths/">IBeaconPaths</a> &amp; <a href="../options_beaconnodeoptions/#ibeaconnodeargs">IBeaconNodeArgs</a> &amp; <a href="../../interfaces/options.ienrargs/">IENRArgs</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L159">packages/cli/src/cmds/beacon/options.ts:159</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L159">packages/cli/src/cmds/beacon/options.ts:159</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-checkpointregex"><code>Const</code> checkpointRegex<a class="headerlink" href="#const-checkpointregex" title="Permanent link">¶</a></h3>
 <p>• <strong>checkpointRegex</strong>: <em>RegExp‹›</em> = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$")</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/initBeaconState.ts#L17">packages/cli/src/cmds/beacon/initBeaconState.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/initBeaconState.ts#L17">packages/cli/src/cmds/beacon/initBeaconState.ts:17</a></em></p>
 <hr/>
 <h3 id="const-defaultbeaconpaths"><code>Const</code> defaultBeaconPaths<a class="headerlink" href="#const-defaultbeaconpaths" title="Permanent link">¶</a></h3>
 <p>• <strong>defaultBeaconPaths</strong>: <em><a href="../../interfaces/cmds_beacon.ibeaconpaths/">IBeaconPaths</a> &amp; <a href="../../interfaces/paths.iglobalpaths/">IGlobalPaths</a></em> = getBeaconPaths({rootDir: "$rootDir"})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/paths.ts#L61">packages/cli/src/cmds/beacon/paths.ts:61</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/paths.ts#L61">packages/cli/src/cmds/beacon/paths.ts:61</a></em></p>
 <p>Constructs representations of the path structure to show in command's description</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="beaconhandler">beaconHandler<a class="headerlink" href="#beaconhandler" title="Permanent link">¶</a></h3>
 <p>▸ <strong>beaconHandler</strong>(<code>args</code>: <a href="./#ibeaconargs">IBeaconArgs</a> &amp; <a href="../options/#iglobalargs">IGlobalArgs</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/handler.ts#L22">packages/cli/src/cmds/beacon/handler.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/handler.ts#L22">packages/cli/src/cmds/beacon/handler.ts:22</a></em></p>
 <p>Runs a beacon node.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -515,7 +515,7 @@
 <hr/>
 <h3 id="getbeaconpaths">getBeaconPaths<a class="headerlink" href="#getbeaconpaths" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBeaconPaths</strong>(<code>args</code>: Partial‹<a href="../../interfaces/cmds_beacon.ibeaconpaths/">IBeaconPaths</a>› &amp; Pick‹<a href="../options/#iglobalargs">IGlobalArgs</a>, "rootDir"›): <em><a href="../../interfaces/cmds_beacon.ibeaconpaths/">IBeaconPaths</a> &amp; <a href="../../interfaces/paths.iglobalpaths/">IGlobalPaths</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/paths.ts#L29">packages/cli/src/cmds/beacon/paths.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/paths.ts#L29">packages/cli/src/cmds/beacon/paths.ts:29</a></em></p>
 <p>Defines the path structure of the files relevant to the beacon node</p>
 <div class="highlight"><pre><span></span><code><span class="nv">$rootDir</span>
 └── <span class="nv">$beaconDir</span>
@@ -543,7 +543,7 @@
 <hr/>
 <h3 id="getcheckpointfromarg">getCheckpointFromArg<a class="headerlink" href="#getcheckpointfromarg" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCheckpointFromArg</strong>(<code>checkpointStr</code>: string): <em>Checkpoint</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/initBeaconState.ts#L19">packages/cli/src/cmds/beacon/initBeaconState.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/initBeaconState.ts#L19">packages/cli/src/cmds/beacon/initBeaconState.ts:19</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -563,7 +563,7 @@
 <hr/>
 <h3 id="getcheckpointfromstate">getCheckpointFromState<a class="headerlink" href="#getcheckpointfromstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCheckpointFromState</strong>(<code>config</code>: IChainForkConfig, <code>state</code>: allForks.BeaconState): <em>Checkpoint</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/initBeaconState.ts#L27">packages/cli/src/cmds/beacon/initBeaconState.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/initBeaconState.ts#L27">packages/cli/src/cmds/beacon/initBeaconState.ts:27</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -587,7 +587,7 @@
 <hr/>
 <h3 id="initandverifyweaksubjectivitystate">initAndVerifyWeakSubjectivityState<a class="headerlink" href="#initandverifyweaksubjectivitystate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>initAndVerifyWeakSubjectivityState</strong>(<code>config</code>: IBeaconConfig, <code>db</code>: IBeaconDb, <code>logger</code>: ILogger, <code>store</code>: TreeBacked‹allForks.BeaconState›, <code>wsState</code>: TreeBacked‹allForks.BeaconState›, <code>wsCheckpoint</code>: Checkpoint): <em>Promise‹TreeBacked‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/initBeaconState.ts#L34">packages/cli/src/cmds/beacon/initBeaconState.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/initBeaconState.ts#L34">packages/cli/src/cmds/beacon/initBeaconState.ts:34</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -627,7 +627,7 @@
 <hr/>
 <h3 id="initbeaconstate">initBeaconState<a class="headerlink" href="#initbeaconstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>initBeaconState</strong>(<code>options</code>: IBeaconNodeOptions, <code>args</code>: <a href="./#ibeaconargs">IBeaconArgs</a> &amp; <a href="../options/#iglobalargs">IGlobalArgs</a>, <code>chainForkConfig</code>: IChainForkConfig, <code>db</code>: IBeaconDb, <code>logger</code>: ILogger, <code>signal</code>: AbortSignal): <em>Promise‹TreeBacked‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/initBeaconState.ts#L57">packages/cli/src/cmds/beacon/initBeaconState.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/initBeaconState.ts#L57">packages/cli/src/cmds/beacon/initBeaconState.ts:57</a></em></p>
 <p>Initialize a beacon state, picking the strategy based on the <code>IBeaconArgs</code></p>
 <p>State is initialized in one of three ways:
 1. restore from weak subjectivity state (possibly downloaded from a remote beacon node)
@@ -673,13 +673,13 @@
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-beacon"><code>Const</code> beacon<a class="headerlink" href="#const-beacon" title="Permanent link">¶</a></h3>
 <h3 id="beacon-object">▪ <strong>beacon</strong>: <em>object</em><a class="headerlink" href="#beacon-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L6">packages/cli/src/cmds/beacon/index.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L6">packages/cli/src/cmds/beacon/index.ts:6</a></em></p>
 <h3 id="command">command<a class="headerlink" href="#command" title="Permanent link">¶</a></h3>
 <p>• <strong>command</strong>: <em>string</em> = "beacon"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L7">packages/cli/src/cmds/beacon/index.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L7">packages/cli/src/cmds/beacon/index.ts:7</a></em></p>
 <h3 id="describe">describe<a class="headerlink" href="#describe" title="Permanent link">¶</a></h3>
 <p>• <strong>describe</strong>: <em>string</em> = "Run a beacon chain node"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L8">packages/cli/src/cmds/beacon/index.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L8">packages/cli/src/cmds/beacon/index.ts:8</a></em></p>
 <h3 id="examples">examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h3>
 <p>• <strong>examples</strong>: <em>object[]</em> = [
     {
@@ -687,19 +687,19 @@
       description: "Run a beacon chain node and connect to the pyrmont testnet",
     },
   ]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L9">packages/cli/src/cmds/beacon/index.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L9">packages/cli/src/cmds/beacon/index.ts:9</a></em></p>
 <h3 id="handler">handler<a class="headerlink" href="#handler" title="Permanent link">¶</a></h3>
 <p>• <strong>handler</strong>: <em><a href="./#beaconhandler">beaconHandler</a></em> = beaconHandler</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L16">packages/cli/src/cmds/beacon/index.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L16">packages/cli/src/cmds/beacon/index.ts:16</a></em></p>
 <h3 id="options">options<a class="headerlink" href="#options" title="Permanent link">¶</a></h3>
 <p>• <strong>options</strong>: <em>Required‹object›</em> = beaconOptions as ICliCommandOptions<ibeaconargs></ibeaconargs></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/index.ts#L15">packages/cli/src/cmds/beacon/index.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/index.ts#L15">packages/cli/src/cmds/beacon/index.ts:15</a></em></p>
 <hr/>
 <h3 id="const-beaconextraoptions"><code>Const</code> beaconExtraOptions<a class="headerlink" href="#const-beaconextraoptions" title="Permanent link">¶</a></h3>
 <h3 id="beaconextraoptions-object">▪ <strong>beaconExtraOptions</strong>: <em>object</em><a class="headerlink" href="#beaconextraoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L18">packages/cli/src/cmds/beacon/options.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L18">packages/cli/src/cmds/beacon/options.ts:18</a></em></p>
 <p>▪ <strong>discoveryPort</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L26">packages/cli/src/cmds/beacon/options.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L26">packages/cli/src/cmds/beacon/options.ts:26</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = "<code>port</code>"</p>
@@ -712,7 +712,7 @@
 </li>
 </ul>
 <p>▪ <strong>forceGenesis</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L32">packages/cli/src/cmds/beacon/options.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L32">packages/cli/src/cmds/beacon/options.ts:32</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Force beacon to create genesis without file"</p>
@@ -722,7 +722,7 @@
 </li>
 </ul>
 <p>▪ <strong>genesisStateFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L37">packages/cli/src/cmds/beacon/options.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L37">packages/cli/src/cmds/beacon/options.ts:37</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Path or URL to download a genesis state file in ssz-encoded format"</p>
@@ -732,7 +732,7 @@
 </li>
 </ul>
 <p>▪ <strong>port</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L19">packages/cli/src/cmds/beacon/options.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L19">packages/cli/src/cmds/beacon/options.ts:19</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = "9000"</p>
@@ -745,7 +745,7 @@
 </li>
 </ul>
 <p>▪ <strong>weakSubjectivityCheckpoint</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L54">packages/cli/src/cmds/beacon/options.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L54">packages/cli/src/cmds/beacon/options.ts:54</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockroot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234."</epoch></blockroot></p>
@@ -755,7 +755,7 @@
 </li>
 </ul>
 <p>▪ <strong>weakSubjectivityServerUrl</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L60">packages/cli/src/cmds/beacon/options.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L60">packages/cli/src/cmds/beacon/options.ts:60</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Pass in a custom server from which to fetch weak subjectivity states (if you don't want to use the built-in Lodestar servers)."</p>
@@ -765,7 +765,7 @@
 </li>
 </ul>
 <p>▪ <strong>weakSubjectivityStateFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L42">packages/cli/src/cmds/beacon/options.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L42">packages/cli/src/cmds/beacon/options.ts:42</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Path or URL to download a weak subjectivity state file in ssz-encoded format"</p>
@@ -775,7 +775,7 @@
 </li>
 </ul>
 <p>▪ <strong>weakSubjectivitySyncLatest</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L47">packages/cli/src/cmds/beacon/options.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L47">packages/cli/src/cmds/beacon/options.ts:47</a></em></p>
 <ul>
 <li>
 <p><strong>default</strong>: <em>boolean</em> = false</p>
@@ -790,13 +790,13 @@
 <hr/>
 <h3 id="const-beaconoptions"><code>Const</code> beaconOptions<a class="headerlink" href="#const-beaconoptions" title="Permanent link">¶</a></h3>
 <h3 id="beaconoptions-object">▪ <strong>beaconOptions</strong>: <em>object</em><a class="headerlink" href="#beaconoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L161">packages/cli/src/cmds/beacon/options.ts:161</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L161">packages/cli/src/cmds/beacon/options.ts:161</a></em></p>
 <hr/>
 <h3 id="const-beaconpathsoptions"><code>Const</code> beaconPathsOptions<a class="headerlink" href="#const-beaconpathsoptions" title="Permanent link">¶</a></h3>
 <h3 id="beaconpathsoptions-object">▪ <strong>beaconPathsOptions</strong>: <em>object</em><a class="headerlink" href="#beaconpathsoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L105">packages/cli/src/cmds/beacon/options.ts:105</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L105">packages/cli/src/cmds/beacon/options.ts:105</a></em></p>
 <p>▪ <strong>beaconDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L106">packages/cli/src/cmds/beacon/options.ts:106</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L106">packages/cli/src/cmds/beacon/options.ts:106</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.beaconDir</p>
@@ -812,7 +812,7 @@
 </li>
 </ul>
 <p>▪ <strong>configFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L127">packages/cli/src/cmds/beacon/options.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L127">packages/cli/src/cmds/beacon/options.ts:127</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Beacon node configuration file path"</p>
@@ -822,7 +822,7 @@
 </li>
 </ul>
 <p>▪ <strong>dbDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L113">packages/cli/src/cmds/beacon/options.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L113">packages/cli/src/cmds/beacon/options.ts:113</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.dbDir</p>
@@ -838,7 +838,7 @@
 </li>
 </ul>
 <p>▪ <strong>enrFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L146">packages/cli/src/cmds/beacon/options.ts:146</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L146">packages/cli/src/cmds/beacon/options.ts:146</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.enrFile</p>
@@ -854,7 +854,7 @@
 </li>
 </ul>
 <p>▪ <strong>logFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L153">packages/cli/src/cmds/beacon/options.ts:153</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L153">packages/cli/src/cmds/beacon/options.ts:153</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Path to output all logs to a persistent log file"</p>
@@ -864,7 +864,7 @@
 </li>
 </ul>
 <p>▪ <strong>peerIdFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L139">packages/cli/src/cmds/beacon/options.ts:139</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L139">packages/cli/src/cmds/beacon/options.ts:139</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.peerIdFile</p>
@@ -880,7 +880,7 @@
 </li>
 </ul>
 <p>▪ <strong>peerStoreDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L132">packages/cli/src/cmds/beacon/options.ts:132</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L132">packages/cli/src/cmds/beacon/options.ts:132</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.peerStoreDir</p>
@@ -896,7 +896,7 @@
 </li>
 </ul>
 <p>▪ <strong>persistInvalidSszObjectsDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L120">packages/cli/src/cmds/beacon/options.ts:120</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L120">packages/cli/src/cmds/beacon/options.ts:120</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultBeaconPaths.persistInvalidSszObjectsDir</p>
@@ -914,9 +914,9 @@
 <hr/>
 <h3 id="const-logoptions"><code>Const</code> logOptions<a class="headerlink" href="#const-logoptions" title="Permanent link">¶</a></h3>
 <h3 id="logoptions-object">▪ <strong>logOptions</strong>: <em>object</em><a class="headerlink" href="#logoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L67">packages/cli/src/cmds/beacon/options.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L67">packages/cli/src/cmds/beacon/options.ts:67</a></em></p>
 <p>▪ <strong>logFormatGenesisTime</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L82">packages/cli/src/cmds/beacon/options.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L82">packages/cli/src/cmds/beacon/options.ts:82</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Logger format - Use EpochSlot TimestampFormat"</p>
@@ -929,7 +929,7 @@
 </li>
 </ul>
 <p>▪ <strong>logFormatId</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L88">packages/cli/src/cmds/beacon/options.ts:88</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L88">packages/cli/src/cmds/beacon/options.ts:88</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Logger format - Prefix module field with a string ID"</p>
@@ -942,7 +942,7 @@
 </li>
 </ul>
 <p>▪ <strong>logLevel</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L68">packages/cli/src/cmds/beacon/options.ts:68</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L68">packages/cli/src/cmds/beacon/options.ts:68</a></em></p>
 <ul>
 <li>
 <p><strong>choices</strong>: <em>LogLevel[]</em> = LogLevels</p>
@@ -958,7 +958,7 @@
 </li>
 </ul>
 <p>▪ <strong>logLevelFile</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L75">packages/cli/src/cmds/beacon/options.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L75">packages/cli/src/cmds/beacon/options.ts:75</a></em></p>
 <ul>
 <li>
 <p><strong>choices</strong>: <em>LogLevel[]</em> = LogLevels</p>
@@ -974,7 +974,7 @@
 </li>
 </ul>
 <p>▪ <strong>logMaxFiles</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L99">packages/cli/src/cmds/beacon/options.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L99">packages/cli/src/cmds/beacon/options.ts:99</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Number of log files to maintain while rotating logs(if provided with logRotate)"</p>
@@ -984,7 +984,7 @@
 </li>
 </ul>
 <p>▪ <strong>logRotate</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fd95cb/packages/cli/src/cmds/beacon/options.ts#L94">packages/cli/src/cmds/beacon/options.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/cli/src/cmds/beacon/options.ts#L94">packages/cli/src/cmds/beacon/options.ts:94</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Daily rotate log files"</p>
