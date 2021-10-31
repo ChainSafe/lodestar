@@ -49,12 +49,19 @@ async function initAndVerifyWeakSubjectivityState(
     );
   }
 
-  if (!allForks.isWithinWeakSubjectivityPeriod(config, wsState, wsCheckpoint)) {
+  // Pick the state which is ahead as an anchor to initialize the beacon chain
+  let anchorState = wsState;
+  let anchorCheckpoint = wsCheckpoint;
+  if (store.slot > wsState.slot) {
+    anchorState = store;
+    anchorCheckpoint = getCheckpointFromState(config, store);
+    logger.info("Db state is ahead of the provided checkpoint state, using the same to initialize the beacon chain");
+  }
+
+  if (!allForks.isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
 
-  // Pick the state which is ahead as an anchor to initialize the beacon chain
-  const anchorState = wsState.slot > store.slot ? wsState : store;
   return await initStateFromAnchorState(config, db, logger, anchorState);
 }
 
