@@ -283,7 +283,7 @@
           "pluginVersion": "8.1.5",
           "targets": [
             {
-              "expr": "sum(lodestar_peers_by_direction)",
+              "expr": "sum(lodestar_peers_by_direction_count)",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -919,7 +919,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "lodestar_peers_by_direction",
+              "expr": "lodestar_peers_by_direction_count",
               "hide": false,
               "interval": "",
               "legendFormat": "{{direction}}",
@@ -2309,7 +2309,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "rate(unhandeled_promise_rejections[$__rate_interval])",
+              "expr": "rate(lodestar_unhandeled_promise_rejections_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "Errors",
               "refId": "A"
@@ -2758,7 +2758,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss[$__rate_interval])) / (sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss[$__rate_interval])))",
+              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])) / (sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])))",
               "interval": "",
               "legendFormat": "{{index}}",
               "refId": "A"
@@ -2933,7 +2933,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss[$__rate_interval])) OR vector(0))\n/\n((sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit[$__rate_interval])) OR vector(0))\n+\n(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss[$__rate_interval])) OR vector(0)))",
+              "expr": "(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0))\n/\n((sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$__rate_interval])) OR vector(0))\n+\n(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0)))",
               "interval": "",
               "legendFormat": "{{index}}",
               "refId": "A"
@@ -3019,7 +3019,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss[$__rate_interval])) /  (sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_hit[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss[$__rate_interval])))",
+              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$__rate_interval])) /  (sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_hit_total[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$__rate_interval])))",
               "interval": "",
               "legendFormat": "{{index}}",
               "refId": "A"
@@ -4323,7 +4323,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "rate(lodestar_bls_thread_pool_batch_retries[$__rate_interval])",
+              "expr": "rate(lodestar_bls_thread_pool_batch_retries_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "pool",
               "refId": "A"
@@ -7206,7 +7206,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "delta(lodestar_peer_goodbye_received[$__rate_interval])>0",
+              "expr": "delta(lodestar_peer_goodbye_received_total[$__rate_interval])>0",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -7302,7 +7302,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "delta(lodestar_peer_connected[$__rate_interval])>0",
+              "expr": "delta(lodestar_peer_connected_total[$__rate_interval])>0",
               "format": "time_series",
               "instant": false,
               "interval": "",
@@ -7386,7 +7386,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "delta(lodestar_peer_goodbye_sent[$__rate_interval])>0",
+              "expr": "delta(lodestar_peer_goodbye_sent_total[$__rate_interval])>0",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -7482,7 +7482,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "delta(lodestar_peer_disconnected[$__rate_interval])>0",
+              "expr": "delta(lodestar_peer_disconnected_total[$__rate_interval])>0",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 1,
@@ -7642,7 +7642,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "lodestar_peer_connected - lodestar_peer_disconnected - lodestar_peers_by_direction",
+              "expr": "lodestar_peer_connected_total - lodestar_peer_disconnected_total - lodestar_peers_by_direction_count",
               "format": "time_series",
               "interval": "",
               "intervalFactor": 3,
@@ -7713,7 +7713,7 @@
           "pluginVersion": "8.1.4",
           "targets": [
             {
-              "expr": "lodestar_gossip_mesh_peers_by_type{type!~\"beacon_attestation\"}",
+              "expr": "lodestar_gossip_mesh_peers_by_type_count{type!~\"beacon_attestation\"}",
               "format": "time_series",
               "interval": "",
               "legendFormat": "{{type}}",
@@ -7768,7 +7768,7 @@
           "pluginVersion": "8.1.4",
           "targets": [
             {
-              "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
+              "expr": "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
               "interval": "",
               "legendFormat": "{{subnet}}",
               "refId": "A"
@@ -9197,14 +9197,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "rate(state_cache_lookups_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "total lookups",
               "refId": "A"
             },
             {
               "exemplar": false,
-              "expr": "rate(state_cache_hits_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "cache hits",
@@ -9286,14 +9286,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "rate(cp_state_cache_lookups_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_cp_state_cache_lookups_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "total lookups",
               "refId": "A"
             },
             {
               "exemplar": false,
-              "expr": "rate(cp_state_cache_hits_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_cp_state_cache_hits_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "cache hits",
@@ -9375,7 +9375,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "state_cache_size{}",
+              "expr": "lodestar_state_cache_size{}",
               "interval": "",
               "legendFormat": "states",
               "refId": "A"
@@ -9456,14 +9456,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "cp_state_cache_size{}",
+              "expr": "lodestar_cp_state_cache_size{}",
               "interval": "",
               "legendFormat": "states",
               "refId": "A"
             },
             {
               "exemplar": false,
-              "expr": "cp_state_epoch_size",
+              "expr": "lodestar_cp_state_epoch_size",
               "hide": false,
               "interval": "",
               "legendFormat": "epochs",
@@ -9545,14 +9545,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "rate(state_cache_adds_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_state_cache_adds_total{}[$__rate_interval])",
               "interval": "",
               "legendFormat": "state cache",
               "refId": "A"
             },
             {
               "exemplar": false,
-              "expr": "rate(cp_state_cache_adds_total{}[$__rate_interval])",
+              "expr": "rate(lodestar_cp_state_cache_adds_total{}[$__rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "checkpointState cache",
@@ -9650,13 +9650,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (entrypoint)(12*rate(regen_fn_call_total[$__rate_interval]))",
+              "expr": "sum by (entrypoint)(12*rate(lodestar_regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{entrypoint}}",
               "refId": "A"
             }
           ],
-          "title": "Call rate per slot(grouped by entrypoint)",
+          "title": "Call rate per slot (grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -9731,13 +9731,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (caller)(12*rate(regen_fn_call_total[$__rate_interval]))",
+              "expr": "sum by (caller)(12*rate(lodestar_regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{caller}}",
               "refId": "A"
             }
           ],
-          "title": "Call rate per slot(grouped by caller)",
+          "title": "Call rate per slot (grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -9813,13 +9813,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (entrypoint)(delta(regen_fn_call_duration_sum[$__rate_interval]))/sum by (entrypoint)(delta(regen_fn_call_duration_count[$__rate_interval]))",
+              "expr": "sum by (entrypoint)(delta(lodestar_regen_fn_call_duration_sum[$__rate_interval]))/sum by (entrypoint)(delta(lodestar_regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{entrypoint}}",
               "refId": "A"
             }
           ],
-          "title": "Regen job avg time(grouped by entrypoint)",
+          "title": "Regen job avg time (grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -9895,13 +9895,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (caller)(delta(regen_fn_call_duration_sum[$__rate_interval]))/sum by (caller)(delta(regen_fn_call_duration_count[$__rate_interval]))",
+              "expr": "sum by (caller)(delta(lodestar_regen_fn_call_duration_sum[$__rate_interval]))/sum by (caller)(delta(lodestar_regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "{{caller}}",
               "refId": "A"
             }
           ],
-          "title": "Regen job avg time(grouped by caller)",
+          "title": "Regen job avg time (grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -9979,7 +9979,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (entrypoint) (delta(regen_fn_queued_total[$__rate_interval]))/sum by (entrypoint)(delta(regen_fn_call_total[$__rate_interval]))",
+              "expr": "sum by (entrypoint) (delta(lodestar_regen_fn_queued_total[$__rate_interval]))/sum by (entrypoint)(delta(lodestar_regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -10063,13 +10063,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (caller) (delta(regen_fn_queued_total[$__rate_interval]))/sum by (caller)(delta(regen_fn_call_total[$__rate_interval]))",
+              "expr": "sum by (caller) (delta(lodestar_regen_fn_queued_total[$__rate_interval]))/sum by (caller)(delta(lodestar_regen_fn_call_total[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "title": "Cache miss(grouped by caller)",
+          "title": "Cache miss (grouped by caller)",
           "type": "timeseries"
         },
         {
@@ -10147,13 +10147,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (entrypoint)(rate(regen_fn_total_errors[$__rate_interval]))/sum by (entrypoint)(rate(regen_fn_call_duration_count[$__rate_interval]))",
+              "expr": "sum by (entrypoint)(rate(lodestar_regen_fn_errors_total[$__rate_interval]))/sum by (entrypoint)(rate(lodestar_regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "title": "Error rate(grouped by entrypoint)",
+          "title": "Error rate (grouped by entrypoint)",
           "type": "timeseries"
         },
         {
@@ -10231,13 +10231,13 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "sum by (caller)(rate(regen_fn_total_errors[$__rate_interval]))/sum by (caller)(rate(regen_fn_call_duration_count[$__rate_interval]))",
+              "expr": "sum by (caller)(rate(lodestar_regen_fn_errors_total[$__rate_interval]))/sum by (caller)(rate(lodestar_regen_fn_call_duration_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "title": "Error rate(grouped by caller)",
+          "title": "Error rate (grouped by caller)",
           "type": "timeseries"
         }
       ],
@@ -10329,7 +10329,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "delta(gossip_block_elappsed_time_till_received_sum[$__rate_interval])/delta(gossip_block_elappsed_time_till_received_count[$__rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elappsed_time_till_received_sum[$__rate_interval])/delta(lodestar_gossip_block_elappsed_time_till_received_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
@@ -10412,7 +10412,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "delta(gossip_block_elappsed_time_till_processed_sum[$__rate_interval])/delta(gossip_block_elappsed_time_till_processed_count[$__rate_interval])",
+              "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$__rate_interval])/delta(lodestar_gossip_block_elappsed_time_till_processed_count[$__rate_interval])",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
