@@ -10,7 +10,14 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from ".";
-import {getActiveValidatorIndices, getCurrentEpoch, computeEpochAtSlot, ZERO_HASH, getChurnLimit} from "../..";
+import {
+  getActiveValidatorIndices,
+  getCurrentEpoch,
+  computeEpochAtSlot,
+  ZERO_HASH,
+  getChurnLimit,
+  getCurrentSlot,
+} from "../..";
 
 export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = BigInt(10);
@@ -109,7 +116,6 @@ export function getLatestBlockRoot(config: IChainForkConfig, state: allForks.Bea
 
 export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
-  store: allForks.BeaconState,
   wsState: allForks.BeaconState,
   wsCheckpoint: Checkpoint
 ): boolean {
@@ -124,6 +130,6 @@ export function isWithinWeakSubjectivityPeriod(
     throw new Error(`Epochs do not match.  expected=${wsCheckpoint.epoch}, actual=${wsStateEpoch}`);
   }
   const wsPeriod = computeWeakSubjectivityPeriod(config, wsState);
-  const currentEpoch = getCurrentEpoch(store);
-  return currentEpoch <= wsStateEpoch + wsPeriod;
+  const clockEpoch = computeEpochAtSlot(getCurrentSlot(config, wsState.genesisTime));
+  return clockEpoch <= wsStateEpoch + wsPeriod;
 }
