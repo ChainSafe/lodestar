@@ -48,7 +48,7 @@ async function initAndVerifyWeakSubjectivityState(
       "Db state and checkpoint state are not compatible, either clear the db or verify your checkpoint source"
     );
   }
-  
+
   if (!allForks.isWithinWeakSubjectivityPeriod(config, wsState, wsCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
