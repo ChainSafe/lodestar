@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics_metrics/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-7.3.5" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-7.3.6" name="generator"/>
 <title>Metrics metrics - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.cdeb8541.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.a57b2b03.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -367,15 +367,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr/>
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/eth2.0-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -648,7 +648,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr/>
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata</code>: IMetricsOptions["metadata"], <code>anchorState?</code>: allForks.BeaconState): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aafc5d7/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -692,35 +692,35 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>gossipMeshPeersByBeaconAttestationSubnet</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"fork" | "subnet"›</em> = register.gauge&lt;"subnet" | "fork"&gt;({
-      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
+      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
       help: "Number of connected mesh peers per beacon attestation subnet",
       labelNames: ["subnet", "fork"],
     })</p>
 </li>
 <li>
 <p><strong>gossipMeshPeersBySyncCommitteeSubnet</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"fork" | "subnet"›</em> = register.gauge&lt;"subnet" | "fork"&gt;({
-      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet",
+      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
       help: "Number of connected mesh peers per sync committee subnet",
       labelNames: ["subnet", "fork"],
     })</p>
 </li>
 <li>
 <p><strong>gossipMeshPeersByType</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"type" | "fork"›</em> = register.gauge&lt;"type" | "fork"&gt;({
-      name: "lodestar_gossip_mesh_peers_by_type",
+      name: "lodestar_gossip_mesh_peers_by_type_count",
       help: "Number of connected mesh peers per gossip type",
       labelNames: ["type", "fork"],
     })</p>
 </li>
 <li>
 <p><strong>gossipValidationAccept</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"topic"›</em> = register.gauge&lt;"topic"&gt;({
-      name: "lodestar_gossip_validation_accept",
+      name: "lodestar_gossip_validation_accept_total",
       help: "Count of total gossip validation accept",
       labelNames: ["topic"],
     })</p>
 </li>
 <li>
 <p><strong>gossipValidationIgnore</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"topic"›</em> = register.gauge&lt;"topic"&gt;({
-      name: "lodestar_gossip_validation_ignore",
+      name: "lodestar_gossip_validation_ignore_total",
       help: "Count of total gossip validation ignore",
       labelNames: ["topic"],
     })</p>
@@ -756,42 +756,42 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>gossipValidationReject</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"topic"›</em> = register.gauge&lt;"topic"&gt;({
-      name: "lodestar_gossip_validation_reject",
+      name: "lodestar_gossip_validation_reject_total",
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
     })</p>
 </li>
 <li>
 <p><strong>peerConnectedEvent</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"direction"›</em> = register.gauge&lt;"direction"&gt;({
-      name: "lodestar_peer_connected",
-      help: "Number of peer:connected event, labeled by direction",
+      name: "lodestar_peer_connected_total",
+      help: "Total number of peer:connected event, labeled by direction",
       labelNames: ["direction"],
     })</p>
 </li>
 <li>
 <p><strong>peerDisconnectedEvent</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"direction"›</em> = register.gauge&lt;"direction"&gt;({
-      name: "lodestar_peer_disconnected",
-      help: "Number of peer:disconnected event, labeled by direction",
+      name: "lodestar_peer_disconnected_total",
+      help: "Total number of peer:disconnected event, labeled by direction",
       labelNames: ["direction"],
     })</p>
 </li>
 <li>
 <p><strong>peerGoodbyeReceived</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"reason"›</em> = register.gauge&lt;"reason"&gt;({
-      name: "lodestar_peer_goodbye_received",
-      help: "Number of goodbye received, labeled by reason",
+      name: "lodestar_peer_goodbye_received_total",
+      help: "Total number of goodbye received, labeled by reason",
       labelNames: ["reason"],
     })</p>
 </li>
 <li>
 <p><strong>peerGoodbyeSent</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"reason"›</em> = register.gauge&lt;"reason"&gt;({
-      name: "lodestar_peer_goodbye_sent",
-      help: "Number of goodbye sent, labeled by reason",
+      name: "lodestar_peer_goodbye_sent_total",
+      help: "Total number of goodbye sent, labeled by reason",
       labelNames: ["reason"],
     })</p>
 </li>
 <li>
 <p><strong>peersByDirection</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"direction"›</em> = register.gauge&lt;"direction"&gt;({
-      name: "lodestar_peers_by_direction",
+      name: "lodestar_peers_by_direction_count",
       help: "number of peers, labeled by direction",
       labelNames: ["direction"],
     })</p>
@@ -804,7 +804,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>regenFnCallDuration</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹"entrypoint" | "caller"›</em> = register.histogram&lt;"entrypoint" | "caller"&gt;({
-      name: "regen_fn_call_duration",
+      name: "lodestar_regen_fn_call_duration",
       help: "regen function duration",
       labelNames: ["entrypoint", "caller"],
       buckets: [0.1, 1, 10, 100],
@@ -812,21 +812,21 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>regenFnCallTotal</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"entrypoint" | "caller"›</em> = register.gauge&lt;"entrypoint" | "caller"&gt;({
-      name: "regen_fn_call_total",
-      help: "Number of calls for regen functions",
+      name: "lodestar_regen_fn_call_total",
+      help: "Total number of calls for regen functions",
       labelNames: ["entrypoint", "caller"],
     })</p>
 </li>
 <li>
 <p><strong>regenFnQueuedTotal</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"entrypoint" | "caller"›</em> = register.gauge&lt;"entrypoint" | "caller"&gt;({
-      name: "regen_fn_queued_total",
-      help: "Number of calls queued for regen functions",
+      name: "lodestar_regen_fn_queued_total",
+      help: "Total number of calls queued for regen functions",
       labelNames: ["entrypoint", "caller"],
     })</p>
 </li>
 <li>
 <p><strong>regenFnTotalErrors</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"entrypoint" | "caller"›</em> = register.gauge&lt;"entrypoint" | "caller"&gt;({
-      name: "regen_fn_total_errors",
+      name: "lodestar_regen_fn_errors_total",
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
     })</p>
@@ -847,7 +847,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>syncChainsStarted</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"syncType"›</em> = register.gauge&lt;"syncType"&gt;({
-      name: "lodestar_sync_chains_started",
+      name: "lodestar_sync_chains_started_total",
       help: "Total number of sync chains started events, labeled by syncType",
       labelNames: ["syncType"],
     })</p>
@@ -860,8 +860,8 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>unhandeledPromiseRejections</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-      name: "unhandeled_promise_rejections",
-      help: "UnhandeledPromiseRejection count",
+      name: "lodestar_unhandeled_promise_rejections_total",
+      help: "UnhandeledPromiseRejection total count",
     })</p>
 </li>
 <li>
@@ -897,7 +897,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>batchRetries</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "lodestar_bls_thread_pool_batch_retries",
+        name: "lodestar_bls_thread_pool_batch_retries_total",
         help: "Count of total batches that failed and had to be verified again.",
       })</p>
 </li>
@@ -976,43 +976,43 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>adds</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "cp_state_cache_adds_total",
-        help: "Number of items added in checkpoint state cache",
+        name: "lodestar_cp_state_cache_adds_total",
+        help: "Total number of items added in checkpoint state cache",
       })</p>
 </li>
 <li>
 <p><strong>epochSize</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "cp_state_epoch_size",
+        name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
       })</p>
 </li>
 <li>
 <p><strong>hits</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "cp_state_cache_hits_total",
-        help: "Number of checkpoint cache hits",
+        name: "lodestar_cp_state_cache_hits_total",
+        help: "Total number of checkpoint cache hits",
       })</p>
 </li>
 <li>
 <p><strong>lookups</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "cp_state_cache_lookups_total",
-        help: "Number of checkpoint cache lookup",
+        name: "lodestar_cp_state_cache_lookups_total",
+        help: "Total number of checkpoint cache lookup",
       })</p>
 </li>
 <li>
 <p><strong>reads</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹string›</em> = register.avgMinMax({
-        name: "cp_state_epoch_reads",
+        name: "lodestar_cp_state_epoch_reads",
         help: "Avg min max of all state cache items total read count",
       })</p>
 </li>
 <li>
 <p><strong>secondsSinceLastRead</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹string›</em> = register.avgMinMax({
-        name: "cp_state_epoch_seconds_since_last_read",
+        name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       })</p>
 </li>
 <li>
 <p><strong>size</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "cp_state_cache_size",
+        name: "lodestar_cp_state_cache_size",
         help: "Checkpoint state cache size",
       })</p>
 </li>
@@ -1021,14 +1021,14 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>elappsedTimeTillProcessed</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹string›</em> = register.histogram({
-        name: "gossip_block_elappsed_time_till_processed",
+        name: "lodestar_gossip_block_elappsed_time_till_processed",
         help: "Time elappsed between block slot time and the time block processed",
         buckets: [0.1, 1, 10],
       })</p>
 </li>
 <li>
 <p><strong>elappsedTimeTillReceived</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹string›</em> = register.histogram({
-        name: "gossip_block_elappsed_time_till_received",
+        name: "lodestar_gossip_block_elappsed_time_till_received",
         help: "Time elappsed between block slot time and the time block received via gossip",
         buckets: [0.1, 1, 10],
       })</p>
@@ -1067,37 +1067,37 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>adds</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "state_cache_adds_total",
-        help: "Number of items added in state cache",
+        name: "lodestar_state_cache_adds_total",
+        help: "Total number of items added in state cache",
       })</p>
 </li>
 <li>
 <p><strong>hits</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "state_cache_hits_total",
-        help: "Number of total cache hits",
+        name: "lodestar_state_cache_hits_total",
+        help: "Total number of cache hits",
       })</p>
 </li>
 <li>
 <p><strong>lookups</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "state_cache_lookups_total",
-        help: "Number of cache lookup",
+        name: "lodestar_state_cache_lookups_total",
+        help: "Total number of cache lookup",
       })</p>
 </li>
 <li>
 <p><strong>reads</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹string›</em> = register.avgMinMax({
-        name: "state_cache_reads",
+        name: "lodestar_state_cache_reads",
         help: "Avg min max of all state cache items total read count",
       })</p>
 </li>
 <li>
 <p><strong>secondsSinceLastRead</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹string›</em> = register.avgMinMax({
-        name: "state_cache_seconds_since_last_read",
+        name: "lodestar_state_cache_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       })</p>
 </li>
 <li>
 <p><strong>size</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
-        name: "state_cache_size",
+        name: "lodestar_state_cache_size",
         help: "State cache size",
       })</p>
 </li>
@@ -1207,7 +1207,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <li>
 <p><strong>beaconBlockTotal</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index" | "src"›</em> = register.gauge&lt;"index" | "src"&gt;({
         name: "validator_monitor_beacon_block_total",
-        help: "Number of beacon blocks seen",
+        help: "Total number of beacon blocks seen",
         labelNames: ["index", "src"],
       })</p>
 </li>
@@ -1227,14 +1227,14 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>prevEpochAttestationAggregateInclusions</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions",
+        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions_total",
         help: "The count of times an attestation was seen inside an aggregate",
         labelNames: ["index"],
       })</p>
 </li>
 <li>
 <p><strong>prevEpochAttestationBlockInclusions</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_attestation_block_inclusions",
+        name: "validator_monitor_prev_epoch_attestation_block_inclusions_total",
         help: "The count of times an attestation was seen inside a block",
         labelNames: ["index"],
       })</p>
@@ -1276,28 +1276,28 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainAttesterHit</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
         labelNames: ["index"],
       })</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainAttesterMiss</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
         help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
         labelNames: ["index"],
       })</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainHeadAttesterHit</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_head_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
         labelNames: ["index"],
       })</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainHeadAttesterMiss</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_head_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
         labelNames: ["index"],
@@ -1312,14 +1312,14 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainTargetAttesterHit</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_target_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
         labelNames: ["index"],
       })</p>
 </li>
 <li>
 <p><strong>prevEpochOnChainTargetAttesterMiss</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"index"›</em> = register.gauge&lt;"index"&gt;({
-        name: "validator_monitor_prev_epoch_on_chain_target_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
         labelNames: ["index"],
@@ -1383,7 +1383,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.8397ff9e.min.js", "version": null}</script>
-<script src="../../../../assets/javascripts/bundle.1e84347e.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.fcfe8b6d.min.js", "version": null}</script>
+<script src="../../../../assets/javascripts/bundle.b1047164.min.js"></script>
 </body>
 </html>
