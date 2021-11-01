@@ -16,7 +16,6 @@ export interface ILibp2pOptions {
   addresses: {
     listen: string[];
     announce?: string[];
-    noAnnounce?: string[];
   };
   datastore?: Datastore;
   peerDiscovery?: (typeof Bootstrap | typeof MDNS)[];
@@ -27,12 +26,11 @@ export interface ILibp2pOptions {
 
 export class NodejsNode extends LibP2p {
   constructor(options: ILibp2pOptions) {
-    const defaults = {
+    super({
       peerId: options.peerId,
       addresses: {
         listen: options.addresses.listen,
         announce: options.addresses.announce || [],
-        noAnnounce: options.addresses.noAnnounce || [],
       },
       modules: {
         connEncryption: [NOISE],
@@ -40,8 +38,22 @@ export class NodejsNode extends LibP2p {
         streamMuxer: [Mplex],
         peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS],
       },
+      dialer: {
+        maxParallelDials: 100,
+        maxAddrsToDial: 4,
+        maxDialsPerPeer: 2,
+        dialTimeout: 30_000,
+      },
       connectionManager: {
+        autoDial: false,
+        // DOCS: the maximum number of connections libp2p is willing to have before it starts disconnecting.
+        // If ConnectionManager.size > maxConnections calls _maybeDisconnectOne() which will sort peers disconnect
+        // the one with the least `_peerValues`. That's a custom peer generalized score that's not used, so it always
+        // has the same value in current Lodestar usage.
         maxConnections: options.maxConnections,
+        // DOCS: the minimum number of connections below which libp2p not activate preemptive disconnections.
+        // If ConnectionManager.size < minConnections, it won't prune peers in _maybeDisconnectOne(). If autoDial is
+        // off it doesn't have any effect in behaviour.
         minConnections: options.minConnections,
       },
       datastore: options.datastore,
@@ -78,7 +90,6 @@ export class NodejsNode extends LibP2p {
           },
         },
       },
-    };
-    super(defaults);
+    });
   }
 }
