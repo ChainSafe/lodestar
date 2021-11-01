@@ -132,6 +132,9 @@ export class Network implements INetwork {
 
   async start(): Promise<void> {
     await this.libp2p.start();
+    // Stop latency monitor since we handle disconnects here and don't want additional load on the event loop
+    this.libp2p.connectionManager._latencyMonitor.stop();
+
     this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
     await this.peerManager.start();
