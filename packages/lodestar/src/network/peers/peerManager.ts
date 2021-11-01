@@ -98,6 +98,7 @@ export class PeerManager {
   private intervals: NodeJS.Timeout[] = [];
 
   private seenPeers = new Set<string>();
+  private syncPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
     this.libp2p = modules.libp2p;
@@ -115,6 +116,11 @@ export class PeerManager {
 
     // opts.discv5 === null, discovery is disabled
     this.discovery = opts.discv5 && new PeerDiscovery(modules, {maxPeers: opts.maxPeers, discv5: opts.discv5});
+
+    const {metrics} = modules;
+    if (metrics) {
+      metrics.peers.addCollect(() => this.runPeerCountMetrics(metrics));
+    }
   }
 
   async start(): Promise<void> {
@@ -257,6 +263,7 @@ export class PeerManager {
     // NOTE: Peer may not be connected anymore at this point, potential race condition
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (this.libp2p.connectionManager.get(peer)) {
+      this.syncPeers.add(peer.toB58String());
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
     }
   }
@@ -420,8 +427,6 @@ export class PeerManager {
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction});
     this.seenPeers.add(peer.toB58String());
-    this.metrics?.peersTotalUniqueConnected.set(this.seenPeers.size);
-    this.runPeerCountMetrics();
   };
 
   /**
@@ -437,9 +442,9 @@ export class PeerManager {
     this.peersToStatus.delete(peer);
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
+    this.syncPeers.delete(peer.toB58String());
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
-    this.runPeerCountMetrics(); // Last in case it throws
   };
 
   private async disconnect(peer: PeerId): Promise<void> {
@@ -462,7 +467,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private runPeerCountMetrics(): void {
+  private runPeerCountMetrics(metrics: IMetrics): void {
     let total = 0;
     const peersByDirection = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {
@@ -475,9 +480,11 @@ export class PeerManager {
     }
 
     for (const [direction, peers] of peersByDirection.entries()) {
-      this.metrics?.peersByDirection.set({direction}, peers);
+      metrics.peersByDirection.set({direction}, peers);
     }
 
-    this.metrics?.peers.set(total);
+    metrics.peers.set(total);
+    metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
+    metrics.peersSync.set(this.syncPeers.size);
   }
 }
