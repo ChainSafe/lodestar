@@ -7,14 +7,14 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain";
 import {LocalClock} from "../../../src/chain/clock";
-import {PrecomputeEpochScheduler} from "../../../src/chain/precomputeEpoch";
+import {PrecomputeNextEpochTransitionScheduler} from "../../../src/chain/precomputeNextEpochTransition";
 import {StateRegenerator} from "../../../src/chain/regen";
 
 describe("PrecomputeEpochScheduler", () => {
   const sandbox = sinon.createSandbox();
   const abortController = new AbortController();
 
-  let preComputeScheduler: PrecomputeEpochScheduler;
+  let preComputeScheduler: PrecomputeNextEpochTransitionScheduler;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
   let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
@@ -33,7 +33,13 @@ describe("PrecomputeEpochScheduler", () => {
       StateRegenerator;
     chainStub.regen = regenStub;
     loggerStub = sandbox.createStubInstance(WinstonLogger) as SinonStubbedInstance<WinstonLogger> & WinstonLogger;
-    preComputeScheduler = new PrecomputeEpochScheduler(chainStub, config, null, loggerStub, abortController.signal);
+    preComputeScheduler = new PrecomputeNextEpochTransitionScheduler(
+      chainStub,
+      config,
+      null,
+      loggerStub,
+      abortController.signal
+    );
   });
 
   afterEach(() => {

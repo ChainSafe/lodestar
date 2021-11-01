@@ -15,7 +15,7 @@ import {RegenCaller} from "./regen";
  * + validators vote for block head on time through attestation
  * + validators propose blocks on time
  */
-export class PrecomputeEpochScheduler {
+export class PrecomputeNextEpochTransitionScheduler {
   constructor(
     private readonly chain: IBeaconChain,
     private readonly config: IChainForkConfig,
@@ -51,7 +51,7 @@ export class PrecomputeEpochScheduler {
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
     // node may be syncing or out of synced
     if (headSlot < clockSlot) {
-      this.metrics?.preComputeEpoch.count.inc({result: "skip"}, 1);
+      this.metrics?.precomputeNextEpochTransition.count.inc({result: "skip"}, 1);
       this.logger.debug("Skipping PrecomputeEpochScheduler - head slot is not current slot", {
         nextEpoch,
         headSlot,
@@ -71,16 +71,16 @@ export class PrecomputeEpochScheduler {
     this.chain.regen
       .getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch)
       .then(() => {
-        this.metrics?.preComputeEpoch.count.inc({result: "success"}, 1);
+        this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
         const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(blockRoot, nextEpoch);
         if (previousHits === 0) {
-          this.metrics?.preComputeEpoch.waste.inc();
+          this.metrics?.precomputeNextEpochTransition.waste.inc();
         }
-        this.metrics?.preComputeEpoch.hits.set(previousHits ?? 0);
+        this.metrics?.precomputeNextEpochTransition.hits.set(previousHits ?? 0);
         this.logger.verbose("Completed PrecomputeEpochScheduler", {nextEpoch, headSlot, nextSlot});
       })
       .catch((e) => {
-        this.metrics?.preComputeEpoch.count.inc({result: "error"}, 1);
+        this.metrics?.precomputeNextEpochTransition.count.inc({result: "error"}, 1);
         this.logger.error("Failed to precompute epoch transition", nextEpoch, e);
       });
   };
