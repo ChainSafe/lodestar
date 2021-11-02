@@ -40,7 +40,7 @@ export function createLodestarMetrics(
     // Peers
 
     peersByDirection: register.gauge<"direction">({
-      name: "lodestar_peers_by_direction",
+      name: "lodestar_peers_by_direction_count",
       help: "number of peers, labeled by direction",
       labelNames: ["direction"],
     }),
@@ -49,23 +49,23 @@ export function createLodestarMetrics(
       help: "Current count of peers useful for sync",
     }),
     peerConnectedEvent: register.gauge<"direction">({
-      name: "lodestar_peer_connected",
-      help: "Number of peer:connected event, labeled by direction",
+      name: "lodestar_peer_connected_total",
+      help: "Total number of peer:connected event, labeled by direction",
       labelNames: ["direction"],
     }),
     peerDisconnectedEvent: register.gauge<"direction">({
-      name: "lodestar_peer_disconnected",
-      help: "Number of peer:disconnected event, labeled by direction",
+      name: "lodestar_peer_disconnected_total",
+      help: "Total number of peer:disconnected event, labeled by direction",
       labelNames: ["direction"],
     }),
     peerGoodbyeReceived: register.gauge<"reason">({
-      name: "lodestar_peer_goodbye_received",
-      help: "Number of goodbye received, labeled by reason",
+      name: "lodestar_peer_goodbye_received_total",
+      help: "Total number of goodbye received, labeled by reason",
       labelNames: ["reason"],
     }),
     peerGoodbyeSent: register.gauge<"reason">({
-      name: "lodestar_peer_goodbye_sent",
-      help: "Number of goodbye sent, labeled by reason",
+      name: "lodestar_peer_goodbye_sent_total",
+      help: "Total number of goodbye sent, labeled by reason",
       labelNames: ["reason"],
     }),
     peersTotalUniqueConnected: register.gauge({
@@ -157,33 +157,33 @@ export function createLodestarMetrics(
     },
 
     gossipMeshPeersByType: register.gauge<"type" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_type",
+      name: "lodestar_gossip_mesh_peers_by_type_count",
       help: "Number of connected mesh peers per gossip type",
       labelNames: ["type", "fork"],
     }),
     gossipMeshPeersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet",
+      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
       help: "Number of connected mesh peers per beacon attestation subnet",
       labelNames: ["subnet", "fork"],
     }),
     gossipMeshPeersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet",
+      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
       help: "Number of connected mesh peers per sync committee subnet",
       labelNames: ["subnet", "fork"],
     }),
 
     gossipValidationAccept: register.gauge<"topic">({
-      name: "lodestar_gossip_validation_accept",
+      name: "lodestar_gossip_validation_accept_total",
       help: "Count of total gossip validation accept",
       labelNames: ["topic"],
     }),
     gossipValidationIgnore: register.gauge<"topic">({
-      name: "lodestar_gossip_validation_ignore",
+      name: "lodestar_gossip_validation_ignore_total",
       help: "Count of total gossip validation ignore",
       labelNames: ["topic"],
     }),
     gossipValidationReject: register.gauge<"topic">({
-      name: "lodestar_gossip_validation_reject",
+      name: "lodestar_gossip_validation_reject_total",
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
     }),
@@ -311,7 +311,7 @@ export function createLodestarMetrics(
       }),
       // Re-verifying a batch means doing double work. This number must be very low or it can be a waste of CPU resources
       batchRetries: register.gauge({
-        name: "lodestar_bls_thread_pool_batch_retries",
+        name: "lodestar_bls_thread_pool_batch_retries_total",
         help: "Count of total batches that failed and had to be verified again.",
       }),
       // To count how many sigs are being validated with the optimization of batching them
@@ -335,7 +335,7 @@ export function createLodestarMetrics(
     // Sync
 
     syncChainsStarted: register.gauge<"syncType">({
-      name: "lodestar_sync_chains_started",
+      name: "lodestar_sync_chains_started_total",
       help: "Total number of sync chains started events, labeled by syncType",
       labelNames: ["syncType"],
     }),
@@ -381,12 +381,12 @@ export function createLodestarMetrics(
     // Gossip block
     gossipBlock: {
       elappsedTimeTillReceived: register.histogram({
-        name: "gossip_block_elappsed_time_till_received",
+        name: "lodestar_gossip_block_elappsed_time_till_received",
         help: "Time elappsed between block slot time and the time block received via gossip",
         buckets: [0.1, 1, 10],
       }),
       elappsedTimeTillProcessed: register.histogram({
-        name: "gossip_block_elappsed_time_till_processed",
+        name: "lodestar_gossip_block_elappsed_time_till_processed",
         help: "Time elappsed between block slot time and the time block processed",
         buckets: [0.1, 1, 10],
       }),
@@ -404,33 +404,33 @@ export function createLodestarMetrics(
       // Validator Monitor Metrics (per-epoch summaries)
 
       prevEpochOnChainAttesterHit: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainAttesterMiss: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
         help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_head_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_head_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch head attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterMiss: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_head_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_head_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainTargetAttesterHit: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_target_attester_hit",
+        name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainTargetAttesterMiss: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_on_chain_target_attester_miss",
+        name: "validator_monitor_prev_epoch_on_chain_target_attester_miss_total",
         help:
           "Incremented if the validator is not flagged as a previous epoch target attester during per epoch processing",
         labelNames: ["index"],
@@ -451,12 +451,12 @@ export function createLodestarMetrics(
         labelNames: ["index"],
       }),
       prevEpochAttestationAggregateInclusions: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions",
+        name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions_total",
         help: "The count of times an attestation was seen inside an aggregate",
         labelNames: ["index"],
       }),
       prevEpochAttestationBlockInclusions: register.gauge<"index">({
-        name: "validator_monitor_prev_epoch_attestation_block_inclusions",
+        name: "validator_monitor_prev_epoch_attestation_block_inclusions_total",
         help: "The count of times an attestation was seen inside a block",
         labelNames: ["index"],
       }),
@@ -530,7 +530,7 @@ export function createLodestarMetrics(
       }),
       beaconBlockTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_beacon_block_total",
-        help: "Number of beacon blocks seen",
+        help: "Total number of beacon blocks seen",
         labelNames: ["index", "src"],
       }),
       beaconBlockDelaySeconds: register.histogram<"index" | "src">({
@@ -544,86 +544,86 @@ export function createLodestarMetrics(
 
     stateCache: {
       lookups: register.gauge({
-        name: "state_cache_lookups_total",
-        help: "Number of cache lookup",
+        name: "lodestar_state_cache_lookups_total",
+        help: "Total number of cache lookup",
       }),
       hits: register.gauge({
-        name: "state_cache_hits_total",
-        help: "Number of total cache hits",
+        name: "lodestar_state_cache_hits_total",
+        help: "Total number of cache hits",
       }),
       adds: register.gauge({
-        name: "state_cache_adds_total",
-        help: "Number of items added in state cache",
+        name: "lodestar_state_cache_adds_total",
+        help: "Total number of items added in state cache",
       }),
       size: register.gauge({
-        name: "state_cache_size",
+        name: "lodestar_state_cache_size",
         help: "State cache size",
       }),
       reads: register.avgMinMax({
-        name: "state_cache_reads",
+        name: "lodestar_state_cache_reads",
         help: "Avg min max of all state cache items total read count",
       }),
       secondsSinceLastRead: register.avgMinMax({
-        name: "state_cache_seconds_since_last_read",
+        name: "lodestar_state_cache_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
     },
 
     cpStateCache: {
       lookups: register.gauge({
-        name: "cp_state_cache_lookups_total",
-        help: "Number of checkpoint cache lookup",
+        name: "lodestar_cp_state_cache_lookups_total",
+        help: "Total number of checkpoint cache lookup",
       }),
       hits: register.gauge({
-        name: "cp_state_cache_hits_total",
-        help: "Number of checkpoint cache hits",
+        name: "lodestar_cp_state_cache_hits_total",
+        help: "Total number of checkpoint cache hits",
       }),
       adds: register.gauge({
-        name: "cp_state_cache_adds_total",
-        help: "Number of items added in checkpoint state cache",
+        name: "lodestar_cp_state_cache_adds_total",
+        help: "Total number of items added in checkpoint state cache",
       }),
       size: register.gauge({
-        name: "cp_state_cache_size",
+        name: "lodestar_cp_state_cache_size",
         help: "Checkpoint state cache size",
       }),
       epochSize: register.gauge({
-        name: "cp_state_epoch_size",
+        name: "lodestar_cp_state_epoch_size",
         help: "Checkpoint state cache size",
       }),
       reads: register.avgMinMax({
-        name: "cp_state_epoch_reads",
+        name: "lodestar_cp_state_epoch_reads",
         help: "Avg min max of all state cache items total read count",
       }),
       secondsSinceLastRead: register.avgMinMax({
-        name: "cp_state_epoch_seconds_since_last_read",
+        name: "lodestar_cp_state_epoch_seconds_since_last_read",
         help: "Avg min max of all state cache items seconds since last reads",
       }),
     },
 
     regenFnCallTotal: register.gauge<"entrypoint" | "caller">({
-      name: "regen_fn_call_total",
-      help: "Number of calls for regen functions",
+      name: "lodestar_regen_fn_call_total",
+      help: "Total number of calls for regen functions",
       labelNames: ["entrypoint", "caller"],
     }),
     regenFnQueuedTotal: register.gauge<"entrypoint" | "caller">({
-      name: "regen_fn_queued_total",
-      help: "Number of calls queued for regen functions",
+      name: "lodestar_regen_fn_queued_total",
+      help: "Total number of calls queued for regen functions",
       labelNames: ["entrypoint", "caller"],
     }),
     regenFnCallDuration: register.histogram<"entrypoint" | "caller">({
-      name: "regen_fn_call_duration",
+      name: "lodestar_regen_fn_call_duration",
       help: "regen function duration",
       labelNames: ["entrypoint", "caller"],
       buckets: [0.1, 1, 10, 100],
     }),
     regenFnTotalErrors: register.gauge<"entrypoint" | "caller">({
-      name: "regen_fn_total_errors",
+      name: "lodestar_regen_fn_errors_total",
       help: "regen function total errors",
       labelNames: ["entrypoint", "caller"],
     }),
     unhandeledPromiseRejections: register.gauge({
-      name: "unhandeled_promise_rejections",
-      help: "UnhandeledPromiseRejection count",
+      name: "lodestar_unhandeled_promise_rejections_total",
+      help: "UnhandeledPromiseRejection total count",
     }),
   };
 }
