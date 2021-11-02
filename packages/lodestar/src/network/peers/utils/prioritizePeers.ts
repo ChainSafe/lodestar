@@ -7,6 +7,12 @@ import {RequestedSubnet} from "./subnetMap";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const MAX_TARGET_SUBNET_PEERS = 6;
+/**
+ * Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
+ * rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - connectedPeerCount` the
+ * peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary
+ */
+const PEERS_TO_CONNECT_OVERSHOOT_FACTOR = 3;
 
 type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: number};
 
@@ -73,8 +79,15 @@ export function prioritizePeers(
   const connectedPeerCount = connectedPeers.length;
 
   if (connectedPeerCount < targetPeers) {
-    // Need more peers,
-    peersToConnect = targetPeers - connectedPeerCount;
+    // Need more peers.
+    // Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
+    // rate of outgoing connections is low, <33%. If we try to connect exactly `targetPeers - connectedPeerCount` the
+    // peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary
+    peersToConnect = Math.min(
+      PEERS_TO_CONNECT_OVERSHOOT_FACTOR * (targetPeers - connectedPeerCount),
+      // Never attempt to connect more peers than maxPeers even considering a low chance of dial success
+      maxPeers - connectedPeerCount
+    );
   } else if (connectedPeerCount > targetPeers) {
     // Too much peers, disconnect worst
 

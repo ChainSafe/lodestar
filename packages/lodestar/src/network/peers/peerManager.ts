@@ -112,7 +112,6 @@ export class PeerManager {
   private intervals: NodeJS.Timeout[] = [];
 
   private seenPeers = new Set<string>();
-  private syncPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
     this.libp2p = modules.libp2p;
@@ -481,7 +480,6 @@ export class PeerManager {
     this.connectedPeers.delete(peer.toB58String());
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
-    this.syncPeers.delete(peer.toB58String());
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
   };
@@ -522,8 +520,15 @@ export class PeerManager {
       metrics.peersByDirection.set({direction}, peers);
     }
 
+    let syncPeers = 0;
+    for (const peer of this.connectedPeers.values()) {
+      if (peer.relevantStatus === RelevantPeerStatus.relevant) {
+        syncPeers++;
+      }
+    }
+
     metrics.peers.set(total);
     metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
-    metrics.peersSync.set(this.syncPeers.size);
+    metrics.peersSync.set(syncPeers);
   }
 }
