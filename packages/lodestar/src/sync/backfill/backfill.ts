@@ -4,7 +4,7 @@ import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
+import {phase0, Root, Slot, allForks} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List, toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain";
@@ -16,6 +16,7 @@ import {PeerSet} from "../../util/peerMap";
 import {shuffleOne} from "../../util/shuffle";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {verifyBlockProposerSignature, verifyBlockSequence} from "./verify";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /** Default batch size. Same as range sync (2 epochs) */
 const BATCH_SIZE = 64;
@@ -27,6 +28,7 @@ export type BackfillSyncModules = {
   config: IBeaconConfig;
   logger: ILogger;
   metrics: IMetrics | null;
+  wsCheckpoint?: phase0.Checkpoint;
 };
 
 export type BackfillSyncOpts = {
@@ -64,11 +66,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
+  private wsCheckpoint?: phase0.Checkpoint | null;
   private opts: BackfillSyncOpts;
 
   // At any given point, we should have either the anchorBlock, or anchorBlockRoot, the reversed head of the backfill sync, from where we need to backfill
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
   private anchorBlockRoot?: Root | null = null;
+  private lastBackSyncedSlot?: Slot;
 
   private processor = new ItTrigger();
   private peers = new PeerSet();
@@ -82,6 +86,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.config = modules.config;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
+    this.wsCheckpoint = modules.wsCheckpoint;
     this.opts = opts ?? {batchSize: BATCH_SIZE};
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
@@ -117,32 +122,53 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
   /** Returns oldestSlotSynced */
   private async sync(): Promise<Slot> {
-    //Initial check, could be issue if somebody stops and starts node later from WSS
-    // as it will already contain genesis block but not blkocks in between
-
-    const {root, epoch} = this.chain.forkChoice.getFinalizedCheckpoint();
-    const oldestBlock = await this.db.blockArchive.firstValue();
-
-    if (epoch <= 0 || oldestBlock?.message.slot === GENESIS_SLOT) {
-      this.logger.info("BackfillSync - already backfilled to genesis, exiting");
-      return GENESIS_SLOT;
-    }
-    this.logger.info("BackfillSync initializing from cp", {epoch, root: toHexString(root)});
-
-    this.anchorBlock = oldestBlock ?? null;
-    if (!this.anchorBlock) {
-      // Attempt to find the anchor block in the DB
-      try {
-        this.anchorBlock = await this.db.blockArchive.getByRoot(root);
-      } catch (e) {
-        this.logger.error("Error fetching blockArchive", {root: toHexString(root)}, e as Error);
-      }
-    }
-
     // Start processor loop
     this.processor.trigger();
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    const checkpointSlot = (this.wsCheckpoint?.epoch || 0) * SLOTS_PER_EPOCH;
 
     for await (const _ of this.processor) {
+      // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+      if (this.wsCheckpoint && this.lastBackSyncedSlot && checkpointSlot >= this.lastBackSyncedSlot) {
+        // Checkpoint root should be in db now!
+        const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpoint.root);
+        if (!wsDbCheckpointBlock || wsDbCheckpointBlock.message.slot !== checkpointSlot)
+          throw new Error("InvalidWsCheckpoint");
+        this.logger.info("BackfillSync - wsCheckpoint validated!", {
+          root: toHexString(this.wsCheckpoint.root),
+          slot: wsDbCheckpointBlock?.message.slot,
+        });
+        this.wsCheckpoint = null; //no need to check again
+      }
+
+      if (this.anchorBlock?.message.slot === GENESIS_SLOT) {
+        this.logger.info("BackfillSync - successfully synced to genesis, exiting");
+        return GENESIS_SLOT;
+      }
+
+      if (!this.anchorBlock) {
+        // In case of irrecoverable error, both anchorBlock and anchorBlockRoot could be nullified in order to start Backfill sync afresh!
+        if (!this.anchorBlockRoot) {
+          const anchorCp = this.chain.forkChoice.getFinalizedCheckpoint();
+          this.anchorBlockRoot = anchorCp.root;
+          this.logger.warn("BackfillSync - initializing from cp", {
+            root: toHexString(anchorCp.root),
+            epoch: anchorCp.epoch,
+          });
+        }
+      }
+
+      // Inspect in DB
+      const inspectDbRoot = this.anchorBlock?.message.parentRoot || this.anchorBlockRoot;
+      if (!inspectDbRoot) throw new Error("BackfillSyncInternalError");
+      const dbBackBlock = await this.fastBackfillDb(inspectDbRoot);
+      if (dbBackBlock) {
+        this.anchorBlock = dbBackBlock;
+        this.anchorBlockRoot = null;
+        this.processor.trigger();
+        continue;
+      }
+
       const peer = shuffleOne(this.peers.values());
       if (!peer) {
         this.logger.info("BackfillSync no peers yet");
@@ -150,35 +176,24 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       }
 
       try {
-        if (!this.anchorBlock) {
-          // In case of irrecoverable error, both anchorBlock and anchorBlockRoot could be nullified in order to start Backfill sync afresh!
-          if (!this.anchorBlockRoot) {
-            const anchorCp = this.chain.forkChoice.getFinalizedCheckpoint();
-            this.anchorBlockRoot = anchorCp.root;
-            this.logger.warn("BackfillSync - No anchor root, BackfillSync reset from chain's finalized checkpoint", {
-              root: toHexString(anchorCp.root),
-              epoch: anchorCp.epoch,
-            });
-          }
-
+        if (!this.anchorBlock && this.anchorBlockRoot) {
           this.anchorBlock = await this.syncBlockByRoot(peer, this.anchorBlockRoot);
-          if (!this.anchorBlock) continue; // Try from another peer
+          if (!this.anchorBlock) throw new Error("InvalidBlockSyncedFromPeer");
           this.logger.info("BackfillSync - fetched new anchorBlock", {
             root: toHexString(this.anchorBlockRoot),
             slot: this.anchorBlock.message.slot,
           });
+          this.processor.trigger();
+          continue; // Go back to start to do checks
         }
 
-        //synced to genesis
-        if (this.anchorBlock.message.slot === GENESIS_SLOT) {
-          this.logger.info("BackfillSync - successfully synced to genesis, exiting");
-          return GENESIS_SLOT;
-        }
-
+        if (!this.anchorBlock) continue;
         const toSlot = this.anchorBlock.message.slot;
         const fromSlot = Math.max(toSlot - this.opts.batchSize, GENESIS_SLOT);
-        this.logger.warn("BackfillSync syncing", {fromSlot, toSlot});
         await this.syncRange(peer, fromSlot, toSlot, this.anchorBlock.message.parentRoot);
+        //synced to genesis
+        this.processor.trigger();
+        continue; // Go back to start to do checks
       } catch (e) {
         this.metrics?.backfillSync.errors.inc();
         this.logger.error("BackfillSync sync error", {}, e as Error);
@@ -216,12 +231,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.peers.delete(peerId);
   };
 
+  private async fastBackfillDb(root: Root): Promise<allForks.SignedBeaconBlock | null> {
+    let anchorBlock = await this.db.blockArchive.getByRoot(root);
+    if (!anchorBlock) {
+      return null;
+    }
+    let parentBlock,
+      backCount = 0;
+    while ((parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))) {
+      anchorBlock = parentBlock;
+      backCount++;
+      if (backCount % this.opts.batchSize === 0) {
+        break;
+      }
+    }
+    this.lastBackSyncedSlot = anchorBlock.message.slot;
+    this.logger.info(`BackfillSync - read ${backCount} blocks from DB till `, {slot: anchorBlock.message.slot});
+    return anchorBlock;
+  }
+
   private async syncBlockByRoot(peer: PeerId, root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const [block] = await this.network.reqResp.beaconBlocksByRoot(peer, [root] as List<Root>);
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (block) {
       await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [block]);
       await this.db.blockArchive.put(block.message.slot, block);
+      this.lastBackSyncedSlot = block.message.slot;
       this.metrics?.backfillSync.totalBlocks.inc();
     }
     return block;
@@ -231,12 +266,15 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {startSlot: from, count: to - from, step: 1});
     if (blocks.length === 0) {
       return;
-      verifyBlockSequence;
     }
 
     const {nextAnchor, verifiedBlocks, error} = verifyBlockSequence(this.config, blocks, anchorRoot);
-    console.log("nextAnchor ", ssz.Root.toJson(nextAnchor), "error", error);
-    this.logger.warn(`BackfillSync - original length: ${blocks.length}  verified block seq ${verifiedBlocks.length}`);
+    this.logger.info("BackfillSync - syncRange: ", {
+      from,
+      to,
+      discovered: blocks.length,
+      verified: verifiedBlocks.length,
+    });
 
     // If any of the block's proposer signature fail, we can't trust this peer at all
     if (verifiedBlocks.length > 0)
@@ -248,6 +286,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (error === undefined && blocks[0]) {
       this.anchorBlock = blocks[0];
+      this.lastBackSyncedSlot = blocks[0].message.slot;
       this.anchorBlockRoot = null;
     } else {
       // The next previous block be many skipped steps behind so lets set the anchorBlockRoot for main process for it to fetch it singleton

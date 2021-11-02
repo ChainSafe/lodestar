@@ -64,7 +64,8 @@ async function initAndVerifyWeakSubjectivityState(
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
 
-  return await initStateFromAnchorState(config, db, logger, anchorState);
+  await initStateFromAnchorState(config, db, logger, anchorState);
+  return {anchorState: wsState, wsCheckpoint};
 }
 
 /**
@@ -83,7 +84,7 @@ export async function initBeaconState(
   db: IBeaconDb,
   logger: ILogger,
   signal: AbortSignal
-): Promise<TreeBacked<allForks.BeaconState>> {
+): Promise<{anchorState: TreeBacked<allForks.BeaconState>; wsCheckpoint?: Checkpoint}> {
   // fetch the latest state stored in the db
   // this will be used in all cases, if it exists, either used during verification of a weak subjectivity state, or used directly as the anchor state
   const lastDbState = await db.stateArchive.lastValue();
@@ -132,16 +133,19 @@ export async function initBeaconState(
   } else if (lastDbState) {
     // start the chain from the latest stored state in the db
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
-    return await initStateFromAnchorState(config, db, logger, lastDbState);
+    const anchorState = await initStateFromAnchorState(config, db, logger, lastDbState);
+    return {anchorState};
   } else {
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
       const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).createTreeBackedFromBytes(stateBytes);
       const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
-      return await initStateFromAnchorState(config, db, logger, anchorState);
+      await initStateFromAnchorState(config, db, logger, anchorState);
+      return {anchorState};
     } else {
-      return await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
+      const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
+      return {anchorState};
     }
   }
 }

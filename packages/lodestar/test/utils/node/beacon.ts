@@ -17,7 +17,7 @@ import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
 import {TreeBacked} from "@chainsafe/ssz";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export async function getDevBeaconNode(
   opts: {
@@ -28,6 +28,7 @@ export async function getDevBeaconNode(
     peerId?: PeerId;
     peerStoreDir?: string;
     anchorState?: TreeBacked<allForks.BeaconState>;
+    wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
 ): Promise<BeaconNode> {
   const {params, validatorCount = 8, peerStoreDir} = opts;
@@ -79,5 +80,6 @@ export async function getDevBeaconNode(
     logger,
     libp2p,
     anchorState: state,
+    wsCheckpoint: opts.wsCheckpoint,
   });
 }

@@ -8,7 +8,7 @@ import {Registry} from "prom-client";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
@@ -46,6 +46,7 @@ export interface IBeaconNodeInitModules {
   logger: ILogger;
   libp2p: LibP2p;
   anchorState: TreeBacked<allForks.BeaconState>;
+  wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 }
 
@@ -113,6 +114,7 @@ export class BeaconNode {
     logger,
     libp2p,
     anchorState,
+    wsCheckpoint,
     metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
@@ -158,6 +160,7 @@ export class BeaconNode {
       chain,
       metrics,
       network,
+      wsCheckpoint,
       logger: logger.child(opts.logger.sync),
     });
 
