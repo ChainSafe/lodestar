@@ -110,7 +110,7 @@ export class Eth2Gossipsub extends Gossipsub {
     this.jobQueues = jobQueues;
 
     if (metrics) {
-      metrics.gossipMeshPeersByType.addCollect(() => this.onScrapeMetrics(metrics));
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeMetrics(metrics));
     }
   }
 
@@ -385,45 +385,50 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   private onScrapeMetrics(metrics: IMetrics): void {
-    // Pre-aggregate results by fork so we can fill the remaining metrics with 0
-    const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
-    const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
-    const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
+    for (const {peersMap, metricsGossip} of [
+      {peersMap: this.mesh, metricsGossip: metrics.gossipMesh},
+      {peersMap: this.topics, metricsGossip: metrics.gossipTopic},
+    ]) {
+      // Pre-aggregate results by fork so we can fill the remaining metrics with 0
+      const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
+      const peersByBeaconAttSubnetByFork = new Map2dArr<ForkName, number>();
+      const peersByBeaconSyncSubnetByFork = new Map2dArr<ForkName, number>();
 
-    // loop through all mesh entries, count each set size
-    for (const [topicString, peers] of this.mesh.entries()) {
-      // Ignore topics with 0 peers. May prevent overriding after a fork
-      if (peers.size === 0) continue;
+      // loop through all mesh entries, count each set size
+      for (const [topicString, peers] of peersMap) {
+        // Ignore topics with 0 peers. May prevent overriding after a fork
+        if (peers.size === 0) continue;
 
-      const topic = this.gossipTopicCache.getTopic(topicString);
-      if (topic.type === GossipType.beacon_attestation) {
-        peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
-      } else if (topic.type === GossipType.sync_committee) {
-        peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
-      } else {
-        peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+        const topic = this.gossipTopicCache.getTopic(topicString);
+        if (topic.type === GossipType.beacon_attestation) {
+          peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+        } else if (topic.type === GossipType.sync_committee) {
+          peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+        } else {
+          peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+        }
       }
-    }
 
-    // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
-    // zero out all gossip type & subnet choices, so the dashboard will register them
-    for (const [fork, peersByType] of peersByTypeByFork.map.entries()) {
-      for (const type of Object.values(GossipType)) {
-        metrics.gossipMeshPeersByType.set({fork, type}, peersByType.get(type) ?? 0);
+      // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
+      // zero out all gossip type & subnet choices, so the dashboard will register them
+      for (const [fork, peersByType] of peersByTypeByFork.map) {
+        for (const type of Object.values(GossipType)) {
+          metricsGossip.peersByType.set({fork, type}, peersByType.get(type) ?? 0);
+        }
       }
-    }
-    for (const [fork, peersByBeaconAttSubnet2] of peersByBeaconAttSubnetByFork.map.entries()) {
-      for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
-        metrics.gossipMeshPeersByBeaconAttestationSubnet.set(
-          {fork, subnet: attSubnetLabel(subnet)},
-          peersByBeaconAttSubnet2[subnet] ?? 0
-        );
+      for (const [fork, peersByBeaconAttSubnet] of peersByBeaconAttSubnetByFork.map) {
+        for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+          metricsGossip.peersByBeaconAttestationSubnet.set(
+            {fork, subnet: attSubnetLabel(subnet)},
+            peersByBeaconAttSubnet[subnet] ?? 0
+          );
+        }
       }
-    }
-    for (const [fork, peersByBeaconSyncSubnet2] of peersByBeaconSyncSubnetByFork.map.entries()) {
-      for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
-        // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
-        metrics.gossipMeshPeersBySyncCommitteeSubnet.set({fork, subnet}, peersByBeaconSyncSubnet2[subnet] ?? 0);
+      for (const [fork, peersByBeaconSyncSubnet] of peersByBeaconSyncSubnetByFork.map) {
+        for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+          // SYNC_COMMITTEE_SUBNET_COUNT is < 9, no need to prepend a 0 to the label
+          metricsGossip.peersBySyncCommitteeSubnet.set({fork, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
+        }
       }
     }
   }
