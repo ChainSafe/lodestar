@@ -141,7 +141,9 @@ describe("network", function () {
     expect(Array.from(netB.getConnectionsByPeer().values()).length).to.equal(0);
   });
 
-  it("should connect to new peer by subnet", async function () {
+  // Current implementation of discv5 consumer doesn't allow to deterministically force a peer to be found
+  // a random find node lookup can yield no results if there are too few peers in the DHT
+  it.skip("should connect to new peer by subnet", async function () {
     const [{network: netBootnode}, {network: netA}, {network: netB}] = await Promise.all([
       createTestNode("bootnode"),
       createTestNode("A"),
