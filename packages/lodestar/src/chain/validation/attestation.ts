@@ -173,11 +173,11 @@ export async function validateGossipAttestation(
  */
 export function verifyPropagationSlotRange(chain: IBeaconChain, attestationSlot: Slot): void {
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
-  const latestPermissibleSlot = chain.clock.slotWithTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
+  const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
   const earliestPermissibleSlot = Math.max(
     // slot with past tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
     // ATTESTATION_PROPAGATION_SLOT_RANGE = SLOTS_PER_EPOCH
-    chain.clock.slotWithTolerance(-MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
+    chain.clock.slotWithPastTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC) - SLOTS_PER_EPOCH,
     0
   );
   if (attestationSlot < earliestPermissibleSlot) {
