@@ -371,15 +371,15 @@ receives and it can be triggered manually.</p>
 <p>• <strong>attestationByRootBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../../modules/chain_oppools/#aggregatefast">AggregateFast</a>››</em> = new MapDef<slot, aggregatefast="" map\<dataroothex,="">&gt;(
     () =&gt; new Map<dataroothex, aggregatefast="">()
   )</dataroothex,></slot,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L57">packages/lodestar/src/chain/opPools/attestationPool.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L57">packages/lodestar/src/chain/opPools/attestationPool.ts:57</a></em></p>
 <hr/>
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">¶</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L60">packages/lodestar/src/chain/opPools/attestationPool.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L60">packages/lodestar/src/chain/opPools/attestationPool.ts:60</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>attestation</code>: Attestation): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L80">packages/lodestar/src/chain/opPools/attestationPool.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L80">packages/lodestar/src/chain/opPools/attestationPool.ts:80</a></em></p>
 <p>Accepts an <code>VerifiedUnaggregatedAttestation</code> and attempts to apply it to the "naive
 aggregation pool".</p>
 <p>The naive aggregation pool is used by local validators to produce
@@ -410,7 +410,7 @@ and no error is returned.</p>
 <hr/>
 <h3 id="getaggregate">getAggregate<a class="headerlink" href="#getaggregate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAggregate</strong>(<code>slot</code>: Slot, <code>dataRoot</code>: Root): <em>Attestation</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L113">packages/lodestar/src/chain/opPools/attestationPool.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L113">packages/lodestar/src/chain/opPools/attestationPool.ts:113</a></em></p>
 <p>For validator API to get an aggregate</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -435,7 +435,7 @@ and no error is returned.</p>
 <hr/>
 <h3 id="getall">getAll<a class="headerlink" href="#getall" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAll</strong>(<code>bySlot?</code>: Slot): <em>Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L137">packages/lodestar/src/chain/opPools/attestationPool.ts:137</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L137">packages/lodestar/src/chain/opPools/attestationPool.ts:137</a></em></p>
 <p>Get all attestations optionally filtered by <code>attestation.data.slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -458,7 +458,7 @@ and no error is returned.</p>
 <hr/>
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/13b61a3/packages/lodestar/src/chain/opPools/attestationPool.ts#L128">packages/lodestar/src/chain/opPools/attestationPool.ts:128</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9fd75f0/packages/lodestar/src/chain/opPools/attestationPool.ts#L128">packages/lodestar/src/chain/opPools/attestationPool.ts:128</a></em></p>
 <p>Removes any attestations with a slot lower than <code>current_slot</code> and bars any future
 attestations with a slot lower than <code>current_slot - SLOTS_RETAINED</code>.</p>
 <p><strong>Parameters:</strong></p>
