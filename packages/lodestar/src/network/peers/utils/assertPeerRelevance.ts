@@ -1,4 +1,5 @@
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Epoch, ForkDigest, Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -71,7 +72,7 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
         : // This will get the latest known block at the start of the epoch.
           getRootAtHistoricalEpoch(chain, remote.finalizedEpoch);
 
-    if (!ssz.Root.equals(remoteRoot, expectedRoot)) {
+    if (expectedRoot !== null && !ssz.Root.equals(remoteRoot, expectedRoot)) {
       throw new IrrelevantPeerError({
         code: IrrelevantPeerErrorCode.DIFFERENT_FINALIZED,
         expectedRoot: toHexString(expectedRoot), // forkChoice returns Tree BranchNode which the logger prints as {}
@@ -88,10 +89,16 @@ export function isZeroRoot(root: Root): boolean {
   return ssz.Root.equals(root, ZERO_ROOT);
 }
 
-function getRootAtHistoricalEpoch(chain: IBeaconChain, epoch: Epoch): Root {
+function getRootAtHistoricalEpoch(chain: IBeaconChain, epoch: Epoch): Root | null {
   const headState = chain.getHeadState();
-
   const slot = computeStartSlotAtEpoch(epoch);
+
+  if (slot < headState.slot - SLOTS_PER_HISTORICAL_ROOT) {
+    // TODO: If the slot is very old, go to the historical blocks DB and fetch the block with less or equal `slot`.
+    // Note that our db schema will have to be updated to persist the block root to prevent re-hashing.
+    // For now peers will be accepted, since it's better than throwing an error on `getBlockRootAtSlot()`
+    return null;
+  }
 
   // This will get the latest known block at the start of the epoch.
   // NOTE: Throws if the epoch if from a long-ago epoch
