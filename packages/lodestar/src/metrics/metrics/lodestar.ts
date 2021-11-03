@@ -69,21 +69,40 @@ export function createLodestarMetrics(
       help: "Total number of unique peers that have had a connection with",
     }),
 
-    gossipMeshPeersByType: register.gauge<"type" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_type_count",
-      help: "Number of connected mesh peers per gossip type",
-      labelNames: ["type", "fork"],
-    }),
-    gossipMeshPeersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
-      help: "Number of connected mesh peers per beacon attestation subnet",
-      labelNames: ["subnet", "fork"],
-    }),
-    gossipMeshPeersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
-      name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
-      help: "Number of connected mesh peers per sync committee subnet",
-      labelNames: ["subnet", "fork"],
-    }),
+    gossipMesh: {
+      peersByType: register.gauge<"type" | "fork">({
+        name: "lodestar_gossip_mesh_peers_by_type_count",
+        help: "Number of connected mesh peers per gossip type",
+        labelNames: ["type", "fork"],
+      }),
+      peersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
+        name: "lodestar_gossip_mesh_peers_by_beacon_attestation_subnet_count",
+        help: "Number of connected mesh peers per beacon attestation subnet",
+        labelNames: ["subnet", "fork"],
+      }),
+      peersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
+        name: "lodestar_gossip_mesh_peers_by_sync_committee_subnet_count",
+        help: "Number of connected mesh peers per sync committee subnet",
+        labelNames: ["subnet", "fork"],
+      }),
+    },
+    gossipTopic: {
+      peersByType: register.gauge<"type" | "fork">({
+        name: "lodestar_gossip_topic_peers_by_type_count",
+        help: "Number of connected topic peers per gossip type",
+        labelNames: ["type", "fork"],
+      }),
+      peersByBeaconAttestationSubnet: register.gauge<"subnet" | "fork">({
+        name: "lodestar_gossip_topic_peers_by_beacon_attestation_subnet_count",
+        help: "Number of connected topic peers per beacon attestation subnet",
+        labelNames: ["subnet", "fork"],
+      }),
+      peersBySyncCommitteeSubnet: register.gauge<"subnet" | "fork">({
+        name: "lodestar_gossip_topic_peers_by_sync_committee_subnet_count",
+        help: "Number of connected topic peers per sync committee subnet",
+        labelNames: ["subnet", "fork"],
+      }),
+    },
 
     gossipValidationAccept: register.gauge<"topic">({
       name: "lodestar_gossip_validation_accept_total",
