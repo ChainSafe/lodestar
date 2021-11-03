@@ -55,7 +55,9 @@ async function initAndVerifyWeakSubjectivityState(
   if (store.slot > wsState.slot) {
     anchorState = store;
     anchorCheckpoint = getCheckpointFromState(config, store);
-    logger.verbose("Db state is ahead of the provided checkpoint state, using the db state to initialize the beacon chain");
+    logger.verbose(
+      "Db state is ahead of the provided checkpoint state, using the db state to initialize the beacon chain"
+    );
   }
 
   if (!allForks.isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
