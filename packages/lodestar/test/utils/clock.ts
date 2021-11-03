@@ -13,7 +13,11 @@ export class ClockStatic implements IBeaconClock {
     return this.currentSlot;
   }
 
-  slotWithTolerance(): Slot {
+  slotWithFutureTolerance(): Slot {
+    return this.currentSlot;
+  }
+
+  slotWithPastTolerance(): Slot {
     return this.currentSlot;
   }
 

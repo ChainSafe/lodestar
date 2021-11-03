@@ -64,7 +64,14 @@ export class LocalClock implements IBeaconClock {
   }
 
   /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
-  slotWithTolerance(toleranceSec: number): Slot {
+  slotWithFutureTolerance(toleranceSec: number): Slot {
+    // this is the same to getting slot at now + toleranceSec
+    return getCurrentSlot(this.config, this.genesisTime - toleranceSec);
+  }
+
+  /** Returns the slot if the internal clock were reversed by `toleranceSec`. */
+  slotWithPastTolerance(toleranceSec: number): Slot {
+    // this is the same to getting slot at now - toleranceSec
     return getCurrentSlot(this.config, this.genesisTime + toleranceSec);
   }
 
