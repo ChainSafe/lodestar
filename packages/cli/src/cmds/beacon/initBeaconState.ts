@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-
+import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
@@ -39,10 +39,32 @@ async function initAndVerifyWeakSubjectivityState(
   wsState: TreeBacked<allForks.BeaconState>,
   wsCheckpoint: Checkpoint
 ): Promise<TreeBacked<allForks.BeaconState>> {
-  if (!allForks.isWithinWeakSubjectivityPeriod(config, store, wsState, wsCheckpoint)) {
+  // Check if the store's state and wsState are compatible
+  if (
+    store.genesisTime !== wsState.genesisTime ||
+    !ssz.Root.equals(store.genesisValidatorsRoot, wsState.genesisValidatorsRoot)
+  ) {
+    throw new Error(
+      "Db state and checkpoint state are not compatible, either clear the db or verify your checkpoint source"
+    );
+  }
+
+  // Pick the state which is ahead as an anchor to initialize the beacon chain
+  let anchorState = wsState;
+  let anchorCheckpoint = wsCheckpoint;
+  if (store.slot > wsState.slot) {
+    anchorState = store;
+    anchorCheckpoint = getCheckpointFromState(config, store);
+    logger.verbose(
+      "Db state is ahead of the provided checkpoint state, using the db state to initialize the beacon chain"
+    );
+  }
+
+  if (!allForks.isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
-  return await initStateFromAnchorState(config, db, logger, wsState);
+
+  return await initStateFromAnchorState(config, db, logger, anchorState);
 }
 
 /**
