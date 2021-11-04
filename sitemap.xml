@@ -1481,11 +1481,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers_utils.peermapdelay/</loc>
-         <lastmod>2021-11-04</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers_utils.subnetmap/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
@@ -1761,7 +1756,17 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.enrkey/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.networkevent/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.subnettype/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1776,7 +1781,22 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.discoveredpeerstatus/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.peeraction/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.querystatuscode/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.relevantpeerstatus/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
     </url>

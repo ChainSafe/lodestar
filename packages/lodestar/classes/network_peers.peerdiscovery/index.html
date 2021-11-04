@@ -270,6 +270,11 @@
     Methods
   </a>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#object-literals">
+    Object literals
+  </a>
+</li>
 </ul>
 </nav>
 </li>
@@ -294,13 +299,18 @@
 <nav aria-label="Properties" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#private-activediscv5query">
-    Private activeDiscv5Query
+<a class="md-nav__link" href="#private-cachedenrs">
+    Private cachedENRs
   </a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#private-config">
     Private config
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#readonly-discv5">
+    Readonly discv5
   </a>
 </li>
 <li class="md-nav__item">
@@ -319,8 +329,18 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#private-metrics">
+    Private metrics
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#private-peerrpcscores">
     Private peerRpcScores
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#private-peerstoconnect">
+    Private peersToConnect
   </a>
 </li>
 </ul>
@@ -333,23 +353,18 @@
 <nav aria-label="Methods" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#private-dialpeer">
+    Private dialPeer
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#discoverpeers">
     discoverPeers
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#discoversubnetpeers">
-    discoverSubnetPeers
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#getcacheddiscoverypeersonsubnet">
-    getCachedDiscoveryPeersOnSubnet
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#private-getstoredpeeridstr">
-    Private getStoredPeerIdStr
+<a class="md-nav__link" href="#private-handlediscoveredpeer">
+    Private handleDiscoveredPeer
   </a>
 </li>
 <li class="md-nav__item">
@@ -358,13 +373,72 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#private-peersdiscovered">
-    Private peersDiscovered
+<a class="md-nav__link" href="#private-ondiscovered">
+    Private onDiscovered
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#private-runsubnetquery">
-    Private runSubnetQuery
+<a class="md-nav__link" href="#private-runfindrandomnodequery">
+    Private runFindRandomNodeQuery
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#private-shoulddialpeer">
+    Private shouldDialPeer
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#start">
+    start
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#stop">
+    stop
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#object-literals_1">
+    Object literals
+  </a>
+<nav aria-label="Object literals" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#private-randomnodequery">
+    Private randomNodeQuery
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#randomnodequery-object">
+    ▪ randomNodeQuery: object
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#code">
+    code
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#private-subnetrequests">
+    Private subnetRequests
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#subnetrequests-object">
+    ▪ subnetRequests: object
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#attnets">
+    attnets
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#syncnets">
+    syncnets
   </a>
 </li>
 </ul>
@@ -383,7 +457,7 @@
 <p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/network_peers/">network/peers</a> › <a href="./">PeerDiscovery</a></p>
 <h1 id="class-peerdiscovery">Class: PeerDiscovery<a class="headerlink" href="#class-peerdiscovery" title="Permanent link">¶</a></h1>
 <p>PeerDiscovery discovers and dials new peers, and executes discv5 queries.
-Currently relies on discv5 automatic periodic queries</p>
+Currently relies on discv5 automatic periodic queries.</p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
 <li><strong>PeerDiscovery</strong></li>
@@ -395,27 +469,37 @@ Currently relies on discv5 automatic periodic queries</p>
 </ul>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#private-activediscv5query">activeDiscv5Query</a></li>
+<li><a href="./#private-cachedenrs">cachedENRs</a></li>
 <li><a href="./#private-config">config</a></li>
+<li><a href="./#readonly-discv5">discv5</a></li>
 <li><a href="./#private-libp2p">libp2p</a></li>
 <li><a href="./#private-logger">logger</a></li>
 <li><a href="./#private-maxpeers">maxPeers</a></li>
+<li><a href="./#private-metrics">metrics</a></li>
 <li><a href="./#private-peerrpcscores">peerRpcScores</a></li>
+<li><a href="./#private-peerstoconnect">peersToConnect</a></li>
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
+<li><a href="./#private-dialpeer">dialPeer</a></li>
 <li><a href="./#discoverpeers">discoverPeers</a></li>
-<li><a href="./#discoversubnetpeers">discoverSubnetPeers</a></li>
-<li><a href="./#getcacheddiscoverypeersonsubnet">getCachedDiscoveryPeersOnSubnet</a></li>
-<li><a href="./#private-getstoredpeeridstr">getStoredPeerIdStr</a></li>
+<li><a href="./#private-handlediscoveredpeer">handleDiscoveredPeer</a></li>
 <li><a href="./#private-ispeerconnected">isPeerConnected</a></li>
-<li><a href="./#private-peersdiscovered">peersDiscovered</a></li>
-<li><a href="./#private-runsubnetquery">runSubnetQuery</a></li>
+<li><a href="./#private-ondiscovered">onDiscovered</a></li>
+<li><a href="./#private-runfindrandomnodequery">runFindRandomNodeQuery</a></li>
+<li><a href="./#private-shoulddialpeer">shouldDialPeer</a></li>
+<li><a href="./#start">start</a></li>
+<li><a href="./#stop">stop</a></li>
+</ul>
+<h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#private-randomnodequery">randomNodeQuery</a></li>
+<li><a href="./#private-subnetrequests">subnetRequests</a></li>
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new PeerDiscovery</strong>(<code>modules</code>: <a href="../../modules/network_peers/#peerdiscoverymodules">PeerDiscoveryModules</a>, <code>opts</code>: <a href="../../modules/network_peers/#peerdiscoveryopts">PeerDiscoveryOpts</a>): <em><a href="./">PeerDiscovery</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L39">packages/lodestar/src/network/peers/discover.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L88">packages/lodestar/src/network/peers/discover.ts:88</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -437,56 +521,48 @@ Currently relies on discv5 automatic periodic queries</p>
 </table>
 <p><strong>Returns:</strong> <em><a href="./">PeerDiscovery</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="private-activediscv5query"><code>Private</code> activeDiscv5Query<a class="headerlink" href="#private-activediscv5query" title="Permanent link">¶</a></h3>
-<p>• <strong>activeDiscv5Query</strong>: <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L36">packages/lodestar/src/network/peers/discover.ts:36</a></em></p>
+<h3 id="private-cachedenrs"><code>Private</code> cachedENRs<a class="headerlink" href="#private-cachedenrs" title="Permanent link">¶</a></h3>
+<p>• <strong>cachedENRs</strong>: <em>Set‹<a href="../../modules/network_peers/#cachedenr">CachedENR</a>›</em> = new Set<cachedenr>()</cachedenr></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L79">packages/lodestar/src/network/peers/discover.ts:79</a></em></p>
 <hr/>
 <h3 id="private-config"><code>Private</code> config<a class="headerlink" href="#private-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L35">packages/lodestar/src/network/peers/discover.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L78">packages/lodestar/src/network/peers/discover.ts:78</a></em></p>
+<hr/>
+<h3 id="readonly-discv5"><code>Readonly</code> discv5<a class="headerlink" href="#readonly-discv5" title="Permanent link">¶</a></h3>
+<p>• <strong>discv5</strong>: <em>Discv5</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L73">packages/lodestar/src/network/peers/discover.ts:73</a></em></p>
 <hr/>
 <h3 id="private-libp2p"><code>Private</code> libp2p<a class="headerlink" href="#private-libp2p" title="Permanent link">¶</a></h3>
 <p>• <strong>libp2p</strong>: <em>LibP2p</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L32">packages/lodestar/src/network/peers/discover.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L74">packages/lodestar/src/network/peers/discover.ts:74</a></em></p>
 <hr/>
 <h3 id="private-logger"><code>Private</code> logger<a class="headerlink" href="#private-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L34">packages/lodestar/src/network/peers/discover.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L77">packages/lodestar/src/network/peers/discover.ts:77</a></em></p>
 <hr/>
 <h3 id="private-maxpeers"><code>Private</code> maxPeers<a class="headerlink" href="#private-maxpeers" title="Permanent link">¶</a></h3>
 <p>• <strong>maxPeers</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L39">packages/lodestar/src/network/peers/discover.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L88">packages/lodestar/src/network/peers/discover.ts:88</a></em></p>
 <p>The maximum number of peers we allow (exceptions for subnet peers)</p>
+<hr/>
+<h3 id="private-metrics"><code>Private</code> metrics<a class="headerlink" href="#private-metrics" title="Permanent link">¶</a></h3>
+<p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L76">packages/lodestar/src/network/peers/discover.ts:76</a></em></p>
 <hr/>
 <h3 id="private-peerrpcscores"><code>Private</code> peerRpcScores<a class="headerlink" href="#private-peerrpcscores" title="Permanent link">¶</a></h3>
 <p>• <strong>peerRpcScores</strong>: <em><a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L33">packages/lodestar/src/network/peers/discover.ts:33</a></em></p>
-<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="discoverpeers">discoverPeers<a class="headerlink" href="#discoverpeers" title="Permanent link">¶</a></h3>
-<p>▸ <strong>discoverPeers</strong>(<code>maxPeersToDiscover</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L53">packages/lodestar/src/network/peers/discover.ts:53</a></em></p>
-<p>Request to find peers. First, looked at cached peers in peerStore</p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>maxPeersToDiscover</code></td>
-<td>number</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L75">packages/lodestar/src/network/peers/discover.ts:75</a></em></p>
 <hr/>
-<h3 id="discoversubnetpeers">discoverSubnetPeers<a class="headerlink" href="#discoversubnetpeers" title="Permanent link">¶</a></h3>
-<p>▸ <strong>discoverSubnetPeers</strong>(<code>subnetsToDiscover</code>: <a href="../../modules/network_peers/#attsubnetquery">AttSubnetQuery</a>[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L80">packages/lodestar/src/network/peers/discover.ts:80</a></em></p>
-<p>Request to find peers on a given subnet.</p>
+<h3 id="private-peerstoconnect"><code>Private</code> peersToConnect<a class="headerlink" href="#private-peerstoconnect" title="Permanent link">¶</a></h3>
+<p>• <strong>peersToConnect</strong>: <em>number</em> = 0</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L81">packages/lodestar/src/network/peers/discover.ts:81</a></em></p>
+<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
+<h3 id="private-dialpeer"><code>Private</code> dialPeer<a class="headerlink" href="#private-dialpeer" title="Permanent link">¶</a></h3>
+<p>▸ <strong>dialPeer</strong>(<code>cachedPeer</code>: <a href="../../modules/network_peers/#cachedenr">CachedENR</a>): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L333">packages/lodestar/src/network/peers/discover.ts:333</a></em></p>
+<p>Handles DiscoveryEvent::QueryResult
+Peers that have been returned by discovery requests are dialed here if they are suitable.</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -497,17 +573,45 @@ Currently relies on discv5 automatic periodic queries</p>
 </thead>
 <tbody>
 <tr>
-<td><code>subnetsToDiscover</code></td>
-<td><a href="../../modules/network_peers/#attsubnetquery">AttSubnetQuery</a>[]</td>
+<td><code>cachedPeer</code></td>
+<td><a href="../../modules/network_peers/#cachedenr">CachedENR</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
-<h3 id="getcacheddiscoverypeersonsubnet">getCachedDiscoveryPeersOnSubnet<a class="headerlink" href="#getcacheddiscoverypeersonsubnet" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getCachedDiscoveryPeersOnSubnet</strong>(<code>subnet</code>: number, <code>maxPeersToDiscover</code>: number): <em>Promise‹<a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L108">packages/lodestar/src/network/peers/discover.ts:108</a></em></p>
-<p>List existing peers that declare being part of a target subnet</p>
+<h3 id="discoverpeers">discoverPeers<a class="headerlink" href="#discoverpeers" title="Permanent link">¶</a></h3>
+<p>▸ <strong>discoverPeers</strong>(<code>peersToConnect</code>: number, <code>subnetRequests</code>: <a href="../../modules/network_peers/#subnetdiscvqueryms">SubnetDiscvQueryMs</a>[]): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L133">packages/lodestar/src/network/peers/discover.ts:133</a></em></p>
+<p>Request to find peers, both on specific subnets and in general</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peersToConnect</code></td>
+<td>number</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>subnetRequests</code></td>
+<td><a href="../../modules/network_peers/#subnetdiscvqueryms">SubnetDiscvQueryMs</a>[]</td>
+<td>[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="private-handlediscoveredpeer"><code>Private</code> handleDiscoveredPeer<a class="headerlink" href="#private-handlediscoveredpeer" title="Permanent link">¶</a></h3>
+<p>▸ <strong>handleDiscoveredPeer</strong>(<code>enr</code>: ENR): <em>Promise‹<a href="../../enums/network_peers.discoveredpeerstatus/">DiscoveredPeerStatus</a>›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L234">packages/lodestar/src/network/peers/discover.ts:234</a></em></p>
+<p>Progressively called by discv5 as a result of any query.</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -518,26 +622,16 @@ Currently relies on discv5 automatic periodic queries</p>
 </thead>
 <tbody>
 <tr>
-<td><code>subnet</code></td>
-<td>number</td>
-</tr>
-<tr>
-<td><code>maxPeersToDiscover</code></td>
-<td>number</td>
+<td><code>enr</code></td>
+<td>ENR</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]›</em></p>
-<hr/>
-<h3 id="private-getstoredpeeridstr"><code>Private</code> getStoredPeerIdStr<a class="headerlink" href="#private-getstoredpeeridstr" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getStoredPeerIdStr</strong>(): <em><a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L188">packages/lodestar/src/network/peers/discover.ts:188</a></em></p>
-<p>Return stored peerIdStr, may return self peerIdStr</p>
-<p><strong>Returns:</strong> <em><a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../enums/network_peers.discoveredpeerstatus/">DiscoveredPeerStatus</a>›</em></p>
 <hr/>
 <h3 id="private-ispeerconnected"><code>Private</code> isPeerConnected<a class="headerlink" href="#private-ispeerconnected" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isPeerConnected</strong>(<code>peerIdStr</code>: <a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L193">packages/lodestar/src/network/peers/discover.ts:193</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L364">packages/lodestar/src/network/peers/discover.ts:364</a></em></p>
 <p>Check if there is 1+ open connection with this peer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -556,11 +650,10 @@ Currently relies on discv5 automatic periodic queries</p>
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
-<h3 id="private-peersdiscovered"><code>Private</code> peersDiscovered<a class="headerlink" href="#private-peersdiscovered" title="Permanent link">¶</a></h3>
-<p>▸ <strong>peersDiscovered</strong>(<code>discoveredPeers</code>: <a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L156">packages/lodestar/src/network/peers/discover.ts:156</a></em></p>
-<p>Handles DiscoveryEvent::QueryResult
-Peers that have been returned by discovery requests are dialed here if they are suitable.</p>
+<h3 id="private-ondiscovered"><code>Private</code> onDiscovered<a class="headerlink" href="#private-ondiscovered" title="Permanent link">¶</a></h3>
+<p>▸ <strong>onDiscovered</strong>(<code>enr</code>: ENR): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L226">packages/lodestar/src/network/peers/discover.ts:226</a></em></p>
+<p>Progressively called by discv5 as a result of any query.</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -571,32 +664,65 @@ Peers that have been returned by discovery requests are dialed here if they are 
 </thead>
 <tbody>
 <tr>
-<td><code>discoveredPeers</code></td>
-<td><a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>[]</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="private-runsubnetquery"><code>Private</code> runSubnetQuery<a class="headerlink" href="#private-runsubnetquery" title="Permanent link">¶</a></h3>
-<p>▸ <strong>runSubnetQuery</strong>(<code>subnets</code>: number[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70a534d/packages/lodestar/src/network/peers/discover.ts#L148">packages/lodestar/src/network/peers/discover.ts:148</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>subnets</code></td>
-<td>number[]</td>
+<td><code>enr</code></td>
+<td>ENR</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="private-runfindrandomnodequery"><code>Private</code> runFindRandomNodeQuery<a class="headerlink" href="#private-runfindrandomnodequery" title="Permanent link">¶</a></h3>
+<p>▸ <strong>runFindRandomNodeQuery</strong>(): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L198">packages/lodestar/src/network/peers/discover.ts:198</a></em></p>
+<p>Request to find peers. First, looked at cached peers in peerStore</p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="private-shoulddialpeer"><code>Private</code> shouldDialPeer<a class="headerlink" href="#private-shoulddialpeer" title="Permanent link">¶</a></h3>
+<p>▸ <strong>shouldDialPeer</strong>(<code>peer</code>: <a href="../../modules/network_peers/#cachedenr">CachedENR</a>): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L308">packages/lodestar/src/network/peers/discover.ts:308</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peer</code></td>
+<td><a href="../../modules/network_peers/#cachedenr">CachedENR</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
+<p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L120">packages/lodestar/src/network/peers/discover.ts:120</a></em></p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<hr/>
+<h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
+<p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L125">packages/lodestar/src/network/peers/discover.ts:125</a></em></p>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
+<h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
+<h3 id="private-randomnodequery"><code>Private</code> randomNodeQuery<a class="headerlink" href="#private-randomnodequery" title="Permanent link">¶</a></h3>
+<h3 id="randomnodequery-object">▪ <strong>randomNodeQuery</strong>: <em>object</em><a class="headerlink" href="#randomnodequery-object" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L80">packages/lodestar/src/network/peers/discover.ts:80</a></em></p>
+<h3 id="code">code<a class="headerlink" href="#code" title="Permanent link">¶</a></h3>
+<p>• <strong>code</strong>: <em><a href="../../enums/network_peers.querystatuscode/#notactive">NotActive</a></em> = QueryStatusCode.NotActive</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L80">packages/lodestar/src/network/peers/discover.ts:80</a></em></p>
+<hr/>
+<h3 id="private-subnetrequests"><code>Private</code> subnetRequests<a class="headerlink" href="#private-subnetrequests" title="Permanent link">¶</a></h3>
+<h3 id="subnetrequests-object">▪ <strong>subnetRequests</strong>: <em>object</em><a class="headerlink" href="#subnetrequests-object" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L82">packages/lodestar/src/network/peers/discover.ts:82</a></em></p>
+<h3 id="attnets">attnets<a class="headerlink" href="#attnets" title="Permanent link">¶</a></h3>
+<p>• <strong>attnets</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹any, any›</em> = new Map()</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L83">packages/lodestar/src/network/peers/discover.ts:83</a></em></p>
+<h3 id="syncnets">syncnets<a class="headerlink" href="#syncnets" title="Permanent link">¶</a></h3>
+<p>• <strong>syncnets</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹any, any›</em> = new Map()</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/network/peers/discover.ts#L84">packages/lodestar/src/network/peers/discover.ts:84</a></em></p>
 </article>
 </div>
 </div>
