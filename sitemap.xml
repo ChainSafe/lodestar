@@ -3166,6 +3166,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.validatoreventemitter/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.validatorstore/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
@@ -3251,6 +3256,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/services.validatorevent/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_attestation.invalidattestationerrorcode/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
@@ -3282,6 +3292,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/util.timeitem/</loc>
+         <lastmod>2021-11-04</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/services.ivalidatorevents/</loc>
          <lastmod>2021-11-04</lastmod>
          <changefreq>daily</changefreq>
     </url>
