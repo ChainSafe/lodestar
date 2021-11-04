@@ -7,7 +7,7 @@ import {ChainEvent, IBeaconChain} from "../../chain";
 import {getActiveForks} from "../forks";
 import {Eth2Gossipsub, GossipType} from "../gossip";
 import {MetadataController} from "../metadata";
-import {SubnetMap} from "../peers/utils";
+import {RequestedSubnet, SubnetMap} from "../peers/utils";
 import {CommitteeSubscription, ISubnetsService, SubnetsServiceOpts} from "./interface";
 
 const gossipType = GossipType.sync_committee;
@@ -46,9 +46,8 @@ export class SyncnetsService implements ISubnetsService {
   /**
    * Get all active subnets for the hearbeat.
    */
-  getActiveSubnets(): number[] {
-    const currentSlot = this.chain.clock.currentSlot;
-    return this.subscriptionsCommittee.getActive(currentSlot);
+  getActiveSubnets(): RequestedSubnet[] {
+    return this.subscriptionsCommittee.getActiveTtl(this.chain.clock.currentSlot);
   }
 
   /**

@@ -67,7 +67,6 @@ export async function createNodeJsLibp2p(
     addresses: {listen: localMultiaddrs},
     datastore,
     bootMultiaddrs: bootMultiaddrs,
-    discv5: networkOpts.discv5 || defaultDiscv5Options,
     maxConnections: networkOpts.maxPeers,
     minConnections: networkOpts.targetPeers,
     // If peer discovery is enabled let the default in NodejsNode

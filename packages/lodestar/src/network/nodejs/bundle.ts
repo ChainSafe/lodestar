@@ -9,7 +9,6 @@ import {NOISE} from "@chainsafe/libp2p-noise";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
-import {ENRInput, Discv5Discovery, IDiscv5Metrics} from "@chainsafe/discv5";
 import {Datastore} from "interface-datastore";
 
 export interface ILibp2pOptions {
@@ -17,16 +16,9 @@ export interface ILibp2pOptions {
   addresses: {
     listen: string[];
     announce?: string[];
-    noAnnounce?: string[];
   };
   datastore?: Datastore;
-  discv5: {
-    bindAddr: string;
-    enr: ENRInput;
-    bootEnrs?: ENRInput[];
-    metrics?: IDiscv5Metrics;
-  };
-  peerDiscovery?: (typeof Bootstrap | typeof MDNS | typeof Discv5Discovery)[];
+  peerDiscovery?: (typeof Bootstrap | typeof MDNS)[];
   bootMultiaddrs?: string[];
   maxConnections?: number;
   minConnections?: number;
@@ -34,21 +26,34 @@ export interface ILibp2pOptions {
 
 export class NodejsNode extends LibP2p {
   constructor(options: ILibp2pOptions) {
-    const defaults = {
+    super({
       peerId: options.peerId,
       addresses: {
         listen: options.addresses.listen,
         announce: options.addresses.announce || [],
-        noAnnounce: options.addresses.noAnnounce || [],
       },
       modules: {
         connEncryption: [NOISE],
         transport: [TCP],
         streamMuxer: [Mplex],
-        peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS, Discv5Discovery],
+        peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS],
+      },
+      dialer: {
+        maxParallelDials: 100,
+        maxAddrsToDial: 4,
+        maxDialsPerPeer: 2,
+        dialTimeout: 30_000,
       },
       connectionManager: {
+        autoDial: false,
+        // DOCS: the maximum number of connections libp2p is willing to have before it starts disconnecting.
+        // If ConnectionManager.size > maxConnections calls _maybeDisconnectOne() which will sort peers disconnect
+        // the one with the least `_peerValues`. That's a custom peer generalized score that's not used, so it always
+        // has the same value in current Lodestar usage.
         maxConnections: options.maxConnections,
+        // DOCS: the minimum number of connections below which libp2p not activate preemptive disconnections.
+        // If ConnectionManager.size < minConnections, it won't prune peers in _maybeDisconnectOne(). If autoDial is
+        // off it doesn't have any effect in behaviour.
         minConnections: options.minConnections,
       },
       datastore: options.datastore,
@@ -83,17 +88,8 @@ export class NodejsNode extends LibP2p {
             interval: 2000,
             list: (options.bootMultiaddrs || []) as string[],
           },
-          discv5: {
-            enr: options.discv5.enr,
-            bindAddr: options.discv5.bindAddr,
-            bootEnrs: options.discv5.bootEnrs || [],
-            // TODO: Disable and query on demand https://github.com/ChainSafe/lodestar/pull/3104
-            searchInterval: 30_000,
-            metrics: options.discv5.metrics,
-          },
         },
       },
-    };
-    super(defaults);
+    });
   }
 }

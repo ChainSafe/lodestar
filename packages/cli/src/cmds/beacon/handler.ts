@@ -3,7 +3,7 @@ import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
-import {createDbMetrics, createDiscv5Metrics} from "@chainsafe/lodestar/lib/metrics";
+import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {IGlobalArgs} from "../../options";
@@ -56,15 +56,11 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
-  let discv5Metrics: null | ReturnType<typeof createDiscv5Metrics> = null;
   // additional metrics registries
   const metricsRegistries = [];
   if (options.metrics.enabled) {
     dbMetrics = createDbMetrics();
-    discv5Metrics = createDiscv5Metrics();
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    options.network.discv5!.metrics = discv5Metrics.metrics;
-    metricsRegistries.push(dbMetrics.registry, discv5Metrics.registry);
+    metricsRegistries.push(dbMetrics.registry);
   }
   const db = new BeaconDb({
     config,

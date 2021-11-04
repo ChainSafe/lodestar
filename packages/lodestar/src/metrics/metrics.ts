@@ -4,7 +4,7 @@
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {collectDefaultMetrics, Counter, Gauge, Registry} from "prom-client";
+import {collectDefaultMetrics, Counter, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
@@ -12,7 +12,6 @@ import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
 import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
-import {IDiscv5Metrics} from "@chainsafe/discv5";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
 
@@ -68,35 +67,5 @@ export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
   const registry = new Registry();
   registry.registerMetric(metrics.dbReads);
   registry.registerMetric(metrics.dbWrites);
-  return {metrics, registry};
-}
-
-export function createDiscv5Metrics(): {metrics: IDiscv5Metrics; registry: Registry} {
-  const metrics = {
-    kadTableSize: new Gauge({
-      name: "lodestar_discv5_kad_table_size",
-      help: "Total size of the discv5 kad table",
-    }) as Gauge<string> & {collect(): void},
-    activeSessionCount: new Gauge({
-      name: "lodestar_discv5_active_session_count",
-      help: "Count of the discv5 active sessions",
-    }) as Gauge<string> & {collect(): void},
-    connectedPeerCount: new Gauge({
-      name: "lodestar_discv5_connected_peer_count",
-      help: "Count of the discv5 connected peers",
-    }) as Gauge<string> & {collect(): void},
-    sentMessageCount: new Gauge<"type">({
-      name: "lodestar_discv5_sent_message_count",
-      help: "Count of the discv5 messages sent by message type",
-      labelNames: ["type"],
-    }) as Gauge<"type"> & {collect(): void},
-    rcvdMessageCount: new Gauge<"type">({
-      name: "lodestar_discv5_rcvd_message_count",
-      help: "Count of the discv5 messages received by message type",
-      labelNames: ["type"],
-    }) as Gauge<"type"> & {collect(): void},
-  };
-  const registry = new Registry();
-  Object.keys(metrics).forEach((metricName) => registry.registerMetric(metrics[metricName as keyof typeof metrics]));
   return {metrics, registry};
 }

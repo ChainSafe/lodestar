@@ -1,5 +1,6 @@
 import deepmerge from "deepmerge";
 import tmp from "tmp";
+import PeerId from "peer-id";
 import {createEnr} from "@chainsafe/lodestar-cli/src/config";
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
@@ -14,7 +15,6 @@ import {IBeaconNodeOptions} from "../../../src/node/options";
 import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
-import PeerId from "peer-id";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
 
 export async function getDevBeaconNode(
@@ -59,9 +59,9 @@ export async function getDevBeaconNode(
     deepmerge(
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false},
+        eth1: {enabled: false, providerUrls: ["http://localhost:8545"]},
         metrics: {enabled: false},
-        network: {disablePeerDiscovery: true},
+        network: {discv5: null},
       } as Partial<IBeaconNodeOptions>,
       options
     )

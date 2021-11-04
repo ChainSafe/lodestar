@@ -5,6 +5,7 @@ export type ForkDigestHex = string;
 
 export interface IForkDigestContext {
   forkDigest2ForkName(forkDigest: ForkDigest | ForkDigestHex): ForkName;
+  forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null;
   forkName2ForkDigest(forkName: ForkName): ForkDigest;
   forkName2ForkDigestHex(forkName: ForkName): ForkDigestHex;
 }

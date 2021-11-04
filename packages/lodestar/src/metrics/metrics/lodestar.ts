@@ -44,6 +44,10 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by direction",
       labelNames: ["direction"],
     }),
+    peersSync: register.gauge({
+      name: "lodestar_peers_sync_count",
+      help: "Current count of peers useful for sync",
+    }),
     peerConnectedEvent: register.gauge<"direction">({
       name: "lodestar_peer_connected_total",
       help: "Total number of peer:connected event, labeled by direction",
@@ -68,6 +72,89 @@ export function createLodestarMetrics(
       name: "lodestar_peers_total_unique_connected",
       help: "Total number of unique peers that have had a connection with",
     }),
+    peersRequestedToConnect: register.gauge({
+      name: "lodestar_peers_requested_total_to_connect",
+      help: "Priorization results total peers count requested to connect",
+    }),
+    peersRequestedToDisconnect: register.gauge({
+      name: "lodestar_peers_requested_total_to_disconnect",
+      help: "Priorization results total peers count requested to disconnect",
+    }),
+    peersRequestedSubnetsToQuery: register.gauge<"type">({
+      name: "lodestar_peers_requested_total_subnets_to_query",
+      help: "Priorization results total subnets to query and discover peers in",
+      labelNames: ["type"],
+    }),
+    peersRequestedSubnetsPeerCount: register.gauge<"type">({
+      name: "lodestar_peers_requested_total_subnets_peers_count",
+      help: "Priorization results total peers in subnets to query and discover peers in",
+      labelNames: ["type"],
+    }),
+
+    discovery: {
+      peersToConnect: register.gauge({
+        name: "lodestar_discovery_peers_to_connect",
+        help: "Current peers to connect count from discoverPeers requests",
+      }),
+      cachedENRsSize: register.gauge({
+        name: "lodestar_discovery_cached_enrs_size",
+        help: "Current size of the cachedENRs Set",
+      }),
+      findNodeQueryRequests: register.gauge<"action">({
+        name: "lodestar_discovery_find_node_query_requests_total",
+        help: "Total count of find node queries started",
+        labelNames: ["action"],
+      }),
+      findNodeQueryTime: register.histogram({
+        name: "lodestar_discovery_find_node_query_time_seconds",
+        help: "Time to complete a find node query in seconds in seconds",
+        buckets: [5, 60],
+      }),
+      findNodeQueryEnrCount: register.gauge({
+        name: "lodestar_discovery_find_node_query_enrs_total",
+        help: "Total count of found ENRs in queries",
+      }),
+      discoveredStatus: register.gauge<"status">({
+        name: "lodestar_discovery_discovered_status_total_count",
+        help: "Total count of status results of PeerDiscovery.onDiscovered() function",
+        labelNames: ["status"],
+      }),
+      dialAttempts: register.gauge({
+        name: "lodestar_discovery_total_dial_attempts",
+        help: "Total dial attempts by peer discovery",
+      }),
+      dialTime: register.histogram<"status">({
+        name: "lodestar_discovery_dial_time_seconds",
+        help: "Time to dial peers in seconds",
+        labelNames: ["status"],
+        buckets: [0.1, 5, 60],
+      }),
+    },
+
+    discv5: {
+      kadTableSize: register.gauge({
+        name: "lodestar_discv5_kad_table_size",
+        help: "Total size of the discv5 kad table",
+      }),
+      activeSessionCount: register.gauge({
+        name: "lodestar_discv5_active_session_count",
+        help: "Count of the discv5 active sessions",
+      }),
+      connectedPeerCount: register.gauge({
+        name: "lodestar_discv5_connected_peer_count",
+        help: "Count of the discv5 connected peers",
+      }),
+      sentMessageCount: register.gauge<"type">({
+        name: "lodestar_discv5_sent_message_count",
+        help: "Count of the discv5 messages sent by message type",
+        labelNames: ["type"],
+      }),
+      rcvdMessageCount: register.gauge<"type">({
+        name: "lodestar_discv5_rcvd_message_count",
+        help: "Count of the discv5 messages received by message type",
+        labelNames: ["type"],
+      }),
+    },
 
     gossipMesh: {
       peersByType: register.gauge<"type" | "fork">({

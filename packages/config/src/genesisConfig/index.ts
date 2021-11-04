@@ -46,6 +46,15 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
       return forkName;
     },
 
+    forkDigest2ForkNameOption(forkDigest: ForkDigest | ForkDigestHex): ForkName | null {
+      const forkDigestHex = toHexStringNoPrefix(forkDigest);
+      const forkName = forkNameByForkDigest.get(forkDigestHex);
+      if (!forkName) {
+        return null;
+      }
+      return forkName;
+    },
+
     forkName2ForkDigest(forkName: ForkName): ForkDigest {
       const forkDigest = forkDigestByForkName.get(forkName);
       if (!forkDigest) {

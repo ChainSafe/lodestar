@@ -8,6 +8,17 @@ import {IBeaconChain} from "../chain";
 import {FAR_FUTURE_EPOCH} from "../constants";
 import {getCurrentAndNextFork} from "./forks";
 
+export enum ENRKey {
+  tcp = "tcp",
+  eth2 = "eth2",
+  attnets = "attnets",
+  syncnets = "syncnets",
+}
+export enum SubnetType {
+  attnets = "attnets",
+  syncnets = "syncnets",
+}
+
 export interface IMetadataOpts {
   metadata?: altair.Metadata;
 }
@@ -43,13 +54,13 @@ export class MetadataController {
       // updateEth2Field() MUST be called with clock epoch
       this.updateEth2Field(this.chain.clock.currentEpoch);
 
-      this.enr.set("attnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
+      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.attnets));
       // Any fork after altair included
 
       if (currentFork !== ForkName.phase0) {
         // Only persist syncnets if altair fork is already activated. If currentFork is altair but head is phase0
         // adding syncnets to the ENR is not a problem, we will just have a useless field for a few hours.
-        this.enr.set("syncnets", ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
+        this.enr.set(ENRKey.syncnets, ssz.phase0.AttestationSubnets.serialize(this._metadata.syncnets));
       }
     }
   }
@@ -64,7 +75,7 @@ export class MetadataController {
 
   set syncnets(syncnets: BitVector) {
     if (this.enr) {
-      this.enr.set("syncnets", ssz.altair.SyncSubnets.serialize(syncnets));
+      this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
@@ -75,7 +86,7 @@ export class MetadataController {
 
   set attnets(attnets: BitVector) {
     if (this.enr) {
-      this.enr.set("attnets", ssz.phase0.AttestationSubnets.serialize(attnets));
+      this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     }
     this._metadata.seqNumber++;
     this._metadata.attnets = attnets;
@@ -101,7 +112,7 @@ export class MetadataController {
     if (this.enr) {
       const enrForkId = ssz.phase0.ENRForkID.serialize(getENRForkID(this.config, epoch));
       this.logger.verbose(`Updated ENR.eth2: ${toHexString(enrForkId)}`);
-      this.enr.set("eth2", enrForkId);
+      this.enr.set(ENRKey.eth2, enrForkId);
     }
   }
 }
