@@ -3,6 +3,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Slot, Root, RootHex} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {fromHexString} from "@chainsafe/ssz";
+import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
 
 const {EventType} = routes.events;
 
@@ -23,7 +24,11 @@ export class ChainHeaderTracker {
   private headBlockRoot: Root | null = null;
   private readonly fns: RunEveryFn[] = [];
 
-  constructor(private readonly logger: ILogger, private readonly api: Api) {}
+  constructor(
+    private readonly logger: ILogger,
+    private readonly api: Api,
+    private readonly emitter: ValidatorEventEmitter
+  ) {}
 
   start(signal: AbortSignal): void {
     this.api.events.eventstream([EventType.head], signal, this.onHeadUpdate);
@@ -49,14 +54,18 @@ export class ChainHeaderTracker {
       this.headBlockSlot = slot;
       this.headBlockRoot = fromHexString(block);
 
+      const headEventData = {
+        slot: this.headBlockSlot,
+        head: block,
+        previousDutyDependentRoot: previousDutyDependentRoot,
+        currentDutyDependentRoot: currentDutyDependentRoot,
+      };
+
       for (const fn of this.fns) {
-        fn({
-          slot: this.headBlockSlot,
-          head: block,
-          previousDutyDependentRoot: previousDutyDependentRoot,
-          currentDutyDependentRoot: currentDutyDependentRoot,
-        }).catch((e) => this.logger.error("Error calling head event handler", e));
+        fn(headEventData).catch((e) => this.logger.error("Error calling head event handler", e));
       }
+
+      this.emitter.emit(ValidatorEvent.chainHead, headEventData);
 
       this.logger.verbose("Found new chain head", {
         slot: slot,

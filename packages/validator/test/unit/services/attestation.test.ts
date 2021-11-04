@@ -14,6 +14,7 @@ import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
+import {ValidatorEventEmitter} from "../../../src/services/emitter";
 
 describe("AttestationService", function () {
   const sandbox = sinon.createSandbox();
@@ -23,6 +24,8 @@ describe("AttestationService", function () {
   const api = getApiClientStub(sandbox);
   const validatorStore = sinon.createStubInstance(ValidatorStore) as ValidatorStore &
     sinon.SinonStubbedInstance<ValidatorStore>;
+  const emitter = sinon.createStubInstance(ValidatorEventEmitter) as ValidatorEventEmitter &
+    sinon.SinonStubbedInstance<ValidatorEventEmitter>;
   const chainHeadTracker = sinon.createStubInstance(ChainHeaderTracker) as ChainHeaderTracker &
     sinon.SinonStubbedInstance<ChainHeaderTracker>;
   let pubkeys: Uint8Array[]; // Initialize pubkeys in before() so bls is already initialized
@@ -48,6 +51,7 @@ describe("AttestationService", function () {
       api,
       clock,
       validatorStore,
+      emitter,
       indicesService,
       chainHeadTracker
     );
