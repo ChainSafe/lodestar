@@ -172,8 +172,6 @@ export async function validateGossipAttestation(
  * Note: We do not queue future attestations for later processing
  */
 export function verifyPropagationSlotRange(chain: IBeaconChain, attestationSlot: Slot): void {
-  // don't want to have the check for dev network with small SECONDS_PER_SLOT
-  const maximumGossipClockDisparity = chain.config.SECONDS_PER_SLOT <= 2 ? 0 : MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC;
   // slot with future tolerance of MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC
   const latestPermissibleSlot = chain.clock.slotWithFutureTolerance(MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC);
   const earliestPermissibleSlot = Math.max(
