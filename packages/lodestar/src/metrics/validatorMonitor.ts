@@ -104,7 +104,7 @@ type EpochSummary = {
   /** The number of times a validators attestation was seen in a block. */
   attestationBlockInclusions: number;
   /** The minimum observed inclusion distance for an attestation for this epoch.. */
-  attestationMinBlockInclusionDistance: Slot;
+  attestationMinBlockInclusionDistance: Slot | null;
   /** The attestation contains the correct head or not */
   attestationCorrectHead: boolean | null;
   // Blocks with a slot in the current epoch.
@@ -127,7 +127,7 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
       attestationMinDelay: null,
       attestationAggregateIncusions: 0,
       attestationBlockInclusions: 0,
-      attestationMinBlockInclusionDistance: 0,
+      attestationMinBlockInclusionDistance: null,
       blocks: 0,
       blockMinDelay: null,
       aggregates: 0,
@@ -219,7 +219,11 @@ export function createValidatorMonitor(
         }
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         let inclusionDistance;
-        if (attestationMinBlockInclusionDistance !== undefined && attestationMinBlockInclusionDistance > 0) {
+        if (
+          attestationMinBlockInclusionDistance !== undefined &&
+          attestationMinBlockInclusionDistance !== null &&
+          attestationMinBlockInclusionDistance > 0
+        ) {
           // altair, attestation is not missed
           inclusionDistance = attestationMinBlockInclusionDistance;
         } else if (summary.inclusionDistance) {
@@ -307,10 +311,14 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe({index}, delay);
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationBlockInclusions += 1;
-            summary.attestationMinBlockInclusionDistance = Math.min(
-              summary.attestationMinBlockInclusionDistance,
-              inclusionDistance
-            );
+            if (summary.attestationMinBlockInclusionDistance !== null) {
+              summary.attestationMinBlockInclusionDistance = Math.min(
+                summary.attestationMinBlockInclusionDistance,
+                inclusionDistance
+              );
+            } else {
+              summary.attestationMinBlockInclusionDistance = inclusionDistance;
+            }
             summary.attestationCorrectHead = correctHead;
           });
         }
@@ -356,7 +364,7 @@ export function createValidatorMonitor(
         metrics.validatorMonitor.prevEpochAttestationBlockInclusions.set({index}, summary.attestationBlockInclusions);
         metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.set(
           {index},
-          summary.attestationMinBlockInclusionDistance
+          summary.attestationMinBlockInclusionDistance ?? Infinity
         );
 
         // Blocks
