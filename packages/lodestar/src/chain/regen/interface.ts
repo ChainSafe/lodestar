@@ -5,7 +5,7 @@ export enum RegenCaller {
   getDuties = "getDuties",
   produceBlock = "produceBlock",
   validateGossipBlock = "validateGossipBlock",
-  preComputeEpoch = "precomputeEpoch",
+  precomputeEpoch = "precomputeEpoch",
   produceAttestationData = "produceAttestationData",
   processBlocksInEpoch = "processBlocksInEpoch",
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",

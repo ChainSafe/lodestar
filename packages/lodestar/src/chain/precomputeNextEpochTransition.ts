@@ -69,7 +69,7 @@ export class PrecomputeNextEpochTransitionScheduler {
     //  + when gossip block comes, we need to validate and run state transition
     //  + if next slot is a skipped slot, it'd help getting target checkpoint state faster to validate attestations
     this.chain.regen
-      .getBlockSlotState(blockRoot, nextSlot, RegenCaller.preComputeEpoch)
+      .getBlockSlotState(blockRoot, nextSlot, RegenCaller.precomputeEpoch)
       .then(() => {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
         const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(blockRoot, nextEpoch);
