@@ -38,7 +38,7 @@ async function initAndVerifyWeakSubjectivityState(
   store: TreeBacked<allForks.BeaconState>,
   wsState: TreeBacked<allForks.BeaconState>,
   wsCheckpoint: Checkpoint
-): Promise<TreeBacked<allForks.BeaconState>> {
+): Promise<{anchorState: TreeBacked<allForks.BeaconState>; wsCheckpoint: Checkpoint}> {
   // Check if the store's state and wsState are compatible
   if (
     store.genesisTime !== wsState.genesisTime ||

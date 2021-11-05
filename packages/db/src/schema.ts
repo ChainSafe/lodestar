@@ -66,6 +66,8 @@ export enum Bucket {
   lightClient_bestPartialLightClientUpdate = 54, // SyncPeriod -> PartialLightClientUpdate
 
   validator_metaData = 41,
+
+  backfilled_sequences = 42, // Backfilled From to To, inclusive of both From, To
 }
 
 export enum Key {

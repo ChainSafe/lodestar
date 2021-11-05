@@ -39,6 +39,7 @@ export interface IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly anchorSlot: Slot;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;

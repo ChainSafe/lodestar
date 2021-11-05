@@ -7,6 +7,7 @@ import {archiveBlocks} from "./archiveBlocks";
 import {StatesArchiver} from "./archiveStates";
 import {JobItemQueue} from "../../util/queue";
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -69,6 +70,14 @@ export class Archiver {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
       await archiveBlocks(this.db, this.chain.forkChoice, this.chain.lightClientServer, this.logger, finalized);
+
+      // Mark the sequence in backfill db from finalized slot till anchor slot as filled
+      const currentSlot = finalized.epoch * SLOTS_PER_EPOCH;
+      await this.db.backfilledSequences.put(currentSlot, this.chain.anchorSlot);
+
+      // Clear previously marked sequence till anchorSlot, without touching backfill sync process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
+      const filteredSeqs = await this.db.backfilledSequences.keys({gt: this.chain.anchorSlot, lt: currentSlot});
+      await this.db.backfilledSequences.batchDelete(filteredSeqs);
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);

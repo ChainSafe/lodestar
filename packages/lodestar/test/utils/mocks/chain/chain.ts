@@ -52,6 +52,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
+  readonly anchorSlot: Slot;
 
   readonly bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -89,6 +90,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state;
+    this.anchorSlot = state.slot;
     this.config = config;
     this.emitter = new ChainEventEmitter();
     this.abortController = new AbortController();

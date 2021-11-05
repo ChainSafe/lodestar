@@ -18,6 +18,7 @@ import {
   CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
+  BackfilledSequences,
 } from "./repositories";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 
@@ -57,6 +58,8 @@ export interface IBeaconDb {
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
+
+  backfilledSequences: BackfilledSequences;
 
   /**
    * Start the connection to the db instance and open the db store.
