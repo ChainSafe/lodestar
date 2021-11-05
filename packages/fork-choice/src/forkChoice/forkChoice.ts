@@ -306,6 +306,12 @@ export class ForkChoice implements IForkChoice {
       if (!isValidTerminalPowBlock(this.config, powBlock, powBlockParent)) {
         throw Error("Not valid terminal POW block");
       }
+      if (
+        this.config.TERMINAL_BLOCK_HASH !== ZERO_HASH &&
+        computeEpochAtSlot(block.slot) < this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+      ) {
+        throw Error("Terminal activation epoch not reached");
+      }
     }
 
     let shouldUpdateJustified = false;
@@ -911,8 +917,8 @@ export class ForkChoice implements IForkChoice {
 }
 
 function isValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): boolean {
-  if (block.blockhash === toHexString(config.TERMINAL_BLOCK_HASH)) {
-    return true;
+  if (config.TERMINAL_BLOCK_HASH !== ZERO_HASH) {
+    return block.blockhash === toHexString(config.TERMINAL_BLOCK_HASH);
   }
   const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;

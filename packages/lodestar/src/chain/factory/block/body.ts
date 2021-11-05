@@ -10,9 +10,11 @@ import {
   computeTimeAtSlot,
   getRandaoMix,
   merge,
+  getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
+import {ZERO_HASH} from "../../../constants";
 
 export async function assembleBody(
   chain: IBeaconChain,
@@ -107,6 +109,11 @@ async function prepareExecutionPayload(
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
   if (!merge.isMergeComplete(state)) {
+    if (
+      chain.config.TERMINAL_BLOCK_HASH !== ZERO_HASH &&
+      getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+    )
+      return null;
     const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed

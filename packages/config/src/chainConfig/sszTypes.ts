@@ -14,6 +14,7 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     // Transition
     TERMINAL_TOTAL_DIFFICULTY: ssz.Uint256,
     TERMINAL_BLOCK_HASH: ssz.Root,
+    TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH: ssz.Number64,
 
     // Genesis
     MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: ssz.Number64,
