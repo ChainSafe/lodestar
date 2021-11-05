@@ -53,7 +53,7 @@
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "2.0.0",
     "@chainsafe/blst": "^0.2.2",
-    "@chainsafe/discv5": "^0.6.4",
+    "@chainsafe/discv5": "^0.6.5",
     "@chainsafe/lodestar": "^0.31.0",
     "@chainsafe/lodestar-api": "^0.31.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.31.0",
