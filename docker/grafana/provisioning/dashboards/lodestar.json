@@ -2882,7 +2882,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "count(validator_monitor_prev_epoch_on_chain_inclusion_distance == 1)/sum(validator_monitor_validators_total)",
               "interval": "",
               "legendFormat": "Expected Inclusion Distance (1)",
@@ -3005,7 +3005,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])) / (sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])))",
               "interval": "",
               "legendFormat": "{{index}}",
