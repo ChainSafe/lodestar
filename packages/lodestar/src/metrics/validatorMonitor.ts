@@ -219,11 +219,7 @@ export function createValidatorMonitor(
         }
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
         let inclusionDistance;
-        if (
-          attestationMinBlockInclusionDistance !== undefined &&
-          attestationMinBlockInclusionDistance !== null &&
-          attestationMinBlockInclusionDistance > 0
-        ) {
+        if (attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0) {
           // altair, attestation is not missed
           inclusionDistance = attestationMinBlockInclusionDistance;
         } else if (summary.inclusionDistance) {
@@ -303,12 +299,13 @@ export function createValidatorMonitor(
       const inclusionDistance = block.slot - data.slot;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
-      const correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
+      let correctHead: boolean | null = null;
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInBlockTotal.inc({index});
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe({index}, delay);
+
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationBlockInclusions += 1;
             if (summary.attestationMinBlockInclusionDistance !== null) {
@@ -318,6 +315,10 @@ export function createValidatorMonitor(
               );
             } else {
               summary.attestationMinBlockInclusionDistance = inclusionDistance;
+            }
+
+            if (correctHead === null) {
+              correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
             }
             summary.attestationCorrectHead = correctHead;
           });
@@ -362,10 +363,12 @@ export function createValidatorMonitor(
           summary.attestationAggregateIncusions
         );
         metrics.validatorMonitor.prevEpochAttestationBlockInclusions.set({index}, summary.attestationBlockInclusions);
-        metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.set(
-          {index},
-          summary.attestationMinBlockInclusionDistance ?? Infinity
-        );
+        if (summary.attestationMinBlockInclusionDistance !== null) {
+          metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.set(
+            {index},
+            summary.attestationMinBlockInclusionDistance
+          );
+        }
 
         // Blocks
         metrics.validatorMonitor.prevEpochBeaconBlocksTotal.set({index}, summary.blocks);
