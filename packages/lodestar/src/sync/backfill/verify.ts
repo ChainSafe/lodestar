@@ -9,26 +9,28 @@ export function verifyBlockSequence(
   config: IBeaconConfig,
   blocks: allForkTypes.SignedBeaconBlock[],
   anchorRoot: Root
-): {nextAnchor: Root; verifiedBlocks: allForkTypes.SignedBeaconBlock[]; error?: BackfillSyncErrorCode.NOT_LINEAR} {
+): {
+  nextAnchor: allForkTypes.SignedBeaconBlock | null;
+  verifiedBlocks: allForkTypes.SignedBeaconBlock[];
+  error?: BackfillSyncErrorCode.NOT_LINEAR;
+} {
   let nextRoot: Root = anchorRoot;
-  // let testRandom=Math.random();
-  // if(testRandom>0.9) throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
+  let nextAnchor: allForkTypes.SignedBeaconBlock | null = null;
+
   const verifiedBlocks: allForkTypes.SignedBeaconBlock[] = [];
   for (const block of blocks.slice(0).reverse()) {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
-    // testRandom=Math.random();
-    // if(testRandom > 0.8) return {nextAnchor:nextRoot, verifiedBlocks ,error: BackfillSyncErrorCode.NOT_LINEAR};
-
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
       }
-      return {nextAnchor: nextRoot, verifiedBlocks, error: BackfillSyncErrorCode.NOT_LINEAR};
+      return {nextAnchor, verifiedBlocks, error: BackfillSyncErrorCode.NOT_LINEAR};
     }
     verifiedBlocks.push(block);
     nextRoot = block.message.parentRoot;
+    nextAnchor = block;
   }
-  return {nextAnchor: nextRoot, verifiedBlocks};
+  return {nextAnchor, verifiedBlocks};
 }
 
 export async function verifyBlockProposerSignature(

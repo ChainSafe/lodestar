@@ -243,12 +243,12 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         if (e instanceof BackfillSyncError) {
           switch (e.type.code) {
             case BackfillSyncErrorCode.NOT_ANCHORED:
+            case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to just get the parent of this anchorBlock as it might be couple of skipped steps behind
               this.anchorBlockRoot = this.anchorBlock?.message.parentRoot;
               this.anchorBlock = null;
             /* falls through */
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
-            case BackfillSyncErrorCode.NOT_LINEAR:
               this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
           }
         }
@@ -326,14 +326,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.metrics?.backfillSync.totalBlocks.inc(verifiedBlocks.length);
     // If no error, everything went good, linear chain, first block is oldest
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    if (error === undefined && blocks[0]) {
-      this.anchorBlock = blocks[0];
-      this.lastBackSyncedSlot = blocks[0].message.slot;
+    if (nextAnchor) {
+      this.anchorBlock = nextAnchor;
+      this.lastBackSyncedSlot = nextAnchor.message.slot;
       this.anchorBlockRoot = null;
-    } else {
-      // The next previous block be many skipped steps behind so lets set the anchorBlockRoot for main process for it to fetch it singleton
-      this.anchorBlock = null;
-      this.anchorBlockRoot = nextAnchor;
     }
     if (error) throw new BackfillSyncError({code: error});
   }
