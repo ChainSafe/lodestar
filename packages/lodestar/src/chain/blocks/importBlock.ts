@@ -113,11 +113,14 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   if (!skipImportingAttestations) {
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
     const rootCache = new altair.RootCache(postState);
+    const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
         chain.forkChoice.onAttestation(indexedAttestation);
-        chain.metrics?.registerAttestationInBlock(indexedAttestation, block.message, rootCache);
+        if (parentSlot !== undefined) {
+          chain.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
+        }
         pendingEvents.push(ChainEvent.attestation, attestation);
       } catch (e) {
         chain.logger.error("Error processing attestation from block", {slot: block.message.slot}, e as Error);

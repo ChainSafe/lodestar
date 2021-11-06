@@ -34,7 +34,7 @@ export interface IValidatorMonitor {
   ): void;
   registerAttestationInBlock(
     indexedAttestation: IndexedAttestation,
-    block: allForks.BeaconBlock,
+    parentSlot: Slot,
     rootCache: altair.RootCache
   ): void;
   scrapeMetrics(slotClock: Slot): void;
@@ -294,9 +294,10 @@ export function createValidatorMonitor(
     },
 
     // Register that the `indexed_attestation` was included in a *valid* `BeaconBlock`.
-    registerAttestationInBlock(indexedAttestation, block, rootCache): void {
+    registerAttestationInBlock(indexedAttestation, parentSlot, rootCache): void {
       const data = indexedAttestation.data;
-      const inclusionDistance = block.slot - data.slot;
+      // optimal inclusion distance, not to count skipped slots between data.slot and blockSlot
+      const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
       const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
       let correctHead: boolean | null = null;
