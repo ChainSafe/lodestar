@@ -3,18 +3,30 @@
  */
 
 import {List} from "@chainsafe/ssz";
-import {Bytes96, Bytes32, phase0, allForks, altair, Root, Slot, ssz, ExecutionAddress} from "@chainsafe/lodestar-types";
+import {
+  Bytes96,
+  Bytes32,
+  phase0,
+  allForks,
+  altair,
+  Root,
+  RootHex,
+  Slot,
+  ssz,
+  ExecutionAddress,
+} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconState,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getRandaoMix,
-  merge,
   getCurrentEpoch,
+  merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
-import {ZERO_HASH} from "../../../constants";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants";
+import {bytesToData, numToQuantity} from "../../../eth1/provider/utils";
 
 export async function assembleBody(
   chain: IBeaconChain,
@@ -79,8 +91,11 @@ export async function assembleBody(
     // - Call prepareExecutionPayload as early as possible
     // - Call prepareExecutionPayload again if parameters change
 
+    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+
     const payloadId = await prepareExecutionPayload(
       chain,
+      finalizedBlockHash ?? ZERO_HASH_HEX,
       currentState as CachedBeaconState<merge.BeaconState>,
       feeRecipient
     );
@@ -102,6 +117,7 @@ export async function assembleBody(
  */
 async function prepareExecutionPayload(
   chain: IBeaconChain,
+  finalizedBlockHash: RootHex,
   state: CachedBeaconState<merge.BeaconState>,
   feeRecipient: ExecutionAddress
 ): Promise<PayloadId | null> {
@@ -127,9 +143,14 @@ async function prepareExecutionPayload(
     parentHash = state.latestExecutionPayloadHeader.blockHash;
   }
 
-  const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const random = getRandaoMix(state, state.currentShuffling.epoch);
-  return chain.executionEngine.preparePayload(parentHash, timestamp, random, feeRecipient);
+  const timestamp = numToQuantity(computeTimeAtSlot(chain.config, state.slot, state.genesisTime));
+  const random = bytesToData(getRandaoMix(state, state.currentShuffling.epoch));
+  const payloadAttributes = {timestamp, random, feeRecipient: bytesToData(feeRecipient)};
+  return await chain.executionEngine.notifyForkchoiceUpdate(
+    bytesToData(parentHash),
+    finalizedBlockHash,
+    payloadAttributes
+  );
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

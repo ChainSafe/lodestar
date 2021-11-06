@@ -1,5 +1,5 @@
-import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
-
+import {merge, RootHex} from "@chainsafe/lodestar-types";
+import {DATA, QUANTITY} from "../eth1/provider/utils";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
@@ -13,6 +13,14 @@ export enum ExecutePayloadStatus {
   SYNCING = "SYNCING",
 }
 
+export type PayloadAttributes = {
+  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
+  timestamp: QUANTITY;
+  /** DATA, 32 Bytes - value for the random field of the new payload */
+  random: DATA;
+  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
+  feeRecipient: DATA;
+};
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -43,23 +51,10 @@ export interface IExecutionEngine {
    *
    * Should be called in response to fork-choice head and finalized events
    */
-  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void>;
-
-  /**
-   * Given the set of execution payload attributes, prepare_payload initiates a process of building an execution
-   * payload on top of the execution chain tip identified by parent_hash.
-   *
-   * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#prepare_payload
-   *
-   * Must be called close to the slot associated with the validator's block producing to get the blockHash and
-   * random correct
-   */
-  preparePayload(
-    parentHash: Root,
-    timestamp: number,
-    random: Bytes32,
-    feeRecipient: ExecutionAddress
+  notifyForkchoiceUpdate(
+    headBlockHash: RootHex,
+    finalizedBlockHash: RootHex,
+    payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId>;
 
   /**

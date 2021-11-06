@@ -4,12 +4,11 @@ import net from "net";
 import {spawn} from "child_process";
 import {Context} from "mocha";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
@@ -206,17 +205,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const preparePayloadParams = {
       // Note: this is created with a pre-defined genesis.json
-      parentHash: genesisBlockHash,
       timestamp: "0x5",
       random: "0x0000000000000000000000000000000000000000000000000000000000000000",
       feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
     };
 
-    const payloadId = await executionEngine.preparePayload(
-      dataToBytes(preparePayloadParams.parentHash),
-      quantityToNum(preparePayloadParams.timestamp),
-      dataToBytes(preparePayloadParams.random),
-      dataToBytes(preparePayloadParams.feeRecipient)
+    const payloadId = await executionEngine.notifyForkchoiceUpdate(
+      genesisBlockHash,
+      genesisBlockHash,
+      preparePayloadParams
     );
 
     // 2. Get the payload
@@ -229,17 +226,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     if (!payloadResult) {
       throw Error("getPayload returned payload that executePayload deems invalid");
     }
-
-    // 4. Update the fork choice
-
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{
-     * "headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-     * "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"
-     * }],"id":67}' http://localhost:8545
-     */
-
-    await executionEngine.notifyForkchoiceUpdate(toHexString(payload.blockHash), toHexString(payload.blockHash));
 
     // Error cases
     // 1. unknown payload

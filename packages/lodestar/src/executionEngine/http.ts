@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
+import {merge, RootHex} from "@chainsafe/lodestar-types";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -11,7 +11,7 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
+import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -81,47 +81,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
-  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void> {
+  notifyForkchoiceUpdate(
+    headBlockHash: RootHex,
+    finalizedBlockHash: RootHex,
+    _payloadAttributes?: PayloadAttributes
+  ): Promise<PayloadId> {
     const method = "engine_forkchoiceUpdated";
     return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
       method,
       params: [{headBlockHash, finalizedBlockHash}],
     });
-  }
-
-  /**
-   * `engine_preparePayload`
-   *
-   * 1. Given provided field value set client software SHOULD build the initial version of the payload which has an empty transaction set.
-   * 2. Client software SHOULD start the process of updating the payload. The strategy of this process is implementation dependent. The default strategy would be to keep the transaction set up-to-date with the state of local mempool.
-   * 3. Client software SHOULD stop the updating process either by finishing to serve the engine_getPayload call with the same payloadId value or when SECONDS_PER_SLOT (currently set to 12 in the Mainnet configuration) seconds have passed since the point in time identified by the timestamp parameter.
-   * 4. Client software MUST set the payload field values according to the set of parameters passed in the call to this method with exception for the feeRecipient. The coinbase field value MAY deviate from what is specified by the feeRecipient parameter.
-   * 5. Client software SHOULD respond with 2: Action not allowed error if the sync process is in progress.
-   * 6. Client software SHOULD respond with 4: Unknown block error if the parent block is unknown.
-   */
-  async preparePayload(
-    parentHash: Root,
-    timestamp: number,
-    random: Bytes32,
-    feeRecipient: ExecutionAddress
-  ): Promise<PayloadId> {
-    const method = "engine_preparePayload";
-    const {payloadId} = await this.rpc.fetch<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [
-        {
-          parentHash: bytesToData(parentHash),
-          timestamp: numToQuantity(timestamp),
-          random: bytesToData(random),
-          feeRecipient: bytesToData(feeRecipient),
-        },
-      ],
-    });
-
-    return payloadId;
   }
 
   /**
@@ -181,23 +150,12 @@ type EngineApiRpcReturnTypes = {
    */
   engine_executePayload: {status: ExecutePayloadStatus};
   engine_consensusValidated: void;
-  engine_forkchoiceUpdated: void;
+  engine_forkchoiceUpdated: QUANTITY;
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
   engine_preparePayload: {payloadId: QUANTITY};
   engine_getPayload: ExecutionPayloadRpc;
-};
-
-type PayloadAttributes = {
-  /** DATA, 32 Bytes - hash of the parent block */
-  parentHash: DATA;
-  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
-  timestamp: QUANTITY;
-  /** DATA, 32 Bytes - value for the random field of the new payload */
-  random: DATA;
-  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
-  feeRecipient: DATA;
 };
 
 type ExecutionPayloadRpc = {

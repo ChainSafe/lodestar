@@ -50,6 +50,12 @@ export interface BeaconState extends altair.BeaconState {
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
 }
 
+export interface PayloadAttributes{
+  timestamp: Number64;
+  random: Bytes32;
+  feeRecipient: ExecutionAddress;
+}
+
 export type PowBlock = {
   blockHash: Root;
   parentHash: Root;
