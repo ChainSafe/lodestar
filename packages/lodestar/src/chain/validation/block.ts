@@ -8,7 +8,6 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
-import {byteArrayEquals} from "../../util/bytes";
 
 // TODO - TEMP: Placeholder, to be agreed with other clients
 const MAX_TRANSACTIONS_SIZE = 50e6; // 50MB
@@ -115,15 +114,6 @@ export async function validateGossipBlock(
         code: BlockErrorCode.TOO_MUCH_GAS_USED,
         gasUsed: executionPayload.gasUsed,
         gasLimit: executionPayload.gasLimit,
-      });
-    }
-
-    // [REJECT] The execution payload block hash is not equal to the parent hash
-    // -- i.e. execution_payload.block_hash != execution_payload.parent_hash.
-    if (byteArrayEquals(executionPayload.blockHash, executionPayload.parentHash)) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.SAME_PARENT_HASH,
-        blockHash: toHexString(executionPayload.blockHash),
       });
     }
 
