@@ -1,20 +1,9 @@
-import {
-  byteType,
-  ByteVectorType,
-  ContainerType,
-  List,
-  ListType,
-  RootType,
-  Union,
-  UnionType,
-  Vector,
-  VectorType,
-} from "@chainsafe/ssz";
+import {byteType, ByteVectorType, ContainerType, List, ListType, RootType, Vector, VectorType} from "@chainsafe/ssz";
 import {
   BYTES_PER_LOGS_BLOOM,
   HISTORICAL_ROOTS_LIMIT,
   MAX_TRANSACTIONS_PER_PAYLOAD,
-  MAX_BYTES_PER_OPAQUE_TRANSACTION,
+  MAX_BYTES_PER_TRANSACTION,
   MAX_EXTRA_DATA_BYTES,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
@@ -34,18 +23,17 @@ const typesRef = new LazyVariable<{
 }>();
 
 /**
- * ByteList[MAX_BYTES_PER_OPAQUE_TRANSACTION]
+ * ByteList[MAX_BYTES_PER_TRANSACTION]
  *
  * Spec v1.0.1
  */
-export const OpaqueTransaction = new ListType({elementType: byteType, limit: MAX_BYTES_PER_OPAQUE_TRANSACTION});
+export const Transaction = new ListType({elementType: byteType, limit: MAX_BYTES_PER_TRANSACTION});
 
 /**
  * Union[OpaqueTransaction]
  *
  * Spec v1.0.1
  */
-export const Transaction = new UnionType<Union<merge.Transaction>>({types: [OpaqueTransaction]});
 export const Transactions = new ListType<List<merge.Transaction>>({
   elementType: Transaction,
   limit: MAX_TRANSACTIONS_PER_PAYLOAD,

@@ -50,7 +50,7 @@ export interface BeaconState extends altair.BeaconState {
   latestExecutionPayloadHeader: ExecutionPayloadHeader;
 }
 
-export interface PayloadAttributes{
+export interface PayloadAttributes {
   timestamp: Number64;
   random: Bytes32;
   feeRecipient: ExecutionAddress;

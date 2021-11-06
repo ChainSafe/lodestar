@@ -67,6 +67,11 @@ export const {
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+
+  MAX_BYTES_PER_TRANSACTION,
+  MAX_TRANSACTIONS_PER_PAYLOAD,
+  BYTES_PER_LOGS_BLOOM,
+  MAX_EXTRA_DATA_BYTES,
 } = presets[ACTIVE_PRESET];
 
 ////////////
@@ -135,14 +140,6 @@ export const TARGET_AGGREGATORS_PER_SYNC_SUBCOMMITTEE = 16;
 export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
-
-// Merge constants - Spec v1.0.1
-export const MAX_BYTES_PER_OPAQUE_TRANSACTION = 1048576; // 2**20;
-export const MAX_TRANSACTIONS_PER_PAYLOAD = 16384; // 2**14;
-export const BYTES_PER_LOGS_BLOOM = 256; // 2**8;
-export const GAS_LIMIT_DENOMINATOR = 1024; // 2**10;
-export const MIN_GAS_LIMIT = 5000;
-export const MAX_EXTRA_DATA_BYTES = 32; // 2**5
 
 // Merge constants - Spec v1.0.1
 // Genesis testing settings
