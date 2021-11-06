@@ -4,6 +4,7 @@ import {
   ForkName,
   MIN_SLASHING_PENALTY_QUOTIENT,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
+  MIN_SLASHING_PENALTY_QUOTIENT_MERGE,
   PROPOSER_REWARD_QUOTIENT,
   PROPOSER_WEIGHT,
   WEIGHT_DENOMINATOR,
@@ -35,7 +36,11 @@ export function slashValidatorAllForks(
   state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += BigInt(effectiveBalance);
 
   const minSlashingPenaltyQuotient =
-    fork === ForkName.phase0 ? MIN_SLASHING_PENALTY_QUOTIENT : MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR;
+    fork === ForkName.phase0
+      ? MIN_SLASHING_PENALTY_QUOTIENT
+      : fork === ForkName.altair
+      ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
+      : MIN_SLASHING_PENALTY_QUOTIENT_MERGE;
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
