@@ -10,11 +10,14 @@ import {loadConfigYaml} from "../yaml";
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Record<string, unknown>> {
   const phase0Url = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/phase0.yaml`;
   const altairUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/altair.yaml`;
+  const mergeUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/merge.yaml`;
   const phase0Res = await axios({url: phase0Url, timeout: 30 * 1000});
   const altairRes = await axios({url: altairUrl, timeout: 30 * 1000});
+  const mergeRes = await axios({url: mergeUrl, timeout: 30 * 1000});
   return createIBeaconPreset({
     ...loadConfigYaml(phase0Res.data),
     ...loadConfigYaml(altairRes.data),
+    ...loadConfigYaml(mergeRes.data),
   });
 }
 
