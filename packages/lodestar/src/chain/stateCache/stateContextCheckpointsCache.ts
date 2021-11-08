@@ -3,7 +3,7 @@ import {phase0, Epoch, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
-import {MapTracker} from "./mapMetrics";
+import {MapTrackerWeakRef} from "./mapMetrics";
 import {MapDef} from "../../util/map";
 
 type CheckpointHex = {epoch: Epoch; rootHex: RootHex};
@@ -16,7 +16,7 @@ const MAX_EPOCHS = 10;
  * Similar API to Repository
  */
 export class CheckpointStateCache {
-  private readonly cache: MapTracker<string, CachedBeaconState<allForks.BeaconState>>;
+  private readonly cache: MapTrackerWeakRef<string, CachedBeaconState<allForks.BeaconState>>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
   private readonly metrics: IMetrics["cpStateCache"] | null | undefined;
@@ -24,7 +24,7 @@ export class CheckpointStateCache {
   private preComputedCheckpointHits: number | null = null;
 
   constructor({metrics}: {metrics?: IMetrics | null}) {
-    this.cache = new MapTracker(metrics?.cpStateCache);
+    this.cache = new MapTrackerWeakRef(metrics?.cpStateCache);
     if (metrics) {
       this.metrics = metrics.cpStateCache;
       metrics.cpStateCache.size.addCollect(() => metrics.cpStateCache.size.set(this.cache.size));
