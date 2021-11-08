@@ -14,18 +14,20 @@ import {IMetrics} from "../../metrics";
 import {IEth1ForBlockProduction} from "../../eth1";
 import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
+import {ZERO_HASH_HEX} from "../../constants";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
+import {IStateRegenerator} from "../regen";
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
 import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
-import {ZERO_HASH_HEX} from "../../constants";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
   forkChoice: IForkChoice;
+  regen: IStateRegenerator;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   executionEngine: IExecutionEngine;
@@ -149,6 +151,13 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
     }
+
+    // MUST BE CALLED IF HEAD CHANGES !!! Otherwise the node will use the wrong state as head.
+    // Currently the cannonical head information is split between `forkChoice.getHead()` to get just a summary, and
+    // regen.getHeadState() to get the state of that head.
+    //
+    // Set head state in regen. May trigger async regen if the state is not in a memory cache
+    chain.regen.setHead(newHead, postState);
   }
 
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event

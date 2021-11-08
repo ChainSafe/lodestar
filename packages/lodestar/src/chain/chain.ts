@@ -135,6 +135,11 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
+
+    // On start, the initial anchor state is added to the state cache + the forkchoice.
+    // Since this state and its block is the only one in the forkchoice, it becomes the head.
+    regen.setHead(forkChoice.getHead(), cachedState);
+
     this.blockProcessor = new BlockProcessor(
       {
         clock,
@@ -194,10 +199,8 @@ export class BeaconChain implements IBeaconChain {
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
     // head state should always exist
-    const head = this.forkChoice.getHead();
-    const headState =
-      this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-    if (!headState) throw Error("headState does not exist");
+    const headState = this.regen.getHeadState();
+    if (!headState) throw Error("headState not available");
     return headState;
   }
 

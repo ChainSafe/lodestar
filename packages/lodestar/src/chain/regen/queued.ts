@@ -1,11 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {JobItemQueue} from "../../util/queue";
-import {IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
+import {IStateRegeneratorInternal, RegenCaller, RegenFnName} from "./interface";
 import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
@@ -16,8 +16,8 @@ type QueuedStateRegeneratorModules = RegenModules & {
   signal: AbortSignal;
 };
 
-type RegenRequestKey = keyof IStateRegenerator;
-type RegenRequestByKey = {[K in RegenRequestKey]: {key: K; args: Parameters<IStateRegenerator[K]>}};
+type RegenRequestKey = keyof IStateRegeneratorInternal;
+type RegenRequestByKey = {[K in RegenRequestKey]: {key: K; args: Parameters<IStateRegeneratorInternal[K]>}};
 export type RegenRequest = RegenRequestByKey[RegenRequestKey];
 
 /**
@@ -25,7 +25,7 @@ export type RegenRequest = RegenRequestByKey[RegenRequestKey];
  *
  * All requests are queued so that only a single state at a time may be regenerated at a time
  */
-export class QueuedStateRegenerator implements IStateRegenerator {
+export class QueuedStateRegenerator implements IStateRegeneratorInternal {
   readonly jobQueue: JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>;
   private regen: StateRegenerator;
 
@@ -33,6 +33,9 @@ export class QueuedStateRegenerator implements IStateRegenerator {
   private stateCache: StateContextCache;
   private checkpointStateCache: CheckpointStateCache;
   private metrics: IMetrics | null;
+
+  private headStateRootHex: string | null = null;
+  private headState: CachedBeaconState<allForks.BeaconState> | null = null;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
@@ -45,6 +48,45 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.stateCache = modules.stateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
+  }
+
+  getHeadState(): CachedBeaconState<allForks.BeaconState> | null {
+    return (
+      this.headState ||
+      // Fallback, check if head state is in cache
+      (this.headStateRootHex ? this.stateCache.get(this.headStateRootHex) : null)
+    );
+  }
+
+  setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void {
+    this.headStateRootHex = head.stateRoot;
+
+    const headState =
+      potentialHeadState &&
+      // Compare the slot to prevent comparing stateRoot which should be more expensive
+      head.slot === potentialHeadState.slot &&
+      head.stateRoot === toHexString(potentialHeadState.hashTreeRoot())
+        ? potentialHeadState
+        : this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
+
+    // State is available syncronously =D
+    // Note: almost always the headState should be in the cache since it should be from a block recently processed
+    if (headState) {
+      this.headState = headState;
+      return;
+    }
+
+    // Make the state temporarily unavailable, while regen gets the state. While headState = null, the node may halt,
+    // but it will recover eventually once the headState is available.
+    this.headState = null;
+    this.getState(head.stateRoot, RegenCaller.regenHeadState)
+      .then((state) => {
+        this.headState = state;
+      })
+      .catch((e) => {
+        (e as Error).message = `Head state ${head.slot} ${head.stateRoot} not available: ${(e as Error).message}`;
+        throw e;
+      });
   }
 
   /**

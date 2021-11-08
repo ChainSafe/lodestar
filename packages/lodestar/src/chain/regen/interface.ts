@@ -1,5 +1,6 @@
 import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -11,6 +12,7 @@ export enum RegenCaller {
   validateGossipAggregateAndProof = "validateGossipAggregateAndProof",
   validateGossipAttestation = "validateGossipAttestation",
   onForkChoiceFinalized = "onForkChoiceFinalized",
+  regenHeadState = "regenHeadState",
 }
 
 export enum RegenFnName {
@@ -20,10 +22,15 @@ export enum RegenFnName {
   getCheckpointState = "getCheckpointState",
 }
 
+export interface IStateRegenerator extends IStateRegeneratorInternal {
+  getHeadState(): CachedBeaconState<allForks.BeaconState> | null;
+  setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void;
+}
+
 /**
  * Regenerates states that have already been processed by the fork choice
  */
-export interface IStateRegenerator {
+export interface IStateRegeneratorInternal {
   /**
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
