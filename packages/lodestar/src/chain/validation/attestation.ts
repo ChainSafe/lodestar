@@ -1,6 +1,6 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List, toHexString} from "@chainsafe/ssz";
 import {
   allForks,
@@ -15,7 +15,7 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
 import {RegenCaller} from "../regen";
 
-const {EpochContextError, EpochContextErrorCode, computeSubnetForSlot, getIndexedAttestationSignatureSet} = allForks;
+const {getIndexedAttestationSignatureSet} = allForks;
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,
@@ -85,8 +85,8 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  const attestationTargetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
+  const attesterShuffling = await chain.regen
+    .getAttesterShuffling(attTarget, RegenCaller.validateGossipAttestation)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
@@ -97,7 +97,7 @@ export async function validateGossipAttestation(
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const attIndex = attData.index;
-  const committeeIndices = getCommitteeIndices(attestationTargetState, attSlot, attIndex);
+  const committeeIndices = getCommitteeIndices(attesterShuffling, attSlot, attIndex);
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
@@ -116,7 +116,7 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  const expectedSubnet = computeSubnetForSlot(attestationTargetState, attSlot, attIndex);
+  const expectedSubnet = computeSubnetForSlot(attesterShuffling, attSlot, attIndex);
   if (subnet !== null && subnet !== expectedSubnet) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -141,7 +141,7 @@ export async function validateGossipAttestation(
     data: attData,
     signature: attestation.signature,
   };
-  const signatureSet = getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
+  const signatureSet = getIndexedAttestationSignatureSet(chain.config, chain.index2pubkey, indexedAttestation);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
@@ -285,21 +285,24 @@ function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, a
   }
 }
 
-export function getCommitteeIndices(
-  attestationTargetState: allForks.CachedBeaconState<allForks.BeaconState>,
-  attestationSlot: Slot,
-  attestationIndex: number
-): number[] {
-  try {
-    return attestationTargetState.getBeaconCommittee(attestationSlot, attestationIndex);
-  } catch (e) {
-    if (e instanceof EpochContextError && e.type.code === EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-        index: attestationIndex,
-      });
-    } else {
-      throw e;
-    }
+export function getCommitteeIndices(attesterShuffling: allForks.IEpochShuffling, slot: Slot, index: number): number[] {
+  const slotCommittees = attesterShuffling.committees[slot % SLOTS_PER_EPOCH];
+  if (index >= slotCommittees.length) {
+    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE, index});
   }
+  return slotCommittees[index];
+}
+
+/**
+ * Compute the correct subnet for a slot/committee index
+ */
+function computeSubnetForSlot(
+  attesterShuffling: allForks.IEpochShuffling,
+  slot: number,
+  committeeIndex: number
+): number {
+  const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
+  const committeesPerSlot = attesterShuffling.committeesPerSlot;
+  const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

@@ -10,7 +10,7 @@ export function getAttesterSlashingSignatureSets(
   attesterSlashing: phase0.AttesterSlashing
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
-    getIndexedAttestationSignatureSet(state, attestation)
+    getIndexedAttestationSignatureSet(state.config, state.epochCtx.index2pubkey, attestation)
   );
 }
 

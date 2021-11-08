@@ -1,13 +1,10 @@
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiModules} from "../types";
 import {ChainEvent, IChainEvents} from "../../../chain";
 import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
 import {toHexString} from "@chainsafe/ssz";
+import {getDependantRootAtEpoch} from "../../../chain/regen";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events
@@ -31,15 +28,10 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
     ) => routes.events.EventData[K][];
   } = {
     [routes.events.EventType.head]: (head) => {
-      const state = chain.stateCache.get(head.stateRoot);
-      if (!state) {
-        throw Error("cannot get state for head " + head.stateRoot);
-      }
-
-      const currentEpoch = state.currentShuffling.epoch;
-      const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
-        toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
-      );
+      // TODO: Compute in one pass
+      const currentEpoch = computeEpochAtSlot(head.slot);
+      const currentDutyDependentRoot = getDependantRootAtEpoch(chain.forkChoice, head, currentEpoch);
+      const previousDutyDependentRoot = getDependantRootAtEpoch(chain.forkChoice, head, Math.max(0, currentEpoch - 1));
 
       return [
         {

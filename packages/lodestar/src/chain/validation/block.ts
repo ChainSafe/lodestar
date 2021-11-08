@@ -1,20 +1,19 @@
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, computeTimeAtSlot, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
-import {RegenCaller} from "../regen";
 import {byteArrayEquals} from "../../util/bytes";
 
 // TODO - TEMP: Placeholder, to be agreed with other clients
 const MAX_TRANSACTIONS_SIZE = 50e6; // 50MB
 
 export async function validateGossipBlock(
-  config: IChainForkConfig,
+  config: IBeaconConfig,
   chain: IBeaconChain,
   signedBlock: allForks.SignedBeaconBlock,
   fork: ForkName
@@ -144,23 +143,24 @@ export async function validateGossipBlock(
   // this is something we should change this in the future to make the code airtight to the spec.
   // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
   // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  const blockState = await chain.regen.getProposerShuffling(parentBlock, RegenCaller.validateGossipBlock).catch(() => {
+  const proposerShuffling = await chain.regen.getProposerShuffling(parentBlock, blockSlot).catch(() => {
     throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   });
-
-  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
-  // Don't batch so verification is not delayed
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
-  }
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
+  const expectedProposerIndex = proposerShuffling[blockSlot % SLOTS_PER_EPOCH];
+  if (expectedProposerIndex !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+  }
+
+  // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
+  const signatureSet = allForks.getProposerSignatureSet(config, chain.index2pubkey, signedBlock);
+  // Don't batch so verification is not delayed
+  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
+    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
   }
 
   // Check again in case there two blocks are processed concurrently

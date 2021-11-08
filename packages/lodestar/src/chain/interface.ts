@@ -1,5 +1,5 @@
-import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -9,7 +9,6 @@ import {IExecutionEngine} from "../executionEngine";
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateCacheRegen} from "./regen";
-import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {
   SeenAttesters,
@@ -41,12 +40,14 @@ export interface IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 
+  // Caches
+  readonly index2pubkey: allForks.Index2PubkeyCache;
+
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
+
   regen: IStateCacheRegen;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -74,6 +75,7 @@ export interface IBeaconChain {
   getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
+  getHeadStateOption(): CachedBeaconState<allForks.BeaconState> | null;
 
   /**
    * Since we can have multiple parallel chains,

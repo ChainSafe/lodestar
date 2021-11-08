@@ -151,7 +151,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
   // TODO: Improve using regen here
-  const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+  const headState = this.getHeadStateOption();
   if (headState) {
     this.opPool.pruneAll(headState);
   }

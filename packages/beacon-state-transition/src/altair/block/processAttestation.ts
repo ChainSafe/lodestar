@@ -25,7 +25,7 @@ export function processAttestations(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const {effectiveBalances} = epochCtx;
+  const {effectiveBalances, config, index2pubkey} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state);
 
@@ -45,11 +45,7 @@ export function processAttestations(
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
     if (verifySignature) {
-      const sigSet = getAttestationWithIndicesSignatureSet(
-        state as CachedBeaconState<allForks.BeaconState>,
-        attestation,
-        attestingIndices
-      );
+      const sigSet = getAttestationWithIndicesSignatureSet(config, index2pubkey, attestation, attestingIndices);
       if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }

@@ -24,7 +24,10 @@ export function getAllBlockSignatureSets(
   state: CachedBeaconState<allForks.BeaconState>,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return [getProposerSignatureSet(state, signedBlock), ...getAllBlockSignatureSetsExceptProposer(state, signedBlock)];
+  return [
+    getProposerSignatureSet(state.config, state.epochCtx.index2pubkey, signedBlock),
+    ...getAllBlockSignatureSetsExceptProposer(state, signedBlock),
+  ];
 }
 
 /**

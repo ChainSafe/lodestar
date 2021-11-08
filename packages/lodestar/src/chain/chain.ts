@@ -3,10 +3,10 @@
  */
 
 import fs from "fs";
-import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
@@ -52,12 +52,13 @@ export class BeaconChain implements IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 
+  // Caches
+  readonly index2pubkey: allForks.Index2PubkeyCache;
+
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
   regen: IStateCacheRegen;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -83,6 +84,9 @@ export class BeaconChain implements IBeaconChain {
   protected readonly opts: IChainOptions;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
+
+  private readonly stateCache: StateContextCache;
+  private readonly checkpointStateCache: CheckpointStateCache;
 
   constructor(
     opts: IChainOptions,
@@ -152,8 +156,6 @@ export class BeaconChain implements IBeaconChain {
         eth1,
         db,
         forkChoice,
-        stateCache,
-        checkpointStateCache,
         emitter,
         config,
         logger,
@@ -173,7 +175,7 @@ export class BeaconChain implements IBeaconChain {
 
     this.lightclientUpdater = new LightClientUpdater(this.db);
     this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
-    this.archiver = new Archiver(db, this, logger, signal);
+    this.archiver = new Archiver(db, forkChoice, checkpointStateCache, stateCache, emitter, logger, signal);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
@@ -205,6 +207,10 @@ export class BeaconChain implements IBeaconChain {
     const headState = this.regen.getHeadState();
     if (!headState) throw Error("headState not available");
     return headState;
+  }
+
+  getHeadStateOption(): CachedBeaconState<allForks.BeaconState> | null {
+    return this.regen.getHeadState();
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {

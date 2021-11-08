@@ -62,7 +62,7 @@ export async function validateGossipAggregateAndProof(
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
   const targetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
+    .getAttesterShuffling(attTarget, RegenCaller.validateGossipAggregateAndProof)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
@@ -102,11 +102,11 @@ export async function validateGossipAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = targetState.index2pubkey[aggregateAndProof.aggregatorIndex];
+  const aggregator = chain.index2pubkey[aggregateAndProof.aggregatorIndex];
   const signatureSets = [
-    getSelectionProofSignatureSet(targetState, attSlot, aggregator, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(targetState, attEpoch, aggregator, signedAggregateAndProof),
-    allForks.getIndexedAttestationSignatureSet(targetState, indexedAttestation),
+    getSelectionProofSignatureSet(chain.config, attSlot, aggregator, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(chain.config, attEpoch, aggregator, signedAggregateAndProof),
+    allForks.getIndexedAttestationSignatureSet(chain.config, chain.index2pubkey, indexedAttestation),
   ];
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});

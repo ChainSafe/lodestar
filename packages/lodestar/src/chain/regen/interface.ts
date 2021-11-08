@@ -1,7 +1,6 @@
-import {allForks, phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, Slot, RootHex, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition/lib/allForks";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -25,7 +24,7 @@ export enum RegenFnName {
 }
 
 export type ProposerShuffling = ValidatorIndex[];
-export type AttesterShuffling = IEpochShuffling;
+export type AttesterShuffling = allForks.IEpochShuffling;
 // TODO: Use a raw array
 // type AttesterShuffling = ValidatorIndex[];
 
@@ -76,6 +75,11 @@ export interface IStateCacheRegen {
    * Trigger a regen and persistance of a new head state as a strong ref
    */
   setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void;
+
+  /**
+   * Add post state to regen caches after applying `block`
+   */
+  addPostState(state: CachedBeaconState<allForks.BeaconState>, block: IProtoBlock): void;
 
   /**
    * Returns the current head state
@@ -138,7 +142,58 @@ export interface IStateCacheRegen {
    * - curr shuffling: for state epoch.
    * - prev shuffling: for state epoch - 1.
    */
-  getAttesterShuffling(targetCheckpoint: phase0.Checkpoint): Promise<AttesterShuffling>;
+  getAttesterShuffling(targetCheckpoint: phase0.Checkpoint, rCaller: RegenCaller): Promise<AttesterShuffling>;
+
+  /**
+   * Return a valid pre-state for a beacon block. May be:
+   * - If parent is in same epoch -> Exact state at `block.parentRoot`
+   * - If parent is in prev epoch -> State after `block.parentRoot` dialed forward through epoch transition
+   *
+   * The returned state will always be in the same epoch to cache all epoch transitions
+   *
+   * Used for:
+   * - Block validation (processBlock + processChainSegment)
+   *
+   * May trigger unbounded replay (in long non-finality) + epoch transitions
+   */
+  getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
+
+  /**
+   * Returns the closest state to postState.currentJustifiedCheckpoint in the same fork as postState
+   *
+   * From the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_latest_attesting_balance
+   * The state from which to read balances is:
+   *
+   * ```python
+   * state = store.checkpoint_states[store.justified_checkpoint]
+   * ```
+   *
+   * ```python
+   * def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
+   *    # Store target checkpoint state if not yet seen
+   *    if target not in store.checkpoint_states:
+   *        base_state = copy(store.block_states[target.root])
+   *        if base_state.slot < compute_start_slot_at_epoch(target.epoch):
+   *            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
+   *        store.checkpoint_states[target] = base_state
+   * ```
+   *
+   * So the state to get justified balances is the post state of `checkpoint.root` dialed forward to the first slot in
+   * `checkpoint.epoch` if that block is not in `checkpoint.epoch`.
+   */
+  getStateForJustifiedBalances(
+    postState: CachedBeaconState<allForks.BeaconState>,
+    blockParentRoot: RootHex
+  ): CachedBeaconState<allForks.BeaconState>;
+
+  /**
+   * TEMP - To get states from API
+   * Get state from memory cache doing no regen
+   */
+  getStateSync(stateRoot: RootHex): CachedBeaconState<allForks.BeaconState> | null;
+
+  /** Use only for debugging and testing */
+  dropStateCaches(): void;
 }
 
 /**

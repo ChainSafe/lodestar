@@ -14,8 +14,6 @@ import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
 import {AttesterShuffling, processSlotsToNearestCheckpoint, ProposerShuffling} from ".";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {ZERO_HASH_HEX} from "../../constants";
 import {MapDef} from "../../util/map";
 
 const REGEN_QUEUE_MAX_LEN = 256;
@@ -91,8 +89,9 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
 
   private proposerShufflingCache: Map<Epoch, Map<DependantRootHex, WeakRef<ProposerShuffling>>>;
 
-  constructor(modules: QueuedStateRegeneratorModules, head: HeadSummary) {
-    this.head = head;
+  constructor(modules: QueuedStateRegeneratorModules) {
+    this.head = getHeadSummary(modules.forkChoice, modules.forkChoice.getHead());
+
     this.regen = new StateRegenerator(modules);
     this.jobQueue = new JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>(
       this.jobQueueProcessor,
@@ -103,6 +102,52 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     this.stateCache = modules.stateCache;
     this.checkpointStateCache = modules.checkpointStateCache;
     this.metrics = modules.metrics;
+  }
+
+  setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void {
+    this.head = getHeadSummary(this.forkChoice, head);
+
+    const headState =
+      potentialHeadState &&
+      // Compare the slot to prevent comparing stateRoot which should be more expensive
+      head.slot === potentialHeadState.slot &&
+      head.stateRoot === toHexString(potentialHeadState.hashTreeRoot())
+        ? potentialHeadState
+        : this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
+
+    // State is available syncronously =D
+    // Note: almost always the headState should be in the cache since it should be from a block recently processed
+    if (headState) {
+      this.headState = headState;
+      return;
+    }
+
+    // Make the state temporarily unavailable, while regen gets the state. While headState = null, the node may halt,
+    // but it will recover eventually once the headState is available.
+    this.headState = null;
+    this.getState(head.stateRoot, RegenCaller.regenHeadState)
+      .then((state) => {
+        this.headState = state;
+      })
+      .catch((e) => {
+        (e as Error).message = `Head state ${head.slot} ${head.stateRoot} not available: ${(e as Error).message}`;
+        throw e;
+      });
+  }
+
+  addPostState(state: CachedBeaconState<allForks.BeaconState>, block: IProtoBlock): void {
+    const stateEpoch = computeEpochAtSlot(state.slot);
+    const stateEpochPlus1 = Math.max(stateEpoch - 1, 0);
+    const stateEpochPlus2 = Math.max(stateEpoch - 2, 0);
+    // TODO: Compute all the dependantRoots in one go
+    const dependantRootEpoch = getDependantRootAtEpoch(this.forkChoice, block, stateEpoch);
+    const dependantRootEpochPlus1 = getDependantRootAtEpoch(this.forkChoice, block, Math.max(stateEpochPlus1));
+    const dependantRootEpochPlus2 = getDependantRootAtEpoch(this.forkChoice, block, Math.max(stateEpochPlus2));
+
+    const stateWeakRef = new WeakRef(state);
+    this.dependantRootCacheNext.getOrDefault(stateEpoch).getOrDefault(dependantRootEpoch).add(stateWeakRef);
+    this.dependantRootCacheCurr.getOrDefault(stateEpochPlus1).getOrDefault(dependantRootEpochPlus1).add(stateWeakRef);
+    this.dependantRootCachePrev.getOrDefault(stateEpochPlus2).getOrDefault(dependantRootEpochPlus2).add(stateWeakRef);
   }
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> | null {
@@ -262,59 +307,97 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     return state.nextShuffling;
   }
 
-  addPostState(state: CachedBeaconState<allForks.BeaconState>, block: IProtoBlock): void {
-    const stateEpoch = computeEpochAtSlot(state.slot);
-    const stateEpochPlus1 = Math.max(stateEpoch - 1, 0);
-    const stateEpochPlus2 = Math.max(stateEpoch - 2, 0);
-    const dependantRootEpoch = getDependantRootAtEpoch(this.forkChoice, block, stateEpoch);
-    const dependantRootEpochPlus1 = getDependantRootAtEpoch(this.forkChoice, block, Math.max(stateEpochPlus1));
-    const dependantRootEpochPlus2 = getDependantRootAtEpoch(this.forkChoice, block, Math.max(stateEpochPlus2));
+  /**
+   * Returns the closest state to postState.currentJustifiedCheckpoint in the same fork as postState
+   *
+   * From the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_latest_attesting_balance
+   * The state from which to read balances is:
+   *
+   * ```python
+   * state = store.checkpoint_states[store.justified_checkpoint]
+   * ```
+   *
+   * ```python
+   * def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
+   *    # Store target checkpoint state if not yet seen
+   *    if target not in store.checkpoint_states:
+   *        base_state = copy(store.block_states[target.root])
+   *        if base_state.slot < compute_start_slot_at_epoch(target.epoch):
+   *            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
+   *        store.checkpoint_states[target] = base_state
+   * ```
+   *
+   * So the state to get justified balances is the post state of `checkpoint.root` dialed forward to the first slot in
+   * `checkpoint.epoch` if that block is not in `checkpoint.epoch`.
+   */
+  getStateForJustifiedBalances(
+    postState: CachedBeaconState<allForks.BeaconState>,
+    blockParentRoot: RootHex
+  ): CachedBeaconState<allForks.BeaconState> {
+    const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
+    const checkpointHex = toCheckpointHex(justifiedCheckpoint);
+    const checkpointSlot = computeStartSlotAtEpoch(checkpointHex.epoch);
 
-    const stateWeakRef = new WeakRef(state);
-    this.dependantRootCacheNext.getOrDefault(stateEpoch).getOrDefault(dependantRootEpoch).add(stateWeakRef);
-    this.dependantRootCacheCurr.getOrDefault(stateEpochPlus1).getOrDefault(dependantRootEpochPlus1).add(stateWeakRef);
-    this.dependantRootCachePrev.getOrDefault(stateEpochPlus2).getOrDefault(dependantRootEpochPlus2).add(stateWeakRef);
-  }
-
-  setHead(head: IProtoBlock, potentialHeadState?: CachedBeaconState<allForks.BeaconState>): void {
-    const headEpoch = computeEpochAtSlot(head.slot);
-    this.head = {
-      blockRoot: head.blockRoot,
-      stateRoot: head.stateRoot,
-      slot: head.slot,
-      epoch: headEpoch,
-      targetRoot: head.targetRoot,
-      dependantRootNext: getDependantRootAtEpoch(this.forkChoice, head, headEpoch),
-      dependantRootCurr: getDependantRootAtEpoch(this.forkChoice, head, Math.max(headEpoch - 1, 0)),
-      dependantRootPrev: getDependantRootAtEpoch(this.forkChoice, head, Math.max(headEpoch - 2, 0)),
-    };
-
-    const headState =
-      potentialHeadState &&
-      // Compare the slot to prevent comparing stateRoot which should be more expensive
-      head.slot === potentialHeadState.slot &&
-      head.stateRoot === toHexString(potentialHeadState.hashTreeRoot())
-        ? potentialHeadState
-        : this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
-
-    // State is available syncronously =D
-    // Note: almost always the headState should be in the cache since it should be from a block recently processed
-    if (headState) {
-      this.headState = headState;
-      return;
+    // First, check if the checkpoint block in the checkpoint epoch, by getting the block summary from the fork-choice
+    const checkpointBlock = this.forkChoice.getBlockHex(checkpointHex.rootHex);
+    if (!checkpointBlock) {
+      // Should never happen
+      return postState;
     }
 
-    // Make the state temporarily unavailable, while regen gets the state. While headState = null, the node may halt,
-    // but it will recover eventually once the headState is available.
-    this.headState = null;
-    this.getState(head.stateRoot, RegenCaller.regenHeadState)
-      .then((state) => {
-        this.headState = state;
-      })
-      .catch((e) => {
-        (e as Error).message = `Head state ${head.slot} ${head.stateRoot} not available: ${(e as Error).message}`;
-        throw e;
-      });
+    // NOTE: The state of block checkpointHex.rootHex may be prior to the justified checkpoint if it was a skipped slot.
+    if (checkpointBlock.slot >= checkpointSlot) {
+      const checkpointBlockState = this.stateCache.get(checkpointBlock.stateRoot);
+      if (checkpointBlockState) {
+        return checkpointBlockState;
+      }
+    }
+
+    // If here, the first slot of `checkpoint.epoch` is a skipped slot. Check if the state is in the checkpoint cache.
+    // NOTE: This state and above are correct with the spec.
+    // NOTE: If the first slot of the epoch was skipped and the node is syncing, this state won't be in the cache.
+    const state = this.checkpointStateCache.get(checkpointHex);
+    if (state) {
+      return state;
+    }
+
+    // If it's not found, then find the oldest state in the same chain as this one
+    // NOTE: If `block.message.parentRoot` is not in the fork-choice, `iterateAncestorBlocks()` returns `[]`
+    // NOTE: This state is not be correct with the spec, it may have extra modifications from multiple blocks.
+    //       However, it's a best effort before triggering an async regen process. In the future this should be fixed
+    //       to use regen and get the correct state.
+    let oldestState = postState;
+    for (const parentBlock of this.forkChoice.iterateAncestorBlocks(blockParentRoot)) {
+      // We want at least a state at the slot 0 of checkpoint.epoch
+      if (parentBlock.slot < checkpointSlot) {
+        break;
+      }
+
+      const parentBlockState = this.stateCache.get(parentBlock.stateRoot);
+      if (parentBlockState) {
+        oldestState = parentBlockState;
+      }
+    }
+
+    // TODO: Use regen to get correct state. Note that making this function async can break the import flow.
+    //       Also note that it can dead lock regen and block processing since both have a concurrency of 1.
+
+    this.logger.error("State for currentJustifiedCheckpoint not available, using closest state", {
+      checkpointEpoch: checkpointHex.epoch,
+      checkpointRoot: checkpointHex.rootHex,
+      stateSlot: oldestState.slot,
+      stateRoot: toHexString(oldestState.hashTreeRoot()),
+    });
+
+    return oldestState;
+  }
+
+  /**
+   * TEMP - To get states from API
+   * Get state from memory cache doing no regen
+   */
+  getStateSync(stateRoot: RootHex): CachedBeaconState<allForks.BeaconState> | null {
+    return this.stateCache.get(stateRoot);
   }
 
   /**
@@ -405,6 +488,14 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
   }
 
+  dropStateCaches(): void {
+    this.stateCache.clear();
+    this.checkpointStateCache.clear();
+    this.dependantRootCacheNext.clear();
+    this.dependantRootCacheCurr.clear();
+    this.dependantRootCachePrev.clear();
+  }
+
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {
     const metricsLabels = {
       caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
@@ -436,7 +527,7 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
  * Returns the dependant root of `fromBlock` block ancestors that decided the epoch transition going into `epoch`.
  * `dependantRoot` is the block root of the last block in epoch `epoch - 1`, which may not be in `epoch - 1`.
  */
-function getDependantRootAtEpoch(forkChoice: IForkChoice, fromBlock: IProtoBlock, epoch: Epoch): RootHex {
+export function getDependantRootAtEpoch(forkChoice: IForkChoice, fromBlock: IProtoBlock, epoch: Epoch): RootHex {
   // Handle close to genesis
   if (epoch <= 0) {
     const finalizedCp = forkChoice.getFinalizedCheckpoint();
@@ -488,4 +579,18 @@ function getDependantRootAtEpoch(forkChoice: IForkChoice, fromBlock: IProtoBlock
   } else {
     throw Error(`Can not get dependant root for block ${fromBlock.blockRoot} slot ${fromBlock.slot}`);
   }
+}
+
+function getHeadSummary(forkChoice: IForkChoice, head: IProtoBlock): HeadSummary {
+  const headEpoch = computeEpochAtSlot(head.slot);
+  return {
+    blockRoot: head.blockRoot,
+    stateRoot: head.stateRoot,
+    slot: head.slot,
+    epoch: headEpoch,
+    targetRoot: head.targetRoot,
+    dependantRootNext: getDependantRootAtEpoch(forkChoice, head, headEpoch),
+    dependantRootCurr: getDependantRootAtEpoch(forkChoice, head, Math.max(headEpoch - 1, 0)),
+    dependantRootPrev: getDependantRootAtEpoch(forkChoice, head, Math.max(headEpoch - 2, 0)),
+  };
 }

@@ -1,13 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
-import {allForks} from "@chainsafe/lodestar-types";
-import {
-  CachedBeaconState,
-  computeStartSlotAtEpoch,
-  getEffectiveBalances,
-  merge,
-} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
+import {getEffectiveBalances, merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {IForkChoice, IProtoBlock, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
@@ -15,7 +9,6 @@ import {IEth1ForBlockProduction} from "../../eth1";
 import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
 import {ZERO_HASH_HEX} from "../../constants";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IStateCacheRegen} from "../regen";
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
@@ -28,8 +21,6 @@ export type ImportBlockModules = {
   eth1: IEth1ForBlockProduction;
   forkChoice: IForkChoice;
   regen: IStateCacheRegen;
-  stateCache: StateContextCache;
-  checkpointStateCache: CheckpointStateCache;
   executionEngine: IExecutionEngine;
   emitter: ChainEventEmitter;
   config: IChainForkConfig;
@@ -80,7 +71,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
   const onBlockPrecachedData: OnBlockPrecachedData = {};
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
-    const state = getStateForJustifiedBalances(chain, postState, block);
+    const state = chain.regen.getStateForJustifiedBalances(postState, toHexString(block.message.parentRoot));
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
   }
 
@@ -101,7 +92,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
+  const blockFC: IProtoBlock = chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
 
   // - Register state and block to the validator monitor
   // TODO
@@ -189,7 +180,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // TODO: Move internal emitter onBlock() code here
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
-  chain.stateCache.add(postState);
+  chain.regen.addPostState(postState, blockFC);
   await chain.db.block.add(block);
 
   // - head_tracker.register_block(block_root, parent_root, slot)
@@ -199,90 +190,4 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // Emit all events at once after fully completing importBlock()
   chain.emitter.emit(ChainEvent.block, block, postState);
   pendingEvents.emit();
-}
-
-/**
- * Returns the closest state to postState.currentJustifiedCheckpoint in the same fork as postState
- *
- * From the spec https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_latest_attesting_balance
- * The state from which to read balances is:
- *
- * ```python
- * state = store.checkpoint_states[store.justified_checkpoint]
- * ```
- *
- * ```python
- * def store_target_checkpoint_state(store: Store, target: Checkpoint) -> None:
- *    # Store target checkpoint state if not yet seen
- *    if target not in store.checkpoint_states:
- *        base_state = copy(store.block_states[target.root])
- *        if base_state.slot < compute_start_slot_at_epoch(target.epoch):
- *            process_slots(base_state, compute_start_slot_at_epoch(target.epoch))
- *        store.checkpoint_states[target] = base_state
- * ```
- *
- * So the state to get justified balances is the post state of `checkpoint.root` dialed forward to the first slot in
- * `checkpoint.epoch` if that block is not in `checkpoint.epoch`.
- */
-function getStateForJustifiedBalances(
-  chain: ImportBlockModules,
-  postState: CachedBeaconState<allForks.BeaconState>,
-  block: allForks.SignedBeaconBlock
-): CachedBeaconState<allForks.BeaconState> {
-  const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-  const checkpointHex = toCheckpointHex(justifiedCheckpoint);
-  const checkpointSlot = computeStartSlotAtEpoch(checkpointHex.epoch);
-
-  // First, check if the checkpoint block in the checkpoint epoch, by getting the block summary from the fork-choice
-  const checkpointBlock = chain.forkChoice.getBlockHex(checkpointHex.rootHex);
-  if (!checkpointBlock) {
-    // Should never happen
-    return postState;
-  }
-
-  // NOTE: The state of block checkpointHex.rootHex may be prior to the justified checkpoint if it was a skipped slot.
-  if (checkpointBlock.slot >= checkpointSlot) {
-    const checkpointBlockState = chain.stateCache.get(checkpointBlock.stateRoot);
-    if (checkpointBlockState) {
-      return checkpointBlockState;
-    }
-  }
-
-  // If here, the first slot of `checkpoint.epoch` is a skipped slot. Check if the state is in the checkpoint cache.
-  // NOTE: This state and above are correct with the spec.
-  // NOTE: If the first slot of the epoch was skipped and the node is syncing, this state won't be in the cache.
-  const state = chain.checkpointStateCache.get(checkpointHex);
-  if (state) {
-    return state;
-  }
-
-  // If it's not found, then find the oldest state in the same chain as this one
-  // NOTE: If `block.message.parentRoot` is not in the fork-choice, `iterateAncestorBlocks()` returns `[]`
-  // NOTE: This state is not be correct with the spec, it may have extra modifications from multiple blocks.
-  //       However, it's a best effort before triggering an async regen process. In the future this should be fixed
-  //       to use regen and get the correct state.
-  let oldestState = postState;
-  for (const parentBlock of chain.forkChoice.iterateAncestorBlocks(toHexString(block.message.parentRoot))) {
-    // We want at least a state at the slot 0 of checkpoint.epoch
-    if (parentBlock.slot < checkpointSlot) {
-      break;
-    }
-
-    const parentBlockState = chain.stateCache.get(parentBlock.stateRoot);
-    if (parentBlockState) {
-      oldestState = parentBlockState;
-    }
-  }
-
-  // TODO: Use regen to get correct state. Note that making this function async can break the import flow.
-  //       Also note that it can dead lock regen and block processing since both have a concurrency of 1.
-
-  chain.logger.error("State for currentJustifiedCheckpoint not available, using closest state", {
-    checkpointEpoch: checkpointHex.epoch,
-    checkpointRoot: checkpointHex.rootHex,
-    stateSlot: oldestState.slot,
-    stateRoot: toHexString(oldestState.hashTreeRoot()),
-  });
-
-  return oldestState;
 }
