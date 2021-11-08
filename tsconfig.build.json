@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "es2019",
+    "target": "esnext",
     "module": "commonjs",
     "pretty": true,
-    "lib": ["es2020", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
+    "lib": ["esnext", "esnext.bigint", "es2020.string", "es2020.symbol.wellknown"],
 
     "strict": true,
     "sourceMap": true,
