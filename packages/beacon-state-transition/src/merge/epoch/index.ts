@@ -1,0 +1,1 @@
+export {processSlashings} from "./processSlashings";
