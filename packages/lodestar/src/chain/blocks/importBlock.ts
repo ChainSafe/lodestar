@@ -132,7 +132,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     // Cache state to preserve epoch transition work
     const checkpointState = postState.clone();
     const cp = getCheckpointFromState(checkpointState);
-    chain.checkpointStateCache.add(cp, checkpointState);
     pendingEvents.push(ChainEvent.checkpoint, cp, checkpointState);
   }
 

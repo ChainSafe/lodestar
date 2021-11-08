@@ -3,15 +3,9 @@
  */
 
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {
-  blockToHeader,
-  computeEpochAtSlot,
-  createCachedBeaconState,
-  phase0,
-  CachedBeaconState,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {blockToHeader, computeEpochAtSlot, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -21,7 +15,6 @@ import {Eth1Provider} from "../eth1";
 import {IMetrics} from "../metrics";
 import {GenesisBuilder} from "./genesis/genesis";
 import {IGenesisResult} from "./genesis/interface";
-import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {Eth1Options} from "../eth1/options";
 
 export async function persistGenesisResult(
@@ -173,25 +166,6 @@ export async function initStateFromAnchorState(
   await persistAnchorState(config, db, anchorState);
 
   return anchorState;
-}
-
-/**
- * Restore a beacon state to the state cache.
- */
-export function restoreStateCaches(
-  config: IBeaconConfig,
-  stateCache: StateContextCache,
-  checkpointStateCache: CheckpointStateCache,
-  state: TreeBacked<allForks.BeaconState>
-): CachedBeaconState<allForks.BeaconState> {
-  const {checkpoint} = computeAnchorCheckpoint(config, state);
-
-  const cachedBeaconState = createCachedBeaconState(config, state);
-
-  // store state in state caches
-  void stateCache.add(cachedBeaconState);
-  checkpointStateCache.add(checkpoint, cachedBeaconState);
-  return cachedBeaconState;
 }
 
 export function initBeaconMetrics(metrics: IMetrics, state: TreeBacked<allForks.BeaconState>): void {

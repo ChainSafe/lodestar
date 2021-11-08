@@ -3,7 +3,11 @@
  */
 
 import fs from "fs";
-import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  createCachedBeaconState,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
@@ -23,7 +27,6 @@ import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
-import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
   SeenAttesters,
@@ -124,8 +127,12 @@ export class BeaconChain implements IBeaconChain {
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
-    const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
+
+    const cachedAnchorState = createCachedBeaconState(config, anchorState);
+    // store state in state caches
+    stateCache.add(cachedAnchorState);
+
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedAnchorState, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,
@@ -138,7 +145,7 @@ export class BeaconChain implements IBeaconChain {
 
     // On start, the initial anchor state is added to the state cache + the forkchoice.
     // Since this state and its block is the only one in the forkchoice, it becomes the head.
-    regen.setHead(forkChoice.getHead(), cachedState);
+    regen.setHead(forkChoice.getHead(), cachedAnchorState);
 
     this.blockProcessor = new BlockProcessor(
       {
