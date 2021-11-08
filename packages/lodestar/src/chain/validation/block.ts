@@ -9,9 +9,6 @@ import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
 
-// TODO - TEMP: Placeholder, to be agreed with other clients
-const MAX_TRANSACTIONS_SIZE = 50e6; // 50MB
-
 export async function validateGossipBlock(
   config: IChainForkConfig,
   chain: IBeaconChain,
@@ -92,43 +89,6 @@ export async function validateGossipBlock(
     });
   }
 
-  // Extra conditions for merge fork blocks
-  if (fork === ForkName.merge) {
-    if (!merge.isMergeBlockBodyType(block.body)) throw Error("Not merge block type");
-    const executionPayload = block.body.executionPayload;
-
-    // [REJECT] The block's execution payload timestamp is correct with respect to the slot
-    // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-    const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
-    if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.INCORRECT_TIMESTAMP,
-        timestamp: executionPayload.timestamp,
-        expectedTimestamp,
-      });
-    }
-
-    // [REJECT] Gas used is less than the gas limit -- i.e. execution_payload.gas_used <= execution_payload.gas_limit.
-    if (executionPayload.gasUsed > executionPayload.gasLimit) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.TOO_MUCH_GAS_USED,
-        gasUsed: executionPayload.gasUsed,
-        gasLimit: executionPayload.gasLimit,
-      });
-    }
-
-    // [REJECT] The execution payload transaction list data is within expected size limits, the data MUST NOT be larger
-    // than the SSZ list-limit, and a client MAY be more strict.
-    const totalTransactionSize = getTotalTransactionsSize(executionPayload.transactions);
-    if (totalTransactionSize > MAX_TRANSACTIONS_SIZE) {
-      throw new BlockGossipError(GossipAction.REJECT, {
-        code: BlockErrorCode.TRANSACTIONS_TOO_BIG,
-        size: totalTransactionSize,
-        max: MAX_TRANSACTIONS_SIZE,
-      });
-    }
-  }
-
   // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
   // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
   // this is something we should change this in the future to make the code airtight to the spec.
@@ -139,6 +99,25 @@ export async function validateGossipBlock(
     .catch(() => {
       throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
+
+  // Extra conditions for merge fork blocks
+  if (fork === ForkName.merge) {
+    if (!merge.isMergeBlockBodyType(block.body)) throw Error("Not merge block type");
+    const executionPayload = block.body.executionPayload;
+
+    if (merge.isMergeStateType(blockState) && merge.isExecutionEnabled(blockState, block.body)) {
+      // [REJECT] The block's execution payload timestamp is correct with respect to the slot
+      // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
+      const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
+      if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
+        throw new BlockGossipError(GossipAction.REJECT, {
+          code: BlockErrorCode.INCORRECT_TIMESTAMP,
+          timestamp: executionPayload.timestamp,
+          expectedTimestamp,
+        });
+      }
+    }
+  }
 
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
@@ -170,12 +149,4 @@ export async function validateGossipBlock(
   }
 
   chain.seenBlockProposers.add(blockSlot, proposerIndex);
-}
-
-function getTotalTransactionsSize(transactions: merge.Transaction[]): number {
-  let totalSize = 0;
-  for (const transaction of transactions) {
-    totalSize += transaction.value.length;
-  }
-  return totalSize;
 }
