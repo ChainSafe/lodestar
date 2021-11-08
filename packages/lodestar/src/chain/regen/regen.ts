@@ -153,6 +153,8 @@ export class StateRegenerator implements IStateRegeneratorInternal {
     if (state === null) {
       throw new RegenError({
         code: RegenErrorCode.NO_SEED_STATE,
+        slot: block.slot,
+        blockRoot: block.blockRoot,
       });
     }
 

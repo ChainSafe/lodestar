@@ -14,7 +14,7 @@ export type RegenErrorType =
   | {code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE; blockRoot: RootHex | Root}
   | {code: RegenErrorCode.STATE_NOT_IN_FORKCHOICE; stateRoot: RootHex | Root}
   | {code: RegenErrorCode.SLOT_BEFORE_BLOCK_SLOT; slot: Slot; blockSlot: Slot}
-  | {code: RegenErrorCode.NO_SEED_STATE}
+  | {code: RegenErrorCode.NO_SEED_STATE; slot: Slot; blockRoot: RootHex}
   | {code: RegenErrorCode.TOO_MANY_BLOCK_PROCESSED; stateRoot: RootHex | Root}
   | {code: RegenErrorCode.BLOCK_NOT_IN_DB; blockRoot: RootHex | Root}
   | {code: RegenErrorCode.STATE_TRANSITION_ERROR; error: Error};
