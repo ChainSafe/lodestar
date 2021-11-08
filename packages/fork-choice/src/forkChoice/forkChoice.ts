@@ -238,7 +238,7 @@ export class ForkChoice implements IForkChoice {
    * `justifiedBalances` balances of justified state which is updated synchronously.
    * This ensures that the forkchoice is never out of sync.
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void {
+  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): IProtoBlock {
     const {parentRoot, slot} = block;
     const parentRootHex = toHexString(parentRoot);
     // Parent block must be known
@@ -368,7 +368,7 @@ export class ForkChoice implements IForkChoice {
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
-    this.protoArray.onBlock({
+    const protoBlock: IProtoBlock = {
       slot: slot,
       blockRoot: toHexString(blockRoot),
       parentRoot: parentRootHex,
@@ -381,7 +381,10 @@ export class ForkChoice implements IForkChoice {
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
-    });
+    };
+
+    this.protoArray.onBlock(protoBlock);
+    return protoBlock;
   }
 
   /**

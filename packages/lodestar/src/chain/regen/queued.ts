@@ -13,7 +13,7 @@ import {IStateRegeneratorInternal, IStateCacheRegen, RegenCaller, RegenFnName} f
 import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
-import {AttesterShuffling, processSlotsToNearestCheckpoint, ProposerShuffling} from ".";
+import {AttesterShuffling, processSlotsToNearestCheckpoint, processSlotsByCheckpoint, ProposerShuffling} from ".";
 import {MapDef} from "../../util/map";
 
 const REGEN_QUEUE_MAX_LEN = 256;
@@ -41,15 +41,19 @@ type HeadSummary = {
   dependantRootPrev: DependantRootHex;
 };
 
-type ShufflingCheckpoint = {
-  epoch: Epoch;
-  dependantRoot: DependantRootHex;
-};
-
 type DependantRootCache = MapDef<
   Epoch,
   MapDef<DependantRootHex, Set<WeakRef<CachedBeaconState<allForks.BeaconState>>>>
 >;
+
+function getDependantRootCache(): DependantRootCache {
+  return new MapDef<Epoch, MapDef<DependantRootHex, Set<WeakRef<CachedBeaconState<allForks.BeaconState>>>>>(
+    () =>
+      new MapDef<DependantRootHex, Set<WeakRef<CachedBeaconState<allForks.BeaconState>>>>(
+        () => new Set<WeakRef<CachedBeaconState<allForks.BeaconState>>>()
+      )
+  );
+}
 
 /**
  * Regenerates states that have already been processed by the fork choice
@@ -83,11 +87,11 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
   // |----------------|----------------|----------------|------
   //                ep N             ep N+1)          ep N+2
   //
-  private dependantRootCacheNext: DependantRootCache;
-  private dependantRootCacheCurr: DependantRootCache;
-  private dependantRootCachePrev: DependantRootCache;
+  private dependantRootCacheNext = getDependantRootCache();
+  private dependantRootCacheCurr = getDependantRootCache();
+  private dependantRootCachePrev = getDependantRootCache();
 
-  private proposerShufflingCache: Map<Epoch, Map<DependantRootHex, WeakRef<ProposerShuffling>>>;
+  // private proposerShufflingCache: Map<Epoch, Map<DependantRootHex, WeakRef<ProposerShuffling>>>;
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.head = getHeadSummary(modules.forkChoice, modules.forkChoice.getHead());
@@ -163,12 +167,16 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
       throw Error("Head state not available");
     }
 
-    if (this.head.epoch <= epoch) {
+    if (epoch <= this.head.epoch) {
       return this.headState;
     }
 
     const slot = computeStartSlotAtEpoch(epoch);
-    return await processSlotsToNearestCheckpoint({}, this.headState, slot);
+    return await processSlotsToNearestCheckpoint(
+      {checkpointStateCache: this.checkpointStateCache, metrics: this.metrics},
+      this.headState,
+      slot
+    );
   }
 
   async getHeadStateAtSlot(slot: Slot): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -176,11 +184,15 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
       throw Error("Head state not available");
     }
 
-    if (this.head.slot <= slot) {
+    if (slot <= this.head.slot) {
       return this.headState;
     }
 
-    return await processSlotsToNearestCheckpoint({}, this.headState, slot);
+    return await processSlotsByCheckpoint(
+      {checkpointStateCache: this.checkpointStateCache, metrics: this.metrics},
+      this.headState,
+      slot
+    );
   }
 
   async getProposerShuffling(parentBlock: IProtoBlock, blockSlot: Slot): Promise<ProposerShuffling> {
@@ -218,7 +230,7 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     // If no state in memory cache matches the dependantRoot go fetch to the DB.
     // The hot DB should contain all checkpoint between finalizated block and latest epoch.
     // If the state is not found, dial a parent state forward.
-    const state = (await this.store.readCheckpointState(
+    const state = (await this.readCheckpointState(
       blockEpoch,
       dependantRoot
     )) as CachedBeaconState<allForks.BeaconState>;
@@ -297,10 +309,7 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     // If no state in memory cache matches the dependantRoot go fetch to the DB.
     // The hot DB should contain all checkpoint between finalizated block and latest epoch.
     // If the state is not found, dial a parent state forward.
-    const state = (await this.store.readCheckpointState(
-      epochNext,
-      dependantRoot
-    )) as CachedBeaconState<allForks.BeaconState>;
+    const state = (await this.readCheckpointState(epochNext, dependantRoot)) as CachedBeaconState<allForks.BeaconState>;
 
     // TODO: Cache in memory
 
@@ -382,12 +391,12 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     // TODO: Use regen to get correct state. Note that making this function async can break the import flow.
     //       Also note that it can dead lock regen and block processing since both have a concurrency of 1.
 
-    this.logger.error("State for currentJustifiedCheckpoint not available, using closest state", {
-      checkpointEpoch: checkpointHex.epoch,
-      checkpointRoot: checkpointHex.rootHex,
-      stateSlot: oldestState.slot,
-      stateRoot: toHexString(oldestState.hashTreeRoot()),
-    });
+    // this.logger.error("State for currentJustifiedCheckpoint not available, using closest state", {
+    //   checkpointEpoch: checkpointHex.epoch,
+    //   checkpointRoot: checkpointHex.rootHex,
+    //   stateSlot: oldestState.slot,
+    //   stateRoot: toHexString(oldestState.hashTreeRoot()),
+    // });
 
     return oldestState;
   }
@@ -418,6 +427,11 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
         code: RegenErrorCode.BLOCK_NOT_IN_FORKCHOICE,
         blockRoot: block.parentRoot,
       });
+    }
+
+    // Early return if the parent is the head
+    if (this.head.blockRoot === parentRoot && this.headState) {
+      return this.headState;
     }
 
     const parentEpoch = computeEpochAtSlot(parentBlock.slot);
@@ -494,6 +508,13 @@ export class QueuedStateRegenerator implements IStateCacheRegen {
     this.dependantRootCacheNext.clear();
     this.dependantRootCacheCurr.clear();
     this.dependantRootCachePrev.clear();
+  }
+
+  private async readCheckpointState(
+    blockEpoch: Epoch,
+    dependantRoot: RootHex
+  ): Promise<CachedBeaconState<allForks.BeaconState>> {
+    throw Error(`readCheckpointState not implemented - epoch ${blockEpoch} dependantRoot ${dependantRoot}`);
   }
 
   private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {

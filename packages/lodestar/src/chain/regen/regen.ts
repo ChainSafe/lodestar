@@ -228,7 +228,7 @@ export class StateRegenerator implements IStateRegeneratorInternal {
  * process slots forward towards `slot`,
  * emitting "checkpoint" events after every epoch processed.
  */
-async function processSlotsByCheckpoint(
+export async function processSlotsByCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null},
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot

@@ -7,7 +7,7 @@ import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../metrics";
 import {ChainEvent} from "./emitter";
 import {IBeaconChain} from "./interface";
-import {RegenCaller} from "./regen";
+import {QueuedStateRegenerator, RegenCaller} from "./regen";
 
 /**
  * When node is synced and 1/3 slot before an epoch, we want to prepare for the next epoch
@@ -72,7 +72,9 @@ export class PrecomputeNextEpochTransitionScheduler {
       .getHeadStateAtEpoch(nextEpoch, RegenCaller.precomputeEpoch)
       .then(() => {
         this.metrics?.precomputeNextEpochTransition.count.inc({result: "success"}, 1);
-        const previousHits = this.chain.checkpointStateCache.updatePreComputedCheckpoint(blockRoot, nextEpoch);
+        const previousHits = (this.chain.regen as QueuedStateRegenerator)[
+          "checkpointStateCache"
+        ].updatePreComputedCheckpoint(blockRoot, nextEpoch);
         if (previousHits === 0) {
           this.metrics?.precomputeNextEpochTransition.waste.inc();
         }

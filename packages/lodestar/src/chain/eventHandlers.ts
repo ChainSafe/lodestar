@@ -11,7 +11,6 @@ import {
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
-import {RegenCaller} from "./regen";
 import {ZERO_HASH} from "../constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -159,7 +158,13 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   // Only after altair
   if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
     try {
-      const state = await this.regen.getCheckpointState(cp, RegenCaller.onForkChoiceFinalized);
+      // TODO - TEMP: This will break almost always, this state won't be available
+      const finalizedBlock = this.forkChoice.getFinalizedBlock();
+      const state = this.regen.getStateSync(finalizedBlock.stateRoot);
+      if (!state) {
+        throw Error(`Finalized state not available ${finalizedBlock.stateRoot}`);
+      }
+
       const latestHeader = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
       if (ssz.Root.equals(latestHeader.stateRoot, ZERO_HASH)) {
         latestHeader.stateRoot = state.hashTreeRoot();

@@ -1,7 +1,7 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {getEffectiveBalances, merge} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice, IProtoBlock, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
@@ -92,7 +92,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  const blockFC: IProtoBlock = chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
+  const blockFC = chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
 
   // - Register state and block to the validator monitor
   // TODO

@@ -53,7 +53,7 @@ export class BeaconChain implements IBeaconChain {
   readonly config: IBeaconConfig;
 
   // Caches
-  readonly index2pubkey: allForks.Index2PubkeyCache;
+  readonly index2pubkey: allForks.Index2PubkeyCache = [];
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -128,7 +128,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
 
-    const cachedAnchorState = createCachedBeaconState(config, anchorState);
+    const cachedAnchorState = createCachedBeaconState(config, anchorState, {index2pubkey: this.index2pubkey});
     // store state in state caches
     stateCache.add(cachedAnchorState);
 

@@ -1,6 +1,12 @@
-import {computeEpochAtSlot, computeStartSlotAtEpoch, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  allForks,
+  CachedBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
@@ -8,8 +14,6 @@ import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src";
 import {ChainEvent} from "../../../src/chain";
 import {linspace} from "../../../src/util/numpy";
-import {RegenCaller} from "../../../src/chain/regen";
-import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable no-console */
 
@@ -55,16 +59,22 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     });
   }
 
-  async function onCheckpoint(checkpoint: Checkpoint): Promise<void> {
+  async function onCheckpoint(
+    checkpoint: Checkpoint,
+    checkpointState: CachedBeaconState<allForks.BeaconState>
+  ): Promise<void> {
     // Skip epochs on duplicated checkpoint events
     if (checkpoint.epoch <= lastSeenEpoch) return;
     lastSeenEpoch = checkpoint.epoch;
 
     // Recover the pre-epoch transition state, use any random caller for regen
-    const checkpointState = await bn.chain.regen.getCheckpointState(checkpoint, RegenCaller.onForkChoiceFinalized);
     const lastSlot = computeStartSlotAtEpoch(checkpoint.epoch) - 1;
     const lastStateRoot = checkpointState.stateRoots[lastSlot % SLOTS_PER_HISTORICAL_ROOT];
-    const lastState = await bn.chain.regen.getState(toHexString(lastStateRoot), RegenCaller.onForkChoiceFinalized);
+    const stateRootHex = toHexString(lastStateRoot);
+    const lastState = bn.chain.regen.getStateSync(toHexString(lastStateRoot));
+    if (!lastState) {
+      throw Error(`checkpoint state not available ${stateRootHex} slot ${lastSlot}`);
+    }
     logParticipation(lastState);
   }
 
