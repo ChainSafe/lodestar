@@ -14,7 +14,7 @@ import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache";
 import {LocalClock} from "../../../../src/chain/clock";
-import {IStateRegenerator, QueuedStateRegenerator} from "../../../../src/chain/regen";
+import {IStateCacheRegen, QueuedStateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
@@ -59,7 +59,7 @@ export class MockBeaconChain implements IBeaconChain {
   chainId: Uint16;
   networkId: Uint64;
   clock: IBeaconClock;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   emitter: ChainEventEmitter;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
@@ -120,10 +120,6 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
-    return createCachedBeaconState(this.config, this.state);
-  }
-
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
     return createCachedBeaconState(this.config, this.state);
   }
 

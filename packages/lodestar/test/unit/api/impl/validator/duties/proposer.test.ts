@@ -71,7 +71,7 @@ describe("get proposers api impl", function () {
       config
     );
     const cachedState = createCachedBeaconState(config, state);
-    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    chainStub.regen.getHeadStateAtEpoch.resolves(cachedState);
     sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
     const {data: result} = await api.getProposerDuties(0);
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH);

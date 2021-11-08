@@ -8,7 +8,7 @@ import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
-import {IStateRegenerator} from "./regen";
+import {IStateCacheRegen} from "./regen";
 import {StateContextCache, CheckpointStateCache} from "./stateCache";
 import {IBlsVerifier} from "./bls";
 import {
@@ -47,7 +47,7 @@ export interface IBeaconChain {
   emitter: ChainEventEmitter;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
 
@@ -74,7 +74,6 @@ export interface IBeaconChain {
   getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconState<allForks.BeaconState>;
-  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
 
   /**
    * Since we can have multiple parallel chains,

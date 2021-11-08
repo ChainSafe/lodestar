@@ -16,7 +16,7 @@ import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
 import {ZERO_HASH_HEX} from "../../constants";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
-import {IStateRegenerator} from "../regen";
+import {IStateCacheRegen} from "../regen";
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
 import {getCheckpointFromState} from "./utils/checkpoint";
@@ -27,7 +27,7 @@ export type ImportBlockModules = {
   db: IBeaconDb;
   eth1: IEth1ForBlockProduction;
   forkChoice: IForkChoice;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   executionEngine: IExecutionEngine;

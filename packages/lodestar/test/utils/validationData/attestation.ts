@@ -9,7 +9,7 @@ import {IProtoBlock, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../src/chain";
-import {IStateRegenerator} from "../../../src/chain/regen";
+import {IStateCacheRegen} from "../../../src/chain/regen";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants";
 import {
   generateTestCachedBeaconStateOnlyValidators,
@@ -106,7 +106,7 @@ export function getAttestationValidData(
   // Add state to regen
   const regen = ({
     getCheckpointState: async () => (state as unknown) as CachedBeaconState<allForks.BeaconState>,
-  } as Partial<IStateRegenerator>) as IStateRegenerator;
+  } as Partial<IStateCacheRegen>) as IStateCacheRegen;
 
   const chain = ({
     clock,

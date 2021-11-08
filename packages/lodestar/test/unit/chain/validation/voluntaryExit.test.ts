@@ -71,7 +71,7 @@ describe("validate voluntary exit", () => {
     chainStub.forkChoice = sandbox.createStubInstance(ForkChoice);
     opPool = sandbox.createStubInstance(OpPool) as OpPool & SinonStubbedInstance<OpPool>;
     (chainStub as {opPool: OpPool}).opPool = opPool;
-    chainStub.getHeadStateAtCurrentEpoch.resolves(state);
+    chainStub.regen.getHeadStateAtEpoch.resolves(state);
     // TODO: Use actual BLS verification
     chainStub.bls = {verifySignatureSets: async () => true};
   });

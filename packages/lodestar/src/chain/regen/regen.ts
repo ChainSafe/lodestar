@@ -247,7 +247,7 @@ async function processSlotsByCheckpoint(
  *
  * Stops processing after no more full epochs can be processed.
  */
-async function processSlotsToNearestCheckpoint(
+export async function processSlotsToNearestCheckpoint(
   modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null},
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot

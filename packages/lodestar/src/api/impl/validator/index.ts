@@ -201,7 +201,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         attEpoch <= headEpoch
           ? headState
           : // Will advance the state to the correct next epoch if necessary
-            await chain.regen.getBlockSlotState(headBlockRootHex, slot, RegenCaller.produceAttestationData);
+            await chain.regen.getHeadStateAtEpoch(headEpoch, RegenCaller.produceAttestationData);
 
       return {
         data: {
@@ -237,7 +237,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.regen.getHeadStateAtEpoch(chain.clock.currentEpoch, RegenCaller.getDuties);
 
       const duties: routes.validator.ProposerDuty[] = [];
       const indexes: ValidatorIndex[] = [];
@@ -285,7 +285,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.regen.getHeadStateAtEpoch(chain.clock.currentEpoch, RegenCaller.getDuties);
 
       // TODO: Determine what the current epoch would be if we fast-forward our system clock by
       // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.

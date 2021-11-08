@@ -32,7 +32,7 @@ export async function assembleBlock(
   }
 ): Promise<allForks.BeaconBlock> {
   const head = chain.forkChoice.getHead();
-  const state = await chain.regen.getBlockSlotState(head.blockRoot, slot, RegenCaller.produceBlock);
+  const state = await chain.regen.getHeadStateAtSlot(slot, RegenCaller.produceBlock);
   const parentBlockRoot = fromHexString(head.blockRoot);
 
   const block: allForks.BeaconBlock = {

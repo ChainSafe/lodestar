@@ -3,11 +3,7 @@
  */
 
 import fs from "fs";
-import {
-  CachedBeaconState,
-  createCachedBeaconState,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
@@ -25,7 +21,7 @@ import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
+import {IStateCacheRegen, QueuedStateRegenerator} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
@@ -62,7 +58,7 @@ export class BeaconChain implements IBeaconChain {
   emitter: ChainEventEmitter;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   lightclientUpdater: LightClientUpdater;
   lightClientIniter: LightClientIniter;
 
@@ -209,13 +205,6 @@ export class BeaconChain implements IBeaconChain {
     const headState = this.regen.getHeadState();
     if (!headState) throw Error("headState not available");
     return headState;
-  }
-
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
-    const head = this.forkChoice.getHead();
-    const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {
