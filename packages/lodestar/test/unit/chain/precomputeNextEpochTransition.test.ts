@@ -8,7 +8,7 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {BeaconChain, ChainEventEmitter} from "../../../src/chain";
 import {LocalClock} from "../../../src/chain/clock";
 import {PrecomputeNextEpochTransitionScheduler} from "../../../src/chain/precomputeNextEpochTransition";
-import {StateRegenerator} from "../../../src/chain/regen";
+import {QueuedStateRegenerator} from "../../../src/chain/regen";
 
 describe("PrecomputeEpochScheduler", () => {
   const sandbox = sinon.createSandbox();
@@ -16,7 +16,7 @@ describe("PrecomputeEpochScheduler", () => {
 
   let preComputeScheduler: PrecomputeNextEpochTransitionScheduler;
   let forkChoiceStub: SinonStubbedInstance<ForkChoice> & ForkChoice;
-  let regenStub: SinonStubbedInstance<StateRegenerator> & StateRegenerator;
+  let regenStub: SinonStubbedInstance<QueuedStateRegenerator> & QueuedStateRegenerator;
   let loggerStub: SinonStubbedInstance<WinstonLogger> & WinstonLogger;
 
   beforeEach(() => {
@@ -29,8 +29,8 @@ describe("PrecomputeEpochScheduler", () => {
     const emitterStub = sandbox.createStubInstance(ChainEventEmitter) as SinonStubbedInstance<ChainEventEmitter> &
       ChainEventEmitter;
     chainStub.emitter = emitterStub;
-    regenStub = sandbox.createStubInstance(StateRegenerator) as SinonStubbedInstance<StateRegenerator> &
-      StateRegenerator;
+    regenStub = sandbox.createStubInstance(QueuedStateRegenerator) as SinonStubbedInstance<QueuedStateRegenerator> &
+      QueuedStateRegenerator;
     chainStub.regen = regenStub;
     loggerStub = sandbox.createStubInstance(WinstonLogger) as SinonStubbedInstance<WinstonLogger> & WinstonLogger;
     preComputeScheduler = new PrecomputeNextEpochTransitionScheduler(

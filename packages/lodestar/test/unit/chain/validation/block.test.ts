@@ -3,7 +3,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
-import {StateRegenerator} from "../../../../src/chain/regen";
+import {QueuedStateRegenerator} from "../../../../src/chain/regen";
 import {validateGossipBlock} from "../../../../src/chain/validation";
 import {generateCachedState} from "../../../utils/state";
 import {BlockErrorCode} from "../../../../src/chain/errors";
@@ -17,7 +17,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 describe("gossip block validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;
   let forkChoice: SinonStubbedInstance<ForkChoice>;
-  let regen: SinonStubbedInstance<StateRegenerator>;
+  let regen: SinonStubbedInstance<QueuedStateRegenerator>;
   let verifySignature: SinonStubFn<() => Promise<boolean>>;
   let job: allForks.SignedBeaconBlock;
   const proposerIndex = 0;
@@ -33,7 +33,7 @@ describe("gossip block validation", function () {
     forkChoice = sinon.createStubInstance(ForkChoice);
     forkChoice.getBlockHex.returns(null);
     chain.forkChoice = forkChoice;
-    regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+    regen = chain.regen = sinon.createStubInstance(QueuedStateRegenerator);
 
     verifySignature = sinon.stub();
     verifySignature.resolves(true);

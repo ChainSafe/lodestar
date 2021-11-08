@@ -1,5 +1,4 @@
 import {SinonStubbedInstance} from "sinon";
-import {LevelDbController} from "@chainsafe/lodestar-db";
 
 import {BeaconDb} from "../../../src/db";
 import {
@@ -17,8 +16,6 @@ import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createStubInstance} from "../types";
 
 export class StubbedBeaconDb extends BeaconDb {
-  db!: SinonStubbedInstance<LevelDbController>;
-
   block: SinonStubbedInstance<BlockRepository> & BlockRepository;
   blockArchive: SinonStubbedInstance<BlockArchiveRepository> & BlockArchiveRepository;
   stateArchive: SinonStubbedInstance<StateArchiveRepository> & StateArchiveRepository;

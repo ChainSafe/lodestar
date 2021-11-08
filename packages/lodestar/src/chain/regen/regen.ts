@@ -13,7 +13,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
-import {IStateRegenerator, RegenCaller} from "./interface";
+import {IStateRegeneratorInternal, RegenCaller} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint";
 
@@ -29,7 +29,7 @@ export type RegenModules = {
 /**
  * Regenerates states that have already been processed by the fork choice
  */
-export class StateRegenerator implements IStateRegenerator {
+export class StateRegenerator implements IStateRegeneratorInternal {
   constructor(private readonly modules: RegenModules) {}
 
   /**

@@ -14,7 +14,7 @@ import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
 import {CheckpointStateCache, StateContextCache} from "../../../../src/chain/stateCache";
 import {LocalClock} from "../../../../src/chain/clock";
-import {IStateRegenerator, StateRegenerator} from "../../../../src/chain/regen";
+import {IStateRegenerator, QueuedStateRegenerator} from "../../../../src/chain/regen";
 import {StubbedBeaconDb} from "../../stub";
 import {IBlsVerifier, BlsSingleThreadVerifier} from "../../../../src/chain/bls";
 import {AttestationPool} from "../../../../src/chain/opPools/attestationPool";
@@ -101,13 +101,14 @@ export class MockBeaconChain implements IBeaconChain {
     this.stateCache = new StateContextCache({});
     this.checkpointStateCache = new CheckpointStateCache({});
     const db = new StubbedBeaconDb();
-    this.regen = new StateRegenerator({
+    this.regen = new QueuedStateRegenerator({
       config: this.config,
       forkChoice: this.forkChoice,
       stateCache: this.stateCache,
       checkpointStateCache: this.checkpointStateCache,
       db,
       metrics: null,
+      signal: this.abortController.signal,
     });
     this.lightclientUpdater = new LightClientUpdater(db);
     this.lightClientIniter = new LightClientIniter({

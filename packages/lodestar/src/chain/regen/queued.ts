@@ -5,7 +5,7 @@ import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {JobItemQueue} from "../../util/queue";
-import {IStateRegeneratorInternal, RegenCaller, RegenFnName} from "./interface";
+import {IStateRegeneratorInternal, IStateRegenerator, RegenCaller, RegenFnName} from "./interface";
 import {StateRegenerator, RegenModules} from "./regen";
 import {RegenError, RegenErrorCode} from "./errors";
 import {toHexString} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ export type RegenRequest = RegenRequestByKey[RegenRequestKey];
  *
  * All requests are queued so that only a single state at a time may be regenerated at a time
  */
-export class QueuedStateRegenerator implements IStateRegeneratorInternal {
+export class QueuedStateRegenerator implements IStateRegenerator {
   readonly jobQueue: JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>;
   private regen: StateRegenerator;
 
