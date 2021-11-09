@@ -1,4 +1,4 @@
-import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
+import {allForks, altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
 import {newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
@@ -51,7 +51,7 @@ function translateParticipation(
   pendingAttesations: phase0.PendingAttestation[]
 ): void {
   const {epochCtx} = state;
-  const rootCache = new RootCache(state);
+  const rootCache = new RootCache(state as CachedBeaconState<allForks.BeaconState>);
   const epochParticipation = state.previousEpochParticipation;
   for (const attestation of pendingAttesations) {
     const data = attestation.data;

@@ -27,7 +27,7 @@ export function processAttestations(
   const {epochCtx} = state;
   const {effectiveBalances} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state);
+  const rootCache = new RootCache(state as CachedBeaconState<allForks.BeaconState>);
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
@@ -168,7 +168,7 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
-  constructor(private readonly state: CachedBeaconState<altair.BeaconState>) {
+  constructor(private readonly state: CachedBeaconState<allForks.BeaconState>) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   }

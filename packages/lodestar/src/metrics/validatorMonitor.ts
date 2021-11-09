@@ -1,8 +1,8 @@
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Epoch, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {IndexedAttestation, SignedAggregateAndProof} from "@chainsafe/lodestar-types/phase0";
 import {ILodestarMetrics} from "./metrics/lodestar";
 
@@ -32,7 +32,11 @@ export interface IValidatorMonitor {
     signedAggregateAndProof: SignedAggregateAndProof,
     indexedAttestation: IndexedAttestation
   ): void;
-  registerAttestationInBlock(indexedAttestation: IndexedAttestation, block: allForks.BeaconBlock): void;
+  registerAttestationInBlock(
+    indexedAttestation: IndexedAttestation,
+    parentSlot: Slot,
+    rootCache: altair.RootCache
+  ): void;
   scrapeMetrics(slotClock: Slot): void;
 }
 
@@ -100,7 +104,9 @@ type EpochSummary = {
   /** The number of times a validators attestation was seen in a block. */
   attestationBlockInclusions: number;
   /** The minimum observed inclusion distance for an attestation for this epoch.. */
-  attestationMinBlockInclusionDistance: Slot;
+  attestationMinBlockInclusionDistance: Slot | null;
+  /** The attestation contains the correct head or not */
+  attestationCorrectHead: boolean | null;
   // Blocks with a slot in the current epoch.
   /** The number of blocks observed. */
   blocks: number;
@@ -121,11 +127,12 @@ function withEpochSummary(validator: MonitoredValidator, epoch: Epoch, fn: (summ
       attestationMinDelay: null,
       attestationAggregateIncusions: 0,
       attestationBlockInclusions: 0,
-      attestationMinBlockInclusionDistance: 0,
+      attestationMinBlockInclusionDistance: null,
       blocks: 0,
       blockMinDelay: null,
       aggregates: 0,
       aggregateMinDelay: null,
+      attestationCorrectHead: null,
     };
     validator.summaries.set(epoch, summary);
   }
@@ -174,6 +181,7 @@ export function createValidatorMonitor(
         return;
       }
       lastRegisteredStatusEpoch = currentEpoch;
+      const previousEpoch = currentEpoch - 1;
 
       for (const monitoredValidator of validators.values()) {
         // We subtract two from the state of the epoch that generated these summaries.
@@ -204,8 +212,25 @@ export function createValidatorMonitor(
         } else {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
         }
-        if (summary.inclusionDistance) {
-          metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, summary.inclusionDistance);
+
+        const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
+        const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
+        if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
+          metrics.validatorMonitor.prevOnChainAttesterCorrectHead.set({index}, attestationCorrectHead ? 1 : 0);
+        }
+
+        const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
+        const inclusionDistance =
+          attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
+            ? // altair, attestation is not missed
+              attestationMinBlockInclusionDistance
+            : summary.inclusionDistance
+            ? // phase0, this is from the state transition
+              summary.inclusionDistance
+            : null;
+
+        if (inclusionDistance !== null) {
+          metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, inclusionDistance);
         }
       }
     },
@@ -272,22 +297,34 @@ export function createValidatorMonitor(
     },
 
     // Register that the `indexed_attestation` was included in a *valid* `BeaconBlock`.
-    registerAttestationInBlock(indexedAttestation, block): void {
+    registerAttestationInBlock(indexedAttestation, parentSlot, rootCache): void {
       const data = indexedAttestation.data;
-      const delay = block.slot - data.slot - MIN_ATTESTATION_INCLUSION_DELAY;
+      // optimal inclusion distance, not to count skipped slots between data.slot and blockSlot
+      const inclusionDistance = Math.max(parentSlot - data.slot, 0) + 1;
+      const delay = inclusionDistance - MIN_ATTESTATION_INCLUSION_DELAY;
       const epoch = computeEpochAtSlot(data.slot);
-
+      let correctHead: boolean | null = null;
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           metrics.validatorMonitor.attestationInBlockTotal.inc({index});
           metrics.validatorMonitor.attestationInBlockDelaySlots.observe({index}, delay);
+
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationBlockInclusions += 1;
-            summary.attestationMinBlockInclusionDistance = Math.min(
-              summary.attestationMinBlockInclusionDistance,
-              delay
-            );
+            if (summary.attestationMinBlockInclusionDistance !== null) {
+              summary.attestationMinBlockInclusionDistance = Math.min(
+                summary.attestationMinBlockInclusionDistance,
+                inclusionDistance
+              );
+            } else {
+              summary.attestationMinBlockInclusionDistance = inclusionDistance;
+            }
+
+            if (correctHead === null) {
+              correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
+            }
+            summary.attestationCorrectHead = correctHead;
           });
         }
       }
@@ -330,10 +367,12 @@ export function createValidatorMonitor(
           summary.attestationAggregateIncusions
         );
         metrics.validatorMonitor.prevEpochAttestationBlockInclusions.set({index}, summary.attestationBlockInclusions);
-        metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.set(
-          {index},
-          summary.attestationMinBlockInclusionDistance
-        );
+        if (summary.attestationMinBlockInclusionDistance !== null) {
+          metrics.validatorMonitor.prevEpochAttestationBlockMinInclusionDistance.set(
+            {index},
+            summary.attestationMinBlockInclusionDistance
+          );
+        }
 
         // Blocks
         metrics.validatorMonitor.prevEpochBeaconBlocksTotal.set({index}, summary.blocks);

@@ -447,6 +447,11 @@ export function createLodestarMetrics(
           "Incremented if the validator is not flagged as a previous epoch head attester during per epoch processing",
         labelNames: ["index"],
       }),
+      prevOnChainAttesterCorrectHead: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_attester_correct_head_total",
+        help: "Incremented if the validator votes correct head",
+        labelNames: ["index"],
+      }),
       prevEpochOnChainTargetAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_target_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch target attester during per epoch processing",
