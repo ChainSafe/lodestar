@@ -304,11 +304,18 @@ export class ForkChoice implements IForkChoice {
       if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
       if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
       assertValidTerminalPowBlock(this.config, powBlock, powBlockParent);
-      if (
-        this.config.TERMINAL_BLOCK_HASH !== ZERO_HASH &&
-        computeEpochAtSlot(block.slot) < this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
-      ) {
-        throw Error(`Terminal block activation epoch ${this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
+
+      if (this.config.TERMINAL_BLOCK_HASH !== ZERO_HASH) {
+        if (computeEpochAtSlot(block.slot) < this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
+          throw Error(
+            `Terminal block activation epoch ${this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`
+          );
+        if (block.body.executionPayload.parentHash !== this.config.TERMINAL_BLOCK_HASH)
+          throw new Error(
+            `Invalid terminal block hash, expected: ${toHexString(
+              this.config.TERMINAL_BLOCK_HASH
+            )}, actual: ${toHexString(block.body.executionPayload.parentHash)}`
+          );
       }
     }
 
@@ -915,10 +922,6 @@ export class ForkChoice implements IForkChoice {
 }
 
 function assertValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): void {
-  if (config.TERMINAL_BLOCK_HASH !== ZERO_HASH && block.blockhash !== toHexString(config.TERMINAL_BLOCK_HASH))
-    throw Error(
-      `Invalid terminal POW block: blockHash ${block.blockhash} expected ${toHexString(config.TERMINAL_BLOCK_HASH)}`
-    );
   const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
   if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
