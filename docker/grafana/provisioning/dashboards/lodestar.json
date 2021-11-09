@@ -12721,7 +12721,7 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_precompute_next_epoch_transition_result_total",
+              "expr": "rate(lodestar_precompute_next_epoch_transition_result_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{result}}",
               "refId": "A"
@@ -12819,14 +12819,14 @@
           "targets": [
             {
               "exemplar": false,
-              "expr": "lodestar_precompute_next_epoch_transition_hits_total",
+              "expr": "rate(lodestar_precompute_next_epoch_transition_hits_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "Cache Hit Count",
               "refId": "A"
             },
             {
               "exemplar": false,
-              "expr": "lodestar_precompute_next_epoch_transition_waste_total",
+              "expr": "rate(lodestar_precompute_next_epoch_transition_waste_total[$__rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "Waste Count",
