@@ -380,7 +380,7 @@ https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/intero
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ExecutionEngineHttp</strong>(<code>opts</code>: <a href="../../modules/executionengine/#executionenginehttpopts">ExecutionEngineHttpOpts</a>, <code>signal</code>: AbortSignal, <code>rpc?</code>: <a href="../../interfaces/eth1_provider.ijsonrpchttpclient/">IJsonRpcHttpClient</a>): <em><a href="./">ExecutionEngineHttp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L37">packages/lodestar/src/executionEngine/http.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L37">packages/lodestar/src/executionEngine/http.ts:37</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -408,12 +408,12 @@ https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/intero
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-rpc"><code>Private</code> <code>Readonly</code> rpc<a class="headerlink" href="#private-readonly-rpc" title="Permanent link">¶</a></h3>
 <p>• <strong>rpc</strong>: <em><a href="../../interfaces/eth1_provider.ijsonrpchttpclient/">IJsonRpcHttpClient</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L37">packages/lodestar/src/executionEngine/http.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L37">packages/lodestar/src/executionEngine/http.ts:37</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="executepayload">executePayload<a class="headerlink" href="#executepayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>executePayload</strong>(<code>executionPayload</code>: merge.ExecutionPayload): <em>Promise‹<a href="../../enums/executionengine.executepayloadstatus/">ExecutePayloadStatus</a>›</em></p>
 <p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L59">packages/lodestar/src/executionEngine/http.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L59">packages/lodestar/src/executionEngine/http.ts:59</a></em></p>
 <p><code>engine_executePayload</code></p>
 <ol>
 <li>Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.</li>
@@ -444,7 +444,7 @@ https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/intero
 <h3 id="getpayload">getPayload<a class="headerlink" href="#getpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPayload</strong>(<code>payloadId</code>: <a href="../../modules/executionengine/#payloadid">PayloadId</a>): <em>Promise‹merge.ExecutionPayload›</em></p>
 <p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L134">packages/lodestar/src/executionEngine/http.ts:134</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L134">packages/lodestar/src/executionEngine/http.ts:134</a></em></p>
 <p><code>engine_getPayload</code></p>
 <ol>
 <li>Given the payloadId client software MUST respond with the most recent version of the payload that is available in the corresponding building process at the time of receiving the call.</li>
@@ -471,7 +471,7 @@ https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/intero
 <h3 id="notifyforkchoiceupdate">notifyForkchoiceUpdate<a class="headerlink" href="#notifyforkchoiceupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: RootHex, <code>finalizedBlockHash</code>: RootHex): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L84">packages/lodestar/src/executionEngine/http.ts:84</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L84">packages/lodestar/src/executionEngine/http.ts:84</a></em></p>
 <p><code>engine_forkchoiceUpdated</code></p>
 <ol>
 <li>This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.</li>
@@ -501,7 +501,7 @@ https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.1/src/engine/intero
 <h3 id="preparepayload">preparePayload<a class="headerlink" href="#preparepayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>preparePayload</strong>(<code>parentHash</code>: Root, <code>timestamp</code>: number, <code>random</code>: Bytes32, <code>feeRecipient</code>: ExecutionAddress): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a>›</em></p>
 <p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08dbb21/packages/lodestar/src/executionEngine/http.ts#L102">packages/lodestar/src/executionEngine/http.ts:102</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0eb314a/packages/lodestar/src/executionEngine/http.ts#L102">packages/lodestar/src/executionEngine/http.ts:102</a></em></p>
 <p><code>engine_preparePayload</code></p>
 <ol>
 <li>Given provided field value set client software SHOULD build the initial version of the payload which has an empty transaction set.</li>
