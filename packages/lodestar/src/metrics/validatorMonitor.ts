@@ -212,21 +212,24 @@ export function createValidatorMonitor(
         } else {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
         }
+
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
         if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
           metrics.validatorMonitor.prevOnChainAttesterCorrectHead.set({index}, attestationCorrectHead ? 1 : 0);
         }
+
         const attestationMinBlockInclusionDistance = prevEpochSummary?.attestationMinBlockInclusionDistance;
-        let inclusionDistance;
-        if (attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0) {
-          // altair, attestation is not missed
-          inclusionDistance = attestationMinBlockInclusionDistance;
-        } else if (summary.inclusionDistance) {
-          // phase0, this is from the state transition
-          inclusionDistance = summary.inclusionDistance;
-        }
-        if (inclusionDistance !== undefined) {
+        const inclusionDistance =
+          attestationMinBlockInclusionDistance != null && attestationMinBlockInclusionDistance > 0
+            ? // altair, attestation is not missed
+              attestationMinBlockInclusionDistance
+            : summary.inclusionDistance
+            ? // phase0, this is from the state transition
+              summary.inclusionDistance
+            : null;
+
+        if (inclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, inclusionDistance);
         }
       }
