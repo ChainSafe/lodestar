@@ -303,14 +303,12 @@ export class ForkChoice implements IForkChoice {
       const {powBlock, powBlockParent} = preCachedData || {};
       if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
       if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
-      if (!isValidTerminalPowBlock(this.config, powBlock, powBlockParent)) {
-        throw Error("Not valid terminal POW block");
-      }
+      assertValidTerminalPowBlock(this.config, powBlock, powBlockParent);
       if (
         this.config.TERMINAL_BLOCK_HASH !== ZERO_HASH &&
         computeEpochAtSlot(block.slot) < this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
       ) {
-        throw Error("Terminal activation epoch not reached");
+        throw Error(`Terminal block activation epoch ${this.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
       }
     }
 
@@ -916,11 +914,15 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function isValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): boolean {
-  if (config.TERMINAL_BLOCK_HASH !== ZERO_HASH) {
-    return block.blockhash === toHexString(config.TERMINAL_BLOCK_HASH);
-  }
+function assertValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): void {
+  if (config.TERMINAL_BLOCK_HASH !== ZERO_HASH && block.blockhash !== toHexString(config.TERMINAL_BLOCK_HASH))
+    throw Error(
+      `Invalid terminal POW block: blockHash ${block.blockhash} expected ${toHexString(config.TERMINAL_BLOCK_HASH)}`
+    );
   const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
-  return isTotalDifficultyReached && isParentTotalDifficultyValid;
+  if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
+    throw Error(
+      `Invalid terminal POW block: total difficulty not reached ${parent.totalDifficulty} < ${block.totalDifficulty}`
+    );
 }

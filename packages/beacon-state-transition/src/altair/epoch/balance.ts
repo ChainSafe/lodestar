@@ -8,6 +8,7 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
+  ForkName,
 } from "@chainsafe/lodestar-params";
 import {
   CachedBeaconState,
@@ -28,7 +29,6 @@ interface IRewardPenaltyItem {
   timelyTargetPenalty: number;
   timelyHeadReward: number;
 }
-import {ForkName} from "@chainsafe/lodestar-params";
 
 /**
  * An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.statuses 1 time instead of 4.
