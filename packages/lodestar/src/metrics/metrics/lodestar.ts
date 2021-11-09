@@ -136,6 +136,10 @@ export function createLodestarMetrics(
         name: "lodestar_discv5_kad_table_size",
         help: "Total size of the discv5 kad table",
       }),
+      lookupCount: register.gauge({
+        name: "lodestar_discv5_lookup_count",
+        help: "Total count of discv5 lookups",
+      }),
       activeSessionCount: register.gauge({
         name: "lodestar_discv5_active_session_count",
         help: "Count of the discv5 active sessions",

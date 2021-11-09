@@ -447,10 +447,10 @@
     node-fetch "^2.6.1"
     node-gyp "^7.1.2"
 
-"@chainsafe/discv5@^0.6.4":
-  version "0.6.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.6.4.tgz#567b3da1bd0efd573612f3c088fcc68ba96220b9"
-  integrity sha512-98+W2xwBfnHuiOzhT2FzHdWKX5lrdrL+jP5Oz16aQGDJnwagPwhAKtpsuBGCqMfLtbXF2Z6ksP4Q0KFPyTGjeg==
+"@chainsafe/discv5@^0.6.5":
+  version "0.6.5"
+  resolved "https://registry.yarnpkg.com/@chainsafe/discv5/-/discv5-0.6.5.tgz#195005b6d74e42621e40ac9573754f4e91a10dd9"
+  integrity sha512-w+oBg+xKw7PgtN4HLJGLSMsIQLYPJpD7hl4SvmgsIs3Sy+fjtuLyHw8ln56dk50efDX5LOyLq/M60MMopJmFkw==
   dependencies:
     "@chainsafe/abort-controller" "^3.0.1"
     base64url "^3.0.1"
