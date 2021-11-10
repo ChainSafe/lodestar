@@ -123,10 +123,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     return {genesisBlockHash};
   }
 
-  // runGethPreMerge has not yet been implemented/tested on kintsugi branch
   // Ref: https://notes.ethereum.org/_UH57VUPRrC-re3ubtmo2w
   // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
-  async function _runGethPreMerge(): Promise<{genesisBlockHash: string}> {
+  async function runGethPreMerge(): Promise<{genesisBlockHash: string}> {
     const privKey = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
     const pubKey = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
     const password = "12345678";
@@ -272,16 +271,16 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
   });
 
-  // it("Pre-merge, run for a few blocks", async function () {
-  //   console.log("\n\nPre-merge, run for a few blocks\n\n");
-  //   const {genesisBlockHash} = await runGethPreMerge();
-  //   await runNodeWithGeth.bind(this)({
-  //     genesisBlockHash,
-  //     mergeEpoch: 1,
-  //     ttd: BigInt(terminalTotalDifficultyPreMerge),
-  //     testName: "pre-merge",
-  //   });
-  // });
+  it("Pre-merge, run for a few blocks", async function () {
+    console.log("\n\nPre-merge, run for a few blocks\n\n");
+    const {genesisBlockHash} = await runGethPreMerge();
+    await runNodeWithGeth.bind(this)({
+      genesisBlockHash,
+      mergeEpoch: 1,
+      ttd: BigInt(terminalTotalDifficultyPreMerge),
+      testName: "pre-merge",
+    });
+  });
 
   async function runNodeWithGeth(
     this: Context,
