@@ -1,7 +1,4 @@
 import fs from "fs";
-import path from "path";
-import net from "net";
-import {spawn} from "child_process";
 import {Context} from "mocha";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {fromHexString} from "@chainsafe/ssz";
@@ -22,17 +19,9 @@ import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 
-// NOTE: Must specify GETH_BINARY_PATH ENV
-// Example:
-// ```
-// $ GETH_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin/geth ../../node_modules/.bin/mocha test/sim/merge.test.ts
-// ```
+// NOTE: This file has been tested on a running geth outside CI, might be reworked or scrapped once CI interop test file: merge-interop.test.ts works just fine.
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
-
-// MERGE_EPOCH will happen at 2 sec * 8 slots = 16 sec
-// 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
-const terminalTotalDifficultyPreMerge = 20;
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
@@ -55,131 +44,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
   });
 
-  /**
-   * Start Geth process, accumulate stdout stderr and kill the process on afterEach() hook
-   */
-  function startGethProcess(args: string[]): void {
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
-    }
-
-    const gethProc = spawn(process.env.GETH_BINARY_PATH, args);
-
-    gethProc.stdout.on("data", (chunk) => {
-      const str = Buffer.from(chunk).toString("utf8");
-      process.stdout.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-    });
-    gethProc.stderr.on("data", (chunk) => {
-      const str = Buffer.from(chunk).toString("utf8");
-      process.stderr.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
-    });
-
-    gethProc.on("exit", (code) => {
-      console.log("Geth exited", {code});
-    });
-
-    afterEachCallbacks.push(async function () {
-      if (gethProc.killed) {
-        throw Error("Geth is killed before end of test");
-      }
-
-      console.log("Killing Geth process", gethProc.pid);
-      await shell(`kill ${gethProc.pid}`);
-
-      // Wait for the P2P to be offline
-      await waitForGethOffline();
-      console.log("Geth successfully killed!");
-    });
-  }
-
   // Ref: https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
   // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
   // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
   // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
   async function runGethPostMerge(): Promise<{genesisBlockHash: string}> {
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
-    }
-
     await shell(`rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
 
-    const genesisPath = path.join(dataPath, "genesis.json");
-    fs.writeFileSync(genesisPath, JSON.stringify(genesisGethPostMerge, null, 2));
-
-    // Use as check to ensure geth is available and built correctly.
-    // Note: Use double quotes on paths to let bash expand the ~ character
-    await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
-
-    startGethProcess(["--catalyst", "--http", "--ws", "-http.api", "engine,net,eth", "--datadir", dataPath]);
-
-    // Wait for Geth to be online
     const controller = new AbortController();
-    afterEachCallbacks.push(() => controller?.abort());
-    await waitForGethOnline(jsonRpcUrl, controller.signal);
-
-    // Fetch genesis block hash
-    const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
-    return {genesisBlockHash};
-  }
-
-  // runGethPreMerge has not yet been implemented/tested on kintsugi branch
-  // Ref: https://notes.ethereum.org/_UH57VUPRrC-re3ubtmo2w
-  // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
-  async function _runGethPreMerge(): Promise<{genesisBlockHash: string}> {
-    const privKey = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
-    const pubKey = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
-    const password = "12345678";
-
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
-    }
-
-    await shell(`rm -rf ${dataPath}`);
-    fs.mkdirSync(dataPath, {recursive: true});
-
-    const genesisPath = path.join(dataPath, "genesis.json");
-    const skPath = path.join(dataPath, "sk.json");
-    const passwordPath = path.join(dataPath, "password.txt");
-    fs.writeFileSync(genesisPath, JSON.stringify(genesisGethPreMerge, null, 2));
-    fs.writeFileSync(skPath, privKey);
-    fs.writeFileSync(passwordPath, password);
-
-    // Use as check to ensure geth is available and built correctly.
-    // Note: Use double quotes on paths to let bash expand the ~ character
-    //  ./build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
-    console.log("Initilizing Geth");
-    await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
-
-    // Import the signing key (press enter twice for empty password):
-    //  ./build/bin/geth --catalyst --datadir "~/ethereum/taunus" account import sk.json
-    console.log("Importing account to Geth");
-    await shell(
-      `${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" account import "${skPath}" --password ${passwordPath}`
-    );
-
-    startGethProcess([
-      "--catalyst",
-      "--http",
-      "--ws",
-      "-http.api",
-      "engine,net,eth,miner",
-      "--datadir",
-      dataPath,
-      "--allow-insecure-unlock",
-      "--unlock",
-      pubKey,
-      "--password",
-      passwordPath,
-      "--nodiscover",
-      // Automatically start mining
-      "--mine",
-    ]);
-
-    // Wait for Geth to be online
-    const controller = new AbortController();
-    afterEachCallbacks.push(() => controller?.abort());
-    await waitForGethOnline(jsonRpcUrl, controller.signal);
 
     // Fetch genesis block hash
     const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
@@ -271,17 +144,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       testName: "post-merge",
     });
   });
-
-  // it("Pre-merge, run for a few blocks", async function () {
-  //   console.log("\n\nPre-merge, run for a few blocks\n\n");
-  //   const {genesisBlockHash} = await runGethPreMerge();
-  //   await runNodeWithGeth.bind(this)({
-  //     genesisBlockHash,
-  //     mergeEpoch: 1,
-  //     ttd: BigInt(terminalTotalDifficultyPreMerge),
-  //     testName: "pre-merge",
-  //   });
-  // });
 
   async function runNodeWithGeth(
     this: Context,
@@ -411,142 +273,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     console.log("\n\nDone\n\n");
   }
 });
-
-/**
- * From https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
- *
- * NOTE: Edited gasLimit to match 30_000_000 value is subsequent block generation
- */
-const genesisGethPostMerge = {
-  config: {
-    chainId: 1,
-    homesteadBlock: 0,
-    daoForkBlock: 0,
-    daoForkSupport: true,
-    eip150Block: 0,
-    eip155Block: 0,
-    eip158Block: 0,
-    byzantiumBlock: 0,
-    constantinopleBlock: 0,
-    petersburgBlock: 0,
-    istanbulBlock: 0,
-    muirGlacierBlock: 0,
-    berlinBlock: 0,
-    londonBlock: 0,
-    clique: {
-      period: 5,
-      epoch: 30000,
-    },
-    terminalTotalDifficulty: 0,
-  },
-  nonce: "0x42",
-  timestamp: "0x0",
-  extraData:
-    "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  gasLimit: "0x1c9c380",
-  difficulty: "0x400000000",
-  mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  coinbase: "0x0000000000000000000000000000000000000000",
-  alloc: {
-    "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-  },
-  number: "0x0",
-  gasUsed: "0x0",
-  parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  baseFeePerGas: "0x7",
-};
-
-/**
- * From https://notes.ethereum.org/_UH57VUPRrC-re3ubtmo2w
- */
-const genesisGethPreMerge = {
-  config: {
-    chainId: 1,
-    homesteadBlock: 0,
-    eip150Block: 0,
-    eip150Hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    eip155Block: 0,
-    eip158Block: 0,
-    byzantiumBlock: 0,
-    constantinopleBlock: 0,
-    petersburgBlock: 0,
-    istanbulBlock: 0,
-    muirGlacierBlock: 0,
-    berlinBlock: 0,
-    londonBlock: 0,
-    clique: {
-      period: 5,
-      epoch: 30000,
-    },
-    terminalTotalDifficulty: terminalTotalDifficultyPreMerge,
-  },
-  nonce: "0x42",
-  timestamp: "0x0",
-  extraData:
-    "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  gasLimit: "0x1c9c380",
-  difficulty: "0x0",
-  mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  coinbase: "0x0000000000000000000000000000000000000000",
-  alloc: {
-    "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-  },
-  number: "0x0",
-  gasUsed: "0x0",
-  parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  baseFeePerGas: "0x7",
-};
-
-async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void> {
-  for (let i = 0; i < 60; i++) {
-    try {
-      console.log("Waiting for geth online...");
-      await shell(
-        `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' ${url}`
-      );
-      return; // Done
-    } catch (e) {
-      await sleep(1000, signal);
-    }
-  }
-  throw Error("Geth not online in 60 seconds");
-}
-
-async function waitForGethOffline(): Promise<void> {
-  const port = 30303;
-
-  for (let i = 0; i < 60; i++) {
-    console.log("Waiting for geth offline...");
-    const isInUse = await isPortInUse(port);
-    if (!isInUse) {
-      return;
-    }
-    await sleep(1000);
-  }
-  throw Error("Geth not offline in 60 seconds");
-}
-
-async function isPortInUse(port: number): Promise<boolean> {
-  return await new Promise<boolean>((resolve, reject) => {
-    const server = net.createServer();
-    server.once("error", function (err) {
-      if (((err as unknown) as {code: string}).code === "EADDRINUSE") {
-        resolve(true);
-      } else {
-        reject(err);
-      }
-    });
-
-    server.once("listening", function () {
-      // close the server if listening doesn't fail
-      server.close(() => {
-        resolve(false);
-      });
-    });
-
-    server.listen(port);
-  });
-}
 
 async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
   const eth1Provider = new Eth1Provider(

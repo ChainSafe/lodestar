@@ -29,11 +29,6 @@ const typesRef = new LazyVariable<{
  */
 export const Transaction = new ListType({elementType: byteType, limit: MAX_BYTES_PER_TRANSACTION});
 
-/**
- * Union[OpaqueTransaction]
- *
- * Spec v1.0.1
- */
 export const Transactions = new ListType<List<merge.Transaction>>({
   elementType: Transaction,
   limit: MAX_TRANSACTIONS_PER_PAYLOAD,

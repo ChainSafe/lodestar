@@ -1,5 +1,5 @@
-import {merge, RootHex} from "@chainsafe/lodestar-types";
-import {DATA, QUANTITY} from "../eth1/provider/utils";
+import {merge, Root, RootHex} from "@chainsafe/lodestar-types";
+import {ByteVector} from "@chainsafe/ssz";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
@@ -15,11 +15,11 @@ export enum ExecutePayloadStatus {
 
 export type PayloadAttributes = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
-  timestamp: QUANTITY;
+  timestamp: number;
   /** DATA, 32 Bytes - value for the random field of the new payload */
-  random: DATA;
+  random: Uint8Array | ByteVector;
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
-  feeRecipient: DATA;
+  feeRecipient: Uint8Array | ByteVector;
 };
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
@@ -52,10 +52,10 @@ export interface IExecutionEngine {
    * Should be called in response to fork-choice head and finalized events
    */
   notifyForkchoiceUpdate(
-    headBlockHash: RootHex,
+    headBlockHash: Root | RootHex,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
-  ): Promise<PayloadId>;
+  ): Promise<PayloadId | null>;
 
   /**
    * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built

@@ -34,7 +34,7 @@ jobs:
       # Install Geth merge interop
       - uses: actions/setup-go@v2
       - name: Clone Geth merge interop branch
-        run: git clone -b merge-interop-spec https://github.com/MariusVanDerWijden/go-ethereum.git
+        run: git clone -b kintsugi-spec https://github.com/MariusVanDerWijden/go-ethereum.git
       - name: Build Geth
         run: cd go-ethereum && make
 

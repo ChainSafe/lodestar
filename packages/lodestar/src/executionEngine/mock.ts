@@ -1,10 +1,9 @@
 import crypto from "crypto";
-import {merge, RootHex} from "@chainsafe/lodestar-types";
-import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-import {quantityToNum} from "../eth1/provider/utils";
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {
@@ -70,21 +69,22 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
   async notifyForkchoiceUpdate(
-    headBlockHash: RootHex,
+    headBlockHash: Root,
     finalizedBlockHash: RootHex,
     payloadAttributes?: PayloadAttributes
   ): Promise<PayloadId> {
-    if (!this.knownBlocks.has(headBlockHash)) {
-      throw Error(`Unknown headBlockHash ${headBlockHash}`);
+    const headBlockHashHex = toHexString(headBlockHash);
+    if (!this.knownBlocks.has(headBlockHashHex)) {
+      throw Error(`Unknown headBlockHash ${headBlockHashHex}`);
     }
     if (!this.knownBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
 
-    this.headBlockRoot = headBlockHash;
+    this.headBlockRoot = headBlockHashHex;
     this.finalizedBlockRoot = finalizedBlockHash;
 
-    const parentHashHex = headBlockHash;
+    const parentHashHex = headBlockHashHex;
     const parentPayload = this.knownBlocks.get(parentHashHex);
     if (!parentPayload) {
       throw Error(`Unknown parentHash ${parentHashHex}`);
@@ -94,16 +94,16 @@ export class ExecutionEngineMock implements IExecutionEngine {
 
     const payloadId = this.payloadId++;
     const payload: merge.ExecutionPayload = {
-      parentHash: fromHexString(headBlockHash),
-      coinbase: fromHexString(payloadAttributes.feeRecipient),
+      parentHash: headBlockHash,
+      coinbase: payloadAttributes.feeRecipient,
       stateRoot: crypto.randomBytes(32),
       receiptRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-      random: fromHexString(payloadAttributes.random),
+      random: payloadAttributes.random,
       blockNumber: parentPayload.blockNumber + 1,
       gasLimit: INTEROP_GAS_LIMIT,
       gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-      timestamp: quantityToNum(payloadAttributes.timestamp),
+      timestamp: payloadAttributes.timestamp,
       extraData: ZERO_HASH,
       baseFeePerGas: BigInt(0),
       blockHash: crypto.randomBytes(32),

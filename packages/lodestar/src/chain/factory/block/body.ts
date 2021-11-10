@@ -26,7 +26,6 @@ import {
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants";
-import {bytesToData, numToQuantity} from "../../../eth1/provider/utils";
 
 export async function assembleBody(
   chain: IBeaconChain,
@@ -143,14 +142,13 @@ async function prepareExecutionPayload(
     parentHash = state.latestExecutionPayloadHeader.blockHash;
   }
 
-  const timestamp = numToQuantity(computeTimeAtSlot(chain.config, state.slot, state.genesisTime));
-  const random = bytesToData(getRandaoMix(state, state.currentShuffling.epoch));
-  const payloadAttributes = {timestamp, random, feeRecipient: bytesToData(feeRecipient)};
-  return await chain.executionEngine.notifyForkchoiceUpdate(
-    bytesToData(parentHash),
-    finalizedBlockHash,
-    payloadAttributes
-  );
+  const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
+  const random = getRandaoMix(state, state.currentShuffling.epoch);
+  return await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
+    timestamp,
+    random,
+    feeRecipient,
+  });
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
