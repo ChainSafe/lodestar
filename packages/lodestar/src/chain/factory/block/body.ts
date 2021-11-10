@@ -125,7 +125,7 @@ async function prepareExecutionPayload(
   let parentHash: Root;
   if (!merge.isMergeComplete(state)) {
     if (
-      chain.config.TERMINAL_BLOCK_HASH !== ZERO_HASH &&
+      !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
     )
       return null;
