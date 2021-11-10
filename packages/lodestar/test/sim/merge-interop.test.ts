@@ -480,6 +480,8 @@ const genesisGethPreMerge = {
 
     // TODO: Pre merge scenario issue with geth's genesis configuration of terminalTotalDifficulty set at 20 i.e. >0 (but works fine with geth's terminal difficulty set to 0), throws the following error on geth call.
 
+    // Tracker: https://github.com/ChainSafe/lodestar/issues/3427
+
     // Error: JSON RPC error: total difficulty not reached yet, engine_forkchoiceUpdatedV1
     //   at parseRpcResponse (/home/runner/work/lodestar/lodestar/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:159:9)
     //   at JsonRpcHttpClient.fetch (/home/runner/work/lodestar/lodestar/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:60:12)
