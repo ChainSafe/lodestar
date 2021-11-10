@@ -1,5 +1,6 @@
 import {merge, Root, RootHex} from "@chainsafe/lodestar-types";
 import {ByteVector} from "@chainsafe/ssz";
+import {DATA, QUANTITY} from "../eth1/provider/utils";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
@@ -14,12 +15,18 @@ export enum ExecutePayloadStatus {
 }
 
 export type PayloadAttributes = {
-  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
   timestamp: number;
-  /** DATA, 32 Bytes - value for the random field of the new payload */
   random: Uint8Array | ByteVector;
-  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   feeRecipient: Uint8Array | ByteVector;
+};
+
+export type ApiPayloadAttributes = {
+  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
+  timestamp: QUANTITY;
+  /** DATA, 32 Bytes - value for the random field of the new payload */
+  random: DATA;
+  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
+  feeRecipient: DATA;
 };
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:

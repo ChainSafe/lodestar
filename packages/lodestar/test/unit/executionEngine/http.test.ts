@@ -44,7 +44,7 @@ describe("ExecutionEngine / http", () => {
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayload","params":["0x0"],"id":67}' http://localhost:8545
      */
 
-    const request = {jsonrpc: "2.0", method: "engine_getPayload", params: ["0x0"]};
+    const request = {jsonrpc: "2.0", method: "engine_getPayloadV1", params: ["0x0"]};
     const response = {
       jsonrpc: "2.0",
       id: 67,
@@ -81,7 +81,7 @@ describe("ExecutionEngine / http", () => {
 
     const request = {
       jsonrpc: "2.0",
-      method: "engine_executePayload",
+      method: "engine_executePayloadV1",
       params: [
         {
           blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -117,15 +117,16 @@ describe("ExecutionEngine / http", () => {
 
     const request = {
       jsonrpc: "2.0",
-      method: "engine_forkchoiceUpdated",
+      method: "engine_forkchoiceUpdatedV1",
       params: [
         {
           headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
           finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         },
       ],
     };
-    returnValue = {jsonrpc: "2.0", id: 67, result: null};
+    returnValue = {jsonrpc: "2.0", id: 67, result: {payloadId: "0x"}};
 
     await executionEngine.notifyForkchoiceUpdate(request.params[0].headBlockHash, request.params[0].finalizedBlockHash);
 

@@ -11,7 +11,7 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
+import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes, ApiPayloadAttributes} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -88,19 +88,21 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   ): Promise<PayloadId | null> {
     const method = "engine_forkchoiceUpdatedV1";
     const headBlockHashData = typeof headBlockHash === "string" ? headBlockHash : bytesToData(headBlockHash);
-    const apiPayloadAttributes = payloadAttributes
-      ? {
-          timestamp: numToQuantity(payloadAttributes.timestamp),
-          random: bytesToData(payloadAttributes.random),
-          feeRecipient: bytesToData(payloadAttributes.feeRecipient),
-        }
-      : undefined;
+    const apiPayloadAttributes: [input?: ApiPayloadAttributes] = payloadAttributes
+      ? [
+          {
+            timestamp: numToQuantity(payloadAttributes.timestamp),
+            random: bytesToData(payloadAttributes.random),
+            feeRecipient: bytesToData(payloadAttributes.feeRecipient),
+          },
+        ]
+      : [];
     return this.rpc
       .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
         method,
         params: [
           {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
-          apiPayloadAttributes,
+          ...apiPayloadAttributes,
         ],
       })
       .then(({payloadId}) => {
@@ -150,8 +152,8 @@ type EngineApiRpcParamTypes = {
    *   - finalizedBlockHash: DATA, 32 Bytes - block hash of the most recent finalized block
    */
   engine_forkchoiceUpdatedV1: [
-    {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
-    {timestamp: QUANTITY; random: DATA; feeRecipient: DATA} | undefined
+    param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: ApiPayloadAttributes
   ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
