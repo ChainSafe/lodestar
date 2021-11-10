@@ -909,10 +909,6 @@ function assertValidTerminalPowBlock(
   block: merge.BeaconBlock,
   preCachedData?: OnBlockPrecachedData
 ): void {
-  const {powBlock, powBlockParent} = preCachedData || {};
-  if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-  if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
-
   if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
     if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
       throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
@@ -924,7 +920,14 @@ function assertValidTerminalPowBlock(
           block.body.executionPayload.parentHash
         )}`
       );
+
+    // TERMINAL_BLOCK_HASH override skips ttd checks
+    return;
   }
+
+  const {powBlock, powBlockParent} = preCachedData || {};
+  if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
+  if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
 
   const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
   const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
