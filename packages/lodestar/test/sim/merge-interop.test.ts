@@ -477,7 +477,21 @@ const genesisGethPreMerge = {
       period: 5,
       epoch: 30000,
     },
-    terminalTotalDifficulty: terminalTotalDifficultyPreMerge,
+
+    // TODO: Pre merge scenario issue with geth's genesis configuration of terminalTotalDifficulty set at 20 i.e. >0 (but works fine with geth's terminal difficulty set to 0), throws the following error on geth call.
+
+    // Error: JSON RPC error: total difficulty not reached yet, engine_forkchoiceUpdatedV1
+    //   at parseRpcResponse (/home/runner/work/lodestar/lodestar/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:159:9)
+    //   at JsonRpcHttpClient.fetch (/home/runner/work/lodestar/lodestar/packages/lodestar/src/eth1/provider/jsonRpcHttpClient.ts:60:12)
+    //   at runMicrotasks (<anonymous>)
+    //   at processTicksAndRejections (internal/process/task_queues.js:95:5)
+    //   at prepareExecutionPayload (/home/runner/work/lodestar/lodestar/packages/lodestar/src/chain/factory/block/body.ts:147:10)
+    //   at assembleBody (/home/runner/work/lodestar/lodestar/packages/lodestar/src/chain/factory/block/body.ts:95:23)
+    //   at assembleBlock (/home/runner/work/lodestar/lodestar/packages/lodestar/src/chain/factory/block/index.ts:43:11)
+    //   at Object.produceBlock (/home/runner/work/lodestar/lodestar/packages/lodestar/src/api/impl/validator/index.ts:148:21)
+    //   at Object.handler (/home/runner/work/lodestar/lodestar/packages/api/src/server/utils/server.ts:70:23)
+
+    terminalTotalDifficulty: 0,
   },
   nonce: "0x42",
   timestamp: "0x0",
