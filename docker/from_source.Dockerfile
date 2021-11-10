@@ -21,7 +21,7 @@
 
 FROM node:14-alpine as build
 WORKDIR /usr/app
-RUN apk update && apk add --no-cache g++ make python && rm -rf /var/cache/apk/*
+RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
 # Installs all deps in the root yarn.lock, which are most of them. To cache before copying the src
 COPY package.json yarn.lock ./
