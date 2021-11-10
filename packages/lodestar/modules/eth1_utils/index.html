@@ -452,11 +452,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="blocknumber">BlockNumber<a class="headerlink" href="#blocknumber" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>BlockNumber</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Data.ts#L7">packages/lodestar/src/eth1/utils/eth1Data.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Data.ts#L7">packages/lodestar/src/eth1/utils/eth1Data.ts:7</a></em></p>
 <hr/>
 <h3 id="depositgetter">DepositGetter<a class="headerlink" href="#depositgetter" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>DepositGetter</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/deposits.ts#L8">packages/lodestar/src/eth1/utils/deposits.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/deposits.ts#L8">packages/lodestar/src/eth1/utils/deposits.ts:8</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <p>▸ (<code>indexRange</code>: IFilterOptions‹number›, <code>eth1Data</code>: Eth1Data): <em>Promise‹T[]›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -481,7 +481,7 @@
 <hr/>
 <h3 id="eth1datagetter">Eth1DataGetter<a class="headerlink" href="#eth1datagetter" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>Eth1DataGetter</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Vote.ts#L8">packages/lodestar/src/eth1/utils/eth1Vote.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Vote.ts#L8">packages/lodestar/src/eth1/utils/eth1Vote.ts:8</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <p>▸ (<code>__namedParameters</code>: object): <em>Promise‹Eth1Data[]›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -503,20 +503,20 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-depositcontractinterface"><code>Const</code> depositContractInterface<a class="headerlink" href="#const-depositcontractinterface" title="Permanent link">¶</a></h3>
 <p>• <strong>depositContractInterface</strong>: <em>Interface‹›</em> = new Interface([depositEventFragment])</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/depositContract.ts#L12">packages/lodestar/src/eth1/utils/depositContract.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/depositContract.ts#L12">packages/lodestar/src/eth1/utils/depositContract.ts:12</a></em></p>
 <hr/>
 <h3 id="const-depositeventfragment"><code>Const</code> depositEventFragment<a class="headerlink" href="#const-depositeventfragment" title="Permanent link">¶</a></h3>
 <p>• <strong>depositEventFragment</strong>: <em>"event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)"</em> = "event DepositEvent(bytes pubkey, bytes withdrawal_credentials, bytes amount, bytes signature, bytes index)"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/depositContract.ts#L9">packages/lodestar/src/eth1/utils/depositContract.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/depositContract.ts#L9">packages/lodestar/src/eth1/utils/depositContract.ts:9</a></em></p>
 <hr/>
 <h3 id="const-depositeventtopics"><code>Const</code> depositEventTopics<a class="headerlink" href="#const-depositeventtopics" title="Permanent link">¶</a></h3>
 <p>• <strong>depositEventTopics</strong>: <em>string[]</em> = [depositContractInterface.getEventTopic("DepositEvent")]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/depositContract.ts#L17">packages/lodestar/src/eth1/utils/depositContract.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/depositContract.ts#L17">packages/lodestar/src/eth1/utils/depositContract.ts:17</a></em></p>
 <p>Precomputed topics of DepositEvent logs</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assertconsecutivedeposits">assertConsecutiveDeposits<a class="headerlink" href="#assertconsecutivedeposits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertConsecutiveDeposits</strong>(<code>depositEvents</code>: object[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1DepositEvent.ts#L4">packages/lodestar/src/eth1/utils/eth1DepositEvent.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1DepositEvent.ts#L4">packages/lodestar/src/eth1/utils/eth1DepositEvent.ts:4</a></em></p>
 <p>Assert that an array of deposits are consecutive and ascending</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -537,7 +537,7 @@
 <hr/>
 <h3 id="getdepositrootbydepositcount">getDepositRootByDepositCount<a class="headerlink" href="#getdepositrootbydepositcount" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDepositRootByDepositCount</strong>(<code>depositCounts</code>: number[], <code>depositRootTree</code>: TreeBacked‹List‹Root››): <em><a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹number, Root›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Data.ts#L82">packages/lodestar/src/eth1/utils/eth1Data.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Data.ts#L82">packages/lodestar/src/eth1/utils/eth1Data.ts:82</a></em></p>
 <p>Precompute a map of depositCount =&gt; depositRoot from a depositRootTree filled beforehand</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -562,7 +562,7 @@
 <hr/>
 <h3 id="getdeposits">getDeposits<a class="headerlink" href="#getdeposits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDeposits</strong>‹<strong>T</strong>›(<code>state</code>: allForks.BeaconState, <code>eth1Data</code>: Eth1Data, <code>depositsGetter</code>: <a href="./#depositgetter">DepositGetter</a>‹T›): <em>Promise‹T[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/deposits.ts#L10">packages/lodestar/src/eth1/utils/deposits.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/deposits.ts#L10">packages/lodestar/src/eth1/utils/deposits.ts:10</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
@@ -592,7 +592,7 @@
 <hr/>
 <h3 id="getdepositsbyblocknumber">getDepositsByBlockNumber<a class="headerlink" href="#getdepositsbyblocknumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDepositsByBlockNumber</strong>(<code>fromBlock</code>: <a href="./#blocknumber">BlockNumber</a>, <code>toBlock</code>: <a href="./#blocknumber">BlockNumber</a>, <code>depositEventDescendingStream</code>: AsyncIterable‹DepositEvent›): <em>Promise‹DepositEvent[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Data.ts#L60">packages/lodestar/src/eth1/utils/eth1Data.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Data.ts#L60">packages/lodestar/src/eth1/utils/eth1Data.ts:60</a></em></p>
 <p>Collect depositCount by blockNumber from a stream matching a block number range
 For a given blockNumber it's depositCount is equal to the index + 1 of the
 closest deposit event whose deposit.blockNumber &lt;= blockNumber</p>
@@ -624,7 +624,7 @@ closest deposit event whose deposit.blockNumber &lt;= blockNumber</p>
 <hr/>
 <h3 id="getdepositswithproofs">getDepositsWithProofs<a class="headerlink" href="#getdepositswithproofs" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDepositsWithProofs</strong>(<code>depositEvents</code>: DepositEvent[], <code>depositRootTree</code>: TreeBacked‹List‹Root››, <code>eth1Data</code>: Eth1Data): <em>Deposit[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/deposits.ts#L39">packages/lodestar/src/eth1/utils/deposits.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/deposits.ts#L39">packages/lodestar/src/eth1/utils/deposits.ts:39</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -652,7 +652,7 @@ closest deposit event whose deposit.blockNumber &lt;= blockNumber</p>
 <hr/>
 <h3 id="geteth1dataforblocks">getEth1DataForBlocks<a class="headerlink" href="#geteth1dataforblocks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getEth1DataForBlocks</strong>(<code>blocks</code>: Eth1Block[], <code>depositDescendingStream</code>: AsyncIterable‹DepositEvent›, <code>depositRootTree</code>: TreeBacked‹List‹Root››, <code>lastProcessedDepositBlockNumber</code>: <a href="./#blocknumber">BlockNumber</a> | null): <em>Promise‹Eth1Data &amp; Eth1Block[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Data.ts#L13">packages/lodestar/src/eth1/utils/eth1Data.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Data.ts#L13">packages/lodestar/src/eth1/utils/eth1Data.ts:13</a></em></p>
 <p>Appends partial eth1 data (depositRoot, depositCount) in a sequence of blocks
 eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs</p>
 <p><strong>Parameters:</strong></p>
@@ -686,7 +686,7 @@ eth1 data deposit is inferred from sparse eth1 data obtained from the deposit lo
 <hr/>
 <h3 id="geteth1votestoconsider">getEth1VotesToConsider<a class="headerlink" href="#geteth1votestoconsider" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getEth1VotesToConsider</strong>(<code>config</code>: IChainForkConfig, <code>state</code>: allForks.BeaconState, <code>eth1DataGetter</code>: <a href="./#eth1datagetter">Eth1DataGetter</a>): <em>Promise‹Eth1Data[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Vote.ts#L14">packages/lodestar/src/eth1/utils/eth1Vote.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Vote.ts#L14">packages/lodestar/src/eth1/utils/eth1Vote.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -714,7 +714,7 @@ eth1 data deposit is inferred from sparse eth1 data obtained from the deposit lo
 <hr/>
 <h3 id="groupdepositeventsbyblock">groupDepositEventsByBlock<a class="headerlink" href="#groupdepositeventsbyblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>groupDepositEventsByBlock</strong>(<code>depositEvents</code>: DepositEvent[]): <em><a href="../../interfaces/eth1.ibatchdepositevents/">IBatchDepositEvents</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/groupDepositEventsByBlock.ts#L9">packages/lodestar/src/eth1/utils/groupDepositEventsByBlock.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/groupDepositEventsByBlock.ts#L9">packages/lodestar/src/eth1/utils/groupDepositEventsByBlock.ts:9</a></em></p>
 <p>Return deposit events of blocks grouped/sorted by block number and deposit index
 Blocks without events are omitted</p>
 <p><strong>Parameters:</strong></p>
@@ -738,7 +738,7 @@ Blocks without events are omitted</p>
 <hr/>
 <h3 id="optimizenextblockdiffforgenesis">optimizeNextBlockDiffForGenesis<a class="headerlink" href="#optimizenextblockdiffforgenesis" title="Permanent link">¶</a></h3>
 <p>▸ <strong>optimizeNextBlockDiffForGenesis</strong>(<code>lastFetchedBlock</code>: object, <code>params</code>: Pick‹IChainConfig, "MIN_GENESIS_TIME" | "GENESIS_DELAY" | "SECONDS_PER_ETH1_BLOCK"›): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/optimizeNextBlockDiffForGenesis.ts#L8">packages/lodestar/src/eth1/utils/optimizeNextBlockDiffForGenesis.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/optimizeNextBlockDiffForGenesis.ts#L8">packages/lodestar/src/eth1/utils/optimizeNextBlockDiffForGenesis.ts:8</a></em></p>
 <p>Utility for fetching genesis min genesis time block
 Returns an approximation of the next block diff to fetch to progressively
 get closer to the block that satisfies min genesis time condition</p>
@@ -763,7 +763,7 @@ get closer to the block that satisfies min genesis time condition</p>
 <hr/>
 <h3 id="parsedepositlog">parseDepositLog<a class="headerlink" href="#parsedepositlog" title="Permanent link">¶</a></h3>
 <p>▸ <strong>parseDepositLog</strong>(<code>log</code>: object): <em>DepositEvent</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/depositContract.ts#L22">packages/lodestar/src/eth1/utils/depositContract.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/depositContract.ts#L22">packages/lodestar/src/eth1/utils/depositContract.ts:22</a></em></p>
 <p>Parse DepositEvent log</p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>log</strong>: <em>object</em></p>
@@ -793,7 +793,7 @@ get closer to the block that satisfies min genesis time condition</p>
 <hr/>
 <h3 id="picketh1vote">pickEth1Vote<a class="headerlink" href="#picketh1vote" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pickEth1Vote</strong>(<code>state</code>: allForks.BeaconState, <code>votesToConsider</code>: Eth1Data[]): <em>Eth1Data</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Vote.ts#L37">packages/lodestar/src/eth1/utils/eth1Vote.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Vote.ts#L37">packages/lodestar/src/eth1/utils/eth1Vote.ts:37</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -817,7 +817,7 @@ get closer to the block that satisfies min genesis time condition</p>
 <hr/>
 <h3 id="serializeeth1data">serializeEth1Data<a class="headerlink" href="#serializeeth1data" title="Permanent link">¶</a></h3>
 <p>▸ <strong>serializeEth1Data</strong>(<code>eth1Data</code>: Eth1Data): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Vote.ts#L66">packages/lodestar/src/eth1/utils/eth1Vote.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Vote.ts#L66">packages/lodestar/src/eth1/utils/eth1Vote.ts:66</a></em></p>
 <p>Serialize eth1Data types to a unique string ID. It is only used for comparison.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -838,7 +838,7 @@ get closer to the block that satisfies min genesis time condition</p>
 <hr/>
 <h3 id="votingperiodstarttime">votingPeriodStartTime<a class="headerlink" href="#votingperiodstarttime" title="Permanent link">¶</a></h3>
 <p>▸ <strong>votingPeriodStartTime</strong>(<code>config</code>: IChainForkConfig, <code>state</code>: allForks.BeaconState): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/91f3fef/packages/lodestar/src/eth1/utils/eth1Vote.ts#L70">packages/lodestar/src/eth1/utils/eth1Vote.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5f94e69/packages/lodestar/src/eth1/utils/eth1Vote.ts#L70">packages/lodestar/src/eth1/utils/eth1Vote.ts:70</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
