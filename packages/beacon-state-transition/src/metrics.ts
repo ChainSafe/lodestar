@@ -4,7 +4,7 @@ import {IAttesterStatus} from "./allForks";
 export interface IBeaconStateTransitionMetrics {
   stfnEpochTransition: IHistogram;
   stfnProcessBlock: IHistogram;
-  registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[]) => void;
+  registerValidatorStatuses: (currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]) => void;
 }
 
 interface IHistogram {

@@ -425,7 +425,11 @@ export function createLodestarMetrics(
       }),
 
       // Validator Monitor Metrics (per-epoch summaries)
-
+      prevEpochOnChainBalance: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_balance_total",
+        help: "Balance of validator after an epoch",
+        labelNames: ["index"],
+      }),
       prevEpochOnChainAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
         help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",

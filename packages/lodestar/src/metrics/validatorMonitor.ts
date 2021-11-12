@@ -19,7 +19,7 @@ export enum OpSource {
 
 export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
-  registerValidatorStatuses(currentEpoch: Epoch, statuses: allForks.IAttesterStatus[]): void;
+  registerValidatorStatuses(currentEpoch: Epoch, statuses: allForks.IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   registerUnaggregatedAttestation(
     src: OpSource,
@@ -175,7 +175,7 @@ export function createValidatorMonitor(
       }
     },
 
-    registerValidatorStatuses(currentEpoch, statuses) {
+    registerValidatorStatuses(currentEpoch, statuses, balances) {
       // Prevent registering status for the same epoch twice. processEpoch() may be ran more than once for the same epoch.
       if (currentEpoch <= lastRegisteredStatusEpoch) {
         return;
@@ -231,6 +231,11 @@ export function createValidatorMonitor(
 
         if (inclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, inclusionDistance);
+        }
+
+        const balance = balances && balances[index];
+        if (balance !== undefined) {
+          metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
         }
       }
     },
