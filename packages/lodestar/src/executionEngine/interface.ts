@@ -14,6 +14,13 @@ export enum ExecutePayloadStatus {
   SYNCING = "SYNCING",
 }
 
+export enum ForkChoiceUpdateStatus {
+  /** given payload is valid */
+  SUCCESS = "SUCCESS",
+  /** sync process is in progress */
+  SYNCING = "SYNCING",
+}
+
 export type PayloadAttributes = {
   timestamp: number;
   random: Uint8Array | ByteVector;

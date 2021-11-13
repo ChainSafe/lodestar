@@ -23,6 +23,8 @@ import {
   getCurrentEpoch,
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
+
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants";
@@ -44,7 +46,8 @@ export async function assembleBody(
     parentSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: ExecutionAddress;
-  }
+  },
+  logger?: ILogger | null
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -92,18 +95,23 @@ export async function assembleBody(
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
 
-    const payloadId = await prepareExecutionPayload(
-      chain,
-      finalizedBlockHash ?? ZERO_HASH_HEX,
-      currentState as CachedBeaconState<merge.BeaconState>,
-      feeRecipient
-    );
-
-    if (payloadId !== null) {
-      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
-    } else {
-      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+    let executionPayload: merge.ExecutionPayload | null = null;
+    try {
+      const payloadId = await prepareExecutionPayload(
+        chain,
+        finalizedBlockHash ?? ZERO_HASH_HEX,
+        currentState as CachedBeaconState<merge.BeaconState>,
+        feeRecipient
+      );
+      if (payloadId) executionPayload = await chain.executionEngine.getPayload(payloadId);
+    } catch (e) {
+      logger?.warn("Failed to produce execution payload", {}, e as Error);
     }
+
+    if (!executionPayload) logger?.verbose("Assembling block with empty executionPayload");
+
+    (blockBody as merge.BeaconBlockBody).executionPayload =
+      executionPayload ?? ssz.merge.ExecutionPayload.defaultValue();
   }
 
   return blockBody;

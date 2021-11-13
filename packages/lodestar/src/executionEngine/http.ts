@@ -11,7 +11,14 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes, ApiPayloadAttributes} from "./interface";
+import {
+  ExecutePayloadStatus,
+  ForkChoiceUpdateStatus,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+  ApiPayloadAttributes,
+} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -105,9 +112,16 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           ...apiPayloadAttributes,
         ],
       })
-      .then(({payloadId}) => {
-        if ((payloadAttributes && payloadId === "0x") || (!payloadAttributes && payloadId !== "0x"))
-          throw Error("InvalidPayloadId");
+      .then(({status, payloadId}) => {
+        // Validate status is known
+        const statusEnum = ForkChoiceUpdateStatus[status];
+        if (statusEnum === undefined) {
+          throw Error(`Unknown status ${status}`);
+        }
+
+        // Throw error on syncing if requested to produce a block, else silently ignore
+        if (payloadAttributes && statusEnum === ForkChoiceUpdateStatus.SYNCING) throw Error("Execution Layer Syncing");
+
         return payloadId !== "0x" ? payloadId : null;
       });
   }
@@ -168,7 +182,7 @@ type EngineApiRpcReturnTypes = {
    */
   engine_executePayloadV1: {status: ExecutePayloadStatus};
   engine_consensusValidated: void;
-  engine_forkchoiceUpdatedV1: {status: ExecutePayloadStatus; payloadId: QUANTITY};
+  engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
