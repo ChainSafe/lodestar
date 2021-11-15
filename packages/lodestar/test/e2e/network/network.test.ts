@@ -55,6 +55,7 @@ describe("network", function () {
       targetPeers: 1,
       bootMultiaddrs: [],
       localMultiaddrs: [],
+      firstHeartBeatDelayMs: 1,
       discv5: {
         enr,
         bindAddr: bindAddrUdp,

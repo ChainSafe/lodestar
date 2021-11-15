@@ -1,9 +1,10 @@
 import LibP2p, {Connection} from "libp2p";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import PeerId from "peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
 import {IMetrics} from "../../metrics";
@@ -46,6 +47,11 @@ export type PeerManagerOpts = {
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   maxPeers: number;
   /**
+   * Delay the 1st heartbeat after starting discv5
+   * See https://github.com/ChainSafe/lodestar/issues/3423
+   */
+  firstHeartBeatDelayMs: number;
+  /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
   discv5: IDiscv5DiscoveryInputOptions | null;
@@ -62,6 +68,7 @@ export type PeerManagerModules = {
   config: IBeaconConfig;
   peerMetadata: Libp2pPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
+  signal?: AbortSignal;
   networkEventBus: INetworkEventBus;
 };
 
@@ -103,6 +110,7 @@ export class PeerManager {
   private peerRpcScores: IPeerRpcScoreStore;
   /** If null, discovery is disabled */
   private discovery: PeerDiscovery | null;
+  private signal: AbortSignal | undefined;
   private networkEventBus: INetworkEventBus;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
@@ -124,6 +132,7 @@ export class PeerManager {
     this.config = modules.config;
     this.peerMetadata = modules.peerMetadata;
     this.peerRpcScores = modules.peerRpcScores;
+    this.signal = modules.signal;
     this.networkEventBus = modules.networkEventBus;
     this.opts = opts;
 
@@ -142,6 +151,7 @@ export class PeerManager {
     this.libp2p.connectionManager.on(Libp2pEvent.peerDisconnect, this.onLibp2pPeerDisconnect);
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
+    await sleep(this.opts.firstHeartBeatDelayMs, this.signal);
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
     this.heartbeat();
     this.intervals = [

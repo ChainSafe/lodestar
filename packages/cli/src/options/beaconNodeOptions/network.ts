@@ -11,6 +11,7 @@ export interface INetworkArgs {
   "network.localMultiaddrs": string[];
   "network.subscribeAllSubnets": boolean;
   "network.connectToDiscv5Bootnodes": boolean;
+  "network.firstHeartBeatDelayMs": number;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -28,6 +29,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     localMultiaddrs: args["network.localMultiaddrs"],
     subscribeAllSubnets: args["network.subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
+    firstHeartBeatDelayMs: args["network.firstHeartBeatDelayMs"],
   };
 }
 
@@ -93,6 +95,13 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     type: "boolean",
     description: "Attempt direct connection to discv5 bootnodes from network.discv5.bootEnrs option",
     defaultDescription: String(defaultOptions.network.connectToDiscv5Bootnodes === true),
+    group: "network",
+  },
+
+  "network.firstHeartBeatDelayMs": {
+    type: "number",
+    description: "Delay the 1st heart beat of Peer Manager after starting Discv5",
+    defaultDescription: String(defaultOptions.network.firstHeartBeatDelayMs),
     group: "network",
   },
 };
