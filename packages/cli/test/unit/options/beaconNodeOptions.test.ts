@@ -45,7 +45,7 @@ describe("options / beaconNodeOptions", () => {
       "network.localMultiaddrs": [],
       "network.subscribeAllSubnets": true,
       "network.connectToDiscv5Bootnodes": true,
-      "network.firstHeartBeatDelayMs": 1000,
+      "network.discv5FirstQueryDelayMs": 1000,
 
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
@@ -101,7 +101,7 @@ describe("options / beaconNodeOptions", () => {
         localMultiaddrs: [],
         subscribeAllSubnets: true,
         connectToDiscv5Bootnodes: true,
-        firstHeartBeatDelayMs: 1000,
+        discv5FirstQueryDelayMs: 1000,
       },
       sync: {
         isSingleNode: true,

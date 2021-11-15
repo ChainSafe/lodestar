@@ -19,7 +19,7 @@ export const defaultDiscv5Options: IDiscv5DiscoveryInputOptions = {
 export const defaultNetworkOptions: INetworkOptions = {
   maxPeers: 30, // Allow some room above targetPeers for new inbound peers
   targetPeers: 25,
-  firstHeartBeatDelayMs: 1000,
+  discv5FirstQueryDelayMs: 1000,
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   discv5: defaultDiscv5Options,

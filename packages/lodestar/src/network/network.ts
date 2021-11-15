@@ -116,7 +116,6 @@ export class Network implements INetwork {
         config,
         peerMetadata,
         peerRpcScores,
-        signal,
         networkEventBus,
       },
       opts

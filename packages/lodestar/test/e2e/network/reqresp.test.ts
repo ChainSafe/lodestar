@@ -38,7 +38,7 @@ describe("network / ReqResp", function () {
     targetPeers: 1,
     bootMultiaddrs: [],
     localMultiaddrs: [],
-    firstHeartBeatDelayMs: 1,
+    discv5FirstQueryDelayMs: 0,
     discv5: null,
   };
   const state = generateState();
