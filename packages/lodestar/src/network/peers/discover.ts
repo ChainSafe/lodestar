@@ -19,6 +19,7 @@ const MAX_CACHED_ENR_AGE_MS = 5 * 60 * 1000;
 
 export type PeerDiscoveryOpts = {
   maxPeers: number;
+  discv5FirstQueryDelayMs: number;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
 };
 
@@ -86,6 +87,8 @@ export class PeerDiscovery {
 
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   private maxPeers: number;
+  private discv5StartMs: number;
+  private discv5FirstQueryDelayMs: number;
 
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
@@ -95,6 +98,8 @@ export class PeerDiscovery {
     this.logger = logger;
     this.config = config;
     this.maxPeers = opts.maxPeers;
+    this.discv5StartMs = 0;
+    this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
 
     this.discv5 = Discv5.create({
       enr: opts.discv5.enr,
@@ -119,6 +124,7 @@ export class PeerDiscovery {
 
   async start(): Promise<void> {
     await this.discv5.start();
+    this.discv5StartMs = Date.now();
     this.discv5.on("discovered", this.onDiscovered);
   }
 
@@ -196,6 +202,12 @@ export class PeerDiscovery {
    * Request to find peers. First, looked at cached peers in peerStore
    */
   private async runFindRandomNodeQuery(): Promise<void> {
+    // Delay the 1st query after starting discv5
+    // See https://github.com/ChainSafe/lodestar/issues/3423
+    if (Date.now() - this.discv5StartMs <= this.discv5FirstQueryDelayMs) {
+      return;
+    }
+
     // Run a general discv5 query if one is not already in progress
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "ignore"});

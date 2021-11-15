@@ -46,6 +46,11 @@ export type PeerManagerOpts = {
   /** The maximum number of peers we allow (exceptions for subnet peers) */
   maxPeers: number;
   /**
+   * Delay the 1st query after starting discv5
+   * See https://github.com/ChainSafe/lodestar/issues/3423
+   */
+  discv5FirstQueryDelayMs: number;
+  /**
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
   discv5: IDiscv5DiscoveryInputOptions | null;
@@ -128,7 +133,13 @@ export class PeerManager {
     this.opts = opts;
 
     // opts.discv5 === null, discovery is disabled
-    this.discovery = opts.discv5 && new PeerDiscovery(modules, {maxPeers: opts.maxPeers, discv5: opts.discv5});
+    this.discovery =
+      opts.discv5 &&
+      new PeerDiscovery(modules, {
+        maxPeers: opts.maxPeers,
+        discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
+        discv5: opts.discv5,
+      });
 
     const {metrics} = modules;
     if (metrics) {
