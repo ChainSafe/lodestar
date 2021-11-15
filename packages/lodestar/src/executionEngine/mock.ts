@@ -107,7 +107,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       extraData: ZERO_HASH,
       baseFeePerGas: BigInt(0),
       blockHash: crypto.randomBytes(32),
-      transactions: [{selector: 0, value: crypto.randomBytes(512)}],
+      transactions: [crypto.randomBytes(512)],
     };
     this.preparingPayloads.set(payloadId, payload);
 

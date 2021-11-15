@@ -221,7 +221,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
     extraData: bytesToData(data.extraData),
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran.value)),
+    transactions: data.transactions.map((tran) => bytesToData(tran)),
   };
 }
 
@@ -240,6 +240,6 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.Executio
     extraData: dataToBytes(data.extraData),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => ({selector: 0, value: dataToBytes(tran)})),
+    transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 }

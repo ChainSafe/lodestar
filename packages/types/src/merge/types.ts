@@ -1,12 +1,7 @@
 import * as altair from "../altair/types";
 import {Root, Bytes32, Number64, ExecutionAddress, Uint256} from "../primitive/types";
 
-export type OpaqueTransaction = Uint8Array;
-
-export type Transaction = {
-  selector: number;
-  value: OpaqueTransaction;
-};
+export type Transaction = Uint8Array;
 
 type ExecutionPayloadFields = {
   // Execution block header fields

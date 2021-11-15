@@ -920,19 +920,17 @@ function assertValidTerminalPowBlock(
           block.body.executionPayload.parentHash
         )}`
       );
+  } else {
+    // If no TERMINAL_BLOCK_HASH override, check ttd
+    const {powBlock, powBlockParent} = preCachedData || {};
+    if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
+    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
 
-    // TERMINAL_BLOCK_HASH override skips ttd checks
-    return;
+    const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
+    const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
+    if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
+      throw Error(
+        `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
+      );
   }
-
-  const {powBlock, powBlockParent} = preCachedData || {};
-  if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-  if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
-
-  const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
-  const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
-  if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
-    throw Error(
-      `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
-    );
 }
