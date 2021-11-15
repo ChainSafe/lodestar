@@ -326,6 +326,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/merge_epoch/</loc>
+         <lastmod>2021-11-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/phase0/</loc>
          <lastmod>2021-11-15</lastmod>
          <changefreq>daily</changefreq>
@@ -1751,6 +1756,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/executionengine.forkchoiceupdatestatus/</loc>
+         <lastmod>2021-11-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/metrics.opsource/</loc>
          <lastmod>2021-11-15</lastmod>
          <changefreq>daily</changefreq>
@@ -2621,6 +2631,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_merge.imergepreset/</loc>
+         <lastmod>2021-11-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_phase0.iphase0preset/</loc>
          <lastmod>2021-11-15</lastmod>
          <changefreq>daily</changefreq>
@@ -2632,6 +2647,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_altair/</loc>
+         <lastmod>2021-11-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_merge/</loc>
          <lastmod>2021-11-15</lastmod>
          <changefreq>daily</changefreq>
     </url>

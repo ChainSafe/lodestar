@@ -289,11 +289,6 @@
     notifyForkchoiceUpdate
   </a>
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#preparepayload">
-    preparePayload
-  </a>
-</li>
 </ul>
 </nav>
 </li>
@@ -329,12 +324,11 @@
 <li><a href="./#executepayload">executePayload</a></li>
 <li><a href="./#getpayload">getPayload</a></li>
 <li><a href="./#notifyforkchoiceupdate">notifyForkchoiceUpdate</a></li>
-<li><a href="./#preparepayload">preparePayload</a></li>
 </ul>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="executepayload">executePayload<a class="headerlink" href="#executepayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>executePayload</strong>(<code>executionPayload</code>: merge.ExecutionPayload): <em>Promise‹<a href="../../enums/executionengine.executepayloadstatus/">ExecutePayloadStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/interface.ts#L32">packages/lodestar/src/executionEngine/interface.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L54">packages/lodestar/src/executionEngine/interface.ts:54</a></em></p>
 <p>A state transition function which applies changes to the self.execution_state.
 Returns <code>True</code> iff <code>execution_payload</code> is valid with respect to <code>self.execution_state</code>.</p>
 <p>Required for block processing in the beacon state transition function.
@@ -359,7 +353,7 @@ https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-c
 <hr/>
 <h3 id="getpayload">getPayload<a class="headerlink" href="#getpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPayload</strong>(<code>payloadId</code>: <a href="../../modules/executionengine/#payloadid">PayloadId</a>): <em>Promise‹merge.ExecutionPayload›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/interface.ts#L72">packages/lodestar/src/executionEngine/interface.ts:72</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L81">packages/lodestar/src/executionEngine/interface.ts:81</a></em></p>
 <p>Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
 since the corresponding call to prepare_payload method.</p>
 <p>Required for block producing
@@ -382,8 +376,8 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#ge
 <p><strong>Returns:</strong> <em>Promise‹merge.ExecutionPayload›</em></p>
 <hr/>
 <h3 id="notifyforkchoiceupdate">notifyForkchoiceUpdate<a class="headerlink" href="#notifyforkchoiceupdate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: RootHex, <code>finalizedBlockHash</code>: RootHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/interface.ts#L46">packages/lodestar/src/executionEngine/interface.ts:46</a></em></p>
+<p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: Root | RootHex, <code>finalizedBlockHash</code>: RootHex, <code>payloadAttributes?</code>: <a href="../../modules/executionengine/#payloadattributes">PayloadAttributes</a>): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a> | null›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L68">packages/lodestar/src/executionEngine/interface.ts:68</a></em></p>
 <p>Signal fork choice updates
 This function performs two actions atomically:
 - Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
@@ -403,53 +397,19 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#
 <tbody>
 <tr>
 <td><code>headBlockHash</code></td>
-<td>RootHex</td>
+<td>Root | RootHex</td>
 </tr>
 <tr>
 <td><code>finalizedBlockHash</code></td>
 <td>RootHex</td>
 </tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="preparepayload">preparePayload<a class="headerlink" href="#preparepayload" title="Permanent link">¶</a></h3>
-<p>▸ <strong>preparePayload</strong>(<code>parentHash</code>: Root, <code>timestamp</code>: number, <code>random</code>: Bytes32, <code>feeRecipient</code>: ExecutionAddress): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/interface.ts#L58">packages/lodestar/src/executionEngine/interface.ts:58</a></em></p>
-<p>Given the set of execution payload attributes, prepare_payload initiates a process of building an execution
-payload on top of the execution chain tip identified by parent_hash.</p>
-<p>Required for block producing
-https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#prepare_payload</p>
-<p>Must be called close to the slot associated with the validator's block producing to get the blockHash and
-random correct</p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
 <tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>parentHash</code></td>
-<td>Root</td>
-</tr>
-<tr>
-<td><code>timestamp</code></td>
-<td>number</td>
-</tr>
-<tr>
-<td><code>random</code></td>
-<td>Bytes32</td>
-</tr>
-<tr>
-<td><code>feeRecipient</code></td>
-<td>ExecutionAddress</td>
+<td><code>payloadAttributes?</code></td>
+<td><a href="../../modules/executionengine/#payloadattributes">PayloadAttributes</a></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a>›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a> | null›</em></p>
 </article>
 </div>
 </div>

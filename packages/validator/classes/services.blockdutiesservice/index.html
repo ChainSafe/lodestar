@@ -404,7 +404,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new BlockDutiesService</strong>(<code>logger</code>: <a href="../../modules/util/#iloggervc">ILoggerVc</a>, <code>api</code>: Api, <code>clock</code>: <a href="../../interfaces/util.iclock/">IClock</a>, <code>validatorStore</code>: <a href="../services.validatorstore/">ValidatorStore</a>, <code>notifyBlockProductionFn</code>: <a href="../../modules/services/#notifyblockproductionfn">NotifyBlockProductionFn</a>): <em><a href="./">BlockDutiesService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L22">packages/validator/src/services/blockDuties.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L22">packages/validator/src/services/blockDuties.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -440,30 +440,30 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-api"><code>Private</code> <code>Readonly</code> api<a class="headerlink" href="#private-readonly-api" title="Permanent link">¶</a></h3>
 <p>• <strong>api</strong>: <em>Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L26">packages/validator/src/services/blockDuties.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L26">packages/validator/src/services/blockDuties.ts:26</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em><a href="../../modules/util/#iloggervc">ILoggerVc</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L25">packages/validator/src/services/blockDuties.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L25">packages/validator/src/services/blockDuties.ts:25</a></em></p>
 <hr/>
 <h3 id="private-readonly-notifyblockproductionfn"><code>Private</code> <code>Readonly</code> notifyBlockProductionFn<a class="headerlink" href="#private-readonly-notifyblockproductionfn" title="Permanent link">¶</a></h3>
 <p>• <strong>notifyBlockProductionFn</strong>: <em><a href="../../modules/services/#notifyblockproductionfn">NotifyBlockProductionFn</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L19">packages/validator/src/services/blockDuties.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L19">packages/validator/src/services/blockDuties.ts:19</a></em></p>
 <p>Notify the block service if it should produce a block.</p>
 <hr/>
 <h3 id="private-readonly-proposers"><code>Private</code> <code>Readonly</code> proposers<a class="headerlink" href="#private-readonly-proposers" title="Permanent link">¶</a></h3>
 <p>• <strong>proposers</strong>: <em>Map‹number, <a href="../../modules/services/#blockdutyatepoch">BlockDutyAtEpoch</a>›</em> = new Map<epoch, blockdutyatepoch="">()</epoch,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L22">packages/validator/src/services/blockDuties.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L22">packages/validator/src/services/blockDuties.ts:22</a></em></p>
 <p>Maps an epoch to all <em>local</em> proposers in this epoch. Notably, this does not contain
 proposals for any validators which are not registered locally.</p>
 <hr/>
 <h3 id="private-readonly-validatorstore"><code>Private</code> <code>Readonly</code> validatorStore<a class="headerlink" href="#private-readonly-validatorstore" title="Permanent link">¶</a></h3>
 <p>• <strong>validatorStore</strong>: <em><a href="../services.validatorstore/">ValidatorStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L28">packages/validator/src/services/blockDuties.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L28">packages/validator/src/services/blockDuties.ts:28</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getblockproposersatslot">getblockProposersAtSlot<a class="headerlink" href="#getblockproposersatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getblockProposersAtSlot</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>BLSPubkey[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L45">packages/validator/src/services/blockDuties.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L45">packages/validator/src/services/blockDuties.ts:45</a></em></p>
 <p>Returns the pubkeys of the validators which are assigned to propose in the given slot.</p>
 <p>It is possible that multiple validators have an identical proposal slot, however that is
 likely the result of heavy forking (lol) or inconsistent beacon node connections.</p>
@@ -486,7 +486,7 @@ likely the result of heavy forking (lol) or inconsistent beacon node connections
 <hr/>
 <h3 id="private-pollbeaconproposers"><code>Private</code> pollBeaconProposers<a class="headerlink" href="#private-pollbeaconproposers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pollBeaconProposers</strong>(<code>epoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L132">packages/validator/src/services/blockDuties.ts:132</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L132">packages/validator/src/services/blockDuties.ts:132</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -506,7 +506,7 @@ likely the result of heavy forking (lol) or inconsistent beacon node connections
 <hr/>
 <h3 id="private-pollbeaconproposersandnotify"><code>Private</code> pollBeaconProposersAndNotify<a class="headerlink" href="#private-pollbeaconproposersandnotify" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pollBeaconProposersAndNotify</strong>(<code>currentSlot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L104">packages/validator/src/services/blockDuties.ts:104</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L104">packages/validator/src/services/blockDuties.ts:104</a></em></p>
 <p>Download the proposer duties for the current epoch and store them in <code>this.proposers</code>.
 If there are any proposer for this slot, send out a notification to the block proposers.</p>
 <h2 id="note">Note<a class="headerlink" href="#note" title="Permanent link">¶</a></h2>
@@ -546,7 +546,7 @@ function is as fast as possible.</p>
 <hr/>
 <h3 id="private-pruneoldduties"><code>Private</code> pruneOldDuties<a class="headerlink" href="#private-pruneoldduties" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneOldDuties</strong>(<code>currentEpoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L164">packages/validator/src/services/blockDuties.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L164">packages/validator/src/services/blockDuties.ts:164</a></em></p>
 <p>Run once per epoch to prune <code>this.proposers</code> map</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -567,7 +567,7 @@ function is as fast as possible.</p>
 <hr/>
 <h3 id="private-runblockdutiestask"><code>Private</code> runBlockDutiesTask<a class="headerlink" href="#private-runblockdutiestask" title="Permanent link">¶</a></h3>
 <p>▸ <strong>runBlockDutiesTask</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/validator/src/services/blockDuties.ts#L61">packages/validator/src/services/blockDuties.ts:61</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/validator/src/services/blockDuties.ts#L61">packages/validator/src/services/blockDuties.ts:61</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>

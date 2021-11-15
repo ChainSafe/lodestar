@@ -295,13 +295,27 @@
 <nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#apipayloadattributes">
+    ApiPayloadAttributes
+  </a>
+<nav aria-label="ApiPayloadAttributes" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#engineapirpcparamtypes">
     EngineApiRpcParamTypes
   </a>
 <nav aria-label="EngineApiRpcParamTypes" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration">
+<a class="md-nav__link" href="#type-declaration_1">
     Type declaration:
   </a>
 </li>
@@ -315,7 +329,7 @@
 <nav aria-label="EngineApiRpcReturnTypes" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_1">
+<a class="md-nav__link" href="#type-declaration_2">
     Type declaration:
   </a>
 </li>
@@ -329,7 +343,7 @@
 <nav aria-label="ExecutionEngineHttpOpts" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_2">
+<a class="md-nav__link" href="#type-declaration_3">
     Type declaration:
   </a>
 </li>
@@ -343,7 +357,7 @@
 <nav aria-label="ExecutionEngineMockOpts" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_3">
+<a class="md-nav__link" href="#type-declaration_4">
     Type declaration:
   </a>
 </li>
@@ -362,7 +376,7 @@
 <nav aria-label="ExecutionPayloadRpc" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_4">
+<a class="md-nav__link" href="#type-declaration_5">
     Type declaration:
   </a>
 </li>
@@ -376,7 +390,7 @@
 <nav aria-label="PayloadAttributes" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_5">
+<a class="md-nav__link" href="#type-declaration_6">
     Type declaration:
   </a>
 </li>
@@ -479,6 +493,7 @@
 <h3 id="enumerations">Enumerations<a class="headerlink" href="#enumerations" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="../../enums/executionengine.executepayloadstatus/">ExecutePayloadStatus</a></li>
+<li><a href="../../enums/executionengine.forkchoiceupdatestatus/">ForkChoiceUpdateStatus</a></li>
 </ul>
 <h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
 <ul>
@@ -492,6 +507,7 @@
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
+<li><a href="./#apipayloadattributes">ApiPayloadAttributes</a></li>
 <li><a href="./#engineapirpcparamtypes">EngineApiRpcParamTypes</a></li>
 <li><a href="./#engineapirpcreturntypes">EngineApiRpcReturnTypes</a></li>
 <li><a href="./#executionenginehttpopts">ExecutionEngineHttpOpts</a></li>
@@ -517,60 +533,73 @@
 <li><a href="./#const-defaultexecutionenginehttpopts">defaultExecutionEngineHttpOpts</a></li>
 </ul>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="apipayloadattributes">ApiPayloadAttributes<a class="headerlink" href="#apipayloadattributes" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>ApiPayloadAttributes</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L30">packages/lodestar/src/executionEngine/interface.ts:30</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>feeRecipient</strong>: <em><a href="../eth1_provider/#data">DATA</a></em></p>
+</li>
+<li>
+<p><strong>random</strong>: <em><a href="../eth1_provider/#data">DATA</a></em></p>
+</li>
+<li>
+<p><strong>timestamp</strong>: <em><a href="../eth1_provider/#quantity">QUANTITY</a></em></p>
+</li>
+</ul>
+<hr/>
 <h3 id="engineapirpcparamtypes">EngineApiRpcParamTypes<a class="headerlink" href="#engineapirpcparamtypes" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>EngineApiRpcParamTypes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L150">packages/lodestar/src/executionEngine/http.ts:150</a></em></p>
-<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L152">packages/lodestar/src/executionEngine/http.ts:152</a></em></p>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>engine_consensusValidated</strong>: <em>[object]</em></p>
 </li>
 <li>
-<p><strong>engine_executePayload</strong>: <em>[<a href="./#executionpayloadrpc">ExecutionPayloadRpc</a>]</em></p>
+<p><strong>engine_executePayloadV1</strong>: <em>[<a href="./#executionpayloadrpc">ExecutionPayloadRpc</a>]</em></p>
 </li>
 <li>
-<p><strong>engine_forkchoiceUpdated</strong>: <em>[object]</em></p>
+<p><strong>engine_forkchoiceUpdatedV1</strong>: <em>[param1: object, payloadAttributes?: ApiPayloadAttributes]</em></p>
 </li>
 <li>
-<p><strong>engine_getPayload</strong>: <em>[<a href="../eth1_provider/#quantity">QUANTITY</a>]</em></p>
-</li>
-<li>
-<p><strong>engine_preparePayload</strong>: <em>[<a href="./#payloadattributes">PayloadAttributes</a>]</em></p>
+<p><strong>engine_getPayloadV1</strong>: <em>[<a href="../eth1_provider/#quantity">QUANTITY</a>]</em></p>
 </li>
 </ul>
 <hr/>
 <h3 id="engineapirpcreturntypes">EngineApiRpcReturnTypes<a class="headerlink" href="#engineapirpcreturntypes" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>EngineApiRpcReturnTypes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L177">packages/lodestar/src/executionEngine/http.ts:177</a></em></p>
-<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L178">packages/lodestar/src/executionEngine/http.ts:178</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>engine_consensusValidated</strong>: <em>void</em></p>
 </li>
 <li>
-<p><strong>engine_executePayload</strong>(): <em>object</em></p>
+<p><strong>engine_executePayloadV1</strong>(): <em>object</em></p>
 </li>
 <li>
 <p><strong>status</strong>: <em><a href="../../enums/executionengine.executepayloadstatus/">ExecutePayloadStatus</a></em></p>
 </li>
 <li>
-<p><strong>engine_forkchoiceUpdated</strong>: <em>void</em></p>
-</li>
-<li>
-<p><strong>engine_getPayload</strong>: <em><a href="./#executionpayloadrpc">ExecutionPayloadRpc</a></em></p>
-</li>
-<li>
-<p><strong>engine_preparePayload</strong>(): <em>object</em></p>
+<p><strong>engine_forkchoiceUpdatedV1</strong>(): <em>object</em></p>
 </li>
 <li>
 <p><strong>payloadId</strong>: <em><a href="../eth1_provider/#quantity">QUANTITY</a></em></p>
+</li>
+<li>
+<p><strong>status</strong>: <em><a href="../../enums/executionengine.forkchoiceupdatestatus/">ForkChoiceUpdateStatus</a></em></p>
+</li>
+<li>
+<p><strong>engine_getPayloadV1</strong>: <em><a href="./#executionpayloadrpc">ExecutionPayloadRpc</a></em></p>
 </li>
 </ul>
 <hr/>
 <h3 id="executionenginehttpopts">ExecutionEngineHttpOpts<a class="headerlink" href="#executionenginehttpopts" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionEngineHttpOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L17">packages/lodestar/src/executionEngine/http.ts:17</a></em></p>
-<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L24">packages/lodestar/src/executionEngine/http.ts:24</a></em></p>
+<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>timeout</strong>? : <em>undefined | number</em></p>
@@ -582,20 +611,20 @@
 <hr/>
 <h3 id="executionenginemockopts">ExecutionEngineMockOpts<a class="headerlink" href="#executionenginemockopts" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionEngineMockOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/mock.ts#L10">packages/lodestar/src/executionEngine/mock.ts:10</a></em></p>
-<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/mock.ts#L9">packages/lodestar/src/executionEngine/mock.ts:9</a></em></p>
+<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">¶</a></h4>
 <ul>
 <li><strong>genesisBlockHash</strong>: <em>string</em></li>
 </ul>
 <hr/>
 <h3 id="executionengineopts">ExecutionEngineOpts<a class="headerlink" href="#executionengineopts" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionEngineOpts</strong>: <em>object &amp; <a href="./#executionenginehttpopts">ExecutionEngineHttpOpts</a> | object &amp; <a href="./#executionenginemockopts">ExecutionEngineMockOpts</a> | object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/index.ts#L9">packages/lodestar/src/executionEngine/index.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/index.ts#L9">packages/lodestar/src/executionEngine/index.ts:9</a></em></p>
 <hr/>
 <h3 id="executionpayloadrpc">ExecutionPayloadRpc<a class="headerlink" href="#executionpayloadrpc" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionPayloadRpc</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L203">packages/lodestar/src/executionEngine/http.ts:203</a></em></p>
-<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L192">packages/lodestar/src/executionEngine/http.ts:192</a></em></p>
+<h4 id="type-declaration_5">Type declaration:<a class="headerlink" href="#type-declaration_5" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>baseFeePerGas</strong>: <em><a href="../eth1_provider/#quantity">QUANTITY</a></em></p>
@@ -643,38 +672,35 @@
 <hr/>
 <h3 id="payloadattributes">PayloadAttributes<a class="headerlink" href="#payloadattributes" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>PayloadAttributes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L192">packages/lodestar/src/executionEngine/http.ts:192</a></em></p>
-<h4 id="type-declaration_5">Type declaration:<a class="headerlink" href="#type-declaration_5" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L24">packages/lodestar/src/executionEngine/interface.ts:24</a></em></p>
+<h4 id="type-declaration_6">Type declaration:<a class="headerlink" href="#type-declaration_6" title="Permanent link">¶</a></h4>
 <ul>
 <li>
-<p><strong>feeRecipient</strong>: <em><a href="../eth1_provider/#data">DATA</a></em></p>
+<p><strong>feeRecipient</strong>: <em>Uint8Array | ByteVector</em></p>
 </li>
 <li>
-<p><strong>parentHash</strong>: <em><a href="../eth1_provider/#data">DATA</a></em></p>
+<p><strong>random</strong>: <em>Uint8Array | ByteVector</em></p>
 </li>
 <li>
-<p><strong>random</strong>: <em><a href="../eth1_provider/#data">DATA</a></em></p>
-</li>
-<li>
-<p><strong>timestamp</strong>: <em><a href="../eth1_provider/#quantity">QUANTITY</a></em></p>
+<p><strong>timestamp</strong>: <em>number</em></p>
 </li>
 </ul>
 <hr/>
 <h3 id="payloadid">PayloadId<a class="headerlink" href="#payloadid" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>PayloadId</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/interface.ts#L5">packages/lodestar/src/executionEngine/interface.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/interface.ts#L6">packages/lodestar/src/executionEngine/interface.ts:6</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-interop_gas_limit"><code>Const</code> INTEROP_GAS_LIMIT<a class="headerlink" href="#const-interop_gas_limit" title="Permanent link">¶</a></h3>
 <p>• <strong>INTEROP_GAS_LIMIT</strong>: <em>30000000</em> = 30000000</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/mock.ts#L8">packages/lodestar/src/executionEngine/mock.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/mock.ts#L7">packages/lodestar/src/executionEngine/mock.ts:7</a></em></p>
 <hr/>
 <h3 id="const-defaultexecutionengineopts"><code>Const</code> defaultExecutionEngineOpts<a class="headerlink" href="#const-defaultexecutionengineopts" title="Permanent link">¶</a></h3>
 <p>• <strong>defaultExecutionEngineOpts</strong>: <em><a href="./#executionengineopts">ExecutionEngineOpts</a></em> = defaultExecutionEngineHttpOpts</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/index.ts#L14">packages/lodestar/src/executionEngine/index.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/index.ts#L14">packages/lodestar/src/executionEngine/index.ts:14</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="initializeexecutionengine">initializeExecutionEngine<a class="headerlink" href="#initializeexecutionengine" title="Permanent link">¶</a></h3>
 <p>▸ <strong>initializeExecutionEngine</strong>(<code>opts</code>: <a href="./#executionengineopts">ExecutionEngineOpts</a>, <code>signal</code>: AbortSignal): <em><a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/index.ts#L16">packages/lodestar/src/executionEngine/index.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/index.ts#L16">packages/lodestar/src/executionEngine/index.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -698,7 +724,7 @@
 <hr/>
 <h3 id="parseexecutionpayload">parseExecutionPayload<a class="headerlink" href="#parseexecutionpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>parseExecutionPayload</strong>(<code>data</code>: <a href="./#executionpayloadrpc">ExecutionPayloadRpc</a>): <em>merge.ExecutionPayload</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L239">packages/lodestar/src/executionEngine/http.ts:239</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L228">packages/lodestar/src/executionEngine/http.ts:228</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -718,7 +744,7 @@
 <hr/>
 <h3 id="serializeexecutionpayload">serializeExecutionPayload<a class="headerlink" href="#serializeexecutionpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>serializeExecutionPayload</strong>(<code>data</code>: merge.ExecutionPayload): <em><a href="./#executionpayloadrpc">ExecutionPayloadRpc</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L220">packages/lodestar/src/executionEngine/http.ts:220</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L209">packages/lodestar/src/executionEngine/http.ts:209</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -738,13 +764,13 @@
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-defaultexecutionenginehttpopts"><code>Const</code> defaultExecutionEngineHttpOpts<a class="headerlink" href="#const-defaultexecutionenginehttpopts" title="Permanent link">¶</a></h3>
 <h3 id="defaultexecutionenginehttpopts-object">▪ <strong>defaultExecutionEngineHttpOpts</strong>: <em>object</em><a class="headerlink" href="#defaultexecutionenginehttpopts-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L22">packages/lodestar/src/executionEngine/http.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L29">packages/lodestar/src/executionEngine/http.ts:29</a></em></p>
 <h3 id="timeout">timeout<a class="headerlink" href="#timeout" title="Permanent link">¶</a></h3>
 <p>• <strong>timeout</strong>: <em>number</em> = 12000</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L24">packages/lodestar/src/executionEngine/http.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L31">packages/lodestar/src/executionEngine/http.ts:31</a></em></p>
 <h3 id="urls">urls<a class="headerlink" href="#urls" title="Permanent link">¶</a></h3>
 <p>• <strong>urls</strong>: <em>string[]</em> = ["http://localhost:8550"]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/lodestar/src/executionEngine/http.ts#L23">packages/lodestar/src/executionEngine/http.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/lodestar/src/executionEngine/http.ts#L30">packages/lodestar/src/executionEngine/http.ts:30</a></em></p>
 </article>
 </div>
 </div>

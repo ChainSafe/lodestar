@@ -300,8 +300,18 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#imergepreset">
+    IMergePreset
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#iphase0preset">
     IPhase0Preset
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#mergepreset">
+    MergePreset
   </a>
 </li>
 <li class="md-nav__item">
@@ -364,7 +374,9 @@
 <li><a href="./#beaconpreset">BeaconPreset</a></li>
 <li><a href="./#ialtairpreset">IAltairPreset</a></li>
 <li><a href="./#ibeaconpreset">IBeaconPreset</a></li>
+<li><a href="./#imergepreset">IMergePreset</a></li>
 <li><a href="./#iphase0preset">IPhase0Preset</a></li>
+<li><a href="./#mergepreset">MergePreset</a></li>
 <li><a href="./#phase0preset">Phase0Preset</a></li>
 <li><a href="./#presetname">PresetName</a></li>
 </ul>
@@ -393,8 +405,14 @@
 <h3 id="ibeaconpreset">IBeaconPreset<a class="headerlink" href="#ibeaconpreset" title="Permanent link">¶</a></h3>
 <p>• <strong>IBeaconPreset</strong>:</p>
 <hr/>
+<h3 id="imergepreset">IMergePreset<a class="headerlink" href="#imergepreset" title="Permanent link">¶</a></h3>
+<p>• <strong>IMergePreset</strong>:</p>
+<hr/>
 <h3 id="iphase0preset">IPhase0Preset<a class="headerlink" href="#iphase0preset" title="Permanent link">¶</a></h3>
 <p>• <strong>IPhase0Preset</strong>:</p>
+<hr/>
+<h3 id="mergepreset">MergePreset<a class="headerlink" href="#mergepreset" title="Permanent link">¶</a></h3>
+<p>• <strong>MergePreset</strong>:</p>
 <hr/>
 <h3 id="phase0preset">Phase0Preset<a class="headerlink" href="#phase0preset" title="Permanent link">¶</a></h3>
 <p>• <strong>Phase0Preset</strong>:</p>
@@ -403,18 +421,19 @@
 <p>• <strong>PresetName</strong>:</p>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconpreset_1">IBeaconPreset<a class="headerlink" href="#ibeaconpreset_1" title="Permanent link">¶</a></h3>
-<p>Ƭ <strong>IBeaconPreset</strong>: <em><a href="../../interfaces/preset_phase0.iphase0preset/">IPhase0Preset</a> &amp; <a href="../../interfaces/preset_altair.ialtairpreset/">IAltairPreset</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/params/src/preset/interface.ts#L9">preset/interface.ts:9</a></em></p>
+<p>Ƭ <strong>IBeaconPreset</strong>: <em><a href="../../interfaces/preset_phase0.iphase0preset/">IPhase0Preset</a> &amp; <a href="../../interfaces/preset_altair.ialtairpreset/">IAltairPreset</a> &amp; <a href="../../interfaces/preset_merge.imergepreset/">IMergePreset</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/params/src/preset/interface.ts#L10">preset/interface.ts:10</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-beaconpreset"><code>Const</code> BeaconPreset<a class="headerlink" href="#const-beaconpreset" title="Permanent link">¶</a></h3>
 <p>• <strong>BeaconPreset</strong>: <em>ContainerType‹<a href="./#ibeaconpreset">IBeaconPreset</a>›</em> = new ContainerType<ibeaconpreset>({
   fields: {
     ...Phase0Preset.fields,
     ...AltairPreset.fields,
+    ...MergePreset.fields,
   },
   expectedCase: "notransform",
 })</ibeaconpreset></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/params/src/preset/ssz.ts#L9">preset/ssz.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/params/src/preset/ssz.ts#L10">preset/ssz.ts:10</a></em></p>
 </article>
 </div>
 </div>

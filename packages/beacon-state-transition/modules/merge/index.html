@@ -300,11 +300,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#opaquetransaction">
-    OpaqueTransaction
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#powblock">
     PowBlock
   </a>
@@ -345,8 +340,28 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#processattesterslashing">
+    processAttesterSlashing
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#processblock">
     processBlock
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processoperations">
+    processOperations
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processproposerslashing">
+    processProposerSlashing
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processslashings">
+    processSlashings
   </a>
 </li>
 <li class="md-nav__item">
@@ -444,7 +459,6 @@
 <li><a href="./#beaconstate">BeaconState</a></li>
 <li><a href="./#executionpayload">ExecutionPayload</a></li>
 <li><a href="./#executionpayloadheader">ExecutionPayloadHeader</a></li>
-<li><a href="./#opaquetransaction">OpaqueTransaction</a></li>
 <li><a href="./#powblock">PowBlock</a></li>
 <li><a href="./#signedbeaconblock">SignedBeaconBlock</a></li>
 <li><a href="./#transaction">Transaction</a></li>
@@ -453,7 +467,11 @@
 <li><a href="./#ismergeblockbodytype">isMergeBlockBodyType</a></li>
 <li><a href="./#ismergecomplete">isMergeComplete</a></li>
 <li><a href="./#ismergestatetype">isMergeStateType</a></li>
+<li><a href="./#processattesterslashing">processAttesterSlashing</a></li>
 <li><a href="./#processblock">processBlock</a></li>
+<li><a href="./#processoperations">processOperations</a></li>
+<li><a href="./#processproposerslashing">processProposerSlashing</a></li>
+<li><a href="./#processslashings">processSlashings</a></li>
 <li><a href="./#upgradestate">upgradeState</a></li>
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
@@ -486,9 +504,6 @@
 <h3 id="executionpayloadheader">ExecutionPayloadHeader<a class="headerlink" href="#executionpayloadheader" title="Permanent link">¶</a></h3>
 <p>• <strong>ExecutionPayloadHeader</strong>:</p>
 <hr/>
-<h3 id="opaquetransaction">OpaqueTransaction<a class="headerlink" href="#opaquetransaction" title="Permanent link">¶</a></h3>
-<p>• <strong>OpaqueTransaction</strong>:</p>
-<hr/>
 <h3 id="powblock">PowBlock<a class="headerlink" href="#powblock" title="Permanent link">¶</a></h3>
 <p>• <strong>PowBlock</strong>:</p>
 <hr/>
@@ -513,15 +528,27 @@
 <h3 id="ismergestatetype">isMergeStateType<a class="headerlink" href="#ismergestatetype" title="Permanent link">¶</a></h3>
 <p>• <strong>isMergeStateType</strong>:</p>
 <hr/>
+<h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
+<p>• <strong>processAttesterSlashing</strong>:</p>
+<hr/>
 <h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
 <p>• <strong>processBlock</strong>:</p>
+<hr/>
+<h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
+<p>• <strong>processOperations</strong>:</p>
+<hr/>
+<h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
+<p>• <strong>processProposerSlashing</strong>:</p>
+<hr/>
+<h3 id="processslashings">processSlashings<a class="headerlink" href="#processslashings" title="Permanent link">¶</a></h3>
+<p>• <strong>processSlashings</strong>:</p>
 <hr/>
 <h3 id="upgradestate">upgradeState<a class="headerlink" href="#upgradestate" title="Permanent link">¶</a></h3>
 <p>• <strong>upgradeState</strong>:</p>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="executionengine">ExecutionEngine<a class="headerlink" href="#executionengine" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionEngine</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/executionEngine.ts#L3">packages/beacon-state-transition/src/merge/executionEngine.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/executionEngine.ts#L3">packages/beacon-state-transition/src/merge/executionEngine.ts:3</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li><strong>executePayload</strong>(<code>executionPayload</code>: <a href="./#executionpayload">ExecutionPayload</a>): <em>boolean</em></li>
@@ -529,7 +556,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="isexecutionenabled_1">isExecutionEnabled<a class="headerlink" href="#isexecutionenabled_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isExecutionEnabled</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/utils.ts#L7">packages/beacon-state-transition/src/merge/utils.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/utils.ts#L7">packages/beacon-state-transition/src/merge/utils.ts:7</a></em></p>
 <p>Execution enabled = merge is done.
 When (A) state has execution data OR (B) block has execution data</p>
 <p><strong>Parameters:</strong></p>
@@ -555,7 +582,7 @@ When (A) state has execution data OR (B) block has execution data</p>
 <hr/>
 <h3 id="ismergeblock_1">isMergeBlock<a class="headerlink" href="#ismergeblock_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isMergeBlock</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/utils.ts#L18">packages/beacon-state-transition/src/merge/utils.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/utils.ts#L18">packages/beacon-state-transition/src/merge/utils.ts:18</a></em></p>
 <p>Merge block is the SINGLE block that transitions from POW to POS.
 state has no execution data AND this block has execution data</p>
 <p><strong>Parameters:</strong></p>
@@ -581,7 +608,7 @@ state has no execution data AND this block has execution data</p>
 <hr/>
 <h3 id="ismergeblockbodytype_1">isMergeBlockBodyType<a class="headerlink" href="#ismergeblockbodytype_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isMergeBlockBodyType</strong>(<code>blockBody</code>: <a href="../allforks/#beaconblockbody">BeaconBlockBody</a>): <em>blockBody is BeaconBlockBody</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/utils.ts#L42">packages/beacon-state-transition/src/merge/utils.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/utils.ts#L42">packages/beacon-state-transition/src/merge/utils.ts:42</a></em></p>
 <p>Type guard for merge.BeaconBlockBody</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -602,7 +629,7 @@ state has no execution data AND this block has execution data</p>
 <hr/>
 <h3 id="ismergecomplete_1">isMergeComplete<a class="headerlink" href="#ismergecomplete_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isMergeComplete</strong>(<code>state</code>: BeaconState): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/utils.ts#L29">packages/beacon-state-transition/src/merge/utils.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/utils.ts#L29">packages/beacon-state-transition/src/merge/utils.ts:29</a></em></p>
 <p>Merge is complete when the state includes execution layer data:
 state.latestExecutionPayloadHeader NOT EMPTY</p>
 <p><strong>Parameters:</strong></p>
@@ -624,7 +651,7 @@ state.latestExecutionPayloadHeader NOT EMPTY</p>
 <hr/>
 <h3 id="ismergestatetype_1">isMergeStateType<a class="headerlink" href="#ismergestatetype_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isMergeStateType</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>): <em>state is BeaconState</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/utils.ts#L37">packages/beacon-state-transition/src/merge/utils.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/utils.ts#L37">packages/beacon-state-transition/src/merge/utils.ts:37</a></em></p>
 <p>Type guard for merge.BeaconState</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -645,7 +672,7 @@ state.latestExecutionPayloadHeader NOT EMPTY</p>
 <hr/>
 <h3 id="upgradestate_1">upgradeState<a class="headerlink" href="#upgradestate_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>upgradeState</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›): <em><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/upgradeState.ts#L9">packages/beacon-state-transition/src/merge/upgradeState.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/upgradeState.ts#L9">packages/beacon-state-transition/src/merge/upgradeState.ts:9</a></em></p>
 <p>Upgrade a state from altair to merge.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -666,7 +693,7 @@ state.latestExecutionPayloadHeader NOT EMPTY</p>
 <hr/>
 <h3 id="upgradetreebackedstate">upgradeTreeBackedState<a class="headerlink" href="#upgradetreebackedstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>upgradeTreeBackedState</strong>(<code>config</code>: IBeaconConfig, <code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›): <em>TreeBacked‹BeaconState›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0f5ee0e/packages/beacon-state-transition/src/merge/upgradeState.ts#L16">packages/beacon-state-transition/src/merge/upgradeState.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/90c7299/packages/beacon-state-transition/src/merge/upgradeState.ts#L16">packages/beacon-state-transition/src/merge/upgradeState.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
