@@ -3,19 +3,29 @@ import axios from "axios";
 import {createIBeaconPreset} from "../../src/utils";
 import * as mainnet from "../../src/presets/mainnet";
 import * as minimal from "../../src/presets/minimal";
+import {ForkName} from "../../src";
 import {loadConfigYaml} from "../yaml";
 
 // Not e2e, but slow. Run with e2e tests
 
 async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: string): Promise<Record<string, unknown>> {
-  const phase0Url = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/phase0.yaml`;
-  const altairUrl = `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/altair.yaml`;
-  const phase0Res = await axios({url: phase0Url, timeout: 30 * 1000});
-  const altairRes = await axios({url: altairUrl, timeout: 30 * 1000});
-  return createIBeaconPreset({
-    ...loadConfigYaml(phase0Res.data),
-    ...loadConfigYaml(altairRes.data),
-  });
+  const urlByFork: Record<ForkName, string> = {
+    [ForkName.phase0]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/phase0.yaml`,
+    [ForkName.altair]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/altair.yaml`,
+    [ForkName.merge]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/merge.yaml`,
+  };
+
+  const downloadedParams = await Promise.all(
+    Object.values(urlByFork).map((url) =>
+      axios({url, timeout: 30 * 1000}).then((response) => loadConfigYaml(response.data))
+    )
+  );
+
+  // Merge all the fetched yamls for the different forks
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const configParams = Object.assign(...((downloadedParams as unknown) as [input: Record<string, unknown>]));
+
+  return createIBeaconPreset(configParams);
 }
 
 describe("Ensure config is synced", function () {

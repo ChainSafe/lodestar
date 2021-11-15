@@ -2,11 +2,13 @@ import {allForks, altair} from "@chainsafe/lodestar-types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
+  INACTIVITY_PENALTY_QUOTIENT_MERGE,
   PARTICIPATION_FLAG_WEIGHTS,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_TARGET_FLAG_INDEX,
   WEIGHT_DENOMINATOR,
+  ForkName,
 } from "@chainsafe/lodestar-params";
 import {
   CachedBeaconState,
@@ -56,7 +58,12 @@ export function getRewardsPenaltiesDeltas(
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config, epochCtx} = state;
-  const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * INACTIVITY_PENALTY_QUOTIENT_ALTAIR;
+  const fork = config.getForkName(state.slot);
+
+  const inactivityPenalityMultiplier =
+    fork === ForkName.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_MERGE;
+  const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
+
   const {statuses} = process;
   for (let i = 0; i < statuses.length; i++) {
     const status = statuses[i];

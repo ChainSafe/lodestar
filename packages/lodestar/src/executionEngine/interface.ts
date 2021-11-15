@@ -1,5 +1,6 @@
-import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
-
+import {merge, Root, RootHex} from "@chainsafe/lodestar-types";
+import {ByteVector} from "@chainsafe/ssz";
+import {DATA, QUANTITY} from "../eth1/provider/utils";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;
@@ -13,6 +14,27 @@ export enum ExecutePayloadStatus {
   SYNCING = "SYNCING",
 }
 
+export enum ForkChoiceUpdateStatus {
+  /** given payload is valid */
+  SUCCESS = "SUCCESS",
+  /** sync process is in progress */
+  SYNCING = "SYNCING",
+}
+
+export type PayloadAttributes = {
+  timestamp: number;
+  random: Uint8Array | ByteVector;
+  feeRecipient: Uint8Array | ByteVector;
+};
+
+export type ApiPayloadAttributes = {
+  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
+  timestamp: QUANTITY;
+  /** DATA, 32 Bytes - value for the random field of the new payload */
+  random: DATA;
+  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
+  feeRecipient: DATA;
+};
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
  * - JSON RPC over network
@@ -43,24 +65,11 @@ export interface IExecutionEngine {
    *
    * Should be called in response to fork-choice head and finalized events
    */
-  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void>;
-
-  /**
-   * Given the set of execution payload attributes, prepare_payload initiates a process of building an execution
-   * payload on top of the execution chain tip identified by parent_hash.
-   *
-   * Required for block producing
-   * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#prepare_payload
-   *
-   * Must be called close to the slot associated with the validator's block producing to get the blockHash and
-   * random correct
-   */
-  preparePayload(
-    parentHash: Root,
-    timestamp: number,
-    random: Bytes32,
-    feeRecipient: ExecutionAddress
-  ): Promise<PayloadId>;
+  notifyForkchoiceUpdate(
+    headBlockHash: Root | RootHex,
+    finalizedBlockHash: RootHex,
+    payloadAttributes?: PayloadAttributes
+  ): Promise<PayloadId | null>;
 
   /**
    * Given the payload_id, get_payload returns the most recent version of the execution payload that has been built

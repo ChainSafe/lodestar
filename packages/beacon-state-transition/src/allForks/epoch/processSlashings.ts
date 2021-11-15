@@ -6,6 +6,7 @@ import {
   ForkName,
   PROPORTIONAL_SLASHING_MULTIPLIER,
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+  PROPORTIONAL_SLASHING_MULTIPLIER_MERGE,
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance} from "../../util";
@@ -35,7 +36,11 @@ export function processSlashingsAllForks(
   const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
 
   const proportionalSlashingMultiplier =
-    fork === ForkName.phase0 ? PROPORTIONAL_SLASHING_MULTIPLIER : PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR;
+    fork === ForkName.phase0
+      ? PROPORTIONAL_SLASHING_MULTIPLIER
+      : fork === ForkName.altair
+      ? PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR
+      : PROPORTIONAL_SLASHING_MULTIPLIER_MERGE;
 
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;

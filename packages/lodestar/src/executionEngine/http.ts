@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
+import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -11,7 +11,14 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
+import {
+  ExecutePayloadStatus,
+  ForkChoiceUpdateStatus,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+  ApiPayloadAttributes,
+} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
@@ -46,7 +53,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   /**
-   * `engine_executePayload`
+   * `engine_executePayloadV1`
    *
    * 1. Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.
    * 2. Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.
@@ -57,7 +64,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
   async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
-    const method = "engine_executePayload";
+    const method = "engine_executePayloadV1";
     const {status} = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -81,58 +88,53 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
-  notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void> {
-    const method = "engine_forkchoiceUpdated";
-    return this.rpc.fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-      method,
-      params: [{headBlockHash, finalizedBlockHash}],
-    });
+  notifyForkchoiceUpdate(
+    headBlockHash: Root | RootHex,
+    finalizedBlockHash: RootHex,
+    payloadAttributes?: PayloadAttributes
+  ): Promise<PayloadId | null> {
+    const method = "engine_forkchoiceUpdatedV1";
+    const headBlockHashData = typeof headBlockHash === "string" ? headBlockHash : bytesToData(headBlockHash);
+    const apiPayloadAttributes: [input?: ApiPayloadAttributes] = payloadAttributes
+      ? [
+          {
+            timestamp: numToQuantity(payloadAttributes.timestamp),
+            random: bytesToData(payloadAttributes.random),
+            feeRecipient: bytesToData(payloadAttributes.feeRecipient),
+          },
+        ]
+      : [];
+    return this.rpc
+      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [
+          {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
+          ...apiPayloadAttributes,
+        ],
+      })
+      .then(({status, payloadId}) => {
+        // Validate status is known
+        const statusEnum = ForkChoiceUpdateStatus[status];
+        if (statusEnum === undefined) {
+          throw Error(`Unknown status ${status}`);
+        }
+
+        // Throw error on syncing if requested to produce a block, else silently ignore
+        if (payloadAttributes && statusEnum === ForkChoiceUpdateStatus.SYNCING) throw Error("Execution Layer Syncing");
+
+        return payloadId !== "0x" ? payloadId : null;
+      });
   }
 
   /**
-   * `engine_preparePayload`
-   *
-   * 1. Given provided field value set client software SHOULD build the initial version of the payload which has an empty transaction set.
-   * 2. Client software SHOULD start the process of updating the payload. The strategy of this process is implementation dependent. The default strategy would be to keep the transaction set up-to-date with the state of local mempool.
-   * 3. Client software SHOULD stop the updating process either by finishing to serve the engine_getPayload call with the same payloadId value or when SECONDS_PER_SLOT (currently set to 12 in the Mainnet configuration) seconds have passed since the point in time identified by the timestamp parameter.
-   * 4. Client software MUST set the payload field values according to the set of parameters passed in the call to this method with exception for the feeRecipient. The coinbase field value MAY deviate from what is specified by the feeRecipient parameter.
-   * 5. Client software SHOULD respond with 2: Action not allowed error if the sync process is in progress.
-   * 6. Client software SHOULD respond with 4: Unknown block error if the parent block is unknown.
-   */
-  async preparePayload(
-    parentHash: Root,
-    timestamp: number,
-    random: Bytes32,
-    feeRecipient: ExecutionAddress
-  ): Promise<PayloadId> {
-    const method = "engine_preparePayload";
-    const {payloadId} = await this.rpc.fetch<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [
-        {
-          parentHash: bytesToData(parentHash),
-          timestamp: numToQuantity(timestamp),
-          random: bytesToData(random),
-          feeRecipient: bytesToData(feeRecipient),
-        },
-      ],
-    });
-
-    return payloadId;
-  }
-
-  /**
-   * `engine_getPayload`
+   * `engine_getPayloadV1`
    *
    * 1. Given the payloadId client software MUST respond with the most recent version of the payload that is available in the corresponding building process at the time of receiving the call.
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
-    const method = "engine_getPayload";
+    const method = "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
@@ -151,7 +153,7 @@ type EngineApiRpcParamTypes = {
   /**
    * 1. Object - Instance of ExecutionPayload
    */
-  engine_executePayload: [ExecutionPayloadRpc];
+  engine_executePayloadV1: [ExecutionPayloadRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
@@ -163,15 +165,14 @@ type EngineApiRpcParamTypes = {
    *   - headBlockHash: DATA, 32 Bytes - block hash of the head of the canonical chain
    *   - finalizedBlockHash: DATA, 32 Bytes - block hash of the most recent finalized block
    */
-  engine_forkchoiceUpdated: [{headBlockHash: DATA; finalizedBlockHash: DATA}];
-  /**
-   * 1. Object - The payload attributes:
-   */
-  engine_preparePayload: [PayloadAttributes];
+  engine_forkchoiceUpdatedV1: [
+    param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
+    payloadAttributes?: ApiPayloadAttributes
+  ];
   /**
    * 1. payloadId: QUANTITY, 64 Bits - Identifier of the payload building process
    */
-  engine_getPayload: [QUANTITY];
+  engine_getPayloadV1: [QUANTITY];
 };
 
 type EngineApiRpcReturnTypes = {
@@ -179,25 +180,13 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayload: {status: ExecutePayloadStatus};
+  engine_executePayloadV1: {status: ExecutePayloadStatus};
   engine_consensusValidated: void;
-  engine_forkchoiceUpdated: void;
+  engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
-  engine_preparePayload: {payloadId: QUANTITY};
-  engine_getPayload: ExecutionPayloadRpc;
-};
-
-type PayloadAttributes = {
-  /** DATA, 32 Bytes - hash of the parent block */
-  parentHash: DATA;
-  /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
-  timestamp: QUANTITY;
-  /** DATA, 32 Bytes - value for the random field of the new payload */
-  random: DATA;
-  /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
-  feeRecipient: DATA;
+  engine_getPayloadV1: ExecutionPayloadRpc;
 };
 
 type ExecutionPayloadRpc = {
@@ -232,7 +221,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
     extraData: bytesToData(data.extraData),
     baseFeePerGas: numToQuantity(data.baseFeePerGas),
     blockHash: bytesToData(data.blockHash),
-    transactions: data.transactions.map((tran) => bytesToData(tran.value)),
+    transactions: data.transactions.map((tran) => bytesToData(tran)),
   };
 }
 
@@ -251,6 +240,6 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.Executio
     extraData: dataToBytes(data.extraData),
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
-    transactions: data.transactions.map((tran) => ({selector: 0, value: dataToBytes(tran)})),
+    transactions: data.transactions.map((tran) => dataToBytes(tran)),
   };
 }

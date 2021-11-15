@@ -16,7 +16,7 @@ import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
@@ -299,14 +299,8 @@ export class ForkChoice implements IForkChoice {
       merge.isMergeStateType(state) &&
       merge.isMergeBlockBodyType(block.body) &&
       merge.isMergeBlock(state, block.body)
-    ) {
-      const {powBlock, powBlockParent} = preCachedData || {};
-      if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-      if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
-      if (!isValidTerminalPowBlock(this.config, powBlock, powBlockParent)) {
-        throw Error("Not valid terminal POW block");
-      }
-    }
+    )
+      assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
 
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
@@ -910,11 +904,33 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function isValidTerminalPowBlock(config: IChainConfig, block: PowBlockHex, parent: PowBlockHex): boolean {
-  if (block.blockhash === toHexString(config.TERMINAL_BLOCK_HASH)) {
-    return true;
+function assertValidTerminalPowBlock(
+  config: IChainConfig,
+  block: merge.BeaconBlock,
+  preCachedData?: OnBlockPrecachedData
+): void {
+  if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
+    if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
+      throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
+
+    // powBock.blockhash is hex, so we just pick the corresponding root
+    if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
+      throw new Error(
+        `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
+          block.body.executionPayload.parentHash
+        )}`
+      );
+  } else {
+    // If no TERMINAL_BLOCK_HASH override, check ttd
+    const {powBlock, powBlockParent} = preCachedData || {};
+    if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
+    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
+
+    const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
+    const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
+    if (!isTotalDifficultyReached || !isParentTotalDifficultyValid)
+      throw Error(
+        `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
+      );
   }
-  const isTotalDifficultyReached = block.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
-  const isParentTotalDifficultyValid = parent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;
-  return isTotalDifficultyReached && isParentTotalDifficultyValid;
 }

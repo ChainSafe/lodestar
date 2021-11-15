@@ -1,10 +1,9 @@
 import crypto from "crypto";
-import {Bytes32, merge, Root, ExecutionAddress, RootHex} from "@chainsafe/lodestar-types";
+import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId} from "./interface";
+import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {
@@ -69,56 +68,46 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
    * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
    */
-  async notifyForkchoiceUpdate(headBlockHash: RootHex, finalizedBlockHash: RootHex): Promise<void> {
-    if (!this.knownBlocks.has(headBlockHash)) {
-      throw Error(`Unknown headBlockHash ${headBlockHash}`);
+  async notifyForkchoiceUpdate(
+    headBlockHash: Root,
+    finalizedBlockHash: RootHex,
+    payloadAttributes?: PayloadAttributes
+  ): Promise<PayloadId> {
+    const headBlockHashHex = toHexString(headBlockHash);
+    if (!this.knownBlocks.has(headBlockHashHex)) {
+      throw Error(`Unknown headBlockHash ${headBlockHashHex}`);
     }
     if (!this.knownBlocks.has(finalizedBlockHash)) {
       throw Error(`Unknown finalizedBlockHash ${finalizedBlockHash}`);
     }
 
-    this.headBlockRoot = headBlockHash;
+    this.headBlockRoot = headBlockHashHex;
     this.finalizedBlockRoot = finalizedBlockHash;
-  }
 
-  /**
-   * `engine_preparePayload`
-   *
-   * 1. Given provided field value set client software SHOULD build the initial version of the payload which has an empty transaction set.
-   * 2. Client software SHOULD start the process of updating the payload. The strategy of this process is implementation dependent. The default strategy would be to keep the transaction set up-to-date with the state of local mempool.
-   * 3. Client software SHOULD stop the updating process either by finishing to serve the engine_getPayload call with the same payloadId value or when SECONDS_PER_SLOT (currently set to 12 in the Mainnet configuration) seconds have passed since the point in time identified by the timestamp parameter.
-   * 4. Client software MUST set the payload field values according to the set of parameters passed in the call to this method with exception for the feeRecipient. The coinbase field value MAY deviate from what is specified by the feeRecipient parameter.
-   * 5. Client software SHOULD respond with 2: Action not allowed error if the sync process is in progress.
-   * 6. Client software SHOULD respond with 4: Unknown block error if the parent block is unknown.
-   */
-  async preparePayload(
-    parentHash: Root,
-    timestamp: number,
-    random: Bytes32,
-    feeRecipient: ExecutionAddress
-  ): Promise<PayloadId> {
-    const parentHashHex = toHexString(parentHash);
+    const parentHashHex = headBlockHashHex;
     const parentPayload = this.knownBlocks.get(parentHashHex);
     if (!parentPayload) {
       throw Error(`Unknown parentHash ${parentHashHex}`);
     }
 
+    if (!payloadAttributes) throw Error("InvalidPayloadAttributes");
+
     const payloadId = this.payloadId++;
     const payload: merge.ExecutionPayload = {
-      parentHash: parentHash,
-      coinbase: feeRecipient,
+      parentHash: headBlockHash,
+      coinbase: payloadAttributes.feeRecipient,
       stateRoot: crypto.randomBytes(32),
       receiptRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-      random: random,
+      random: payloadAttributes.random,
       blockNumber: parentPayload.blockNumber + 1,
       gasLimit: INTEROP_GAS_LIMIT,
       gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),
-      timestamp: timestamp,
+      timestamp: payloadAttributes.timestamp,
       extraData: ZERO_HASH,
       baseFeePerGas: BigInt(0),
       blockHash: crypto.randomBytes(32),
-      transactions: [{selector: 0, value: crypto.randomBytes(512)}],
+      transactions: [crypto.randomBytes(512)],
     };
     this.preparingPayloads.set(payloadId, payload);
 

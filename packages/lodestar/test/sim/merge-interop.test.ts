@@ -4,12 +4,11 @@ import net from "net";
 import {spawn} from "child_process";
 import {Context} from "mocha";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
@@ -21,6 +20,7 @@ import {simTestInfoTracker} from "../utils/node/simTest";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
+import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 
 // NOTE: Must specify GETH_BINARY_PATH ENV
 // Example:
@@ -194,36 +194,37 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 1. Prepare a payload
 
     /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_preparePayload","params":[{
-     * "parentHash":gensisBlockHash,
-     * "timestamp":"0x5",
-     * "random":"0x0000000000000000000000000000000000000000000000000000000000000000",
-     * "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
-     * }],"id":67}' http://localhost:8545
-     *
-     * {"jsonrpc":"2.0","id":67,"result":{"payloadId":"0x0"}}
-     */
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "safeBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "finalizedBlockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}, {"timestamp":"0x5", "random":"0x0000000000000000000000000000000000000000000000000000000000000000", "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}],"id":67}' http://localhost:8550
+     **/
 
     const preparePayloadParams = {
       // Note: this is created with a pre-defined genesis.json
-      parentHash: genesisBlockHash,
-      timestamp: "0x5",
-      random: "0x0000000000000000000000000000000000000000000000000000000000000000",
-      feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+      timestamp: quantityToNum("0x5"),
+      random: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      feeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
     };
 
-    const payloadId = await executionEngine.preparePayload(
-      dataToBytes(preparePayloadParams.parentHash),
-      quantityToNum(preparePayloadParams.timestamp),
-      dataToBytes(preparePayloadParams.random),
-      dataToBytes(preparePayloadParams.feeRecipient)
+    const finalizedBlockHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
+
+    const payloadId = await executionEngine.notifyForkchoiceUpdate(
+      genesisBlockHash,
+      finalizedBlockHash,
+      preparePayloadParams
     );
 
+    if (!payloadId) throw Error("InvalidPayloadId");
+
     // 2. Get the payload
+    /**
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayloadV1","params":["0xa247243752eb10b4"],"id":67}' http://localhost:8550
+     **/
 
     const payload = await executionEngine.getPayload(payloadId);
 
     // 3. Execute the payload
+    /**
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_executePayloadV1","params":[{"parentHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a","coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b","stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45","receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","random":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":"0x1","gasLimit":"0x1c9c380","gasUsed":"0x0","timestamp":"0x5","extraData":"0x","baseFeePerGas":"0x7","blockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858","transactions":[]}],"id":67}' http://localhost:8550
+     * **/
 
     const payloadResult = await executionEngine.executePayload(payload);
     if (!payloadResult) {
@@ -233,13 +234,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     // 4. Update the fork choice
 
     /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{
-     * "headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-     * "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"
-     * }],"id":67}' http://localhost:8545
-     */
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858", "safeBlockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858", "finalizedBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a"}, null],"id":67}' http://localhost:8550
+     **/
 
-    await executionEngine.notifyForkchoiceUpdate(toHexString(payload.blockHash), toHexString(payload.blockHash));
+    await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash);
 
     // Error cases
     // 1. unknown payload

@@ -3,7 +3,6 @@ import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
 import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
-import {dataToBytes, quantityToNum} from "../../../src/eth1/provider/utils";
 
 chai.use(chaiAsPromised);
 
@@ -40,50 +39,12 @@ describe("ExecutionEngine / http", () => {
     executionEngine = new ExecutionEngineHttp({urls: [baseUrl]}, controller.signal);
   });
 
-  it("preparePayload", async () => {
-    /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_preparePayload","params":[{
-     * "parentHash":"0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
-     * "timestamp":"0x5",
-     * "random":"0x0000000000000000000000000000000000000000000000000000000000000000",
-     * "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
-     * }],"id":67}' http://localhost:8545
-     *
-     * {"jsonrpc":"2.0","id":67,"result":{"payloadId":"0x0"}}
-     */
-
-    const request = {
-      jsonrpc: "2.0",
-      method: "engine_preparePayload",
-      params: [
-        {
-          parentHash: "0xa0513a503d5bd6e89a144c3268e5b7e9da9dbf63df125a360e3950a7d0d67131",
-          timestamp: "0x5",
-          random: "0x0000000000000000000000000000000000000000000000000000000000000000",
-          feeRecipient: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
-        },
-      ],
-    };
-    returnValue = {jsonrpc: "2.0", id: 67, result: {payloadId: "0x0"}};
-
-    const param0 = request.params[0];
-    const payloadId = await executionEngine.preparePayload(
-      dataToBytes(param0.parentHash),
-      quantityToNum(param0.timestamp),
-      dataToBytes(param0.random),
-      dataToBytes(param0.feeRecipient)
-    );
-
-    expect(payloadId).to.equal("0x0", "Wrong returned payloadId");
-    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
-  });
-
   it("getPayload", async () => {
     /**
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_getPayload","params":["0x0"],"id":67}' http://localhost:8545
      */
 
-    const request = {jsonrpc: "2.0", method: "engine_getPayload", params: ["0x0"]};
+    const request = {jsonrpc: "2.0", method: "engine_getPayloadV1", params: ["0x0"]};
     const response = {
       jsonrpc: "2.0",
       id: 67,
@@ -120,7 +81,7 @@ describe("ExecutionEngine / http", () => {
 
     const request = {
       jsonrpc: "2.0",
-      method: "engine_executePayload",
+      method: "engine_executePayloadV1",
       params: [
         {
           blockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
@@ -156,15 +117,16 @@ describe("ExecutionEngine / http", () => {
 
     const request = {
       jsonrpc: "2.0",
-      method: "engine_forkchoiceUpdated",
+      method: "engine_forkchoiceUpdatedV1",
       params: [
         {
           headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+          safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
           finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
         },
       ],
     };
-    returnValue = {jsonrpc: "2.0", id: 67, result: null};
+    returnValue = {jsonrpc: "2.0", id: 67, result: {status: "SUCCESS", payloadId: "0x"}};
 
     await executionEngine.notifyForkchoiceUpdate(request.params[0].headBlockHash, request.params[0].finalizedBlockHash);
 

@@ -1,4 +1,4 @@
-import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, altair, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {processParticipationRecordUpdates} from "@chainsafe/lodestar-beacon-state-transition/src/phase0/epoch/processParticipationRecordUpdates";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {EpochProcessFn, epochProcessing} from "../allForks/epochProcessing";
@@ -18,7 +18,7 @@ epochProcessing(ForkName.merge, {
   randao_mixes_reset: allForks.processRandaoMixesReset,
   registry_updates: allForks.processRegistryUpdates,
   rewards_and_penalties: altair.processRewardsAndPenalties as EpochProcessFn,
-  slashings: altair.processSlashings as EpochProcessFn,
+  slashings: merge.processSlashings as EpochProcessFn,
   slashings_reset: allForks.processSlashingsReset,
   sync_committee_updates: altair.processSyncCommitteeUpdates as EpochProcessFn,
 });
