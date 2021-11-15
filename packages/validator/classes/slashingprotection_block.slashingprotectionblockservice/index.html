@@ -377,7 +377,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new SlashingProtectionBlockService</strong>(<code>blockBySlot</code>: <a href="../slashingprotection_block.blockbyslotrepository/">BlockBySlotRepository</a>): <em><a href="./">SlashingProtectionBlockService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L14">packages/validator/src/slashingProtection/block/index.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L14">packages/validator/src/slashingProtection/block/index.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -397,11 +397,11 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-blockbyslot"><code>Private</code> blockBySlot<a class="headerlink" href="#private-blockbyslot" title="Permanent link">¶</a></h3>
 <p>• <strong>blockBySlot</strong>: <em><a href="../slashingprotection_block.blockbyslotrepository/">BlockBySlotRepository</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L14">packages/validator/src/slashingProtection/block/index.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L14">packages/validator/src/slashingProtection/block/index.ts:14</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="checkandinsertblockproposal">checkAndInsertBlockProposal<a class="headerlink" href="#checkandinsertblockproposal" title="Permanent link">¶</a></h3>
 <p>▸ <strong>checkAndInsertBlockProposal</strong>(<code>pubkey</code>: BLSPubkey, <code>block</code>: <a href="../../interfaces/slashingprotection.slashingprotectionblock/">SlashingProtectionBlock</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L24">packages/validator/src/slashingProtection/block/index.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L24">packages/validator/src/slashingProtection/block/index.ts:24</a></em></p>
 <p>Check a block proposal for slash safety, and if it is safe, record it in the database.
 This is the safe, externally-callable interface for checking block proposals.</p>
 <p><strong>Parameters:</strong></p>
@@ -427,7 +427,7 @@ This is the safe, externally-callable interface for checking block proposals.</p
 <hr/>
 <h3 id="checkblockproposal">checkBlockProposal<a class="headerlink" href="#checkblockproposal" title="Permanent link">¶</a></h3>
 <p>▸ <strong>checkBlockProposal</strong>(<code>pubkey</code>: BLSPubkey, <code>block</code>: <a href="../../interfaces/slashingprotection.slashingprotectionblock/">SlashingProtectionBlock</a>): <em>Promise‹<a href="../../enums/slashingprotection_block.safestatus/">SafeStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L37">packages/validator/src/slashingProtection/block/index.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L37">packages/validator/src/slashingProtection/block/index.ts:37</a></em></p>
 <p>Check a block proposal from <code>pubKey</code> for slash safety.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -452,7 +452,7 @@ This is the safe, externally-callable interface for checking block proposals.</p
 <hr/>
 <h3 id="exportblocks">exportBlocks<a class="headerlink" href="#exportblocks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>exportBlocks</strong>(<code>pubkey</code>: BLSPubkey): <em>Promise‹<a href="../../interfaces/slashingprotection.slashingprotectionblock/">SlashingProtectionBlock</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L87">packages/validator/src/slashingProtection/block/index.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L87">packages/validator/src/slashingProtection/block/index.ts:87</a></em></p>
 <p>Interchange import / export functionality</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -473,7 +473,7 @@ This is the safe, externally-callable interface for checking block proposals.</p
 <hr/>
 <h3 id="importblocks">importBlocks<a class="headerlink" href="#importblocks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>importBlocks</strong>(<code>pubkey</code>: BLSPubkey, <code>blocks</code>: <a href="../../interfaces/slashingprotection.slashingprotectionblock/">SlashingProtectionBlock</a>[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L80">packages/validator/src/slashingProtection/block/index.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L80">packages/validator/src/slashingProtection/block/index.ts:80</a></em></p>
 <p>Interchange import / export functionality</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -498,7 +498,7 @@ This is the safe, externally-callable interface for checking block proposals.</p
 <hr/>
 <h3 id="insertblockproposal">insertBlockProposal<a class="headerlink" href="#insertblockproposal" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertBlockProposal</strong>(<code>pubkey</code>: BLSPubkey, <code>block</code>: <a href="../../interfaces/slashingprotection.slashingprotectionblock/">SlashingProtectionBlock</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L73">packages/validator/src/slashingProtection/block/index.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L73">packages/validator/src/slashingProtection/block/index.ts:73</a></em></p>
 <p>Insert a block proposal into the slashing database
 This should <em>only</em> be called in the same (exclusive) transaction as <code>checkBlockProposal</code>
 so that the check isn't invalidated by a concurrent mutation</p>
@@ -525,7 +525,7 @@ so that the check isn't invalidated by a concurrent mutation</p>
 <hr/>
 <h3 id="listpubkeys">listPubkeys<a class="headerlink" href="#listpubkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>listPubkeys</strong>(): <em>Promise‹BLSPubkey[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/df54a0a/packages/validator/src/slashingProtection/block/index.ts#L91">packages/validator/src/slashingProtection/block/index.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09a4e53/packages/validator/src/slashingProtection/block/index.ts#L91">packages/validator/src/slashingProtection/block/index.ts:91</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹BLSPubkey[]›</em></p>
 </article>
 </div>
