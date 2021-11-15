@@ -203,9 +203,11 @@ export class PeerDiscovery {
    */
   private async runFindRandomNodeQuery(): Promise<void> {
     // Delay the 1st query after starting discv5
+    // See https://github.com/ChainSafe/lodestar/issues/3423
     if (Date.now() - this.discv5StartMs <= this.discv5FirstQueryDelayMs) {
       return;
     }
+
     // Run a general discv5 query if one is not already in progress
     if (this.randomNodeQuery.code === QueryStatusCode.Active) {
       this.metrics?.discovery.findNodeQueryRequests.inc({action: "ignore"});
