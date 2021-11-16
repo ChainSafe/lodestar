@@ -19,6 +19,10 @@ export type FullyVerifiedBlockFlags = {
    * Used by range sync.
    */
   ignoreIfFinalized?: boolean;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   */
+  payloadStatusUnknown?: boolean;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {

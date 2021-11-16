@@ -132,6 +132,10 @@ export interface IForkChoice {
   getBlockSummariesAtSlot(slot: Slot): IProtoBlock[];
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
   getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
+  /**
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   */
+  validateLatestHash(latestValidHash: RootHex, invalidBranchDecendantHash: RootHex | null): void;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
@@ -150,14 +154,19 @@ export type OnBlockPrecachedData = {
    * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
    * ```
    */
-  powBlock?: PowBlockHex;
+  powBlock?: PowBlockHex | null;
   /**
    * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts
    * const powParent = getPowBlock(powBlock.parentHash);
    * ```
    */
-  powBlockParent?: PowBlockHex;
+  powBlockParent?: PowBlockHex | null;
+  /**
+   * Optimistic sync fields
+   */
+  isMergeBlock?: boolean;
+  payloadStatusUnknown?: boolean;
 };
 
 export interface ILatestMessage {

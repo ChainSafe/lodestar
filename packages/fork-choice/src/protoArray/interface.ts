@@ -49,6 +49,11 @@ export interface IProtoBlock {
   justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
   finalizedRoot: RootHex;
+  /**
+   * Optimistic sync based statuses
+   */
+  payloadStatusUnknown?: boolean;
+  isMergeBlock?: boolean;
 }
 
 /**

@@ -296,9 +296,8 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (
-      merge.isMergeStateType(state) &&
-      merge.isMergeBlockBodyType(block.body) &&
-      merge.isMergeBlock(state, block.body)
+      preCachedData?.isMergeBlock ||
+      (merge.isMergeStateType(state) && merge.isMergeBlockBodyType(block.body) && merge.isMergeBlock(state, block.body))
     )
       assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
 
@@ -375,6 +374,10 @@ export class ForkChoice implements IForkChoice {
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+
+      // Optimistic sync based status to verify/prune later
+      payloadStatusUnknown: preCachedData?.payloadStatusUnknown,
+      isMergeBlock: preCachedData?.isMergeBlock,
     });
   }
 
@@ -627,6 +630,17 @@ export class ForkChoice implements IForkChoice {
     }
 
     return newNode.slot - commonAncestor.slot;
+  }
+
+  /**
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   * TODO: implementation:
+   * 1. verify is_merge_block if the mergeblock has not yet been validated
+   * 2. Throw critical error and exit if a block in finalized chain gets invalidated
+   */
+  validateLatestHash(_latestValidHash: RootHex, invalidBranchDecendantHash: RootHex | null): void {
+    if (invalidBranchDecendantHash) throw Error("NOT_IMPLEMENTED");
+    // Silently ignore for now if all calls were valid
   }
 
   private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: number[]): void {
@@ -922,6 +936,10 @@ function assertValidTerminalPowBlock(
       );
   } else {
     // If no TERMINAL_BLOCK_HASH override, check ttd
+
+    // Delay powBlock checks if the payload execution status is unknown because of syncing response in executePayload call while verifying
+    if (preCachedData?.payloadStatusUnknown) return;
+
     const {powBlock, powBlockParent} = preCachedData || {};
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
     if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");

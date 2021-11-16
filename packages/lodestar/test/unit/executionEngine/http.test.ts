@@ -102,7 +102,11 @@ describe("ExecutionEngine / http", () => {
         },
       ],
     };
-    returnValue = {jsonrpc: "2.0", id: 67, result: {status: "VALID"}};
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {status: "VALID", latestValidHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"},
+    };
 
     const status = await executionEngine.executePayload(parseExecutionPayload(request.params[0]));
 
