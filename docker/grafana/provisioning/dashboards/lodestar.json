@@ -19,12 +19,10 @@
     ]
   },
   "editable": true,
-  "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
   "id": 1,
   "links": [],
-  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
@@ -277,7 +275,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["last"],
+          "calcs": [
+            "last"
+          ],
           "fields": "",
           "values": false
         },
@@ -329,7 +329,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -380,7 +382,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -431,7 +435,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -486,7 +492,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -538,7 +546,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -594,7 +604,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -665,7 +677,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -723,7 +737,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -775,7 +791,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -836,7 +854,9 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": ["lastNotNull"],
+          "calcs": [
+            "lastNotNull"
+          ],
           "fields": "",
           "values": false
         },
@@ -2596,7 +2616,7 @@
             "h": 7,
             "w": 12,
             "x": 0,
-            "y": 5
+            "y": 20
           },
           "id": 192,
           "options": {
@@ -2605,7 +2625,9 @@
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "fields": "",
               "values": false
             },
@@ -2636,7 +2658,7 @@
             "h": 7,
             "w": 12,
             "x": 12,
-            "y": 5
+            "y": 20
           },
           "hiddenSeries": false,
           "id": 194,
@@ -2715,6 +2737,7 @@
         },
         {
           "datasource": null,
+          "description": "Percent of attestations having correct head",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2725,22 +2748,21 @@
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 10,
+                "fillOpacity": 0,
                 "gradientMode": "none",
                 "hideFrom": {
-                  "graph": false,
                   "legend": false,
                   "tooltip": false,
                   "viz": false
                 },
                 "lineInterpolation": "linear",
                 "lineWidth": 1,
-                "pointSize": 4,
+                "pointSize": 5,
                 "scaleDistribution": {
                   "type": "linear"
                 },
-                "showPoints": "always",
-                "spanNulls": true,
+                "showPoints": "auto",
+                "spanNulls": false,
                 "stacking": {
                   "group": "A",
                   "mode": "none"
@@ -2771,11 +2793,10 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 12
+            "y": 27
           },
-          "id": 196,
+          "id": 311,
           "options": {
-            "graph": {},
             "legend": {
               "calcs": [],
               "displayMode": "list",
@@ -2785,18 +2806,16 @@
               "mode": "single"
             }
           },
-          "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])) / (sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])))",
+              "exemplar": false,
+              "expr": "avg(validator_monitor_prev_epoch_on_chain_attester_correct_head_total)",
               "interval": "",
-              "legendFormat": "{{index}}",
+              "legendFormat": "Percent of correct head attestations",
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "prev epoch ATTESTER miss ratio",
+          "title": "Correct Head Percentage",
           "type": "timeseries"
         },
         {
@@ -2811,7 +2830,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 12
+            "y": 27
           },
           "hiddenSeries": false,
           "id": 198,
@@ -2946,9 +2965,9 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 20
+            "y": 35
           },
-          "id": 200,
+          "id": 196,
           "options": {
             "graph": {},
             "legend": {
@@ -2963,7 +2982,7 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0))\n/\n((sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$__rate_interval])) OR vector(0))\n+\n(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0)))",
+              "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])) / (sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$__rate_interval])) + sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval])))",
               "interval": "",
               "legendFormat": "{{index}}",
               "refId": "A"
@@ -2971,7 +2990,7 @@
           ],
           "timeFrom": null,
           "timeShift": null,
-          "title": "prev epoch HEAD miss ratio",
+          "title": "prev epoch ATTESTER miss ratio",
           "type": "timeseries"
         },
         {
@@ -3032,7 +3051,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 20
+            "y": 35
           },
           "id": 202,
           "options": {
@@ -3061,99 +3080,90 @@
           "type": "timeseries"
         },
         {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
           "datasource": null,
           "fieldConfig": {
             "defaults": {
-              "unit": "short"
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 10,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "graph": false,
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 4,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "always",
+                "spanNulls": true,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "mappings": [],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 80
+                  }
+                ]
+              },
+              "unit": "percentunit"
             },
             "overrides": []
           },
-          "fill": 1,
-          "fillGradient": 0,
           "gridPos": {
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 43
           },
-          "hiddenSeries": false,
-          "id": 204,
-          "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
-            "min": false,
-            "show": true,
-            "total": false,
-            "values": false
-          },
-          "lines": true,
-          "linewidth": 1,
-          "nullPointMode": "null",
+          "id": 200,
           "options": {
-            "alertThreshold": true
+            "graph": {},
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "single"
+            }
           },
-          "percentage": false,
-          "pluginVersion": "8.1.5",
-          "pointradius": 2,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": false,
+          "pluginVersion": "7.4.5",
           "targets": [
             {
-              "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators_total)",
+              "expr": "(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0))\n/\n((sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$__rate_interval])) OR vector(0))\n+\n(sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval])) OR vector(0)))",
               "interval": "",
               "legendFormat": "{{index}}",
               "refId": "A"
             }
           ],
-          "thresholds": [],
           "timeFrom": null,
-          "timeRegions": [],
           "timeShift": null,
-          "title": "Attestations per epoch per validator",
-          "tooltip": {
-            "shared": true,
-            "sort": 0,
-            "value_type": "individual"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
+          "title": "prev epoch HEAD miss ratio",
+          "type": "timeseries"
         },
         {
           "aliasColors": {},
@@ -3173,7 +3183,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 28
+            "y": 43
           },
           "hiddenSeries": false,
           "id": 206,
@@ -3230,6 +3240,101 @@
           "yaxes": [
             {
               "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": null,
+          "fieldConfig": {
+            "defaults": {
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 51
+          },
+          "hiddenSeries": false,
+          "id": 204,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "alertThreshold": true
+          },
+          "percentage": false,
+          "pluginVersion": "8.1.5",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators_total)",
+              "interval": "",
+              "legendFormat": "{{index}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Attestations per epoch per validator",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
               "label": null,
               "logBase": 1,
               "max": null,
@@ -6319,7 +6424,9 @@
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": ["lastNotNull"],
+              "calcs": [
+                "lastNotNull"
+              ],
               "fields": "",
               "values": false
             },
@@ -8141,7 +8248,9 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": ["last"],
+              "calcs": [
+                "last"
+              ],
               "fields": "",
               "values": false
             },
@@ -8277,7 +8386,9 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": ["last"],
+              "calcs": [
+                "last"
+              ],
               "fields": "",
               "values": false
             },
@@ -8332,7 +8443,9 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": ["last"],
+              "calcs": [
+                "last"
+              ],
               "fields": "",
               "values": false
             },
@@ -9135,7 +9248,9 @@
                   "id": "byNames",
                   "options": {
                     "mode": "exclude",
-                    "names": ["start"],
+                    "names": [
+                      "start"
+                    ],
                     "prefix": "All except:",
                     "readOnly": true
                   }
@@ -12853,10 +12968,21 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]
   },
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 4
+  "version": 5
 }
