@@ -6,7 +6,7 @@ import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-u
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
-import {Protocol, RequestBody, ResponseBody} from "../types";
+import {Protocol, RequestBody, LodestarResponseBody} from "../types";
 import {onChunk} from "../utils";
 import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
@@ -19,7 +19,7 @@ export type PerformRequestHandler = (
   protocol: Protocol,
   requestBody: RequestBody,
   peerId: PeerId
-) => AsyncIterable<ResponseBody>;
+) => AsyncIterable<LodestarResponseBody>;
 
 type HandleRequestModules = {
   config: IBeaconConfig;

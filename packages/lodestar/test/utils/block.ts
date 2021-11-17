@@ -1,4 +1,8 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {P2pBlockResponse} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
@@ -34,6 +38,29 @@ export function generateEmptySignedBlock(): phase0.SignedBeaconBlock {
     message: generateEmptyBlock(),
     signature: EMPTY_SIGNATURE,
   };
+}
+
+export function generateEmptyP2pBlockResponse(): P2pBlockResponse {
+  return {
+    slot: 0,
+    bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock())),
+  };
+}
+
+export function blocksToP2pBlockResponses(
+  blocks: allForks.SignedBeaconBlock[],
+  config?: IChainForkConfig
+): P2pBlockResponse[] {
+  return blocks.map((block) => {
+    const slot = block.message.slot;
+    const sszType = config
+      ? config.getForkTypes(slot).SignedBeaconBlock
+      : defaultConfig.getForkTypes(slot).SignedBeaconBlock;
+    return {
+      slot,
+      bytes: Buffer.from(sszType.serialize(block)),
+    };
+  });
 }
 
 export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader {

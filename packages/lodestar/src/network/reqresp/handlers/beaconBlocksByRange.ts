@@ -1,5 +1,5 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@chainsafe/lodestar-params";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {P2pBlockResponse, phase0} from "@chainsafe/lodestar-types";
 import {IBlockFilterOptions} from "../../../db/repositories";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
@@ -12,7 +12,7 @@ export async function* onBeaconBlocksByRange(
   requestBody: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<allForks.SignedBeaconBlock> {
+): AsyncIterable<P2pBlockResponse> {
   if (requestBody.step < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "step < 1");
   }
@@ -28,7 +28,7 @@ export async function* onBeaconBlocksByRange(
     requestBody.count = MAX_REQUEST_BLOCKS;
   }
 
-  const archiveBlocksStream = db.blockArchive.valuesStream({
+  const archiveBlocksStream = db.blockArchive.p2pBlockStream({
     gte: requestBody.startSlot,
     lt: requestBody.startSlot + requestBody.count * requestBody.step,
     step: requestBody.step,
@@ -37,16 +37,16 @@ export async function* onBeaconBlocksByRange(
 }
 
 export async function* injectRecentBlocks(
-  archiveStream: AsyncIterable<allForks.SignedBeaconBlock>,
+  archiveStream: AsyncIterable<P2pBlockResponse>,
   chain: IBeaconChain,
   request: phase0.BeaconBlocksByRangeRequest
-): AsyncGenerator<allForks.SignedBeaconBlock> {
+): AsyncGenerator<P2pBlockResponse> {
   let totalBlock = 0;
   let slot = -1;
-  for await (const archiveBlock of archiveStream) {
+  for await (const p2pBlock of archiveStream) {
     totalBlock++;
-    yield archiveBlock;
-    slot = archiveBlock.message.slot;
+    yield p2pBlock;
+    slot = p2pBlock.slot;
   }
   slot = slot === -1 ? request.startSlot : slot + request.step;
   const upperSlot = request.startSlot + request.count * request.step;
@@ -56,11 +56,11 @@ export async function* injectRecentBlocks(
     slot += request.step;
   }
 
-  const blocks = await chain.getUnfinalizedBlocksAtSlots(slots);
-  for (const block of blocks) {
-    if (block !== undefined) {
+  const p2pBlocks = await chain.getUnfinalizedBlocksAtSlots(slots);
+  for (const p2pBlock of p2pBlocks) {
+    if (p2pBlock !== undefined) {
       totalBlock++;
-      yield block;
+      yield p2pBlock;
     }
   }
   if (totalBlock === 0) {

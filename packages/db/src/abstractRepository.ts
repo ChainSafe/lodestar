@@ -149,6 +149,7 @@ export abstract class Repository<I extends Id, T> {
     const data = await this.db.keys(this.dbFilterOptions(opts));
     return (data ?? []).map((data) => this.decodeKey(data));
   }
+
   async *keysStream(opts?: IFilterOptions<I>): AsyncIterable<I> {
     this.dbReadsMetrics?.inc();
     const keysStream = this.db.keysStream(this.dbFilterOptions(opts));
@@ -157,11 +158,13 @@ export abstract class Repository<I extends Id, T> {
       yield decodeKey(key);
     }
   }
+
   async values(opts?: IFilterOptions<I>): Promise<T[]> {
     this.dbReadsMetrics?.inc();
     const data = await this.db.values(this.dbFilterOptions(opts));
     return (data ?? []).map((data) => this.decodeValue(data));
   }
+
   async *valuesStream(opts?: IFilterOptions<I>): AsyncIterable<T> {
     this.dbReadsMetrics?.inc();
     const valuesStream = this.db.valuesStream(this.dbFilterOptions(opts));
@@ -170,6 +173,12 @@ export abstract class Repository<I extends Id, T> {
       yield decodeValue(value);
     }
   }
+
+  async *binaryValuesStream(opts?: IFilterOptions<I>): AsyncIterable<Buffer> {
+    this.dbReadsMetrics?.inc();
+    yield* this.db.valuesStream(this.dbFilterOptions(opts));
+  }
+
   async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {
     this.dbReadsMetrics?.inc();
     const data = await this.db.entries(this.dbFilterOptions(opts));
@@ -178,6 +187,7 @@ export abstract class Repository<I extends Id, T> {
       value: this.decodeValue(data.value),
     }));
   }
+
   async *entriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<I, T>> {
     this.dbReadsMetrics?.inc();
     const entriesStream = this.db.entriesStream(this.dbFilterOptions(opts));

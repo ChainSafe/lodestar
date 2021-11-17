@@ -1,5 +1,5 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, P2pBlockResponse, phase0, ssz} from "@chainsafe/lodestar-types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -141,11 +141,22 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
   }
 }
 
-export type ResponseBodyByMethod = {
+type CommonResponseBodyByMethod = {
   [Method.Status]: phase0.Status;
   [Method.Goodbye]: phase0.Goodbye;
   [Method.Ping]: phase0.Ping;
   [Method.Metadata]: phase0.Metadata;
+};
+
+// Used internally by lodestar to response to beacon_blocks_by_range and beacon_blocks_by_root
+// without having to deserialize and serialize from/to bytes
+export type LodestarResponseBodyByMethod = CommonResponseBodyByMethod & {
+  [Method.BeaconBlocksByRange]: P2pBlockResponse;
+  [Method.BeaconBlocksByRoot]: P2pBlockResponse;
+};
+
+// p2p protocol in the spec
+export type ResponseBodyByMethod = CommonResponseBodyByMethod & {
   [Method.BeaconBlocksByRange]: allForks.SignedBeaconBlock;
   [Method.BeaconBlocksByRoot]: allForks.SignedBeaconBlock;
 };
@@ -153,8 +164,10 @@ export type ResponseBodyByMethod = {
 // Helper types to generically define the arguments of the encoder functions
 
 export type RequestBody = RequestBodyByMethod[Method];
+export type LodestarResponseBody = LodestarResponseBodyByMethod[Method];
 export type ResponseBody = ResponseBodyByMethod[Method];
 export type RequestOrResponseBody = RequestBody | ResponseBody;
+export type RequestOrLodestarResponseBody = RequestBody | LodestarResponseBody;
 
 export type RequestType = Exclude<ReturnType<typeof getRequestSzzTypeByMethod>, null>;
 export type ResponseType = ReturnType<typeof getResponseSzzTypeByMethod>;
@@ -166,5 +179,5 @@ export type RequestTypedContainer = {
   [K in Method]: {method: K; body: RequestBodyByMethod[K]};
 }[Method];
 export type ResponseTypedContainer = {
-  [K in Method]: {method: K; body: ResponseBodyByMethod[K]};
+  [K in Method]: {method: K; body: LodestarResponseBodyByMethod[K]};
 }[Method];

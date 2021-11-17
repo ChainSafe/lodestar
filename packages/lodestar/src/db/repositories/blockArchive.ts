@@ -2,9 +2,9 @@ import all from "it-all";
 import {ArrayLike} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
-import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
+import {Slot, Root, allForks, ssz, P2pBlockResponse} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork";
+import {getSignedBlockTypeFromBytes, getSlotFromBytes} from "../../util/multifork";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex";
 
@@ -101,14 +101,21 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
+  async *p2pBlockStream(opts?: IBlockFilterOptions): AsyncIterable<P2pBlockResponse> {
+    const firstSlot = this.getFirstSlot(opts);
+    const binaryValuesStream = super.binaryValuesStream(opts);
+    const step = (opts && opts.step) || 1;
+
+    for await (const bytes of binaryValuesStream) {
+      const slot = getSlotFromBytes(bytes);
+      if ((slot - firstSlot) % step === 0) {
+        yield {bytes, slot};
+      }
+    }
+  }
+
   async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
-    const dbFilterOpts = this.dbFilterOptions(opts);
-    const firstSlot = dbFilterOpts.gt
-      ? this.decodeKey(dbFilterOpts.gt) + 1
-      : dbFilterOpts.gte
-      ? this.decodeKey(dbFilterOpts.gte)
-      : null;
-    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
+    const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) || 1;
 
@@ -130,6 +137,11 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return slot !== null ? await this.get(slot) : null;
   }
 
+  async getBinaryByRoot(root: Root): Promise<Buffer | null> {
+    const slot = await this.getSlotByRoot(root);
+    return slot !== null ? await this.getBinary(slot) : null;
+  }
+
   async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     return slot !== null ? await this.get(slot) : null;
@@ -148,5 +160,17 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     const slot = bytesToInt(slotBytes, "be");
     // TODO: Is this necessary? How can bytesToInt return a non-integer?
     return Number.isInteger(slot) ? slot : null;
+  }
+
+  private getFirstSlot(opts?: IBlockFilterOptions): Slot {
+    const dbFilterOpts = this.dbFilterOptions(opts);
+    const firstSlot = dbFilterOpts.gt
+      ? this.decodeKey(dbFilterOpts.gt) + 1
+      : dbFilterOpts.gte
+      ? this.decodeKey(dbFilterOpts.gte)
+      : null;
+    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
+
+    return firstSlot;
   }
 }

@@ -1,21 +1,23 @@
 import chai from "chai";
 import chaiAsPromised from "chai-as-promised";
 import pipe from "it-pipe";
+import {allForks} from "@chainsafe/lodestar-types";
 import all from "it-all";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {
   Method,
   Version,
   Encoding,
-  ResponseBody,
-  ResponseBodyByMethod,
+  LodestarResponseBody,
   getResponseSzzTypeByMethod,
+  ResponseBodyByMethod,
 } from "../../../../../src/network/reqresp/types";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
 import {config} from "../../../../utils/config";
+import {blocksToP2pBlockResponses} from "../../../../utils/block";
 
 chai.use(chaiAsPromised);
 
@@ -36,10 +38,14 @@ describe("network / reqresp / encoders / responseTypes", () => {
   const forkName = ForkName.phase0;
 
   for (const encoding of encodings) {
-    for (const [_method, _responsesChunks] of Object.entries(testCases)) {
+    for (const [_method, responsesChunks] of Object.entries(testCases)) {
       // Cast to more generic types, type by index is useful only at declaration of `testCases`
       const method = _method as keyof typeof testCases;
-      const responsesChunks = _responsesChunks as ResponseBody[][];
+      // const responsesChunks = _responsesChunks as LodestarResponseBody[][];
+      const lodestarResponseBodies =
+        _method === Method.BeaconBlocksByRange || _method === Method.BeaconBlocksByRoot
+          ? responsesChunks.map((chunk) => blocksToP2pBlockResponses(chunk as allForks.SignedBeaconBlock[]))
+          : (responsesChunks as LodestarResponseBody[][]);
 
       const versions =
         method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot
@@ -51,7 +57,7 @@ describe("network / reqresp / encoders / responseTypes", () => {
           it(`${encoding} v${version} ${method} - resp ${i}`, async function () {
             const protocol = {method, version, encoding};
             const returnedResponses = await pipe(
-              arrToSource(responseChunks),
+              arrToSource(lodestarResponseBodies[i]),
               responseEncodeSuccess(config, protocol),
               responseDecode(config, protocol),
               all

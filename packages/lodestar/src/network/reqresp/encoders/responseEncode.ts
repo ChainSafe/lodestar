@@ -6,12 +6,13 @@ import {encodeErrorMessage} from "../utils";
 import {
   Method,
   Protocol,
-  ResponseBody,
+  LodestarResponseBody,
   ResponseTypedContainer,
-  ResponseBodyByMethod,
+  LodestarResponseBodyByMethod,
   ContextBytesType,
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
+  ResponseBodyByMethod,
 } from "../types";
 
 /**
@@ -26,7 +27,7 @@ import {
 export function responseEncodeSuccess(
   config: IBeaconConfig,
   protocol: Protocol
-): (source: AsyncIterable<ResponseBody>) => AsyncIterable<Buffer> {
+): (source: AsyncIterable<LodestarResponseBody>) => AsyncIterable<Buffer> {
   const contextBytesType = contextBytesTypeByProtocol(protocol);
 
   return async function* responseEncodeSuccessTransform(source) {
@@ -34,12 +35,15 @@ export function responseEncodeSuccess(
       // <result>
       yield Buffer.from([RespStatus.SUCCESS]);
 
-      // <context-bytes>
+      // <context-bytes> - from altair
       const forkName = getForkNameFromResponseBody(config, protocol, chunk);
       yield* writeContextBytes(config, contextBytesType, forkName);
 
       // <encoding-dependent-header> | <encoded-payload>
-      const type = getResponseSzzTypeByMethod(protocol, forkName);
+      const type =
+        protocol.method === Method.BeaconBlocksByRange || protocol.method === Method.BeaconBlocksByRoot
+          ? null
+          : getResponseSzzTypeByMethod(protocol, forkName);
       yield* writeEncodedPayload(chunk, protocol.encoding, type);
     }
   };
@@ -91,7 +95,7 @@ export async function* writeContextBytes(
 export function getForkNameFromResponseBody<K extends Method>(
   config: IBeaconConfig,
   protocol: Protocol,
-  body: ResponseBodyByMethod[K]
+  body: LodestarResponseBodyByMethod[K] | ResponseBodyByMethod[K]
 ): ForkName {
   const requestTyped = {method: protocol.method, body} as ResponseTypedContainer;
 
@@ -104,6 +108,6 @@ export function getForkNameFromResponseBody<K extends Method>(
 
     case Method.BeaconBlocksByRange:
     case Method.BeaconBlocksByRoot:
-      return config.getForkName(requestTyped.body.message.slot);
+      return config.getForkName(requestTyped.body.slot);
   }
 }

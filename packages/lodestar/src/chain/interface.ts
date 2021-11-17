@@ -1,4 +1,4 @@
-import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, P2pBlockResponse} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
@@ -83,7 +83,7 @@ export interface IBeaconChain {
    * @param slot
    */
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
-  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]>;
+  getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<P2pBlockResponse[]>;
 
   /** Process a block until complete */
   processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;

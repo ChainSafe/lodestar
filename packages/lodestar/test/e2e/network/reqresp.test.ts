@@ -18,7 +18,7 @@ import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {createNode} from "../../utils/network";
 import {generateState} from "../../utils/state";
 import {arrToSource, generateEmptySignedBlocks} from "../../unit/network/reqresp/utils";
-import {generateEmptySignedBlock} from "../../utils/block";
+import {blocksToP2pBlockResponses, generateEmptyP2pBlockResponse, generateEmptySignedBlock} from "../../utils/block";
 import {expectRejectedWithLodestarError} from "../../utils/errors";
 import {connect, onPeerConnect} from "../../utils/network";
 import {StubbedBeaconDb} from "../../utils/stub";
@@ -179,7 +179,7 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* () {
-        yield* arrToSource(blocks);
+        yield* arrToSource(blocksToP2pBlockResponses(blocks));
       },
     });
 
@@ -215,7 +215,7 @@ describe("network / ReqResp", function () {
 
     const [netA, netB] = await createAndConnectPeers({
       onBeaconBlocksByRange: async function* onRequest() {
-        yield* arrToSource(generateEmptySignedBlocks(2));
+        yield* arrToSource(blocksToP2pBlockResponses(generateEmptySignedBlocks(2)));
         throw Error(testErrorMessage);
       },
     });
@@ -237,7 +237,7 @@ describe("network / ReqResp", function () {
         onBeaconBlocksByRange: async function* onRequest() {
           // Wait for too long before sending first response chunk
           await sleep(TTFB_TIMEOUT * 10);
-          yield generateEmptySignedBlock();
+          yield generateEmptyP2pBlockResponse();
         },
       },
       {TTFB_TIMEOUT}
@@ -258,10 +258,10 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
-          yield generateEmptySignedBlock();
+          yield generateEmptyP2pBlockResponse();
           // Wait for too long before sending second response chunk
           await sleep(RESP_TIMEOUT * 5);
-          yield generateEmptySignedBlock();
+          yield generateEmptyP2pBlockResponse();
         },
       },
       {RESP_TIMEOUT}
@@ -299,7 +299,7 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers(
       {
         onBeaconBlocksByRange: async function* onRequest() {
-          yield generateEmptySignedBlock();
+          yield generateEmptyP2pBlockResponse();
           await sleep(100000000);
         },
       },

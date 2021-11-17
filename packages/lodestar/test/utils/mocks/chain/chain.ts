@@ -1,3 +1,4 @@
+import {P2pBlockResponse} from "@chainsafe/lodestar-types";
 import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
@@ -132,8 +133,12 @@ export class MockBeaconChain implements IBeaconChain {
     return block;
   }
 
-  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<allForks.SignedBeaconBlock[]> {
-    return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
+  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<P2pBlockResponse[]> {
+    const blocks = await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
+    return blocks.map((block, i) => ({
+      slot: slots[i],
+      bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
+    }));
   }
 
   getGenesisTime(): Number64 {
