@@ -31,7 +31,7 @@ describe("block archiver task", function () {
     const nonCanonicalBlocks = [blocks[2]];
     forkChoiceStub.getAllAncestorBlocks.returns(canonicalBlocks);
     forkChoiceStub.getAllNonAncestorBlocks.returns(nonCanonicalBlocks);
-    await archiveBlocks(dbStub, forkChoiceStub, logger, {epoch: 5, root: ZERO_HASH, rootHex: ""});
+    await archiveBlocks(dbStub, forkChoiceStub, logger, {epoch: 5, root: ZERO_HASH, root: ""});
     expect(
       dbStub.blockArchive.batchPutBinary.calledWith(
         canonicalBlocks.map((summary) => ({
