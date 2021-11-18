@@ -22,12 +22,12 @@ import {ZERO_HASH} from "../../src/constants";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 
 // NOTE: Must specify
-// EL_BINARY_PATH: File path to locate the EL executable
-// EL_DIR: Directory in kintsugi folder for the EL client, from where to execute post-merge/pre-merge EL scenario scripts
+// EL_BINARY_DIR: File path to locate the EL executable
+// EL_SCRIPT_DIR: Directory in kintsugi folder for the EL client, from where to execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
 // Example:
 // ```
-// $ EL_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_DIR=geth EL_PORT=8545 ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=geth EL_PORT=8545 ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
@@ -60,12 +60,15 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   /**
    * Start Geth process, accumulate stdout stderr and kill the process on afterEach() hook
    */
-  function startELProcess(elPath: string, args: string[]): void {
-    if (!elPath) {
-      throw Error("elPath ENV must be provided");
-    }
-
-    const gethProc = spawn(elPath, args);
+  function startELProcess(args: {runScriptPath: string; TTD: string; DATA_DIR: string}): void {
+    const {runScriptPath, TTD, DATA_DIR} = args;
+    const gethProc = spawn(runScriptPath, [], {
+      env: {
+        ...process.env,
+        TTD,
+        DATA_DIR,
+      },
+    });
 
     gethProc.stdout.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
@@ -99,23 +102,20 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
   // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
   async function runEL(elScript: string, ttd: number): Promise<{genesisBlockHash: string}> {
-    if (!process.env.EL_BINARY_PATH || !process.env.EL_DIR || !process.env.EL_PORT) {
+    if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR || !process.env.EL_PORT) {
       throw Error(
-        `EL ENV must be provided, EL_BINARY_PATH: ${process.env.EL_BINARY_PATH}, EL_DIR: ${process.env.EL_DIR}, EL_PORT: ${process.env.EL_PORT}`
+        `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}, EL_PORT: ${process.env.EL_PORT}`
       );
     }
 
     await shell(`rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
 
-    startELProcess(`../../kintsugi/${process.env.EL_DIR}/${elScript}`, [
-      "--ttd",
-      `${ttd}`,
-      "--dataDir",
-      dataPath,
-      "--elPath",
-      process.env.EL_BINARY_PATH,
-    ]);
+    startELProcess({
+      runScriptPath: `../../kintsugi/${process.env.EL_SCRIPT_DIR}/${elScript}`,
+      TTD: `${ttd}`,
+      DATA_DIR: dataPath,
+    });
 
     // Wait for Geth to be online
     const controller = new AbortController();

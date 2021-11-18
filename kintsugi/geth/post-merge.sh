@@ -1,8 +1,12 @@
 #!/bin/bash -x
 
-# Parse args to get elPath, ttd, dataDir
-. $(dirname "$0")/../parse-args.sh
+scriptDir=$(dirname $0)
 
-env TTD=$ttd envsubst < $currentDir/genesisPost.tmpl > $dataDir/genesis.json
-$elPath/geth --catalyst --datadir $dataDir init $dataDir/genesis.json
-$elPath/geth --catalyst --http --ws -http.api "engine,net,eth" --datadir $dataDir
+echo $TTD
+echo $DATA_DIR
+echo $scriptDir
+echo $EL_BINARY_DIR
+
+env TTD=$TTD envsubst < $scriptDir/genesisPost.tmpl > $DATA_DIR/genesis.json
+$EL_BINARY_DIR/geth --catalyst --datadir $DATA_DIR init $DATA_DIR/genesis.json
+$EL_BINARY_DIR/geth --catalyst --http --ws -http.api "engine,net,eth" --datadir $DATA_DIR
