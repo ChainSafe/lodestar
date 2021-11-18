@@ -38,11 +38,31 @@ jobs:
       - name: Build Geth
         run: cd go-ethereum && make
 
-      - name: Simulation query geth node
+      - name: Simulation query Geth node
         run: yarn test:sim:merge-interop
         working-directory: packages/lodestar
         env:
-          GETH_BINARY_PATH: ../../go-ethereum/build/bin/geth
+          EL_BINARY_PATH: ../../go-ethereum/build/bin
+          EL_DIR: geth
+          EL_PORT: 8545
+
+      # Install Nethermind merge interop
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.x'
+      - name: Clone Nethermind merge interop branch
+        run: git clone -b themerge_kintsugi https://github.com/NethermindEth/nethermind --recursive
+      - name: Build Nethermind
+        run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
+
+      - name: Simulation query Nethermind node
+        run: yarn test:sim:merge-interop
+        working-directory: packages/lodestar
+        env:
+          EL_BINARY_PATH: ../../nethermind/src/Nethermind/Nethermind.Runner
+          EL_DIR: nethermind
+          EL_PORT: 8550
+
 
       - name: Upload debug log test files
         if: ${{ always() }}
@@ -50,3 +70,4 @@ jobs:
         with:
           name: debug-test-logs
           path: packages/lodestar/test-logs
+

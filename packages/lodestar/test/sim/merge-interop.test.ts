@@ -1,5 +1,4 @@
 import fs from "fs";
-import path from "path";
 import net from "net";
 import {spawn} from "child_process";
 import {Context} from "mocha";
@@ -22,10 +21,13 @@ import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
 
-// NOTE: Must specify GETH_BINARY_PATH ENV
+// NOTE: Must specify
+// EL_BINARY_PATH: File path to locate the EL executable
+// EL_DIR: Directory in kintsugi folder for the EL client, from where to execute post-merge/pre-merge EL scenario scripts
+// EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
 // Example:
 // ```
-// $ GETH_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin/geth ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_PATH=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_DIR=geth EL_PORT=8545 ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
@@ -38,8 +40,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
-  const jsonRpcPort = 8545;
-  const enginePort = 8545;
+  const jsonRpcPort = process.env.EL_PORT;
+  const enginePort = process.env.EL_PORT;
   const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
   const engineApiUrl = `http://localhost:${enginePort}`;
 
@@ -58,37 +60,37 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   /**
    * Start Geth process, accumulate stdout stderr and kill the process on afterEach() hook
    */
-  function startGethProcess(args: string[]): void {
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
+  function startELProcess(elPath: string, args: string[]): void {
+    if (!elPath) {
+      throw Error("elPath ENV must be provided");
     }
 
-    const gethProc = spawn(process.env.GETH_BINARY_PATH, args);
+    const gethProc = spawn(elPath, args);
 
     gethProc.stdout.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      process.stdout.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
+      process.stdout.write(`EL ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
     });
     gethProc.stderr.on("data", (chunk) => {
       const str = Buffer.from(chunk).toString("utf8");
-      process.stderr.write(`GETH ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
+      process.stderr.write(`EL ${gethProc.pid}: ${str}`); // str already contains a new line. console.log adds a new line
     });
 
     gethProc.on("exit", (code) => {
-      console.log("Geth exited", {code});
+      console.log("EL exited", {code});
     });
 
     afterEachCallbacks.push(async function () {
       if (gethProc.killed) {
-        throw Error("Geth is killed before end of test");
+        throw Error("EL is killed before end of test");
       }
 
-      console.log("Killing Geth process", gethProc.pid);
-      await shell(`kill ${gethProc.pid}`);
+      console.log("Killing EL process", gethProc.pid);
+      await shell(`pkill -15 -P ${gethProc.pid}`);
 
       // Wait for the P2P to be offline
-      await waitForGethOffline();
-      console.log("Geth successfully killed!");
+      await waitForELOffline();
+      console.log("EL successfully killed!");
     });
   }
 
@@ -96,97 +98,37 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
   // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
   // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
-  async function runGethPostMerge(): Promise<{genesisBlockHash: string}> {
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
+  async function runEL(elScript: string, ttd: number): Promise<{genesisBlockHash: string}> {
+    if (!process.env.EL_BINARY_PATH || !process.env.EL_DIR || !process.env.EL_PORT) {
+      throw Error(
+        `EL ENV must be provided, EL_BINARY_PATH: ${process.env.EL_BINARY_PATH}, EL_DIR: ${process.env.EL_DIR}, EL_PORT: ${process.env.EL_PORT}`
+      );
     }
 
     await shell(`rm -rf ${dataPath}`);
     fs.mkdirSync(dataPath, {recursive: true});
 
-    const genesisPath = path.join(dataPath, "genesis.json");
-    fs.writeFileSync(genesisPath, JSON.stringify(genesisGethPostMerge, null, 2));
-
-    // Use as check to ensure geth is available and built correctly.
-    // Note: Use double quotes on paths to let bash expand the ~ character
-    await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
-
-    startGethProcess(["--catalyst", "--http", "--ws", "-http.api", "engine,net,eth", "--datadir", dataPath]);
-
-    // Wait for Geth to be online
-    const controller = new AbortController();
-    afterEachCallbacks.push(() => controller?.abort());
-    await waitForGethOnline(jsonRpcUrl, controller.signal);
-
-    // Fetch genesis block hash
-    const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
-    return {genesisBlockHash};
-  }
-
-  // Ref: https://notes.ethereum.org/_UH57VUPRrC-re3ubtmo2w
-  // Build geth from source at branch https://github.com/ethereum/go-ethereum/pull/23607
-  async function runGethPreMerge(): Promise<{genesisBlockHash: string}> {
-    const privKey = "45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8";
-    const pubKey = "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b";
-    const password = "12345678";
-
-    if (!process.env.GETH_BINARY_PATH) {
-      throw Error("GETH_BINARY_PATH ENV must be provided");
-    }
-
-    await shell(`rm -rf ${dataPath}`);
-    fs.mkdirSync(dataPath, {recursive: true});
-
-    const genesisPath = path.join(dataPath, "genesis.json");
-    const skPath = path.join(dataPath, "sk.json");
-    const passwordPath = path.join(dataPath, "password.txt");
-    fs.writeFileSync(genesisPath, JSON.stringify(genesisGethPreMerge, null, 2));
-    fs.writeFileSync(skPath, privKey);
-    fs.writeFileSync(passwordPath, password);
-
-    // Use as check to ensure geth is available and built correctly.
-    // Note: Use double quotes on paths to let bash expand the ~ character
-    //  ./build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
-    console.log("Initilizing Geth");
-    await shell(`${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" init "${genesisPath}"`);
-
-    // Import the signing key (press enter twice for empty password):
-    //  ./build/bin/geth --catalyst --datadir "~/ethereum/taunus" account import sk.json
-    console.log("Importing account to Geth");
-    await shell(
-      `${process.env.GETH_BINARY_PATH} --catalyst --datadir "${dataPath}" account import "${skPath}" --password ${passwordPath}`
-    );
-
-    startGethProcess([
-      "--catalyst",
-      "--http",
-      "--ws",
-      "-http.api",
-      "engine,net,eth,miner",
-      "--datadir",
+    startELProcess(`../../kintsugi/${process.env.EL_DIR}/${elScript}`, [
+      "--ttd",
+      `${ttd}`,
+      "--dataDir",
       dataPath,
-      "--allow-insecure-unlock",
-      "--unlock",
-      pubKey,
-      "--password",
-      passwordPath,
-      "--nodiscover",
-      // Automatically start mining
-      "--mine",
+      "--elPath",
+      process.env.EL_BINARY_PATH,
     ]);
 
     // Wait for Geth to be online
     const controller = new AbortController();
     afterEachCallbacks.push(() => controller?.abort());
-    await waitForGethOnline(jsonRpcUrl, controller.signal);
+    await waitForELOnline(jsonRpcUrl, controller.signal);
 
     // Fetch genesis block hash
     const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
     return {genesisBlockHash};
   }
 
-  it("Send stub payloads to Geth", async () => {
-    const {genesisBlockHash} = await runGethPostMerge();
+  it("Send stub payloads to EL", async () => {
+    const {genesisBlockHash} = await runEL("post-merge.sh", 0);
 
     const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl]}, controller.signal);
@@ -262,8 +204,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Post-merge, run for a few blocks", async function () {
     console.log("\n\nPost-merge, run for a few blocks\n\n");
-    const {genesisBlockHash} = await runGethPostMerge();
-    await runNodeWithGeth.bind(this)({
+    const {genesisBlockHash} = await runEL("post-merge.sh", 0);
+    await runNodeWithEL.bind(this)({
       genesisBlockHash,
       mergeEpoch: 0,
       ttd: BigInt(0),
@@ -273,8 +215,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Pre-merge, run for a few blocks", async function () {
     console.log("\n\nPre-merge, run for a few blocks\n\n");
-    const {genesisBlockHash} = await runGethPreMerge();
-    await runNodeWithGeth.bind(this)({
+    const {genesisBlockHash} = await runEL("pre-merge.sh", terminalTotalDifficultyPreMerge);
+    await runNodeWithEL.bind(this)({
       genesisBlockHash,
       mergeEpoch: 1,
       ttd: BigInt(terminalTotalDifficultyPreMerge),
@@ -282,7 +224,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
   });
 
-  async function runNodeWithGeth(
+  async function runNodeWithEL(
     this: Context,
     {
       genesisBlockHash,
@@ -411,95 +353,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   }
 });
 
-/**
- * From https://notes.ethereum.org/@9AeMAlpyQYaAAyuj47BzRw/rkwW3ceVY
- *
- * NOTE: Edited gasLimit to match 30_000_000 value is subsequent block generation
- */
-const genesisGethPostMerge = {
-  config: {
-    chainId: 1,
-    homesteadBlock: 0,
-    daoForkBlock: 0,
-    daoForkSupport: true,
-    eip150Block: 0,
-    eip155Block: 0,
-    eip158Block: 0,
-    byzantiumBlock: 0,
-    constantinopleBlock: 0,
-    petersburgBlock: 0,
-    istanbulBlock: 0,
-    muirGlacierBlock: 0,
-    berlinBlock: 0,
-    londonBlock: 0,
-    clique: {
-      period: 5,
-      epoch: 30000,
-    },
-    terminalTotalDifficulty: 0,
-  },
-  nonce: "0x42",
-  timestamp: "0x0",
-  extraData:
-    "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  gasLimit: "0x1c9c380",
-  difficulty: "0x400000000",
-  mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  coinbase: "0x0000000000000000000000000000000000000000",
-  alloc: {
-    "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-  },
-  number: "0x0",
-  gasUsed: "0x0",
-  parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  baseFeePerGas: "0x7",
-};
-
-/**
- * From https://notes.ethereum.org/_UH57VUPRrC-re3ubtmo2w
- */
-const genesisGethPreMerge = {
-  config: {
-    chainId: 1,
-    homesteadBlock: 0,
-    eip150Block: 0,
-    eip150Hash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-    eip155Block: 0,
-    eip158Block: 0,
-    byzantiumBlock: 0,
-    constantinopleBlock: 0,
-    petersburgBlock: 0,
-    istanbulBlock: 0,
-    muirGlacierBlock: 0,
-    berlinBlock: 0,
-    londonBlock: 0,
-    clique: {
-      period: 5,
-      epoch: 30000,
-    },
-    terminalTotalDifficulty: terminalTotalDifficultyPreMerge,
-  },
-  nonce: "0x42",
-  timestamp: "0x0",
-  extraData:
-    "0x0000000000000000000000000000000000000000000000000000000000000000a94f5374fce5edbc8e2a8697c15331677e6ebf0b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-  gasLimit: "0x1c9c380",
-  difficulty: "0x0",
-  mixHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  coinbase: "0x0000000000000000000000000000000000000000",
-  alloc: {
-    "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b": {balance: "0x6d6172697573766477000000"},
-  },
-  number: "0x0",
-  gasUsed: "0x0",
-  parentHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
-  baseFeePerGas: "0x7",
-};
-
-async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void> {
+async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> {
   for (let i = 0; i < 60; i++) {
     try {
-      console.log("Waiting for geth online...");
+      console.log("Waiting for EL online...");
       await shell(
         `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' ${url}`
       );
@@ -508,21 +365,21 @@ async function waitForGethOnline(url: string, signal: AbortSignal): Promise<void
       await sleep(1000, signal);
     }
   }
-  throw Error("Geth not online in 60 seconds");
+  throw Error("EL not online in 60 seconds");
 }
 
-async function waitForGethOffline(): Promise<void> {
+async function waitForELOffline(): Promise<void> {
   const port = 30303;
 
   for (let i = 0; i < 60; i++) {
-    console.log("Waiting for geth offline...");
+    console.log("Waiting for EL offline...");
     const isInUse = await isPortInUse(port);
     if (!isInUse) {
       return;
     }
     await sleep(1000);
   }
-  throw Error("Geth not offline in 60 seconds");
+  throw Error("EL not offline in 60 seconds");
 }
 
 async function isPortInUse(port: number): Promise<boolean> {
