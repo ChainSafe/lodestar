@@ -19,7 +19,7 @@
 #
 #######################
 
-FROM node:14-alpine as build
+FROM node:16-alpine as build
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
@@ -32,7 +32,7 @@ RUN yarn install --non-interactive --frozen-lockfile && yarn build
 
 # Copy built src + node_modules to a new layer to prune unnecessary fs
 # Previous layer weights 7.25GB, while this final 488MB (as of Oct 2020)
-FROM node:14-alpine
+FROM node:16-alpine
 WORKDIR /usr/app
 COPY --from=build /usr/app .
 

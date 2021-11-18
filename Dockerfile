@@ -1,4 +1,4 @@
-FROM node:14-alpine as build
+FROM node:16-alpine as build
 WORKDIR /usr/app
 RUN apk update && apk add --no-cache g++ make python3 && rm -rf /var/cache/apk/*
 
@@ -6,7 +6,7 @@ ARG VERSION=latest
 ENV VERSION=$VERSION
 RUN npm install @chainsafe/lodestar-cli@$VERSION
 
-FROM node:14-alpine
+FROM node:16-alpine
 WORKDIR /usr/app
 COPY --from=build /usr/app .
 
