@@ -38,7 +38,7 @@ jobs:
       - name: Build Geth
         run: cd go-ethereum && make
 
-      - name: Simulation query Geth node
+      - name: Test Lodestar <> Geth interop
         run: yarn test:sim:merge-interop
         working-directory: packages/lodestar
         env:
@@ -55,7 +55,7 @@ jobs:
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 
-      - name: Simulation query Nethermind node
+      - name: Test Lodestar <> Nethermind interop
         run: yarn test:sim:merge-interop
         working-directory: packages/lodestar
         env:
