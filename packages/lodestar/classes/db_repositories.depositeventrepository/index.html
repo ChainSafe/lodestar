@@ -368,6 +368,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#binaryentriesstream">
+    binaryEntriesStream
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#protected-dbfilteroptions">
     Protected dbFilterOptions
   </a>
@@ -542,6 +547,7 @@ Removed when included on chain or old</p>
 <li><a href="./#batchputbinary">batchPutBinary</a></li>
 <li><a href="./#batchputvalues">batchPutValues</a></li>
 <li><a href="./#batchremove">batchRemove</a></li>
+<li><a href="./#binaryentriesstream">binaryEntriesStream</a></li>
 <li><a href="./#protected-dbfilteroptions">dbFilterOptions</a></li>
 <li><a href="./#decodekey">decodeKey</a></li>
 <li><a href="./#decodevalue">decodeValue</a></li>
@@ -573,7 +579,7 @@ Removed when included on chain or old</p>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new DepositEventRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Buffer, Buffer›, <code>metrics?</code>: IDbMetrics): <em><a href="./">DepositEventRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/depositEvent.ts#L9">packages/lodestar/src/db/repositories/depositEvent.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/depositEvent.ts#L9">packages/lodestar/src/db/repositories/depositEvent.ts:9</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -736,7 +742,7 @@ Removed when included on chain or old</p>
 <hr/>
 <h3 id="batchputvalues">batchPutValues<a class="headerlink" href="#batchputvalues" title="Permanent link">¶</a></h3>
 <p>▸ <strong>batchPutValues</strong>(<code>depositEvents</code>: DepositEvent[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/depositEvent.ts#L22">packages/lodestar/src/db/repositories/depositEvent.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/depositEvent.ts#L22">packages/lodestar/src/db/repositories/depositEvent.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -775,10 +781,31 @@ Removed when included on chain or old</p>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
+<h3 id="binaryentriesstream">binaryEntriesStream<a class="headerlink" href="#binaryentriesstream" title="Permanent link">¶</a></h3>
+<p>▸ <strong>binaryEntriesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹IKeyValue‹Buffer, Buffer››</em></p>
+<p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#binaryentriesstream">binaryEntriesStream</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opts?</code></td>
+<td>IFilterOptions‹number›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Buffer, Buffer››</em></p>
+<hr/>
 <h3 id="protected-dbfilteroptions"><code>Protected</code> dbFilterOptions<a class="headerlink" href="#protected-dbfilteroptions" title="Permanent link">¶</a></h3>
 <p>▸ <strong>dbFilterOptions</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>IFilterOptions‹Buffer›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#protected-dbfilteroptions">dbFilterOptions</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:57</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:58</p>
 <p>Transforms opts from I to Buffer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -862,7 +889,7 @@ Removed when included on chain or old</p>
 <hr/>
 <h3 id="deleteold">deleteOld<a class="headerlink" href="#deleteold" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deleteOld</strong>(<code>depositCount</code>: number): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/depositEvent.ts#L14">packages/lodestar/src/db/repositories/depositEvent.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/depositEvent.ts#L14">packages/lodestar/src/db/repositories/depositEvent.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -925,7 +952,7 @@ Removed when included on chain or old</p>
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
 <p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>Promise‹IKeyValue‹number, DepositEvent›[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entries">entries</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -946,7 +973,7 @@ Removed when included on chain or old</p>
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
 <p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹IKeyValue‹number, DepositEvent››</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entriesstream">entriesStream</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -967,19 +994,19 @@ Removed when included on chain or old</p>
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹number, DepositEvent› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstentry">firstEntry</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
 <p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, DepositEvent› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹number | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstkey">firstKey</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstValue</strong>(): <em>Promise‹DepositEvent | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstvalue">firstValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:50</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
 <p><strong>Returns:</strong> <em>Promise‹DepositEvent | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
@@ -1111,19 +1138,19 @@ Removed when included on chain or old</p>
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹number, DepositEvent› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastentry">lastEntry</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
 <p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, DepositEvent› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹number | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastkey">lastKey</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:50</p>
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastValue</strong>(): <em>Promise‹DepositEvent | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastvalue">lastValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
 <p><strong>Returns:</strong> <em>Promise‹DepositEvent | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>

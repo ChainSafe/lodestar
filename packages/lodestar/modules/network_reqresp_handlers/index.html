@@ -298,6 +298,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#getunfinalizedblocksatslots">
+    getUnfinalizedBlocksAtSlots
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#injectrecentblocks">
     injectRecentBlocks
   </a>
@@ -335,6 +340,7 @@
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#getreqresphandlers">getReqRespHandlers</a></li>
+<li><a href="./#getunfinalizedblocksatslots">getUnfinalizedBlocksAtSlots</a></li>
 <li><a href="./#injectrecentblocks">injectRecentBlocks</a></li>
 <li><a href="./#onbeaconblocksbyrange">onBeaconBlocksByRange</a></li>
 <li><a href="./#onbeaconblocksbyroot">onBeaconBlocksByRoot</a></li>
@@ -342,14 +348,14 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="reqresphandlers">ReqRespHandlers<a class="headerlink" href="#reqresphandlers" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ReqRespHandlers</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/network/reqresp/handlers/index.ts#L7">packages/lodestar/src/network/reqresp/handlers/index.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/index.ts#L8">packages/lodestar/src/network/reqresp/handlers/index.ts:8</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
-<p><strong>onBeaconBlocksByRange</strong>(<code>req</code>: BeaconBlocksByRangeRequest): <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>onBeaconBlocksByRange</strong>(<code>req</code>: BeaconBlocksByRangeRequest): <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
 </li>
 <li>
-<p><strong>onBeaconBlocksByRoot</strong>(<code>req</code>: phase0.BeaconBlocksByRootRequest): <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>onBeaconBlocksByRoot</strong>(<code>req</code>: phase0.BeaconBlocksByRootRequest): <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
 </li>
 <li>
 <p><strong>onStatus</strong>(): <em>AsyncIterable‹Status›</em></p>
@@ -358,7 +364,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="getreqresphandlers">getReqRespHandlers<a class="headerlink" href="#getreqresphandlers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getReqRespHandlers</strong>(<code>__namedParameters</code>: object): <em><a href="./#reqresphandlers">ReqRespHandlers</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/network/reqresp/handlers/index.ts#L17">packages/lodestar/src/network/reqresp/handlers/index.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/index.ts#L18">packages/lodestar/src/network/reqresp/handlers/index.ts:18</a></em></p>
 <p>The ReqRespHandler module handles app-level requests / responses from other peers,
 fetching state from the chain and database as needed.</p>
 <p><strong>Parameters:</strong></p>
@@ -383,9 +389,36 @@ fetching state from the chain and database as needed.</p>
 </table>
 <p><strong>Returns:</strong> <em><a href="./#reqresphandlers">ReqRespHandlers</a></em></p>
 <hr/>
+<h3 id="getunfinalizedblocksatslots">getUnfinalizedBlocksAtSlots<a class="headerlink" href="#getunfinalizedblocksatslots" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getUnfinalizedBlocksAtSlots</strong>(<code>slots</code>: Slot[], <code>__namedParameters</code>: object): <em>Promise‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>[]›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts#L75">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts:75</a></em></p>
+<p>Returned blocks have the same ordering as <code>slots</code></p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>slots</strong>: <em>Slot[]</em></p>
+<p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>chain</code></td>
+<td><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></td>
+</tr>
+<tr>
+<td><code>db</code></td>
+<td><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>[]›</em></p>
+<hr/>
 <h3 id="injectrecentblocks">injectRecentBlocks<a class="headerlink" href="#injectrecentblocks" title="Permanent link">¶</a></h3>
-<p>▸ <strong>injectRecentBlocks</strong>(<code>archiveStream</code>: AsyncIterable‹allForks.SignedBeaconBlock›, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>request</code>: BeaconBlocksByRangeRequest): <em>AsyncGenerator‹allForks.SignedBeaconBlock›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts#L39">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts:39</a></em></p>
+<p>▸ <strong>injectRecentBlocks</strong>(<code>archiveStream</code>: AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>request</code>: BeaconBlocksByRangeRequest): <em>AsyncGenerator‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts#L41">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts:41</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -397,11 +430,15 @@ fetching state from the chain and database as needed.</p>
 <tbody>
 <tr>
 <td><code>archiveStream</code></td>
-<td>AsyncIterable‹allForks.SignedBeaconBlock›</td>
+<td>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</td>
 </tr>
 <tr>
 <td><code>chain</code></td>
 <td><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></td>
+</tr>
+<tr>
+<td><code>db</code></td>
+<td><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></td>
 </tr>
 <tr>
 <td><code>request</code></td>
@@ -409,11 +446,11 @@ fetching state from the chain and database as needed.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncGenerator‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>Returns:</strong> <em>AsyncGenerator‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
 <hr/>
 <h3 id="onbeaconblocksbyrange">onBeaconBlocksByRange<a class="headerlink" href="#onbeaconblocksbyrange" title="Permanent link">¶</a></h3>
-<p>▸ <strong>onBeaconBlocksByRange</strong>(<code>requestBody</code>: BeaconBlocksByRangeRequest, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts#L11">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts:11</a></em></p>
+<p>▸ <strong>onBeaconBlocksByRange</strong>(<code>requestBody</code>: BeaconBlocksByRangeRequest, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts#L13">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRange.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -437,11 +474,11 @@ fetching state from the chain and database as needed.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
 <hr/>
 <h3 id="onbeaconblocksbyroot">onBeaconBlocksByRoot<a class="headerlink" href="#onbeaconblocksbyroot" title="Permanent link">¶</a></h3>
-<p>▸ <strong>onBeaconBlocksByRoot</strong>(<code>requestBody</code>: phase0.BeaconBlocksByRootRequest, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRoot.ts#L5">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRoot.ts:5</a></em></p>
+<p>▸ <strong>onBeaconBlocksByRoot</strong>(<code>requestBody</code>: phase0.BeaconBlocksByRootRequest, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRoot.ts#L7">packages/lodestar/src/network/reqresp/handlers/beaconBlocksByRoot.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -465,7 +502,7 @@ fetching state from the chain and database as needed.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../network_reqresp/#reqrespblockresponse">ReqRespBlockResponse</a>›</em></p>
 </article>
 </div>
 </div>

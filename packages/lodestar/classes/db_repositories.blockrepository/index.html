@@ -363,6 +363,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#binaryentriesstream">
+    binaryEntriesStream
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#protected-dbfilteroptions">
     Protected dbFilterOptions
   </a>
@@ -531,6 +536,7 @@
 <li><a href="./#batchput">batchPut</a></li>
 <li><a href="./#batchputbinary">batchPutBinary</a></li>
 <li><a href="./#batchremove">batchRemove</a></li>
+<li><a href="./#binaryentriesstream">binaryEntriesStream</a></li>
 <li><a href="./#protected-dbfilteroptions">dbFilterOptions</a></li>
 <li><a href="./#decodekey">decodeKey</a></li>
 <li><a href="./#decodevalue">decodeValue</a></li>
@@ -561,7 +567,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new BlockRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Buffer, Buffer›, <code>metrics?</code>: IDbMetrics): <em><a href="./">BlockRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/block.ts#L11">packages/lodestar/src/db/repositories/block.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/block.ts#L11">packages/lodestar/src/db/repositories/block.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -743,10 +749,31 @@
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
+<h3 id="binaryentriesstream">binaryEntriesStream<a class="headerlink" href="#binaryentriesstream" title="Permanent link">¶</a></h3>
+<p>▸ <strong>binaryEntriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Buffer, Buffer››</em></p>
+<p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#binaryentriesstream">binaryEntriesStream</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>opts?</code></td>
+<td>IFilterOptions‹Uint8Array›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Buffer, Buffer››</em></p>
+<hr/>
 <h3 id="protected-dbfilteroptions"><code>Protected</code> dbFilterOptions<a class="headerlink" href="#protected-dbfilteroptions" title="Permanent link">¶</a></h3>
 <p>▸ <strong>dbFilterOptions</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>IFilterOptions‹Buffer›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#protected-dbfilteroptions">dbFilterOptions</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:57</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:58</p>
 <p>Transforms opts from I to Buffer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -789,7 +816,7 @@
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decodeValue</strong>(<code>data</code>: Buffer): <em>allForks.SignedBeaconBlock</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/block.ts#L28">packages/lodestar/src/db/repositories/block.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/block.ts#L28">packages/lodestar/src/db/repositories/block.ts:28</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -852,7 +879,7 @@
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>encodeValue</strong>(<code>value</code>: allForks.SignedBeaconBlock): <em>Buffer</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/block.ts#L24">packages/lodestar/src/db/repositories/block.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/block.ts#L24">packages/lodestar/src/db/repositories/block.ts:24</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -873,7 +900,7 @@
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
 <p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock›[]›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#entries">entries</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -894,7 +921,7 @@
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
 <p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock››</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#entriesstream">entriesStream</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -915,19 +942,19 @@
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock› | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#firstentry">firstEntry</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
 <p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#firstkey">firstKey</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstValue</strong>(): <em>Promise‹allForks.SignedBeaconBlock | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#firstvalue">firstValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:50</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
 <p><strong>Returns:</strong> <em>Promise‹allForks.SignedBeaconBlock | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
@@ -975,7 +1002,7 @@
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getId</strong>(<code>value</code>: allForks.SignedBeaconBlock): <em>Uint8Array</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/db/repositories/block.ts#L20">packages/lodestar/src/db/repositories/block.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/75a5dc7/packages/lodestar/src/db/repositories/block.ts#L20">packages/lodestar/src/db/repositories/block.ts:20</a></em></p>
 <p>Id is hashTreeRoot of unsigned BeaconBlock</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1060,19 +1087,19 @@
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock› | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#lastentry">lastEntry</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
 <p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, allForks.SignedBeaconBlock› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#lastkey">lastKey</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:50</p>
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastValue</strong>(): <em>Promise‹allForks.SignedBeaconBlock | null›</em></p>
 <p><em>Inherited from <a href="./">BlockRepository</a>.<a href="./#lastvalue">lastValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
 <p><strong>Returns:</strong> <em>Promise‹allForks.SignedBeaconBlock | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
