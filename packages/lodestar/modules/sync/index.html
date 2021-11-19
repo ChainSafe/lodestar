@@ -622,7 +622,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="pendingblock_1">PendingBlock<a class="headerlink" href="#pendingblock_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>PendingBlock</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L60">packages/lodestar/src/sync/interface.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L60">packages/lodestar/src/sync/interface.ts:60</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -647,7 +647,7 @@
 <hr/>
 <h3 id="syncoptions">SyncOptions<a class="headerlink" href="#syncoptions" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SyncOptions</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/options.ts#L1">packages/lodestar/src/sync/options.ts:1</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/options.ts#L1">packages/lodestar/src/sync/options.ts:1</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -666,11 +666,11 @@
 <hr/>
 <h3 id="syncingstatus_1">SyncingStatus<a class="headerlink" href="#syncingstatus_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SyncingStatus</strong>: <em>routes.node.SyncingStatus</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L12">packages/lodestar/src/sync/interface.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L12">packages/lodestar/src/sync/interface.ts:12</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-batch_buffer_size"><code>Const</code> BATCH_BUFFER_SIZE<a class="headerlink" href="#const-batch_buffer_size" title="Permanent link">¶</a></h3>
 <p>• <strong>BATCH_BUFFER_SIZE</strong>: <em>5</em> = 5</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L36">packages/lodestar/src/sync/constants.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L36">packages/lodestar/src/sync/constants.ts:36</a></em></p>
 <p>The maximum number of batches to queue before requesting more.
 In good network conditions downloading batches is much faster than processing them
 A number &gt; 5 results in wasted progress when the chain completes syncing</p>
@@ -678,12 +678,12 @@ A number &gt; 5 results in wasted progress when the chain completes syncing</p>
 <hr/>
 <h3 id="const-batch_slot_offset"><code>Const</code> BATCH_SLOT_OFFSET<a class="headerlink" href="#const-batch_slot_offset" title="Permanent link">¶</a></h3>
 <p>• <strong>BATCH_SLOT_OFFSET</strong>: <em>1</em> = 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L14">packages/lodestar/src/sync/constants.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L14">packages/lodestar/src/sync/constants.ts:14</a></em></p>
 <p>Batch range excludes the first block of the epoch. @see Batch</p>
 <hr/>
 <h3 id="const-epochs_per_batch"><code>Const</code> EPOCHS_PER_BATCH<a class="headerlink" href="#const-epochs_per_batch" title="Permanent link">¶</a></h3>
 <p>• <strong>EPOCHS_PER_BATCH</strong>: <em>2</em> = 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L27">packages/lodestar/src/sync/constants.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L27">packages/lodestar/src/sync/constants.ts:27</a></em></p>
 <p>Blocks are downloaded in batches from peers. This constant specifies how many epochs worth of
 blocks per batch are requested <em>at most</em>. A batch may request less blocks to account for
 already requested slots. There is a timeout for each batch request. If this value is too high,
@@ -693,67 +693,67 @@ bandwidth to do so.</p>
 <hr/>
 <h3 id="const-max_attempts_per_block"><code>Const</code> MAX_ATTEMPTS_PER_BLOCK<a class="headerlink" href="#const-max_attempts_per_block" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_ATTEMPTS_PER_BLOCK</strong>: <em>5</em> = 5</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/unknownBlock.ts#L18">packages/lodestar/src/sync/unknownBlock.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/unknownBlock.ts#L18">packages/lodestar/src/sync/unknownBlock.ts:18</a></em></p>
 <hr/>
 <h3 id="const-max_batch_download_attempts"><code>Const</code> MAX_BATCH_DOWNLOAD_ATTEMPTS<a class="headerlink" href="#const-max_batch_download_attempts" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_BATCH_DOWNLOAD_ATTEMPTS</strong>: <em>5</em> = 5</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L8">packages/lodestar/src/sync/constants.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L8">packages/lodestar/src/sync/constants.ts:8</a></em></p>
 <p>The number of times to retry a batch before it is considered failed.</p>
 <hr/>
 <h3 id="const-max_batch_processing_attempts"><code>Const</code> MAX_BATCH_PROCESSING_ATTEMPTS<a class="headerlink" href="#const-max_batch_processing_attempts" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_BATCH_PROCESSING_ATTEMPTS</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L11">packages/lodestar/src/sync/constants.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L11">packages/lodestar/src/sync/constants.ts:11</a></em></p>
 <p>Consider batch faulty after downloading and processing this number of times</p>
 <hr/>
 <h3 id="const-max_known_bad_blocks"><code>Const</code> MAX_KNOWN_BAD_BLOCKS<a class="headerlink" href="#const-max_known_bad_blocks" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_KNOWN_BAD_BLOCKS</strong>: <em>500</em> = 500</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/unknownBlock.ts#L19">packages/lodestar/src/sync/unknownBlock.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/unknownBlock.ts#L19">packages/lodestar/src/sync/unknownBlock.ts:19</a></em></p>
 <hr/>
 <h3 id="const-max_pending_blocks"><code>Const</code> MAX_PENDING_BLOCKS<a class="headerlink" href="#const-max_pending_blocks" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_PENDING_BLOCKS</strong>: <em>100</em> = 100</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/unknownBlock.ts#L20">packages/lodestar/src/sync/unknownBlock.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/unknownBlock.ts#L20">packages/lodestar/src/sync/unknownBlock.ts:20</a></em></p>
 <hr/>
 <h3 id="const-min_epoch_to_start_gossip"><code>Const</code> MIN_EPOCH_TO_START_GOSSIP<a class="headerlink" href="#const-min_epoch_to_start_gossip" title="Permanent link">¶</a></h3>
 <p>• <strong>MIN_EPOCH_TO_START_GOSSIP</strong>: <em>-1</em> = -1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L17">packages/lodestar/src/sync/constants.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L17">packages/lodestar/src/sync/constants.ts:17</a></em></p>
 <p>First epoch to allow to start gossip</p>
 <hr/>
 <h3 id="const-min_finalized_chain_validated_epochs"><code>Const</code> MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS<a class="headerlink" href="#const-min_finalized_chain_validated_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>MIN_FINALIZED_CHAIN_VALIDATED_EPOCHS</strong>: <em>10</em> = 10</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L5">packages/lodestar/src/sync/constants.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L5">packages/lodestar/src/sync/constants.ts:5</a></em></p>
 <p>Minimum work we require a finalized chain to do before picking a chain with more peers.</p>
 <hr/>
 <h3 id="const-parallel_head_chains"><code>Const</code> PARALLEL_HEAD_CHAINS<a class="headerlink" href="#const-parallel_head_chains" title="Permanent link">¶</a></h3>
 <p>• <strong>PARALLEL_HEAD_CHAINS</strong>: <em>2</em> = 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/constants.ts#L2">packages/lodestar/src/sync/constants.ts:2</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/constants.ts#L2">packages/lodestar/src/sync/constants.ts:2</a></em></p>
 <p>The number of head syncing chains to sync at a time.</p>
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-defaultsyncoptions"><code>Const</code> defaultSyncOptions<a class="headerlink" href="#const-defaultsyncoptions" title="Permanent link">¶</a></h3>
 <h3 id="defaultsyncoptions-object">▪ <strong>defaultSyncOptions</strong>: <em>object</em><a class="headerlink" href="#defaultsyncoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/options.ts#L19">packages/lodestar/src/sync/options.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/options.ts#L19">packages/lodestar/src/sync/options.ts:19</a></em></p>
 <h3 id="disableprocessaschainsegment">disableProcessAsChainSegment<a class="headerlink" href="#disableprocessaschainsegment" title="Permanent link">¶</a></h3>
 <p>• <strong>disableProcessAsChainSegment</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/options.ts#L21">packages/lodestar/src/sync/options.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/options.ts#L21">packages/lodestar/src/sync/options.ts:21</a></em></p>
 <h3 id="issinglenode">isSingleNode<a class="headerlink" href="#issinglenode" title="Permanent link">¶</a></h3>
 <p>• <strong>isSingleNode</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/options.ts#L20">packages/lodestar/src/sync/options.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/options.ts#L20">packages/lodestar/src/sync/options.ts:20</a></em></p>
 <hr/>
 <h3 id="const-syncstatemetric"><code>Const</code> syncStateMetric<a class="headerlink" href="#const-syncstatemetric" title="Permanent link">¶</a></h3>
 <h3 id="syncstatemetric-object">▪ <strong>syncStateMetric</strong>: <em>object</em><a class="headerlink" href="#syncstatemetric-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L35">packages/lodestar/src/sync/interface.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L35">packages/lodestar/src/sync/interface.ts:35</a></em></p>
 <p>Map a SyncState to an integer for rendering in Grafana</p>
 <h3 id="syncstatestalled">[SyncState.Stalled]<a class="headerlink" href="#syncstatestalled" title="Permanent link">¶</a></h3>
 <p>• <strong>[SyncState.Stalled]</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L36">packages/lodestar/src/sync/interface.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L36">packages/lodestar/src/sync/interface.ts:36</a></em></p>
 <h3 id="syncstatesynced">[SyncState.Synced]<a class="headerlink" href="#syncstatesynced" title="Permanent link">¶</a></h3>
 <p>• <strong>[SyncState.Synced]</strong>: <em>number</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L39">packages/lodestar/src/sync/interface.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L39">packages/lodestar/src/sync/interface.ts:39</a></em></p>
 <h3 id="syncstatesyncingfinalized">[SyncState.SyncingFinalized]<a class="headerlink" href="#syncstatesyncingfinalized" title="Permanent link">¶</a></h3>
 <p>• <strong>[SyncState.SyncingFinalized]</strong>: <em>number</em> = 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L37">packages/lodestar/src/sync/interface.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L37">packages/lodestar/src/sync/interface.ts:37</a></em></p>
 <h3 id="syncstatesyncinghead">[SyncState.SyncingHead]<a class="headerlink" href="#syncstatesyncinghead" title="Permanent link">¶</a></h3>
 <p>• <strong>[SyncState.SyncingHead]</strong>: <em>number</em> = 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/ac812ab/packages/lodestar/src/sync/interface.ts#L38">packages/lodestar/src/sync/interface.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cb3decd/packages/lodestar/src/sync/interface.ts#L38">packages/lodestar/src/sync/interface.ts:38</a></em></p>
 </article>
 </div>
 </div>
