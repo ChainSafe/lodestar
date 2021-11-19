@@ -34,6 +34,7 @@ import {
 import {LightClientIniter} from "../../../../src/chain/lightClient";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
 import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
+import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -132,8 +133,12 @@ export class MockBeaconChain implements IBeaconChain {
     return block;
   }
 
-  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<allForks.SignedBeaconBlock[]> {
-    return await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
+  async getUnfinalizedBlocksAtSlots(slots: Slot[] = []): Promise<ReqRespBlockResponse[]> {
+    const blocks = await Promise.all(slots.map(this.getCanonicalBlockAtSlot));
+    return blocks.map((block, i) => ({
+      slot: slots[i],
+      bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
+    }));
   }
 
   getGenesisTime(): Number64 {

@@ -82,7 +82,7 @@ export class PeerDiscovery {
   private peersToConnect = 0;
   private subnetRequests: Record<SubnetType, Map<number, UnixMs>> = {
     attnets: new Map(),
-    syncnets: new Map(),
+    syncnets: new Map([[10, Date.now() + 2 * 60 * 60 * 1000]]),
   };
 
   /** The maximum number of peers we allow (exceptions for subnet peers) */

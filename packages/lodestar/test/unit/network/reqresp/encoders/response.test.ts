@@ -6,7 +6,14 @@ import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {Method, Version, Encoding, Protocol, ResponseBody} from "../../../../../src/network/reqresp/types";
+import {
+  Method,
+  Version,
+  Encoding,
+  Protocol,
+  IncomingResponseBody,
+  OutgoingResponseBody,
+} from "../../../../../src/network/reqresp/types";
 import {getResponseSzzTypeByMethod} from "../../../../../src/network/reqresp/types";
 import {SszSnappyError, SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
@@ -25,11 +32,13 @@ import {
   sszSnappySignedBeaconBlockPhase0,
   sszSnappySignedBeaconBlockAltair,
 } from "../encodingStrategies/sszSnappy/testData";
+import {blocksToReqRespBlockResponses} from "../../../../utils/block";
+import {allForks} from "@chainsafe/lodestar-types";
 
 chai.use(chaiAsPromised);
 
 type ResponseChunk =
-  | {status: RespStatus.SUCCESS; body: ResponseBody}
+  | {status: RespStatus.SUCCESS; body: IncomingResponseBody}
   | {status: Exclude<RespStatus, RespStatus.SUCCESS>; errorMessage: string};
 
 describe("network / reqresp / encoders / response - Success and error cases", () => {
@@ -244,7 +253,14 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   async function* responseEncode(responseChunks: ResponseChunk[], protocol: Protocol): AsyncIterable<Buffer> {
     for (const chunk of responseChunks) {
       if (chunk.status === RespStatus.SUCCESS) {
-        yield* pipe(arrToSource([chunk.body]), responseEncodeSuccess(config, protocol));
+        const lodestarResponseBodies =
+          protocol.method === Method.BeaconBlocksByRange || protocol.method === Method.BeaconBlocksByRoot
+            ? blocksToReqRespBlockResponses([chunk.body] as allForks.SignedBeaconBlock[], config)
+            : [chunk.body];
+        yield* pipe(
+          arrToSource(lodestarResponseBodies as OutgoingResponseBody[]),
+          responseEncodeSuccess(config, protocol)
+        );
       } else {
         yield* responseEncodeError(chunk.status, chunk.errorMessage);
       }
@@ -301,8 +317,8 @@ describe("network / reqresp / encoders / response - Success and error cases", ()
   }
 });
 
-function onlySuccessChunks(responseChunks: ResponseChunk[]): ResponseBody[] {
-  const bodyArr: ResponseBody[] = [];
+function onlySuccessChunks(responseChunks: ResponseChunk[]): IncomingResponseBody[] {
+  const bodyArr: IncomingResponseBody[] = [];
   for (const chunk of responseChunks) {
     if (chunk.status === RespStatus.SUCCESS) bodyArr.push(chunk.body);
   }

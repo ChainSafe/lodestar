@@ -18,6 +18,13 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
   parentRoot: Root;
 };
 
+// TODO: remove once we remove reqRespBlockStream
+export type BlockEntry = {
+  /** Deserialized data of allForks.SignedBeaconBlock */
+  bytes: Buffer;
+  slot: Slot;
+};
+
 /**
  * Stores finalized blocks. Block slot is identifier.
  */
@@ -101,14 +108,22 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
+  // TODO: only support step 1
+  async *reqRespBlockStream(opts?: IBlockFilterOptions): AsyncIterable<BlockEntry> {
+    const firstSlot = this.getFirstSlot(opts);
+    const binaryEntriesStream = super.binaryEntriesStream(opts);
+    const step = (opts && opts.step) || 1;
+
+    for await (const {key, value} of binaryEntriesStream) {
+      const slot = this.decodeKey(key);
+      if ((slot - firstSlot) % step === 0) {
+        yield {bytes: value, slot};
+      }
+    }
+  }
+
   async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
-    const dbFilterOpts = this.dbFilterOptions(opts);
-    const firstSlot = dbFilterOpts.gt
-      ? this.decodeKey(dbFilterOpts.gt) + 1
-      : dbFilterOpts.gte
-      ? this.decodeKey(dbFilterOpts.gte)
-      : null;
-    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
+    const firstSlot = this.getFirstSlot(opts);
     const valuesStream = super.valuesStream(opts);
     const step = (opts && opts.step) || 1;
 
@@ -130,6 +145,11 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return slot !== null ? await this.get(slot) : null;
   }
 
+  async getBinaryEntryByRoot(root: Root): Promise<IKeyValue<Slot, Buffer> | null> {
+    const slot = await this.getSlotByRoot(root);
+    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as IKeyValue<Slot, Buffer>) : null;
+  }
+
   async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {
     const slot = await this.getSlotByParentRoot(root);
     return slot !== null ? await this.get(slot) : null;
@@ -148,5 +168,17 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     const slot = bytesToInt(slotBytes, "be");
     // TODO: Is this necessary? How can bytesToInt return a non-integer?
     return Number.isInteger(slot) ? slot : null;
+  }
+
+  private getFirstSlot(opts?: IBlockFilterOptions): Slot {
+    const dbFilterOpts = this.dbFilterOptions(opts);
+    const firstSlot = dbFilterOpts.gt
+      ? this.decodeKey(dbFilterOpts.gt) + 1
+      : dbFilterOpts.gte
+      ? this.decodeKey(dbFilterOpts.gte)
+      : null;
+    if (firstSlot === null) throw Error("specify opts.gt or opts.gte");
+
+    return firstSlot;
   }
 }

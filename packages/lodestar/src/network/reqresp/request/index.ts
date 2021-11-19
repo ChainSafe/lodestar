@@ -6,7 +6,7 @@ import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../constants";
 import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
-import {Method, Encoding, Protocol, Version, ResponseBody, RequestBody} from "../types";
+import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
 import {formatProtocolId} from "../utils";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
@@ -41,7 +41,7 @@ type SendRequestModules = {
  *    - Any part of the response_chunk fails validation. Throws a typed error (see `SszSnappyError`)
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
-export async function sendRequest<T extends ResponseBody | ResponseBody[]>(
+export async function sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
   {logger, forkDigestContext, libp2p}: SendRequestModules,
   peerId: PeerId,
   method: Method,

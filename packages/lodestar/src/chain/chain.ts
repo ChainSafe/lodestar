@@ -220,29 +220,6 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  /** Returned blocks have the same ordering as `slots` */
-  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<allForks.SignedBeaconBlock[]> {
-    if (slots.length === 0) {
-      return [];
-    }
-
-    const slotsSet = new Set(slots);
-    const minSlot = Math.min(...slots); // Slots must have length > 0
-    const blockRootsPerSlot = new Map<Slot, Promise<allForks.SignedBeaconBlock | null>>();
-
-    // these blocks are on the same chain to head
-    for (const block of this.forkChoice.iterateAncestorBlocks(this.forkChoice.getHeadRoot())) {
-      if (block.slot < minSlot) {
-        break;
-      } else if (slotsSet.has(block.slot)) {
-        blockRootsPerSlot.set(block.slot, this.db.block.get(fromHexString(block.blockRoot)));
-      }
-    }
-
-    const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
-    return unfinalizedBlocks.filter((block): block is allForks.SignedBeaconBlock => block != null);
-  }
-
   async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
     return await this.blockProcessor.processBlockJob({...flags, block});
   }

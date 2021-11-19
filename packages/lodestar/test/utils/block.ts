@@ -1,10 +1,14 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
+import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
+import {ReqRespBlockResponse} from "../../src/network/reqresp/types";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {
@@ -34,6 +38,29 @@ export function generateEmptySignedBlock(): phase0.SignedBeaconBlock {
     message: generateEmptyBlock(),
     signature: EMPTY_SIGNATURE,
   };
+}
+
+export function generateEmptyReqRespBlockResponse(): ReqRespBlockResponse {
+  return {
+    slot: 0,
+    bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock())),
+  };
+}
+
+export function blocksToReqRespBlockResponses(
+  blocks: allForks.SignedBeaconBlock[],
+  config?: IChainForkConfig
+): ReqRespBlockResponse[] {
+  return blocks.map((block) => {
+    const slot = block.message.slot;
+    const sszType = config
+      ? config.getForkTypes(slot).SignedBeaconBlock
+      : defaultConfig.getForkTypes(slot).SignedBeaconBlock;
+    return {
+      slot,
+      bytes: Buffer.from(sszType.serialize(block)),
+    };
+  });
 }
 
 export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader {

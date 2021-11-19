@@ -1,13 +1,14 @@
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
+import {ReqRespBlockResponse} from "../types";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot";
 
 export type ReqRespHandlers = {
   onStatus(): AsyncIterable<phase0.Status>;
-  onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<allForks.SignedBeaconBlock>;
-  onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<allForks.SignedBeaconBlock>;
+  onBeaconBlocksByRange(req: phase0.BeaconBlocksByRangeRequest): AsyncIterable<ReqRespBlockResponse>;
+  onBeaconBlocksByRoot(req: phase0.BeaconBlocksByRootRequest): AsyncIterable<ReqRespBlockResponse>;
 };
 
 /**

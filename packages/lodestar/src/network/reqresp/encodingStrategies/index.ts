@@ -1,4 +1,10 @@
-import {Encoding, RequestOrResponseType, RequestOrResponseBody} from "../types";
+import {
+  Encoding,
+  RequestOrResponseType,
+  RequestOrIncomingResponseBody,
+  RequestOrOutgoingResponseBody,
+  OutgoingSerializer,
+} from "../types";
 import {BufferedSource} from "../utils";
 import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
 import {writeSszSnappyPayload} from "./sszSnappy/encode";
@@ -14,7 +20,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readEncodedPayload<T extends RequestOrResponseBody>(
+export async function readEncodedPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
   encoding: Encoding,
   type: RequestOrResponseType,
@@ -35,14 +41,14 @@ export async function readEncodedPayload<T extends RequestOrResponseBody>(
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeEncodedPayload<T extends RequestOrResponseBody>(
+export async function* writeEncodedPayload<T extends RequestOrOutgoingResponseBody>(
   body: T,
   encoding: Encoding,
-  type: RequestOrResponseType
+  serializer: OutgoingSerializer
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      yield* writeSszSnappyPayload(body, type);
+      yield* writeSszSnappyPayload(body, serializer);
       break;
 
     default:
