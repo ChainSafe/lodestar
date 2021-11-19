@@ -11,8 +11,8 @@ import {
   OutgoingResponseBodyByMethod,
   ContextBytesType,
   contextBytesTypeByProtocol,
-  getResponseSzzTypeByMethod,
   IncomingResponseBodyByMethod,
+  getOutgoingSerializerByMethod,
 } from "../types";
 
 /**
@@ -40,11 +40,8 @@ export function responseEncodeSuccess(
       yield* writeContextBytes(config, contextBytesType, forkName);
 
       // <encoding-dependent-header> | <encoded-payload>
-      const type =
-        protocol.method === Method.BeaconBlocksByRange || protocol.method === Method.BeaconBlocksByRoot
-          ? null
-          : getResponseSzzTypeByMethod(protocol, forkName);
-      yield* writeEncodedPayload(chunk, protocol.encoding, type);
+      const serializer = getOutgoingSerializerByMethod(protocol);
+      yield* writeEncodedPayload(chunk, protocol.encoding, serializer);
     }
   };
 }

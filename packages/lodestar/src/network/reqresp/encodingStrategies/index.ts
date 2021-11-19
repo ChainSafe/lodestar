@@ -1,4 +1,10 @@
-import {Encoding, RequestOrResponseType, RequestOrIncomingResponseBody, RequestOrOutgoingResponseBody} from "../types";
+import {
+  Encoding,
+  RequestOrResponseType,
+  RequestOrIncomingResponseBody,
+  RequestOrOutgoingResponseBody,
+  OutgoingSerializer,
+} from "../types";
 import {BufferedSource} from "../utils";
 import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
 import {writeSszSnappyPayload} from "./sszSnappy/encode";
@@ -31,7 +37,6 @@ export async function readEncodedPayload<T extends RequestOrIncomingResponseBody
 
 /**
  * Yields byte chunks for encoded header and payload as defined in the spec:
- * @param type: null if we use bytes data without having to serialize
  * ```
  * <encoding-dependent-header> | <encoded-payload>
  * ```
@@ -39,11 +44,11 @@ export async function readEncodedPayload<T extends RequestOrIncomingResponseBody
 export async function* writeEncodedPayload<T extends RequestOrOutgoingResponseBody>(
   body: T,
   encoding: Encoding,
-  type: RequestOrResponseType | null
+  serializer: OutgoingSerializer
 ): AsyncGenerator<Buffer> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      yield* writeSszSnappyPayload(body, type);
+      yield* writeSszSnappyPayload(body, serializer);
       break;
 
     default:

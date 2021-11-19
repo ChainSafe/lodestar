@@ -2,7 +2,11 @@ import all from "it-all";
 import pipe from "it-pipe";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
+import {
+  reqRespBlockResponseSerializer,
+  RequestOrIncomingResponseBody,
+  RequestOrResponseType,
+} from "../../../../../../src/network/reqresp/types";
 import {
   SszSnappyError,
   SszSnappyErrorCode,
@@ -28,7 +32,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
         const encodedChunks = await pipe(
           writeSszSnappyPayload(
             body as RequestOrOutgoingResponseBody,
-            type === ssz.phase0.SignedBeaconBlock ? null : type
+            type === ssz.phase0.SignedBeaconBlock ? reqRespBlockResponseSerializer : type
           ),
           all
         );

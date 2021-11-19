@@ -141,6 +141,26 @@ export function getResponseSzzTypeByMethod(protocol: Protocol, forkName: ForkNam
   }
 }
 
+/** Return either an ssz type or the serializer for ReqRespBlockResponse */
+export function getOutgoingSerializerByMethod(protocol: Protocol): OutgoingSerializer {
+  switch (protocol.method) {
+    case Method.Status:
+      return ssz.phase0.Status;
+    case Method.Goodbye:
+      return ssz.phase0.Goodbye;
+    case Method.Ping:
+      return ssz.phase0.Ping;
+    case Method.Metadata: {
+      // V1 -> phase0.Metadata, V2 -> altair.Metadata
+      const fork = protocol.version === Version.V1 ? ForkName.phase0 : ForkName.altair;
+      return ssz[fork].Metadata;
+    }
+    case Method.BeaconBlocksByRange:
+    case Method.BeaconBlocksByRoot:
+      return reqRespBlockResponseSerializer;
+  }
+}
+
 type CommonResponseBodyByMethod = {
   [Method.Status]: phase0.Status;
   [Method.Goodbye]: phase0.Goodbye;
@@ -172,6 +192,8 @@ export type RequestOrOutgoingResponseBody = RequestBody | OutgoingResponseBody;
 export type RequestType = Exclude<ReturnType<typeof getRequestSzzTypeByMethod>, null>;
 export type ResponseType = ReturnType<typeof getResponseSzzTypeByMethod>;
 export type RequestOrResponseType = RequestType | ResponseType;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type OutgoingSerializer = {serialize: (body: any) => Uint8Array};
 
 // Link each method with its type for more type-safe event handlers
 
@@ -181,3 +203,10 @@ export type RequestTypedContainer = {
 export type ResponseTypedContainer = {
   [K in Method]: {method: K; body: OutgoingResponseBodyByMethod[K]};
 }[Method];
+
+/** Serializer for ReqRespBlockResponse */
+export const reqRespBlockResponseSerializer = {
+  serialize: (chunk: ReqRespBlockResponse): Uint8Array => {
+    return chunk.bytes;
+  },
+};
