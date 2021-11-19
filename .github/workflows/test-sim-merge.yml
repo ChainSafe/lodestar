@@ -32,17 +32,37 @@ jobs:
       # </common-build>
 
       # Install Geth merge interop
-      - uses: actions/setup-go@v2
-      - name: Clone Geth merge interop branch
-        run: git clone -b kintsugi-spec https://github.com/MariusVanDerWijden/go-ethereum.git
-      - name: Build Geth
-        run: cd go-ethereum && make
+      # - uses: actions/setup-go@v2
+      # - name: Clone Geth merge interop branch
+      #   run: git clone -b kintsugi-spec https://github.com/MariusVanDerWijden/go-ethereum.git && cd go-ethereum && git reset --hard b629e2560aae26059bf69ef19690385e078cbefd && git submodule update
+      # - name: Build Geth
+      #   run: cd go-ethereum && make
 
-      - name: Simulation query geth node
+      # - name: Test Lodestar <> Geth interop
+      #   run: yarn test:sim:merge-interop
+      #   working-directory: packages/lodestar
+      #   env:
+      #     EL_BINARY_DIR: ../../go-ethereum/build/bin
+      #     EL_SCRIPT_DIR: geth
+      #     EL_PORT: 8545
+
+      # Install Nethermind merge interop
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '5.0.x'
+      - name: Clone Nethermind merge interop branch
+        run: git clone -b themerge_kintsugi https://github.com/NethermindEth/nethermind --recursive && cd nethermind && git reset --hard 8e54f87ce2e36e20a73b73a0e470816b1edc9b92 && git submodule update
+      - name: Build Nethermind
+        run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
+
+      - name: Test Lodestar <> Nethermind interop
         run: yarn test:sim:merge-interop
         working-directory: packages/lodestar
         env:
-          GETH_BINARY_PATH: ../../go-ethereum/build/bin/geth
+          EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
+          EL_SCRIPT_DIR: nethermind
+          EL_PORT: 8550
+
 
       - name: Upload debug log test files
         if: ${{ always() }}
@@ -50,3 +70,4 @@ jobs:
         with:
           name: debug-test-logs
           path: packages/lodestar/test-logs
+
