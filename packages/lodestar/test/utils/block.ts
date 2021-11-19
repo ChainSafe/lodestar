@@ -1,4 +1,3 @@
-import {ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -9,6 +8,7 @@ import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../src/constants";
+import {ReqRespBlockResponse} from "../../src/network/reqresp/types";
 
 export function generateEmptyBlock(): phase0.BeaconBlock {
   return {

@@ -1,10 +1,12 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@chainsafe/lodestar-params";
-import {ReqRespBlockResponse, phase0} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
+import {fromHexString} from "@chainsafe/ssz";
 import {IBlockFilterOptions} from "../../../db/repositories";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 import {RespStatus} from "../../../constants";
 import {ResponseError} from "../response";
+import {ReqRespBlockResponse} from "../types";
 
 // TODO: Unit test
 
@@ -33,12 +35,13 @@ export async function* onBeaconBlocksByRange(
     lt: requestBody.startSlot + requestBody.count * requestBody.step,
     step: requestBody.step,
   } as IBlockFilterOptions);
-  yield* injectRecentBlocks(archiveBlocksStream, chain, requestBody);
+  yield* injectRecentBlocks(archiveBlocksStream, chain, db, requestBody);
 }
 
 export async function* injectRecentBlocks(
   archiveStream: AsyncIterable<ReqRespBlockResponse>,
   chain: IBeaconChain,
+  db: IBeaconDb,
   request: phase0.BeaconBlocksByRangeRequest
 ): AsyncGenerator<ReqRespBlockResponse> {
   let totalBlock = 0;
@@ -56,7 +59,7 @@ export async function* injectRecentBlocks(
     slot += request.step;
   }
 
-  const p2pBlocks = await chain.getUnfinalizedBlocksAtSlots(slots);
+  const p2pBlocks = await getUnfinalizedBlocksAtSlots(slots, {chain, db});
   for (const p2pBlock of p2pBlocks) {
     if (p2pBlock !== undefined) {
       totalBlock++;
@@ -66,4 +69,32 @@ export async function* injectRecentBlocks(
   if (totalBlock === 0) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No block found");
   }
+}
+
+/** Returned blocks have the same ordering as `slots` */
+async function getUnfinalizedBlocksAtSlots(
+  slots: Slot[],
+  {chain, db}: {chain: IBeaconChain; db: IBeaconDb}
+): Promise<ReqRespBlockResponse[]> {
+  if (slots.length === 0) {
+    return [];
+  }
+
+  const slotsSet = new Set(slots);
+  const minSlot = Math.min(...slots); // Slots must have length > 0
+  const blockRootsPerSlot = new Map<Slot, Promise<Buffer | null>>();
+
+  // these blocks are on the same chain to head
+  for (const block of chain.forkChoice.iterateAncestorBlocks(chain.forkChoice.getHeadRoot())) {
+    if (block.slot < minSlot) {
+      break;
+    } else if (slotsSet.has(block.slot)) {
+      blockRootsPerSlot.set(block.slot, db.block.getBinary(fromHexString(block.blockRoot)));
+    }
+  }
+
+  const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
+  return unfinalizedBlocks
+    .map((block, i) => ({bytes: block, slot: slots[i]}))
+    .filter((p2pBlock): p2pBlock is ReqRespBlockResponse => p2pBlock.bytes != null);
 }

@@ -1,7 +1,8 @@
-import {ReqRespBlockResponse, phase0, Slot} from "@chainsafe/lodestar-types";
+import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 import {getSlotFromBytes} from "../../../util/multifork";
+import {ReqRespBlockResponse} from "../types";
 
 export async function* onBeaconBlocksByRoot(
   requestBody: phase0.BeaconBlocksByRootRequest,

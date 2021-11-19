@@ -1,4 +1,3 @@
-import {ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
@@ -35,6 +34,7 @@ import {
 import {LightClientIniter} from "../../../../src/chain/lightClient";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
 import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
+import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 

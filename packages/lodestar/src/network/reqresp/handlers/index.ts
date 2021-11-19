@@ -1,6 +1,7 @@
-import {ReqRespBlockResponse, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
+import {ReqRespBlockResponse} from "../types";
 import {onBeaconBlocksByRange} from "./beaconBlocksByRange";
 import {onBeaconBlocksByRoot} from "./beaconBlocksByRoot";
 

@@ -1,5 +1,5 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {allForks, ReqRespBlockResponse, phase0, ssz} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz, Slot} from "@chainsafe/lodestar-types";
 
 export const protocolPrefix = "/eth2/beacon_chain/req";
 
@@ -209,4 +209,11 @@ export const reqRespBlockResponseSerializer = {
   serialize: (chunk: ReqRespBlockResponse): Uint8Array => {
     return chunk.bytes;
   },
+};
+
+/** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
+export type ReqRespBlockResponse = {
+  /** Deserialized data of allForks.SignedBeaconBlock */
+  bytes: Buffer;
+  slot: Slot;
 };

@@ -2,7 +2,7 @@ import all from "it-all";
 import {ArrayLike} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
-import {Slot, Root, allForks, ssz, ReqRespBlockResponse} from "@chainsafe/lodestar-types";
+import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
@@ -16,6 +16,13 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
   slot: Slot;
   blockRoot: Root;
   parentRoot: Root;
+};
+
+// TODO: remove once we remove reqRespBlockStream
+export type BlockEntry = {
+  /** Deserialized data of allForks.SignedBeaconBlock */
+  bytes: Buffer;
+  slot: Slot;
 };
 
 /**
@@ -101,7 +108,8 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async *reqRespBlockStream(opts?: IBlockFilterOptions): AsyncIterable<ReqRespBlockResponse> {
+  // TODO: only support step 1
+  async *reqRespBlockStream(opts?: IBlockFilterOptions): AsyncIterable<BlockEntry> {
     const firstSlot = this.getFirstSlot(opts);
     const binaryEntriesStream = super.binaryEntriesStream(opts);
     const step = (opts && opts.step) || 1;
