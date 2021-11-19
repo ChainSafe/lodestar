@@ -1,4 +1,4 @@
-import {P2pBlockResponse} from "@chainsafe/lodestar-types";
+import {ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -40,17 +40,17 @@ export function generateEmptySignedBlock(): phase0.SignedBeaconBlock {
   };
 }
 
-export function generateEmptyP2pBlockResponse(): P2pBlockResponse {
+export function generateEmptyReqRespBlockResponse(): ReqRespBlockResponse {
   return {
     slot: 0,
     bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(generateEmptySignedBlock())),
   };
 }
 
-export function blocksToP2pBlockResponses(
+export function blocksToReqRespBlockResponses(
   blocks: allForks.SignedBeaconBlock[],
   config?: IChainForkConfig
-): P2pBlockResponse[] {
+): ReqRespBlockResponse[] {
   return blocks.map((block) => {
     const slot = block.message.slot;
     const sszType = config

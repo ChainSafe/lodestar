@@ -1,5 +1,5 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@chainsafe/lodestar-params";
-import {P2pBlockResponse, phase0} from "@chainsafe/lodestar-types";
+import {ReqRespBlockResponse, phase0} from "@chainsafe/lodestar-types";
 import {IBlockFilterOptions} from "../../../db/repositories";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
@@ -12,7 +12,7 @@ export async function* onBeaconBlocksByRange(
   requestBody: phase0.BeaconBlocksByRangeRequest,
   chain: IBeaconChain,
   db: IBeaconDb
-): AsyncIterable<P2pBlockResponse> {
+): AsyncIterable<ReqRespBlockResponse> {
   if (requestBody.step < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "step < 1");
   }
@@ -28,7 +28,7 @@ export async function* onBeaconBlocksByRange(
     requestBody.count = MAX_REQUEST_BLOCKS;
   }
 
-  const archiveBlocksStream = db.blockArchive.p2pBlockStream({
+  const archiveBlocksStream = db.blockArchive.reqRespBlockStream({
     gte: requestBody.startSlot,
     lt: requestBody.startSlot + requestBody.count * requestBody.step,
     step: requestBody.step,
@@ -37,10 +37,10 @@ export async function* onBeaconBlocksByRange(
 }
 
 export async function* injectRecentBlocks(
-  archiveStream: AsyncIterable<P2pBlockResponse>,
+  archiveStream: AsyncIterable<ReqRespBlockResponse>,
   chain: IBeaconChain,
   request: phase0.BeaconBlocksByRangeRequest
-): AsyncGenerator<P2pBlockResponse> {
+): AsyncGenerator<ReqRespBlockResponse> {
   let totalBlock = 0;
   let slot = -1;
   for await (const p2pBlock of archiveStream) {

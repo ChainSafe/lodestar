@@ -1,9 +1,9 @@
 import varint from "varint";
 import {source} from "stream-to-it";
 import {createCompressStream} from "@chainsafe/snappy-stream";
-import {RequestOrResponseType, RequestOrLodestarResponseBody} from "../../types";
+import {RequestOrResponseType, RequestOrOutgoingResponseBody} from "../../types";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
-import {P2pBlockResponse} from "@chainsafe/lodestar-types";
+import {ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 
 /**
  * ssz_snappy encoding strategy writer.
@@ -13,11 +13,11 @@ import {P2pBlockResponse} from "@chainsafe/lodestar-types";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeSszSnappyPayload<T extends RequestOrLodestarResponseBody>(
+export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponseBody>(
   body: T,
   type: RequestOrResponseType | null
 ): AsyncGenerator<Buffer> {
-  const serializedBody = type === null ? (body as P2pBlockResponse).bytes : serializeSszBody(body, type);
+  const serializedBody = type === null ? (body as ReqRespBlockResponse).bytes : serializeSszBody(body, type);
 
   // MUST encode the length of the raw SSZ bytes, encoded as an unsigned protobuf varint
   yield Buffer.from(varint.encode(serializedBody.length));
@@ -40,7 +40,7 @@ function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
 /**
  * Returns SSZ serialized body. Wrapps errors with SszSnappyError.SERIALIZE_ERROR
  */
-function serializeSszBody<T extends RequestOrLodestarResponseBody>(body: T, type: RequestOrResponseType): Buffer {
+function serializeSszBody<T extends RequestOrOutgoingResponseBody>(body: T, type: RequestOrResponseType): Buffer {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const bytes = type.serialize(body as any);

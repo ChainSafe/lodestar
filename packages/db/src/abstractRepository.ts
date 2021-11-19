@@ -174,9 +174,9 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  async *binaryValuesStream(opts?: IFilterOptions<I>): AsyncIterable<Buffer> {
+  async *binaryEntriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<Buffer, Buffer>> {
     this.dbReadsMetrics?.inc();
-    yield* this.db.valuesStream(this.dbFilterOptions(opts));
+    yield* this.db.entriesStream(this.dbFilterOptions(opts));
   }
 
   async entries(opts?: IFilterOptions<I>): Promise<IKeyValue<I, T>[]> {

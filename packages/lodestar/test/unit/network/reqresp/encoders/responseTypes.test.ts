@@ -8,22 +8,22 @@ import {
   Method,
   Version,
   Encoding,
-  LodestarResponseBody,
+  OutgoingResponseBody,
   getResponseSzzTypeByMethod,
-  ResponseBodyByMethod,
+  IncomingResponseBodyByMethod,
 } from "../../../../../src/network/reqresp/types";
 import {responseDecode} from "../../../../../src/network/reqresp/encoders/responseDecode";
 import {responseEncodeSuccess} from "../../../../../src/network/reqresp/encoders/responseEncode";
 import {arrToSource, createStatus, generateEmptySignedBlocks} from "../utils";
 import {expectIsEqualSszTypeArr} from "../../../../utils/ssz";
 import {config} from "../../../../utils/config";
-import {blocksToP2pBlockResponses} from "../../../../utils/block";
+import {blocksToReqRespBlockResponses} from "../../../../utils/block";
 
 chai.use(chaiAsPromised);
 
 // Ensure the types from all methods are supported properly
 describe("network / reqresp / encoders / responseTypes", () => {
-  const testCases: {[P in keyof ResponseBodyByMethod]: ResponseBodyByMethod[P][][]} = {
+  const testCases: {[P in keyof IncomingResponseBodyByMethod]: IncomingResponseBodyByMethod[P][][]} = {
     [Method.Status]: [[createStatus()]],
     [Method.Goodbye]: [[BigInt(0)], [BigInt(1)]],
     [Method.Ping]: [[BigInt(0)], [BigInt(1)]],
@@ -44,8 +44,8 @@ describe("network / reqresp / encoders / responseTypes", () => {
       // const responsesChunks = _responsesChunks as LodestarResponseBody[][];
       const lodestarResponseBodies =
         _method === Method.BeaconBlocksByRange || _method === Method.BeaconBlocksByRoot
-          ? responsesChunks.map((chunk) => blocksToP2pBlockResponses(chunk as allForks.SignedBeaconBlock[]))
-          : (responsesChunks as LodestarResponseBody[][]);
+          ? responsesChunks.map((chunk) => blocksToReqRespBlockResponses(chunk as allForks.SignedBeaconBlock[]))
+          : (responsesChunks as OutgoingResponseBody[][]);
 
       const versions =
         method === Method.BeaconBlocksByRange || method === Method.BeaconBlocksByRoot

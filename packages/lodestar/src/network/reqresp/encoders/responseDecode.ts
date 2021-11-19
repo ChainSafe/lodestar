@@ -6,7 +6,7 @@ import {readEncodedPayload} from "../encodingStrategies";
 import {ResponseError} from "../response";
 import {
   Protocol,
-  ResponseBody,
+  IncomingResponseBody,
   ContextBytesType,
   deserializeToTreeByMethod,
   contextBytesTypeByProtocol,
@@ -32,7 +32,7 @@ enum StreamStatus {
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
   protocol: Protocol
-): (source: AsyncIterable<Buffer>) => AsyncGenerator<ResponseBody> {
+): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
     const deserializeToTree = deserializeToTreeByMethod[protocol.method];
     const contextBytesType = contextBytesTypeByProtocol(protocol);

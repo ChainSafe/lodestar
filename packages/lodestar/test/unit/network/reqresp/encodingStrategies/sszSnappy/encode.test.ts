@@ -2,7 +2,7 @@ import all from "it-all";
 import pipe from "it-pipe";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
+import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 import {
   SszSnappyError,
   SszSnappyErrorCode,
@@ -11,8 +11,8 @@ import {
 import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
 import {expectEqualByteChunks} from "../../utils";
 import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
-import {blocksToP2pBlockResponses} from "../../../../../utils/block";
-import {RequestOrLodestarResponseBody} from "../../../../../../src/network/reqresp/types";
+import {blocksToReqRespBlockResponses} from "../../../../../utils/block";
+import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types";
 
 describe("network / reqresp / sszSnappy / encode", () => {
   describe("Test data vectors (generated in a previous version)", () => {
@@ -23,11 +23,11 @@ describe("network / reqresp / sszSnappy / encode", () => {
       it(id, async () => {
         const body =
           type === ssz.phase0.SignedBeaconBlock
-            ? blocksToP2pBlockResponses([testCase.body] as allForks.SignedBeaconBlock[])[0]
+            ? blocksToReqRespBlockResponses([testCase.body] as allForks.SignedBeaconBlock[])[0]
             : testCase.body;
         const encodedChunks = await pipe(
           writeSszSnappyPayload(
-            body as RequestOrLodestarResponseBody,
+            body as RequestOrOutgoingResponseBody,
             type === ssz.phase0.SignedBeaconBlock ? null : type
           ),
           all
@@ -41,7 +41,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     const testCases: {
       id: string;
       type: RequestOrResponseType;
-      body: RequestOrResponseBody;
+      body: RequestOrIncomingResponseBody;
       error: LodestarError<any>;
     }[] = [
       {
@@ -58,7 +58,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     for (const {id, type, body, error} of testCases) {
       it(id, async () => {
         await expectRejectedWithLodestarError(
-          pipe(writeSszSnappyPayload(body as RequestOrLodestarResponseBody, type), all),
+          pipe(writeSszSnappyPayload(body as RequestOrOutgoingResponseBody, type), all),
           error
         );
       });

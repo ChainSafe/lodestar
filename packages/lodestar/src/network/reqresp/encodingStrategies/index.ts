@@ -1,4 +1,4 @@
-import {Encoding, RequestOrResponseType, RequestOrResponseBody, RequestOrLodestarResponseBody} from "../types";
+import {Encoding, RequestOrResponseType, RequestOrIncomingResponseBody, RequestOrOutgoingResponseBody} from "../types";
 import {BufferedSource} from "../utils";
 import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
 import {writeSszSnappyPayload} from "./sszSnappy/encode";
@@ -14,7 +14,7 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode";
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readEncodedPayload<T extends RequestOrResponseBody>(
+export async function readEncodedPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
   encoding: Encoding,
   type: RequestOrResponseType,
@@ -36,7 +36,7 @@ export async function readEncodedPayload<T extends RequestOrResponseBody>(
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function* writeEncodedPayload<T extends RequestOrLodestarResponseBody>(
+export async function* writeEncodedPayload<T extends RequestOrOutgoingResponseBody>(
   body: T,
   encoding: Encoding,
   type: RequestOrResponseType | null

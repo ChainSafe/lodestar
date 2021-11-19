@@ -11,7 +11,7 @@ export {ts as allForks} from "./allForks";
 export type RootHex = string;
 
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
-export type P2pBlockResponse = {
+export type ReqRespBlockResponse = {
   /** Deserialized data of allForks.SignedBeaconBlock */
   bytes: Buffer;
   slot: Slot;

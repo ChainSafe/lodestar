@@ -6,13 +6,13 @@ import {encodeErrorMessage} from "../utils";
 import {
   Method,
   Protocol,
-  LodestarResponseBody,
+  OutgoingResponseBody,
   ResponseTypedContainer,
-  LodestarResponseBodyByMethod,
+  OutgoingResponseBodyByMethod,
   ContextBytesType,
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
-  ResponseBodyByMethod,
+  IncomingResponseBodyByMethod,
 } from "../types";
 
 /**
@@ -27,7 +27,7 @@ import {
 export function responseEncodeSuccess(
   config: IBeaconConfig,
   protocol: Protocol
-): (source: AsyncIterable<LodestarResponseBody>) => AsyncIterable<Buffer> {
+): (source: AsyncIterable<OutgoingResponseBody>) => AsyncIterable<Buffer> {
   const contextBytesType = contextBytesTypeByProtocol(protocol);
 
   return async function* responseEncodeSuccessTransform(source) {
@@ -95,7 +95,7 @@ export async function* writeContextBytes(
 export function getForkNameFromResponseBody<K extends Method>(
   config: IBeaconConfig,
   protocol: Protocol,
-  body: LodestarResponseBodyByMethod[K] | ResponseBodyByMethod[K]
+  body: OutgoingResponseBodyByMethod[K] | IncomingResponseBodyByMethod[K]
 ): ForkName {
   const requestTyped = {method: protocol.method, body} as ResponseTypedContainer;
 

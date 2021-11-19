@@ -1,11 +1,11 @@
 import {fromHexString, List} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {RequestOrResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
+import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 
 // This test data generated with code from 'master' at Jan 1st 2021
 // commit: ea3ffab1ffb8093b61a8ebfa4b4432c604c10819
 
-export interface ISszSnappyTestData<T extends RequestOrResponseBody> {
+export interface ISszSnappyTestData<T extends RequestOrIncomingResponseBody> {
   id: string;
   type: RequestOrResponseType;
   body: T;

@@ -3,7 +3,7 @@ import varint from "varint";
 import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
 import {BufferedSource} from "../../utils";
-import {RequestOrResponseType, RequestOrResponseBody} from "../../types";
+import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
 import {maxEncodedLen} from "./utils";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
@@ -19,7 +19,7 @@ export interface ISszSnappyOptions {
  * <encoding-dependent-header> | <encoded-payload>
  * ```
  */
-export async function readSszSnappyPayload<T extends RequestOrResponseBody>(
+export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
   type: RequestOrResponseType,
   options?: ISszSnappyOptions
@@ -130,7 +130,7 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T extends RequestOrResponseBody>(
+function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
   bytes: Buffer,
   type: RequestOrResponseType,
   options?: ISszSnappyOptions

@@ -27,11 +27,11 @@ import {
   Version,
   Encoding,
   Protocol,
-  LodestarResponseBody,
+  OutgoingResponseBody,
   RequestBody,
   RequestTypedContainer,
   protocolsSupported,
-  ResponseBody,
+  IncomingResponseBody,
 } from "./types";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
@@ -133,7 +133,7 @@ export class ReqResp implements IReqResp {
   }
 
   // Helper to reduce code duplication
-  private async sendRequest<T extends ResponseBody | ResponseBody[]>(
+  private async sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
     peerId: PeerId,
     method: Method,
     versions: Version[],
@@ -210,7 +210,7 @@ export class ReqResp implements IReqResp {
     protocol: Protocol,
     requestBody: RequestBody,
     peerId: PeerId
-  ): AsyncIterable<LodestarResponseBody> {
+  ): AsyncIterable<OutgoingResponseBody> {
     const requestTyped = {method: protocol.method, body: requestBody} as RequestTypedContainer;
 
     switch (requestTyped.method) {

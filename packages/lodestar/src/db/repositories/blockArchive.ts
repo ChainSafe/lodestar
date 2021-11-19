@@ -2,9 +2,9 @@ import all from "it-all";
 import {ArrayLike} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
-import {Slot, Root, allForks, ssz, P2pBlockResponse} from "@chainsafe/lodestar-types";
+import {Slot, Root, allForks, ssz, ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {getSignedBlockTypeFromBytes, getSlotFromBytes} from "../../util/multifork";
+import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 import {getRootIndexKey, getParentRootIndexKey} from "./blockArchiveIndex";
 import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootIndex} from "./blockArchiveIndex";
 
@@ -101,15 +101,15 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async *p2pBlockStream(opts?: IBlockFilterOptions): AsyncIterable<P2pBlockResponse> {
+  async *reqRespBlockStream(opts?: IBlockFilterOptions): AsyncIterable<ReqRespBlockResponse> {
     const firstSlot = this.getFirstSlot(opts);
-    const binaryValuesStream = super.binaryValuesStream(opts);
+    const binaryEntriesStream = super.binaryEntriesStream(opts);
     const step = (opts && opts.step) || 1;
 
-    for await (const bytes of binaryValuesStream) {
-      const slot = getSlotFromBytes(bytes);
+    for await (const {key, value} of binaryEntriesStream) {
+      const slot = this.decodeKey(key);
       if ((slot - firstSlot) % step === 0) {
-        yield {bytes, slot};
+        yield {bytes: value, slot};
       }
     }
   }
@@ -137,9 +137,9 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return slot !== null ? await this.get(slot) : null;
   }
 
-  async getBinaryByRoot(root: Root): Promise<Buffer | null> {
+  async getBinaryEntryByRoot(root: Root): Promise<IKeyValue<Slot, Buffer> | null> {
     const slot = await this.getSlotByRoot(root);
-    return slot !== null ? await this.getBinary(slot) : null;
+    return slot !== null ? ({key: slot, value: await this.getBinary(slot)} as IKeyValue<Slot, Buffer>) : null;
   }
 
   async getByParentRoot(root: Root): Promise<allForks.SignedBeaconBlock | null> {

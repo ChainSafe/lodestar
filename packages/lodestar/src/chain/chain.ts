@@ -6,7 +6,7 @@ import fs from "fs";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, Number64, Root, phase0, Slot, P2pBlockResponse} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, ReqRespBlockResponse} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
@@ -221,7 +221,7 @@ export class BeaconChain implements IBeaconChain {
   }
 
   /** Returned blocks have the same ordering as `slots` */
-  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<P2pBlockResponse[]> {
+  async getUnfinalizedBlocksAtSlots(slots: Slot[]): Promise<ReqRespBlockResponse[]> {
     if (slots.length === 0) {
       return [];
     }
@@ -242,7 +242,7 @@ export class BeaconChain implements IBeaconChain {
     const unfinalizedBlocks = await Promise.all(slots.map((slot) => blockRootsPerSlot.get(slot)));
     return unfinalizedBlocks
       .map((block, i) => ({bytes: block, slot: slots[i]}))
-      .filter((p2pBlock): p2pBlock is P2pBlockResponse => p2pBlock.bytes != null);
+      .filter((p2pBlock): p2pBlock is ReqRespBlockResponse => p2pBlock.bytes != null);
   }
 
   async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {

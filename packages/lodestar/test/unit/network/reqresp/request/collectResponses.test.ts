@@ -1,17 +1,17 @@
 import {expect} from "chai";
 import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses";
-import {Method, ResponseBody} from "../../../../../src/network/reqresp/types";
+import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types";
 import {arrToSource} from "../utils";
 
 describe("network / reqresp / request / collectResponses", () => {
-  const chunk: ResponseBody = BigInt(1);
+  const chunk: IncomingResponseBody = BigInt(1);
 
   const testCases: {
     id: string;
     method: Method;
     maxResponses?: number;
-    sourceChunks: ResponseBody[];
-    expectedReturn: ResponseBody | ResponseBody[];
+    sourceChunks: IncomingResponseBody[];
+    expectedReturn: IncomingResponseBody | IncomingResponseBody[];
   }[] = [
     {
       id: "Return first chunk only for a single-chunk method",
