@@ -1,7 +1,6 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
-import {IBlockFilterOptions} from "../../../db/repositories";
 import {IBeaconChain} from "../../../chain";
 import {IBeaconDb} from "../../../db";
 import {RespStatus} from "../../../constants";
@@ -15,27 +14,40 @@ export async function* onBeaconBlocksByRange(
   chain: IBeaconChain,
   db: IBeaconDb
 ): AsyncIterable<ReqRespBlockResponse> {
-  if (requestBody.step < 1) {
+  const {startSlot, step} = requestBody;
+  let {count} = requestBody;
+  if (step < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "step < 1");
   }
-  if (requestBody.count < 1) {
+  if (count < 1) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "count < 1");
   }
   // TODO: validate against MIN_EPOCHS_FOR_BLOCK_REQUESTS
-  if (requestBody.startSlot < GENESIS_SLOT) {
+  if (startSlot < GENESIS_SLOT) {
     throw new ResponseError(RespStatus.INVALID_REQUEST, "startSlot < genesis");
   }
 
-  if (requestBody.count > MAX_REQUEST_BLOCKS) {
-    requestBody.count = MAX_REQUEST_BLOCKS;
+  if (count > MAX_REQUEST_BLOCKS) {
+    count = MAX_REQUEST_BLOCKS;
   }
 
-  const archiveBlocksStream = db.blockArchive.reqRespBlockStream({
-    gte: requestBody.startSlot,
-    lt: requestBody.startSlot + requestBody.count * requestBody.step,
-    step: requestBody.step,
-  } as IBlockFilterOptions);
-  yield* injectRecentBlocks(archiveBlocksStream, chain, db, requestBody);
+  const lt = startSlot + count * step;
+  let archivedBlocksStream: AsyncIterable<ReqRespBlockResponse>;
+
+  if (step > 1) {
+    let slot = startSlot;
+    const slots = [];
+    while (slot < lt) {
+      slots.push(slot);
+      slot += step;
+    }
+    archivedBlocksStream = getFinalizedBlocksAtSlots(slots, db);
+  } else {
+    // step < 1 was validated above
+    archivedBlocksStream = getFinalizedBlocksByRange(startSlot, lt, db);
+  }
+
+  yield* injectRecentBlocks(archivedBlocksStream, chain, db, requestBody);
 }
 
 export async function* injectRecentBlocks(
@@ -68,6 +80,24 @@ export async function* injectRecentBlocks(
   }
   if (totalBlock === 0) {
     throw new ResponseError(RespStatus.RESOURCE_UNAVAILABLE, "No block found");
+  }
+}
+
+async function* getFinalizedBlocksAtSlots(slots: Slot[], db: IBeaconDb): AsyncIterable<ReqRespBlockResponse> {
+  for (const slot of slots) {
+    const bytes = await db.blockArchive.getBinary(slot);
+    if (bytes !== null) yield {slot, bytes};
+  }
+}
+
+async function* getFinalizedBlocksByRange(gte: number, lt: number, db: IBeaconDb): AsyncIterable<ReqRespBlockResponse> {
+  const binaryEntriesStream = db.blockArchive.binaryEntriesStream({
+    gte,
+    lt,
+  });
+  for await (const {key, value} of binaryEntriesStream) {
+    const slot = db.blockArchive.decodeKey(key);
+    yield {bytes: value, slot};
   }
 }
 

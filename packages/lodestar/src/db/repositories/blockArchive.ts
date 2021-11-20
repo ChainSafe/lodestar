@@ -11,18 +11,10 @@ import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootI
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
 }
-
 export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
   slot: Slot;
   blockRoot: Root;
   parentRoot: Root;
-};
-
-// TODO: remove once we remove reqRespBlockStream
-export type BlockEntry = {
-  /** Deserialized data of allForks.SignedBeaconBlock */
-  bytes: Buffer;
-  slot: Slot;
 };
 
 /**
@@ -106,20 +98,6 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
       ),
       Array.from(values).map((value) => deleteParentRootIndex(this.db, value)),
     ]);
-  }
-
-  // TODO: only support step 1
-  async *reqRespBlockStream(opts?: IBlockFilterOptions): AsyncIterable<BlockEntry> {
-    const firstSlot = this.getFirstSlot(opts);
-    const binaryEntriesStream = super.binaryEntriesStream(opts);
-    const step = (opts && opts.step) || 1;
-
-    for await (const {key, value} of binaryEntriesStream) {
-      const slot = this.decodeKey(key);
-      if ((slot - firstSlot) % step === 0) {
-        yield {bytes: value, slot};
-      }
-    }
   }
 
   async *valuesStream(opts?: IBlockFilterOptions): AsyncIterable<allForks.SignedBeaconBlock> {
