@@ -25,29 +25,34 @@ export function getLightclientApi(
       const state = await resolveStateId(config, chain, db, stateId);
       const stateTreeBacked = ssz.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
       const tree = stateTreeBacked.tree;
-      // Logic from TreeBacked#createProof is (mostly) copied here to expose the # of gindices in the proof
-      let gindices = paths
-        .map((path) => {
-          const {type, gindex} = ssz.altair.BeaconState.getPathInfo(path);
-          if (!isCompositeType(type)) {
-            return gindex;
-          } else {
-            // if the path subtype is composite, include the gindices of all the leaves
-            return type.tree_getLeafGindices(
-              type.hasVariableSerializedLength() ? tree.getSubtree(gindex) : undefined,
-              gindex
-            );
+
+      const gindicesSet = new Set<bigint>();
+
+      for (const path of paths) {
+        // Logic from TreeBacked#createProof is (mostly) copied here to expose the # of gindices in the proof
+        const {type, gindex} = ssz.altair.BeaconState.getPathInfo(path);
+        if (!isCompositeType(type)) {
+          gindicesSet.add(gindex);
+        } else {
+          // if the path subtype is composite, include the gindices of all the leaves
+          const gindexes = type.tree_getLeafGindices(
+            type.hasVariableSerializedLength() ? tree.getSubtree(gindex) : undefined,
+            gindex
+          );
+          for (const gindex of gindexes) {
+            gindicesSet.add(gindex);
           }
-        })
-        .flat(1);
-      gindices = Array.from(new Set(gindices));
-      if (gindices.length > maxGindicesInProof) {
+        }
+      }
+
+      if (gindicesSet.size > maxGindicesInProof) {
         throw new Error("Requested proof is too large.");
       }
+
       return {
         data: tree.getProof({
           type: ProofType.treeOffset,
-          gindices,
+          gindices: Array.from(gindicesSet),
         }),
       };
     },
@@ -56,29 +61,27 @@ export function getLightclientApi(
 
     async getBestUpdates(from, to) {
       const periods = linspace(from, to);
-      return {data: await chain.lightclientUpdater.getBestUpdates(periods)};
+      const updates = await Promise.all(
+        periods.map((period) => chain.lightClientServer.serveBestUpdateInPeriod(period))
+      );
+      return {data: updates};
     },
 
-    async getLatestUpdateFinalized() {
-      const update = await chain.lightclientUpdater.getLatestUpdateFinalized();
-      if (!update) throw new ApiError(404, "No update available");
-      return {data: update};
-    },
-
-    async getLatestUpdateNonFinalized() {
-      const update = await chain.lightclientUpdater.getLatestUpdateNonFinalized();
-      if (!update) throw new ApiError(404, "No update available");
+    async getLatestHeader() {
+      const update = await chain.lightClientServer.serveBestHeaderUpdate();
       return {data: update};
     },
 
     // Init API
 
-    async getInitProof(blockRoot) {
-      const proof = await chain.lightClientIniter.getInitProofByBlockRoot(fromHexString(blockRoot));
-      if (!proof) {
-        throw new ApiError(404, "No init proof available");
-      }
-      return {data: proof};
+    async getSnapshotProof(blockRoot) {
+      const snapshotProof = await chain.lightClientServer.serveInitCommittees(fromHexString(blockRoot));
+      return {data: snapshotProof};
+    },
+
+    async getGenesisProof(blockRoot) {
+      const genesisProof = await chain.lightClientServer.serveInitProof(fromHexString(blockRoot));
+      return {data: genesisProof};
     },
   };
 }

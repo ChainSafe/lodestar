@@ -1,7 +1,7 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -34,8 +34,16 @@ export async function verifyBlock(
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
 ): Promise<FullyVerifiedBlock> {
-  verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
-  return await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
+
+  const postState = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+
+  return {
+    block: partiallyVerifiedBlock.block,
+    postState,
+    parentBlock,
+    skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
+  };
 }
 
 /**
@@ -53,7 +61,7 @@ export async function verifyBlock(
 export function verifyBlockSanityChecks(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock
-): void {
+): IProtoBlock {
   const {block} = partiallyVerifiedBlock;
   const blockSlot = block.message.slot;
 
@@ -70,7 +78,8 @@ export function verifyBlockSanityChecks(
 
   // Parent is known to the fork-choice
   const parentRoot = toHexString(block.message.parentRoot);
-  if (!chain.forkChoice.hasBlockHex(parentRoot)) {
+  const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
+  if (!parentBlock) {
     throw new BlockError(block, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
@@ -88,6 +97,8 @@ export function verifyBlockSanityChecks(
   if (chain.forkChoice.hasBlockHex(blockHash)) {
     throw new BlockError(block, {code: BlockErrorCode.ALREADY_KNOWN, root: blockHash});
   }
+
+  return parentBlock;
 }
 
 /**
@@ -102,7 +113,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<FullyVerifiedBlock> {
+): Promise<CachedBeaconState<allForks.BeaconState>> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -190,9 +201,5 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
   }
 
-  return {
-    block,
-    postState,
-    skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
-  };
+  return postState;
 }

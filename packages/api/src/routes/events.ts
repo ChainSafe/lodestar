@@ -1,8 +1,15 @@
-import {Epoch, Number64, phase0, Slot, ssz, StringType, RootHex} from "@chainsafe/lodestar-types";
+import {Epoch, Number64, phase0, Slot, ssz, StringType, RootHex, altair} from "@chainsafe/lodestar-types";
 import {ContainerType, Json, Type} from "@chainsafe/ssz";
 import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
+
+export type LightclientHeaderUpdate = {
+  syncAggregate: altair.SyncAggregate;
+  header: phase0.BeaconBlockHeader;
+  /** Precomputed root to prevent re-hashing */
+  blockRoot: Uint8Array;
+};
 
 export enum EventType {
   /**
@@ -22,6 +29,8 @@ export enum EventType {
   finalizedCheckpoint = "finalized_checkpoint",
   /** The node has reorganized its chain */
   chainReorg = "chain_reorg",
+  /** New or better header update available */
+  lightclientUpdate = "lightclient_update",
 }
 
 export type EventData = {
@@ -46,6 +55,7 @@ export type EventData = {
     newHeadState: RootHex;
     epoch: Epoch;
   };
+  [EventType.lightclientUpdate]: LightclientHeaderUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -140,6 +150,19 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         oldHeadState: "old_head_state",
         newHeadState: "new_head_state",
         epoch: "epoch",
+      },
+    }),
+
+    [EventType.lightclientUpdate]: new ContainerType<EventData[EventType.lightclientUpdate]>({
+      fields: {
+        syncAggregate: ssz.altair.SyncAggregate,
+        header: ssz.phase0.BeaconBlockHeader,
+        blockRoot: stringType,
+      },
+      casingMap: {
+        syncAggregate: "sync_aggregate",
+        header: "header",
+        blockRoot: "block_root",
       },
     }),
   };

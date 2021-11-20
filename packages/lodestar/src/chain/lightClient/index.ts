@@ -1,1 +1,1 @@
-export * from "./LightClientIniter";
+export * from "./LightClientServer";

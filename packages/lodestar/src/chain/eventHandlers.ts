@@ -1,18 +1,12 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {
-  CachedBeaconState,
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
-import {RegenCaller} from "./regen";
-import {ZERO_HASH} from "../constants";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -56,6 +50,8 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.forkChoiceJustified]: onForkChoiceJustified,
     [ChainEvent.forkChoiceReorg]: onForkChoiceReorg,
     [ChainEvent.justified]: onJustified,
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    [ChainEvent.lightclientUpdate]: () => {},
   };
 
   const emitter = this.emitter;
@@ -155,25 +151,6 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   if (headState) {
     this.opPool.pruneAll(headState);
   }
-
-  // Only after altair
-  if (cp.epoch >= this.config.ALTAIR_FORK_EPOCH) {
-    try {
-      const state = await this.regen.getCheckpointState(cp, RegenCaller.onForkChoiceFinalized);
-      const latestHeader = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
-      if (ssz.Root.equals(latestHeader.stateRoot, ZERO_HASH)) {
-        latestHeader.stateRoot = state.hashTreeRoot();
-      }
-      await this.lightclientUpdater.onFinalized(cp, latestHeader, state as TreeBacked<altair.BeaconState>);
-    } catch (e) {
-      this.logger.error("Error lightclientUpdater.onFinalized", {epoch: cp.epoch}, e as Error);
-    }
-    try {
-      await this.lightClientIniter.onFinalized(cp);
-    } catch (e) {
-      this.logger.error("Error LightClientIniter.onFinalized", {epoch: cp.epoch}, e as Error);
-    }
-  }
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
@@ -202,25 +179,13 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 export async function onBlock(
   this: BeaconChain,
   block: allForks.SignedBeaconBlock,
-  postState: CachedBeaconState<allForks.BeaconState>
+  _postState: CachedBeaconState<allForks.BeaconState>
 ): Promise<void> {
   const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: toHexString(blockRoot),
   });
-
-  // Only after altair
-  if (computeEpochAtSlot(block.message.slot) >= this.config.ALTAIR_FORK_EPOCH) {
-    try {
-      await this.lightclientUpdater.onHead(
-        block.message as altair.BeaconBlock,
-        postState as TreeBacked<altair.BeaconState>
-      );
-    } catch (e) {
-      this.logger.error("Error lightclientUpdater.onHead", {slot: block.message.slot}, e as Error);
-    }
-  }
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {

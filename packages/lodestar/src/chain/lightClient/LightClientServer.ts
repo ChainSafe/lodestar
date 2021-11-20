@@ -1,32 +1,22 @@
-import {Proof, ProofType, TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
-import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconState,
-  computeEpochAtSlot,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {intToBytes} from "@chainsafe/lodestar-utils";
-import {IBeaconDb} from "../../db";
-import {
-  getNextSyncCommitteeProof,
-  getSyncCommitteesProof,
-  getSyncCommitteesWitness,
-  SyncCommitteeWitness,
-} from "./proofSyncCommittee";
-import {MapDef, pruneSetToMax} from "../../util/map";
-import {getFinalizedCheckpointWitness} from "./proofFinalizedCheckpoint";
-import {GenesisData, GenesisWitness, getGenesisProof, getGenesisWitness} from "./proofGenesis";
-import {Repository} from "@chainsafe/lodestar-db";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {BitVector, toHexString} from "@chainsafe/ssz";
+import {IBeaconDb} from "../../db";
+import {MapDef, pruneSetToMax} from "../../util/map";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
+import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "./proofSyncCommittee";
+import {getFinalizedCheckpointWitness} from "./proofFinalizedCheckpoint";
+import {GenesisData, getGenesisWitness} from "./proofGenesis";
+import {PartialLightClientUpdate, InitGenesisProof, InitSnapshotProof, LightClientHeaderUpdate} from "./types";
 
-type SyncCommitteePeriod = number;
 type DependantRootHex = RootHex;
-type BlockRoot = Uint8Array;
 type BlockRooHex = RootHex;
 
 type SyncAttestedData = {
@@ -41,31 +31,14 @@ type SyncAttestedData = {
     }
   | {
       isFinalized: false;
-      header: phase0.BeaconBlockHeader;
     }
 );
-
-type PartialLightClientUpdate = altair.SyncAggregate & {
-  header: phase0.BeaconBlockHeader;
-  /** Precomputed root to prevent re-hashing */
-  blockRoot: Uint8Array;
-} & (
-    | {
-        isFinalized: true;
-        finalityBranch: Uint8Array[];
-        finalizedCheckpoint: phase0.Checkpoint;
-        finalizedHeader: phase0.BeaconBlockHeader;
-      }
-    | {
-        isFinalized: false;
-        header: phase0.BeaconBlockHeader;
-      }
-  );
 
 interface ILightClientIniterModules {
   config: IChainForkConfig;
   db: IBeaconDb;
-  forkChoice: ForkChoice;
+  emitter: ChainEventEmitter;
+  logger: ILogger;
 }
 
 /* paths needed to bootstrap the light client */
@@ -79,9 +52,8 @@ export const stateProofPaths = [
   ["genesisValidatorsRoot"],
 ];
 
-const syncProofLeavesLength = SYNC_COMMITTEE_SIZE * 2 + 2;
-
 const MAX_CACHED_FINALIZED_HEADERS = 3;
+const MAX_PREV_HEAD_DATA = 32;
 
 /**
  * Compute and cache "init" proofs as the chain advances.
@@ -195,32 +167,28 @@ const MAX_CACHED_FINALIZED_HEADERS = 3;
  * Storing 4 witness per block costs `219145 * 4 * 32 = 28050560 ~ 28 MB/m`.
  * Storing 4 witness per epoch costs `6848 * 4 * 32 = 876544 ~ 0.9 MB/m`.
  */
-export class LightClientIniter {
-  private readonly db: IBeaconDb & {
-    genesisWitness: Repository<BlockRoot, GenesisWitness>;
-    syncCommitteeWitness: Repository<BlockRoot, SyncCommitteeWitness>;
-    syncCommittee: Repository<Uint8Array, altair.SyncCommittee>;
-    finalizedHeader: Repository<BlockRoot, phase0.BeaconBlockHeader>;
-    bestPartialLightClientUpdate: Repository<SyncPeriod, PartialLightClientUpdate>;
-  };
-
+export class LightClientServer {
+  private readonly db: IBeaconDb;
   private readonly config: IChainForkConfig;
-  private readonly forkChoice: ForkChoice;
-  private readonly knownSyncCommittee = new MapDef<SyncCommitteePeriod, Set<DependantRootHex>>(() => new Set());
+  private readonly emitter: ChainEventEmitter;
+  private readonly logger: ILogger;
+  private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
   private storedCurrentSyncCommittee = false;
-  private readonly genesisData: GenesisData;
+
   /**
    * Keep in memory since this data is very transient, not useful after a few slots
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
+  private readonly headerUpdate = new Map<Slot, LightClientHeaderUpdate>();
   private finalizedHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalityHeader">;
 
-  constructor(modules: ILightClientIniterModules) {
+  constructor(modules: ILightClientIniterModules, private readonly genesisData: GenesisData) {
     this.config = modules.config;
     this.db = modules.db;
-    this.forkChoice = modules.forkChoice;
+    this.emitter = modules.emitter;
+    this.logger = modules.logger;
 
     this.zero = {
       finalityHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
@@ -230,11 +198,158 @@ export class LightClientIniter {
     };
   }
 
-  async onImportBlock(
-    block: allForks.BeaconBlock,
+  /**
+   * Call after importing a block, having the postState available in memory for proof generation.
+   * - Persist state witness
+   * - Use block's syncAggregate
+   */
+  onImportBlock(
+    block: altair.BeaconBlock,
     postState: CachedBeaconState<allForks.BeaconState>,
-    dependantRoot: RootHex,
-    parentBlockSlot: Slot
+    parentBlock: {blockRoot: RootHex; slot: Slot}
+  ): void {
+    // What is the syncAggregate signing?
+    // From the beacon-state-transition
+    // ```
+    // const previousSlot = Math.max(block.slot, 1) - 1;
+    // const rootSigned = getBlockRootAtSlot(state, previousSlot);
+    // ```
+    // In skipped slots the next value of blockRoots is set to the last block root.
+    // So rootSigned will always equal to the parentBlock.
+    const signedBlockRoot = block.parentRoot;
+
+    this.onSyncAggregate(block.body.syncAggregate, signedBlockRoot).catch((e) => {
+      this.logger.error("Error onSyncAggregate", {}, e);
+    });
+
+    this.persistPostBlockImportData(block, postState, parentBlock).catch((e) => {
+      this.logger.error("Error persistPostBlockImportData", {}, e);
+    });
+  }
+
+  /**
+   * API route to replace SSE event
+   */
+  async serveBestHeaderUpdate(slot: Slot): Promise<LightClientHeaderUpdate> {}
+
+  /**
+   * API ROUTE to get `genesisTime` and `genesisValidatorsRoot` from a trusted state root
+   */
+  async serveInitProof(blockRoot: Uint8Array): Promise<InitGenesisProof> {
+    const genesisWitness = await this.db.genesisWitness.get(blockRoot);
+    if (!genesisWitness) {
+      throw Error("Not available");
+    }
+
+    return {
+      genesisTime: this.genesisData.genesisTime,
+      genesisValidatorsRoot: this.genesisData.genesisValidatorsRoot,
+      branch: genesisWitness,
+    };
+  }
+
+  /**
+   * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
+   */
+  async serveInitCommittees(blockRoot: Uint8Array): Promise<InitSnapshotProof> {
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
+    }
+
+    const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
+      this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot),
+      this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
+    ]);
+    if (!currentSyncCommittee) {
+      throw Error("currentSyncCommittee not available");
+    }
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+
+    const header = await this.db.finalizedHeader.get(blockRoot);
+    if (!header) {
+      throw Error("header not available");
+    }
+
+    return {
+      header,
+      currentSyncCommittee,
+      nextSyncCommittee,
+      syncCommitteesBranch: syncCommitteeWitness.witness,
+    };
+  }
+
+  /**
+   * API ROUTE to get the best available update for `period` to transition to the next sync committee.
+   * Criteria for best in priority order:
+   * - Is finalized
+   * - Has the most bits
+   * - Signed header at the oldest slot
+   */
+  async serveBestUpdateInPeriod(period: SyncPeriod): Promise<altair.LightClientUpdate> {
+    // Signature data
+    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    if (!partialUpdate) {
+      throw Error(`Not updated available for period ${period}`);
+    }
+
+    const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
+      ? (partialUpdate.finalizedCheckpoint.root as Uint8Array)
+      : partialUpdate.blockRoot;
+
+    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
+    if (!syncCommitteeWitness) {
+      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
+    }
+
+    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
+    if (!nextSyncCommittee) {
+      throw Error("nextSyncCommittee not available");
+    }
+
+    if (partialUpdate.isFinalized) {
+      return {
+        header: partialUpdate.finalizedHeader,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalityHeader: partialUpdate.header,
+        finalityBranch: partialUpdate.finalityBranch,
+        syncCommitteeBits: partialUpdate.syncCommitteeBits,
+        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
+        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
+      };
+    } else {
+      return {
+        header: partialUpdate.header,
+        nextSyncCommittee: nextSyncCommittee,
+        nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
+        finalityHeader: this.zero.finalityHeader,
+        finalityBranch: this.zero.finalityBranch,
+        syncCommitteeBits: partialUpdate.syncCommitteeBits,
+        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
+        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
+      };
+    }
+  }
+
+  /**
+   * With forkchoice data compute which block roots will never become checkpoints and prune them.
+   */
+  async pruneNonCheckpointData(nonCheckpointBlockRoots: Uint8Array[]): Promise<void> {
+    // TODO: Batch delete with native leveldb batching not just Promise.all()
+    await Promise.all([
+      this.db.genesisWitness.batchDelete(nonCheckpointBlockRoots),
+      this.db.syncCommitteeWitness.batchDelete(nonCheckpointBlockRoots),
+      this.db.finalizedHeader.batchDelete(nonCheckpointBlockRoots),
+    ]);
+  }
+
+  private async persistPostBlockImportData(
+    block: altair.BeaconBlock,
+    postState: CachedBeaconState<allForks.BeaconState>,
+    parentBlock: {blockRoot: RootHex; slot: Slot}
   ): Promise<void> {
     const blockSlot = block.slot;
 
@@ -262,9 +377,11 @@ export class LightClientIniter {
     }
 
     // Only store next sync committee once per dependant root
-    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlockSlot);
+    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlock.slot);
     const period = computeSyncPeriodAtSlot(blockSlot);
     if (parentBlockPeriod < period) {
+      // If the parentBlock is in a previous epoch it must be the dependantRoot of this epoch transition
+      const dependantRoot = parentBlock.blockRoot;
       const periodDependantRoots = this.knownSyncCommittee.getOrDefault(period);
       if (!periodDependantRoots.has(dependantRoot)) {
         periodDependantRoots.add(dependantRoot);
@@ -299,6 +416,8 @@ export class LightClientIniter {
             blockRoot,
           }
     );
+
+    pruneSetToMax(this.prevHeadData, MAX_PREV_HEAD_DATA);
   }
 
   /**
@@ -321,216 +440,59 @@ export class LightClientIniter {
    *
    * 3. On new blocks use `block.body.sync_aggregate`, `block.parent_root` and `block.slot - 1`
    */
-  async onSyncAggregate(syncAggregate: altair.SyncAggregate, signedBlockRoot: Root, slot: Slot): Promise<void> {
+  private async onSyncAggregate(syncAggregate: altair.SyncAggregate, signedBlockRoot: Root): Promise<void> {
     const signedBlockRootHex = toHexString(signedBlockRoot);
-    const prevHeadData = this.prevHeadData.get(signedBlockRootHex);
-    if (!prevHeadData) {
-      throw Error("prevHeadData not available");
+    const attestedData = this.prevHeadData.get(signedBlockRootHex);
+    if (!attestedData) {
+      throw Error("attestedData not available");
     }
 
+    // Gossip syncAggregate plus header
+    const headerUpdate: LightClientHeaderUpdate = {
+      header: attestedData.header,
+      blockRoot: attestedData.blockRoot,
+      syncAggregate,
+    };
+    this.headerUpdate.set(headerUpdate.header.slot, headerUpdate);
+
+    // Emit update
+    // - At the earliest: 6 second after the slot start
+    // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
+    this.emitter.emit(ChainEvent.lightclientUpdate, headerUpdate);
+
     // Check if this update is better, otherwise ignore
-    const period = computeSyncPeriodAtSlot(slot);
+    await this.maybeStoreNewBestPartialUpdate(syncAggregate, attestedData);
+  }
+
+  /**
+   * Given a new `syncAggregate` maybe persist a new best partial update if its better than the current stored for
+   * that sync period.
+   */
+  private async maybeStoreNewBestPartialUpdate(
+    syncAggregate: altair.SyncAggregate,
+    attestedData: SyncAttestedData
+  ): Promise<void> {
+    const period = computeSyncPeriodAtSlot(attestedData.header.slot);
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, prevHeadData)) {
+    if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten
       return;
     }
 
-    const newPartialUpdate: PartialLightClientUpdate = prevHeadData.isFinalized
+    const newPartialUpdate: PartialLightClientUpdate = attestedData.isFinalized
       ? {
-          ...prevHeadData,
-          finalizedHeader: await this.getFinalizedHeader(prevHeadData.finalizedCheckpoint.root as Uint8Array),
+          ...attestedData,
+          finalizedHeader: await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array),
           syncCommitteeBits: syncAggregate.syncCommitteeBits,
           syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
         }
       : {
-          ...prevHeadData,
+          ...attestedData,
           syncCommitteeBits: syncAggregate.syncCommitteeBits,
           syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
         };
 
     await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
-  }
-
-  /**
-   * API ROUTE to get `genesisTime` and `genesisValidatorsRoot` from a trusted state root
-   */
-  async serveInitProof(blockRoot: Uint8Array): Promise<Proof> {
-    const genesisWitness = await this.db.genesisWitness.get(blockRoot);
-    if (!genesisWitness) {
-      throw Error("Not available");
-    }
-
-    return getGenesisProof(genesisWitness, this.genesisData);
-  }
-
-  /**
-   * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
-   */
-  async serveInitCommittees(blockRoot: Uint8Array): Promise<Proof> {
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
-    if (!syncCommitteeWitness) {
-      throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
-    }
-
-    const [currentSyncCommittee, nextSyncCommittee] = await Promise.all([
-      this.db.syncCommittee.get(syncCommitteeWitness.currentSyncCommitteeRoot),
-      this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot),
-    ]);
-    if (!currentSyncCommittee) {
-      throw Error("currentSyncCommittee not available");
-    }
-    if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
-    }
-
-    return getSyncCommitteesProof(syncCommitteeWitness, {currentSyncCommittee, nextSyncCommittee});
-  }
-
-  /**
-   * API ROUTE to get the best available update for `period` to transition to the next sync committee.
-   * Criteria for best in priority order:
-   * - Is finalized
-   * - Has the most bits
-   * - Signed header at the oldest slot
-   */
-  async serveFinalizedPeriodUpdate(period: SyncPeriod): Promise<altair.LightClientUpdate> {
-    // Signature data
-    const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
-    if (!partialUpdate) {
-      throw Error(`Not updated available for period ${period}`);
-    }
-
-    const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
-      ? (partialUpdate.finalizedCheckpoint.root as Uint8Array)
-      : partialUpdate.blockRoot;
-
-    const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(syncCommitteeWitnessBlockRoot);
-    if (!syncCommitteeWitness) {
-      throw Error(`finalizedBlockRoot not available ${toHexString(syncCommitteeWitnessBlockRoot)}`);
-    }
-
-    const nextSyncCommittee = await this.db.syncCommittee.get(syncCommitteeWitness.nextSyncCommitteeRoot);
-    if (!nextSyncCommittee) {
-      throw Error("nextSyncCommittee not available");
-    }
-
-    if (partialUpdate.isFinalized) {
-      return {
-        header: partialUpdate.finalizedHeader,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeProof(syncCommitteeWitness),
-        finalityHeader: partialUpdate.header,
-        finalityBranch: partialUpdate.finalityBranch,
-        syncCommitteeBits: partialUpdate.syncCommitteeBits,
-        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
-        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
-      };
-    } else {
-      return {
-        header: partialUpdate.header,
-        nextSyncCommittee: nextSyncCommittee,
-        nextSyncCommitteeBranch: getNextSyncCommitteeProof(syncCommitteeWitness),
-        finalityHeader: this.zero.finalityHeader,
-        finalityBranch: this.zero.finalityBranch,
-        syncCommitteeBits: partialUpdate.syncCommitteeBits,
-        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
-        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
-      };
-    }
-  }
-
-  /**
-   * With forkchoice data compute which block roots will never become checkpoints and prune them.
-   */
-  async pruneNonCheckpointData(nonCheckpointBlockRoots: Uint8Array[]): Promise<void> {
-    // TODO: Batch delete with native leveldb batching not just Promise.all()
-    await Promise.all([
-      this.db.genesisWitness.batchDelete(nonCheckpointBlockRoots),
-      this.db.syncCommitteeWitness.batchDelete(nonCheckpointBlockRoots),
-      this.db.finalizedHeader.batchDelete(nonCheckpointBlockRoots),
-    ]);
-  }
-
-  /**
-   * Must subscribe to BeaconChain event `finalized`
-   *
-   * Store a light client init proof and related indices and prune old entries
-   */
-  async onFinalized(checkpoint: phase0.Checkpoint): Promise<void> {
-    const checkpointRoot = checkpoint.root.valueOf() as Uint8Array;
-    const checkpointBlockSummary = this.forkChoice.getBlock(checkpointRoot);
-    if (!checkpointBlockSummary) {
-      throw new Error("Block not found in fork choice");
-    }
-    const checkpointBlockSlot = checkpointBlockSummary.slot;
-    const checkpointBlockEpoch = Math.floor(checkpointBlockSlot / SLOTS_PER_EPOCH);
-    // discard any states that occur before altair
-    if (checkpointBlockEpoch < this.config.ALTAIR_FORK_EPOCH) {
-      return;
-    }
-
-    // fetch the state at the block header, this state will be used to create the init proof
-    const checkpointStateRoot = checkpointBlockSummary.stateRoot;
-    const checkpointState = this.stateCache.get(checkpointStateRoot);
-    if (!checkpointState) {
-      throw new Error("State not found in cache");
-    }
-
-    // state proof
-    const stateProof = checkpointState.createProof(stateProofPaths) as TreeOffsetProof;
-
-    // sync committees stored separately to deduplicate
-    const currentPeriod = computeSyncPeriodAtEpoch(checkpointBlockEpoch);
-    const nextPeriod = currentPeriod + 1;
-
-    // Create sync committee proofs by _splicing_ the committee sections out of the state proof
-
-    stateProof.offsets.splice(7, 2);
-
-    const currentSyncCommitteeProof: TreeOffsetProof = {
-      type: ProofType.treeOffset,
-      offsets: stateProof.offsets.splice(7, 1025),
-      leaves: stateProof.leaves.splice(7, 1026),
-    };
-
-    const nextSyncCommitteeProof: TreeOffsetProof = {
-      type: ProofType.treeOffset,
-      offsets: stateProof.offsets.splice(7, 1025),
-      leaves: stateProof.leaves.splice(7, 1026),
-    };
-
-    // calculate beginning of weak subjectivity period to prune from there
-    const wsPeriod = allForks.computeWeakSubjectivityPeriodCachedState(this.config, checkpointState);
-    const wsEpoch = Math.max(0, checkpointState.finalizedCheckpoint.epoch - wsPeriod);
-    const wsSyncPeriod = computeSyncPeriodAtEpoch(wsEpoch);
-
-    // index stored as ${epoch}${blockRoot}
-    const oldStateProofIndexKeys = await this.db.lightClientInitProofIndex.keys({lt: intToBytes(wsEpoch, 8)});
-    // slice off epoch to retrieve block roots
-    const oldStateProofBlockRoots = oldStateProofIndexKeys.map((indexKey) => indexKey.subarray(8));
-    const oldCommitteeProofKeys = await this.db.lightClientSyncCommitteeProof.keys({lt: wsSyncPeriod});
-
-    // serialize the checkpoint for the init proof index
-    // For easy pruning, the epoch is first
-    const serializedCheckpoint = new Uint8Array(40);
-    serializedCheckpoint.set(ssz.Epoch.serialize(checkpoint.epoch));
-    serializedCheckpoint.set(checkpointRoot, 8);
-
-    await Promise.all([
-      // prune old proofs
-      this.db.lightClientInitProofIndex.batchDelete(oldStateProofIndexKeys),
-      this.db.lightClientInitProof.batchDelete(oldStateProofBlockRoots),
-      this.db.lightClientSyncCommitteeProof.batchDelete(oldCommitteeProofKeys),
-      // store state proof
-      this.db.lightClientInitProofIndex.put(serializedCheckpoint, true),
-      this.db.lightClientInitProof.put(checkpointRoot, stateProof),
-      // store sync committee proofs
-      this.db.lightClientSyncCommitteeProof.batchPut([
-        {key: currentPeriod, value: currentSyncCommitteeProof},
-        {key: nextPeriod, value: nextSyncCommitteeProof},
-      ]),
-    ]);
   }
 
   private async storeSyncCommittee(syncCommittee: altair.SyncCommittee, syncCommitteeRoot: Uint8Array): Promise<void> {

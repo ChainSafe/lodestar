@@ -6,6 +6,7 @@ import {IBeaconDb} from "../../db";
 import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {LightClientServer} from "../lightClient";
 
 // Process in chunks to avoid OOM
 // this number of blocks per chunk is tested in e2e test blockArchive.test.ts
@@ -26,12 +27,13 @@ type BlockRootSlot = {slot: Slot; root: Uint8Array};
 export async function archiveBlocks(
   db: IBeaconDb,
   forkChoice: IForkChoice,
+  lightclientServer: LightClientServer,
   logger: ILogger,
-  finalizedCheckpoint: {root: string; epoch: Epoch}
+  finalizedCheckpoint: {rootHex: string; epoch: Epoch}
 ): Promise<void> {
   // Use fork choice to determine the blocks to archive and delete
-  const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.root);
-  const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.root);
+  const finalizedCanonicalBlocks = forkChoice.getAllAncestorBlocks(finalizedCheckpoint.rootHex);
+  const finalizedNonCanonicalBlocks = forkChoice.getAllNonAncestorBlocks(finalizedCheckpoint.rootHex);
 
   const finalizedCanonicalBlockRoots: BlockRootSlot[] = finalizedCanonicalBlocks.map((block) => ({
     slot: block.slot,
@@ -64,7 +66,8 @@ export async function archiveBlocks(
   for (const block of finalizedCanonicalNonCheckpointBlocks) {
     nonCheckpointBlockRoots.push(block.root);
   }
-  await lightclientServer.prune(nonCheckpointBlockRoots);
+
+  await lightclientServer.pruneNonCheckpointData(nonCheckpointBlockRoots);
 
   logger.verbose("Archiving of finalized blocks complete", {
     totalArchived: finalizedCanonicalBlocks.length,

@@ -1,5 +1,5 @@
 export {BlockRepository} from "./block";
-export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository} from "./blockArchive";
+export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository, IBlockFilterOptions} from "./blockArchive";
 export {StateArchiveRepository} from "./stateArchive";
 
 export {AttesterSlashingRepository} from "./attesterSlashing";
