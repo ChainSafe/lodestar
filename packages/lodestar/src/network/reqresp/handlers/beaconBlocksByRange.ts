@@ -35,11 +35,9 @@ export async function* onBeaconBlocksByRange(
   let archivedBlocksStream: AsyncIterable<ReqRespBlockResponse>;
 
   if (step > 1) {
-    let slot = startSlot;
     const slots = [];
-    while (slot < lt) {
+    for (let slot = startSlot; slot < lt; slot += step) {
       slots.push(slot);
-      slot += step;
     }
     archivedBlocksStream = getFinalizedBlocksAtSlots(slots, db);
   } else {
