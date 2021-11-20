@@ -9,7 +9,7 @@ import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lo
  * Removed when included on chain or old
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing, metrics);
   }
 

@@ -4,13 +4,13 @@ import {IDbMetrics} from "./metrics";
 
 export interface IDatabaseApiOptions {
   config: IChainForkConfig;
-  controller: IDatabaseController<Buffer, Buffer>;
+  controller: IDatabaseController<Uint8Array, Uint8Array>;
   metrics?: IDbMetrics;
 }
 
 export abstract class DatabaseService {
   protected config: IChainForkConfig;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: IDatabaseController<Uint8Array, Uint8Array>;
 
   protected constructor(opts: IDatabaseApiOptions) {
     this.config = opts.config;

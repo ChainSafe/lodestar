@@ -7,11 +7,11 @@ import {IDatabaseController, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 export class PreGenesisState {
   private readonly config: IChainForkConfig;
   private readonly bucket: Bucket;
-  private readonly db: IDatabaseController<Buffer, Buffer>;
+  private readonly db: IDatabaseController<Uint8Array, Uint8Array>;
   private readonly key: Buffer;
   private readonly metrics?: IDbMetrics;
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     this.config = config;
     this.db = db;
     this.bucket = Bucket.phase0_preGenesisState;

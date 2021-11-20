@@ -4,7 +4,7 @@ import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 
 export async function storeRootIndex(
-  db: IDatabaseController<Buffer, Buffer>,
+  db: IDatabaseController<Uint8Array, Uint8Array>,
   slot: Slot,
   blockRoot: Root
 ): Promise<void> {
@@ -12,7 +12,7 @@ export async function storeRootIndex(
 }
 
 export async function storeParentRootIndex(
-  db: IDatabaseController<Buffer, Buffer>,
+  db: IDatabaseController<Uint8Array, Uint8Array>,
   slot: Slot,
   parentRoot: Root
 ): Promise<void> {
@@ -20,7 +20,7 @@ export async function storeParentRootIndex(
 }
 
 export async function deleteRootIndex(
-  db: IDatabaseController<Buffer, Buffer>,
+  db: IDatabaseController<Uint8Array, Uint8Array>,
   blockType: ContainerType<allForks.SignedBeaconBlock>,
   block: allForks.SignedBeaconBlock
 ): Promise<void> {
@@ -28,7 +28,7 @@ export async function deleteRootIndex(
 }
 
 export async function deleteParentRootIndex(
-  db: IDatabaseController<Buffer, Buffer>,
+  db: IDatabaseController<Uint8Array, Uint8Array>,
   block: allForks.SignedBeaconBlock
 ): Promise<void> {
   return db.delete(getParentRootIndexKey(block.message.parentRoot));

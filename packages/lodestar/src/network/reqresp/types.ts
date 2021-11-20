@@ -214,6 +214,6 @@ export const reqRespBlockResponseSerializer = {
 /** This type helps response to beacon_block_by_range and beacon_block_by_root more efficiently */
 export type ReqRespBlockResponse = {
   /** Deserialized data of allForks.SignedBeaconBlock */
-  bytes: Buffer;
+  bytes: Uint8Array;
   slot: Slot;
 };

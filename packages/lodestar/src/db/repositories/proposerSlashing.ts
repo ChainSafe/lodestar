@@ -3,7 +3,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class ProposerSlashingRepository extends Repository<ValidatorIndex, phase0.ProposerSlashing> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.phase0_proposerSlashing, ssz.phase0.ProposerSlashing, metrics);
   }
 

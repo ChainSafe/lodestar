@@ -4,11 +4,11 @@ import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lo
 import {Type} from "@chainsafe/ssz";
 
 export class LightClientInitProofRepository extends Repository<Uint8Array, Proof> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientInitProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 
-  encodeValue(value: Proof): Buffer {
+  encodeValue(value: Proof): Uint8Array {
     return Buffer.from(serializeProof(value));
   }
 
@@ -23,11 +23,11 @@ export class LightClientInitProofRepository extends Repository<Uint8Array, Proof
 }
 
 export class LightClientInitProofIndexRepository extends Repository<Uint8Array, boolean> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.index_lightClientInitProof, (undefined as unknown) as Type<boolean>, metrics);
   }
 
-  encodeValue(_value: boolean): Buffer {
+  encodeValue(_value: boolean): Uint8Array {
     return Buffer.from([1]);
   }
 
@@ -42,11 +42,11 @@ export class LightClientInitProofIndexRepository extends Repository<Uint8Array, 
 }
 
 export class LightClientSyncCommitteeProofRepository extends Repository<number, Proof> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientSyncCommitteeProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 
-  encodeValue(value: Proof): Buffer {
+  encodeValue(value: Proof): Uint8Array {
     return Buffer.from(serializeProof(value));
   }
 

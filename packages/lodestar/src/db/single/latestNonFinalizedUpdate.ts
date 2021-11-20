@@ -7,10 +7,10 @@ export class LatestNonFinalizedUpdate {
   private readonly bucket = Bucket.altair_latestNonFinalizedUpdate;
   private readonly key = Buffer.from(new Uint8Array([this.bucket]));
   private readonly type: Type<altair.LightClientUpdate>;
-  private readonly db: IDatabaseController<Buffer, Buffer>;
+  private readonly db: IDatabaseController<Uint8Array, Uint8Array>;
   private readonly metrics?: IDbMetrics;
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     this.db = db;
     this.type = ssz.altair.LightClientUpdate;
     this.metrics = metrics;
@@ -18,7 +18,7 @@ export class LatestNonFinalizedUpdate {
 
   async put(value: altair.LightClientUpdate): Promise<void> {
     this.metrics?.dbWrites.labels({bucket: "altair_latestNonFinalizedUpdate"}).inc();
-    await this.db.put(this.key, this.type.serialize(value) as Buffer);
+    await this.db.put(this.key, this.type.serialize(value));
   }
 
   async get(): Promise<altair.LightClientUpdate | null> {

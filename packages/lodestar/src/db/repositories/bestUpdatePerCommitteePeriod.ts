@@ -4,14 +4,14 @@ import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class BestUpdatePerCommitteePeriod extends Repository<SyncPeriod, altair.LightClientUpdate> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     const type = ssz.altair.LightClientUpdate;
     super(config, db, Bucket.altair_bestUpdatePerCommitteePeriod, type, metrics);
   }
 
   // Handle key as SyncPeriod
 
-  decodeKey(data: Buffer): number {
+  decodeKey(data: Uint8Array): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 }

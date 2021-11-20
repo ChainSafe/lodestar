@@ -9,7 +9,7 @@ import {getSignedBlockTypeFromBytes} from "../../util/multifork";
  * Used to store unfinalized blocks
  */
 export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_block, type, metrics);
   }

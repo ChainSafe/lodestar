@@ -16,6 +16,6 @@ export type BLSKeypair = {
 
 export type PubkeyHex = string;
 export type LodestarValidatorDatabaseController = Pick<
-  IDatabaseController<Buffer, Buffer>,
+  IDatabaseController<Uint8Array, Uint8Array>,
   "get" | "start" | "values" | "batchPut" | "keys" | "get" | "put"
 >;

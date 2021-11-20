@@ -7,7 +7,7 @@ import {IDatabaseController, Bucket, Repository, IKeyValue, IDbMetrics} from "@c
 export class DepositDataRootRepository extends Repository<number, Root> {
   private depositRootTree?: TreeBacked<List<Root>>;
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.index_depositDataRoot, ssz.Root, metrics);
   }
 

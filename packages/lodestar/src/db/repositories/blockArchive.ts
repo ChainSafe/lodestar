@@ -11,7 +11,8 @@ import {deleteParentRootIndex, deleteRootIndex, storeParentRootIndex, storeRootI
 export interface IBlockFilterOptions extends IFilterOptions<Slot> {
   step?: number;
 }
-export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
+
+export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Uint8Array> & {
   slot: Slot;
   blockRoot: Root;
   parentRoot: Root;
@@ -21,18 +22,18 @@ export type BlockArchiveBatchPutBinaryItem = IKeyValue<Slot, Buffer> & {
  * Stores finalized blocks. Block slot is identifier.
  */
 export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_blockArchive, type, metrics);
   }
 
   // Overrides for multi-fork
 
-  encodeValue(value: allForks.SignedBeaconBlock): Buffer {
-    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Buffer;
+  encodeValue(value: allForks.SignedBeaconBlock): Uint8Array {
+    return this.config.getForkTypes(value.message.slot).SignedBeaconBlock.serialize(value) as Uint8Array;
   }
 
-  decodeValue(data: Buffer): allForks.SignedBeaconBlock {
+  decodeValue(data: Uint8Array): allForks.SignedBeaconBlock {
     return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 
@@ -42,7 +43,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return value.message.slot;
   }
 
-  decodeKey(data: Buffer): number {
+  decodeKey(data: Uint8Array): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
@@ -141,7 +142,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     return this.parseSlot(await this.db.get(getParentRootIndexKey(root)));
   }
 
-  private parseSlot(slotBytes: Buffer | null): Slot | null {
+  private parseSlot(slotBytes: Uint8Array | null): Slot | null {
     if (!slotBytes) return null;
     const slot = bytesToInt(slotBytes, "be");
     // TODO: Is this necessary? How can bytesToInt return a non-integer?

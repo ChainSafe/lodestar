@@ -4,7 +4,7 @@ import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class Eth1DataRepository extends Repository<number, phase0.Eth1DataOrdered> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.phase0_eth1Data, ssz.phase0.Eth1DataOrdered, metrics);
   }
 
