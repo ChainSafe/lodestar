@@ -1,15 +1,17 @@
-export * from "./block";
-export * from "./blockArchive";
-export * from "./stateArchive";
+export {BlockRepository} from "./block";
+export {BlockArchiveBatchPutBinaryItem, BlockArchiveRepository} from "./blockArchive";
+export {StateArchiveRepository} from "./stateArchive";
 
-export * from "./attesterSlashing";
-export * from "./proposerSlashing";
-export * from "./voluntaryExit";
-export * from "./depositEvent";
+export {AttesterSlashingRepository} from "./attesterSlashing";
+export {ProposerSlashingRepository} from "./proposerSlashing";
+export {VoluntaryExitRepository} from "./voluntaryExit";
+export {DepositEventRepository} from "./depositEvent";
 
-export * from "./depositDataRoot";
-export * from "./eth1Data";
+export {DepositDataRootRepository} from "./depositDataRoot";
+export {Eth1DataRepository} from "./eth1Data";
 
-export * from "./bestUpdatePerCommitteePeriod";
-export * from "./lightclientFinalizedCheckpoint";
-export * from "./lightClientInitProof";
+export {GenesisWitnessRepository} from "./lightClientGenesisWitness";
+export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate";
+export {FinalizedHeaderRepository} from "./lightclientFinalizedHeader";
+export {SyncCommitteeRepository} from "./lightclientSyncCommittee";
+export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness";

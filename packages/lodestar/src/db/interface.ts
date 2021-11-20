@@ -14,18 +14,13 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  BestUpdatePerCommitteePeriod,
-  LightclientFinalizedCheckpoint,
-  LightClientInitProofRepository,
-  LightClientSyncCommitteeProofRepository,
-  LightClientInitProofIndexRepository,
+  GenesisWitnessRepository,
+  BestPartialLightClientUpdateRepository,
+  FinalizedHeaderRepository,
+  SyncCommitteeRepository,
+  SyncCommitteeWitnessRepository,
 } from "./repositories";
-import {
-  PreGenesisState,
-  PreGenesisStateLastProcessedBlock,
-  LatestFinalizedUpdate,
-  LatestNonFinalizedUpdate,
-} from "./single";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 
 /**
  * The DB service manages the data layer of the beacon chain
@@ -58,14 +53,12 @@ export interface IBeaconDb {
   depositDataRoot: DepositDataRootRepository;
   eth1Data: Eth1DataRepository;
 
-  // altair
-  bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
-  latestFinalizedUpdate: LatestFinalizedUpdate;
-  latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
-  lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
-  lightClientInitProof: LightClientInitProofRepository;
-  lightClientInitProofIndex: LightClientInitProofIndexRepository;
-  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
+  // lightclient
+  genesisWitness: GenesisWitnessRepository;
+  bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
+  finalizedHeader: FinalizedHeaderRepository;
+  syncCommittee: SyncCommitteeRepository;
+  syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   /**
    * Start the connection to the db instance and open the db store.
