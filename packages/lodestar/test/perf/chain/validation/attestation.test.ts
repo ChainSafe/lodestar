@@ -3,6 +3,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {getAttestationValidData} from "../../../utils/validationData/attestation";
+import {AttestationError, AttestationErrorCode, GossipAction} from "../../../../src/chain/errors";
 
 describe("validate gossip attestation", () => {
   const vc = 64;
@@ -26,3 +27,46 @@ describe("validate gossip attestation", () => {
     });
   }
 });
+
+describe.only("test throw AttestationError vs object", () => {
+  itBench({
+    id: "AttestationError",
+    fn: () => {
+      for (let i = 0; i < 1000; i++) {
+        try {
+          throwAttestationError(true);
+        } catch (e) {}
+      }
+    }
+  });
+
+  itBench({
+    id: "Object",
+    fn: () => {
+      for (let i = 0; i < 1000; i++) {
+        try {
+          throwErrorCode(true);
+        } catch (e) {}
+      }
+    }
+  });
+});
+
+function throwAttestationError(b: boolean): void {
+  if (b) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
+      root: Buffer.alloc(32),
+    });
+  }
+}
+
+function throwErrorCode(b: boolean): void {
+  if (b) {
+    throw {
+      action: GossipAction.IGNORE,
+      code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
+      root: Buffer.alloc(32),
+    };
+  }
+}
