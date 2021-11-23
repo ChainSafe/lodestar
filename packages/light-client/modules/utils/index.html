@@ -432,7 +432,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="onslotfn">OnSlotFn<a class="headerlink" href="#onslotfn" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>OnSlotFn</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/clock.ts#L7">utils/clock.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/clock.ts#L7">utils/clock.ts:7</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <p>▸ (<code>slot</code>: Slot, <code>signal</code>: AbortSignal): <em>Promise‹void›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -457,7 +457,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assertzerohashes">assertZeroHashes<a class="headerlink" href="#assertzerohashes" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertZeroHashes</strong>(<code>rootArray</code>: ArrayLike‹Root›, <code>expectedLength</code>: number, <code>errorMessage</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L26">utils/utils.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L26">utils/utils.ts:26</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -485,7 +485,7 @@
 <hr/>
 <h3 id="chunkifyinclusiverange">chunkifyInclusiveRange<a class="headerlink" href="#chunkifyinclusiverange" title="Permanent link">¶</a></h3>
 <p>▸ <strong>chunkifyInclusiveRange</strong>(<code>from</code>: number, <code>to</code>: number, <code>itemsPerChunk</code>: number): <em>number[][]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/chunkify.ts#L12">utils/chunkify.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/chunkify.ts#L12">utils/chunkify.ts:12</a></em></p>
 <p>Split an inclusive range into a sequence of contiguous inclusive ranges
 <div class="highlight"><pre><span></span><code>[[a,b], [c,d] ... Sn] = chunkifyInclusiveRange([a,z], n)
 // where
@@ -522,7 +522,7 @@
 <hr/>
 <h3 id="computeepochatslot">computeEpochAtSlot<a class="headerlink" href="#computeepochatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeEpochAtSlot</strong>(<code>slot</code>: Slot): <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/syncPeriod.ts#L7">utils/syncPeriod.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/syncPeriod.ts#L7">utils/syncPeriod.ts:7</a></em></p>
 <p>Return the epoch number at the given slot.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -543,7 +543,7 @@
 <hr/>
 <h3 id="computesyncperiodatepoch">computeSyncPeriodAtEpoch<a class="headerlink" href="#computesyncperiodatepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeSyncPeriodAtEpoch</strong>(<code>epoch</code>: Epoch): <em>SyncPeriod</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/syncPeriod.ts#L21">utils/syncPeriod.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/syncPeriod.ts#L21">utils/syncPeriod.ts:21</a></em></p>
 <p>Return the sync committee period at epoch</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -564,7 +564,7 @@
 <hr/>
 <h3 id="computesyncperiodatslot">computeSyncPeriodAtSlot<a class="headerlink" href="#computesyncperiodatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeSyncPeriodAtSlot</strong>(<code>slot</code>: Slot): <em>SyncPeriod</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/syncPeriod.ts#L14">utils/syncPeriod.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/syncPeriod.ts#L14">utils/syncPeriod.ts:14</a></em></p>
 <p>Return the sync committee period at slot</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -585,7 +585,7 @@
 <hr/>
 <h3 id="deserializepubkeys">deserializePubkeys<a class="headerlink" href="#deserializepubkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deserializePubkeys</strong>(<code>pubkeys</code>: LightClientUpdate["nextSyncCommittee"]["pubkeys"]): <em>PublicKey[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L63">utils/utils.ts:63</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L63">utils/utils.ts:63</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -605,7 +605,7 @@
 <hr/>
 <h3 id="deserializesynccommittee">deserializeSyncCommittee<a class="headerlink" href="#deserializesynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deserializeSyncCommittee</strong>(<code>syncCommittee</code>: SyncCommittee): <em><a href="../client/#synccommitteefast">SyncCommitteeFast</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L71">utils/utils.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L71">utils/utils.ts:71</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -625,7 +625,7 @@
 <hr/>
 <h3 id="getparticipantpubkeys">getParticipantPubkeys<a class="headerlink" href="#getparticipantpubkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getParticipantPubkeys</strong>‹<strong>T</strong>›(<code>pubkeys</code>: ArrayLike‹T›, <code>bits</code>: BitVector): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L41">utils/utils.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L41">utils/utils.ts:41</a></em></p>
 <p>Util to guarantee that all bits have a corresponding pubkey</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
@@ -652,7 +652,7 @@
 <hr/>
 <h3 id="isemptyheader">isEmptyHeader<a class="headerlink" href="#isemptyheader" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isEmptyHeader</strong>(<code>header</code>: BeaconBlockHeader): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L85">utils/utils.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L85">utils/utils.ts:85</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -672,7 +672,7 @@
 <hr/>
 <h3 id="isemptysynccommitte">isEmptySyncCommitte<a class="headerlink" href="#isemptysynccommitte" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isEmptySyncCommitte</strong>(<code>syncCommittee</code>: SyncCommittee): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L90">utils/utils.ts:90</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L90">utils/utils.ts:90</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -692,7 +692,7 @@
 <hr/>
 <h3 id="isvalidmerklebranch">isValidMerkleBranch<a class="headerlink" href="#isvalidmerklebranch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isValidMerkleBranch</strong>(<code>leaf</code>: Uint8Array, <code>proof</code>: Uint8Array[], <code>depth</code>: number, <code>index</code>: number, <code>root</code>: Uint8Array): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/verifyMerkleBranch.ts#L10">utils/verifyMerkleBranch.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/verifyMerkleBranch.ts#L10">utils/verifyMerkleBranch.ts:10</a></em></p>
 <p>Verify that the given <code>leaf</code> is on the merkle branch <code>proof</code>
 starting with the given <code>root</code>.</p>
 <p>Browser friendly version of verifyMerkleBranch</p>
@@ -731,7 +731,7 @@ starting with the given <code>root</code>.</p>
 <hr/>
 <h3 id="iszerohash">isZeroHash<a class="headerlink" href="#iszerohash" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isZeroHash</strong>(<code>root</code>: Root): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L17">utils/utils.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L17">utils/utils.ts:17</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -751,7 +751,7 @@ starting with the given <code>root</code>.</p>
 <hr/>
 <h3 id="serializepubkeys">serializePubkeys<a class="headerlink" href="#serializepubkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>serializePubkeys</strong>(<code>pubkeys</code>: PublicKey[]): <em>LightClientUpdate["nextSyncCommittee"]["pubkeys"]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L67">utils/utils.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L67">utils/utils.ts:67</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -771,7 +771,7 @@ starting with the given <code>root</code>.</p>
 <hr/>
 <h3 id="serializesynccommittee">serializeSyncCommittee<a class="headerlink" href="#serializesynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>serializeSyncCommittee</strong>(<code>syncCommittee</code>: <a href="../client/#synccommitteefast">SyncCommitteeFast</a>): <em>SyncCommittee</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L78">utils/utils.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L78">utils/utils.ts:78</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -791,7 +791,7 @@ starting with the given <code>root</code>.</p>
 <hr/>
 <h3 id="sumbits">sumBits<a class="headerlink" href="#sumbits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>sumBits</strong>(<code>bits</code>: ArrayLike‹boolean›): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L7">utils/utils.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L7">utils/utils.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -811,7 +811,7 @@ starting with the given <code>root</code>.</p>
 <hr/>
 <h3 id="toblockheader">toBlockHeader<a class="headerlink" href="#toblockheader" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toBlockHeader</strong>(<code>block</code>: BeaconBlock): <em>BeaconBlockHeader</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3662e6/packages/light-client/src/utils/utils.ts#L53">utils/utils.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/light-client/src/utils/utils.ts#L53">utils/utils.ts:53</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
