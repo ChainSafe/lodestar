@@ -42,7 +42,7 @@ describe("snappy frames uncompress", function () {
   it("should detect malformed input", function () {
     const decompress = new SnappyFramesUncompress();
 
-    expect(() => decompress.uncompress(Buffer.alloc(32, 1))).to.throw;
+    expect(() => decompress.uncompress(Buffer.alloc(32, 5))).to.throw();
   });
 
   it("should return null if not enough data", function () {
