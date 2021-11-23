@@ -102,7 +102,7 @@ export class ReqRespRateTracker implements IReqRespRateTracker {
       {tracker: blockCountPeerTracker, count: blockCount, applyPenalty: true, name: "blockCountPeerTracker"},
     ]) {
       if (tracker.requestObjects(count) === 0) {
-        this.logger.warn("Not able to request due to rate limit", {
+        this.logger.warn("Do not serve request due to rate limit", {
           peerId: peerIdStr,
           blockCount,
           rateTracker: name,

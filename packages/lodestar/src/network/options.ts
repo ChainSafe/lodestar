@@ -24,11 +24,11 @@ export const defaultNetworkOptions: INetworkOptions = {
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   // rate tracker options per 1 minute
-  // allow to serve up to 10 requests and 1000 blocks totally
-  // per peer, allow to serve up to 5 requests and 500 blocks
-  requestCountTotalLimit: 10,
+  // per peer per minute, allow to serve up to 5 requests and 500 blocks
+  // total: make 4x peer params
+  requestCountTotalLimit: 20,
   requestCountPeerLimit: 5,
-  blockCountTotalLimit: 1000,
+  blockCountTotalLimit: 2000,
   blockCountPeerLimit: 500,
   rateTrackerTimeoutMs: 60 * 1000,
   discv5: defaultDiscv5Options,
