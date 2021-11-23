@@ -86,8 +86,3 @@ export function isEmptyHeader(header: BeaconBlockHeader): boolean {
   const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue();
   return ssz.phase0.BeaconBlockHeader.equals(emptyValue, header);
 }
-
-export function isEmptySyncCommitte(syncCommittee: altair.SyncCommittee): boolean {
-  const emptyValue = ssz.altair.SyncCommittee.defaultValue();
-  return ssz.altair.SyncCommittee.equals(emptyValue, syncCommittee);
-}

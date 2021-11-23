@@ -1,4 +1,4 @@
-import {altair, Root, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root, ssz, Version} from "@chainsafe/lodestar-types";
 import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
@@ -10,16 +10,19 @@ import {
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
-import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader, isEmptySyncCommitte} from "../utils/utils";
-import {LightClientSnapshotFast} from "./types";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "../utils/utils";
+import {SyncCommitteeFast} from "./types";
 
 /**
- * Spec v1.0.1
+ *
+ * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
+ * @param forkVersion ForkVersion that was used to sign the update
  */
-export function validateLightClientUpdate(
-  snapshot: LightClientSnapshotFast,
+export function assertValidLightClientUpdate(
+  syncCommittee: SyncCommitteeFast,
   update: altair.LightClientUpdate,
-  genesisValidatorsRoot: Root
+  genesisValidatorsRoot: Root,
+  forkVersion: Version
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state
@@ -29,93 +32,113 @@ export function validateLightClientUpdate(
   //   throw Error("update slot is less or equal snapshot slot");
   // }
 
-  // Verify update does not skip a sync committee period
-  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
-  if (updatePeriod !== snapshotPeriod && updatePeriod !== snapshotPeriod + 1) {
-    throw Error("Update skips a sync committee period");
-  }
-
   // Verify update header root is the finalized root of the finality header, if specified
-  const finalityHeaderSpecified = !isEmptyHeader(update.finalityHeader);
-  const signedHeader = finalityHeaderSpecified ? update.finalityHeader : update.header;
-  if (finalityHeaderSpecified) {
-    // Proof that the state referenced in `update.finalityHeader.stateRoot` includes
-    // state = {
-    //   finalizedCheckpoint: {
-    //     root: update.header
-    //   }
-    // }
-    //
-    // Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
-    if (
-      !isValidMerkleBranch(
-        ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
-        Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
-        FINALIZED_ROOT_INDEX_FLOORLOG2,
-        FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
-        update.finalityHeader.stateRoot.valueOf() as Uint8Array
-      )
-    ) {
-      throw Error("Invalid finality header merkle branch");
-    }
-
-    const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalityHeader.slot);
-    if (updateFinalityPeriod !== updatePeriod) {
-      throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
-    }
+  const isFinalized = !isEmptyHeader(update.finalityHeader);
+  const signedHeader = isFinalized ? update.finalityHeader : update.header;
+  if (isFinalized) {
+    assertValidFinalityProof(update);
   } else {
     assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_FLOORLOG2, "finalityBranches");
   }
 
-  // Verify update next sync committee if the update period incremented
-  const updatePeriodIncremented = updatePeriod > snapshotPeriod;
-  const syncCommittee = updatePeriodIncremented ? snapshot.nextSyncCommittee : snapshot.currentSyncCommittee;
-
   // DIFF FROM SPEC:
-  // I believe the nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
+  // The nextSyncCommitteeBranch should be check always not only when updatePeriodIncremented
   // An update may not increase the period but still be stored in validUpdates and be used latter
+  assertValidSyncCommitteeProof(update);
 
-  if (!isEmptySyncCommitte(update.nextSyncCommittee)) {
-    // Proof that the state referenced in `update.header.stateRoot` includes
-    // state = {
-    //   nextSyncCommittee: update.nextSyncCommittee
-    // }
-    //
-    // Where `hashTreeRoot(state) == update.header.stateRoot`
-    if (
-      !isValidMerkleBranch(
-        ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
-        Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
-        NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
-        NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
-        update.header.stateRoot.valueOf() as Uint8Array
-      )
-    ) {
-      throw Error("Invalid next sync committee merkle branch");
-    }
+  assertValidSignedHeader(syncCommittee, update, signedHeader, genesisValidatorsRoot, forkVersion);
+}
+
+/**
+ * Proof that the state referenced in `update.finalityHeader.stateRoot` includes
+ * ```ts
+ * state = {
+ *   finalizedCheckpoint: {
+ *     root: update.header
+ *   }
+ * }
+ * ```
+ *
+ * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
+ */
+export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
+  if (
+    !isValidMerkleBranch(
+      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
+      Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
+      FINALIZED_ROOT_INDEX_FLOORLOG2,
+      FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
+      update.finalityHeader.stateRoot.valueOf() as Uint8Array
+    )
+  ) {
+    throw Error("Invalid finality header merkle branch");
   }
 
-  // Verify sync committee has sufficient participants
-  const syncCommitteeBitsCount = Array.from(update.syncCommitteeBits).filter((bit) => !!bit).length;
-  if (syncCommitteeBitsCount < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
+  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
+  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalityHeader.slot);
+  if (updateFinalityPeriod !== updatePeriod) {
+    throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
+  }
+}
+
+/**
+ * Proof that the state referenced in `update.header.stateRoot` includes
+ * ```ts
+ * state = {
+ *   nextSyncCommittee: update.nextSyncCommittee
+ * }
+ * ```
+ *
+ * Where `hashTreeRoot(state) == update.header.stateRoot`
+ */
+export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate): void {
+  if (
+    !isValidMerkleBranch(
+      ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
+      Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
+      NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+      NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+      update.header.stateRoot.valueOf() as Uint8Array
+    )
+  ) {
+    throw Error("Invalid next sync committee merkle branch");
+  }
+}
+
+/**
+ * Assert valid signature for `signedHeader` with provided `syncCommittee`.
+ *
+ * update.syncCommitteeSignature signs over the block at the previous slot of the state it is included.
+ * ```py
+ * previous_slot = max(state.slot, Slot(1)) - Slot(1)
+ * domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
+ * signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
+ * ```
+ * Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
+ *
+ * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
+ * @param forkVersion ForkVersion that was used to sign the update
+ */
+export function assertValidSignedHeader(
+  syncCommittee: SyncCommitteeFast,
+  syncAggregate: altair.SyncAggregate,
+  signedHeader: phase0.BeaconBlockHeader,
+  genesisValidatorsRoot: Root,
+  forkVersion: Version
+): void {
+  const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, syncAggregate.syncCommitteeBits);
+
+  // Verify sync committee has sufficient participants.
+  // SyncAggregates included in blocks may have zero participants
+  if (participantPubkeys.length < MIN_SYNC_COMMITTEE_PARTICIPANTS) {
     throw Error("Sync committee has not sufficient participants");
   }
 
-  // Verify sync committee aggregate signature
-  //
-  // update.syncCommitteeSignature signs over the block at the previous slot of the state it is included
-  //
-  // ```py
-  // previous_slot = max(state.slot, Slot(1)) - Slot(1)
-  // domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
-  // signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
-  // ```
-  // Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
-  const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, update.syncCommitteeBits);
-  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, update.forkVersion, genesisValidatorsRoot);
+  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
   const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedHeader, domain);
-  if (!isValidBlsAggregate(participantPubkeys, signingRoot, update.syncCommitteeSignature.valueOf() as Uint8Array)) {
+  if (
+    !isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array)
+  ) {
     throw Error("Invalid aggregate signature");
   }
 }

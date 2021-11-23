@@ -1,23 +1,26 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Slot} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, sleep} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
-type OnSlotFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
+type OnEpochFn = (epoch: Epoch, signal: AbortSignal) => Promise<void>;
 
 export interface IClock {
   readonly currentSlot: Slot;
   readonly genesisTime: number;
   start(signal: AbortSignal): void;
-  runEverySlot(fn: OnSlotFn): void;
+  runEveryEpoch(fn: OnEpochFn): void;
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithFutureTolerance(toleranceSec: number): Slot;
 }
 
 export class Clock implements IClock {
-  private readonly fns: OnSlotFn[] = [];
+  private readonly onEveryEpochFns: OnEpochFn[] = [];
 
   constructor(
-    private readonly config: IChainForkConfig,
+    private readonly config: IChainConfig,
     readonly genesisTime: number,
     private readonly onError?: (e: Error) => void
   ) {}
@@ -26,31 +29,37 @@ export class Clock implements IClock {
     return getCurrentSlot(this.config, this.genesisTime);
   }
 
+  /** Returns the slot if the internal clock were advanced by `toleranceSec`. */
+  slotWithFutureTolerance(toleranceSec: number): Slot {
+    // this is the same to getting slot at now + toleranceSec
+    return getCurrentSlot(this.config, this.genesisTime - toleranceSec);
+  }
+
   start(signal: AbortSignal): void {
-    for (const fn of this.fns) {
-      this.runAtMostEvery(signal, fn).catch((e: Error) => {
+    for (const fn of this.onEveryEpochFns) {
+      this.runAtMostEveryEpoch(signal, fn).catch((e: Error) => {
         if (this.onError) this.onError(e);
       });
     }
   }
 
-  runEverySlot(fn: OnSlotFn): void {
-    this.fns.push(fn);
+  runEveryEpoch(fn: OnEpochFn): void {
+    this.onEveryEpochFns.push(fn);
   }
 
   /**
-   * If a task happens to take more than one slot to run, we might skip a slot. This is unfortunate,
-   * however the alternative is to *always* process every slot, which has the chance of creating a
+   * If a task happens to take more than one epoch to run, we might skip a epoch. This is unfortunate,
+   * however the alternative is to *always* process every epoch, which has the chance of creating a
    * theoretically unlimited backlog of tasks. It was a conscious decision to choose to drop tasks
    * on an overloaded/latent system rather than overload it even more.
    */
-  private async runAtMostEvery(signal: AbortSignal, fn: OnSlotFn): Promise<void> {
+  private async runAtMostEveryEpoch(signal: AbortSignal, fn: OnEpochFn): Promise<void> {
     while (!signal.aborted) {
       // Run immediatelly first
       await fn(this.currentSlot, signal);
 
       try {
-        await sleep(this.timeUntilNextSlot(), signal);
+        await sleep(timeUntilNextEpoch(this.config, this.genesisTime), signal);
       } catch (e) {
         if (e instanceof ErrorAborted) {
           return;
@@ -59,10 +68,14 @@ export class Clock implements IClock {
       }
     }
   }
+}
 
-  private timeUntilNextSlot(): number {
-    const miliSecondsPerSlot = this.config.SECONDS_PER_SLOT * 1000;
-    const msFromGenesis = Date.now() - this.genesisTime * 1000;
-    return miliSecondsPerSlot - Math.abs(msFromGenesis % miliSecondsPerSlot);
+function timeUntilNextEpoch(config: Pick<IChainConfig, "SECONDS_PER_SLOT">, genesisTime: number): number {
+  const miliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
+  const msFromGenesis = Date.now() - genesisTime * 1000;
+  if (msFromGenesis >= 0) {
+    return miliSecondsPerEpoch - (msFromGenesis % miliSecondsPerEpoch);
+  } else {
+    return Math.abs(msFromGenesis % miliSecondsPerEpoch);
   }
 }

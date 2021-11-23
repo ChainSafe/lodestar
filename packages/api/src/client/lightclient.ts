@@ -23,10 +23,5 @@ export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): A
       const proof = deserializeProof(new Uint8Array(buffer));
       return {data: proof};
     },
-    async getInitProof(epoch) {
-      const buffer = await httpClient.arrayBuffer(fetchOptsSerializers.getInitProof(epoch));
-      const proof = deserializeProof(new Uint8Array(buffer));
-      return {data: proof};
-    },
   };
 }

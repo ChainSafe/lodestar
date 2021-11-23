@@ -8,7 +8,7 @@ export type LightclientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
   header: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
-  blockRoot: Uint8Array;
+  blockRoot: RootHex;
 };
 
 export enum EventType {

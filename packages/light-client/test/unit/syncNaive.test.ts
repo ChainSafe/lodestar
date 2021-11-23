@@ -2,7 +2,7 @@ import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {processLightClientUpdate} from "../../src/client/update";
+import {processLightClientUpdate} from "../naive/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
 import {LightClientStoreFast} from "../../src/client/types";

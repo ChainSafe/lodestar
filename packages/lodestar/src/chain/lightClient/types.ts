@@ -1,4 +1,4 @@
-import {altair, phase0} from "@chainsafe/lodestar-types";
+import {altair, phase0, RootHex} from "@chainsafe/lodestar-types";
 
 /**
  * `GenesisWitness = Vector[Bytes32, 4]`
@@ -60,7 +60,7 @@ export type LightClientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
   header: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
-  blockRoot: Uint8Array;
+  blockRoot: RootHex;
 };
 
 export type PartialLightClientUpdateFinalized = {

@@ -1,6 +1,24 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {SyncCommitteeWitness} from "./types";
+import {ProofType} from "@chainsafe/persistent-merkle-tree";
+import {FINALIZED_ROOT_INDEX} from "@chainsafe/lodestar-params";
+import {SyncCommitteeWitness, GenesisWitness} from "./types";
+
+const genesisProofPaths = [["genesisTime"], ["genesisValidatorsRoot"]];
+
+export type GenesisData = {
+  genesisTime: number;
+  genesisValidatorsRoot: Uint8Array;
+};
+
+export function getGenesisWitness(state: TreeBacked<allForks.BeaconState>): GenesisWitness {
+  const proof = state.createProof(genesisProofPaths);
+  if (proof.type !== ProofType.treeOffset) {
+    throw Error(`Proof type must be treeOffset: ${proof.type}`);
+  }
+
+  return proof.leaves.slice(2, 7);
+}
 
 export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>): SyncCommitteeWitness {
   const n1 = state.tree.rootNode;
@@ -27,4 +45,8 @@ export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>
 
 export function getNextSyncCommitteeBranch(syncCommitteeWitness: SyncCommitteeWitness): Uint8Array[] {
   return [...syncCommitteeWitness.witness, syncCommitteeWitness.currentSyncCommitteeRoot];
+}
+
+export function getFinalizedRootProof(state: TreeBacked<allForks.BeaconState>): Uint8Array[] {
+  return state.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
 }

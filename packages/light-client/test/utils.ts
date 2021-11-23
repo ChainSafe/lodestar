@@ -1,11 +1,36 @@
 import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
+import {routes} from "@chainsafe/lodestar-api";
 import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
+import {IForkConfig} from "@chainsafe/lodestar-config";
+import {
+  DOMAIN_SYNC_COMMITTEE,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+} from "@chainsafe/lodestar-params";
 import {altair, Bytes4, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {hash} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/client/types";
+import {getLcLoggerConsole} from "../src/utils/logger";
+import {SYNC_COMMITTEES_DEPTH, SYNC_COMMITTEES_INDEX} from "../src/utils/verifyMerkleBranch";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+/**
+ * To enable debug logs run with
+ * ```
+ * DEBUG=true mocha ...
+ * ```
+ */
+export const testLogger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
+
+export const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+export const SOME_HASH = Buffer.alloc(32, 0xaa);
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
@@ -35,7 +60,8 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signAndAggregate: (message: Uint8Array) => altair.SyncAggregate;
+  signHeader(genesisValidatorsRoot: Root, forkVersion: Bytes4, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
+  signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
 /**
@@ -61,9 +87,18 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
+  function signHeader(
+    genesisValidatorsRoot: Root,
+    forkVersion: Bytes4,
+    header: phase0.BeaconBlockHeader
+  ): altair.SyncAggregate {
+    return signAndAggregate(getSyncAggregateSigningRoot(genesisValidatorsRoot, forkVersion, header));
+  }
+
   return {
     pks,
     signAndAggregate,
+    signHeader,
     syncCommittee: {
       pubkeys: pksBytes,
       aggregatePubkey: aggPk.toBytes(PointFormat.compressed),
@@ -71,6 +106,102 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     syncCommitteeFast: {
       pubkeys: pks,
       aggregatePubkey: aggPk,
+    },
+  };
+}
+
+/**
+ * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
+ */
+export function computeLightclientUpdate(config: IForkConfig, period: SyncPeriod): altair.LightClientUpdate {
+  const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
+
+  const committee = getInteropSyncCommittee(period);
+  const committeeNext = getInteropSyncCommittee(period + 1);
+
+  const nextSyncCommittee = committeeNext.syncCommittee;
+
+  const {root: headerStateRoot, proof: nextSyncCommitteeBranch} = computeMerkleBranch(
+    ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee),
+    NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+    NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2
+  );
+
+  const header: phase0.BeaconBlockHeader = {
+    slot: updateSlot,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: headerStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  const {root: finalityHeaderStateRoot, proof: finalityBranch} = computeMerkleBranch(
+    ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+    FINALIZED_ROOT_INDEX_FLOORLOG2,
+    FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2
+  );
+
+  const finalityHeader: phase0.BeaconBlockHeader = {
+    slot: updateSlot,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: finalityHeaderStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  const forkVersion = config.getForkVersion(updateSlot);
+  const syncAggregate = committee.signHeader(genesisValidatorsRoot, forkVersion, finalityHeader);
+
+  return {
+    header,
+    nextSyncCommittee,
+    nextSyncCommitteeBranch,
+    finalityHeader,
+    finalityBranch,
+    syncCommitteeBits: syncAggregate.syncCommitteeBits,
+    syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+    forkVersion,
+  };
+}
+
+/**
+ * Creates a LightclientSnapshotWithProof that passes validation
+ */
+export function computeLightClientSnapshot(
+  period: SyncPeriod
+): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpoint: phase0.Checkpoint} {
+  const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
+  const nextSyncCommittee = getInteropSyncCommittee(period + 1).syncCommittee;
+
+  const syncCommitteesRoot = hash(
+    ssz.altair.SyncCommittee.hashTreeRoot(currentSyncCommittee),
+    ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee)
+  );
+
+  const {root: headerStateRoot, proof: syncCommitteesBranch} = computeMerkleBranch(
+    syncCommitteesRoot,
+    SYNC_COMMITTEES_DEPTH,
+    SYNC_COMMITTEES_INDEX
+  );
+
+  const header: phase0.BeaconBlockHeader = {
+    slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: headerStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  return {
+    snapshot: {
+      header,
+      currentSyncCommittee,
+      nextSyncCommittee,
+      syncCommitteesBranch,
+    },
+    checkpoint: {
+      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+      epoch: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
     },
   };
 }
@@ -104,4 +235,29 @@ export function generateValidators(n: number, opts?: Partial<phase0.Validator>):
 
 export function generateBalances(n: number): List<number> {
   return Array.from({length: n}, () => 32e9) as List<number>;
+}
+
+/**
+ * Verify that the given ``leaf`` is on the merkle branch ``proof``
+ * starting with the given ``root``.
+ *
+ * Browser friendly version of verifyMerkleBranch
+ */
+export function computeMerkleBranch(
+  leaf: Uint8Array,
+  depth: number,
+  index: number
+): {root: Uint8Array; proof: Uint8Array[]} {
+  const proof: Uint8Array[] = [];
+
+  let value = leaf;
+  for (let i = 0; i < depth; i++) {
+    proof[i] = Buffer.alloc(32, i);
+    if (Math.floor(index / 2 ** i) % 2) {
+      value = hash(proof[i], value);
+    } else {
+      value = hash(value, proof[i]);
+    }
+  }
+  return {root: value, proof};
 }

@@ -2,7 +2,6 @@ import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
-import {ApiError} from "../errors";
 import {linspace} from "../../../util/numpy";
 import {fromHexString, isCompositeType} from "@chainsafe/ssz";
 import {ProofType} from "@chainsafe/persistent-merkle-tree";
@@ -19,8 +18,6 @@ export function getLightclientApi(
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
   return {
-    // Proofs API
-
     async getStateProof(stateId, paths) {
       const state = await resolveStateId(config, chain, db, stateId);
       const stateTreeBacked = ssz.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
@@ -57,9 +54,7 @@ export function getLightclientApi(
       };
     },
 
-    // Sync API
-
-    async getBestUpdates(from, to) {
+    async getCommitteeUpdates(from, to) {
       const periods = linspace(from, to);
       const updates = await Promise.all(
         periods.map((period) => chain.lightClientServer.serveBestUpdateInPeriod(period))
@@ -67,21 +62,9 @@ export function getLightclientApi(
       return {data: updates};
     },
 
-    async getLatestHeader() {
-      const update = await chain.lightClientServer.serveBestHeaderUpdate();
-      return {data: update};
-    },
-
-    // Init API
-
-    async getSnapshotProof(blockRoot) {
+    async getSnapshot(blockRoot) {
       const snapshotProof = await chain.lightClientServer.serveInitCommittees(fromHexString(blockRoot));
       return {data: snapshotProof};
-    },
-
-    async getGenesisProof(blockRoot) {
-      const genesisProof = await chain.lightClientServer.serveInitProof(fromHexString(blockRoot));
-      return {data: genesisProof};
     },
   };
 }

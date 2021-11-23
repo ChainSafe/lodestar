@@ -1,18 +1,14 @@
 import fastify, {FastifyInstance} from "fastify";
-import {Api} from "@chainsafe/lodestar-api";
+import {Api, routes} from "@chainsafe/lodestar-api";
 import {registerRoutes} from "@chainsafe/lodestar-api/server";
-import {ILogger} from "@chainsafe/lodestar-utils";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {TreeBacked} from "@chainsafe/ssz";
-import {altair, ssz} from "@chainsafe/lodestar-types";
-import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {LightClientUpdater} from "../src/server/LightClientUpdater";
+import {Path, TreeBacked} from "@chainsafe/ssz";
+import {allForks, altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
+import {Proof} from "@chainsafe/persistent-merkle-tree";
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
-const maxPeriodsPerRequest = 128;
 
 export type IStateRegen = {
   getStateByRoot(stateRoot: string): Promise<TreeBacked<altair.BeaconState>>;
@@ -27,29 +23,14 @@ export type ServerOpts = {
   host: string;
 };
 
-export type ServerModules = {
-  config: IChainForkConfig;
-  lightClientUpdater: LightClientUpdater;
-  logger: ILogger;
-  stateRegen: IStateRegen;
-  blockCache: IBlockCache;
-};
-
-export async function startLightclientApiServer(opts: ServerOpts, modules: ServerModules): Promise<FastifyInstance> {
+export async function startServer(opts: ServerOpts, config: IChainForkConfig, api: Api): Promise<FastifyInstance> {
   const server = fastify({
     logger: false,
     ajv: {customOptions: {coerceTypes: "array"}},
     querystringParser: querystring.parse,
   });
 
-  const lightclientApi = getLightclientServerApi(modules);
-  const beaconApi = getBeaconServerApi(modules);
-  const api = {
-    lightclient: lightclientApi,
-    beacon: beaconApi,
-  } as Api;
-
-  registerRoutes(server, modules.config, api, ["lightclient", "beacon"]);
+  registerRoutes(server, config, api, ["lightclient", "events"]);
 
   void server.register(fastifyCors, {origin: "*"});
 
@@ -57,69 +38,75 @@ export async function startLightclientApiServer(opts: ServerOpts, modules: Serve
   return server;
 }
 
-function getLightclientServerApi(modules: ServerModules): Api["lightclient"] {
-  const {lightClientUpdater, stateRegen} = modules;
+export class LightclientServerApi implements routes.lightclient.Api {
+  readonly states = new Map<RootHex, TreeBacked<allForks.BeaconState>>();
+  readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
+  readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
 
-  return {
-    async getStateProof(stateId, paths) {
-      const state = await stateRegen.getStateByRoot(stateId);
-      const tree = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
-      return {data: tree.createProof(paths)};
-    },
-
-    async getBestUpdates(from, to) {
-      const periods = linspace(from, to);
-      if (periods.length > maxPeriodsPerRequest) {
-        throw Error("Too many periods requested");
-      }
-      return {data: await lightClientUpdater.getBestUpdates(periods)};
-    },
-
-    async getLatestUpdateFinalized() {
-      const data = await lightClientUpdater.getLatestUpdateFinalized();
-      if (!data) throw Error("No update available");
-      return {data};
-    },
-
-    async getLatestUpdateNonFinalized() {
-      const data = await lightClientUpdater.getLatestUpdateNonFinalized();
-      if (!data) throw Error("No update available");
-      return {data};
-    },
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async getInitProof(epoch) {
-      throw Error("No init proof available");
-    },
-  };
-}
-
-function getBeaconServerApi(modules: ServerModules): Api["beacon"] {
-  const {config, blockCache} = modules;
-  const api = {
-    async getBlockHeader(blockId: string) {
-      const block = await blockCache.getBlockByRoot(blockId);
-
-      return {
-        data: {
-          root: config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block),
-          canonical: true,
-          header: {
-            message: blockToHeader(modules.config, block),
-            signature: Buffer.alloc(96, 0),
-          },
-        },
-      };
-    },
-  } as Partial<Api["beacon"]>;
-
-  return api as Api["beacon"];
-}
-
-function linspace(from: number, to: number): number[] {
-  const arr: number[] = [];
-  for (let i = from; i <= to; i++) {
-    arr.push(i);
+  async getStateProof(stateId: string, paths: Path[]): Promise<{data: Proof}> {
+    const state = this.states.get(stateId);
+    if (!state) throw Error(`stateId ${stateId} not available`);
+    return {data: state.createProof(paths)};
   }
-  return arr;
+
+  async getCommitteeUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}> {
+    const updates: altair.LightClientUpdate[] = [];
+    for (let period = from; period <= to; period++) {
+      const update = this.updates.get(period);
+      if (update) {
+        updates.push(update);
+      }
+    }
+    return {data: updates};
+  }
+
+  async getSnapshot(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {
+    const snapshot = this.snapshots.get(blockRoot);
+    if (!snapshot) throw Error(`snapshot for blockRoot ${blockRoot} not available`);
+    return {data: snapshot};
+  }
+}
+
+type OnEvent = (event: routes.events.BeaconEvent) => void;
+
+/**
+ * In-memory simple event emitter for `BeaconEvent`
+ */
+export class EventsServerApi implements routes.events.Api {
+  private readonly onEventsByTopic = new Map<routes.events.EventType, Set<OnEvent>>();
+
+  hasSubscriptions(): boolean {
+    return this.onEventsByTopic.size > 0;
+  }
+
+  emit(event: routes.events.BeaconEvent): void {
+    const onEvents = this.onEventsByTopic.get(event.type);
+    if (onEvents) {
+      for (const onEvent of onEvents) {
+        onEvent(event);
+      }
+    }
+  }
+
+  eventstream(topics: routes.events.EventType[], signal: AbortSignal, onEvent: OnEvent): void {
+    for (const topic of topics) {
+      let onEvents = this.onEventsByTopic.get(topic);
+      if (!onEvents) {
+        onEvents = new Set();
+        this.onEventsByTopic.set(topic, onEvents);
+      }
+
+      onEvents.add(onEvent);
+    }
+
+    signal.addEventListener(
+      "abort",
+      () => {
+        for (const topic of topics) {
+          this.onEventsByTopic.get(topic)?.delete(onEvent);
+        }
+      },
+      {once: true}
+    );
+  }
 }

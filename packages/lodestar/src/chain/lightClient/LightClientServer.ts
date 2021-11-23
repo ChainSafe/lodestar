@@ -11,10 +11,9 @@ import {BitVector, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "./proofSyncCommittee";
-import {getFinalizedCheckpointWitness} from "./proofFinalizedCheckpoint";
-import {GenesisData, getGenesisWitness} from "./proofGenesis";
-import {PartialLightClientUpdate, InitGenesisProof, InitSnapshotProof, LightClientHeaderUpdate} from "./types";
+import {getNextSyncCommitteeBranch, getSyncCommitteesWitness, getFinalizedRootProof, getGenesisWitness} from "./proofs";
+import {PartialLightClientUpdate, InitGenesisProof, InitSnapshotProof} from "./types";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;
@@ -33,6 +32,11 @@ type SyncAttestedData = {
       isFinalized: false;
     }
 );
+
+type GenesisData = {
+  genesisTime: number;
+  genesisValidatorsRoot: Uint8Array;
+};
 
 interface ILightClientIniterModules {
   config: IChainForkConfig;
@@ -72,9 +76,9 @@ const MAX_PREV_HEAD_DATA = 32;
  * | --------------------- | ------ | ----- |
  * | genesisTime           | 32     | 0     |
  * | genesisValidatorsRoot | 33     | 1     |
+ * | finalizedCheckpoint   | 52     | 20    |
  * | currentSyncCommittee  | 54     | 22    |
  * | nextSyncCommittee     | 55     | 23    |
- * | finalizedCheckpoint   | 52     | 20    |
  *
  * For each field you only need 5 x 32 witness. Since genesisTime and genesisValidatorsRoot are mutual witness
  * of each other, never change and are always known you only 4 witness for each, or 4 witness for both.
@@ -179,7 +183,6 @@ export class LightClientServer {
    * Keep in memory since this data is very transient, not useful after a few slots
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
-  private readonly headerUpdate = new Map<Slot, LightClientHeaderUpdate>();
   private finalizedHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalityHeader">;
@@ -226,11 +229,6 @@ export class LightClientServer {
       this.logger.error("Error persistPostBlockImportData", {}, e);
     });
   }
-
-  /**
-   * API route to replace SSE event
-   */
-  async serveBestHeaderUpdate(slot: Slot): Promise<LightClientHeaderUpdate> {}
 
   /**
    * API ROUTE to get `genesisTime` and `genesisValidatorsRoot` from a trusted state root
@@ -407,7 +405,7 @@ export class LightClientServer {
             isFinalized: true,
             header,
             blockRoot,
-            finalityBranch: getFinalizedCheckpointWitness(postState),
+            finalityBranch: getFinalizedRootProof(postState),
             finalizedCheckpoint,
           }
         : {
@@ -447,18 +445,14 @@ export class LightClientServer {
       throw Error("attestedData not available");
     }
 
-    // Gossip syncAggregate plus header
-    const headerUpdate: LightClientHeaderUpdate = {
-      header: attestedData.header,
-      blockRoot: attestedData.blockRoot,
-      syncAggregate,
-    };
-    this.headerUpdate.set(headerUpdate.header.slot, headerUpdate);
-
     // Emit update
     // - At the earliest: 6 second after the slot start
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientUpdate, headerUpdate);
+    this.emitter.emit(ChainEvent.lightclientUpdate, {
+      header: attestedData.header,
+      blockRoot: toHexString(attestedData.blockRoot),
+      syncAggregate,
+    });
 
     // Check if this update is better, otherwise ignore
     await this.maybeStoreNewBestPartialUpdate(syncAggregate, attestedData);
@@ -537,19 +531,20 @@ export function isBetterUpdate(
   nextSyncAggregate: altair.SyncAggregate,
   nextSyncAttestedData: SyncAttestedData
 ): boolean {
-  // Finalized is always better
-  if (!prevUpdate.isFinalized && nextSyncAttestedData.isFinalized) {
+  const nextBitCount = sumBits(nextSyncAggregate.syncCommitteeBits);
+
+  // Finalized if participation is over 66%
+  if (!prevUpdate.isFinalized && nextSyncAttestedData.isFinalized && nextBitCount * 3 > SYNC_COMMITTEE_SIZE * 2) {
     return true;
   }
 
   // Higher bit count
   const prevBitCount = sumBits(prevUpdate.syncCommitteeBits);
-  const nextBitCount = sumBits(nextSyncAggregate.syncCommitteeBits);
   if (prevBitCount > nextBitCount) return false;
   if (prevBitCount < nextBitCount) return true;
 
   // else keep the oldest, lowest chance or re-org and requires less updating
-  return prevUpdate.header.slot < nextSyncAttestedData.header.slot;
+  return prevUpdate.header.slot > nextSyncAttestedData.header.slot;
 }
 
 export function sumBits(bits: BitVector): number {

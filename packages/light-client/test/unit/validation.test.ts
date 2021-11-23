@@ -7,8 +7,8 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {validateLightClientUpdate} from "../../src/client/validation";
-import {LightClientSnapshotFast} from "../../src/client/types";
+import {assertValidLightClientUpdate} from "../../src/client/validation";
+import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/client/types";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
 describe("validateLightClientUpdate", () => {
@@ -24,7 +24,13 @@ describe("validateLightClientUpdate", () => {
     const updateHeaderSlot = EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
     const attestedHeaderSlot = updateHeaderSlot + 1;
 
-    const sks = Array.from({length: SYNC_COMMITTEE_SIZE}).map((_, i) => SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
+    const skBytes: Buffer[] = [];
+    for (let i = 0; i < SYNC_COMMITTEE_SIZE; i++) {
+      const buffer = Buffer.alloc(32, 0);
+      buffer.writeInt16BE(i + 1, 30); // Offset to ensure the SK is less than the order
+      skBytes.push(buffer);
+    }
+    const sks = skBytes.map((skBytes) => SecretKey.fromBytes(skBytes));
     const pks = sks.map((sk) => sk.toPublicKey());
     const pubkeys = pks.map((pk) => pk.toBytes());
 
@@ -61,6 +67,11 @@ describe("validateLightClientUpdate", () => {
     const signingRoot = getSyncAggregateSigningRoot(genValiRoot, forkVersion, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
+    const syncCommittee: SyncCommitteeFast = {
+      pubkeys: pks,
+      aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
+    };
+
     update = {
       header,
       nextSyncCommittee: nextSyncCommittee,
@@ -74,18 +85,12 @@ describe("validateLightClientUpdate", () => {
 
     snapshot = {
       header: defaultBeaconBlockHeader(snapshotHeaderSlot),
-      currentSyncCommittee: {
-        pubkeys: pks,
-        aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
-      },
-      nextSyncCommittee: {
-        pubkeys: pks,
-        aggregatePubkey: PublicKey.fromBytes(aggregatePublicKeys(pubkeys)),
-      },
+      currentSyncCommittee: syncCommittee,
+      nextSyncCommittee: syncCommittee,
     };
   });
 
   it("Validate valid update", () => {
-    validateLightClientUpdate(snapshot, update, genValiRoot);
+    assertValidLightClientUpdate(snapshot.nextSyncCommittee, update, genValiRoot, update.forkVersion);
   });
 });
