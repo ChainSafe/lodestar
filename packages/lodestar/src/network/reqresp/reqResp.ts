@@ -10,10 +10,10 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {timeoutOptions} from "../../constants";
+import {RespStatus, timeoutOptions} from "../../constants";
 import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
-import {handleRequest} from "./response";
+import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
@@ -33,6 +33,7 @@ import {
   protocolsSupported,
   IncomingResponseBody,
 } from "./types";
+import {IReqRespRateTracker} from "./response/rateTracker";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -49,6 +50,7 @@ export class ReqResp implements IReqResp {
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
+  private rateTracker: IReqRespRateTracker;
   private networkEventBus: INetworkEventBus;
   private controller = new AbortController();
   private options?: IReqRespOptions;
@@ -64,6 +66,7 @@ export class ReqResp implements IReqResp {
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
+    this.rateTracker = modules.rateTracker;
     this.networkEventBus = modules.networkEventBus;
     this.options = options;
     this.metrics = modules.metrics;
@@ -232,9 +235,17 @@ export class ReqResp implements IReqResp {
         yield* this.reqRespHandlers.onStatus();
         break;
       case Method.BeaconBlocksByRange:
+        if (this.rateTracker.requestBlocksForPeerId(peerId, Math.max(requestTyped.body.count, 0)) === 0) {
+          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+        }
+
         yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);
         break;
       case Method.BeaconBlocksByRoot:
+        if (this.rateTracker.requestBlocksForPeerId(peerId, requestTyped.body.length) === 0) {
+          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+        }
+
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
         break;
 

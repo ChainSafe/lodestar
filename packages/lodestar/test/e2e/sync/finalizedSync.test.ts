@@ -26,7 +26,13 @@ describe("sync / finalized sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {isSingleNode: true}},
+      options: {
+        sync: {isSingleNode: true},
+        network: {
+          requestCountTotalLimit: 1000,
+          requestCountPeerLimit: 1000,
+        },
+      },
       validatorCount,
       logger: loggerNodeA,
     });

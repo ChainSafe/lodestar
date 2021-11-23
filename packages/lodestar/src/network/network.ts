@@ -25,6 +25,7 @@ import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
+import {ReqRespRateTracker} from "./reqresp/response/rateTracker";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -68,6 +69,7 @@ export class Network implements INetwork {
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerMetadata = new Libp2pPeerMetadataStore(libp2p.peerStore.metadataBook);
     const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
+    const rateTracker = new ReqRespRateTracker(opts, {...modules, peerRpcScores});
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
@@ -80,6 +82,7 @@ export class Network implements INetwork {
         peerMetadata,
         metadata,
         peerRpcScores,
+        rateTracker,
         logger,
         networkEventBus,
         metrics,

@@ -9,6 +9,7 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
+import {IReqRespRateTracker} from "./response/rateTracker";
 
 export interface IReqResp {
   start(): void;
@@ -32,6 +33,7 @@ export interface IReqRespModules {
   reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
+  rateTracker: IReqRespRateTracker;
   networkEventBus: INetworkEventBus;
   metrics: IMetrics | null;
 }
