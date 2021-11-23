@@ -63,7 +63,7 @@
     "@chainsafe/lodestar-types": "^0.32.0",
     "@chainsafe/lodestar-utils": "^0.32.0",
     "@chainsafe/lodestar-validator": "^0.32.0",
-    "@chainsafe/ssz": "^0.8.19",
+    "@chainsafe/ssz": "^0.8.20",
     "@types/lockfile": "^1.0.1",
     "bip39": "^3.0.2",
     "deepmerge": "^4.2.2",
