@@ -1,8 +1,8 @@
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {PeerManagerOpts} from "./peers";
-import {RateTrackerOpts} from "./reqresp/response/rateTracker";
+import {RateLimiterOpts} from "./reqresp/response/rateLimiter";
 
-export interface INetworkOptions extends PeerManagerOpts, RateTrackerOpts {
+export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
@@ -26,8 +26,8 @@ export const defaultNetworkOptions: INetworkOptions = {
   // rate tracker options per 1 minute
   // per peer per minute, allow to serve up to 5 requests and 500 blocks
   // total: make 4x peer params
-  requestCountTotalLimit: 20,
-  requestCountPeerLimit: 5,
+  requestCountTotalLimit: 200,
+  requestCountPeerLimit: 50,
   blockCountTotalLimit: 2000,
   blockCountPeerLimit: 500,
   rateTrackerTimeoutMs: 60 * 1000,

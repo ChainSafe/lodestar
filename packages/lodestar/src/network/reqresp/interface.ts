@@ -9,7 +9,6 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
-import {IReqRespRateTracker} from "./response/rateTracker";
 
 export interface IReqResp {
   start(): void;
@@ -33,7 +32,7 @@ export interface IReqRespModules {
   reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
-  rateTracker: IReqRespRateTracker;
+  rateLimiter: IReqRespRateLimiter;
   networkEventBus: INetworkEventBus;
   metrics: IMetrics | null;
 }
@@ -71,3 +70,13 @@ export type Libp2pStream = {
    */
   abort: (err: Error) => void;
 };
+
+/**
+ * Rate limiter interface for request and response.
+ */
+export interface IReqRespRateLimiter {
+  /**
+   * Allow to request or response based on rate limit params configured.
+   */
+  allowToProcess(peerId: PeerId, objectCount?: number): boolean;
+}
