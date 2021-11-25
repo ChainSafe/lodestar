@@ -1,23 +1,26 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {ProofType} from "@chainsafe/persistent-merkle-tree";
 import {FINALIZED_ROOT_INDEX} from "@chainsafe/lodestar-params";
 import {SyncCommitteeWitness, GenesisWitness} from "./types";
 
-const genesisProofPaths = [["genesisTime"], ["genesisValidatorsRoot"]];
+/**
+ * Parent node of both `genesisTime` and `genesisValidatorsRoot`
+ */
+export const GENESIS_GINDEX = BigInt(16);
 
 export type GenesisData = {
   genesisTime: number;
   genesisValidatorsRoot: Uint8Array;
 };
 
-export function getGenesisWitness(state: TreeBacked<allForks.BeaconState>): GenesisWitness {
-  const proof = state.createProof(genesisProofPaths);
-  if (proof.type !== ProofType.treeOffset) {
-    throw Error(`Proof type must be treeOffset: ${proof.type}`);
-  }
+export type GenesisWithProof = {
+  witness: GenesisWitness;
+  genesisTime: number;
+  genesisValidatorsRoot: Uint8Array;
+};
 
-  return proof.leaves.slice(2, 7);
+export function getGenesisWitness(state: TreeBacked<allForks.BeaconState>): GenesisWitness {
+  return state.tree.getSingleProof(GENESIS_GINDEX);
 }
 
 export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>): SyncCommitteeWitness {
@@ -29,11 +32,12 @@ export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>
   const currentSyncCommitteeRoot = n27.left.root; // n54 1011[0]
   const nextSyncCommitteeRoot = n27.right.root; // n55 1011[1]
 
+  // Witness branch is sorted by descending gindex
   const witness = [
-    n1.left.root, // 2
-    n3.right.root, // 7
-    n6.left.root, // 12
     n13.left.root, // 26
+    n6.left.root, // 12
+    n3.right.root, // 7
+    n1.left.root, // 2
   ];
 
   return {
@@ -43,8 +47,9 @@ export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>
   };
 }
 
-export function getNextSyncCommitteeBranch(syncCommitteeWitness: SyncCommitteeWitness): Uint8Array[] {
-  return [...syncCommitteeWitness.witness, syncCommitteeWitness.currentSyncCommitteeRoot];
+export function getNextSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeWitness): Uint8Array[] {
+  // Witness branch is sorted by descending gindex
+  return [syncCommitteesWitness.currentSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
 export function getFinalizedRootProof(state: TreeBacked<allForks.BeaconState>): Uint8Array[] {
