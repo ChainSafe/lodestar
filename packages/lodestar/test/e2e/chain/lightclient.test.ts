@@ -12,8 +12,9 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 
 describe("chain / lightclient", function () {
   const validatorCount = 8;
-  /** A full sync committee period + 1 epoch of margin */
-  const finalizedEpochToReach = EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
+  const targetSyncCommittee = 3;
+  /** N sync committee periods + 1 epoch of margin */
+  const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
   /** Given 100% participation the fastest epoch to reach finalization is +2 epochs. -1 for margin */
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
   /** Max distance between beacon node head and lightclient head */
