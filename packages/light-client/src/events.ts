@@ -6,14 +6,15 @@ export enum LightclientEvent {
    */
   head = "head",
   /**
-   * New committee at period
+   * Stored nextSyncCommittee from an update at period `period`.
+   * Note: the SyncCommittee is stored for `period + 1`.
    */
   committee = "committee",
 }
 
 export type LightclientEvents = {
   [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.committee]: (committeePeriod: SyncPeriod) => void;
+  [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
 };
 
 export type LightclientEmitter = MittEmitter<LightclientEvents>;

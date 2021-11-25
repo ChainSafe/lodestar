@@ -220,7 +220,6 @@ export class Lightclient {
     const periodRanges = chunkifyInclusiveRange(fromPeriod, toPeriod, MAX_PERIODS_PER_REQUEST);
 
     for (const [fromPeriodRng, toPeriodRng] of periodRanges) {
-      this.logger.debug(`getCommitteeUpdates(${fromPeriodRng}, ${toPeriodRng})`);
       const {data: updates} = await this.api.lightclient.getCommitteeUpdates(fromPeriodRng, toPeriodRng);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
@@ -277,7 +276,6 @@ export class Lightclient {
       // Start fetching updates with some lookahead
       if (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - epochsIntoPeriod <= LOOKAHEAD_EPOCHS_COMMITTEE_SYNC) {
         const period = computeSyncPeriodAtEpoch(currentEpoch);
-        this.logger.debug("onEveryEpoch", {period, epoch: currentEpoch});
         try {
           await this.sync(period, period);
         } catch (e) {
@@ -375,7 +373,7 @@ export class Lightclient {
           prevHeadRoot: prevHead.blockRoot,
         });
       }
-      this.logger.debug("Head updated", {
+      this.logger.info("Head updated", {
         slot: header.slot,
         root: headerUpdate.blockRoot,
       });
@@ -431,6 +429,7 @@ export class Lightclient {
     };
 
     if (!existingNextSyncCommittee || isBetterUpdate(existingNextSyncCommittee, newNextSyncCommitteeStats)) {
+      this.logger.info("Stored SyncCommittee", {nextPeriod, replacedPrevious: existingNextSyncCommittee != null});
       this.emitter.emit(LightclientEvent.committee, updatePeriod);
       this.syncCommitteeByPeriod.set(nextPeriod, {
         ...newNextSyncCommitteeStats,
