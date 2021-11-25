@@ -1,7 +1,7 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 
 import {config} from "@chainsafe/lodestar-config/default";
-import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
 import {verifyBlockSanityChecks, VerifyBlockModules} from "../../../../src/chain/blocks/verifyBlock";
 import {LocalClock} from "../../../../src/chain/clock";
@@ -25,11 +25,11 @@ describe("chain / blocks / verifyBlock", function () {
     clock = {currentSlot} as LocalClock;
     modules = ({config, forkChoice, clock} as Partial<VerifyBlockModules>) as VerifyBlockModules;
     // On first call, parentRoot is known
-    forkChoice.hasBlockHex.onFirstCall().returns(true);
+    forkChoice.getBlockHex.returns({} as IProtoBlock);
   });
 
   it("PARENT_UNKNOWN", function () {
-    forkChoice.hasBlockHex.onFirstCall().returns(false);
+    forkChoice.getBlockHex.returns(null);
     expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.PARENT_UNKNOWN);
   });
 
@@ -39,7 +39,7 @@ describe("chain / blocks / verifyBlock", function () {
   });
 
   it("ALREADY_KNOWN", function () {
-    forkChoice.hasBlockHex.onSecondCall().returns(true);
+    forkChoice.hasBlockHex.returns(true);
     expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.ALREADY_KNOWN);
   });
 

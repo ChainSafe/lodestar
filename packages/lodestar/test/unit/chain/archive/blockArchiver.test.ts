@@ -37,17 +37,17 @@ describe("block archiver task", function () {
     forkChoiceStub.getAllNonAncestorBlocks.returns(nonCanonicalBlocks);
     await archiveBlocks(dbStub, forkChoiceStub, lightclientServer, logger, {epoch: 5, rootHex: ZERO_HASH_HEX});
 
-    expect(
-      dbStub.blockArchive.batchPutBinary.calledWith(
-        canonicalBlocks.map((summary) => ({
-          key: summary.slot,
-          value: blockBuffer,
-          slot: summary.slot,
-          blockRoot: fromHexString(summary.blockRoot),
-          parentRoot: fromHexString(summary.parentRoot),
-        }))
-      )
-    ).to.be.true;
+    expect(dbStub.blockArchive.batchPutBinary.getCall(0).args[0]).to.deep.equal(
+      canonicalBlocks.map((summary) => ({
+        key: summary.slot,
+        value: blockBuffer,
+        slot: summary.slot,
+        blockRoot: fromHexString(summary.blockRoot),
+        parentRoot: fromHexString(summary.parentRoot),
+      })),
+      "blockArchive.batchPutBinary called with wrong args"
+    );
+
     // delete canonical blocks
     expect(
       dbStub.block.batchDelete.calledWith(
