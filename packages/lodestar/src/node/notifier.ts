@@ -6,6 +6,8 @@ import {INetwork} from "../network";
 import {IBeaconSync, SyncState} from "../sync";
 import {prettyTimeDiff} from "../util/time";
 import {TimeSeries} from "../util/timeSeries";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 
 /** Create a warning log whenever the peer count is at or below this value */
 const WARN_PEER_COUNT = 1;
@@ -45,6 +47,8 @@ export async function runNodeNotifier({
       }
 
       const clockSlot = chain.clock.currentSlot;
+      const clockEpoch = computeEpochAtSlot(clockSlot);
+
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -92,6 +96,15 @@ export async function runNodeNotifier({
         }
       }
       logger.info(nodeState.join(" - "));
+
+      // Log important chain time-based events
+      // Log sync committee change
+      if (clockEpoch > config.ALTAIR_FORK_EPOCH) {
+        if (clockEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+          const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+          logger.info(`New sync committee period ${period}`);
+        }
+      }
 
       // Log halfway through each slot
       await sleep(timeToNextHalfSlot(config, chain), signal);
