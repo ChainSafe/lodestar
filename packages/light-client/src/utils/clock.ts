@@ -4,6 +4,7 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {computeEpochAtSlot} from "./syncPeriod";
 
 type OnEpochFn = (epoch: Epoch, signal: AbortSignal) => Promise<void>;
 
@@ -56,7 +57,8 @@ export class Clock implements IClock {
   private async runAtMostEveryEpoch(signal: AbortSignal, fn: OnEpochFn): Promise<void> {
     while (!signal.aborted) {
       // Run immediatelly first
-      await fn(this.currentSlot, signal);
+      const currentEpoch = computeEpochAtSlot(this.currentSlot);
+      await fn(currentEpoch, signal);
 
       try {
         await sleep(timeUntilNextEpoch(this.config, this.genesisTime), signal);
@@ -70,7 +72,7 @@ export class Clock implements IClock {
   }
 }
 
-function timeUntilNextEpoch(config: Pick<IChainConfig, "SECONDS_PER_SLOT">, genesisTime: number): number {
+export function timeUntilNextEpoch(config: Pick<IChainConfig, "SECONDS_PER_SLOT">, genesisTime: number): number {
   const miliSecondsPerEpoch = SLOTS_PER_EPOCH * config.SECONDS_PER_SLOT * 1000;
   const msFromGenesis = Date.now() - genesisTime * 1000;
   if (msFromGenesis >= 0) {

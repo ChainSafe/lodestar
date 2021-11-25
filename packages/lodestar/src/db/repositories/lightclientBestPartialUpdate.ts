@@ -1,5 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {FINALIZED_ROOT_INDEX_FLOORLOG2} from "@chainsafe/lodestar-params";
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {booleanType, ContainerType, VectorType} from "@chainsafe/ssz";
 import {
@@ -21,7 +22,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
       isFinalized: booleanType,
       header: ssz.phase0.BeaconBlockHeader,
       blockRoot: ssz.Root,
-      finalityBranch: new VectorType<GenesisWitness>({length: 5, elementType: ssz.Root}),
+      finalityBranch: new VectorType<GenesisWitness>({length: FINALIZED_ROOT_INDEX_FLOORLOG2, elementType: ssz.Root}),
       finalizedCheckpoint: ssz.phase0.Checkpoint,
       finalizedHeader: ssz.phase0.BeaconBlockHeader,
       ...ssz.altair.SyncAggregate.fields,

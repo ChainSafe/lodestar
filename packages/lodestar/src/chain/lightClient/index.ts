@@ -292,7 +292,7 @@ export class LightClientServer {
     // Signature data
     const partialUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (!partialUpdate) {
-      throw Error(`Not updated available for period ${period}`);
+      throw Error(`No partialUpdate available for period ${period}`);
     }
 
     const syncCommitteeWitnessBlockRoot = partialUpdate.isFinalized
@@ -366,7 +366,6 @@ export class LightClientServer {
 
     // Store genesis witness in case this block becomes a checkpoint
     const genesisWitness = getGenesisWitness(postState);
-    this.logger.warn("Persisted genesisWitness", {genesisWitness: genesisWitness.map((buf) => toHexString(buf))});
     await this.db.genesisWitness.put(blockRoot, genesisWitness);
 
     const syncCommitteeWitness = getSyncCommitteesWitness(postState);
@@ -376,9 +375,7 @@ export class LightClientServer {
       await this.storeSyncCommittee(postState.currentSyncCommittee, syncCommitteeWitness.currentSyncCommitteeRoot);
       await this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot);
       this.storedCurrentSyncCommittee = true;
-      this.logger.warn("storedCurrentSyncCommittee", {slot: blockSlot});
-    } else {
-      this.logger.warn("Skipped storedCurrentSyncCommittee", {slot: blockSlot});
+      this.logger.debug("Stored currentSyncCommittee", {slot: blockSlot});
     }
 
     // Only store next sync committee once per dependant root
@@ -391,7 +388,7 @@ export class LightClientServer {
       if (!periodDependantRoots.has(dependantRoot)) {
         periodDependantRoots.add(dependantRoot);
         await this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot);
-        this.logger.warn("storeSyncCommittee", {period, slot: blockSlot, dependantRoot});
+        this.logger.debug("Stored nextSyncCommittee", {period, slot: blockSlot, dependantRoot});
       }
     }
 
@@ -406,10 +403,11 @@ export class LightClientServer {
     const finalizedCheckpointPeriod = computeSyncPeriodAtEpoch(finalizedCheckpoint.epoch);
     const isFinalized =
       finalizedCheckpointPeriod === period &&
-      // Consider the edge case of genesis: Genesis state's finalizedCheckpoint is zero'ed
-      // If finalizedCheckpoint is zeroed, ignore since there won't exist a finalized header for that root
+      // Consider the edge case of genesis: Genesis state's finalizedCheckpoint is zero'ed.
+      // If finalizedCheckpoint is zeroed, consider not finalized (ignore) since there won't exist a
+      // finalized header for that root
       finalizedCheckpoint.epoch !== 0 &&
-      byteArrayEquals(finalizedCheckpoint.root, ZERO_HASH);
+      !byteArrayEquals(finalizedCheckpoint.root, ZERO_HASH);
 
     this.prevHeadData.set(
       blockRootHex,
@@ -455,7 +453,12 @@ export class LightClientServer {
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
-      throw Error("attestedData not available");
+      // Check for .size > 0 to prevent erroring always in the first run
+      if (this.prevHeadData.size === 0) {
+        return;
+      } else {
+        throw Error("attestedData not available");
+      }
     }
 
     // Emit update
@@ -483,11 +486,6 @@ export class LightClientServer {
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten
-      this.logger.warn("eNewBestPartialUpdate: not better than current", {
-        period,
-        isFinalized: attestedData.isFinalized,
-        participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
-      });
       return;
     }
 
@@ -504,12 +502,12 @@ export class LightClientServer {
           syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
         };
 
-    this.logger.warn("eNewBestPartialUpdate: stored", {
+    await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
+    this.logger.debug("Stored new PartialLightClientUpdate", {
       period,
       isFinalized: attestedData.isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
-    await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
   }
 
   private async storeSyncCommittee(syncCommittee: altair.SyncCommittee, syncCommitteeRoot: Uint8Array): Promise<void> {

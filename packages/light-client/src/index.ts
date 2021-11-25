@@ -2,12 +2,12 @@ import mitt from "mitt";
 import {AbortController} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
-import {altair, Epoch, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
-import {Clock, IClock} from "./utils/clock";
+import {Clock, IClock, timeUntilNextEpoch} from "./utils/clock";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
 import {pruneSetToMax} from "./utils/map";
@@ -18,6 +18,8 @@ import {LightclientEmitter, LightclientEvent} from "./events";
 import {assertValidSignedHeader, assertValidLightClientUpdate} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
+import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
+import {computeEpochAtSlot} from "./utils/syncPeriod";
 
 // Re-export event types
 export {LightclientEvent} from "./events";
@@ -35,7 +37,8 @@ export type LightclientInitArgs = {
 
 const MAX_CLOCK_DISPARITY_SEC = 12;
 const MAX_PERIODS_PER_REQUEST = 32;
-const LOOKAHEAD_EPOCHS_COMMITTEE_SYNC = 8;
+/** For mainnet preset 8 epochs, for minimal preset `EPOCHS_PER_SYNC_COMMITTEE_PERIOD / 2` */
+const LOOKAHEAD_EPOCHS_COMMITTEE_SYNC = Math.min(8, Math.ceil(EPOCHS_PER_SYNC_COMMITTEE_PERIOD / 2));
 const ON_ERROR_RETRY_MS = 1000;
 const MAX_STORED_SYNC_COMMITTEES = 2;
 /**
@@ -95,6 +98,7 @@ export class Lightclient {
   readonly logger: ILcLogger;
   readonly clock: IClock;
   readonly genesisValidatorsRoot: Uint8Array;
+  readonly genesisTime: number;
   readonly beaconApiUrl: string;
 
   readonly syncCommitteeByPeriod = new Map<SyncPeriod, LightclientUpdateStats & SyncCommitteeFast>();
@@ -111,6 +115,7 @@ export class Lightclient {
     this.config = config;
     this.logger = logger ?? getLcLoggerConsole();
     this.clock = new Clock(config, genesisData.genesisTime);
+    this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
         ? fromHexString(genesisData.genesisValidatorsRoot)
@@ -229,15 +234,21 @@ export class Lightclient {
   private async runLoop(): Promise<void> {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const lastPeriod = computeSyncPeriodAtSlot(this.head.header.slot);
       const currentPeriod = computeSyncPeriodAtSlot(this.clock.currentSlot);
+      // Check if we have a sync committee for the current clock period
+      if (!this.syncCommitteeByPeriod.has(currentPeriod)) {
+        // Stop head tracking
+        if (this.status.code === RunStatusCode.started) {
+          this.status.controller.abort();
+        }
 
-      if (lastPeriod !== currentPeriod) {
+        // Go into sync mode
         this.status = {code: RunStatusCode.syncing};
-        this.logger.debug("Syncing", {lastPeriod, currentPeriod});
+        const headPeriod = computeSyncPeriodAtSlot(this.head.header.slot);
+        this.logger.debug("Syncing", {lastPeriod: headPeriod, currentPeriod});
 
         try {
-          await this.sync(lastPeriod, currentPeriod);
+          await this.sync(headPeriod, currentPeriod);
           this.logger.debug("Synced", {currentPeriod});
         } catch (e) {
           this.logger.error("Error sync", {}, e as Error);
@@ -248,36 +259,47 @@ export class Lightclient {
         }
       }
 
+      // After successfully syncing, track head if not already
       if (this.status.code !== RunStatusCode.started) {
         const controller = new AbortController();
         this.status = {code: RunStatusCode.started, controller};
         this.logger.debug("Started tracking the head");
 
-        // Sync committee periods every epoch
-        this.clock.start(controller.signal);
-        this.clock.runEveryEpoch(this.onEveryEpoch);
-
         // Subscribe to head updates over SSE
         this.api.events.eventstream([routes.events.EventType.lightclientUpdate], controller.signal, this.onSSE);
       }
 
-      return;
+      // When close to the end of a sync period poll for sync committee updates
+      // Limit lookahead in case EPOCHS_PER_SYNC_COMMITTEE_PERIOD is configured to be very short
 
-      // TODO: Consider merging onEveryEpoch() here
+      const currentEpoch = computeEpochAtSlot(this.clock.currentSlot);
+      const epochsIntoPeriod = currentEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
+      // Start fetching updates with some lookahead
+      if (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - epochsIntoPeriod <= LOOKAHEAD_EPOCHS_COMMITTEE_SYNC) {
+        const period = computeSyncPeriodAtEpoch(currentEpoch);
+        this.logger.debug("onEveryEpoch", {period, epoch: currentEpoch});
+        try {
+          await this.sync(period, period);
+        } catch (e) {
+          this.logger.error("Error re-syncing period", {period}, e as Error);
+        }
+      }
+
+      // Wait for the next epoch
+      if (this.status.code !== RunStatusCode.started) {
+        return;
+      } else {
+        try {
+          await sleep(timeUntilNextEpoch(this.config, this.genesisTime), this.status.controller.signal);
+        } catch (e) {
+          if (isErrorAborted(e)) {
+            return;
+          }
+          throw e;
+        }
+      }
     }
   }
-
-  private onEveryEpoch = async (epoch: Epoch): Promise<void> => {
-    // Limit lookahead in case EPOCHS_PER_SYNC_COMMITTEE_PERIOD is configured to be very short
-    const lookaheadEpochs = Math.min(LOOKAHEAD_EPOCHS_COMMITTEE_SYNC, EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
-    const epochsIntoPeriod = epoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
-
-    // Start fetching updates with some lookahead
-    if (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - epochsIntoPeriod <= lookaheadEpochs) {
-      const period = computeSyncPeriodAtEpoch(epoch);
-      await this.sync(period, period);
-    }
-  };
 
   private onSSE = (event: routes.events.BeaconEvent): void => {
     try {
@@ -346,10 +368,18 @@ export class Lightclient {
       const prevHead = this.head;
       this.head = {header, participation, blockRoot: headerUpdate.blockRoot};
 
+      // This is not an error, but a problematic network condition worth knowing about
+      if (header.slot === prevHead.header.slot && prevHead.blockRoot !== headerUpdate.blockRoot) {
+        this.logger.warn("Head update on same slot", {
+          prevHeadSlot: prevHead.header.slot,
+          prevHeadRoot: prevHead.blockRoot,
+        });
+      }
       this.logger.debug("Head updated", {
-        prevHead: `${prevHead.header.slot} ${prevHead.blockRoot}`,
-        newHead: `${header.slot} ${headerUpdate.blockRoot}`,
+        slot: header.slot,
+        root: headerUpdate.blockRoot,
       });
+
       // Emit to consumers
       this.emitter.emit(LightclientEvent.head, header);
     } else {
