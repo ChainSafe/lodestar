@@ -1,8 +1,8 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {altair, Slot, Root} from "@chainsafe/lodestar-types";
 import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {LightClientSnapshotFast, LightClientStoreFast} from "../../src/client/types";
-import {assertValidLightClientUpdate} from "../../src/client/validation";
+import {LightClientSnapshotFast, LightClientStoreFast} from "../../src/types";
+import {assertValidLightClientUpdate} from "../../src/validation";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../src/utils/utils";
 
 //

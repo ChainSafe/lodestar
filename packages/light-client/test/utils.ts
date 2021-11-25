@@ -15,7 +15,7 @@ import {
 import {altair, Bytes4, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, List} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../src/client/types";
+import {SyncCommitteeFast} from "../src/types";
 import {getLcLoggerConsole} from "../src/utils/logger";
 import {SYNC_COMMITTEES_DEPTH, SYNC_COMMITTEES_INDEX} from "../src/utils/verifyMerkleBranch";
 

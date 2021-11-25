@@ -5,7 +5,7 @@ import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {processLightClientUpdate} from "../naive/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
-import {LightClientStoreFast} from "../../src/client/types";
+import {LightClientStoreFast} from "../../src/types";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention */

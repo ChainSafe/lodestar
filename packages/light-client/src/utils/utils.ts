@@ -2,7 +2,7 @@ import {PublicKey} from "@chainsafe/bls";
 import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../client/types";
+import {SyncCommitteeFast} from "../types";
 
 export function sumBits(bits: ArrayLike<boolean>): number {
   let sum = 0;

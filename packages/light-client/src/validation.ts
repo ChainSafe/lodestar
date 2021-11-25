@@ -1,5 +1,4 @@
 import {altair, phase0, Root, ssz, Version} from "@chainsafe/lodestar-types";
-import {isValidMerkleBranch} from "../utils/verifyMerkleBranch";
 import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
@@ -10,7 +9,8 @@ import {
   NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
-import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "../utils/utils";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
+import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
 
 /**

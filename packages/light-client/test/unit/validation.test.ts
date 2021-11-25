@@ -7,8 +7,8 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {assertValidLightClientUpdate} from "../../src/client/validation";
-import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/client/types";
+import {assertValidLightClientUpdate} from "../../src/validation";
+import {LightClientSnapshotFast, SyncCommitteeFast} from "../../src/types";
 import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate} from "../utils";
 
 describe("validateLightClientUpdate", () => {

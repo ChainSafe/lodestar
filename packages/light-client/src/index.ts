@@ -7,17 +7,17 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
-import {Clock, IClock} from "../utils/clock";
-import {isBetterUpdate, LightclientUpdateStats} from "../utils/update";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../utils/utils";
-import {pruneSetToMax} from "../utils/map";
-import {isValidSyncCommitteesBranch} from "../utils/verifyMerkleBranch";
+import {Clock, IClock} from "./utils/clock";
+import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
+import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
+import {pruneSetToMax} from "./utils/map";
+import {isValidSyncCommitteesBranch} from "./utils/verifyMerkleBranch";
 import {SyncCommitteeFast} from "./types";
-import {chunkifyInclusiveRange} from "../utils/chunkify";
+import {chunkifyInclusiveRange} from "./utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
 import {assertValidSignedHeader, assertValidLightClientUpdate} from "./validation";
-import {GenesisData} from "../networks";
-import {getLcLoggerConsole, ILcLogger} from "../utils/logger";
+import {GenesisData} from "./networks";
+import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
 
 // Re-export event types
 export {LightclientEvent} from "./events";
