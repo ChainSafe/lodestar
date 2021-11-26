@@ -458,7 +458,10 @@ export async function getNetworkCachedState(
     stateSsz = fs.readFileSync(filepath);
   } else {
     const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout ?? 300_000});
-    stateSsz = await client.debug.getState(String(slot), "ssz");
+    stateSsz =
+      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+        ? await client.debug.getState(String(slot), "ssz")
+        : await client.debug.getStateV2(String(slot), "ssz");
     fs.writeFileSync(filepath, stateSsz);
   }
 
