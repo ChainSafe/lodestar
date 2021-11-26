@@ -41,7 +41,7 @@ export type Api = {
  */
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "POST"},
-  getCommitteeUpdates: {url: "/eth/v1/lightclient/best_updates", method: "GET"},
+  getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
   getSnapshot: {url: "/eth/v1/lightclient/snapshot/:blockRoot", method: "GET"},
 };
 
