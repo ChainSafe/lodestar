@@ -36,6 +36,10 @@ docker pull chainsafe/lodestar
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 - :rotating_light: Please note our [security policy](./SECURITY.md).
 
+## Dive into our code
+If it's your first time looking into our code, here are some ideas which may interest you:
+- 💽: [Beacon state transition](https://github.com/ChainSafe/lodestar/blob/master/packages/beacon-state-transition/src/altair/block/index.ts) based on :page_with_curl: [Ethereum Consensus Beacon Chain Spec - Block Processing](https://github.com/ethereum/consensus-specs/blob/dev/specs/altair/beacon-chain.md#block-processing)
+
 ## Prerequisites
 
 - :gear: [NodeJS](https://nodejs.org/) (LTS/Gallium)
