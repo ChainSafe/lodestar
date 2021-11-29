@@ -427,17 +427,22 @@ export function createLodestarMetrics(
     },
 
     backfillSync: {
-      totalBlocks: register.gauge({
-        name: "lodestar__backfill_sync_total_blocks",
+      backfilledTillSlot: register.gauge({
+        name: "lodestar_backfill_till_slot",
         help: "Total amount of backfilled blocks",
       }),
+      totalBlocks: register.gauge<"method">({
+        name: "lodestar_backfill_sync_blocks_total",
+        help: "Total amount of backfilled blocks",
+        labelNames: ["method"],
+      }),
       errors: register.gauge({
-        name: "lodestar__backfill_sync_errors",
+        name: "lodestar_backfill_sync_errors_total",
         help: "Total number of errors while backfilling",
       }),
       status: register.gauge<"status">({
-        name: "lodestar__backfill_sync_status",
-        help: "Current backfill syncing status: [Syncing, Completed]",
+        name: "lodestar_backfill_sync_status",
+        help: "Current backfill syncing status: [Pending, Syncing, Completed]",
       }),
     },
 

@@ -24,9 +24,6 @@ export class BeaconSync implements IBeaconSync {
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
 
-  // avoid finding same root at the same time
-  private readonly processingRoots = new Set<string>();
-
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
    * If a peer is within this tolerance (forwards or backwards), it is treated as a fully sync'd peer.

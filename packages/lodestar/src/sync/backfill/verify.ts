@@ -1,4 +1,4 @@
-import {allForks, CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, CachedBeaconState, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
@@ -18,7 +18,7 @@ export function verifyBlockSequence(
   let nextAnchor: allForkTypes.SignedBeaconBlock | null = null;
 
   const verifiedBlocks: allForkTypes.SignedBeaconBlock[] = [];
-  for (const block of blocks.slice(0).reverse()) {
+  for (const block of blocks.reverse()) {
     const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
@@ -38,10 +38,11 @@ export async function verifyBlockProposerSignature(
   state: CachedBeaconState<allForks.BeaconState>,
   blocks: allForkTypes.SignedBeaconBlock[]
 ): Promise<void> {
-  const signatures = blocks
-    // genesis block doesn't have valid signature
-    .filter((block) => block.message.slot !== GENESIS_SLOT)
-    .map((block) => allForks.getProposerSignatureSet(state, block));
+  const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
+    /** genesis block doesn't have valid signature */
+    if (block.message.slot !== GENESIS_SLOT) sigs.push(allForks.getProposerSignatureSet(state, block));
+    return sigs;
+  }, []);
 
   if (!(await bls.verifySignatureSets(signatures))) {
     throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
