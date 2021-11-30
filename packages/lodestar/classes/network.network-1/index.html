@@ -8,18 +8,18 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/network.network-1/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-7.3.6" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.0.1" name="generator"/>
 <title>Network.network 1 - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.a57b2b03.min.css" rel="stylesheet"/>
-<link href="../../../../assets/stylesheets/palette.3f5d1f46.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
-<style>:root{--md-text-font-family:"Roboto";--md-code-font-family:"Roboto Mono"}</style>
+<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
 <link href="../../../../stylesheets/extras.css" rel="stylesheet"/>
+<script>function __md_scope(e,t,_){return new URL(_||(t===localStorage?"../../../..":"../../../.."),location).pathname+"."+e}function __md_get(e,t=localStorage,_){return JSON.parse(t.getItem(__md_scope(e,t,_)))}function __md_set(e,t,_=localStorage,o){try{_.setItem(__md_scope(e,_,o),JSON.stringify(t))}catch(e){}}</script>
 </head>
 <body data-md-color-accent="deep-purple" data-md-color-primary="black" data-md-color-scheme="preference" dir="ltr">
-<script>function __prefix(e){return new URL("../../../..",location).pathname+"."+e}function __get(e,t=localStorage){return JSON.parse(t.getItem(__prefix(e)))}</script>
-<script>var palette=__get("__palette");if(null!==palette&&"object"==typeof palette.color)for(var key in palette.color)document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+<script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)</script>
 <input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
@@ -583,7 +583,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Network</strong>(<code>opts</code>: <a href="../../interfaces/network.inetworkoptions/">INetworkOptions</a> &amp; <a href="../../modules/network/#ireqrespoptions">IReqRespOptions</a>, <code>modules</code>: <a href="../../interfaces/network.inetworkmodules/">INetworkModules</a>): <em><a href="./">Network</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L58">packages/lodestar/src/network/network.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L58">packages/lodestar/src/network/network.ts:58</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -608,101 +608,101 @@
 <h3 id="attnetsservice">attnetsService<a class="headerlink" href="#attnetsservice" title="Permanent link">¶</a></h3>
 <p>• <strong>attnetsService</strong>: <em><a href="../network_subnets.attnetsservice/">AttnetsService</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#attnetsservice">attnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L44">packages/lodestar/src/network/network.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L44">packages/lodestar/src/network/network.ts:44</a></em></p>
 <hr/>
 <h3 id="private-readonly-chain"><code>Private</code> <code>Readonly</code> chain<a class="headerlink" href="#private-readonly-chain" title="Permanent link">¶</a></h3>
 <p>• <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L56">packages/lodestar/src/network/network.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L56">packages/lodestar/src/network/network.ts:56</a></em></p>
 <hr/>
 <h3 id="private-readonly-clock"><code>Private</code> <code>Readonly</code> clock<a class="headerlink" href="#private-readonly-clock" title="Permanent link">¶</a></h3>
 <p>• <strong>clock</strong>: <em><a href="../../interfaces/chain_clock.ibeaconclock/">IBeaconClock</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L55">packages/lodestar/src/network/network.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L55">packages/lodestar/src/network/network.ts:55</a></em></p>
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L54">packages/lodestar/src/network/network.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L54">packages/lodestar/src/network/network.ts:54</a></em></p>
 <hr/>
 <h3 id="events">events<a class="headerlink" href="#events" title="Permanent link">¶</a></h3>
 <p>• <strong>events</strong>: <em><a href="../../modules/network/#inetworkeventbus">INetworkEventBus</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#events">events</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L42">packages/lodestar/src/network/network.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L42">packages/lodestar/src/network/network.ts:42</a></em></p>
 <hr/>
 <h3 id="gossip">gossip<a class="headerlink" href="#gossip" title="Permanent link">¶</a></h3>
 <p>• <strong>gossip</strong>: <em><a href="../network_gossip.eth2gossipsub/">Eth2Gossipsub</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#gossip">gossip</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L46">packages/lodestar/src/network/network.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L46">packages/lodestar/src/network/network.ts:46</a></em></p>
 <hr/>
 <h3 id="private-readonly-libp2p"><code>Private</code> <code>Readonly</code> libp2p<a class="headerlink" href="#private-readonly-libp2p" title="Permanent link">¶</a></h3>
 <p>• <strong>libp2p</strong>: <em>LibP2p</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L52">packages/lodestar/src/network/network.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L52">packages/lodestar/src/network/network.ts:52</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L53">packages/lodestar/src/network/network.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L53">packages/lodestar/src/network/network.ts:53</a></em></p>
 <hr/>
 <h3 id="metadata">metadata<a class="headerlink" href="#metadata" title="Permanent link">¶</a></h3>
 <p>• <strong>metadata</strong>: <em><a href="../network.metadatacontroller/">MetadataController</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#metadata">metadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L47">packages/lodestar/src/network/network.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L47">packages/lodestar/src/network/network.ts:47</a></em></p>
 <hr/>
 <h3 id="private-readonly-opts"><code>Private</code> <code>Readonly</code> opts<a class="headerlink" href="#private-readonly-opts" title="Permanent link">¶</a></h3>
 <p>• <strong>opts</strong>: <em><a href="../../interfaces/network.inetworkoptions/">INetworkOptions</a> &amp; <a href="../../modules/network/#ireqrespoptions">IReqRespOptions</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L60">packages/lodestar/src/network/network.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L60">packages/lodestar/src/network/network.ts:60</a></em></p>
 <hr/>
 <h3 id="private-readonly-peermanager"><code>Private</code> <code>Readonly</code> peerManager<a class="headerlink" href="#private-readonly-peermanager" title="Permanent link">¶</a></h3>
 <p>• <strong>peerManager</strong>: <em><a href="../network_peers.peermanager/">PeerManager</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L51">packages/lodestar/src/network/network.ts:51</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L51">packages/lodestar/src/network/network.ts:51</a></em></p>
 <hr/>
 <h3 id="peermetadata">peerMetadata<a class="headerlink" href="#peermetadata" title="Permanent link">¶</a></h3>
 <p>• <strong>peerMetadata</strong>: <em><a href="../../interfaces/network_peers.ipeermetadatastore/">IPeerMetadataStore</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#peermetadata">peerMetadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L48">packages/lodestar/src/network/network.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L48">packages/lodestar/src/network/network.ts:48</a></em></p>
 <hr/>
 <h3 id="peerrpcscores">peerRpcScores<a class="headerlink" href="#peerrpcscores" title="Permanent link">¶</a></h3>
 <p>• <strong>peerRpcScores</strong>: <em><a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#peerrpcscores">peerRpcScores</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L49">packages/lodestar/src/network/network.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L49">packages/lodestar/src/network/network.ts:49</a></em></p>
 <hr/>
 <h3 id="reqresp">reqResp<a class="headerlink" href="#reqresp" title="Permanent link">¶</a></h3>
 <p>• <strong>reqResp</strong>: <em><a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#reqresp">reqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L43">packages/lodestar/src/network/network.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L43">packages/lodestar/src/network/network.ts:43</a></em></p>
 <hr/>
 <h3 id="private-subscribedforks"><code>Private</code> subscribedForks<a class="headerlink" href="#private-subscribedforks" title="Permanent link">¶</a></h3>
 <p>• <strong>subscribedForks</strong>: <em>Set‹ForkName›</em> = new Set<forkname>()</forkname></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L58">packages/lodestar/src/network/network.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L58">packages/lodestar/src/network/network.ts:58</a></em></p>
 <hr/>
 <h3 id="syncnetsservice">syncnetsService<a class="headerlink" href="#syncnetsservice" title="Permanent link">¶</a></h3>
 <p>• <strong>syncnetsService</strong>: <em><a href="../network_subnets.syncnetsservice/">SyncnetsService</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a>.<a href="../../interfaces/network.inetwork/#syncnetsservice">syncnetsService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L45">packages/lodestar/src/network/network.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L45">packages/lodestar/src/network/network.ts:45</a></em></p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
 <h3 id="discv5">discv5<a class="headerlink" href="#discv5" title="Permanent link">¶</a></h3>
 <p>• <strong>get discv5</strong>(): <em>Discv5 | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L160">packages/lodestar/src/network/network.ts:160</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L160">packages/lodestar/src/network/network.ts:160</a></em></p>
 <p><strong>Returns:</strong> <em>Discv5 | undefined</em></p>
 <hr/>
 <h3 id="localmultiaddrs">localMultiaddrs<a class="headerlink" href="#localmultiaddrs" title="Permanent link">¶</a></h3>
 <p>• <strong>get localMultiaddrs</strong>(): <em>Multiaddr[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L164">packages/lodestar/src/network/network.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L164">packages/lodestar/src/network/network.ts:164</a></em></p>
 <p><strong>Returns:</strong> <em>Multiaddr[]</em></p>
 <hr/>
 <h3 id="peerid">peerId<a class="headerlink" href="#peerid" title="Permanent link">¶</a></h3>
 <p>• <strong>get peerId</strong>(): <em>PeerId</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L168">packages/lodestar/src/network/network.ts:168</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L168">packages/lodestar/src/network/network.ts:168</a></em></p>
 <p><strong>Returns:</strong> <em>PeerId</em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="close">close<a class="headerlink" href="#close" title="Permanent link">¶</a></h3>
 <p>▸ <strong>close</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L129">packages/lodestar/src/network/network.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L129">packages/lodestar/src/network/network.ts:129</a></em></p>
 <p>Destroy this instance. Can only be called once.</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="connecttopeer">connectToPeer<a class="headerlink" href="#connecttopeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>connectToPeer</strong>(<code>peer</code>: PeerId, <code>multiaddr</code>: Multiaddr[]): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L242">packages/lodestar/src/network/network.ts:242</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L242">packages/lodestar/src/network/network.ts:242</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -727,7 +727,7 @@
 <h3 id="disconnectpeer">disconnectPeer<a class="headerlink" href="#disconnectpeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>disconnectPeer</strong>(<code>peer</code>: PeerId): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L247">packages/lodestar/src/network/network.ts:247</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L247">packages/lodestar/src/network/network.ts:247</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -748,36 +748,36 @@
 <h3 id="getconnectedpeers">getConnectedPeers<a class="headerlink" href="#getconnectedpeers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getConnectedPeers</strong>(): <em>PeerId[]</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L180">packages/lodestar/src/network/network.ts:180</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L180">packages/lodestar/src/network/network.ts:180</a></em></p>
 <p><strong>Returns:</strong> <em>PeerId[]</em></p>
 <hr/>
 <h3 id="getconnectionsbypeer">getConnectionsByPeer<a class="headerlink" href="#getconnectionsbypeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getConnectionsByPeer</strong>(): <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Connection[]›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L176">packages/lodestar/src/network/network.ts:176</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L176">packages/lodestar/src/network/network.ts:176</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Connection[]›</em></p>
 <hr/>
 <h3 id="getenr">getEnr<a class="headerlink" href="#getenr" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getEnr</strong>(): <em>ENR | undefined</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L172">packages/lodestar/src/network/network.ts:172</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L172">packages/lodestar/src/network/network.ts:172</a></em></p>
 <p><strong>Returns:</strong> <em>ENR | undefined</em></p>
 <hr/>
 <h3 id="hassomeconnectedpeer">hasSomeConnectedPeer<a class="headerlink" href="#hassomeconnectedpeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasSomeConnectedPeer</strong>(): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L184">packages/lodestar/src/network/network.ts:184</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L184">packages/lodestar/src/network/network.ts:184</a></em></p>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="issubscribedtogossipcoretopics">isSubscribedToGossipCoreTopics<a class="headerlink" href="#issubscribedtogossipcoretopics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isSubscribedToGossipCoreTopics</strong>(): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L236">packages/lodestar/src/network/network.ts:236</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L236">packages/lodestar/src/network/network.ts:236</a></em></p>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="private-onepoch"><code>Private</code> onEpoch<a class="headerlink" href="#private-onepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onEpoch</strong>(<code>epoch</code>: Epoch): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L254">packages/lodestar/src/network/network.ts:254</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L254">packages/lodestar/src/network/network.ts:254</a></em></p>
 <p>Handle subscriptions through fork transitions, @see FORK_EPOCH_LOOKAHEAD</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -799,7 +799,7 @@
 <h3 id="preparebeaconcommitteesubnet">prepareBeaconCommitteeSubnet<a class="headerlink" href="#preparebeaconcommitteesubnet" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prepareBeaconCommitteeSubnet</strong>(<code>subscriptions</code>: <a href="../../modules/network_subnets/#committeesubscription">CommitteeSubscription</a>[]): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L191">packages/lodestar/src/network/network.ts:191</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L191">packages/lodestar/src/network/network.ts:191</a></em></p>
 <p>Request att subnets up <code>toSlot</code>. Network will ensure to mantain some peers for each</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -821,7 +821,7 @@
 <h3 id="preparesynccommitteesubnets">prepareSyncCommitteeSubnets<a class="headerlink" href="#preparesynccommitteesubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prepareSyncCommitteeSubnets</strong>(<code>subscriptions</code>: <a href="../../modules/network_subnets/#committeesubscription">CommitteeSubscription</a>[]): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L196">packages/lodestar/src/network/network.ts:196</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L196">packages/lodestar/src/network/network.ts:196</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -842,7 +842,7 @@
 <h3 id="restatuspeers">reStatusPeers<a class="headerlink" href="#restatuspeers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>reStatusPeers</strong>(<code>peers</code>: PeerId[]): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L204">packages/lodestar/src/network/network.ts:204</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L204">packages/lodestar/src/network/network.ts:204</a></em></p>
 <p>The app layer needs to refresh the status of some peers. The sync have reached a target</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -864,18 +864,18 @@
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L133">packages/lodestar/src/network/network.ts:133</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L133">packages/lodestar/src/network/network.ts:133</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L148">packages/lodestar/src/network/network.ts:148</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L148">packages/lodestar/src/network/network.ts:148</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="private-subscribecoretopicsatfork"><code>Private</code> subscribeCoreTopicsAtFork<a class="headerlink" href="#private-subscribecoretopicsatfork" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribeCoreTopicsAtFork</strong>(<code>fork</code>: ForkName): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L293">packages/lodestar/src/network/network.ts:293</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L293">packages/lodestar/src/network/network.ts:293</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -896,13 +896,13 @@
 <h3 id="subscribegossipcoretopics">subscribeGossipCoreTopics<a class="headerlink" href="#subscribegossipcoretopics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribeGossipCoreTopics</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L211">packages/lodestar/src/network/network.ts:211</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L211">packages/lodestar/src/network/network.ts:211</a></em></p>
 <p>Subscribe to all gossip events. Safe to call multiple times</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="private-unsubscribecoretopicsatfork"><code>Private</code> unsubscribeCoreTopicsAtFork<a class="headerlink" href="#private-unsubscribecoretopicsatfork" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeCoreTopicsAtFork</strong>(<code>fork</code>: ForkName): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L317">packages/lodestar/src/network/network.ts:317</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L317">packages/lodestar/src/network/network.ts:317</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -923,7 +923,7 @@
 <h3 id="unsubscribegossipcoretopics">unsubscribeGossipCoreTopics<a class="headerlink" href="#unsubscribegossipcoretopics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeGossipCoreTopics</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd24a96/packages/lodestar/src/network/network.ts#L225">packages/lodestar/src/network/network.ts:225</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/lodestar/src/network/network.ts#L225">packages/lodestar/src/network/network.ts:225</a></em></p>
 <p>Unsubscribe from all gossip events. Safe to call multiple times</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
@@ -933,25 +933,25 @@
 <footer class="md-footer">
 <div class="md-footer-meta md-typeset">
 <div class="md-footer-meta__inner md-grid">
-<div class="md-footer-copyright">
-        
-        
-          Made with
-          <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
-            Material for MkDocs
-          </a>
+<div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+      Material for MkDocs
+    </a>
 </div>
-<div class="md-footer-social">
-<a class="md-footer-social__link" href="https://github.com/ChainSafe/lodestar" rel="noopener" target="_blank" title="github.com">
+<div class="md-social">
+<a class="md-social__link" href="https://github.com/ChainSafe/lodestar" rel="noopener" target="_blank" title="github.com">
 <svg viewbox="0 0 480 512" xmlns="http://www.w3.org/2000/svg"><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"></path></svg>
 </a>
-<a class="md-footer-social__link" href="https://twitter.com/ChainSafe" rel="noopener" target="_blank" title="twitter.com">
+<a class="md-social__link" href="https://twitter.com/ChainSafe" rel="noopener" target="_blank" title="twitter.com">
 <svg viewbox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"></path></svg>
 </a>
-<a class="md-footer-social__link" href="https://discord.gg/yjyvFRP" rel="noopener" target="_blank" title="discord.gg">
+<a class="md-social__link" href="https://discord.gg/yjyvFRP" rel="noopener" target="_blank" title="discord.gg">
 <svg viewbox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541zM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241z"></path></svg>
 </a>
-<a class="md-footer-social__link" href="https://medium.com/ChainSafe" rel="noopener" target="_blank" title="medium.com">
+<a class="md-social__link" href="https://medium.com/ChainSafe" rel="noopener" target="_blank" title="medium.com">
 <svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M0 32v448h448V32H0zm372.2 106.1-24 23c-2.1 1.6-3.1 4.2-2.7 6.7v169.3c-.4 2.6.6 5.2 2.7 6.7l23.5 23v5.1h-118V367l24.3-23.6c2.4-2.4 2.4-3.1 2.4-6.7V199.8l-67.6 171.6h-9.1L125 199.8v115c-.7 4.8 1 9.7 4.4 13.2l31.6 38.3v5.1H71.2v-5.1l31.6-38.3c3.4-3.5 4.9-8.4 4.1-13.2v-133c.4-3.7-1-7.3-3.8-9.8L75 138.1V133h87.3l67.4 148L289 133.1h83.2v5z"></path></svg>
 </a>
 </div>
@@ -962,7 +962,7 @@
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.fcfe8b6d.min.js", "version": null}</script>
-<script src="../../../../assets/javascripts/bundle.b1047164.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.01824240.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.a87c2adc.min.js"></script>
 </body>
 </html>
