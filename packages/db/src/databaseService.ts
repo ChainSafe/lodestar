@@ -1,16 +1,16 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController} from "./controller";
+import {Db} from "./controller";
 import {IDbMetrics} from "./metrics";
 
 export interface IDatabaseApiOptions {
   config: IChainForkConfig;
-  controller: IDatabaseController<Buffer, Buffer>;
+  controller: Db;
   metrics?: IDbMetrics;
 }
 
 export abstract class DatabaseService {
   protected config: IChainForkConfig;
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: Db;
 
   protected constructor(opts: IDatabaseApiOptions) {
     this.config = opts.config;

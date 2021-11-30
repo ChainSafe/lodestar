@@ -12,7 +12,7 @@ export async function* onBeaconBlocksByRoot(
   for (const blockRoot of requestBody) {
     const root = blockRoot.valueOf() as Uint8Array;
     const summary = chain.forkChoice.getBlock(root);
-    let blockBytes: Buffer | null = null;
+    let blockBytes: Uint8Array | null = null;
 
     // finalized block has summary in forkchoice but it stays in blockArchive db
     if (summary) {

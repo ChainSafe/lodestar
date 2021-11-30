@@ -71,7 +71,7 @@ export class BlockBySlotRepository {
     );
   }
 
-  private decodeKey(key: Buffer): {pubkey: BLSPubkey; slot: Slot} {
+  private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; slot: Slot} {
     return {
       pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
       slot: bytesToInt(key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + uintLen), "be"),

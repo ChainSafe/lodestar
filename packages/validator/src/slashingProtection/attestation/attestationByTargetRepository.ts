@@ -68,7 +68,7 @@ export class AttestationByTargetRepository {
     );
   }
 
-  private decodeKey(key: Buffer): {pubkey: BLSPubkey; targetEpoch: Epoch} {
+  private decodeKey(key: Uint8Array): {pubkey: BLSPubkey; targetEpoch: Epoch} {
     return {
       pubkey: key.slice(DB_PREFIX_LENGTH, DB_PREFIX_LENGTH + blsPubkeyLen),
       targetEpoch: bytesToInt(

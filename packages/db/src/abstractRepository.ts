@@ -1,7 +1,8 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ArrayLike, Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from ".";
-import {IDatabaseController, IFilterOptions, IKeyValue} from "./controller";
+import {IFilterOptions, IKeyValue} from "./controller";
+import {Db} from "./controller/interface";
 import {DbMetricCounter, IDbMetrics} from "./metrics";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
 import {getBucketNameByValue} from "./util";
@@ -19,7 +20,7 @@ export type Id = Uint8Array | string | number | bigint;
 export abstract class Repository<I extends Id, T> {
   protected config: IChainForkConfig;
 
-  protected db: IDatabaseController<Buffer, Buffer>;
+  protected db: Db;
 
   protected bucket: Bucket;
 
@@ -28,13 +29,7 @@ export abstract class Repository<I extends Id, T> {
   protected dbReadsMetrics?: ReturnType<DbMetricCounter["labels"]>;
   protected dbWriteMetrics?: ReturnType<DbMetricCounter["labels"]>;
 
-  protected constructor(
-    config: IChainForkConfig,
-    db: IDatabaseController<Buffer, Buffer>,
-    bucket: Bucket,
-    type: Type<T>,
-    metrics?: IDbMetrics
-  ) {
+  protected constructor(config: IChainForkConfig, db: Db, bucket: Bucket, type: Type<T>, metrics?: IDbMetrics) {
     this.config = config;
     this.db = db;
     this.bucket = bucket;
@@ -43,11 +38,11 @@ export abstract class Repository<I extends Id, T> {
     this.dbWriteMetrics = metrics?.dbWrites.labels({bucket: getBucketNameByValue(bucket)});
   }
 
-  encodeValue(value: T): Buffer {
-    return this.type.serialize(value) as Buffer;
+  encodeValue(value: T): Uint8Array {
+    return this.type.serialize(value);
   }
 
-  decodeValue(data: Buffer): T {
+  decodeValue(data: Uint8Array): T {
     return this.type.deserialize(data);
   }
 
@@ -55,8 +50,8 @@ export abstract class Repository<I extends Id, T> {
     return _encodeKey(this.bucket, id);
   }
 
-  decodeKey(key: Buffer): I {
-    return (key.slice(BUCKET_LENGTH) as Uint8Array) as I;
+  decodeKey(key: Uint8Array): I {
+    return key.slice(BUCKET_LENGTH) as I;
   }
 
   async get(id: I): Promise<T | null> {
@@ -66,7 +61,7 @@ export abstract class Repository<I extends Id, T> {
     return this.decodeValue(value);
   }
 
-  async getBinary(id: I): Promise<Buffer | null> {
+  async getBinary(id: I): Promise<Uint8Array | null> {
     this.dbReadsMetrics?.inc();
     const value = await this.db.get(this.encodeKey(id));
     if (!value) return null;
@@ -116,7 +111,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   // Similar to batchPut but we support value as Buffer
-  async batchPutBinary(items: ArrayLike<IKeyValue<I, Buffer>>): Promise<void> {
+  async batchPutBinary(items: ArrayLike<IKeyValue<I, Uint8Array>>): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
@@ -174,7 +169,7 @@ export abstract class Repository<I extends Id, T> {
     }
   }
 
-  async *binaryEntriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<Buffer, Buffer>> {
+  async *binaryEntriesStream(opts?: IFilterOptions<I>): AsyncIterable<IKeyValue<Uint8Array, Uint8Array>> {
     this.dbReadsMetrics?.inc();
     yield* this.db.entriesStream(this.dbFilterOptions(opts));
   }
@@ -258,7 +253,7 @@ export abstract class Repository<I extends Id, T> {
   /**
    * Transforms opts from I to Buffer
    */
-  protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Buffer> {
+  protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Uint8Array> {
     const _opts: IFilterOptions<Buffer> = {
       gte: _encodeKey(this.bucket, Buffer.alloc(0)),
       lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),

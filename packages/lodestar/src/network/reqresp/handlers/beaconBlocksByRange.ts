@@ -110,7 +110,7 @@ async function getUnfinalizedBlocksAtSlots(
 
   const slotsSet = new Set(slots);
   const minSlot = Math.min(...slots); // Slots must have length > 0
-  const blockRootsPerSlot = new Map<Slot, Promise<Buffer | null>>();
+  const blockRootsPerSlot = new Map<Slot, Promise<Uint8Array | null>>();
 
   // these blocks are on the same chain to head
   for (const block of chain.forkChoice.iterateAncestorBlocks(chain.forkChoice.getHeadRoot())) {

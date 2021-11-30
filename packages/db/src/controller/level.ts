@@ -20,7 +20,7 @@ export interface ILevelDBOptions extends IDatabaseOptions {
 /**
  * The LevelDB implementation of DB
  */
-export class LevelDbController implements IDatabaseController<Buffer, Buffer> {
+export class LevelDbController implements IDatabaseController<Uint8Array, Uint8Array> {
   private status = Status.stopped;
   private db: LevelUp;
 

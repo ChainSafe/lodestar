@@ -2,6 +2,9 @@
  * @module db/controller
  */
 
+/** Shortcut for Uint8Array based IDatabaseController */
+export type Db = IDatabaseController<Uint8Array, Uint8Array>;
+
 export interface IDatabaseOptions {
   name: string;
 }
