@@ -336,7 +336,10 @@ export class Lightclient {
     // TODO: Make this work with random testnets
     const forkVersion = this.config.getForkVersion(header.slot);
 
-    assertValidSignedHeader(syncCommittee, syncAggregate, header, this.genesisValidatorsRoot, forkVersion);
+    const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+    const headerBlockRootHex = toHexString(headerBlockRoot);
+
+    assertValidSignedHeader(syncCommittee, syncAggregate, headerBlockRoot, this.genesisValidatorsRoot, forkVersion);
 
     // Valid header, check if has enough bits.
     // Only accept headers that have at least half of the max participation seen in this period
@@ -364,10 +367,10 @@ export class Lightclient {
     ) {
       // TODO: Do metrics for each case (advance vs replace same slot)
       const prevHead = this.head;
-      this.head = {header, participation, blockRoot: headerUpdate.blockRoot};
+      this.head = {header, participation, blockRoot: headerBlockRootHex};
 
       // This is not an error, but a problematic network condition worth knowing about
-      if (header.slot === prevHead.header.slot && prevHead.blockRoot !== headerUpdate.blockRoot) {
+      if (header.slot === prevHead.header.slot && prevHead.blockRoot !== headerBlockRootHex) {
         this.logger.warn("Head update on same slot", {
           prevHeadSlot: prevHead.header.slot,
           prevHeadRoot: prevHead.blockRoot,
@@ -375,7 +378,7 @@ export class Lightclient {
       }
       this.logger.info("Head updated", {
         slot: header.slot,
-        root: headerUpdate.blockRoot,
+        root: headerBlockRootHex,
       });
 
       // Emit to consumers
@@ -383,7 +386,7 @@ export class Lightclient {
     } else {
       this.logger.debug("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
-        eventHead: `${header.slot} ${headerUpdate.blockRoot}`,
+        eventHead: `${header.slot} ${headerBlockRootHex}`,
       });
     }
   }

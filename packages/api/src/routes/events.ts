@@ -7,8 +7,6 @@ import {jsonOpts, RouteDef, TypeJson} from "../utils";
 export type LightclientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
   header: phase0.BeaconBlockHeader;
-  /** Precomputed root to prevent re-hashing */
-  blockRoot: RootHex;
 };
 
 export enum EventType {
@@ -157,12 +155,10 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       fields: {
         syncAggregate: ssz.altair.SyncAggregate,
         header: ssz.phase0.BeaconBlockHeader,
-        blockRoot: stringType,
       },
       casingMap: {
         syncAggregate: "sync_aggregate",
         header: "header",
-        blockRoot: "block_root",
       },
     }),
   };

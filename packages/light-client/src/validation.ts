@@ -1,5 +1,5 @@
-import {altair, phase0, Root, ssz, Version} from "@chainsafe/lodestar-types";
-import {computeDomain, computeSyncPeriodAtSlot, computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, Root, ssz, Version} from "@chainsafe/lodestar-types";
+import {computeDomain, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
@@ -46,7 +46,8 @@ export function assertValidLightClientUpdate(
   // An update may not increase the period but still be stored in validUpdates and be used latter
   assertValidSyncCommitteeProof(update);
 
-  assertValidSignedHeader(syncCommittee, update, signedHeader, genesisValidatorsRoot, forkVersion);
+  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedHeader);
+  assertValidSignedHeader(syncCommittee, update, headerBlockRoot, genesisValidatorsRoot, forkVersion);
 }
 
 /**
@@ -118,11 +119,12 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
  *
  * @param syncCommittee SyncPeriod that signed this update: `computeSyncPeriodAtSlot(update.header.slot) - 1`
  * @param forkVersion ForkVersion that was used to sign the update
+ * @param signedHeaderRoot Takes header root instead of the head itself to prevent re-hashing on SSE
  */
 export function assertValidSignedHeader(
   syncCommittee: SyncCommitteeFast,
   syncAggregate: altair.SyncAggregate,
-  signedHeader: phase0.BeaconBlockHeader,
+  signedHeaderRoot: Root,
   genesisValidatorsRoot: Root,
   forkVersion: Version
 ): void {
@@ -135,7 +137,12 @@ export function assertValidSignedHeader(
   }
 
   const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
-  const signingRoot = computeSigningRoot(ssz.phase0.BeaconBlockHeader, signedHeader, domain);
+
+  const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
+    objectRoot: signedHeaderRoot,
+    domain,
+  });
+
   if (
     !isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array)
   ) {
