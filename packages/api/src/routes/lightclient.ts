@@ -40,13 +40,13 @@ export type Api = {
  * Define javascript values for each route
  */
 export const routesData: RoutesData<Api> = {
-  getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "POST"},
+  getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "GET"},
   getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
   getSnapshot: {url: "/eth/v1/lightclient/snapshot/:blockRoot", method: "GET"},
 };
 
 export type ReqTypes = {
-  getStateProof: {params: {stateId: string}; body: Path[]};
+  getStateProof: {params: {stateId: string}; query: {paths: string[]}};
   getCommitteeUpdates: {query: {from: number; to: number}};
   getSnapshot: {params: {blockRoot: string}};
 };
@@ -54,8 +54,8 @@ export type ReqTypes = {
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getStateProof: {
-      writeReq: (stateId, paths) => ({params: {stateId}, body: paths}),
-      parseReq: ({params, body}) => [params.stateId, body],
+      writeReq: (stateId, paths) => ({params: {stateId}, query: {paths: paths.map((path) => JSON.stringify(path))}}),
+      parseReq: ({params, query}) => [params.stateId, query.paths.map((pathStr) => JSON.parse(pathStr) as Path)],
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
     },
 
