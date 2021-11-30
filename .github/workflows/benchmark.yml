@@ -44,6 +44,13 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      # Restore performance downloaded states
+      - name: Restore performance state cache
+        uses: actions/cache@master
+        with:
+          path: packages/beacon-state-transition/test-cache
+          key: perf-states-${{ hashFiles('packages/beacon-state-transition/test/perf/params.ts') }}
+
       - name: Run benchmarks
         run: yarn benchmark
         env:

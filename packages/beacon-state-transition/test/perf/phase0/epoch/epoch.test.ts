@@ -3,11 +3,10 @@ import {allForks, CachedBeaconState, computeStartSlotAtEpoch, phase0} from "../.
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
 import {StateEpoch} from "../../types";
+import {phase0State} from "../../params";
 
-const network = "mainnet" as const;
-const epoch = 58758; // Pre-altair fork
-const slot = computeStartSlotAtEpoch(epoch) - 1;
-const stateId = `${network}_e${epoch}`;
+const slot = computeStartSlotAtEpoch(phase0State.epoch) - 1;
+const stateId = `${phase0State.network}_e${phase0State.epoch}`;
 
 describe(`phase0 processEpoch - ${stateId}`, () => {
   setBenchOpts({
@@ -15,7 +14,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, slot, 300_000);
+    const state = await getNetworkCachedState(phase0State.network, slot, 300_000);
     state.hashTreeRoot();
     return state;
   }, 300_000);

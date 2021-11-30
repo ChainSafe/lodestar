@@ -2,11 +2,10 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {allForks, altair, CachedBeaconState, computeStartSlotAtEpoch} from "../../../../src";
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {StateEpoch} from "../../types";
+import {altairState} from "../../params";
 
-const network = "mainnet" as const;
-const epoch = 81889; // Post altair fork
-const slot = computeStartSlotAtEpoch(epoch) - 1;
-const stateId = `${network}_e${epoch}`;
+const slot = computeStartSlotAtEpoch(altairState.epoch) - 1;
+const stateId = `${altairState.network}_e${altairState.epoch}`;
 
 describe(`altair processEpoch - ${stateId}`, () => {
   setBenchOpts({
@@ -14,7 +13,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
   });
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, slot, 300_000);
+    const state = await getNetworkCachedState(altairState.network, slot, 300_000);
     state.hashTreeRoot();
     return state;
   }, 300_000);
