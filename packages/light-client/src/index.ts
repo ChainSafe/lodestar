@@ -35,12 +35,18 @@ export type LightclientInitArgs = {
   snapshot: altair.LightClientSnapshot;
 };
 
+/** Provides some protection against a server client sending header updates too far away in the future */
 const MAX_CLOCK_DISPARITY_SEC = 12;
+/** Prevent responses that are too big and get truncated. No specific reasoning for 32 */
 const MAX_PERIODS_PER_REQUEST = 32;
 /** For mainnet preset 8 epochs, for minimal preset `EPOCHS_PER_SYNC_COMMITTEE_PERIOD / 2` */
 const LOOKAHEAD_EPOCHS_COMMITTEE_SYNC = Math.min(8, Math.ceil(EPOCHS_PER_SYNC_COMMITTEE_PERIOD / 2));
+/** Prevent infinite loops caused by sync errors */
 const ON_ERROR_RETRY_MS = 1000;
+/** Persist only the current and next sync committee */
 const MAX_STORED_SYNC_COMMITTEES = 2;
+/** Persist current previous and next participation */
+const MAX_STORED_PARTICIPATION = 3;
 /**
  * From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function
  */
@@ -62,10 +68,10 @@ type RunStatus =
  * - Header updates: To get a more recent header signed by a known sync committee
  *
  * To stay synced to the current sync period it needs:
- * - GET lightclient/best_updates at least once per period.
+ * - GET lightclient/committee_updates at least once per period.
  *
  * To get continuous header updates:
- * - subscribe to SSE
+ * - subscribe to SSE type lightclient_update
  *
  * To initialize, it needs:
  * - GenesisData: To initialize the clock and verify signatures
@@ -76,6 +82,8 @@ type RunStatus =
  * - `LightclientStore`: To have an initial trusted SyncCommittee to start the sync
  *   - For new lightclient instances, it can be queries from a trustless node at GET lightclient/snapshot
  *   - For existing lightclient instances, it should be retrieved from storage
+ *
+ * When to trigger a committee update sync:
  *
  *  period 0         period 1         period 2
  * -|----------------|----------------|----------------|-> time
@@ -88,7 +96,6 @@ type RunStatus =
  * - At the end of period 0, get a sync committe update, and populate period 1's committee
  *
  * syncCommittees: Map<SyncPeriod, SyncCommittee>, limited to max of 2 items
- *
  */
 export class Lightclient {
   readonly api: Api;
@@ -101,7 +108,16 @@ export class Lightclient {
   readonly genesisTime: number;
   readonly beaconApiUrl: string;
 
+  /**
+   * Map of period -> SyncCommittee. Uses a Map instead of spec's current and next fields to allow more flexible sync
+   * strategies. In this case the Lightclient won't attempt to fetch the next SyncCommittee until the end of the
+   * current period. This Map approach is also flexible in case header updates arrive in mixed ordering.
+   */
   readonly syncCommitteeByPeriod = new Map<SyncPeriod, LightclientUpdateStats & SyncCommitteeFast>();
+  /**
+   * Register participation by period. Lightclient only accepts updates that have sufficient participation compared to
+   * previous updates with a factor of SAFETY_THRESHOLD_FACTOR.
+   */
   private readonly maxParticipationByPeriod = new Map<SyncPeriod, number>();
   private head: {
     participation: number;
@@ -343,19 +359,23 @@ export class Lightclient {
 
     // Valid header, check if has enough bits.
     // Only accept headers that have at least half of the max participation seen in this period
-    const maxParticipation = this.maxParticipationByPeriod.get(period) ?? 0;
-    const safetyThreshold = Math.max(1, Math.floor(maxParticipation / SAFETY_THRESHOLD_FACTOR));
+    // From spec https://github.com/ethereum/consensus-specs/pull/2746/files#diff-5e27a813772fdd4ded9b04dec7d7467747c469552cd422d57c1c91ea69453b7dR122
+    // Take the max of current period and previous period
+    const currMaxParticipation = this.maxParticipationByPeriod.get(period) ?? 0;
+    const prevMaxParticipation = this.maxParticipationByPeriod.get(period - 1) ?? 0;
+    const maxParticipation = Math.max(currMaxParticipation, prevMaxParticipation);
+    const minSafeParticipation = Math.floor(maxParticipation / SAFETY_THRESHOLD_FACTOR);
 
     const participation = sumBits(syncAggregate.syncCommitteeBits);
-    if (participation < safetyThreshold) {
+    if (participation < minSafeParticipation) {
       // TODO: Not really an error, this can happen
-      throw Error(`syncAggregate has participation ${participation} less than safetyThreshold ${safetyThreshold}`);
+      throw Error(`syncAggregate has participation ${participation} less than safe minimum ${minSafeParticipation}`);
     }
 
     // Maybe register new max participation
     if (participation > maxParticipation) {
       this.maxParticipationByPeriod.set(period, participation);
-      pruneSetToMax(this.maxParticipationByPeriod, MAX_STORED_SYNC_COMMITTEES);
+      pruneSetToMax(this.maxParticipationByPeriod, MAX_STORED_PARTICIPATION);
     }
 
     // Maybe update the head
@@ -402,14 +422,14 @@ export class Lightclient {
    *                     - known next_sync_committee, signed by current_sync_committee
    */
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
-    // Prevent registering updates for slots to far ahead
+    // Prevent registering updates for slots too far in the future
     const isFinalized = !isEmptyHeader(update.finalityHeader);
     const updateSlot = isFinalized ? update.finalityHeader.slot : update.header.slot;
     if (updateSlot > this.clock.slotWithFutureTolerance(MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.clock.currentSlot}`);
     }
 
-    // Must not rollback periods
+    // Must not rollback periods, since the cache is bounded an older committee could evict the current committee
     const updatePeriod = computeSyncPeriodAtSlot(updateSlot);
     const minPeriod = Math.min(-Infinity, ...this.syncCommitteeByPeriod.keys());
     if (updatePeriod < minPeriod) {
@@ -423,6 +443,9 @@ export class Lightclient {
 
     assertValidLightClientUpdate(syncCommittee, update, this.genesisValidatorsRoot, update.forkVersion);
 
+    // Store next_sync_committee keyed by next period.
+    // Multiple updates could be requested for the same period, only keep the SyncCommittee associated with the best
+    // update available, where best is decided by `isBetterUpdate()`
     const nextPeriod = updatePeriod + 1;
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
