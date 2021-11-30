@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/cli/classes/wallet.walletmanager/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.0.1" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
 <title>Wallet.walletmanager - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
@@ -378,7 +378,7 @@ the same wallet.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new WalletManager</strong>(<code>__namedParameters</code>: object): <em><a href="./">WalletManager</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L28">packages/cli/src/wallet/WalletManager.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L28">packages/cli/src/wallet/WalletManager.ts:28</a></em></p>
 <p>Open a directory containing multiple validators.</p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
@@ -400,11 +400,11 @@ the same wallet.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="walletsdir">walletsDir<a class="headerlink" href="#walletsdir" title="Permanent link">¶</a></h3>
 <p>• <strong>walletsDir</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L28">packages/cli/src/wallet/WalletManager.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L28">packages/cli/src/wallet/WalletManager.ts:28</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="createwallet">createWallet<a class="headerlink" href="#createwallet" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createWallet</strong>(<code>name</code>: string, <code>walletType</code>: string, <code>mnemonic</code>: string, <code>password</code>: string): <em>Promise‹<a href="../wallet.wallet-1/">Wallet</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L87">packages/cli/src/wallet/WalletManager.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L87">packages/cli/src/wallet/WalletManager.ts:87</a></em></p>
 <p>Creates a new wallet with the given <code>name</code> in <code>self.dir</code> with the given <code>mnemonic</code> as a
 seed, encrypted with <code>password</code>.</p>
 <p><strong>Parameters:</strong></p>
@@ -438,7 +438,7 @@ seed, encrypted with <code>password</code>.</p>
 <hr/>
 <h3 id="openbyname">openByName<a class="headerlink" href="#openbyname" title="Permanent link">¶</a></h3>
 <p>▸ <strong>openByName</strong>(<code>name</code>: string): <em><a href="../wallet.wallet-1/">Wallet</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L67">packages/cli/src/wallet/WalletManager.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L67">packages/cli/src/wallet/WalletManager.ts:67</a></em></p>
 <p>Opens and searches all wallets in <code>self.dir</code> and returns the wallet with this name.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -459,7 +459,7 @@ seed, encrypted with <code>password</code>.</p>
 <hr/>
 <h3 id="wallets">wallets<a class="headerlink" href="#wallets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>wallets</strong>(): <em><a href="../../interfaces/wallet.iwalletkeystorejson/">IWalletKeystoreJson</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L50">packages/cli/src/wallet/WalletManager.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L50">packages/cli/src/wallet/WalletManager.ts:50</a></em></p>
 <p>Iterates all wallets in <code>this.walletsDir</code> and returns a mapping of their name to their UUID.</p>
 <p>Ignores any items in <code>this.walletsDir</code> that:</p>
 <ul>
@@ -473,7 +473,7 @@ keystore with the same UUID).</p>
 <hr/>
 <h3 id="writewallet">writeWallet<a class="headerlink" href="#writewallet" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeWallet</strong>(<code>wallet</code>: <a href="../wallet.wallet-1/">Wallet</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/cli/src/wallet/WalletManager.ts#L77">packages/cli/src/wallet/WalletManager.ts:77</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/cli/src/wallet/WalletManager.ts#L77">packages/cli/src/wallet/WalletManager.ts:77</a></em></p>
 <p>Persist wallet info to disk</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -528,6 +528,6 @@ keystore with the same UUID).</p>
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.01824240.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.a87c2adc.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.ff0eccb3.min.js"></script>
 </body>
 </html>

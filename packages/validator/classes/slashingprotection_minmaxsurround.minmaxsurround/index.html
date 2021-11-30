@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_minmaxsurround.minmaxsurround/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.0.1" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
 <title>Slashingprotection minmaxsurround.minmaxsurround - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
@@ -392,7 +392,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new MinMaxSurround</strong>(<code>store</code>: <a href="../../modules/slashingprotection_minmaxsurround/#idistancestore">IDistanceStore</a>, <code>options?</code>: undefined | object): <em><a href="./">MinMaxSurround</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L10">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L10">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:10</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -416,16 +416,16 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-maxepochlookback"><code>Private</code> maxEpochLookback<a class="headerlink" href="#private-maxepochlookback" title="Permanent link">¶</a></h3>
 <p>• <strong>maxEpochLookback</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L10">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L10">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:10</a></em></p>
 <hr/>
 <h3 id="private-store"><code>Private</code> store<a class="headerlink" href="#private-store" title="Permanent link">¶</a></h3>
 <p>• <strong>store</strong>: <em><a href="../../modules/slashingprotection_minmaxsurround/#idistancestore">IDistanceStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L9">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L9">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:9</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="assertnosurround">assertNoSurround<a class="headerlink" href="#assertnosurround" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertNoSurround</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/slashingprotection_minmaxsurround.iminmaxsurround/">IMinMaxSurround</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L17">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L17">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:17</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -449,7 +449,7 @@
 <hr/>
 <h3 id="private-assertnotsurrounded"><code>Private</code> assertNotSurrounded<a class="headerlink" href="#private-assertnotsurrounded" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertNotSurrounded</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L77">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:77</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L77">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:77</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -473,7 +473,7 @@
 <hr/>
 <h3 id="private-assertnotsurrounding"><code>Private</code> assertNotSurrounding<a class="headerlink" href="#private-assertnotsurrounding" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertNotSurrounding</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L47">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L47">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:47</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -498,7 +498,7 @@
 <h3 id="insertattestation">insertAttestation<a class="headerlink" href="#insertattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertAttestation</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/slashingprotection_minmaxsurround.iminmaxsurround/">IMinMaxSurround</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L22">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L22">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -522,7 +522,7 @@
 <hr/>
 <h3 id="private-updatemaxspan"><code>Private</code> updateMaxSpan<a class="headerlink" href="#private-updatemaxspan" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateMaxSpan</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L61">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:61</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L61">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:61</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -546,7 +546,7 @@
 <hr/>
 <h3 id="private-updateminspan"><code>Private</code> updateMinSpan<a class="headerlink" href="#private-updateminspan" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateMinSpan</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../modules/slashingprotection_minmaxsurround/#minmaxsurroundattestation">MinMaxSurroundAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c5047c/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L29">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts#L29">packages/validator/src/slashingProtection/minMaxSurround/minMaxSurround.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -604,6 +604,6 @@
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.01824240.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.a87c2adc.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.ff0eccb3.min.js"></script>
 </body>
 </html>
