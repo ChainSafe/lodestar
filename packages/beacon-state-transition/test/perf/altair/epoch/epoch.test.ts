@@ -3,8 +3,8 @@ import {allForks, altair, CachedBeaconState, computeStartSlotAtEpoch} from "../.
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {StateEpoch} from "../../types";
 
-const network = "pyrmont" as const;
-const epoch = 62330;
+const network = "mainnet" as const;
+const epoch = 81889; // Post altair fork
 const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 

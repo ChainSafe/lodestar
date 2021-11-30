@@ -5,7 +5,7 @@ import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/pr
 import {StateEpoch} from "../../types";
 
 const network = "mainnet" as const;
-const epoch = 58758;
+const epoch = 58758; // Pre-altair fork
 const slot = computeStartSlotAtEpoch(epoch) - 1;
 const stateId = `${network}_e${epoch}`;
 
