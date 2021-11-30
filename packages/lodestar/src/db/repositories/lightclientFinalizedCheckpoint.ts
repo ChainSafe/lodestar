@@ -1,12 +1,12 @@
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 import {FinalizedCheckpointData} from "@chainsafe/lodestar-light-client/server";
 import {ContainerType} from "@chainsafe/ssz";
 
 export class LightclientFinalizedCheckpoint extends Repository<SyncPeriod, FinalizedCheckpointData> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     // Pick<LightClientUpdate, "header" | "nextSyncCommittee" | "nextSyncCommitteeBranch">
     const type = new ContainerType<FinalizedCheckpointData>({
       fields: {

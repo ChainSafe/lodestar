@@ -1,10 +1,10 @@
 import {altair, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
-import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class BestUpdatePerCommitteePeriod extends Repository<SyncPeriod, altair.LightClientUpdate> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     const type = ssz.altair.LightClientUpdate;
     super(config, db, Bucket.altair_bestUpdatePerCommitteePeriod, type, metrics);
   }

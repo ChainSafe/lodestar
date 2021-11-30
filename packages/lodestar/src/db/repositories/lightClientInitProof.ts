@@ -1,10 +1,10 @@
 import {deserializeProof, Proof, serializeProof} from "@chainsafe/persistent-merkle-tree";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {Bucket, Db, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {Type} from "@chainsafe/ssz";
 
 export class LightClientInitProofRepository extends Repository<Uint8Array, Proof> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientInitProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 
@@ -23,7 +23,7 @@ export class LightClientInitProofRepository extends Repository<Uint8Array, Proof
 }
 
 export class LightClientInitProofIndexRepository extends Repository<Uint8Array, boolean> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     super(config, db, Bucket.index_lightClientInitProof, (undefined as unknown) as Type<boolean>, metrics);
   }
 
@@ -42,7 +42,7 @@ export class LightClientInitProofIndexRepository extends Repository<Uint8Array, 
 }
 
 export class LightClientSyncCommitteeProofRepository extends Repository<number, Proof> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     super(config, db, Bucket.altair_lightClientSyncCommitteeProof, (undefined as unknown) as Type<Proof>, metrics);
   }
 

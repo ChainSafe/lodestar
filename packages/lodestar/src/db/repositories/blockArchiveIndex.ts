@@ -1,36 +1,25 @@
-import {IDatabaseController, encodeKey, Bucket} from "@chainsafe/lodestar-db";
+import {Db, encodeKey, Bucket} from "@chainsafe/lodestar-db";
 import {Slot, Root, allForks} from "@chainsafe/lodestar-types";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ContainerType} from "@chainsafe/ssz";
 
-export async function storeRootIndex(
-  db: IDatabaseController<Uint8Array, Uint8Array>,
-  slot: Slot,
-  blockRoot: Root
-): Promise<void> {
+export async function storeRootIndex(db: Db, slot: Slot, blockRoot: Root): Promise<void> {
   return db.put(getRootIndexKey(blockRoot), intToBytes(slot, 8, "be"));
 }
 
-export async function storeParentRootIndex(
-  db: IDatabaseController<Uint8Array, Uint8Array>,
-  slot: Slot,
-  parentRoot: Root
-): Promise<void> {
+export async function storeParentRootIndex(db: Db, slot: Slot, parentRoot: Root): Promise<void> {
   return db.put(getParentRootIndexKey(parentRoot), intToBytes(slot, 8, "be"));
 }
 
 export async function deleteRootIndex(
-  db: IDatabaseController<Uint8Array, Uint8Array>,
+  db: Db,
   blockType: ContainerType<allForks.SignedBeaconBlock>,
   block: allForks.SignedBeaconBlock
 ): Promise<void> {
   return db.delete(getRootIndexKey(blockType.fields["message"].hashTreeRoot(block.message)));
 }
 
-export async function deleteParentRootIndex(
-  db: IDatabaseController<Uint8Array, Uint8Array>,
-  block: allForks.SignedBeaconBlock
-): Promise<void> {
+export async function deleteParentRootIndex(db: Db, block: allForks.SignedBeaconBlock): Promise<void> {
   return db.delete(getParentRootIndexKey(block.message.parentRoot));
 }
 

@@ -1,6 +1,6 @@
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
 
 /**
  * AttesterSlashing indexed by root
@@ -9,7 +9,7 @@ import {IDatabaseController, Bucket, Repository, IDbMetrics} from "@chainsafe/lo
  * Removed when included on chain or old
  */
 export class AttesterSlashingRepository extends Repository<Uint8Array, phase0.AttesterSlashing> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     super(config, db, Bucket.phase0_attesterSlashing, ssz.phase0.AttesterSlashing, metrics);
   }
 

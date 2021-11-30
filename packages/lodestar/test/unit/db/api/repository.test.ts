@@ -6,7 +6,7 @@ import all from "it-all";
 import {ContainerType} from "@chainsafe/ssz";
 import {Bytes32, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {IDatabaseController, LevelDbController, Repository, Bucket} from "@chainsafe/lodestar-db";
+import {Db, LevelDbController, Repository, Bucket} from "@chainsafe/lodestar-db";
 
 chai.use(chaiAsPromised);
 
@@ -25,7 +25,7 @@ const TestSSZType = new ContainerType<TestType>({
 });
 
 class TestRepository extends Repository<string, TestType> {
-  constructor(db: IDatabaseController<Uint8Array, Uint8Array>) {
+  constructor(db: Db) {
     super(config, db, Bucket.phase0_depositEvent, TestSSZType);
   }
 }

@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
+import {Bucket, Db, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {getSignedBlockTypeFromBytes} from "../../util/multifork";
 
@@ -9,7 +9,7 @@ import {getSignedBlockTypeFromBytes} from "../../util/multifork";
  * Used to store unfinalized blocks
  */
 export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaconBlock> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     const type = ssz.phase0.SignedBeaconBlock; // Pick some type but won't be used
     super(config, db, Bucket.allForks_block, type, metrics);
   }

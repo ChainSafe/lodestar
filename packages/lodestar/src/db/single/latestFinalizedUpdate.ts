@@ -1,16 +1,16 @@
 import {Type} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz} from "@chainsafe/lodestar-types";
-import {IDatabaseController, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class LatestFinalizedUpdate {
   private readonly bucket = Bucket.altair_latestFinalizedUpdate;
   private readonly key = Buffer.from(new Uint8Array([this.bucket]));
   private readonly type: Type<altair.LightClientUpdate>;
-  private readonly db: IDatabaseController<Uint8Array, Uint8Array>;
+  private readonly db: Db;
   private readonly metrics?: IDbMetrics;
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     this.db = db;
     this.type = ssz.altair.LightClientUpdate;
     this.metrics = metrics;

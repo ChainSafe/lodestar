@@ -1,16 +1,16 @@
 import {NumberUintType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IDatabaseController, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
+import {Db, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 
 export class PreGenesisStateLastProcessedBlock {
   private readonly bucket: Bucket;
   private readonly type: NumberUintType;
-  private readonly db: IDatabaseController<Uint8Array, Uint8Array>;
+  private readonly db: Db;
   private readonly key: Buffer;
   private readonly metrics?: IDbMetrics;
 
-  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
     this.db = db;
     this.type = ssz.Number64;
     this.bucket = Bucket.phase0_preGenesisStateLastProcessedBlock;
