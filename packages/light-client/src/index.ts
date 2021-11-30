@@ -6,8 +6,9 @@ import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-type
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
+import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
-import {Clock, IClock, timeUntilNextEpoch} from "./utils/clock";
+import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
 import {pruneSetToMax} from "./utils/map";
@@ -18,7 +19,6 @@ import {LightclientEmitter, LightclientEvent} from "./events";
 import {assertValidSignedHeader, assertValidLightClientUpdate} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
-import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "./utils/syncPeriod";
 
 // Re-export event types
@@ -103,7 +103,6 @@ export class Lightclient {
 
   readonly config: IChainForkConfig;
   readonly logger: ILcLogger;
-  readonly clock: IClock;
   readonly genesisValidatorsRoot: Uint8Array;
   readonly genesisTime: number;
   readonly beaconApiUrl: string;
@@ -130,7 +129,6 @@ export class Lightclient {
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs) {
     this.config = config;
     this.logger = logger ?? getLcLoggerConsole();
-    this.clock = new Clock(config, genesisData.genesisTime);
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
@@ -222,6 +220,11 @@ export class Lightclient {
     this.status = {code: RunStatusCode.stopped};
   }
 
+  // Embed lightweigth clock. The epoch cycles are handled with `this.runLoop()`
+  get currentSlot(): number {
+    return getCurrentSlot(this.config, this.genesisTime);
+  }
+
   getHead(): phase0.BeaconBlockHeader {
     return this.head.header;
   }
@@ -249,7 +252,7 @@ export class Lightclient {
   private async runLoop(): Promise<void> {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const currentPeriod = computeSyncPeriodAtSlot(this.clock.currentSlot);
+      const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
       // Check if we have a sync committee for the current clock period
       if (!this.syncCommitteeByPeriod.has(currentPeriod)) {
         // Stop head tracking
@@ -287,7 +290,7 @@ export class Lightclient {
       // When close to the end of a sync period poll for sync committee updates
       // Limit lookahead in case EPOCHS_PER_SYNC_COMMITTEE_PERIOD is configured to be very short
 
-      const currentEpoch = computeEpochAtSlot(this.clock.currentSlot);
+      const currentEpoch = computeEpochAtSlot(this.currentSlot);
       const epochsIntoPeriod = currentEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
       // Start fetching updates with some lookahead
       if (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - epochsIntoPeriod <= LOOKAHEAD_EPOCHS_COMMITTEE_SYNC) {
@@ -338,8 +341,8 @@ export class Lightclient {
     const {header, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
-    if (header.slot > this.clock.slotWithFutureTolerance(MAX_CLOCK_DISPARITY_SEC)) {
-      throw Error(`header.slot ${header.slot} is too far in the future, currentSlot: ${this.clock.currentSlot}`);
+    if (header.slot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
+      throw Error(`header.slot ${header.slot} is too far in the future, currentSlot: ${this.currentSlot}`);
     }
 
     const period = computeSyncPeriodAtSlot(header.slot);
@@ -425,8 +428,8 @@ export class Lightclient {
     // Prevent registering updates for slots too far in the future
     const isFinalized = !isEmptyHeader(update.finalityHeader);
     const updateSlot = isFinalized ? update.finalityHeader.slot : update.header.slot;
-    if (updateSlot > this.clock.slotWithFutureTolerance(MAX_CLOCK_DISPARITY_SEC)) {
-      throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.clock.currentSlot}`);
+    if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
+      throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }
 
     // Must not rollback periods, since the cache is bounded an older committee could evict the current committee
