@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.idatabasecontroller/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/db/modules/db_controller/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
-<title>Controller.idatabasecontroller - Lodestar documentation</title>
+<title>Db controller - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-idatabasecontroller-k-v">
+<a class="md-skip" href="#module-dbcontroller">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Controller.idatabasecontroller
+              Db controller
             
           </span>
 </div>
@@ -245,103 +245,33 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-parameters">
-    Type parameters
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#implemented-by">
-    Implemented by
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#methods">
-    Methods
+<a class="md-nav__link" href="#interfaces">
+    Interfaces
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#methods_1">
-    Methods
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
   </a>
-<nav aria-label="Methods" class="md-nav">
+<nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#batchdelete">
-    batchDelete
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#batchput">
-    batchPut
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#delete">
-    delete
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#entries">
-    entries
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#entriesstream">
-    entriesStream
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#get">
-    get
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#keys">
-    keys
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#keysstream">
-    keysStream
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#put">
-    put
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#start">
-    start
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#stop">
-    stop
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#values">
-    values
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#valuesstream">
-    valuesStream
+<a class="md-nav__link" href="#db">
+    Db
   </a>
 </li>
 </ul>
@@ -354,273 +284,28 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/db/interfaces/controller.idatabasecontroller.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/db/modules/db_controller.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-db</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/controller/">controller</a> › <a href="./">IDatabaseController</a></p>
-<h1 id="interface-idatabasecontroller-k-v">Interface: IDatabaseController ‹<strong>K, V</strong>›<a class="headerlink" href="#interface-idatabasecontroller-k-v" title="Permanent link">¶</a></h1>
-<h2 id="type-parameters">Type parameters<a class="headerlink" href="#type-parameters" title="Permanent link">¶</a></h2>
-<p>▪ <strong>K</strong></p>
-<p>▪ <strong>V</strong></p>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<ul>
-<li><strong>IDatabaseController</strong></li>
-</ul>
-<h2 id="implemented-by">Implemented by<a class="headerlink" href="#implemented-by" title="Permanent link">¶</a></h2>
-<ul>
-<li><a href="../../classes/controller.leveldbcontroller/">LevelDbController</a></li>
-</ul>
+<p><a href="../../">@chainsafe/lodestar-db</a> › <a href="../../globals/">Globals</a> › <a href="./">db/controller</a></p>
+<h1 id="module-dbcontroller">Module: db/controller<a class="headerlink" href="#module-dbcontroller" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
+<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#batchdelete">batchDelete</a></li>
-<li><a href="./#batchput">batchPut</a></li>
-<li><a href="./#delete">delete</a></li>
-<li><a href="./#entries">entries</a></li>
-<li><a href="./#entriesstream">entriesStream</a></li>
-<li><a href="./#get">get</a></li>
-<li><a href="./#keys">keys</a></li>
-<li><a href="./#keysstream">keysStream</a></li>
-<li><a href="./#put">put</a></li>
-<li><a href="./#start">start</a></li>
-<li><a href="./#stop">stop</a></li>
-<li><a href="./#values">values</a></li>
-<li><a href="./#valuesstream">valuesStream</a></li>
+<li><a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a></li>
+<li><a href="../../interfaces/db_controller.idatabaseoptions/">IDatabaseOptions</a></li>
+<li><a href="../../interfaces/db_controller.ifilteroptions/">IFilterOptions</a></li>
+<li><a href="../../interfaces/db_controller.ikeyvalue/">IKeyValue</a></li>
 </ul>
-<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>keys</code>: K[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L37">controller/interface.ts:37</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>keys</code></td>
-<td>K[]</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: <a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V›[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L36">controller/interface.ts:36</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>items</code></td>
-<td><a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V›[]</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>delete</strong>(<code>key</code>: K): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L32">controller/interface.ts:32</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>key</code></td>
-<td>K</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>Promise‹<a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V›[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L48">controller/interface.ts:48</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V›[]›</em></p>
-<hr/>
-<h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>AsyncIterable‹<a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L47">controller/interface.ts:47</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../controller.ikeyvalue/">IKeyValue</a>‹K, V››</em></p>
-<hr/>
-<h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
-<p>▸ <strong>get</strong>(<code>key</code>: K): <em>Promise‹V | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L30">controller/interface.ts:30</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>key</code></td>
-<td>K</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹V | null›</em></p>
-<hr/>
-<h3 id="keys">keys<a class="headerlink" href="#keys" title="Permanent link">¶</a></h3>
-<p>▸ <strong>keys</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>Promise‹K[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L42">controller/interface.ts:42</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹K[]›</em></p>
-<hr/>
-<h3 id="keysstream">keysStream<a class="headerlink" href="#keysstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>keysStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>AsyncIterable‹K›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L41">controller/interface.ts:41</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹K›</em></p>
-<hr/>
-<h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
-<p>▸ <strong>put</strong>(<code>key</code>: K, <code>value</code>: V): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L31">controller/interface.ts:31</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>key</code></td>
-<td>K</td>
-</tr>
-<tr>
-<td><code>value</code></td>
-<td>V</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
-<p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L25">controller/interface.ts:25</a></em></p>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
-<p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L26">controller/interface.ts:26</a></em></p>
-<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">¶</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>Promise‹V[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L45">controller/interface.ts:45</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹V[]›</em></p>
-<hr/>
-<h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: <a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›): <em>AsyncIterable‹V›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8586ec9/packages/db/src/controller/interface.ts#L44">controller/interface.ts:44</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>opts?</code></td>
-<td><a href="../../modules/controller/#ifilteroptions">IFilterOptions</a>‹K›</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹V›</em></p>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#db">Db</a></li>
+</ul>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="db">Db<a class="headerlink" href="#db" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>Db</strong>: <em><a href="../../interfaces/db_controller.idatabasecontroller/">IDatabaseController</a>‹Uint8Array, Uint8Array›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/db/src/controller/interface.ts#L6">controller/interface.ts:6</a></em></p>
+<p>Shortcut for Uint8Array based IDatabaseController</p>
 </article>
 </div>
 </div>

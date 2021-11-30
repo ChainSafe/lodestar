@@ -756,27 +756,27 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.idatabasecontroller/</loc>
-         <lastmod>2021-11-30</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.idatabaseoptions/</loc>
-         <lastmod>2021-11-30</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.ifilteroptions/</loc>
-         <lastmod>2021-11-30</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.ikeyvalue/</loc>
-         <lastmod>2021-11-30</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.ileveldboptions/</loc>
+         <lastmod>2021-11-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.idatabasecontroller/</loc>
+         <lastmod>2021-11-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.idatabaseoptions/</loc>
+         <lastmod>2021-11-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.ifilteroptions/</loc>
+         <lastmod>2021-11-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.ikeyvalue/</loc>
          <lastmod>2021-11-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -797,6 +797,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/modules/controller/</loc>
+         <lastmod>2021-11-30</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/db/modules/db_controller/</loc>
          <lastmod>2021-11-30</lastmod>
          <changefreq>daily</changefreq>
     </url>
