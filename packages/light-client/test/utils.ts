@@ -1,7 +1,6 @@
 import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
-import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
@@ -12,10 +11,11 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {altair, Bytes4, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {altair, phase0, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/types";
+import {computeSigningRoot} from "../src/utils/domain";
 import {getLcLoggerConsole} from "../src/utils/logger";
 import {SYNC_COMMITTEES_DEPTH, SYNC_COMMITTEES_INDEX} from "../src/utils/verifyMerkleBranch";
 
@@ -42,11 +42,10 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  genesisValidatorsRoot: Root,
-  forkVersion: Bytes4,
+  config: IBeaconConfig,
   syncAttestedBlockHeader: phase0.BeaconBlockHeader
 ): Uint8Array {
-  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
+  const domain = config.getDomain(DOMAIN_SYNC_COMMITTEE, syncAttestedBlockHeader.slot);
   return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 
@@ -60,7 +59,7 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signHeader(genesisValidatorsRoot: Root, forkVersion: Bytes4, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
+  signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
   signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
@@ -68,7 +67,9 @@ export type SyncCommitteeKeys = {
  * To make the test fast each sync committee has a single key repeated `SYNC_COMMITTEE_SIZE` times
  */
 export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
-  const sk = interopSecretKey(period);
+  const skBytes = Buffer.alloc(32, 0);
+  skBytes.writeInt32BE(1 + period);
+  const sk = SecretKey.fromBytes(skBytes);
   const pk = sk.toPublicKey();
   const pks = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pk);
 
@@ -87,12 +88,8 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
-  function signHeader(
-    genesisValidatorsRoot: Root,
-    forkVersion: Bytes4,
-    header: phase0.BeaconBlockHeader
-  ): altair.SyncAggregate {
-    return signAndAggregate(getSyncAggregateSigningRoot(genesisValidatorsRoot, forkVersion, header));
+  function signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate {
+    return signAndAggregate(getSyncAggregateSigningRoot(config, header));
   }
 
   return {
@@ -113,7 +110,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
 /**
  * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
  */
-export function computeLightclientUpdate(config: IForkConfig, period: SyncPeriod): altair.LightClientUpdate {
+export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
   const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
 
   const committee = getInteropSyncCommittee(period);
@@ -150,7 +147,7 @@ export function computeLightclientUpdate(config: IForkConfig, period: SyncPeriod
   };
 
   const forkVersion = config.getForkVersion(updateSlot);
-  const syncAggregate = committee.signHeader(genesisValidatorsRoot, forkVersion, finalityHeader);
+  const syncAggregate = committee.signHeader(config, finalityHeader);
 
   return {
     header,

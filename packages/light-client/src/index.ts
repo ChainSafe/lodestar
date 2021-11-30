@@ -3,8 +3,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getClient, Api, routes} from "@chainsafe/lodestar-api";
 import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
@@ -19,7 +18,7 @@ import {LightclientEmitter, LightclientEvent} from "./events";
 import {assertValidSignedHeader, assertValidLightClientUpdate} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
-import {computeEpochAtSlot} from "./utils/syncPeriod";
+import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
 
 // Re-export event types
 export {LightclientEvent} from "./events";
@@ -101,7 +100,7 @@ export class Lightclient {
   readonly api: Api;
   readonly emitter: LightclientEmitter = mitt();
 
-  readonly config: IChainForkConfig;
+  readonly config: IBeaconConfig;
   readonly logger: ILcLogger;
   readonly genesisValidatorsRoot: Uint8Array;
   readonly genesisTime: number;
@@ -127,13 +126,14 @@ export class Lightclient {
   private status: RunStatus = {code: RunStatusCode.stopped};
 
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs) {
-    this.config = config;
-    this.logger = logger ?? getLcLoggerConsole();
     this.genesisTime = genesisData.genesisTime;
     this.genesisValidatorsRoot =
       typeof genesisData.genesisValidatorsRoot === "string"
         ? fromHexString(genesisData.genesisValidatorsRoot)
         : genesisData.genesisValidatorsRoot;
+
+    this.config = createIBeaconConfig(config, this.genesisValidatorsRoot);
+    this.logger = logger ?? getLcLoggerConsole();
 
     this.beaconApiUrl = beaconApiUrl;
     this.api = getClient(config, {baseUrl: beaconApiUrl});
@@ -352,13 +352,10 @@ export class Lightclient {
       throw Error(`No syncCommittee for period ${period}`);
     }
 
-    // TODO: Make this work with random testnets
-    const forkVersion = this.config.getForkVersion(header.slot);
-
     const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     const headerBlockRootHex = toHexString(headerBlockRoot);
 
-    assertValidSignedHeader(syncCommittee, syncAggregate, headerBlockRoot, this.genesisValidatorsRoot, forkVersion);
+    assertValidSignedHeader(this.config, syncCommittee, syncAggregate, headerBlockRoot, header.slot);
 
     // Valid header, check if has enough bits.
     // Only accept headers that have at least half of the max participation seen in this period
@@ -444,7 +441,7 @@ export class Lightclient {
       throw Error(`No SyncCommittee for period ${updatePeriod}`);
     }
 
-    assertValidLightClientUpdate(syncCommittee, update, this.genesisValidatorsRoot, update.forkVersion);
+    assertValidLightClientUpdate(this.config, syncCommittee, update);
 
     // Store next_sync_committee keyed by next period.
     // Multiple updates could be requested for the same period, only keep the SyncCommittee associated with the best

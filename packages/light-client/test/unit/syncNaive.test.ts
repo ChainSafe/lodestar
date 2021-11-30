@@ -2,6 +2,8 @@ import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {processLightClientUpdate} from "../naive/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
@@ -20,6 +22,7 @@ describe("Lightclient flow", () => {
 
   // Fixed params
   const genValiRoot = Buffer.alloc(32, 9);
+  const config = createIBeaconConfig(chainConfig, genValiRoot);
   const currentSlot = 1;
   const syncCommitteesKeys = new Map<SyncPeriod, SyncCommitteeKeys>();
   let updateData: {chain: IBeaconChainLc; blockWithSyncAggregate: altair.BeaconBlock};
@@ -61,8 +64,7 @@ describe("Lightclient flow", () => {
     stateWithSyncAggregate.blockRoots[0] = ssz.phase0.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
 
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
-    const forkVersion = stateWithSyncAggregate.fork.currentVersion;
-    const signingRoot = getSyncAggregateSigningRoot(genValiRoot, forkVersion, syncAttestedBlockHeader);
+    const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
     const blockWithSyncAggregate = ssz.altair.BeaconBlock.defaultValue();
     blockWithSyncAggregate.body.syncAggregate = getSyncCommittee(0).signAndAggregate(signingRoot);
     blockWithSyncAggregate.stateRoot = ssz.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
@@ -94,7 +96,7 @@ describe("Lightclient flow", () => {
       },
     };
 
-    processLightClientUpdate(store, update, currentSlot, genValiRoot);
+    processLightClientUpdate(config, store, update, currentSlot);
   });
 });
 

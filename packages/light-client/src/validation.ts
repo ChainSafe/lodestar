@@ -1,5 +1,4 @@
-import {altair, Root, ssz, Version} from "@chainsafe/lodestar-types";
-import {computeDomain, computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
@@ -12,6 +11,8 @@ import {
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {computeSyncPeriodAtSlot} from "./utils/clock";
 
 /**
  *
@@ -19,10 +20,9 @@ import {SyncCommitteeFast} from "./types";
  * @param forkVersion ForkVersion that was used to sign the update
  */
 export function assertValidLightClientUpdate(
+  config: IBeaconConfig,
   syncCommittee: SyncCommitteeFast,
-  update: altair.LightClientUpdate,
-  genesisValidatorsRoot: Root,
-  forkVersion: Version
+  update: altair.LightClientUpdate
 ): void {
   // DIFF FROM SPEC: An update with the same header.slot can be valid and valuable to the lightclient
   // It may have more consensus and result in a better snapshot whilst not advancing the state
@@ -47,7 +47,7 @@ export function assertValidLightClientUpdate(
   assertValidSyncCommitteeProof(update);
 
   const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedHeader);
-  assertValidSignedHeader(syncCommittee, update, headerBlockRoot, genesisValidatorsRoot, forkVersion);
+  assertValidSignedHeader(config, syncCommittee, update, headerBlockRoot, signedHeader.slot);
 }
 
 /**
@@ -122,11 +122,11 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
  * @param signedHeaderRoot Takes header root instead of the head itself to prevent re-hashing on SSE
  */
 export function assertValidSignedHeader(
+  config: IBeaconConfig,
   syncCommittee: SyncCommitteeFast,
   syncAggregate: altair.SyncAggregate,
   signedHeaderRoot: Root,
-  genesisValidatorsRoot: Root,
-  forkVersion: Version
+  signedHeaderSlot: Slot
 ): void {
   const participantPubkeys = getParticipantPubkeys(syncCommittee.pubkeys, syncAggregate.syncCommitteeBits);
 
@@ -136,11 +136,9 @@ export function assertValidSignedHeader(
     throw Error("Sync committee has not sufficient participants");
   }
 
-  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
-
   const signingRoot = ssz.phase0.SigningData.hashTreeRoot({
     objectRoot: signedHeaderRoot,
-    domain,
+    domain: config.getDomain(DOMAIN_SYNC_COMMITTEE, signedHeaderSlot),
   });
 
   if (

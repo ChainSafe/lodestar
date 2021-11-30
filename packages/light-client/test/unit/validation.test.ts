@@ -1,5 +1,7 @@
 import {aggregatePublicKeys, PublicKey, SecretKey} from "@chainsafe/bls";
 import {altair, ssz} from "@chainsafe/lodestar-types";
+import {chainConfig} from "@chainsafe/lodestar-config/default";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_INDEX,
@@ -13,6 +15,7 @@ import {defaultBeaconBlockHeader, getSyncAggregateSigningRoot, signAndAggregate}
 
 describe("validateLightClientUpdate", () => {
   const genValiRoot = Buffer.alloc(32, 9);
+  const config = createIBeaconConfig(chainConfig, genValiRoot);
 
   let update: altair.LightClientUpdate;
   let snapshot: LightClientSnapshotFast;
@@ -64,7 +67,7 @@ describe("validateLightClientUpdate", () => {
     syncAttestedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     const forkVersion = ssz.Bytes4.defaultValue();
-    const signingRoot = getSyncAggregateSigningRoot(genValiRoot, forkVersion, syncAttestedBlockHeader);
+    const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 
     const syncCommittee: SyncCommitteeFast = {
@@ -91,6 +94,6 @@ describe("validateLightClientUpdate", () => {
   });
 
   it("Validate valid update", () => {
-    assertValidLightClientUpdate(snapshot.nextSyncCommittee, update, genValiRoot, update.forkVersion);
+    assertValidLightClientUpdate(config, snapshot.nextSyncCommittee, update);
   });
 });
