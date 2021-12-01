@@ -63,7 +63,7 @@ export enum Bucket {
   lightClient_syncCommitteeWitness = 51, // BlockRoot -> SyncCommitteeWitness
   lightClient_syncCommittee = 52, // Root(altair.SyncCommittee) -> altair.SyncCommittee
   // TODO: May be redundant to block stores
-  lightClient_finalizedHeader = 53, // BlockRoot -> phase0.BeaconBlockHeader
+  lightClient_checkpointHeader = 53, // BlockRoot -> phase0.BeaconBlockHeader
   lightClient_bestPartialLightClientUpdate = 54, // SyncPeriod -> PartialLightClientUpdate
 
   validator_metaData = 41,

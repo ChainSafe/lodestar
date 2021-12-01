@@ -16,7 +16,7 @@ import {
   VoluntaryExitRepository,
   GenesisWitnessRepository,
   BestPartialLightClientUpdateRepository,
-  FinalizedHeaderRepository,
+  CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
 } from "./repositories";
@@ -56,7 +56,7 @@ export interface IBeaconDb {
   // lightclient
   genesisWitness: GenesisWitnessRepository;
   bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
-  finalizedHeader: FinalizedHeaderRepository;
+  checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 

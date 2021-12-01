@@ -12,6 +12,6 @@ export {Eth1DataRepository} from "./eth1Data";
 
 export {GenesisWitnessRepository} from "./lightClientGenesisWitness";
 export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate";
-export {FinalizedHeaderRepository} from "./lightclientFinalizedHeader";
+export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness";

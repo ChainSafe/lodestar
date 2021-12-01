@@ -185,7 +185,7 @@ export class LightClientServer {
    * Keep in memory since this data is very transient, not useful after a few slots
    */
   private readonly prevHeadData = new Map<BlockRooHex, SyncAttestedData>();
-  private finalizedHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
+  private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalityHeader">;
 
@@ -268,7 +268,7 @@ export class LightClientServer {
       throw Error("nextSyncCommittee not available");
     }
 
-    const header = await this.db.finalizedHeader.get(blockRoot);
+    const header = await this.db.checkpointHeader.get(blockRoot);
     if (!header) {
       throw Error("header not available");
     }
@@ -342,7 +342,7 @@ export class LightClientServer {
     await Promise.all([
       this.db.genesisWitness.batchDelete(nonCheckpointBlockRoots),
       this.db.syncCommitteeWitness.batchDelete(nonCheckpointBlockRoots),
-      this.db.finalizedHeader.batchDelete(nonCheckpointBlockRoots),
+      this.db.checkpointHeader.batchDelete(nonCheckpointBlockRoots),
     ]);
   }
 
@@ -398,7 +398,7 @@ export class LightClientServer {
     await this.db.syncCommitteeWitness.put(blockRoot, syncCommitteeWitness);
 
     // Store header in case it is referenced latter by a future finalized checkpoint
-    await this.db.finalizedHeader.put(blockRoot, header);
+    await this.db.checkpointHeader.put(blockRoot, header);
 
     // Store finalized checkpoint data
     const finalizedCheckpoint = postState.finalizedCheckpoint;
@@ -524,18 +524,18 @@ export class LightClientServer {
    */
   private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<phase0.BeaconBlockHeader> {
     const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
-    const cachedFinalizedHeader = this.finalizedHeaders.get(finalizedBlockRootHex);
+    const cachedFinalizedHeader = this.checkpointHeaders.get(finalizedBlockRootHex);
     if (cachedFinalizedHeader) {
       return cachedFinalizedHeader;
     }
 
-    const finalizedHeader = await this.db.finalizedHeader.get(finalizedBlockRoot);
+    const finalizedHeader = await this.db.checkpointHeader.get(finalizedBlockRoot);
     if (!finalizedHeader) {
       throw Error(`finalityHeader not available ${toHexString(finalizedBlockRoot)}`);
     }
 
-    this.finalizedHeaders.set(finalizedBlockRootHex, finalizedHeader);
-    pruneSetToMax(this.finalizedHeaders, MAX_CACHED_FINALIZED_HEADERS);
+    this.checkpointHeaders.set(finalizedBlockRootHex, finalizedHeader);
+    pruneSetToMax(this.checkpointHeaders, MAX_CACHED_FINALIZED_HEADERS);
 
     return finalizedHeader;
   }

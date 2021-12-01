@@ -16,7 +16,7 @@ import {
   VoluntaryExitRepository,
   GenesisWitnessRepository,
   BestPartialLightClientUpdateRepository,
-  FinalizedHeaderRepository,
+  CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
 } from "./repositories";
@@ -42,7 +42,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   // lightclient
   genesisWitness: GenesisWitnessRepository;
   bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
-  finalizedHeader: FinalizedHeaderRepository;
+  checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
@@ -65,7 +65,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     // lightclient
     this.genesisWitness = new GenesisWitnessRepository(this.config, this.db, this.metrics);
     this.bestPartialLightClientUpdate = new BestPartialLightClientUpdateRepository(this.config, this.db, this.metrics);
-    this.finalizedHeader = new FinalizedHeaderRepository(this.config, this.db, this.metrics);
+    this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db, this.metrics);
     this.syncCommittee = new SyncCommitteeRepository(this.config, this.db, this.metrics);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db, this.metrics);
   }
