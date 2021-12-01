@@ -1,6 +1,6 @@
 import {altair, phase0, Root} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_INDEX, NEXT_SYNC_COMMITTEE_INDEX, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "../src/utils/clock";
 import {getForkVersion} from "../src/utils/domain";
 
@@ -94,12 +94,12 @@ export async function prepareUpdateNaive(
   const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.stateRoot);
   const finalizedCheckpointBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedState.finalizedCheckpoint.root);
   // Prove that the `finalizedCheckpointRoot` belongs in that block
-  const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
+  const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
   // Get `nextSyncCommittee` from a finalized state so the lightclient can safely transition to the next committee
   const finalizedCheckpointState = await chain.getStateByRoot(finalizedCheckpointBlockHeader.stateRoot);
   // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
-  const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX));
+  const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
     header: finalizedCheckpointBlockHeader,

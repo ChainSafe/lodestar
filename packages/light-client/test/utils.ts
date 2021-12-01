@@ -5,9 +5,9 @@ import {
   DOMAIN_SYNC_COMMITTEE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   FINALIZED_ROOT_INDEX,
-  FINALIZED_ROOT_INDEX_FLOORLOG2,
+  FINALIZED_ROOT_DEPTH,
   NEXT_SYNC_COMMITTEE_INDEX,
-  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+  NEXT_SYNC_COMMITTEE_DEPTH,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
@@ -122,8 +122,8 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   const {root: headerStateRoot, proof: nextSyncCommitteeBranch} = computeMerkleBranch(
     ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee),
-    NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
-    NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2
+    NEXT_SYNC_COMMITTEE_DEPTH,
+    NEXT_SYNC_COMMITTEE_INDEX
   );
 
   const header: phase0.BeaconBlockHeader = {
@@ -136,8 +136,8 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
 
   const {root: finalityHeaderStateRoot, proof: finalityBranch} = computeMerkleBranch(
     ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
-    FINALIZED_ROOT_INDEX_FLOORLOG2,
-    FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2
+    FINALIZED_ROOT_DEPTH,
+    FINALIZED_ROOT_INDEX
   );
 
   const finalityHeader: phase0.BeaconBlockHeader = {

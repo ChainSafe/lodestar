@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
-import {FINALIZED_ROOT_INDEX} from "@chainsafe/lodestar-params";
+import {FINALIZED_ROOT_GINDEX} from "@chainsafe/lodestar-params";
 import {SyncCommitteeWitness} from "./types";
 
 export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>): SyncCommitteeWitness {
@@ -38,5 +38,5 @@ export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitt
 }
 
 export function getFinalizedRootProof(state: TreeBacked<allForks.BeaconState>): Uint8Array[] {
-  return state.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
+  return state.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 }

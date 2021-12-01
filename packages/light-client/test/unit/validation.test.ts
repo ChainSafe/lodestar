@@ -4,8 +4,8 @@ import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  FINALIZED_ROOT_INDEX,
-  NEXT_SYNC_COMMITTEE_INDEX,
+  FINALIZED_ROOT_GINDEX,
+  NEXT_SYNC_COMMITTEE_GINDEX,
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
@@ -47,7 +47,7 @@ describe("validateLightClientUpdate", () => {
     const finalizedCheckpointState = ssz.altair.BeaconState.defaultTreeBacked();
     finalizedCheckpointState.nextSyncCommittee = nextSyncCommittee;
     // Prove it
-    const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_INDEX));
+    const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
     // update.header must have stateRoot to finalizedCheckpointState
     const header = defaultBeaconBlockHeader(updateHeaderSlot);
@@ -60,7 +60,7 @@ describe("validateLightClientUpdate", () => {
       root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
     };
     // Prove it
-    const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
+    const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
     // finalityHeader must have stateRoot to syncAttestedState
     const syncAttestedBlockHeader = defaultBeaconBlockHeader(attestedHeaderSlot);

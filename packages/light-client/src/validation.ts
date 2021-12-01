@@ -2,10 +2,10 @@ import {altair, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_DEPTH,
   NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_DEPTH,
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
-  FINALIZED_ROOT_INDEX_FLOORLOG2,
-  NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
@@ -38,7 +38,7 @@ export function assertValidLightClientUpdate(
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
-    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_INDEX_FLOORLOG2, "finalityBranches");
+    assertZeroHashes(update.finalityBranch, FINALIZED_ROOT_DEPTH, "finalityBranches");
   }
 
   // DIFF FROM SPEC:
@@ -67,8 +67,8 @@ export function assertValidFinalityProof(update: altair.LightClientUpdate): void
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.header),
       Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
-      FINALIZED_ROOT_INDEX_FLOORLOG2,
-      FINALIZED_ROOT_INDEX % 2 ** FINALIZED_ROOT_INDEX_FLOORLOG2,
+      FINALIZED_ROOT_DEPTH,
+      FINALIZED_ROOT_INDEX,
       update.finalityHeader.stateRoot.valueOf() as Uint8Array
     )
   ) {
@@ -97,8 +97,8 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
       Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
-      NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
-      NEXT_SYNC_COMMITTEE_INDEX % 2 ** NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2,
+      NEXT_SYNC_COMMITTEE_DEPTH,
+      NEXT_SYNC_COMMITTEE_INDEX,
       update.header.stateRoot.valueOf() as Uint8Array
     )
   ) {
