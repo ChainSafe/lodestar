@@ -96,10 +96,7 @@ describe("chain / lightclient", function () {
           genesisTime: bn.chain.genesisTime,
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
         },
-        checkpoint: {
-          root: fromHexString(head.blockRoot),
-          epoch: 0,
-        },
+        checkpointRoot: fromHexString(head.blockRoot),
       });
 
       loggerLC.important("Initialized lightclient", {headSlot: lightclient.getHead().slot});

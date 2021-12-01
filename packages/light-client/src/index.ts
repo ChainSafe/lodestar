@@ -166,23 +166,23 @@ export class Lightclient {
     logger,
     beaconApiUrl,
     genesisData,
-    checkpoint,
+    checkpointRoot,
   }: {
     config: IChainForkConfig;
     logger?: ILcLogger;
     beaconApiUrl: string;
     genesisData: GenesisData;
-    checkpoint: phase0.Checkpoint;
+    checkpointRoot: phase0.Checkpoint["root"];
   }): Promise<Lightclient> {
     const api = getClient(config, {baseUrl: beaconApiUrl});
 
     // Fetch snapshot with proof at the trusted block root
-    const {data: snapshotWithProof} = await api.lightclient.getSnapshot(toHexString(checkpoint.root));
+    const {data: snapshotWithProof} = await api.lightclient.getSnapshot(toHexString(checkpointRoot));
     const {header, currentSyncCommittee, nextSyncCommittee, syncCommitteesBranch} = snapshotWithProof;
 
     // verify the response matches the requested root
     const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
-    if (!ssz.Root.equals(checkpoint.root, headerRoot)) {
+    if (!ssz.Root.equals(checkpointRoot, headerRoot)) {
       throw new Error("Snapshot header does not match trusted checkpoint");
     }
 

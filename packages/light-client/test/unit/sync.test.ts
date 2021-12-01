@@ -56,7 +56,7 @@ describe("Lightclient sync", () => {
       logger: testLogger,
       beaconApiUrl: `http://${opts.host}:${opts.port}`,
       genesisData: {genesisTime, genesisValidatorsRoot},
-      checkpoint,
+      checkpointRoot: checkpoint.root,
     });
     afterEachCbs.push(() => lightclient.stop());
 
