@@ -50,16 +50,13 @@ export enum Bucket {
   index_stateArchiveRootIndex = 26, // State Root -> slot
 
   // Lightclient server
-  altair_bestUpdatePerCommitteePeriod = 30, // SyncPeriod -> LightClientUpdate
-  // TODO: Review if it's really necessary to persist these two
-  altair_latestFinalizedUpdate = 31, // Single: LightClientUpdate
-  altair_latestNonFinalizedUpdate = 32, // Single: LightClientUpdate
-  // TODO: Review if it's really necessary
-  altair_lightclientFinalizedCheckpoint = 33, // Epoch -> FinalizedCheckpointData
-  // Note: this is the state root for the checkpoint block, NOT necessarily the state root at the epoch boundary
-  altair_lightClientInitProof = 34, // Block root -> Proof
-  altair_lightClientSyncCommitteeProof = 35, // SyncPeriod -> Sync Committee Proof
-  index_lightClientInitProof = 36, // Epoch + Block Root -> true
+  // altair_bestUpdatePerCommitteePeriod = 30, // DEPRECATED on v0.32.0
+  // altair_latestFinalizedUpdate = 31, // DEPRECATED on v0.32.0
+  // altair_latestNonFinalizedUpdate = 32, // DEPRECATED on v0.32.0
+  // altair_lightclientFinalizedCheckpoint = 33, // DEPRECATED on v0.32.0
+  // altair_lightClientInitProof = 34, // DEPRECATED on v0.32.0
+  // altair_lightClientSyncCommitteeProof = 35, // DEPRECATED on v0.32.0
+  // index_lightClientInitProof = 36, // DEPRECATED on v0.32.0
 
   // Buckets to support LightClient server v2
   lightClient_genesisWitness = 50, // BlockRoot -> GenesisWitness
