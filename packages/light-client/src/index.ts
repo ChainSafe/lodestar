@@ -289,7 +289,7 @@ export class Lightclient {
         this.logger.debug("Started tracking the head");
 
         // Subscribe to head updates over SSE
-        this.api.events.eventstream([routes.events.EventType.lightclientUpdate], controller.signal, this.onSSE);
+        this.api.events.eventstream([routes.events.EventType.lightclientHeaderUpdate], controller.signal, this.onSSE);
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -326,7 +326,7 @@ export class Lightclient {
   private onSSE = (event: routes.events.BeaconEvent): void => {
     try {
       switch (event.type) {
-        case routes.events.EventType.lightclientUpdate:
+        case routes.events.EventType.lightclientHeaderUpdate:
           this.processHeaderUpdate(event.message);
           break;
 

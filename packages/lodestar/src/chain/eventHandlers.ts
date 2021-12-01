@@ -51,7 +51,7 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.forkChoiceReorg]: onForkChoiceReorg,
     [ChainEvent.justified]: onJustified,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
-    [ChainEvent.lightclientUpdate]: () => {},
+    [ChainEvent.lightclientHeaderUpdate]: () => {},
   };
 
   const emitter = this.emitter;

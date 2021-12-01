@@ -99,7 +99,7 @@ export enum ChainEvent {
   /**
    * A new lightclient header update is available to be broadcasted to connected light-clients
    */
-  lightclientUpdate = "lightclient:update",
+  lightclientHeaderUpdate = "lightclient:header_update",
 }
 
 export interface IChainEvents {
@@ -123,7 +123,7 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientUpdate]: (headerUpdate: LightClientHeaderUpdate) => void;
+  [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: LightClientHeaderUpdate) => void;
 }
 
 /**

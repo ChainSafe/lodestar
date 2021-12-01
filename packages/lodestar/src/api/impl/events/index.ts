@@ -19,7 +19,7 @@ const chainEventMap = {
   [routes.events.EventType.voluntaryExit]: ChainEvent.block as const,
   [routes.events.EventType.finalizedCheckpoint]: ChainEvent.finalized as const,
   [routes.events.EventType.chainReorg]: ChainEvent.forkChoiceReorg as const,
-  [routes.events.EventType.lightclientUpdate]: ChainEvent.lightclientUpdate as const,
+  [routes.events.EventType.lightclientHeaderUpdate]: ChainEvent.lightclientHeaderUpdate as const,
 };
 
 export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config">): routes.events.Api {
@@ -79,7 +79,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
         oldHeadState: oldHead.stateRoot,
       },
     ],
-    [routes.events.EventType.lightclientUpdate]: (headerUpdate) => [headerUpdate],
+    [routes.events.EventType.lightclientHeaderUpdate]: (headerUpdate) => [headerUpdate],
   };
 
   return {

@@ -28,7 +28,7 @@ export enum EventType {
   /** The node has reorganized its chain */
   chainReorg = "chain_reorg",
   /** New or better header update available */
-  lightclientUpdate = "lightclient_update",
+  lightclientHeaderUpdate = "lightclient_header_update",
 }
 
 export type EventData = {
@@ -53,7 +53,7 @@ export type EventData = {
     newHeadState: RootHex;
     epoch: Epoch;
   };
-  [EventType.lightclientUpdate]: LightclientHeaderUpdate;
+  [EventType.lightclientHeaderUpdate]: LightclientHeaderUpdate;
 };
 
 export type BeaconEvent = {[K in EventType]: {type: K; message: EventData[K]}}[EventType];
@@ -151,7 +151,7 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
       },
     }),
 
-    [EventType.lightclientUpdate]: new ContainerType<EventData[EventType.lightclientUpdate]>({
+    [EventType.lightclientHeaderUpdate]: new ContainerType<EventData[EventType.lightclientHeaderUpdate]>({
       fields: {
         syncAggregate: ssz.altair.SyncAggregate,
         header: ssz.phase0.BeaconBlockHeader,

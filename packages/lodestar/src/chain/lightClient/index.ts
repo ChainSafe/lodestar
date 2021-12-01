@@ -11,8 +11,8 @@ import {BitVector, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {getNextSyncCommitteeBranch, getSyncCommitteesWitness, getFinalizedRootProof, getGenesisWitness} from "./proofs";
-import {PartialLightClientUpdate, InitGenesisProof, InitSnapshotProof} from "./types";
+import {getNextSyncCommitteeBranch, getSyncCommitteesWitness, getFinalizedRootProof} from "./proofs";
+import {PartialLightClientUpdate, InitSnapshotProof} from "./types";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "../../util/bytes";
 import {ZERO_HASH} from "../../constants";
@@ -76,22 +76,11 @@ const MAX_PREV_HEAD_DATA = 32;
  * An altair beacon state has 24 fields, with a depth of 5.
  * | field                 | gindex | index |
  * | --------------------- | ------ | ----- |
- * | genesisTime           | 32     | 0     |
- * | genesisValidatorsRoot | 33     | 1     |
  * | finalizedCheckpoint   | 52     | 20    |
  * | currentSyncCommittee  | 54     | 22    |
  * | nextSyncCommittee     | 55     | 23    |
  *
- * For each field you only need 5 x 32 witness. Since genesisTime and genesisValidatorsRoot are mutual witness
- * of each other, never change and are always known you only 4 witness for each, or 4 witness for both.
- *
- * TODO: Is the GenesisWitness proof really necessary? For any network this info is known in advance.
- *
- * ```ts
- * GenesisWitness = Vector[Bytes32, 4]
- * ```
- *
- * Fields `currentSyncCommittee` and `nextSyncCommittee` are also contiguous fields. Since they rarely change its
+ * Fields `currentSyncCommittee` and `nextSyncCommittee` are contiguous fields. Since they change its
  * more optimal to only store the witnesses different blocks of interest.
  *
  * ```ts
@@ -127,7 +116,6 @@ const MAX_PREV_HEAD_DATA = 32;
  * - SyncAggregate -> ParentBlock -> FinalizedCheckpoint -> nextSyncCommittee
  *
  * After importing a new block + postState:
- * - Persist GenesisWitness, indexed by block root of state's witness, always
  * - Persist SyncCommitteeWitness, indexed by block root of state's witness, always
  * - Persist currentSyncCommittee, indexed by hashTreeRoot, once (not necessary after the first run)
  * - Persist nextSyncCommittee, indexed by hashTreeRoot, for each period + dependantRoot
@@ -445,7 +433,7 @@ export class LightClientServer {
     // Emit update
     // - At the earliest: 6 second after the slot start
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
-    this.emitter.emit(ChainEvent.lightclientUpdate, {
+    this.emitter.emit(ChainEvent.lightclientHeaderUpdate, {
       header: attestedData.header,
       blockRoot: toHexString(attestedData.blockRoot),
       syncAggregate,

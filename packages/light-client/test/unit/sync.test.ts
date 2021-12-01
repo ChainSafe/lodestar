@@ -110,7 +110,7 @@ describe("Lightclient sync", () => {
         };
 
         eventsServerApi.emit({
-          type: routes.events.EventType.lightclientUpdate,
+          type: routes.events.EventType.lightclientHeaderUpdate,
           message: {header, syncAggregate: syncCommittee.signHeader(config, header)},
         });
       }
