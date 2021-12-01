@@ -1,14 +1,16 @@
+import {expect} from "chai";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {fromHexString} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Lightclient} from "@chainsafe/lodestar-light-client";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
+import {getDevBeaconNode} from "../../utils/node/beacon";
+import {getAndInitDevValidators} from "../../utils/node/validator";
+import {ChainEvent} from "../../../src/chain";
 
 describe("chain / lightclient", function () {
   const validatorCount = 8;
@@ -104,12 +106,34 @@ describe("chain / lightclient", function () {
       lightclient.start();
 
       return new Promise<void>((resolve, reject) => {
-        bn.chain.emitter.on(ChainEvent.forkChoiceHead, (head) => {
-          const lcHeadSlot = lightclient.getHead().slot;
-          if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
-            reject(Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`));
-          } else if (head.slot > targetSlotToReach) {
-            resolve();
+        bn.chain.emitter.on(ChainEvent.forkChoiceHead, async (head) => {
+          try {
+            // Test fetching proofs
+            const {proof, header} = await lightclient.getHeadStateProof([["latestBlockHeader", "bodyRoot"]]);
+            const stateRootHex = toHexString(header.stateRoot);
+            const lcHeadState = bn.chain.stateCache.get(stateRootHex);
+            if (!lcHeadState) {
+              throw Error(`LC head state not in cache ${stateRootHex}`);
+            }
+
+            const stateLcFromProof = ssz.altair.BeaconState.createTreeBackedFromProof(
+              header.stateRoot as Uint8Array,
+              proof
+            );
+            expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
+              toHexString(lcHeadState.latestBlockHeader.bodyRoot),
+              `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`
+            );
+
+            // Stop test if reached target head slot
+            const lcHeadSlot = lightclient.getHead().slot;
+            if (head.slot - lcHeadSlot > maxLcHeadTrackingDiffSlots) {
+              throw Error(`Lightclient head ${lcHeadSlot} is too far behind the beacon node ${head.slot}`);
+            } else if (head.slot > targetSlotToReach) {
+              resolve();
+            }
+          } catch (e) {
+            reject(e);
           }
         });
       });
