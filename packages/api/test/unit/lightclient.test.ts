@@ -17,8 +17,8 @@ describe("lightclient", () => {
       args: [
         "head",
         [
-          ["validator", 0, "balance"],
-          ["finalized_checkpoint", "root"],
+          // ["validator", 0, "balance"],
+          ["finalized_checkpoint", 0, "root", 12000],
         ],
       ],
       res: {
@@ -30,7 +30,10 @@ describe("lightclient", () => {
       },
       /* eslint-disable quotes */
       query: {
-        paths: ['["validator",0,"balance"]', '["finalized_checkpoint","root"]'],
+        paths: [
+          // '["validator",0,"balance"]',
+          '["finalized_checkpoint",0,"root",12000]',
+        ],
       },
       /* eslint-enable quotes */
     },

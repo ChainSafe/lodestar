@@ -2,6 +2,7 @@ import {ContainerType, Path, VectorType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {ArrayOf, ReturnTypes, RoutesData, Schema, sameType, ContainerData, ReqSerializers} from "../utils";
+import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/serdes";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -54,8 +55,8 @@ export type ReqTypes = {
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
   return {
     getStateProof: {
-      writeReq: (stateId, paths) => ({params: {stateId}, query: {paths: paths.map((path) => JSON.stringify(path))}}),
-      parseReq: ({params, query}) => [params.stateId, query.paths.map((pathStr) => JSON.parse(pathStr) as Path)],
+      writeReq: (stateId, paths) => ({params: {stateId}, query: {paths: querySerializeProofPathsArr(paths)}}),
+      parseReq: ({params, query}) => [params.stateId, queryParseProofPathsArr(query.paths)],
       schema: {params: {stateId: Schema.StringRequired}, body: Schema.AnyArray},
     },
 
