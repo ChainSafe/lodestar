@@ -372,8 +372,10 @@ export class LightClientServer {
 
     // Only store current sync committee once per run
     if (!this.storedCurrentSyncCommittee) {
-      await this.storeSyncCommittee(postState.currentSyncCommittee, syncCommitteeWitness.currentSyncCommitteeRoot);
-      await this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot);
+      await Promise.all([
+        this.storeSyncCommittee(postState.currentSyncCommittee, syncCommitteeWitness.currentSyncCommitteeRoot),
+        this.storeSyncCommittee(postState.nextSyncCommittee, syncCommitteeWitness.nextSyncCommitteeRoot),
+      ]);
       this.storedCurrentSyncCommittee = true;
       this.logger.debug("Stored currentSyncCommittee", {slot: blockSlot});
     }
