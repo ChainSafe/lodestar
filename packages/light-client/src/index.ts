@@ -161,7 +161,7 @@ export class Lightclient {
     };
   }
 
-  static async initializeFromCheckpoint({
+  static async initializeFromCheckpointRoot({
     config,
     logger,
     beaconApiUrl,

@@ -51,7 +51,7 @@ describe("Lightclient sync", () => {
     }
 
     // Initilize from snapshot
-    const lightclient = await Lightclient.initializeFromCheckpoint({
+    const lightclient = await Lightclient.initializeFromCheckpointRoot({
       config,
       logger: testLogger,
       beaconApiUrl: `http://${opts.host}:${opts.port}`,
