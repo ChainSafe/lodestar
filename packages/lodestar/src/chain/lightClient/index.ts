@@ -47,17 +47,6 @@ interface ILightClientIniterModules {
   logger: ILogger;
 }
 
-/* paths needed to bootstrap the light client */
-export const stateProofPaths = [
-  // initial sync committee list
-  ["currentSyncCommittee"],
-  ["nextSyncCommittee"],
-  // required to initialize a slot clock
-  ["genesisTime"],
-  // required to verify signatures
-  ["genesisValidatorsRoot"],
-];
-
 const MAX_CACHED_FINALIZED_HEADERS = 3;
 const MAX_PREV_HEAD_DATA = 32;
 
