@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {RouteGeneric, ReqGeneric, Resolves} from "../../src/utils";
-import {HttpClient, IHttpClient} from "../../src/client/utils";
+import {FetchOpts, HttpClient, IHttpClient} from "../../src/client/utils";
 import {ServerRoutes} from "../../src/server/utils";
 import {getMockApi, getTestServer} from "./utils";
 import {registerRoutesGroup} from "../../src/server";
@@ -12,6 +12,7 @@ export type GenericServerTestCases<Api extends Record<string, RouteGeneric>> = {
   [K in keyof Api]: {
     args: Parameters<Api[K]>;
     res: IgnoreVoid<Resolves<Api[K]>>;
+    query?: FetchOpts["query"];
   };
 };
 
@@ -27,7 +28,7 @@ export function runGenericServerTest<
   const mockApi = getMockApi<Api>(testCases);
   const {baseUrl, server} = getTestServer();
 
-  const httpClient = new HttpClient({baseUrl});
+  const httpClient = new HttpClientSpy({baseUrl});
   const client = getClient(config, httpClient);
 
   const routes = getRoutes(config, mockApi);
@@ -45,6 +46,11 @@ export function runGenericServerTest<
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const res = await (client[routeId] as RouteGeneric)(...(testCase.args as any[]));
 
+      // Use spy to assert argument serialization
+      if (testCase.query) {
+        expect(httpClient.opts?.query).to.deep.equal(testCase.query, "Wrong fetch opts.query");
+      }
+
       // Assert server handler called with correct args
       expect(mockApi[routeId].callCount).to.equal(1, `mockApi[${routeId}] must be called once`);
       expect(mockApi[routeId].getCall(0).args).to.deep.equal(testCase.args, `mockApi[${routeId}] wrong args`);
@@ -52,5 +58,18 @@ export function runGenericServerTest<
       // Assert returned value is correct
       expect(res).to.deep.equal(testCase.res, "Wrong returned value");
     });
+  }
+}
+
+class HttpClientSpy extends HttpClient {
+  opts: FetchOpts | null = null;
+
+  async json<T>(opts: FetchOpts): Promise<T> {
+    this.opts = opts;
+    return super.json(opts);
+  }
+  async arrayBuffer(opts: FetchOpts): Promise<ArrayBuffer> {
+    this.opts = opts;
+    return super.arrayBuffer(opts);
   }
 }

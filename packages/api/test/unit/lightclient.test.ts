@@ -28,6 +28,11 @@ describe("lightclient", () => {
           leaves: [root, root, root, root],
         },
       },
+      /* eslint-disable quotes */
+      query: {
+        paths: ['["validator",0,"balance"]', '["finalized_checkpoint","root"]'],
+      },
+      /* eslint-enable quotes */
     },
     getCommitteeUpdates: {
       args: [1, 2],
