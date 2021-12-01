@@ -1,4 +1,2 @@
-export * from "./latestFinalizedUpdate";
-export * from "./latestNonFinalizedUpdate";
-export * from "./preGenesisState";
-export * from "./preGenesisStateLastProcessedBlock";
+export {PreGenesisState} from "./preGenesisState";
+export {PreGenesisStateLastProcessedBlock} from "./preGenesisStateLastProcessedBlock";

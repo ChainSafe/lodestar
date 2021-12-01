@@ -6,8 +6,7 @@ import {allForks, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lo
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointWithHex, ForkChoice, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
+import {CheckpointWithHex, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -31,10 +30,11 @@ import {
   AggregatedAttestationPool,
   OpPool,
 } from "../../../../src/chain/opPools";
-import {LightClientIniter} from "../../../../src/chain/lightClient";
+import {LightClientServer} from "../../../../src/chain/lightClient";
 import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
 import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
+import {testLogger} from "../../logger";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -62,8 +62,7 @@ export class MockBeaconChain implements IBeaconChain {
   clock: IBeaconClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
-  lightclientUpdater: LightClientUpdater;
-  lightClientIniter: LightClientIniter;
+  lightClientServer: LightClientServer;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -83,6 +82,7 @@ export class MockBeaconChain implements IBeaconChain {
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
+    const logger = testLogger();
     this.genesisTime = genesisTime ?? state.genesisTime;
     this.genesisValidatorsRoot = state.genesisValidatorsRoot;
     this.bls = sinon.createStubInstance(BlsSingleThreadVerifier);
@@ -110,13 +110,10 @@ export class MockBeaconChain implements IBeaconChain {
       db,
       metrics: null,
     });
-    this.lightclientUpdater = new LightClientUpdater(db);
-    this.lightClientIniter = new LightClientIniter({
-      config: this.config,
-      db: db,
-      forkChoice: this.forkChoice as ForkChoice,
-      stateCache: this.stateCache,
-    });
+    this.lightClientServer = new LightClientServer(
+      {config: this.config, emitter: this.emitter, logger, db: db},
+      {genesisTime: this.genesisTime, genesisValidatorsRoot: this.genesisValidatorsRoot as Uint8Array}
+    );
   }
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> {

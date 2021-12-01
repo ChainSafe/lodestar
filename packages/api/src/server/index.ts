@@ -25,21 +25,21 @@ export function registerRoutes(
 ): void {
   const routesByNamespace: {
     // Enforces that we are declaring routes for every routeId in `Api`
-    [K in keyof Api]: {
+    [K in keyof Api]: () => {
       // The ReqTypes are enforced in each getRoutes return type
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       [K2 in keyof Api[K]]: ServerRoute<any>;
     };
   } = {
     // Initializes route types and their definitions
-    beacon: beacon.getRoutes(config, api.beacon),
-    config: configApi.getRoutes(config, api.config),
-    debug: debug.getRoutes(config, api.debug),
-    events: events.getRoutes(config, api.events),
-    lightclient: lightclient.getRoutes(config, api.lightclient),
-    lodestar: lodestar.getRoutes(config, api.lodestar),
-    node: node.getRoutes(config, api.node),
-    validator: validator.getRoutes(config, api.validator),
+    beacon: () => beacon.getRoutes(config, api.beacon),
+    config: () => configApi.getRoutes(config, api.config),
+    debug: () => debug.getRoutes(config, api.debug),
+    events: () => events.getRoutes(config, api.events),
+    lightclient: () => lightclient.getRoutes(config, api.lightclient),
+    lodestar: () => lodestar.getRoutes(config, api.lodestar),
+    node: () => node.getRoutes(config, api.node),
+    validator: () => validator.getRoutes(config, api.validator),
   };
 
   for (const namespace of enabledNamespaces) {
@@ -48,7 +48,7 @@ export function registerRoutes(
       throw Error(`Unknown api namespace ${namespace}`);
     }
 
-    registerRoutesGroup(server, routes);
+    registerRoutesGroup(server, routes());
   }
 }
 

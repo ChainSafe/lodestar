@@ -160,22 +160,24 @@ export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
  * config.types.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"])
  * ```
  */
-export const FINALIZED_ROOT_INDEX = 105;
+export const FINALIZED_ROOT_GINDEX = 105;
 /**
  * ```ts
- * Math.floor(Math.log2(FINALIZED_ROOT_INDEX))
+ * Math.floor(Math.log2(FINALIZED_ROOT_GINDEX))
  * ```
  */
-export const FINALIZED_ROOT_INDEX_FLOORLOG2 = 6;
+export const FINALIZED_ROOT_DEPTH = 6;
+export const FINALIZED_ROOT_INDEX = 41;
 /**
  * ```ts
  * config.types.altair.BeaconState.getPathGindex(["nextSyncCommittee"])
  * ```
  */
-export const NEXT_SYNC_COMMITTEE_INDEX = 55;
+export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
 /**
  * ```ts
- * Math.floor(Math.log2(NEXT_SYNC_COMMITTEE_INDEX))
+ * Math.floor(Math.log2(NEXT_SYNC_COMMITTEE_GINDEX))
  * ```
  */
-export const NEXT_SYNC_COMMITTEE_INDEX_FLOORLOG2 = 5;
+export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
+export const NEXT_SYNC_COMMITTEE_INDEX = 23;

@@ -1,11 +1,38 @@
 import {PointFormat, PublicKey, SecretKey, Signature} from "@chainsafe/bls";
-import {computeDomain, computeSigningRoot, interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {altair, Bytes4, phase0, Root, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {routes} from "@chainsafe/lodestar-api";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {
+  DOMAIN_SYNC_COMMITTEE,
+  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
+  FINALIZED_ROOT_INDEX,
+  FINALIZED_ROOT_DEPTH,
+  NEXT_SYNC_COMMITTEE_INDEX,
+  NEXT_SYNC_COMMITTEE_DEPTH,
+  SLOTS_PER_EPOCH,
+  SYNC_COMMITTEE_SIZE,
+} from "@chainsafe/lodestar-params";
+import {altair, phase0, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
+import {hash} from "@chainsafe/persistent-merkle-tree";
 import {fromHexString, List} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../src/client/types";
+import {SyncCommitteeFast} from "../src/types";
+import {computeSigningRoot} from "../src/utils/domain";
+import {getLcLoggerConsole} from "../src/utils/logger";
+
+const CURRENT_SYNC_COMMITTEE_INDEX = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+/**
+ * To enable debug logs run with
+ * ```
+ * DEBUG=true mocha ...
+ * ```
+ */
+export const testLogger = getLcLoggerConsole({logDebug: Boolean(process.env.DEBUG)});
+
+export const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+export const SOME_HASH = Buffer.alloc(32, 0xaa);
 
 export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.SyncAggregate {
   const sigs = sks.map((sk) => sk.sign(message));
@@ -17,11 +44,10 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
 }
 
 export function getSyncAggregateSigningRoot(
-  genesisValidatorsRoot: Root,
-  forkVersion: Bytes4,
+  config: IBeaconConfig,
   syncAttestedBlockHeader: phase0.BeaconBlockHeader
 ): Uint8Array {
-  const domain = computeDomain(DOMAIN_SYNC_COMMITTEE, forkVersion, genesisValidatorsRoot);
+  const domain = config.getDomain(DOMAIN_SYNC_COMMITTEE, syncAttestedBlockHeader.slot);
   return computeSigningRoot(ssz.phase0.BeaconBlockHeader, syncAttestedBlockHeader, domain);
 }
 
@@ -35,14 +61,17 @@ export type SyncCommitteeKeys = {
   pks: PublicKey[];
   syncCommittee: altair.SyncCommittee;
   syncCommitteeFast: SyncCommitteeFast;
-  signAndAggregate: (message: Uint8Array) => altair.SyncAggregate;
+  signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate;
+  signAndAggregate(message: Uint8Array): altair.SyncAggregate;
 };
 
 /**
  * To make the test fast each sync committee has a single key repeated `SYNC_COMMITTEE_SIZE` times
  */
 export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
-  const sk = interopSecretKey(period);
+  const skBytes = Buffer.alloc(32, 0);
+  skBytes.writeInt32BE(1 + period);
+  const sk = SecretKey.fromBytes(skBytes);
   const pk = sk.toPublicKey();
   const pks = Array.from({length: SYNC_COMMITTEE_SIZE}, () => pk);
 
@@ -61,9 +90,14 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     };
   }
 
+  function signHeader(config: IBeaconConfig, header: phase0.BeaconBlockHeader): altair.SyncAggregate {
+    return signAndAggregate(getSyncAggregateSigningRoot(config, header));
+  }
+
   return {
     pks,
     signAndAggregate,
+    signHeader,
     syncCommittee: {
       pubkeys: pksBytes,
       aggregatePubkey: aggPk.toBytes(PointFormat.compressed),
@@ -72,6 +106,92 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
       pubkeys: pks,
       aggregatePubkey: aggPk,
     },
+  };
+}
+
+/**
+ * Creates LightClientUpdate that passes `assertValidLightClientUpdate` function, from mock data
+ */
+export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeriod): altair.LightClientUpdate {
+  const updateSlot = period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH + 1;
+
+  const committee = getInteropSyncCommittee(period);
+  const committeeNext = getInteropSyncCommittee(period + 1);
+
+  const nextSyncCommittee = committeeNext.syncCommittee;
+
+  const {root: headerStateRoot, proof: nextSyncCommitteeBranch} = computeMerkleBranch(
+    ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee),
+    NEXT_SYNC_COMMITTEE_DEPTH,
+    NEXT_SYNC_COMMITTEE_INDEX
+  );
+
+  const header: phase0.BeaconBlockHeader = {
+    slot: updateSlot,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: headerStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  const {root: finalityHeaderStateRoot, proof: finalityBranch} = computeMerkleBranch(
+    ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+    FINALIZED_ROOT_DEPTH,
+    FINALIZED_ROOT_INDEX
+  );
+
+  const finalityHeader: phase0.BeaconBlockHeader = {
+    slot: updateSlot,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: finalityHeaderStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  const forkVersion = config.getForkVersion(updateSlot);
+  const syncAggregate = committee.signHeader(config, finalityHeader);
+
+  return {
+    header,
+    nextSyncCommittee,
+    nextSyncCommitteeBranch,
+    finalityHeader,
+    finalityBranch,
+    syncCommitteeBits: syncAggregate.syncCommitteeBits,
+    syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+    forkVersion,
+  };
+}
+
+/**
+ * Creates a LightclientSnapshotWithProof that passes validation
+ */
+export function computeLightClientSnapshot(
+  period: SyncPeriod
+): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpointRoot: Uint8Array} {
+  const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
+
+  const {root: headerStateRoot, proof: currentSyncCommitteeBranch} = computeMerkleBranch(
+    ssz.altair.SyncCommittee.hashTreeRoot(currentSyncCommittee),
+    CURRENT_SYNC_COMMITTEE_DEPTH,
+    CURRENT_SYNC_COMMITTEE_INDEX
+  );
+
+  const header: phase0.BeaconBlockHeader = {
+    slot: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+    proposerIndex: 0,
+    parentRoot: SOME_HASH,
+    stateRoot: headerStateRoot,
+    bodyRoot: SOME_HASH,
+  };
+
+  return {
+    snapshot: {
+      header,
+      currentSyncCommittee,
+      currentSyncCommitteeBranch,
+    },
+    checkpointRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
   };
 }
 
@@ -104,4 +224,29 @@ export function generateValidators(n: number, opts?: Partial<phase0.Validator>):
 
 export function generateBalances(n: number): List<number> {
   return Array.from({length: n}, () => 32e9) as List<number>;
+}
+
+/**
+ * Verify that the given ``leaf`` is on the merkle branch ``proof``
+ * starting with the given ``root``.
+ *
+ * Browser friendly version of verifyMerkleBranch
+ */
+export function computeMerkleBranch(
+  leaf: Uint8Array,
+  depth: number,
+  index: number
+): {root: Uint8Array; proof: Uint8Array[]} {
+  const proof: Uint8Array[] = [];
+
+  let value = leaf;
+  for (let i = 0; i < depth; i++) {
+    proof[i] = Buffer.alloc(32, i);
+    if (Math.floor(index / 2 ** i) % 2) {
+      value = hash(proof[i], value);
+    } else {
+      value = hash(value, proof[i]);
+    }
+  }
+  return {root: value, proof};
 }

@@ -1,9 +1,10 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {altair, Slot, Root} from "@chainsafe/lodestar-types";
-import {computeSyncPeriodAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {validateLightClientUpdate} from "./validation";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../utils/utils";
-import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
+import {altair, Slot} from "@chainsafe/lodestar-types";
+import {LightClientSnapshotFast, LightClientStoreFast} from "../../src/types";
+import {assertValidLightClientUpdate} from "../../src/validation";
+import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../src/utils/utils";
+import {computeSyncPeriodAtSlot} from "../../src/utils/clock";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 //
 // A lightclient has two types of syncing:
@@ -48,12 +49,14 @@ import {LightClientSnapshotFast, LightClientStoreFast} from "./types";
  * Spec v1.0.1
  */
 export function processLightClientUpdate(
+  config: IBeaconConfig,
   store: LightClientStoreFast,
   update: altair.LightClientUpdate,
-  currentSlot: Slot,
-  genesisValidatorsRoot: Root
+  currentSlot: Slot
 ): void {
-  validateLightClientUpdate(store.snapshot, update, genesisValidatorsRoot);
+  // TODO - TEMP
+  const syncCommittee = store.snapshot.nextSyncCommittee;
+  assertValidLightClientUpdate(config, syncCommittee, update);
 
   const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);

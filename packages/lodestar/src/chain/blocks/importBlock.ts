@@ -7,6 +7,7 @@ import {
   getEffectiveBalances,
   merge,
   altair,
+  computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -15,13 +16,14 @@ import {IMetrics} from "../../metrics";
 import {IEth1ForBlockProduction} from "../../eth1";
 import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
+import {ZERO_HASH_HEX} from "../../constants";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
+import {LightClientServer} from "../lightClient";
 import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
-import {ZERO_HASH_HEX} from "../../constants";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
@@ -29,6 +31,7 @@ export type ImportBlockModules = {
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
+  lightClientServer: LightClientServer;
   executionEngine: IExecutionEngine;
   emitter: ChainEventEmitter;
   config: IChainForkConfig;
@@ -56,7 +59,7 @@ export type ImportBlockModules = {
  * - Send events after everything is done
  */
 export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
-  const {block, postState, skipImportingAttestations} = fullyVerifiedBlock;
+  const {block, postState, parentBlock, skipImportingAttestations} = fullyVerifiedBlock;
 
   const pendingEvents = new PendingEvents(chain.emitter);
 
@@ -187,6 +190,17 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // This adds the state necessary to process the next block
   chain.stateCache.add(postState);
   await chain.db.block.add(block);
+
+  // Lightclient server support (only after altair)
+  // - Persist state witness
+  // - Use block's syncAggregate
+  if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
+    try {
+      chain.lightClientServer.onImportBlock(block.message as altair.BeaconBlock, postState, parentBlock);
+    } catch (e) {
+      chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+    }
+  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 

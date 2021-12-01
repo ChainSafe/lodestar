@@ -14,18 +14,12 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  BestUpdatePerCommitteePeriod,
-  LightclientFinalizedCheckpoint,
-  LightClientInitProofRepository,
-  LightClientSyncCommitteeProofRepository,
-  LightClientInitProofIndexRepository,
+  BestPartialLightClientUpdateRepository,
+  CheckpointHeaderRepository,
+  SyncCommitteeRepository,
+  SyncCommitteeWitnessRepository,
 } from "./repositories";
-import {
-  PreGenesisState,
-  PreGenesisStateLastProcessedBlock,
-  LatestFinalizedUpdate,
-  LatestNonFinalizedUpdate,
-} from "./single";
+import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 
 export class BeaconDb extends DatabaseService implements IBeaconDb {
   metrics?: IDbMetrics;
@@ -44,14 +38,11 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   preGenesisState: PreGenesisState;
   preGenesisStateLastProcessedBlock: PreGenesisStateLastProcessedBlock;
 
-  // altair
-  bestUpdatePerCommitteePeriod: BestUpdatePerCommitteePeriod;
-  latestFinalizedUpdate: LatestFinalizedUpdate;
-  latestNonFinalizedUpdate: LatestNonFinalizedUpdate;
-  lightclientFinalizedCheckpoint: LightclientFinalizedCheckpoint;
-  lightClientInitProof: LightClientInitProofRepository;
-  lightClientInitProofIndex: LightClientInitProofIndexRepository;
-  lightClientSyncCommitteeProof: LightClientSyncCommitteeProofRepository;
+  // lightclient
+  bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
+  checkpointHeader: CheckpointHeaderRepository;
+  syncCommittee: SyncCommitteeRepository;
+  syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -68,18 +59,12 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.eth1Data = new Eth1DataRepository(this.config, this.db, this.metrics);
     this.preGenesisState = new PreGenesisState(this.config, this.db, this.metrics);
     this.preGenesisStateLastProcessedBlock = new PreGenesisStateLastProcessedBlock(this.config, this.db, this.metrics);
-    // altair
-    this.bestUpdatePerCommitteePeriod = new BestUpdatePerCommitteePeriod(this.config, this.db, this.metrics);
-    this.latestFinalizedUpdate = new LatestFinalizedUpdate(this.config, this.db, this.metrics);
-    this.latestNonFinalizedUpdate = new LatestNonFinalizedUpdate(this.config, this.db, this.metrics);
-    this.lightclientFinalizedCheckpoint = new LightclientFinalizedCheckpoint(this.config, this.db, this.metrics);
-    this.lightClientInitProof = new LightClientInitProofRepository(this.config, this.db, this.metrics);
-    this.lightClientInitProofIndex = new LightClientInitProofIndexRepository(this.config, this.db, this.metrics);
-    this.lightClientSyncCommitteeProof = new LightClientSyncCommitteeProofRepository(
-      this.config,
-      this.db,
-      this.metrics
-    );
+
+    // lightclient
+    this.bestPartialLightClientUpdate = new BestPartialLightClientUpdateRepository(this.config, this.db, this.metrics);
+    this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db, this.metrics);
+    this.syncCommittee = new SyncCommitteeRepository(this.config, this.db, this.metrics);
+    this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db, this.metrics);
   }
 
   async stop(): Promise<void> {

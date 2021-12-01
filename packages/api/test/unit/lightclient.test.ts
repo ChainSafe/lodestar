@@ -5,6 +5,7 @@ import {Api, ReqTypes} from "../../src/routes/lightclient";
 import {getClient} from "../../src/client/lightclient";
 import {getRoutes} from "../../src/server/lightclient";
 import {runGenericServerTest} from "../utils/genericServerTest";
+import {toHexString} from "@chainsafe/ssz";
 
 const root = Uint8Array.from(Buffer.alloc(32, 1));
 
@@ -16,8 +17,8 @@ describe("lightclient", () => {
       args: [
         "head",
         [
-          ["validator", 0, "balance"],
-          ["finalized_checkpoint", "root"],
+          // ["validator", 0, "balance"],
+          ["finalized_checkpoint", 0, "root", 12000],
         ],
       ],
       res: {
@@ -27,26 +28,26 @@ describe("lightclient", () => {
           leaves: [root, root, root, root],
         },
       },
+      /* eslint-disable quotes */
+      query: {
+        paths: [
+          // '["validator",0,"balance"]',
+          '["finalized_checkpoint",0,"root",12000]',
+        ],
+      },
+      /* eslint-enable quotes */
     },
-    getBestUpdates: {
+    getCommitteeUpdates: {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
-    getLatestUpdateFinalized: {
-      args: [],
-      res: {data: lightClientUpdate},
-    },
-    getLatestUpdateNonFinalized: {
-      args: [],
-      res: {data: lightClientUpdate},
-    },
-    getInitProof: {
-      args: ["0x00"],
+    getSnapshot: {
+      args: [toHexString(root)],
       res: {
         data: {
-          type: ProofType.treeOffset,
-          offsets: [1, 2, 3],
-          leaves: [root, root, root, root],
+          header: ssz.phase0.BeaconBlockHeader.defaultValue(),
+          currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
+          currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
         },
       },
     },

@@ -9,7 +9,6 @@ import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -39,7 +38,7 @@ import {
   SyncContributionAndProofPool,
   OpPool,
 } from "./opPools";
-import {LightClientIniter} from "./lightClient";
+import {LightClientServer} from "./lightClient";
 import {Archiver} from "./archiver";
 import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
@@ -60,8 +59,7 @@ export class BeaconChain implements IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  lightclientUpdater: LightClientUpdater;
-  lightClientIniter: LightClientIniter;
+  readonly lightClientServer: LightClientServer;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -135,6 +133,12 @@ export class BeaconChain implements IBeaconChain {
       metrics,
       signal,
     });
+
+    const lightClientServer = new LightClientServer(
+      {config, db, emitter, logger},
+      {genesisTime: this.genesisTime, genesisValidatorsRoot: this.genesisValidatorsRoot as Uint8Array}
+    );
+
     this.blockProcessor = new BlockProcessor(
       {
         clock,
@@ -144,6 +148,7 @@ export class BeaconChain implements IBeaconChain {
         eth1,
         db,
         forkChoice,
+        lightClientServer,
         stateCache,
         checkpointStateCache,
         emitter,
@@ -162,9 +167,8 @@ export class BeaconChain implements IBeaconChain {
     this.checkpointStateCache = checkpointStateCache;
     this.stateCache = stateCache;
     this.emitter = emitter;
+    this.lightClientServer = lightClientServer;
 
-    this.lightclientUpdater = new LightClientUpdater(this.db);
-    this.lightClientIniter = new LightClientIniter({config: this.config, forkChoice, db: this.db, stateCache});
     this.archiver = new Archiver(db, this, logger, signal);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 

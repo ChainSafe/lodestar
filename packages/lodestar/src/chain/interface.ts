@@ -1,7 +1,6 @@
 import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {LightClientUpdater} from "@chainsafe/lodestar-light-client/server";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 import {IEth1ForBlockProduction} from "../eth1";
@@ -19,7 +18,7 @@ import {
   SeenContributionAndProof,
 } from "./seenCache";
 import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndProofPool} from "./opPools";
-import {LightClientIniter} from "./lightClient";
+import {LightClientServer} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 
@@ -48,8 +47,7 @@ export interface IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
-  lightclientUpdater: LightClientUpdater;
-  lightClientIniter: LightClientIniter;
+  readonly lightClientServer: LightClientServer;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
