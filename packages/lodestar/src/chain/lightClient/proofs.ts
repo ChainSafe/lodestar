@@ -1,27 +1,7 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_INDEX} from "@chainsafe/lodestar-params";
-import {SyncCommitteeWitness, GenesisWitness} from "./types";
-
-/**
- * Parent node of both `genesisTime` and `genesisValidatorsRoot`
- */
-export const GENESIS_GINDEX = BigInt(16);
-
-export type GenesisData = {
-  genesisTime: number;
-  genesisValidatorsRoot: Uint8Array;
-};
-
-export type GenesisWithProof = {
-  witness: GenesisWitness;
-  genesisTime: number;
-  genesisValidatorsRoot: Uint8Array;
-};
-
-export function getGenesisWitness(state: TreeBacked<allForks.BeaconState>): GenesisWitness {
-  return state.tree.getSingleProof(GENESIS_GINDEX);
-}
+import {SyncCommitteeWitness} from "./types";
 
 export function getSyncCommitteesWitness(state: TreeBacked<allForks.BeaconState>): SyncCommitteeWitness {
   const n1 = state.tree.rootNode;
