@@ -233,22 +233,6 @@ export class LightClientServer {
   }
 
   /**
-   * API ROUTE to get `genesisTime` and `genesisValidatorsRoot` from a trusted state root
-   */
-  async serveInitProof(blockRoot: Uint8Array): Promise<InitGenesisProof> {
-    const genesisWitness = await this.db.genesisWitness.get(blockRoot);
-    if (!genesisWitness) {
-      throw Error("Not available");
-    }
-
-    return {
-      genesisTime: this.genesisData.genesisTime,
-      genesisValidatorsRoot: this.genesisData.genesisValidatorsRoot,
-      branch: genesisWitness,
-    };
-  }
-
-  /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
   async serveInitCommittees(blockRoot: Uint8Array): Promise<InitSnapshotProof> {
@@ -340,7 +324,6 @@ export class LightClientServer {
   async pruneNonCheckpointData(nonCheckpointBlockRoots: Uint8Array[]): Promise<void> {
     // TODO: Batch delete with native leveldb batching not just Promise.all()
     await Promise.all([
-      this.db.genesisWitness.batchDelete(nonCheckpointBlockRoots),
       this.db.syncCommitteeWitness.batchDelete(nonCheckpointBlockRoots),
       this.db.checkpointHeader.batchDelete(nonCheckpointBlockRoots),
     ]);
@@ -363,10 +346,6 @@ export class LightClientServer {
 
     const blockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     const blockRootHex = toHexString(blockRoot);
-
-    // Store genesis witness in case this block becomes a checkpoint
-    const genesisWitness = getGenesisWitness(postState);
-    await this.db.genesisWitness.put(blockRoot, genesisWitness);
 
     const syncCommitteeWitness = getSyncCommitteesWitness(postState);
 

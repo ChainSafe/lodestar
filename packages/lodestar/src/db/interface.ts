@@ -14,7 +14,6 @@ import {
   ProposerSlashingRepository,
   StateArchiveRepository,
   VoluntaryExitRepository,
-  GenesisWitnessRepository,
   BestPartialLightClientUpdateRepository,
   CheckpointHeaderRepository,
   SyncCommitteeRepository,
@@ -54,7 +53,6 @@ export interface IBeaconDb {
   eth1Data: Eth1DataRepository;
 
   // lightclient
-  genesisWitness: GenesisWitnessRepository;
   bestPartialLightClientUpdate: BestPartialLightClientUpdateRepository;
   checkpointHeader: CheckpointHeaderRepository;
   syncCommittee: SyncCommitteeRepository;

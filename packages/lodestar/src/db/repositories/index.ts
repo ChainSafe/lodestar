@@ -10,7 +10,6 @@ export {DepositEventRepository} from "./depositEvent";
 export {DepositDataRootRepository} from "./depositDataRoot";
 export {Eth1DataRepository} from "./eth1Data";
 
-export {GenesisWitnessRepository} from "./lightClientGenesisWitness";
 export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUpdate";
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee";

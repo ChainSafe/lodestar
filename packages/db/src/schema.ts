@@ -59,7 +59,6 @@ export enum Bucket {
   // index_lightClientInitProof = 36, // DEPRECATED on v0.32.0
 
   // Buckets to support LightClient server v2
-  lightClient_genesisWitness = 50, // BlockRoot -> GenesisWitness
   lightClient_syncCommitteeWitness = 51, // BlockRoot -> SyncCommitteeWitness
   lightClient_syncCommittee = 52, // Root(altair.SyncCommittee) -> altair.SyncCommittee
   // TODO: May be redundant to block stores
