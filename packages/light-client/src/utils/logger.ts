@@ -15,8 +15,8 @@ export type ILcLogger = {
  */
 export function getLcLoggerConsole(opts?: {logDebug?: boolean}): ILcLogger {
   return {
-    error: console.log,
-    warn: console.log,
+    error: console.error,
+    warn: console.warn,
     info: console.log,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     debug: opts?.logDebug ? console.log : () => {},
