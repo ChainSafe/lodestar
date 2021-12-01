@@ -251,11 +251,6 @@
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references">
-    References
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#classes">
     Classes
   </a>
@@ -266,28 +261,100 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#variables">
     Variables
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions">
+    Functions
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references_1">
-    References
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
   </a>
-<nav aria-label="References" class="md-nav">
+<nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#lightclientiniter">
-    LightClientIniter
+<a class="md-nav__link" href="#blockroohex">
+    BlockRooHex
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#stateproofpaths">
-    stateProofPaths
+<a class="md-nav__link" href="#dependantroothex">
+    DependantRootHex
   </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#genesisdata">
+    GenesisData
+  </a>
+<nav aria-label="GenesisData" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#lightclientheaderupdate">
+    LightClientHeaderUpdate
+  </a>
+<nav aria-label="LightClientHeaderUpdate" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_1">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#partiallightclientupdate">
+    PartialLightClientUpdate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#partiallightclientupdatefinalized">
+    PartialLightClientUpdateFinalized
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#partiallightclientupdatenonfinalized">
+    PartialLightClientUpdateNonFinalized
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#syncattesteddata">
+    SyncAttestedData
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#synccommitteewitness">
+    SyncCommitteeWitness
+  </a>
+<nav aria-label="SyncCommitteeWitness" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_2">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -299,13 +366,52 @@
 <nav aria-label="Variables" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#const-stateproofpaths">
-    Const stateProofPaths
+<a class="md-nav__link" href="#const-max_cached_finalized_headers">
+    Const MAX_CACHED_FINALIZED_HEADERS
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#const-syncproofleaveslength">
-    Const syncProofLeavesLength
+<a class="md-nav__link" href="#const-max_prev_head_data">
+    Const MAX_PREV_HEAD_DATA
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions_1">
+    Functions
+  </a>
+<nav aria-label="Functions" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getcurrentsynccommitteebranch">
+    getCurrentSyncCommitteeBranch
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getfinalizedrootproof">
+    getFinalizedRootProof
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getnextsynccommitteebranch">
+    getNextSyncCommitteeBranch
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getsynccommitteeswitness">
+    getSyncCommitteesWitness
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isbetterupdate">
+    isBetterUpdate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#sumbits">
+    sumBits
   </a>
 </li>
 </ul>
@@ -324,46 +430,269 @@
 <p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="./">chain/lightClient</a></p>
 <h1 id="module-chainlightclient">Module: chain/lightClient<a class="headerlink" href="#module-chainlightclient" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#lightclientiniter">LightClientIniter</a></li>
-<li><a href="./#stateproofpaths">stateProofPaths</a></li>
-</ul>
 <h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="../../classes/chain_lightclient.lightclientiniter/">LightClientIniter</a></li>
+<li><a href="../../classes/chain_lightclient.lightclientserver/">LightClientServer</a></li>
 </ul>
 <h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="../../interfaces/chain_lightclient.ilightclientinitermodules/">ILightClientIniterModules</a></li>
 </ul>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#blockroohex">BlockRooHex</a></li>
+<li><a href="./#dependantroothex">DependantRootHex</a></li>
+<li><a href="./#genesisdata">GenesisData</a></li>
+<li><a href="./#lightclientheaderupdate">LightClientHeaderUpdate</a></li>
+<li><a href="./#partiallightclientupdate">PartialLightClientUpdate</a></li>
+<li><a href="./#partiallightclientupdatefinalized">PartialLightClientUpdateFinalized</a></li>
+<li><a href="./#partiallightclientupdatenonfinalized">PartialLightClientUpdateNonFinalized</a></li>
+<li><a href="./#syncattesteddata">SyncAttestedData</a></li>
+<li><a href="./#synccommitteewitness">SyncCommitteeWitness</a></li>
+</ul>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#const-stateproofpaths">stateProofPaths</a></li>
-<li><a href="./#const-syncproofleaveslength">syncProofLeavesLength</a></li>
+<li><a href="./#const-max_cached_finalized_headers">MAX_CACHED_FINALIZED_HEADERS</a></li>
+<li><a href="./#const-max_prev_head_data">MAX_PREV_HEAD_DATA</a></li>
 </ul>
-<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="lightclientiniter">LightClientIniter<a class="headerlink" href="#lightclientiniter" title="Permanent link">¶</a></h3>
-<p>• <strong>LightClientIniter</strong>:</p>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#getcurrentsynccommitteebranch">getCurrentSyncCommitteeBranch</a></li>
+<li><a href="./#getfinalizedrootproof">getFinalizedRootProof</a></li>
+<li><a href="./#getnextsynccommitteebranch">getNextSyncCommitteeBranch</a></li>
+<li><a href="./#getsynccommitteeswitness">getSyncCommitteesWitness</a></li>
+<li><a href="./#isbetterupdate">isBetterUpdate</a></li>
+<li><a href="./#sumbits">sumBits</a></li>
+</ul>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="blockroohex">BlockRooHex<a class="headerlink" href="#blockroohex" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>BlockRooHex</strong>: <em>RootHex</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L27">packages/lodestar/src/chain/lightClient/index.ts:27</a></em></p>
 <hr/>
-<h3 id="stateproofpaths">stateProofPaths<a class="headerlink" href="#stateproofpaths" title="Permanent link">¶</a></h3>
-<p>• <strong>stateProofPaths</strong>:</p>
+<h3 id="dependantroothex">DependantRootHex<a class="headerlink" href="#dependantroothex" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>DependantRootHex</strong>: <em>RootHex</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L26">packages/lodestar/src/chain/lightClient/index.ts:26</a></em></p>
+<hr/>
+<h3 id="genesisdata">GenesisData<a class="headerlink" href="#genesisdata" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>GenesisData</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L44">packages/lodestar/src/chain/lightClient/index.ts:44</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>Uint8Array</em></p>
+</li>
+</ul>
+<hr/>
+<h3 id="lightclientheaderupdate">LightClientHeaderUpdate<a class="headerlink" href="#lightclientheaderupdate" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>LightClientHeaderUpdate</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/types.ts#L37">packages/lodestar/src/chain/lightClient/types.ts:37</a></em></p>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>blockRoot</strong>: <em>RootHex</em></p>
+</li>
+<li>
+<p><strong>header</strong>: <em>BeaconBlockHeader</em></p>
+</li>
+<li>
+<p><strong>syncAggregate</strong>: <em>SyncAggregate</em></p>
+</li>
+</ul>
+<hr/>
+<h3 id="partiallightclientupdate">PartialLightClientUpdate<a class="headerlink" href="#partiallightclientupdate" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>PartialLightClientUpdate</strong>: <em><a href="./#partiallightclientupdatefinalized">PartialLightClientUpdateFinalized</a> | <a href="./#partiallightclientupdatenonfinalized">PartialLightClientUpdateNonFinalized</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/types.ts#L63">packages/lodestar/src/chain/lightClient/types.ts:63</a></em></p>
+<hr/>
+<h3 id="partiallightclientupdatefinalized">PartialLightClientUpdateFinalized<a class="headerlink" href="#partiallightclientupdatefinalized" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>PartialLightClientUpdateFinalized</strong>: <em>object &amp; SyncAggregate</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/types.ts#L44">packages/lodestar/src/chain/lightClient/types.ts:44</a></em></p>
+<hr/>
+<h3 id="partiallightclientupdatenonfinalized">PartialLightClientUpdateNonFinalized<a class="headerlink" href="#partiallightclientupdatenonfinalized" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>PartialLightClientUpdateNonFinalized</strong>: <em>object &amp; SyncAggregate</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/types.ts#L55">packages/lodestar/src/chain/lightClient/types.ts:55</a></em></p>
+<hr/>
+<h3 id="syncattesteddata">SyncAttestedData<a class="headerlink" href="#syncattesteddata" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>SyncAttestedData</strong>: <em>object &amp; object | object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L29">packages/lodestar/src/chain/lightClient/index.ts:29</a></em></p>
+<hr/>
+<h3 id="synccommitteewitness">SyncCommitteeWitness<a class="headerlink" href="#synccommitteewitness" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>SyncCommitteeWitness</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/types.ts#L30">packages/lodestar/src/chain/lightClient/types.ts:30</a></em></p>
+<p>We aren't creating the sync committee proofs separately because our ssz library automatically adds leaves to composite types,
+so they're already included in the state proof, currently with no way to specify otherwise</p>
+<p>remove two offsets so the # of offsets in the state proof will be the # expected
+This is a hack, but properly setting the offsets in the state proof would require either removing witnesses needed for the committees
+or setting the roots of the committees in the state proof
+this will always be 1, syncProofLeavesLength</p>
+<p>With empty state (minimal)
+- <code>genesisTime = 0xffffffff</code>
+- <code>genesisValidatorsRoot = Buffer.alloc(32, 1)</code></p>
+<p>Proof:
+<div class="highlight"><pre><span></span><code>offsets: [ 5, 4, 3, 2, 1 ]
+leaves: [
+  '0xffffffff00000000000000000000000000000000000000000000000000000000',
+  '0x0101010101010101010101010101010101010101010101010101010101010101',
+  '0xb11b8bcf59425d6c99019cca1d2c2e47b51a2f74917a67ad132274f43e13ec43',
+  '0x74bd1f2437cdf74b0904ee525d8da070a3fa27570942bf42cbab3dc5939600f0',
+  '0x7f06739e5a42360c56e519a511675901c95402ea9877edc0d9a87471b1374a6a',
+  '0x9f534204ba3c0b69fcb42a11987bfcbc5aea0463e5b0614312ded4b62cf3a380'
+]
+</code></pre></div></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>currentSyncCommitteeRoot</strong>: <em>Uint8Array</em></p>
+</li>
+<li>
+<p><strong>nextSyncCommitteeRoot</strong>: <em>Uint8Array</em></p>
+</li>
+<li>
+<p><strong>witness</strong>: <em>Uint8Array[]</em></p>
+</li>
+</ul>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
-<h3 id="const-stateproofpaths"><code>Const</code> stateProofPaths<a class="headerlink" href="#const-stateproofpaths" title="Permanent link">¶</a></h3>
-<p>• <strong>stateProofPaths</strong>: <em>string[][]</em> = [
-  // initial sync committee list
-  ["currentSyncCommittee"],
-  ["nextSyncCommittee"],
-  // required to initialize a slot clock
-  ["genesisTime"],
-  // required to verify signatures
-  ["genesisValidatorsRoot"],
-]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/lightClient/LightClientIniter.ts#L20">packages/lodestar/src/chain/lightClient/LightClientIniter.ts:20</a></em></p>
+<h3 id="const-max_cached_finalized_headers"><code>Const</code> MAX_CACHED_FINALIZED_HEADERS<a class="headerlink" href="#const-max_cached_finalized_headers" title="Permanent link">¶</a></h3>
+<p>• <strong>MAX_CACHED_FINALIZED_HEADERS</strong>: <em>3</em> = 3</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L56">packages/lodestar/src/chain/lightClient/index.ts:56</a></em></p>
 <hr/>
-<h3 id="const-syncproofleaveslength"><code>Const</code> syncProofLeavesLength<a class="headerlink" href="#const-syncproofleaveslength" title="Permanent link">¶</a></h3>
-<p>• <strong>syncProofLeavesLength</strong>: <em>number</em> = SYNC_COMMITTEE_SIZE * 2 + 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/lightClient/LightClientIniter.ts#L30">packages/lodestar/src/chain/lightClient/LightClientIniter.ts:30</a></em></p>
+<h3 id="const-max_prev_head_data"><code>Const</code> MAX_PREV_HEAD_DATA<a class="headerlink" href="#const-max_prev_head_data" title="Permanent link">¶</a></h3>
+<p>• <strong>MAX_PREV_HEAD_DATA</strong>: <em>32</em> = 32</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L57">packages/lodestar/src/chain/lightClient/index.ts:57</a></em></p>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
+<h3 id="getcurrentsynccommitteebranch">getCurrentSyncCommitteeBranch<a class="headerlink" href="#getcurrentsynccommitteebranch" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getCurrentSyncCommitteeBranch</strong>(<code>syncCommitteesWitness</code>: <a href="./#synccommitteewitness">SyncCommitteeWitness</a>): <em>Uint8Array[]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/proofs.ts#L35">packages/lodestar/src/chain/lightClient/proofs.ts:35</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>syncCommitteesWitness</code></td>
+<td><a href="./#synccommitteewitness">SyncCommitteeWitness</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Uint8Array[]</em></p>
+<hr/>
+<h3 id="getfinalizedrootproof">getFinalizedRootProof<a class="headerlink" href="#getfinalizedrootproof" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getFinalizedRootProof</strong>(<code>state</code>: TreeBacked‹allForks.BeaconState›): <em>Uint8Array[]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/proofs.ts#L40">packages/lodestar/src/chain/lightClient/proofs.ts:40</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>TreeBacked‹allForks.BeaconState›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Uint8Array[]</em></p>
+<hr/>
+<h3 id="getnextsynccommitteebranch">getNextSyncCommitteeBranch<a class="headerlink" href="#getnextsynccommitteebranch" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getNextSyncCommitteeBranch</strong>(<code>syncCommitteesWitness</code>: <a href="./#synccommitteewitness">SyncCommitteeWitness</a>): <em>Uint8Array[]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/proofs.ts#L30">packages/lodestar/src/chain/lightClient/proofs.ts:30</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>syncCommitteesWitness</code></td>
+<td><a href="./#synccommitteewitness">SyncCommitteeWitness</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Uint8Array[]</em></p>
+<hr/>
+<h3 id="getsynccommitteeswitness">getSyncCommitteesWitness<a class="headerlink" href="#getsynccommitteeswitness" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getSyncCommitteesWitness</strong>(<code>state</code>: TreeBacked‹allForks.BeaconState›): <em><a href="./#synccommitteewitness">SyncCommitteeWitness</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/proofs.ts#L6">packages/lodestar/src/chain/lightClient/proofs.ts:6</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>TreeBacked‹allForks.BeaconState›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="./#synccommitteewitness">SyncCommitteeWitness</a></em></p>
+<hr/>
+<h3 id="isbetterupdate">isBetterUpdate<a class="headerlink" href="#isbetterupdate" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isBetterUpdate</strong>(<code>prevUpdate</code>: <a href="./#partiallightclientupdate">PartialLightClientUpdate</a>, <code>nextSyncAggregate</code>: SyncAggregate, <code>nextSyncAttestedData</code>: <a href="./#syncattesteddata">SyncAttestedData</a>): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L513">packages/lodestar/src/chain/lightClient/index.ts:513</a></em></p>
+<p>Returns the update with more bits. On ties, prevUpdate is the better</p>
+<p>Spec v1.0.1
+<div class="highlight"><pre><span></span><code><span class="nb">max</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">valid_updates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">update</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">update</span><span class="o">.</span><span class="n">sync_committee_bits</span><span class="p">)))</span>
+</code></pre></div></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>prevUpdate</code></td>
+<td><a href="./#partiallightclientupdate">PartialLightClientUpdate</a></td>
+</tr>
+<tr>
+<td><code>nextSyncAggregate</code></td>
+<td>SyncAggregate</td>
+</tr>
+<tr>
+<td><code>nextSyncAttestedData</code></td>
+<td><a href="./#syncattesteddata">SyncAttestedData</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="sumbits">sumBits<a class="headerlink" href="#sumbits" title="Permanent link">¶</a></h3>
+<p>▸ <strong>sumBits</strong>(<code>bits</code>: BitVector): <em>number</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/lightClient/index.ts#L534">packages/lodestar/src/chain/lightClient/index.ts:534</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bits</code></td>
+<td>BitVector</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>number</em></p>
 </article>
 </div>
 </div>

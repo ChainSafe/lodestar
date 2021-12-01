@@ -256,6 +256,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#variables">
     Variables
   </a>
@@ -269,11 +274,39 @@
 </nav>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
+  </a>
+<nav aria-label="Type aliases" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#blockrootslot">
+    BlockRootSlot
+  </a>
+<nav aria-label="BlockRootSlot" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#variables_1">
     Variables
   </a>
 <nav aria-label="Variables" class="md-nav">
 <ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#const-batch_size">
+    Const BATCH_SIZE
+  </a>
+</li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#const-persist_state_every_epochs">
     Const PERSIST_STATE_EVERY_EPOCHS
@@ -308,6 +341,21 @@
     computeEpochsToDelete
   </a>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getnoncheckpointblocks">
+    getNonCheckpointBlocks
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#getparentrootfromsignedblock">
+    getParentRootFromSignedBlock
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#migrateblocksfromhottocolddb">
+    migrateBlocksFromHotToColdDb
+  </a>
+</li>
 </ul>
 </nav>
 </li>
@@ -329,8 +377,13 @@
 <li><a href="../../classes/chain_archiver.archiver/">Archiver</a></li>
 <li><a href="../../classes/chain_archiver.statesarchiver/">StatesArchiver</a></li>
 </ul>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#blockrootslot">BlockRootSlot</a></li>
+</ul>
 <h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
 <ul>
+<li><a href="./#const-batch_size">BATCH_SIZE</a></li>
 <li><a href="./#const-persist_state_every_epochs">PERSIST_STATE_EVERY_EPOCHS</a></li>
 <li><a href="./#const-persist_temp_state_every_epochs">PERSIST_TEMP_STATE_EVERY_EPOCHS</a></li>
 <li><a href="./#const-process_finalized_checkpoint_queue_len">PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN</a></li>
@@ -339,26 +392,46 @@
 <ul>
 <li><a href="./#archiveblocks">archiveBlocks</a></li>
 <li><a href="./#computeepochstodelete">computeEpochsToDelete</a></li>
+<li><a href="./#getnoncheckpointblocks">getNonCheckpointBlocks</a></li>
+<li><a href="./#getparentrootfromsignedblock">getParentRootFromSignedBlock</a></li>
+<li><a href="./#migrateblocksfromhottocolddb">migrateBlocksFromHotToColdDb</a></li>
+</ul>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="blockrootslot">BlockRootSlot<a class="headerlink" href="#blockrootslot" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>BlockRootSlot</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L16">packages/lodestar/src/chain/archiver/archiveBlocks.ts:16</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>root</strong>: <em>Uint8Array</em></p>
+</li>
+<li>
+<p><strong>slot</strong>: <em>Slot</em></p>
+</li>
 </ul>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
+<h3 id="const-batch_size"><code>Const</code> BATCH_SIZE<a class="headerlink" href="#const-batch_size" title="Permanent link">¶</a></h3>
+<p>• <strong>BATCH_SIZE</strong>: <em>256</em> = 256</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L14">packages/lodestar/src/chain/archiver/archiveBlocks.ts:14</a></em></p>
+<hr/>
 <h3 id="const-persist_state_every_epochs"><code>Const</code> PERSIST_STATE_EVERY_EPOCHS<a class="headerlink" href="#const-persist_state_every_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>PERSIST_STATE_EVERY_EPOCHS</strong>: <em>1024</em> = 1024</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/archiver/archiveStates.ts#L14">packages/lodestar/src/chain/archiver/archiveStates.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveStates.ts#L14">packages/lodestar/src/chain/archiver/archiveStates.ts:14</a></em></p>
 <p>Minimum number of epochs between archived states</p>
 <hr/>
 <h3 id="const-persist_temp_state_every_epochs"><code>Const</code> PERSIST_TEMP_STATE_EVERY_EPOCHS<a class="headerlink" href="#const-persist_temp_state_every_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>PERSIST_TEMP_STATE_EVERY_EPOCHS</strong>: <em>32</em> = 32</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/archiver/archiveStates.ts#L19">packages/lodestar/src/chain/archiver/archiveStates.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveStates.ts#L19">packages/lodestar/src/chain/archiver/archiveStates.ts:19</a></em></p>
 <p>Minimum number of epochs between single temp archived states
 These states will be pruned once a new state is persisted</p>
 <hr/>
 <h3 id="const-process_finalized_checkpoint_queue_len"><code>Const</code> PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN<a class="headerlink" href="#const-process_finalized_checkpoint_queue_len" title="Permanent link">¶</a></h3>
 <p>• <strong>PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN</strong>: <em>256</em> = 256</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/archiver/index.ts#L11">packages/lodestar/src/chain/archiver/index.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/index.ts#L11">packages/lodestar/src/chain/archiver/index.ts:11</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="archiveblocks">archiveBlocks<a class="headerlink" href="#archiveblocks" title="Permanent link">¶</a></h3>
-<p>▸ <strong>archiveBlocks</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>forkChoice</code>: IForkChoice, <code>logger</code>: ILogger, <code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L16">packages/lodestar/src/chain/archiver/archiveBlocks.ts:16</a></em></p>
+<p>▸ <strong>archiveBlocks</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>forkChoice</code>: IForkChoice, <code>lightclientServer</code>: <a href="../../classes/chain_lightclient.lightclientserver/">LightClientServer</a>, <code>logger</code>: ILogger, <code>finalizedCheckpoint</code>: object): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L27">packages/lodestar/src/chain/archiver/archiveBlocks.ts:27</a></em></p>
 <p>Archives finalized blocks from active bucket to archive bucket.</p>
 <p>Only archive blocks on the same chain to the finalized checkpoint.
 Each run should move all finalized blocks to blockArhive db to make it consistent
@@ -366,6 +439,11 @@ to stateArchive, so that the node always work well when we restart.
 Note that the finalized block still stay in forkchoice to check finalize checkpoint of next onBlock calls,
 the next run should not reprocess finalzied block of this run.</p>
 <p><strong>Parameters:</strong></p>
+<p>▪ <strong>db</strong>: <em><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></em></p>
+<p>▪ <strong>forkChoice</strong>: <em>IForkChoice</em></p>
+<p>▪ <strong>lightclientServer</strong>: <em><a href="../../classes/chain_lightclient.lightclientserver/">LightClientServer</a></em></p>
+<p>▪ <strong>logger</strong>: <em>ILogger</em></p>
+<p>▪ <strong>finalizedCheckpoint</strong>: <em>object</em></p>
 <table>
 <thead>
 <tr>
@@ -375,20 +453,12 @@ the next run should not reprocess finalzied block of this run.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>db</code></td>
-<td><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></td>
+<td><code>epoch</code></td>
+<td>Epoch</td>
 </tr>
 <tr>
-<td><code>forkChoice</code></td>
-<td>IForkChoice</td>
-</tr>
-<tr>
-<td><code>logger</code></td>
-<td>ILogger</td>
-</tr>
-<tr>
-<td><code>finalized</code></td>
-<td>CheckpointWithHex</td>
+<td><code>rootHex</code></td>
+<td>string</td>
 </tr>
 </tbody>
 </table>
@@ -396,7 +466,7 @@ the next run should not reprocess finalzied block of this run.</p>
 <hr/>
 <h3 id="computeepochstodelete">computeEpochsToDelete<a class="headerlink" href="#computeepochstodelete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeEpochsToDelete</strong>(<code>storedEpochs</code>: number[], <code>persistEveryEpochs</code>: number): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/chain/archiver/archiveStates.ts#L82">packages/lodestar/src/chain/archiver/archiveStates.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveStates.ts#L82">packages/lodestar/src/chain/archiver/archiveStates.ts:82</a></em></p>
 <p>Keeps first epoch per interval of persistEveryEpochs, deletes the rest</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -418,6 +488,87 @@ the next run should not reprocess finalzied block of this run.</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>number[]</em></p>
+<hr/>
+<h3 id="getnoncheckpointblocks">getNonCheckpointBlocks<a class="headerlink" href="#getnoncheckpointblocks" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getNonCheckpointBlocks</strong>‹<strong>T</strong>›(<code>blocks</code>: T[]): <em>T[]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L140">packages/lodestar/src/chain/archiver/archiveBlocks.ts:140</a></em></p>
+<p><strong>Type parameters:</strong></p>
+<p>▪ <strong>T</strong>: <em>object</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>blocks</code></td>
+<td>T[]</td>
+<td>sequence of linear blocks, from ancestor to child. In ProtoArray.getAllAncestorNodes child nodes are pushed to the returned array.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>T[]</em></p>
+<hr/>
+<h3 id="getparentrootfromsignedblock">getParentRootFromSignedBlock<a class="headerlink" href="#getparentrootfromsignedblock" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getParentRootFromSignedBlock</strong>(<code>bytes</code>: Uint8Array): <em>Uint8Array</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L131">packages/lodestar/src/chain/archiver/archiveBlocks.ts:131</a></em></p>
+<p><div class="highlight"><pre><span></span><code>class SignedBeaconBlock(Container):
+  message: BeaconBlock [offset - 4 bytes]
+  signature: BLSSignature [fixed - 96 bytes]
+
+class BeaconBlock(Container):
+  slot: Slot [fixed - 8 bytes]
+  proposer_index: ValidatorIndex [fixed - 8 bytes]
+  parent_root: Root [fixed - 32 bytes]
+  state_root: Root
+  body: BeaconBlockBody
+</code></pre></div>
+From byte: <code>4 + 96 + 8 + 8 = 116</code>
+To byte: <code>116 + 32 = 148</code></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bytes</code></td>
+<td>Uint8Array</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Uint8Array</em></p>
+<hr/>
+<h3 id="migrateblocksfromhottocolddb">migrateBlocksFromHotToColdDb<a class="headerlink" href="#migrateblocksfromhottocolddb" title="Permanent link">¶</a></h3>
+<p>▸ <strong>migrateBlocksFromHotToColdDb</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>blocks</code>: <a href="./#blockrootslot">BlockRootSlot</a>[]): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/chain/archiver/archiveBlocks.ts#L78">packages/lodestar/src/chain/archiver/archiveBlocks.ts:78</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>db</code></td>
+<td><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></td>
+</tr>
+<tr>
+<td><code>blocks</code></td>
+<td><a href="./#blockrootslot">BlockRootSlot</a>[]</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 </article>
 </div>
 </div>

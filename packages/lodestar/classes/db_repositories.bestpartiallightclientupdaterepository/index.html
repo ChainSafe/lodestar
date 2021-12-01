@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.lightclientfinalizedcheckpoint/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.bestpartiallightclientupdaterepository/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
-<title>Db repositories.lightclientfinalizedcheckpoint - Lodestar documentation</title>
+<title>Db repositories.bestpartiallightclientupdaterepository - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#class-lightclientfinalizedcheckpoint">
+<a class="md-skip" href="#class-bestpartiallightclientupdaterepository">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Db repositories.lightclientfinalizedcheckpoint
+              Db repositories.bestpartiallightclientupdaterepository
             
           </span>
 </div>
@@ -323,6 +323,16 @@
     Protected type
   </a>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#typefinalized">
+    typeFinalized
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#typenonfinalized">
+    typeNonFinalized
+  </a>
+</li>
 </ul>
 </nav>
 </li>
@@ -502,16 +512,18 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/classes/db_repositories.lightclientfinalizedcheckpoint.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/classes/db_repositories.bestpartiallightclientupdaterepository.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/db_repositories/">db/repositories</a> › <a href="./">LightclientFinalizedCheckpoint</a></p>
-<h1 id="class-lightclientfinalizedcheckpoint">Class: LightclientFinalizedCheckpoint<a class="headerlink" href="#class-lightclientfinalizedcheckpoint" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/db_repositories/">db/repositories</a> › <a href="./">BestPartialLightClientUpdateRepository</a></p>
+<h1 id="class-bestpartiallightclientupdaterepository">Class: BestPartialLightClientUpdateRepository<a class="headerlink" href="#class-bestpartiallightclientupdaterepository" title="Permanent link">¶</a></h1>
+<p>Best PartialLightClientUpdate in each SyncPeriod</p>
+<p>Used to prepare light client updates</p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li>Repository‹SyncPeriod, FinalizedCheckpointData›</li>
+<li>Repository‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</li>
 </ul>
-<p>↳ <strong>LightclientFinalizedCheckpoint</strong></p>
+<p>↳ <strong>BestPartialLightClientUpdateRepository</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">¶</a></h3>
 <ul>
@@ -525,6 +537,8 @@
 <li><a href="./#protected-optional-dbreadsmetrics">dbReadsMetrics</a></li>
 <li><a href="./#protected-optional-dbwritemetrics">dbWriteMetrics</a></li>
 <li><a href="./#protected-type">type</a></li>
+<li><a href="./#typefinalized">typeFinalized</a></li>
+<li><a href="./#typenonfinalized">typeNonFinalized</a></li>
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
@@ -563,9 +577,9 @@
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
-<p>+ <strong>new LightclientFinalizedCheckpoint</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: Db, <code>metrics?</code>: IDbMetrics): <em><a href="./">LightclientFinalizedCheckpoint</a></em></p>
+<p>+ <strong>new BestPartialLightClientUpdateRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Uint8Array, Uint8Array›, <code>metrics?</code>: IDbMetrics): <em><a href="./">BestPartialLightClientUpdateRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightclientFinalizedCheckpoint.ts#L8">packages/lodestar/src/db/repositories/lightclientFinalizedCheckpoint.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L39">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:39</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -581,7 +595,7 @@
 </tr>
 <tr>
 <td><code>db</code></td>
-<td>Db</td>
+<td>IDatabaseController‹Uint8Array, Uint8Array›</td>
 </tr>
 <tr>
 <td><code>metrics?</code></td>
@@ -589,7 +603,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="./">LightclientFinalizedCheckpoint</a></em></p>
+<p><strong>Returns:</strong> <em><a href="./">BestPartialLightClientUpdateRepository</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="protected-bucket"><code>Protected</code> bucket<a class="headerlink" href="#protected-bucket" title="Permanent link">¶</a></h3>
 <p>• <strong>bucket</strong>: <em>Bucket</em></p>
@@ -617,12 +631,39 @@
 <p>Defined in packages/db/lib/abstractRepository.d.ts:23</p>
 <hr/>
 <h3 id="protected-type"><code>Protected</code> type<a class="headerlink" href="#protected-type" title="Permanent link">¶</a></h3>
-<p>• <strong>type</strong>: <em>Type‹FinalizedCheckpointData›</em></p>
+<p>• <strong>type</strong>: <em>Type‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#protected-type">type</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:21</p>
+<hr/>
+<h3 id="typefinalized">typeFinalized<a class="headerlink" href="#typefinalized" title="Permanent link">¶</a></h3>
+<p>• <strong>typeFinalized</strong>: <em>ContainerType‹<a href="../../modules/chain_lightclient/#partiallightclientupdatefinalized">PartialLightClientUpdateFinalized</a>›</em> = new ContainerType<partiallightclientupdatefinalized>({
+    fields: {
+      // isFinalized: true
+      isFinalized: booleanType,
+      header: ssz.phase0.BeaconBlockHeader,
+      blockRoot: ssz.Root,
+      finalityBranch: new VectorType<uint8array[]>({length: FINALIZED_ROOT_DEPTH, elementType: ssz.Root}),
+      finalizedCheckpoint: ssz.phase0.Checkpoint,
+      finalizedHeader: ssz.phase0.BeaconBlockHeader,
+      ...ssz.altair.SyncAggregate.fields,
+    },
+  })</uint8array[]></partiallightclientupdatefinalized></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L18">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:18</a></em></p>
+<hr/>
+<h3 id="typenonfinalized">typeNonFinalized<a class="headerlink" href="#typenonfinalized" title="Permanent link">¶</a></h3>
+<p>• <strong>typeNonFinalized</strong>: <em>ContainerType‹<a href="../../modules/chain_lightclient/#partiallightclientupdatenonfinalized">PartialLightClientUpdateNonFinalized</a>›</em> = new ContainerType<partiallightclientupdatenonfinalized>({
+    fields: {
+      // isFinalized: false
+      isFinalized: booleanType,
+      header: ssz.phase0.BeaconBlockHeader,
+      blockRoot: ssz.Root,
+      ...ssz.altair.SyncAggregate.fields,
+    },
+  })</partiallightclientupdatenonfinalized></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L31">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:31</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
-<p>▸ <strong>add</strong>(<code>value</code>: FinalizedCheckpointData): <em>Promise‹void›</em></p>
+<p>▸ <strong>add</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#add">add</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:36</p>
 <p><strong>Parameters:</strong></p>
@@ -636,14 +677,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>FinalizedCheckpointData</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹FinalizedCheckpointData›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -657,7 +698,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹FinalizedCheckpointData›</td>
+<td>ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</td>
 </tr>
 </tbody>
 </table>
@@ -685,7 +726,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹SyncPeriod, FinalizedCheckpointData››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -699,7 +740,7 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹SyncPeriod, FinalizedCheckpointData››</td>
+<td>ArrayLike‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››</td>
 </tr>
 </tbody>
 </table>
@@ -727,7 +768,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹FinalizedCheckpointData›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:42</p>
 <p><strong>Parameters:</strong></p>
@@ -741,7 +782,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹FinalizedCheckpointData›</td>
+<td>ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</td>
 </tr>
 </tbody>
 </table>
@@ -791,9 +832,9 @@
 <p><strong>Returns:</strong> <em>IFilterOptions‹Uint8Array›</em></p>
 <hr/>
 <h3 id="decodekey">decodeKey<a class="headerlink" href="#decodekey" title="Permanent link">¶</a></h3>
-<p>▸ <strong>decodeKey</strong>(<code>data</code>: Uint8Array): <em>number</em></p>
-<p><em>Overrides <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#decodekey">decodeKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightclientFinalizedCheckpoint.ts#L25">packages/lodestar/src/db/repositories/lightclientFinalizedCheckpoint.ts:25</a></em></p>
+<p>▸ <strong>decodeKey</strong>(<code>key</code>: Uint8Array): <em>SyncPeriod</em></p>
+<p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#decodekey">decodeKey</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:28</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -804,17 +845,17 @@
 </thead>
 <tbody>
 <tr>
-<td><code>data</code></td>
+<td><code>key</code></td>
 <td>Uint8Array</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>number</em></p>
+<p><strong>Returns:</strong> <em>SyncPeriod</em></p>
 <hr/>
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>FinalizedCheckpointData</em></p>
-<p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:26</p>
+<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></em></p>
+<p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L55">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:55</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -830,7 +871,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>FinalizedCheckpointData</em></p>
+<p><strong>Returns:</strong> <em><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></em></p>
 <hr/>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>delete</strong>(<code>id</code>: SyncPeriod): <em>Promise‹void›</em></p>
@@ -875,9 +916,9 @@
 <p><strong>Returns:</strong> <em>Buffer</em></p>
 <hr/>
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>encodeValue</strong>(<code>value</code>: FinalizedCheckpointData): <em>Uint8Array</em></p>
-<p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
-<p>Defined in packages/db/lib/abstractRepository.d.ts:25</p>
+<p>▸ <strong>encodeValue</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Uint8Array</em></p>
+<p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L47">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:47</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -889,14 +930,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>FinalizedCheckpointData</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData›[]›</em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entries">entries</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
@@ -914,10 +955,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›[]›</em></p>
 <hr/>
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>AsyncIterable‹IKeyValue‹SyncPeriod, FinalizedCheckpointData››</em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>AsyncIterable‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entriesstream">entriesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
 <p><strong>Parameters:</strong></p>
@@ -935,13 +976,13 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹SyncPeriod, FinalizedCheckpointData››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››</em></p>
 <hr/>
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData› | null›</em></p>
+<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstentry">firstEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹SyncPeriod | null›</em></p>
@@ -950,13 +991,13 @@
 <p><strong>Returns:</strong> <em>Promise‹SyncPeriod | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstValue</strong>(): <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p>▸ <strong>firstValue</strong>(): <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstvalue">firstValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
-<p><strong>Returns:</strong> <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
-<p>▸ <strong>get</strong>(<code>id</code>: SyncPeriod): <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p>▸ <strong>get</strong>(<code>id</code>: SyncPeriod): <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#get">get</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:29</p>
 <p><strong>Parameters:</strong></p>
@@ -974,7 +1015,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <hr/>
 <h3 id="getbinary">getBinary<a class="headerlink" href="#getbinary" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBinary</strong>(<code>id</code>: SyncPeriod): <em>Promise‹Uint8Array | null›</em></p>
@@ -998,7 +1039,7 @@
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getId</strong>(<code>value</code>: FinalizedCheckpointData): <em>SyncPeriod</em></p>
+<p>▸ <strong>getId</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>SyncPeriod</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:35</p>
 <p><strong>Parameters:</strong></p>
@@ -1012,7 +1053,7 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>FinalizedCheckpointData</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></td>
 </tr>
 </tbody>
 </table>
@@ -1082,10 +1123,10 @@
 <p><strong>Returns:</strong> <em>AsyncIterable‹SyncPeriod›</em></p>
 <hr/>
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData› | null›</em></p>
+<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastentry">lastEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:55</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, FinalizedCheckpointData› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹SyncPeriod | null›</em></p>
@@ -1094,13 +1135,13 @@
 <p><strong>Returns:</strong> <em>Promise‹SyncPeriod | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastValue</strong>(): <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p>▸ <strong>lastValue</strong>(): <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastvalue">lastValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
-<p><strong>Returns:</strong> <em>Promise‹FinalizedCheckpointData | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a> | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
-<p>▸ <strong>put</strong>(<code>id</code>: SyncPeriod, <code>value</code>: FinalizedCheckpointData): <em>Promise‹void›</em></p>
+<p>▸ <strong>put</strong>(<code>id</code>: SyncPeriod, <code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#put">put</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:32</p>
 <p><strong>Parameters:</strong></p>
@@ -1118,7 +1159,7 @@
 </tr>
 <tr>
 <td><code>value</code></td>
-<td>FinalizedCheckpointData</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></td>
 </tr>
 </tbody>
 </table>
@@ -1150,7 +1191,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>remove</strong>(<code>value</code>: FinalizedCheckpointData): <em>Promise‹void›</em></p>
+<p>▸ <strong>remove</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#remove">remove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -1164,14 +1205,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>FinalizedCheckpointData</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">¶</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>Promise‹FinalizedCheckpointData[]›</em></p>
+<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#values">values</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:45</p>
 <p><strong>Parameters:</strong></p>
@@ -1189,10 +1230,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹FinalizedCheckpointData[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]›</em></p>
 <hr/>
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>AsyncIterable‹FinalizedCheckpointData›</em></p>
+<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹SyncPeriod›): <em>AsyncIterable‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#valuesstream">valuesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
 <p><strong>Parameters:</strong></p>
@@ -1210,7 +1251,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹FinalizedCheckpointData›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</em></p>
 </article>
 </div>
 </div>

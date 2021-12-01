@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/light-client/modules/client/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/light-client/modules/root/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
-<title>Client - Lodestar documentation</title>
+<title>Root - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#module-client">
+<a class="md-skip" href="#module-root">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Client
+              Root
             
           </span>
 </div>
@@ -251,18 +251,8 @@
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references">
-    References
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#enumerations">
     Enumerations
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#classes">
-    Classes
   </a>
 </li>
 <li class="md-nav__item">
@@ -271,27 +261,13 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#variables">
-    Variables
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#functions">
     Functions
   </a>
 </li>
-</ul>
-</nav>
-</li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references_1">
-    References
-  </a>
-<nav aria-label="References" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#lightclientevent">
-    LightclientEvent
+<a class="md-nav__link" href="#object-literals">
+    Object literals
   </a>
 </li>
 </ul>
@@ -304,13 +280,41 @@
 <nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#genesisdata">
+    GenesisData
+  </a>
+<nav aria-label="GenesisData" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#genesisdatahex">
+    GenesisDataHex
+  </a>
+<nav aria-label="GenesisDataHex" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_1">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#lightclientsnapshotfast">
     LightClientSnapshotFast
   </a>
 <nav aria-label="LightClientSnapshotFast" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration">
+<a class="md-nav__link" href="#type-declaration_2">
     Type declaration:
   </a>
 </li>
@@ -324,7 +328,7 @@
 <nav aria-label="LightClientStoreFast" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_1">
+<a class="md-nav__link" href="#type-declaration_3">
     Type declaration:
   </a>
 </li>
@@ -343,21 +347,7 @@
 <nav aria-label="LightclientEvents" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_2">
-    Type declaration:
-  </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#lightclientmodules">
-    LightclientModules
-  </a>
-<nav aria-label="LightclientModules" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_3">
+<a class="md-nav__link" href="#type-declaration_4">
     Type declaration:
   </a>
 </li>
@@ -371,7 +361,7 @@
 <nav aria-label="MittEmitter" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_4">
+<a class="md-nav__link" href="#type-declaration_5">
     Type declaration:
   </a>
 </li>
@@ -385,26 +375,12 @@
 <nav aria-label="SyncCommitteeFast" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_5">
+<a class="md-nav__link" href="#type-declaration_6">
     Type declaration:
   </a>
 </li>
 </ul>
 </nav>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables_1">
-    Variables
-  </a>
-<nav aria-label="Variables" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-maxperiodperrequest">
-    Const maxPeriodPerRequest
-  </a>
 </li>
 </ul>
 </nav>
@@ -416,13 +392,23 @@
 <nav aria-label="Functions" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#applylightclientupdate">
-    applyLightClientUpdate
+<a class="md-nav__link" href="#assertvalidfinalityproof">
+    assertValidFinalityProof
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#isbetterupdate">
-    isBetterUpdate
+<a class="md-nav__link" href="#assertvalidlightclientupdate">
+    assertValidLightClientUpdate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#assertvalidsignedheader">
+    assertValidSignedHeader
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#assertvalidsynccommitteeproof">
+    assertValidSyncCommitteeProof
   </a>
 </li>
 <li class="md-nav__item">
@@ -430,14 +416,23 @@
     isValidBlsAggregate
   </a>
 </li>
+</ul>
+</nav>
+</li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#processlightclientupdate">
-    processLightClientUpdate
+<a class="md-nav__link" href="#object-literals_1">
+    Object literals
+  </a>
+<nav aria-label="Object literals" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#const-networkgenesis">
+    Const networkGenesis
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#validatelightclientupdate">
-    validateLightClientUpdate
+<a class="md-nav__link" href="#networkgenesis-object">
+    ▪ networkGenesis: object
   </a>
 </li>
 </ul>
@@ -450,54 +445,71 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/light-client/modules/client.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/light-client/modules/root.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-light-client</a> › <a href="../../globals/">Globals</a> › <a href="./">client</a></p>
-<h1 id="module-client">Module: client<a class="headerlink" href="#module-client" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-light-client</a> › <a href="../../globals/">Globals</a> › <a href="./">root</a></p>
+<h1 id="module-root">Module: root<a class="headerlink" href="#module-root" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#lightclientevent">LightclientEvent</a></li>
-</ul>
 <h3 id="enumerations">Enumerations<a class="headerlink" href="#enumerations" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="../../enums/client.lightclientevent/">LightclientEvent</a></li>
-</ul>
-<h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="../../classes/client.lightclient/">Lightclient</a></li>
+<li><a href="../../enums/root.lightclientevent/">LightclientEvent</a></li>
+<li><a href="../../enums/root.networkname/">NetworkName</a></li>
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
+<li><a href="./#genesisdata">GenesisData</a></li>
+<li><a href="./#genesisdatahex">GenesisDataHex</a></li>
 <li><a href="./#lightclientsnapshotfast">LightClientSnapshotFast</a></li>
 <li><a href="./#lightclientstorefast">LightClientStoreFast</a></li>
 <li><a href="./#lightclientemitter">LightclientEmitter</a></li>
 <li><a href="./#lightclientevents">LightclientEvents</a></li>
-<li><a href="./#lightclientmodules">LightclientModules</a></li>
 <li><a href="./#mittemitter">MittEmitter</a></li>
 <li><a href="./#synccommitteefast">SyncCommitteeFast</a></li>
 </ul>
-<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#const-maxperiodperrequest">maxPeriodPerRequest</a></li>
-</ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#applylightclientupdate">applyLightClientUpdate</a></li>
-<li><a href="./#isbetterupdate">isBetterUpdate</a></li>
+<li><a href="./#assertvalidfinalityproof">assertValidFinalityProof</a></li>
+<li><a href="./#assertvalidlightclientupdate">assertValidLightClientUpdate</a></li>
+<li><a href="./#assertvalidsignedheader">assertValidSignedHeader</a></li>
+<li><a href="./#assertvalidsynccommitteeproof">assertValidSyncCommitteeProof</a></li>
 <li><a href="./#isvalidblsaggregate">isValidBlsAggregate</a></li>
-<li><a href="./#processlightclientupdate">processLightClientUpdate</a></li>
-<li><a href="./#validatelightclientupdate">validateLightClientUpdate</a></li>
 </ul>
-<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="lightclientevent">LightclientEvent<a class="headerlink" href="#lightclientevent" title="Permanent link">¶</a></h3>
-<p>• <strong>LightclientEvent</strong>:</p>
+<h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#const-networkgenesis">networkGenesis</a></li>
+</ul>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="genesisdata">GenesisData<a class="headerlink" href="#genesisdata" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>GenesisData</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L14">networks.ts:14</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>RootHex | Uint8Array</em></p>
+</li>
+</ul>
+<hr/>
+<h3 id="genesisdatahex">GenesisDataHex<a class="headerlink" href="#genesisdatahex" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>GenesisDataHex</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L9">networks.ts:9</a></em></p>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>RootHex</em></p>
+</li>
+</ul>
+<hr/>
 <h3 id="lightclientsnapshotfast">LightClientSnapshotFast<a class="headerlink" href="#lightclientsnapshotfast" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>LightClientSnapshotFast</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/types.ts#L9">client/types.ts:9</a></em></p>
-<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/types.ts#L9">types.ts:9</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>currentSyncCommittee</strong>: <em><a href="./#synccommitteefast">SyncCommitteeFast</a></em></p>
@@ -512,8 +524,8 @@
 <hr/>
 <h3 id="lightclientstorefast">LightClientStoreFast<a class="headerlink" href="#lightclientstorefast" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>LightClientStoreFast</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/types.ts#L4">client/types.ts:4</a></em></p>
-<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/types.ts#L4">types.ts:4</a></em></p>
+<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>bestUpdates</strong>: <em>Map‹SyncPeriod, LightClientUpdate›</em></p>
@@ -525,50 +537,31 @@
 <hr/>
 <h3 id="lightclientemitter">LightclientEmitter<a class="headerlink" href="#lightclientemitter" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>LightclientEmitter</strong>: <em><a href="./#mittemitter">MittEmitter</a>‹<a href="./#lightclientevents">LightclientEvents</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/events.ts#L13">client/events.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/events.ts#L20">events.ts:20</a></em></p>
 <hr/>
 <h3 id="lightclientevents">LightclientEvents<a class="headerlink" href="#lightclientevents" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>LightclientEvents</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/events.ts#L8">client/events.ts:8</a></em></p>
-<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/events.ts#L15">events.ts:15</a></em></p>
+<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">¶</a></h4>
 <ul>
 <li>
-<p><strong>[LightclientEvent.advancedCommittee]</strong>(): <em>function</em></p>
+<p><strong>[LightclientEvent.committee]</strong>(): <em>function</em></p>
 </li>
 <li>
-<p>(<code>newSnapshotPeriod</code>: SyncPeriod): <em>void</em></p>
+<p>(<code>updatePeriod</code>: SyncPeriod): <em>void</em></p>
 </li>
 <li>
-<p><strong>[LightclientEvent.newHeader]</strong>(): <em>function</em></p>
+<p><strong>[LightclientEvent.head]</strong>(): <em>function</em></p>
 </li>
 <li>
 <p>(<code>newHeader</code>: BeaconBlockHeader): <em>void</em></p>
 </li>
 </ul>
 <hr/>
-<h3 id="lightclientmodules">LightclientModules<a class="headerlink" href="#lightclientmodules" title="Permanent link">¶</a></h3>
-<p>Ƭ <strong>LightclientModules</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/index.ts#L20">client/index.ts:20</a></em></p>
-<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">¶</a></h4>
-<ul>
-<li>
-<p><strong>beaconApiUrl</strong>: <em>string</em></p>
-</li>
-<li>
-<p><strong>clock</strong>: <em><a href="../../interfaces/utils.iclock/">IClock</a></em></p>
-</li>
-<li>
-<p><strong>config</strong>: <em>IChainForkConfig</em></p>
-</li>
-<li>
-<p><strong>genesisValidatorsRoot</strong>: <em>Root</em></p>
-</li>
-</ul>
-<hr/>
 <h3 id="mittemitter">MittEmitter<a class="headerlink" href="#mittemitter" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>MittEmitter</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/events.ts#L16">client/events.ts:16</a></em></p>
-<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/events.ts#L23">events.ts:23</a></em></p>
+<h4 id="type-declaration_5">Type declaration:<a class="headerlink" href="#type-declaration_5" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>emit</strong>‹<strong>K</strong>›(<code>type</code>: K, ...<code>args</code>: Parameters‹T[K]›): <em>void</em></p>
@@ -583,8 +576,8 @@
 <hr/>
 <h3 id="synccommitteefast">SyncCommitteeFast<a class="headerlink" href="#synccommitteefast" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SyncCommitteeFast</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/types.ts#L17">client/types.ts:17</a></em></p>
-<h4 id="type-declaration_5">Type declaration:<a class="headerlink" href="#type-declaration_5" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/types.ts#L17">types.ts:17</a></em></p>
+<h4 id="type-declaration_6">Type declaration:<a class="headerlink" href="#type-declaration_6" title="Permanent link">¶</a></h4>
 <ul>
 <li>
 <p><strong>aggregatePubkey</strong>: <em>PublicKey</em></p>
@@ -593,15 +586,18 @@
 <p><strong>pubkeys</strong>: <em>PublicKey[]</em></p>
 </li>
 </ul>
-<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
-<h3 id="const-maxperiodperrequest"><code>Const</code> maxPeriodPerRequest<a class="headerlink" href="#const-maxperiodperrequest" title="Permanent link">¶</a></h3>
-<p>• <strong>maxPeriodPerRequest</strong>: <em>32</em> = 32</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/index.ts#L27">client/index.ts:27</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
-<h3 id="applylightclientupdate">applyLightClientUpdate<a class="headerlink" href="#applylightclientupdate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>applyLightClientUpdate</strong>(<code>snapshot</code>: <a href="./#lightclientsnapshotfast">LightClientSnapshotFast</a>, <code>update</code>: LightClientUpdate): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/update.ts#L91">client/update.ts:91</a></em></p>
-<p>Spec v1.0.1</p>
+<h3 id="assertvalidfinalityproof">assertValidFinalityProof<a class="headerlink" href="#assertvalidfinalityproof" title="Permanent link">¶</a></h3>
+<p>▸ <strong>assertValidFinalityProof</strong>(<code>update</code>: LightClientUpdate): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/validation.ts#L65">validation.ts:65</a></em></p>
+<p>Proof that the state referenced in <code>update.finalityHeader.stateRoot</code> includes
+<div class="highlight"><pre><span></span><code><span class="nx">state</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="nx">finalizedCheckpoint</span><span class="o">:</span> <span class="p">{</span>
+    <span class="nx">root</span>: <span class="kt">update.header</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>Where <code>hashTreeRoot(state) == update.finalityHeader.stateRoot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -611,10 +607,6 @@
 </tr>
 </thead>
 <tbody>
-<tr>
-<td><code>snapshot</code></td>
-<td><a href="./#lightclientsnapshotfast">LightClientSnapshotFast</a></td>
-</tr>
 <tr>
 <td><code>update</code></td>
 <td>LightClientUpdate</td>
@@ -623,13 +615,96 @@
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="isbetterupdate">isBetterUpdate<a class="headerlink" href="#isbetterupdate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isBetterUpdate</strong>(<code>prevUpdate</code>: LightClientUpdate, <code>newUpdate</code>: LightClientUpdate): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/update.ts#L112">client/update.ts:112</a></em></p>
-<p>Returns the update with more bits. On ties, newUpdate is the better</p>
-<p>Spec v1.0.1
-<div class="highlight"><pre><span></span><code><span class="nb">max</span><span class="p">(</span><span class="n">store</span><span class="o">.</span><span class="n">valid_updates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">update</span><span class="p">:</span> <span class="nb">sum</span><span class="p">(</span><span class="n">update</span><span class="o">.</span><span class="n">sync_committee_bits</span><span class="p">)))</span>
+<h3 id="assertvalidlightclientupdate">assertValidLightClientUpdate<a class="headerlink" href="#assertvalidlightclientupdate" title="Permanent link">¶</a></h3>
+<p>▸ <strong>assertValidLightClientUpdate</strong>(<code>config</code>: IBeaconConfig, <code>syncCommittee</code>: <a href="./#synccommitteefast">SyncCommitteeFast</a>, <code>update</code>: LightClientUpdate): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/validation.ts#L22">validation.ts:22</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config</code></td>
+<td>IBeaconConfig</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>syncCommittee</code></td>
+<td><a href="./#synccommitteefast">SyncCommitteeFast</a></td>
+<td>SyncPeriod that signed this update: <code>computeSyncPeriodAtSlot(update.header.slot) - 1</code></td>
+</tr>
+<tr>
+<td><code>update</code></td>
+<td>LightClientUpdate</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="assertvalidsignedheader">assertValidSignedHeader<a class="headerlink" href="#assertvalidsignedheader" title="Permanent link">¶</a></h3>
+<p>▸ <strong>assertValidSignedHeader</strong>(<code>config</code>: IBeaconConfig, <code>syncCommittee</code>: <a href="./#synccommitteefast">SyncCommitteeFast</a>, <code>syncAggregate</code>: SyncAggregate, <code>signedHeaderRoot</code>: Root, <code>signedHeaderSlot</code>: Slot): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/validation.ts#L124">validation.ts:124</a></em></p>
+<p>Assert valid signature for <code>signedHeader</code> with provided <code>syncCommittee</code>.</p>
+<p>update.syncCommitteeSignature signs over the block at the previous slot of the state it is included.
+<div class="highlight"><pre><span></span><code><span class="n">previous_slot</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">state</span><span class="o">.</span><span class="n">slot</span><span class="p">,</span> <span class="n">Slot</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">-</span> <span class="n">Slot</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">domain</span> <span class="o">=</span> <span class="n">get_domain</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">DOMAIN_SYNC_COMMITTEE</span><span class="p">,</span> <span class="n">compute_epoch_at_slot</span><span class="p">(</span><span class="n">previous_slot</span><span class="p">))</span>
+<span class="n">signing_root</span> <span class="o">=</span> <span class="n">compute_signing_root</span><span class="p">(</span><span class="n">get_block_root_at_slot</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">previous_slot</span><span class="p">),</span> <span class="n">domain</span><span class="p">)</span>
+</code></pre></div>
+Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config</code></td>
+<td>IBeaconConfig</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>syncCommittee</code></td>
+<td><a href="./#synccommitteefast">SyncCommitteeFast</a></td>
+<td>SyncPeriod that signed this update: <code>computeSyncPeriodAtSlot(update.header.slot) - 1</code></td>
+</tr>
+<tr>
+<td><code>syncAggregate</code></td>
+<td>SyncAggregate</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>signedHeaderRoot</code></td>
+<td>Root</td>
+<td>Takes header root instead of the head itself to prevent re-hashing on SSE</td>
+</tr>
+<tr>
+<td><code>signedHeaderSlot</code></td>
+<td>Slot</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="assertvalidsynccommitteeproof">assertValidSyncCommitteeProof<a class="headerlink" href="#assertvalidsynccommitteeproof" title="Permanent link">¶</a></h3>
+<p>▸ <strong>assertValidSyncCommitteeProof</strong>(<code>update</code>: LightClientUpdate): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/validation.ts#L95">validation.ts:95</a></em></p>
+<p>Proof that the state referenced in <code>update.header.stateRoot</code> includes
+<div class="highlight"><pre><span></span><code><span class="nx">state</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="nx">nextSyncCommittee</span>: <span class="kt">update.nextSyncCommittee</span>
+<span class="p">}</span>
 </code></pre></div></p>
+<p>Where <code>hashTreeRoot(state) == update.header.stateRoot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -640,20 +715,16 @@
 </thead>
 <tbody>
 <tr>
-<td><code>prevUpdate</code></td>
-<td>LightClientUpdate</td>
-</tr>
-<tr>
-<td><code>newUpdate</code></td>
+<td><code>update</code></td>
 <td>LightClientUpdate</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>boolean</em></p>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="isvalidblsaggregate">isValidBlsAggregate<a class="headerlink" href="#isvalidblsaggregate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isValidBlsAggregate</strong>(<code>publicKeys</code>: PublicKey[], <code>message</code>: Uint8Array, <code>signature</code>: Uint8Array): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/validation.ts#L126">client/validation.ts:126</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/validation.ts#L154">validation.ts:154</a></em></p>
 <p>Same as BLS.verifyAggregate but with detailed error messages</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -679,70 +750,40 @@
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
-<hr/>
-<h3 id="processlightclientupdate">processLightClientUpdate<a class="headerlink" href="#processlightclientupdate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processLightClientUpdate</strong>(<code>store</code>: <a href="./#lightclientstorefast">LightClientStoreFast</a>, <code>update</code>: LightClientUpdate, <code>currentSlot</code>: Slot, <code>genesisValidatorsRoot</code>: Root): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/update.ts#L50">client/update.ts:50</a></em></p>
-<p>A light client maintains its state in a store object of type LightClientStore and receives update objects of type LightClientUpdate.
-Every update triggers process_light_client_update(store, update, current_slot) where current_slot is the current slot based on some local clock.
-Spec v1.0.1</p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>store</code></td>
-<td><a href="./#lightclientstorefast">LightClientStoreFast</a></td>
-</tr>
-<tr>
-<td><code>update</code></td>
-<td>LightClientUpdate</td>
-</tr>
-<tr>
-<td><code>currentSlot</code></td>
-<td>Slot</td>
-</tr>
-<tr>
-<td><code>genesisValidatorsRoot</code></td>
-<td>Root</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="validatelightclientupdate">validateLightClientUpdate<a class="headerlink" href="#validatelightclientupdate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>validateLightClientUpdate</strong>(<code>snapshot</code>: <a href="./#lightclientsnapshotfast">LightClientSnapshotFast</a>, <code>update</code>: LightClientUpdate, <code>genesisValidatorsRoot</code>: Root): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/client/validation.ts#L19">client/validation.ts:19</a></em></p>
-<p>Spec v1.0.1</p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>snapshot</code></td>
-<td><a href="./#lightclientsnapshotfast">LightClientSnapshotFast</a></td>
-</tr>
-<tr>
-<td><code>update</code></td>
-<td>LightClientUpdate</td>
-</tr>
-<tr>
-<td><code>genesisValidatorsRoot</code></td>
-<td>Root</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
+<h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
+<h3 id="const-networkgenesis"><code>Const</code> networkGenesis<a class="headerlink" href="#const-networkgenesis" title="Permanent link">¶</a></h3>
+<h3 id="networkgenesis-object">▪ <strong>networkGenesis</strong>: <em>object</em><a class="headerlink" href="#networkgenesis-object" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L19">networks.ts:19</a></em></p>
+<p>▪ <strong>[NetworkName.mainnet]</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L20">networks.ts:20</a></em></p>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em> = 1606824023</p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>string</em> = "0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95"</p>
+</li>
+</ul>
+<p>▪ <strong>[NetworkName.prater]</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L24">networks.ts:24</a></em></p>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em> = 1616508000</p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>string</em> = "0x043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb"</p>
+</li>
+</ul>
+<p>▪ <strong>[NetworkName.pyrmont]</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/networks.ts#L28">networks.ts:28</a></em></p>
+<ul>
+<li>
+<p><strong>genesisTime</strong>: <em>number</em> = 1605700807</p>
+</li>
+<li>
+<p><strong>genesisValidatorsRoot</strong>: <em>string</em> = "0x9436e8a630e3162b7ed4f449b12b8a5a368a4b95bc46b941ae65c11613bfa4c1"</p>
+</li>
+</ul>
 </article>
 </div>
 </div>

@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/light-client/interfaces/utils.iclock/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/light-client/enums/root.lightclientevent/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
-<title>Utils.iclock - Lodestar documentation</title>
+<title>Root.lightclientevent - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-iclock">
+<a class="md-skip" href="#enumeration-lightclientevent">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Utils.iclock
+              Root.lightclientevent
             
           </span>
 </div>
@@ -245,67 +245,33 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#implemented-by">
-    Implemented by
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#methods">
-    Methods
+<a class="md-nav__link" href="#enumeration-members">
+    Enumeration members
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#enumeration-members_1">
+    Enumeration members
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="Enumeration members" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#readonly-currentslot">
-    Readonly currentSlot
+<a class="md-nav__link" href="#committee">
+    committee
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#readonly-genesistime">
-    Readonly genesisTime
-  </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#methods_1">
-    Methods
-  </a>
-<nav aria-label="Methods" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#runeveryslot">
-    runEverySlot
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#start">
-    start
+<a class="md-nav__link" href="#head">
+    head
   </a>
 </li>
 </ul>
@@ -318,78 +284,28 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/light-client/interfaces/utils.iclock.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/light-client/enums/root.lightclientevent.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-light-client</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/utils/">utils</a> › <a href="./">IClock</a></p>
-<h1 id="interface-iclock">Interface: IClock<a class="headerlink" href="#interface-iclock" title="Permanent link">¶</a></h1>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<ul>
-<li><strong>IClock</strong></li>
-</ul>
-<h2 id="implemented-by">Implemented by<a class="headerlink" href="#implemented-by" title="Permanent link">¶</a></h2>
-<ul>
-<li><a href="../../classes/utils.clock/">Clock</a></li>
-</ul>
+<p><a href="../../">@chainsafe/lodestar-light-client</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/root/">root</a> › <a href="./">LightclientEvent</a></p>
+<h1 id="enumeration-lightclientevent">Enumeration: LightclientEvent<a class="headerlink" href="#enumeration-lightclientevent" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="enumeration-members">Enumeration members<a class="headerlink" href="#enumeration-members" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#readonly-currentslot">currentSlot</a></li>
-<li><a href="./#readonly-genesistime">genesisTime</a></li>
+<li><a href="./#committee">committee</a></li>
+<li><a href="./#head">head</a></li>
 </ul>
-<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#runeveryslot">runEverySlot</a></li>
-<li><a href="./#start">start</a></li>
-</ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="readonly-currentslot"><code>Readonly</code> currentSlot<a class="headerlink" href="#readonly-currentslot" title="Permanent link">¶</a></h3>
-<p>• <strong>currentSlot</strong>: <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/utils/clock.ts#L10">utils/clock.ts:10</a></em></p>
+<h2 id="enumeration-members_1">Enumeration members<a class="headerlink" href="#enumeration-members_1" title="Permanent link">¶</a></h2>
+<h3 id="committee">committee<a class="headerlink" href="#committee" title="Permanent link">¶</a></h3>
+<p>• <strong>committee</strong>: = "committee"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/events.ts#L12">events.ts:12</a></em></p>
+<p>Stored nextSyncCommittee from an update at period <code>period</code>.
+Note: the SyncCommittee is stored for <code>period + 1</code>.</p>
 <hr/>
-<h3 id="readonly-genesistime"><code>Readonly</code> genesisTime<a class="headerlink" href="#readonly-genesistime" title="Permanent link">¶</a></h3>
-<p>• <strong>genesisTime</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/utils/clock.ts#L11">utils/clock.ts:11</a></em></p>
-<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="runeveryslot">runEverySlot<a class="headerlink" href="#runeveryslot" title="Permanent link">¶</a></h3>
-<p>▸ <strong>runEverySlot</strong>(<code>fn</code>: <a href="../../modules/utils/#onslotfn">OnSlotFn</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/utils/clock.ts#L13">utils/clock.ts:13</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>fn</code></td>
-<td><a href="../../modules/utils/#onslotfn">OnSlotFn</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
-<p>▸ <strong>start</strong>(<code>signal</code>: AbortSignal): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/light-client/src/utils/clock.ts#L12">utils/clock.ts:12</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>signal</code></td>
-<td>AbortSignal</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
+<h3 id="head">head<a class="headerlink" href="#head" title="Permanent link">¶</a></h3>
+<p>• <strong>head</strong>: = "head"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/light-client/src/events.ts#L7">events.ts:7</a></em></p>
+<p>New head</p>
 </article>
 </div>
 </div>

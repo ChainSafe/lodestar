@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.lightclientinitproofindexrepository/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.synccommitteerepository/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.0.2" name="generator"/>
-<title>Db repositories.lightclientinitproofindexrepository - Lodestar documentation</title>
+<title>Db repositories.synccommitteerepository - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.816931ca.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#class-lightclientinitproofindexrepository">
+<a class="md-skip" href="#class-synccommitteerepository">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Db repositories.lightclientinitproofindexrepository
+              Db repositories.synccommitteerepository
             
           </span>
 </div>
@@ -502,16 +502,18 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/classes/db_repositories.lightclientinitproofindexrepository.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/classes/db_repositories.synccommitteerepository.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/db_repositories/">db/repositories</a> › <a href="./">LightClientInitProofIndexRepository</a></p>
-<h1 id="class-lightclientinitproofindexrepository">Class: LightClientInitProofIndexRepository<a class="headerlink" href="#class-lightclientinitproofindexrepository" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/db_repositories/">db/repositories</a> › <a href="./">SyncCommitteeRepository</a></p>
+<h1 id="class-synccommitteerepository">Class: SyncCommitteeRepository<a class="headerlink" href="#class-synccommitteerepository" title="Permanent link">¶</a></h1>
+<p>Historical sync committees by SyncCommittee hash tree root</p>
+<p>Used to prepare lightclient updates and initial snapshots</p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li>Repository‹Uint8Array, boolean›</li>
+<li>Repository‹Uint8Array, SyncCommittee›</li>
 </ul>
-<p>↳ <strong>LightClientInitProofIndexRepository</strong></p>
+<p>↳ <strong>SyncCommitteeRepository</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">¶</a></h3>
 <ul>
@@ -563,9 +565,9 @@
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
-<p>+ <strong>new LightClientInitProofIndexRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: Db, <code>metrics?</code>: IDbMetrics): <em><a href="./">LightClientInitProofIndexRepository</a></em></p>
+<p>+ <strong>new SyncCommitteeRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Uint8Array, Uint8Array›, <code>metrics?</code>: IDbMetrics): <em><a href="./">SyncCommitteeRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightClientInitProof.ts#L25">packages/lodestar/src/db/repositories/lightClientInitProof.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/be50e4e/packages/lodestar/src/db/repositories/lightclientSyncCommittee.ts#L10">packages/lodestar/src/db/repositories/lightclientSyncCommittee.ts:10</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -581,7 +583,7 @@
 </tr>
 <tr>
 <td><code>db</code></td>
-<td>Db</td>
+<td>IDatabaseController‹Uint8Array, Uint8Array›</td>
 </tr>
 <tr>
 <td><code>metrics?</code></td>
@@ -589,7 +591,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="./">LightClientInitProofIndexRepository</a></em></p>
+<p><strong>Returns:</strong> <em><a href="./">SyncCommitteeRepository</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="protected-bucket"><code>Protected</code> bucket<a class="headerlink" href="#protected-bucket" title="Permanent link">¶</a></h3>
 <p>• <strong>bucket</strong>: <em>Bucket</em></p>
@@ -617,12 +619,12 @@
 <p>Defined in packages/db/lib/abstractRepository.d.ts:23</p>
 <hr/>
 <h3 id="protected-type"><code>Protected</code> type<a class="headerlink" href="#protected-type" title="Permanent link">¶</a></h3>
-<p>• <strong>type</strong>: <em>Type‹boolean›</em></p>
+<p>• <strong>type</strong>: <em>Type‹SyncCommittee›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#protected-type">type</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:21</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
-<p>▸ <strong>add</strong>(<code>value</code>: boolean): <em>Promise‹void›</em></p>
+<p>▸ <strong>add</strong>(<code>value</code>: SyncCommittee): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#add">add</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:36</p>
 <p><strong>Parameters:</strong></p>
@@ -636,14 +638,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>boolean</td>
+<td>SyncCommittee</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹boolean›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹SyncCommittee›): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -657,7 +659,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹boolean›</td>
+<td>ArrayLike‹SyncCommittee›</td>
 </tr>
 </tbody>
 </table>
@@ -685,7 +687,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, boolean››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, SyncCommittee››): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -699,7 +701,7 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹Uint8Array, boolean››</td>
+<td>ArrayLike‹IKeyValue‹Uint8Array, SyncCommittee››</td>
 </tr>
 </tbody>
 </table>
@@ -727,7 +729,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹boolean›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹SyncCommittee›): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:42</p>
 <p><strong>Parameters:</strong></p>
@@ -741,7 +743,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹boolean›</td>
+<td>ArrayLike‹SyncCommittee›</td>
 </tr>
 </tbody>
 </table>
@@ -812,9 +814,9 @@
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>decodeValue</strong>(<code>_data</code>: Uint8Array): <em>boolean</em></p>
-<p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightClientInitProof.ts#L34">packages/lodestar/src/db/repositories/lightClientInitProof.ts:34</a></em></p>
+<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>SyncCommittee</em></p>
+<p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:26</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -825,12 +827,12 @@
 </thead>
 <tbody>
 <tr>
-<td><code>_data</code></td>
+<td><code>data</code></td>
 <td>Uint8Array</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>boolean</em></p>
+<p><strong>Returns:</strong> <em>SyncCommittee</em></p>
 <hr/>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>delete</strong>(<code>id</code>: Uint8Array): <em>Promise‹void›</em></p>
@@ -875,9 +877,9 @@
 <p><strong>Returns:</strong> <em>Buffer</em></p>
 <hr/>
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>encodeValue</strong>(<code>_value</code>: boolean): <em>Uint8Array</em></p>
-<p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightClientInitProof.ts#L30">packages/lodestar/src/db/repositories/lightClientInitProof.ts:30</a></em></p>
+<p>▸ <strong>encodeValue</strong>(<code>value</code>: SyncCommittee): <em>Uint8Array</em></p>
+<p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:25</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -888,15 +890,15 @@
 </thead>
 <tbody>
 <tr>
-<td><code>_value</code></td>
-<td>boolean</td>
+<td><code>value</code></td>
+<td>SyncCommittee</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹IKeyValue‹Uint8Array, boolean›[]›</em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee›[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entries">entries</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
@@ -914,10 +916,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, boolean›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee›[]›</em></p>
 <hr/>
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Uint8Array, boolean››</em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Uint8Array, SyncCommittee››</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entriesstream">entriesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:49</p>
 <p><strong>Parameters:</strong></p>
@@ -935,13 +937,13 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Uint8Array, boolean››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Uint8Array, SyncCommittee››</em></p>
 <hr/>
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, boolean› | null›</em></p>
+<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstentry">firstEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, boolean› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
@@ -950,13 +952,13 @@
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstValue</strong>(): <em>Promise‹boolean | null›</em></p>
+<p>▸ <strong>firstValue</strong>(): <em>Promise‹SyncCommittee | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstvalue">firstValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
-<p><strong>Returns:</strong> <em>Promise‹boolean | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹SyncCommittee | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
-<p>▸ <strong>get</strong>(<code>id</code>: Uint8Array): <em>Promise‹boolean | null›</em></p>
+<p>▸ <strong>get</strong>(<code>id</code>: Uint8Array): <em>Promise‹SyncCommittee | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#get">get</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:29</p>
 <p><strong>Parameters:</strong></p>
@@ -974,7 +976,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹boolean | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹SyncCommittee | null›</em></p>
 <hr/>
 <h3 id="getbinary">getBinary<a class="headerlink" href="#getbinary" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBinary</strong>(<code>id</code>: Uint8Array): <em>Promise‹Uint8Array | null›</em></p>
@@ -998,9 +1000,9 @@
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getId</strong>(<code>value</code>: boolean): <em>Uint8Array</em></p>
-<p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/2d15bc1/packages/lodestar/src/db/repositories/lightClientInitProof.ts#L39">packages/lodestar/src/db/repositories/lightClientInitProof.ts:39</a></em></p>
+<p>▸ <strong>getId</strong>(<code>value</code>: SyncCommittee): <em>Uint8Array</em></p>
+<p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
+<p>Defined in packages/db/lib/abstractRepository.d.ts:35</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1012,7 +1014,7 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>boolean</td>
+<td>SyncCommittee</td>
 </tr>
 </tbody>
 </table>
@@ -1082,10 +1084,10 @@
 <p><strong>Returns:</strong> <em>AsyncIterable‹Uint8Array›</em></p>
 <hr/>
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, boolean› | null›</em></p>
+<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastentry">lastEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:55</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, boolean› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, SyncCommittee› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
@@ -1094,13 +1096,13 @@
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastValue</strong>(): <em>Promise‹boolean | null›</em></p>
+<p>▸ <strong>lastValue</strong>(): <em>Promise‹SyncCommittee | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastvalue">lastValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
-<p><strong>Returns:</strong> <em>Promise‹boolean | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹SyncCommittee | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
-<p>▸ <strong>put</strong>(<code>id</code>: Uint8Array, <code>value</code>: boolean): <em>Promise‹void›</em></p>
+<p>▸ <strong>put</strong>(<code>id</code>: Uint8Array, <code>value</code>: SyncCommittee): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#put">put</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:32</p>
 <p><strong>Parameters:</strong></p>
@@ -1118,7 +1120,7 @@
 </tr>
 <tr>
 <td><code>value</code></td>
-<td>boolean</td>
+<td>SyncCommittee</td>
 </tr>
 </tbody>
 </table>
@@ -1150,7 +1152,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>remove</strong>(<code>value</code>: boolean): <em>Promise‹void›</em></p>
+<p>▸ <strong>remove</strong>(<code>value</code>: SyncCommittee): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#remove">remove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -1164,14 +1166,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>boolean</td>
+<td>SyncCommittee</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">¶</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹boolean[]›</em></p>
+<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹SyncCommittee[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#values">values</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:45</p>
 <p><strong>Parameters:</strong></p>
@@ -1189,10 +1191,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹boolean[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹SyncCommittee[]›</em></p>
 <hr/>
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹boolean›</em></p>
+<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹SyncCommittee›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#valuesstream">valuesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:46</p>
 <p><strong>Parameters:</strong></p>
@@ -1210,7 +1212,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹boolean›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹SyncCommittee›</em></p>
 </article>
 </div>
 </div>
