@@ -229,10 +229,15 @@ export class Lightclient {
     return this.head.header;
   }
 
-  async getHeadStateProof(paths: Path[]): Promise<TreeOffsetProof> {
-    const stateId = toHexString(this.head.header.stateRoot);
+  /** Returns header since head may change during request */
+  async getHeadStateProof(paths: Path[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+    const header = this.head.header;
+    const stateId = toHexString(header.stateRoot);
     const res = await this.api.lightclient.getStateProof(stateId, paths);
-    return res.data as TreeOffsetProof;
+    return {
+      proof: res.data as TreeOffsetProof,
+      header,
+    };
   }
 
   async sync(fromPeriod: SyncPeriod, toPeriod: SyncPeriod): Promise<void> {

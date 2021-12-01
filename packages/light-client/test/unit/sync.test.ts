@@ -1,14 +1,15 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {routes, Api} from "@chainsafe/lodestar-api";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {Lightclient, LightclientEvent} from "../../src";
 import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer";
 import {computeLightclientUpdate, computeLightClientSnapshot, getInteropSyncCommittee, testLogger} from "../utils";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {expect} from "chai";
 
-const SOME_HASH = Buffer.alloc(32, 0xdd);
+const SOME_HASH = Buffer.alloc(32, 0xff);
 
 describe("Lightclient sync", () => {
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
@@ -74,7 +75,14 @@ describe("Lightclient sync", () => {
       await new Promise((r) => setTimeout(r, 10));
     }
 
-    // Track head
+    // Test fetching a proof
+    // First create a state with some known data
+    const executionStateRoot = Buffer.alloc(32, 0xee);
+    const state = ssz.merge.BeaconState.defaultTreeBacked();
+    state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
+
+    // Track head + reference states with some known data
+    const syncCommittee = getInteropSyncCommittee(targetPeriod);
     await new Promise<void>((resolve) => {
       lightclient.emitter.on(LightclientEvent.head, (header) => {
         if (header.slot === targetSlot) {
@@ -82,22 +90,41 @@ describe("Lightclient sync", () => {
         }
       });
 
-      const syncCommittee = getInteropSyncCommittee(targetPeriod);
       for (let slot = firstHeadSlot; slot <= targetSlot; slot++) {
+        // Make each stateRoot unique
+        state.slot = slot;
+        const stateRoot = state.hashTreeRoot();
+
+        // Provide the state to the lightclient server impl. Only the last one to test proof fetching
+        if (slot === targetSlot) {
+          lightclientServerApi.states.set(toHexString(stateRoot), state as TreeBacked<allForks.BeaconState>);
+        }
+
+        // Emit a new head update with the custom state root
         const header: phase0.BeaconBlockHeader = {
           slot,
           proposerIndex: 0,
           parentRoot: SOME_HASH,
-          stateRoot: SOME_HASH,
+          stateRoot: stateRoot,
           bodyRoot: SOME_HASH,
         };
-        const syncAggregate = syncCommittee.signHeader(config, header);
 
         eventsServerApi.emit({
           type: routes.events.EventType.lightclientUpdate,
-          message: {header, syncAggregate},
+          message: {header, syncAggregate: syncCommittee.signHeader(config, header)},
         });
       }
     });
+
+    // Ensure that the lightclient head is correct
+    expect(lightclient.getHead().slot).to.equal(targetSlot, "lightclient.head is not the targetSlot head");
+
+    // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
+    const {proof, header} = await lightclient.getHeadStateProof([["latestExecutionPayloadHeader", "stateRoot"]]);
+    const recoveredState = ssz.merge.BeaconState.createTreeBackedFromProof(header.stateRoot as Uint8Array, proof);
+    expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
+      toHexString(executionStateRoot),
+      "Recovered executionStateRoot from getHeadStateProof() not correct"
+    );
   });
 });
