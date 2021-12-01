@@ -9,10 +9,8 @@ import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/ser
 export type LightclientSnapshotWithProof = {
   header: phase0.BeaconBlockHeader;
   currentSyncCommittee: altair.SyncCommittee;
-  // TODO: Not really necessary since it can be fetched with an update
-  nextSyncCommittee: altair.SyncCommittee;
-  /** Single branch proof from state root to currentSyncCommittee parent */
-  syncCommitteesBranch: Uint8Array[];
+  /** Single branch proof from state root to currentSyncCommittee */
+  currentSyncCommitteeBranch: Uint8Array[];
 };
 
 export type Api = {
@@ -79,15 +77,13 @@ export function getReturnTypes(): ReturnTypes<Api> {
     fields: {
       header: ssz.phase0.BeaconBlockHeader,
       currentSyncCommittee: ssz.altair.SyncCommittee,
-      nextSyncCommittee: ssz.altair.SyncCommittee,
-      syncCommitteesBranch: new VectorType({elementType: ssz.Root, length: 4}),
+      currentSyncCommitteeBranch: new VectorType({elementType: ssz.Root, length: 5}),
     },
     // Custom type, not in the consensus specs
     casingMap: {
       header: "header",
       currentSyncCommittee: "current_sync_committee",
-      nextSyncCommittee: "next_sync_committee",
-      syncCommitteesBranch: "sync_committees_branch",
+      currentSyncCommitteeBranch: "current_sync_committee_branch",
     },
   });
 

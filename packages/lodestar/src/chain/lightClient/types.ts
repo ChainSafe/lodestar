@@ -61,18 +61,3 @@ export type PartialLightClientUpdateNonFinalized = {
 } & altair.SyncAggregate;
 
 export type PartialLightClientUpdate = PartialLightClientUpdateFinalized | PartialLightClientUpdateNonFinalized;
-
-export type InitGenesisProof = {
-  genesisTime: number;
-  genesisValidatorsRoot: Uint8Array;
-  /** Vector[Bytes32, 4] */
-  branch: Uint8Array[];
-};
-
-export type InitSnapshotProof = {
-  header: phase0.BeaconBlockHeader;
-  currentSyncCommittee: altair.SyncCommittee;
-  nextSyncCommittee: altair.SyncCommittee;
-  /** Vector[Bytes32, 4] */
-  syncCommitteesBranch: Uint8Array[];
-};

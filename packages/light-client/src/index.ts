@@ -11,7 +11,7 @@ import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./uti
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
 import {pruneSetToMax} from "./utils/map";
-import {isValidSyncCommitteesBranch} from "./utils/verifyMerkleBranch";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {SyncCommitteeFast} from "./types";
 import {chunkifyInclusiveRange} from "./utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
@@ -31,7 +31,10 @@ export type LightclientInitArgs = {
     genesisValidatorsRoot: RootHex | Uint8Array;
   };
   beaconApiUrl: string;
-  snapshot: altair.LightClientSnapshot;
+  snapshot: {
+    header: phase0.BeaconBlockHeader;
+    currentSyncCommittee: altair.SyncCommittee;
+  };
 };
 
 /** Provides some protection against a server client sending header updates too far away in the future */
@@ -50,6 +53,9 @@ const MAX_STORED_PARTICIPATION = 3;
  * From https://notes.ethereum.org/@vbuterin/extended_light_client_protocol#Optimistic-head-determining-function
  */
 const SAFETY_THRESHOLD_FACTOR = 2;
+
+const CURRENT_SYNC_COMMITTEE_INDEX = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
 enum RunStatusCode {
   started,
@@ -139,19 +145,11 @@ export class Lightclient {
     this.api = getClient(config, {baseUrl: beaconApiUrl});
 
     const periodCurr = computeSyncPeriodAtSlot(snapshot.header.slot);
-    const periodNext = periodCurr + 1;
-
     this.syncCommitteeByPeriod.set(periodCurr, {
       isFinalized: false,
       participation: 0,
       slot: periodCurr * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
       ...deserializeSyncCommittee(snapshot.currentSyncCommittee),
-    });
-    this.syncCommitteeByPeriod.set(periodNext, {
-      isFinalized: false,
-      participation: 0,
-      slot: periodNext * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-      ...deserializeSyncCommittee(snapshot.nextSyncCommittee),
     });
 
     this.head = {
@@ -178,7 +176,7 @@ export class Lightclient {
 
     // Fetch snapshot with proof at the trusted block root
     const {data: snapshotWithProof} = await api.lightclient.getSnapshot(toHexString(checkpointRoot));
-    const {header, currentSyncCommittee, nextSyncCommittee, syncCommitteesBranch} = snapshotWithProof;
+    const {header, currentSyncCommittee, currentSyncCommitteeBranch} = snapshotWithProof;
 
     // verify the response matches the requested root
     const headerRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
@@ -188,10 +186,11 @@ export class Lightclient {
 
     // Verify the sync committees
     if (
-      !isValidSyncCommitteesBranch(
+      !isValidMerkleBranch(
         ssz.altair.SyncCommittee.hashTreeRoot(currentSyncCommittee),
-        ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee),
-        syncCommitteesBranch,
+        currentSyncCommitteeBranch,
+        CURRENT_SYNC_COMMITTEE_DEPTH,
+        CURRENT_SYNC_COMMITTEE_INDEX,
         header.stateRoot as Uint8Array
       )
     ) {

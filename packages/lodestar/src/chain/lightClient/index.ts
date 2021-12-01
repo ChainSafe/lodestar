@@ -7,12 +7,18 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {routes} from "@chainsafe/lodestar-api";
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
-import {getNextSyncCommitteeBranch, getSyncCommitteesWitness, getFinalizedRootProof} from "./proofs";
-import {PartialLightClientUpdate, InitSnapshotProof} from "./types";
+import {
+  getNextSyncCommitteeBranch,
+  getSyncCommitteesWitness,
+  getFinalizedRootProof,
+  getCurrentSyncCommitteeBranch,
+} from "./proofs";
+import {PartialLightClientUpdate} from "./types";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "../../util/bytes";
 import {ZERO_HASH} from "../../constants";
@@ -212,7 +218,7 @@ export class LightClientServer {
   /**
    * API ROUTE to get `currentSyncCommittee` and `nextSyncCommittee` from a trusted state root
    */
-  async serveInitCommittees(blockRoot: Uint8Array): Promise<InitSnapshotProof> {
+  async serveInitCommittees(blockRoot: Uint8Array): Promise<routes.lightclient.LightclientSnapshotWithProof> {
     const syncCommitteeWitness = await this.db.syncCommitteeWitness.get(blockRoot);
     if (!syncCommitteeWitness) {
       throw Error(`syncCommitteeWitness not available ${toHexString(blockRoot)}`);
@@ -237,8 +243,7 @@ export class LightClientServer {
     return {
       header,
       currentSyncCommittee,
-      nextSyncCommittee,
-      syncCommitteesBranch: syncCommitteeWitness.witness,
+      currentSyncCommitteeBranch: getCurrentSyncCommitteeBranch(syncCommitteeWitness),
     };
   }
 

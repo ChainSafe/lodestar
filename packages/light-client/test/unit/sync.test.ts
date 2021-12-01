@@ -42,8 +42,8 @@ describe("Lightclient sync", () => {
     afterEachCbs.push(() => server.close());
 
     // Populate initial snapshot
-    const {snapshot, checkpoint} = computeLightClientSnapshot(initialPeriod);
-    lightclientServerApi.snapshots.set(toHexString(checkpoint.root), snapshot);
+    const {snapshot, checkpointRoot} = computeLightClientSnapshot(initialPeriod);
+    lightclientServerApi.snapshots.set(toHexString(checkpointRoot), snapshot);
 
     // Populate sync committee updates
     for (let period = initialPeriod; period <= targetPeriod; period++) {
@@ -56,7 +56,7 @@ describe("Lightclient sync", () => {
       logger: testLogger,
       beaconApiUrl: `http://${opts.host}:${opts.port}`,
       genesisData: {genesisTime, genesisValidatorsRoot},
-      checkpointRoot: checkpoint.root,
+      checkpointRoot: checkpointRoot,
     });
     afterEachCbs.push(() => lightclient.stop());
 

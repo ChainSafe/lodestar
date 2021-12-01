@@ -17,7 +17,9 @@ import {fromHexString, List} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/types";
 import {computeSigningRoot} from "../src/utils/domain";
 import {getLcLoggerConsole} from "../src/utils/logger";
-import {SYNC_COMMITTEES_DEPTH, SYNC_COMMITTEES_INDEX} from "../src/utils/verifyMerkleBranch";
+
+const CURRENT_SYNC_COMMITTEE_INDEX = 22;
+const CURRENT_SYNC_COMMITTEE_DEPTH = 5;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -166,19 +168,13 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
  */
 export function computeLightClientSnapshot(
   period: SyncPeriod
-): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpoint: phase0.Checkpoint} {
+): {snapshot: routes.lightclient.LightclientSnapshotWithProof; checkpointRoot: Uint8Array} {
   const currentSyncCommittee = getInteropSyncCommittee(period).syncCommittee;
-  const nextSyncCommittee = getInteropSyncCommittee(period + 1).syncCommittee;
 
-  const syncCommitteesRoot = hash(
+  const {root: headerStateRoot, proof: currentSyncCommitteeBranch} = computeMerkleBranch(
     ssz.altair.SyncCommittee.hashTreeRoot(currentSyncCommittee),
-    ssz.altair.SyncCommittee.hashTreeRoot(nextSyncCommittee)
-  );
-
-  const {root: headerStateRoot, proof: syncCommitteesBranch} = computeMerkleBranch(
-    syncCommitteesRoot,
-    SYNC_COMMITTEES_DEPTH,
-    SYNC_COMMITTEES_INDEX
+    CURRENT_SYNC_COMMITTEE_DEPTH,
+    CURRENT_SYNC_COMMITTEE_INDEX
   );
 
   const header: phase0.BeaconBlockHeader = {
@@ -193,13 +189,9 @@ export function computeLightClientSnapshot(
     snapshot: {
       header,
       currentSyncCommittee,
-      nextSyncCommittee,
-      syncCommitteesBranch,
+      currentSyncCommitteeBranch,
     },
-    checkpoint: {
-      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
-      epoch: period * EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-    },
+    checkpointRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
   };
 }
 

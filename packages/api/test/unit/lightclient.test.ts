@@ -47,8 +47,7 @@ describe("lightclient", () => {
         data: {
           header: ssz.phase0.BeaconBlockHeader.defaultValue(),
           currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
-          nextSyncCommittee: lightClientUpdate.nextSyncCommittee,
-          syncCommitteesBranch: [root, root, root, root], // Vector(Root, 4)
+          currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
         },
       },
     },

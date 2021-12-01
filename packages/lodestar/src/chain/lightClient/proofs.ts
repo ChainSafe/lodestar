@@ -32,6 +32,11 @@ export function getNextSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeW
   return [syncCommitteesWitness.currentSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
+export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitteeWitness): Uint8Array[] {
+  // Witness branch is sorted by descending gindex
+  return [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
+}
+
 export function getFinalizedRootProof(state: TreeBacked<allForks.BeaconState>): Uint8Array[] {
   return state.tree.getSingleProof(BigInt(FINALIZED_ROOT_INDEX));
 }
