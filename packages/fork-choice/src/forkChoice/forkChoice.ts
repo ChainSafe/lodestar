@@ -373,7 +373,9 @@ export class ForkChoice implements IForkChoice {
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
 
-      ...(merge.isMergeBlockBodyType(block.body)
+      ...(merge.isMergeBlockBodyType(block.body) &&
+      merge.isMergeStateType(state) &&
+      merge.isExecutionEnabled(state, block.body)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),
