@@ -6,7 +6,7 @@ import {ForkDigestHex, ICachedGenesis} from "./types";
 export {IForkDigestContext} from "./types";
 
 export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisValidatorsRoot: Root): ICachedGenesis {
-  const domainCache = new Map<ForkName, Map<DomainType, Buffer>>();
+  const domainCache = new Map<ForkName, Map<DomainType, Uint8Array>>();
 
   const forkDigestByForkName = new Map<ForkName, ForkDigest>();
   const forkDigestHexByForkName = new Map<ForkName, ForkDigestHex>();
@@ -22,11 +22,11 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   }
 
   return {
-    getDomain(domainType: DomainType, slot: Slot): Buffer {
+    getDomain(domainType: DomainType, slot: Slot): Uint8Array {
       const forkInfo = chainForkConfig.getForkInfo(slot);
       let domainByType = domainCache.get(forkInfo.name);
       if (!domainByType) {
-        domainByType = new Map<DomainType, Buffer>();
+        domainByType = new Map<DomainType, Uint8Array>();
         domainCache.set(forkInfo.name, domainByType);
       }
       let domain = domainByType.get(domainType);
@@ -73,9 +73,12 @@ export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisV
   };
 }
 
-function computeDomain(domainType: DomainType, forkVersion: Version, genesisValidatorRoot: Root): Buffer {
+function computeDomain(domainType: DomainType, forkVersion: Version, genesisValidatorRoot: Root): Uint8Array {
   const forkDataRoot = computeForkDataRoot(forkVersion, genesisValidatorRoot);
-  return Buffer.concat([domainType as Buffer, forkDataRoot.slice(0, 28)]);
+  const domain = new Uint8Array(32);
+  domain.set(domainType, 0);
+  domain.set(forkDataRoot.slice(0, 28), 4);
+  return domain;
 }
 
 function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Root): Uint8Array {
