@@ -14,9 +14,9 @@ export interface IVoteTracker {
 }
 
 export enum ExecutionStatus {
-  Valid,
-  Syncing,
-  PreMerge,
+  Valid = "Valid",
+  Syncing = "Syncing",
+  PreMerge = "PreMerge",
 }
 
 type BlockExecution =
