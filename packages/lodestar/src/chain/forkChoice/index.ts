@@ -59,7 +59,7 @@ export function initializeForkChoice(
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(merge.isMergeStateType(state)
+      ...(merge.isMergeStateType(state) && merge.isMergeComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
             executionStatus: ExecutionStatus.Syncing,
