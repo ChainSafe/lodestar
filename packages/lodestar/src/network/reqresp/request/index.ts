@@ -5,7 +5,7 @@ import {Libp2p} from "libp2p/src/connection-manager";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../constants";
-import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
+import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
 import {formatProtocolId} from "../utils";
 import {ResponseError} from "../response";
@@ -55,8 +55,8 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
-  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
-  const logCtx = {method, encoding, agentVersion, peer, requestId};
+  const client = getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+  const logCtx = {method, encoding, client, peer, requestId};
 
   if (signal?.aborted) {
     throw new ErrorAborted("sendRequest");

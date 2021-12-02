@@ -5,7 +5,7 @@ import {Libp2p} from "libp2p/src/connection-manager";
 import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
-import {getAgentVersionFromPeerStore, prettyPrintPeerId} from "../../util";
+import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
 import {onChunk} from "../utils";
 import {Libp2pStream} from "../interface";
@@ -46,8 +46,8 @@ export async function handleRequest(
   signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
-  const agentVersion = getAgentVersionFromPeerStore(peerId, libp2p.peerStore.metadataBook);
-  const logCtx = {method: protocol.method, agentVersion, peer: prettyPrintPeerId(peerId), requestId};
+  const client = getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+  const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
   await pipe(
