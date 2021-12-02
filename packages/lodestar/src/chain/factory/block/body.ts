@@ -97,14 +97,20 @@ export async function assembleBody(
 
     let executionPayload: merge.ExecutionPayload | null = null;
     try {
+      // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
+      // the EL returns Syncing on this request to prepare a payload
       const payloadId = await prepareExecutionPayload(
         chain,
         finalizedBlockHash ?? ZERO_HASH_HEX,
         currentState as CachedBeaconState<merge.BeaconState>,
         feeRecipient
       );
-      if (payloadId) executionPayload = await chain.executionEngine.getPayload(payloadId);
+      executionPayload = await chain.executionEngine.getPayload(payloadId);
     } catch (e) {
+      // 1. If Merge is complete, then fail hard i.e. can't produce block
+      // 2. Otherwise this was going to be mergeBlock, just propose a pre-merge block with
+      //    empty execution and keep the chain going
+      if (merge.isMergeComplete(currentState as CachedBeaconState<merge.BeaconState>)) throw e;
       logger?.warn("Failed to produce execution payload", {}, e as Error);
     }
 
@@ -136,11 +142,15 @@ async function prepareExecutionPayload(
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
     )
-      return null;
+      throw new Error(
+        `InvalidMergeTBH epoch: expected >= ${
+          chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+        }, actual: ${getCurrentEpoch(state)}`
+      );
     const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
-      return null;
+      throw new Error("InvalidTerminalPow: terminal pow block not found yet");
     } else {
       // Signify merge via producing on top of the last PoW block
       parentHash = terminalPowBlockHash;
@@ -152,11 +162,13 @@ async function prepareExecutionPayload(
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const random = getRandaoMix(state, state.currentShuffling.epoch);
-  return await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
+  const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
     random,
     suggestedFeeRecipient,
   });
+  if (!payloadId) throw new Error("InvalidPayloadId: Null");
+  return payloadId;
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */
