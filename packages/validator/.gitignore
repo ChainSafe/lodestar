@@ -1,2 +1,3 @@
 coverage/**
 test/slashing-protection-interchange-spec-tests
+src/signer.ts
