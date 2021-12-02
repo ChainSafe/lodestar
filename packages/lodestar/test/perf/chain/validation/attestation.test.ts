@@ -31,10 +31,10 @@ describe("validate gossip attestation", () => {
 describe.only("test throw AttestationError vs object", () => {
   itBench({
     id: "AttestationError",
-    fn: () => {
+    fn: async () => {
       for (let i = 0; i < 1000; i++) {
         try {
-          throwAttestationError(true);
+          await throwAttestationError(true);
         } catch (e) {}
       }
     }
@@ -42,17 +42,17 @@ describe.only("test throw AttestationError vs object", () => {
 
   itBench({
     id: "Object",
-    fn: () => {
+    fn: async () => {
       for (let i = 0; i < 1000; i++) {
         try {
-          throwErrorCode(true);
+          await throwObject(true);
         } catch (e) {}
       }
     }
   });
 });
 
-function throwAttestationError(b: boolean): void {
+async function throwAttestationError(b: boolean): Promise<void> {
   if (b) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
@@ -61,7 +61,7 @@ function throwAttestationError(b: boolean): void {
   }
 }
 
-function throwErrorCode(b: boolean): void {
+async function throwObject(b: boolean): Promise<void> {
   if (b) {
     throw {
       action: GossipAction.IGNORE,
