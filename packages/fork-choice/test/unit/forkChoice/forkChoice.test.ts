@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src";
+import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray, ExecutionStatus} from "../../../src";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
@@ -18,12 +18,15 @@ describe("Forkchoice", function () {
     stateRoot,
     parentRoot,
     blockRoot: finalizedRoot,
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
     finalizedRoot: genesisRoot,
-  });
+
+    executionPayloadBlockHash: null,
+    executionStatus: ExecutionStatus.PreMerge,
+  } as Omit<IProtoBlock, "targetRoot">);
 
   // Add block that is a finalized descendant.
   const block: IProtoBlock = {
@@ -32,11 +35,14 @@ describe("Forkchoice", function () {
     parentRoot: finalizedRoot,
     stateRoot,
     targetRoot: finalizedRoot,
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: genesisEpoch,
     justifiedRoot: genesisRoot,
     finalizedEpoch: genesisEpoch,
     finalizedRoot: genesisRoot,
+
+    executionPayloadBlockHash: null,
+    executionStatus: ExecutionStatus.PreMerge,
   };
 
   const fcStore: IForkChoiceStore = {

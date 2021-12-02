@@ -5,7 +5,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice, ProtoArray, ForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {getEffectiveBalances, CachedBeaconState, merge} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState";
@@ -53,14 +53,18 @@ export function initializeForkChoice(
       parentRoot: toHexString(blockHeader.parentRoot),
       stateRoot: toHexString(blockHeader.stateRoot),
       blockRoot: toHexString(checkpoint.root),
-      // TODO: Review if correct after merge interop
-      executionPayloadBlockHash: merge.isMergeStateType(state)
-        ? toHexString(state.latestExecutionPayloadHeader.blockHash)
-        : null,
+
       justifiedEpoch: justifiedCheckpoint.epoch,
       justifiedRoot: toHexString(justifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
+
+      ...(merge.isMergeStateType(state)
+        ? {
+            executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
+            executionStatus: ExecutionStatus.Syncing,
+          }
+        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
     }),
 
     justifiedBalances,

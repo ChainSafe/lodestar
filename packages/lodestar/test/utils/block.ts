@@ -3,7 +3,7 @@ import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import deepmerge from "deepmerge";
@@ -96,11 +96,13 @@ export function generateEmptyProtoBlock(): IProtoBlock {
     parentRoot: rootHex,
     stateRoot: rootHex,
     targetRoot: rootHex,
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: 0,
     justifiedRoot: rootHex,
     finalizedEpoch: 0,
     finalizedRoot: rootHex,
+
+    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
 }
 

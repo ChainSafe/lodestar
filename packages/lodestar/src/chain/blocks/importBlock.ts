@@ -9,7 +9,7 @@ import {
   altair,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, OnBlockPrecachedData, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
@@ -59,7 +59,7 @@ export type ImportBlockModules = {
  * - Send events after everything is done
  */
 export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
-  const {block, postState, parentBlock, skipImportingAttestations, payloadStatusUnknown} = fullyVerifiedBlock;
+  const {block, postState, parentBlock, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
   const pendingEvents = new PendingEvents(chain.emitter);
 
   // - Observe attestations
@@ -79,7 +79,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-  const onBlockPrecachedData: OnBlockPrecachedData = {payloadStatusUnknown};
+  const onBlockPrecachedData: OnBlockPrecachedData = {executionStatus};
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
@@ -93,7 +93,8 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
     const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
-    if (!powBlock && !payloadStatusUnknown) throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
+    if (!powBlock && executionStatus !== ExecutionStatus.Syncing)
+      throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
     // pow_parent = get_pow_block(pow_block.parent_hash)
     const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
     if (powBlock && !powBlockParent)

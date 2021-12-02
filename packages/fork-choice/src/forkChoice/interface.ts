@@ -1,5 +1,5 @@
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {IProtoBlock} from "../protoArray/interface";
+import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
 
 export type CheckpointHex = {
@@ -166,7 +166,7 @@ export type OnBlockPrecachedData = {
    * Optimistic sync fields
    */
   isMergeBlock?: boolean;
-  payloadStatusUnknown?: boolean;
+  executionStatus?: ExecutionStatus;
 };
 
 export interface ILatestMessage {

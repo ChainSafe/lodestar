@@ -13,12 +13,22 @@ export interface IVoteTracker {
   nextEpoch: Epoch;
 }
 
+export enum ExecutionStatus {
+  Valid,
+  Syncing,
+  PreMerge,
+}
+
+type BlockExecution =
+  | {executionPayloadBlockHash: RootHex; executionStatus: ExecutionStatus.Valid | ExecutionStatus.Syncing}
+  | {executionPayloadBlockHash: null; executionStatus: ExecutionStatus.PreMerge};
 /**
  * A block that is to be applied to the fork choice
  *
  * A simplified version of BeaconBlock
  */
-export interface IProtoBlock {
+
+export type IProtoBlock = BlockExecution & {
   /**
    * The slot is not necessary for ProtoArray,
    * it just exists so external components can easily query the block slot.
@@ -39,30 +49,20 @@ export interface IProtoBlock {
    * it also just exists for upstream components (namely attestation verification)
    */
   targetRoot: RootHex;
-  /**
-   * `executionPayloadBlockHash` is not necessary for ProtoArray either.
-   * Here to do ExecutionEngine.notify_forkchoice_updated() easier.
-   * TODO: Check with other teams if this is the optimal strategy
-   */
-  executionPayloadBlockHash: RootHex | null;
+
   justifiedEpoch: Epoch;
   justifiedRoot: RootHex;
   finalizedEpoch: Epoch;
   finalizedRoot: RootHex;
-  /**
-   * Optimistic sync based statuses
-   */
-  payloadStatusUnknown?: boolean;
-  isMergeBlock?: boolean;
-}
+};
 
 /**
  * A block root with additional metadata required to form a DAG
  * with vote weights and best blocks stored as metadata
  */
-export interface IProtoNode extends IProtoBlock {
+export type IProtoNode = IProtoBlock & {
   parent?: number;
   weight: number;
   bestChild?: number;
   bestDescendant?: number;
-}
+};

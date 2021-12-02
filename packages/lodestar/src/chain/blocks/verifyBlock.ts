@@ -1,7 +1,7 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -36,14 +36,14 @@ export async function verifyBlock(
 ): Promise<FullyVerifiedBlock> {
   const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
 
-  const {postState,payloadStatusUnknown} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const {postState, executionStatus} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
 
   return {
     block: partiallyVerifiedBlock.block,
     postState,
     parentBlock,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
-    payloadStatusUnknown
+    executionStatus,
   };
 }
 
@@ -114,7 +114,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<{postState:CachedBeaconState<allForks.BeaconState>,payloadStatusUnknown?:boolean}> {
+): Promise<{postState: CachedBeaconState<allForks.BeaconState>; executionStatus: ExecutionStatus}> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -162,7 +162,7 @@ export async function verifyBlockStateTransition(
     }
   }
 
-  let payloadStatusUnknown;
+  let executionStatus = ExecutionStatus.PreMerge;
   if (executionPayloadEnabled) {
     // TODO: Handle better executePayload() returning error is syncing
     const status = await chain.executionEngine.executePayload(
@@ -176,6 +176,7 @@ export async function verifyBlockStateTransition(
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
+        executionStatus = ExecutionStatus.Valid;
         break; // OK
       case ExecutePayloadStatus.INVALID:
         throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
@@ -192,7 +193,7 @@ export async function verifyBlockStateTransition(
         //
         // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
         if (partiallyVerifiedBlock.fromRangeSync) {
-          payloadStatusUnknown = true;
+          executionStatus = ExecutionStatus.Syncing;
           break;
         } else {
           throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
@@ -205,5 +206,5 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
   }
 
-  return {postState, payloadStatusUnknown};
+  return {postState, executionStatus};
 }
