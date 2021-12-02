@@ -646,7 +646,8 @@ export class ForkChoice implements IForkChoice {
 
   private getPreMergeExecStatus(preCachedData?: OnBlockPrecachedData): ExecutionStatus.PreMerge {
     const executionStatus = preCachedData?.executionStatus || ExecutionStatus.PreMerge;
-    if (executionStatus !== ExecutionStatus.PreMerge) throw Error("Invalid pre-merge execution status");
+    if (executionStatus !== ExecutionStatus.PreMerge)
+      throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
     return executionStatus;
   }
 
@@ -654,7 +655,10 @@ export class ForkChoice implements IForkChoice {
     preCachedData?: OnBlockPrecachedData
   ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
     const executionStatus = preCachedData?.executionStatus || ExecutionStatus.Syncing;
-    if (executionStatus === ExecutionStatus.PreMerge) throw Error("Invalid post-merge execution status");
+    if (executionStatus === ExecutionStatus.PreMerge)
+      throw Error(
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+      );
     return executionStatus;
   }
 
