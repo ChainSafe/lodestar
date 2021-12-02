@@ -11,5 +11,5 @@ export interface IForkDigestContext {
 }
 
 export interface ICachedGenesis extends IForkDigestContext {
-  getDomain(domainType: DomainType, slot: Slot): Buffer;
+  getDomain(domainType: DomainType, slot: Slot): Uint8Array;
 }
