@@ -144,7 +144,7 @@ export class Lightclient {
     this.beaconApiUrl = beaconApiUrl;
     this.api = getClient(config, {baseUrl: beaconApiUrl});
 
-    const periodCurr = computeSyncPeriodAtSlot(snapshot.header.slot);
+    const periodCurr = computeSyncPeriodAtSlot(this.config, snapshot.header.slot);
     this.syncCommitteeByPeriod.set(periodCurr, {
       isFinalized: false,
       participation: 0,
@@ -246,7 +246,8 @@ export class Lightclient {
       const {data: updates} = await this.api.lightclient.getCommitteeUpdates(fromPeriodRng, toPeriodRng);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
-        this.logger.debug(`processed sync update for period ${computeSyncPeriodAtSlot(update.header.slot)}`);
+        const headPeriod = computeSyncPeriodAtSlot(this.config, update.header.slot);
+        this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));
       }
@@ -256,7 +257,7 @@ export class Lightclient {
   private async runLoop(): Promise<void> {
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      const currentPeriod = computeSyncPeriodAtSlot(this.currentSlot);
+      const currentPeriod = computeSyncPeriodAtSlot(this.config, this.currentSlot);
       // Check if we have a sync committee for the current clock period
       if (!this.syncCommitteeByPeriod.has(currentPeriod)) {
         // Stop head tracking
@@ -266,7 +267,7 @@ export class Lightclient {
 
         // Go into sync mode
         this.status = {code: RunStatusCode.syncing};
-        const headPeriod = computeSyncPeriodAtSlot(this.head.header.slot);
+        const headPeriod = computeSyncPeriodAtSlot(this.config, this.head.header.slot);
         this.logger.debug("Syncing", {lastPeriod: headPeriod, currentPeriod});
 
         try {
@@ -298,7 +299,7 @@ export class Lightclient {
       const epochsIntoPeriod = currentEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
       // Start fetching updates with some lookahead
       if (EPOCHS_PER_SYNC_COMMITTEE_PERIOD - epochsIntoPeriod <= LOOKAHEAD_EPOCHS_COMMITTEE_SYNC) {
-        const period = computeSyncPeriodAtEpoch(currentEpoch);
+        const period = computeSyncPeriodAtEpoch(this.config, currentEpoch);
         try {
           await this.sync(period, period);
         } catch (e) {
@@ -349,7 +350,7 @@ export class Lightclient {
       throw Error(`header.slot ${header.slot} is too far in the future, currentSlot: ${this.currentSlot}`);
     }
 
-    const period = computeSyncPeriodAtSlot(header.slot);
+    const period = computeSyncPeriodAtSlot(this.config, header.slot);
     const syncCommittee = this.syncCommitteeByPeriod.get(period);
     if (!syncCommittee) {
       // TODO: Attempt to fetch committee update for period if it's before the current clock period
@@ -434,7 +435,7 @@ export class Lightclient {
     }
 
     // Must not rollback periods, since the cache is bounded an older committee could evict the current committee
-    const updatePeriod = computeSyncPeriodAtSlot(updateSlot);
+    const updatePeriod = computeSyncPeriodAtSlot(this.config, updateSlot);
     const minPeriod = Math.min(-Infinity, ...this.syncCommitteeByPeriod.keys());
     if (updatePeriod < minPeriod) {
       throw Error(`update must not rollback existing committee at period ${minPeriod}`);

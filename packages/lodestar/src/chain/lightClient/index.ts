@@ -342,8 +342,8 @@ export class LightClientServer {
     }
 
     // Only store next sync committee once per dependant root
-    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlock.slot);
-    const period = computeSyncPeriodAtSlot(blockSlot);
+    const parentBlockPeriod = computeSyncPeriodAtSlot(this.config, parentBlock.slot);
+    const period = computeSyncPeriodAtSlot(this.config, blockSlot);
     if (parentBlockPeriod < period) {
       // If the parentBlock is in a previous epoch it must be the dependantRoot of this epoch transition
       const dependantRoot = parentBlock.blockRoot;
@@ -363,7 +363,7 @@ export class LightClientServer {
 
     // Store finalized checkpoint data
     const finalizedCheckpoint = postState.finalizedCheckpoint;
-    const finalizedCheckpointPeriod = computeSyncPeriodAtEpoch(finalizedCheckpoint.epoch);
+    const finalizedCheckpointPeriod = computeSyncPeriodAtEpoch(this.config, finalizedCheckpoint.epoch);
     const isFinalized =
       finalizedCheckpointPeriod === period &&
       // Consider the edge case of genesis: Genesis state's finalizedCheckpoint is zero'ed.
@@ -445,7 +445,7 @@ export class LightClientServer {
     syncAggregate: altair.SyncAggregate,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const period = computeSyncPeriodAtSlot(attestedData.header.slot);
+    const period = computeSyncPeriodAtSlot(this.config, attestedData.header.slot);
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten

@@ -1,8 +1,8 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {routes, Api} from "@chainsafe/lodestar-api";
-import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
+import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {Lightclient, LightclientEvent} from "../../src";
 import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer";
 import {computeLightclientUpdate, computeLightClientSnapshot, getInteropSyncCommittee, testLogger} from "../utils";
@@ -19,6 +19,9 @@ describe("Lightclient sync", () => {
   });
 
   it("Sync lightclient and track head", async () => {
+    const SECONDS_PER_SLOT = 2;
+    const ALTAIR_FORK_EPOCH = 0;
+
     const initialPeriod = 0;
     const targetPeriod = 5;
     const slotsIntoPeriod = 8;
@@ -26,6 +29,8 @@ describe("Lightclient sync", () => {
     const targetSlot = firstHeadSlot + slotsIntoPeriod;
 
     // Genesis data such that targetSlot is at the current clock slot
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
     const genesisTime = Math.floor(Date.now() / 1000) - chainConfig.SECONDS_PER_SLOT * targetSlot;
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
     const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);

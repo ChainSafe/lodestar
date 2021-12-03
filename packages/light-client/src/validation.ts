@@ -8,11 +8,11 @@ import {
   MIN_SYNC_COMMITTEE_PARTICIPANTS,
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {computeSyncPeriodAtSlot} from "./utils/clock";
+import {computeAbsoluteSyncPeriodAtSlot} from "./utils/clock";
 
 /**
  *
@@ -75,8 +75,8 @@ export function assertValidFinalityProof(update: altair.LightClientUpdate): void
     throw Error("Invalid finality header merkle branch");
   }
 
-  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
-  const updateFinalityPeriod = computeSyncPeriodAtSlot(update.finalityHeader.slot);
+  const updatePeriod = computeAbsoluteSyncPeriodAtSlot(update.header.slot);
+  const updateFinalityPeriod = computeAbsoluteSyncPeriodAtSlot(update.finalityHeader.slot);
   if (updateFinalityPeriod !== updatePeriod) {
     throw Error(`finalityHeader period ${updateFinalityPeriod} != header period ${updatePeriod}`);
   }
