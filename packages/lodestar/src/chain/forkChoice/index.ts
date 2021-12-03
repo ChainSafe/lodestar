@@ -12,6 +12,7 @@ import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {ChainEvent} from "../emitter";
+import {GENESIS_SLOT} from "../../constants";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
@@ -62,7 +63,7 @@ export function initializeForkChoice(
       ...(merge.isMergeStateType(state) && merge.isMergeComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
-            executionStatus: ExecutionStatus.Syncing,
+            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
           }
         : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
     }),

@@ -15,6 +15,8 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
+import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
@@ -133,6 +135,15 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   }
 
+  function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
+    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    if (!protoBeaconBlock) throw Error("BLOCK_NOT_IN_FORKCHOICE");
+    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
+      throw new Error(
+        `InvalidExecutionStatus: beaconBlockRoot ${protoBeaconBlock.blockRoot}'s payload ${protoBeaconBlock.executionPayloadBlockHash} on slot ${protoBeaconBlock.slot} is not yet validated`
+      );
+  }
+
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
     slot,
     randaoReveal,
@@ -188,6 +199,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             // the VC and BN are out-of-sync due to time issues or overloading.
             getBlockRootAtSlot(headState, slot);
 
+      // Check the execution status as validator shouldn't vote on an optimistic head
+      notOnOptimisticBlockRoot(beaconBlockRoot);
+
       const targetSlot = computeStartSlotAtEpoch(attEpoch);
       const targetRoot =
         targetSlot >= headSlot
@@ -226,6 +240,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
+      // Check the execution status as validator shouldn't contribute on an optimistic head
+      notOnOptimisticBlockRoot(beaconBlockRoot);
+
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
       return {data: contribution};
