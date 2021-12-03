@@ -28,6 +28,10 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
           res.raw.setHeader("Connection", "keep-alive");
           // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
           res.raw.setHeader("x-no-compression", 1);
+          // In case this beacon node is behind a NGINX, instruct it to disable buffering which can disrupt SSE by
+          // infinitely buffering it. http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering
+          // Source: https://stackoverflow.com/questions/13672743/eventsource-server-sent-events-through-nginx
+          res.raw.setHeader("X-Accel-Buffering", "no");
 
           await new Promise<void>((resolve, reject) => {
             api.eventstream(req.query.topics, controller.signal, (event) => {
