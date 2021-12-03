@@ -42,6 +42,7 @@ export class LightclientServerApi implements routes.lightclient.Api {
   readonly states = new Map<RootHex, TreeBacked<allForks.BeaconState>>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
+  latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
   async getStateProof(stateId: string, paths: Path[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
@@ -58,6 +59,11 @@ export class LightclientServerApi implements routes.lightclient.Api {
       }
     }
     return {data: updates};
+  }
+
+  async getHeadUpdate(): Promise<{data: routes.lightclient.LightclientHeaderUpdate}> {
+    if (!this.latestHeadUpdate) throw Error("No latest head update");
+    return {data: this.latestHeadUpdate};
   }
 
   async getSnapshot(blockRoot: string): Promise<{data: routes.lightclient.LightclientSnapshotWithProof}> {

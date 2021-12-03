@@ -5,7 +5,14 @@ import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {Lightclient, LightclientEvent} from "../../src";
 import {EventsServerApi, LightclientServerApi, ServerOpts, startServer} from "../lightclientApiServer";
-import {computeLightclientUpdate, computeLightClientSnapshot, getInteropSyncCommittee, testLogger} from "../utils";
+import {
+  computeLightclientUpdate,
+  computeLightClientSnapshot,
+  getInteropSyncCommittee,
+  testLogger,
+  committeeUpdateToHeadUpdate,
+  lastInMap,
+} from "../utils";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {expect} from "chai";
 
@@ -47,8 +54,12 @@ describe("Lightclient sync", () => {
 
     // Populate sync committee updates
     for (let period = initialPeriod; period <= targetPeriod; period++) {
-      lightclientServerApi.updates.set(period, computeLightclientUpdate(config, period));
+      const committeeUpdate = computeLightclientUpdate(config, period);
+      lightclientServerApi.updates.set(period, committeeUpdate);
     }
+
+    // So the first call to getHeadUpdate() doesn't error, store the latest snapshot as latest header update
+    lightclientServerApi.latestHeadUpdate = committeeUpdateToHeadUpdate(lastInMap(lightclientServerApi.updates));
 
     // Initilize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
@@ -109,10 +120,13 @@ describe("Lightclient sync", () => {
           bodyRoot: SOME_HASH,
         };
 
-        eventsServerApi.emit({
-          type: routes.events.EventType.lightclientHeaderUpdate,
-          message: {header, syncAggregate: syncCommittee.signHeader(config, header)},
-        });
+        const headUpdate: routes.lightclient.LightclientHeaderUpdate = {
+          header,
+          syncAggregate: syncCommittee.signHeader(config, header),
+        };
+
+        lightclientServerApi.latestHeadUpdate = headUpdate;
+        eventsServerApi.emit({type: routes.events.EventType.lightclientHeaderUpdate, message: headUpdate});
       }
     });
 
