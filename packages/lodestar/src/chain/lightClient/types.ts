@@ -1,4 +1,4 @@
-import {altair, phase0, RootHex} from "@chainsafe/lodestar-types";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 
 /**
  * We aren't creating the sync committee proofs separately because our ssz library automatically adds leaves to composite types,
@@ -32,13 +32,6 @@ export type SyncCommitteeWitness = {
   witness: Uint8Array[];
   currentSyncCommitteeRoot: Uint8Array;
   nextSyncCommitteeRoot: Uint8Array;
-};
-
-export type LightClientHeaderUpdate = {
-  syncAggregate: altair.SyncAggregate;
-  header: phase0.BeaconBlockHeader;
-  /** Precomputed root to prevent re-hashing */
-  blockRoot: RootHex;
 };
 
 export type PartialLightClientUpdateFinalized = {

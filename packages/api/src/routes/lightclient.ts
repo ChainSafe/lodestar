@@ -1,8 +1,22 @@
 import {ContainerType, Path, VectorType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {ArrayOf, ReturnTypes, RoutesData, Schema, sameType, ContainerData, ReqSerializers} from "../utils";
+import {
+  ArrayOf,
+  ReturnTypes,
+  RoutesData,
+  Schema,
+  sameType,
+  ContainerData,
+  ReqSerializers,
+  reqEmpty,
+  ReqEmpty,
+} from "../utils";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/serdes";
+import {LightclientHeaderUpdate} from "./events";
+
+// Re-export for convenience when importing routes.lightclient.LightclientHeaderUpdate
+export {LightclientHeaderUpdate};
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -28,6 +42,11 @@ export type Api = {
    */
   getCommitteeUpdates(from: SyncPeriod, to: SyncPeriod): Promise<{data: altair.LightClientUpdate[]}>;
   /**
+   * Returns the latest best head update available. Clients should use the SSE type `lightclient_header_update`
+   * unless to get the very first head update after syncing, or if SSE are not supported by the server.
+   */
+  getHeadUpdate(): Promise<{data: LightclientHeaderUpdate}>;
+  /**
    * Fetch a snapshot with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
    * Only block roots for checkpoints are guaranteed to be available.
@@ -41,12 +60,14 @@ export type Api = {
 export const routesData: RoutesData<Api> = {
   getStateProof: {url: "/eth/v1/lightclient/proof/:stateId", method: "GET"},
   getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
+  getHeadUpdate: {url: "/eth/v1/lightclient/head_update/", method: "GET"},
   getSnapshot: {url: "/eth/v1/lightclient/snapshot/:blockRoot", method: "GET"},
 };
 
 export type ReqTypes = {
   getStateProof: {params: {stateId: string}; query: {paths: string[]}};
   getCommitteeUpdates: {query: {from: number; to: number}};
+  getHeadUpdate: ReqEmpty;
   getSnapshot: {params: {blockRoot: string}};
 };
 
@@ -63,6 +84,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({query}) => [query.from, query.to],
       schema: {query: {from: Schema.UintRequired, to: Schema.UintRequired}},
     },
+
+    getHeadUpdate: reqEmpty,
 
     getSnapshot: {
       writeReq: (blockRoot) => ({params: {blockRoot}}),
@@ -87,10 +110,22 @@ export function getReturnTypes(): ReturnTypes<Api> {
     },
   });
 
+  const lightclientHeaderUpdate = new ContainerType<LightclientHeaderUpdate>({
+    fields: {
+      syncAggregate: ssz.altair.SyncAggregate,
+      header: ssz.phase0.BeaconBlockHeader,
+    },
+    casingMap: {
+      syncAggregate: "sync_aggregate",
+      header: "header",
+    },
+  });
+
   return {
     // Just sent the proof JSON as-is
     getStateProof: sameType(),
     getCommitteeUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
+    getHeadUpdate: ContainerData(lightclientHeaderUpdate),
     getSnapshot: ContainerData(lightclientSnapshotWithProofType),
   };
 }

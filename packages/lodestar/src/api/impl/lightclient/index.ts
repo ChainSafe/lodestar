@@ -56,14 +56,16 @@ export function getLightclientApi(
 
     async getCommitteeUpdates(from, to) {
       const periods = linspace(from, to);
-      const updates = await Promise.all(
-        periods.map((period) => chain.lightClientServer.serveBestUpdateInPeriod(period))
-      );
+      const updates = await Promise.all(periods.map((period) => chain.lightClientServer.getCommitteeUpdates(period)));
       return {data: updates};
     },
 
+    async getHeadUpdate() {
+      return {data: await chain.lightClientServer.getHeadUpdate()};
+    },
+
     async getSnapshot(blockRoot) {
-      const snapshotProof = await chain.lightClientServer.serveInitCommittees(fromHexString(blockRoot));
+      const snapshotProof = await chain.lightClientServer.getSnapshot(fromHexString(blockRoot));
       return {data: snapshotProof};
     },
   };

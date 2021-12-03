@@ -11,6 +11,8 @@ const root = Uint8Array.from(Buffer.alloc(32, 1));
 
 describe("lightclient", () => {
   const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
+  const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
+  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getStateProof: {
@@ -41,11 +43,15 @@ describe("lightclient", () => {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
+    getHeadUpdate: {
+      args: [],
+      res: {data: {syncAggregate, header}},
+    },
     getSnapshot: {
       args: [toHexString(root)],
       res: {
         data: {
-          header: ssz.phase0.BeaconBlockHeader.defaultValue(),
+          header,
           currentSyncCommittee: lightClientUpdate.nextSyncCommittee,
           currentSyncCommitteeBranch: [root, root, root, root, root], // Vector(Root, 5)
         },
