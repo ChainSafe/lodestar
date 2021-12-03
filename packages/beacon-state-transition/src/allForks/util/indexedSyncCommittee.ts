@@ -1,4 +1,3 @@
-import {IChainConfig} from "@chainsafe/lodestar-config";
 import {altair, ssz, allForks, Slot, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {computeAbsoluteSyncPeriodAtSlot} from "../../util/epoch";
