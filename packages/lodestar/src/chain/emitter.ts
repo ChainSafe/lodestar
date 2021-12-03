@@ -1,10 +1,10 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
+import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {LightClientHeaderUpdate} from "./lightClient/types";
 import {AttestationError, BlockError} from "./errors";
 
 /**
@@ -123,7 +123,7 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
 
-  [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: LightClientHeaderUpdate) => void;
+  [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: routes.events.LightclientHeaderUpdate) => void;
 }
 
 /**

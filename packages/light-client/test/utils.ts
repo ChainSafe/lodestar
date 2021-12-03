@@ -250,3 +250,21 @@ export function computeMerkleBranch(
   }
   return {root: value, proof};
 }
+
+export function committeeUpdateToHeadUpdate(
+  committeeUpdate: altair.LightClientUpdate
+): routes.lightclient.LightclientHeaderUpdate {
+  return {
+    header: committeeUpdate.finalityHeader,
+    syncAggregate: {
+      syncCommitteeBits: committeeUpdate.syncCommitteeBits,
+      syncCommitteeSignature: committeeUpdate.syncCommitteeSignature,
+    },
+  };
+}
+
+export function lastInMap<T>(map: Map<unknown, T>): T {
+  if (map.size === 0) throw Error("Empty map");
+  const values = Array.from(map.values());
+  return values[values.length - 1];
+}
