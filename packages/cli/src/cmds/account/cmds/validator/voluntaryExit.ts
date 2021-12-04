@@ -10,8 +10,25 @@ import {getBeaconConfigFromArgs} from "../../../../config";
 import {errorLogger} from "../../../../util/logger";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
 import {getValidatorPaths} from "../../../validator/paths";
+import {SecretKey} from "@chainsafe/bls";
 
 /* eslint-disable no-console */
+
+export enum SignerType {
+  Local,
+  Remote,
+}
+
+export type Signers =
+  | {
+      type: SignerType.Local;
+      secretKeys: SecretKey[];
+    }
+  | {
+      type: SignerType.Remote;
+      url: string;
+      pubkeys: string[];
+    };
 
 export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {
   publicKey: string;
@@ -103,12 +120,17 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       controller: new LevelDbController({name: dbPath}, {logger}),
     };
     const slashingProtection = new SlashingProtection(dbOps);
+    const signers: Signers = {
+      type: SignerType.Local,
+      secretKeys: [secretKey],
+    };
 
     const validatorClient = await Validator.initializeFromBeaconNode({
       slashingProtection,
       dbOps,
       api: args.server,
-      secretKeys: [secretKey],
+      // secretKeys: [secretKey],
+      signers: signers,
       logger: errorLogger(),
       graffiti: args.graffiti,
     });

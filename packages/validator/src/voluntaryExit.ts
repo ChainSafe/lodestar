@@ -9,6 +9,7 @@ import {
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
+import {requestSignature} from "./services/utils";
 
 /**
  * Perform a voluntary exit for the given validator by its key.
@@ -16,7 +17,8 @@ import {Api} from "@chainsafe/lodestar-api";
 export async function signAndSubmitVoluntaryExit(
   publicKey: string,
   exitEpoch: number,
-  secretKey: SecretKey,
+  secretKey: SecretKey | undefined,
+  endpoint: string,
   api: Api,
   config: IChainForkConfig
 ): Promise<void> {
@@ -47,7 +49,10 @@ export async function signAndSubmitVoluntaryExit(
 
   const signedVoluntaryExit: phase0.SignedVoluntaryExit = {
     message: voluntaryExit,
-    signature: secretKey.sign(signingRoot).toBytes(),
+    signature:
+      secretKey !== undefined
+        ? secretKey.sign(signingRoot).toBytes()
+        : await requestSignature(publicKey, signingRoot, endpoint),
   };
 
   await api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);

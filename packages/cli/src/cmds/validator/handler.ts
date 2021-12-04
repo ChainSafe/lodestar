@@ -11,6 +11,23 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
 import {getVersion} from "../../util/version";
+import {SecretKey} from "@chainsafe/bls";
+
+export enum SignerType {
+  Local,
+  Remote,
+}
+
+export type Signers =
+  | {
+      type: SignerType.Local;
+      secretKeys: SecretKey[];
+    }
+  | {
+      type: SignerType.Remote;
+      url: string;
+      pubkeys: string[];
+    };
 
 /**
  * Runs a validator client.
@@ -30,6 +47,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   logger.info("Lodestar", {version: version, network: args.network});
 
   const secretKeys = await getSecretKeys(args);
+  const signers: Signers = {
+    type: SignerType.Local,
+    secretKeys: secretKeys,
+  };
   if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
 
@@ -52,7 +73,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   };
   const slashingProtection = new SlashingProtection(dbOps);
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, secretKeys, graffiti},
+    {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
   onGracefulShutdownCbs.push(async () => await validator.stop());

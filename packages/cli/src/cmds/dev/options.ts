@@ -1,4 +1,4 @@
-import {Options} from "yargs";
+import {boolean, Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
@@ -10,6 +10,8 @@ interface IDevOwnArgs {
   genesisTime?: number;
   reset?: boolean;
   server: string;
+  mode: boolean;
+  url?: string;
 }
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
@@ -50,6 +52,14 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
+  },
+  mode: {
+    type: "boolean",
+    default: 0,
+  },
+  url: {
+    type: "string",
+    default: undefined,
   },
 };
 

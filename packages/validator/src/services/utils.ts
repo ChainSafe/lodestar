@@ -6,7 +6,7 @@ import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import axios from "axios";
+import fetch from "cross-fetch";
 
 /** Sync committee duty associated to a single sub committee subnet */
 export type SubCommitteeDuty = {
@@ -15,7 +15,7 @@ export type SubCommitteeDuty = {
 };
 
 type ResponseType = {
-  signature: Uint8Array;
+  signature: number;
   error: number;
 };
 
@@ -75,20 +75,29 @@ export async function requestSignature(
   signingRoot: string | Uint8Array,
   endpoint: string
 ): Promise<Uint8Array> {
-  // signingRoot: "0xb6bb8f3765f93f4f1e7c7348479289c9261399a3c6906685e320071a1a13955c"
-  typeof pubkey === "string" ? pubkey : toHexString(pubkey);
-  typeof signingRoot === "string" ? signingRoot : toHexString(signingRoot);
+  const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+  const signingRootHex = typeof signingRoot === "string" ? signingRoot : toHexString(signingRoot);
   const body = {
-    signingRoot: signingRoot,
+    signingRoot: signingRootHex,
   };
 
   try {
-    const resp = await axios.post<ResponseType>(`${endpoint}/sign/${pubkey}`, body);
-    const values: number[] = Object.values(resp.data.signature);
-    const sigBytes = Uint8Array.from(values);
+    const url = `${endpoint}/sign/${pubkeyHex}`;
+    const headers = {
+      "Content-Type": "application/json",
+    };
 
+    const res = await fetch(url, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(body),
+    });
+
+    const resJSON = <ResponseType>await res.json();
+    const values = Object.values(resJSON.signature);
+    const sigBytes = Uint8Array.from(values);
     return sigBytes;
   } catch (err) {
-    throw Error(`Error in requesting API: ${err}`);
+    throw Error(`Error in requesting from remote signer API: ${err}`);
   }
 }

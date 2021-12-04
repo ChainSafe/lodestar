@@ -32,26 +32,9 @@ import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
 import {BLSKeypair, PubkeyHex} from "../types";
 import {getAggregationBits, mapSecretKeysToValidators, requestSignature} from "./utils";
+import {SignerType, Signers} from "../validator";
+import {init} from "@chainsafe/bls";
 
-export enum SignerType {
-  Local,
-  Remote,
-}
-
-export type Signers =
-  | {
-      type: SignerType.Local;
-      secretKeys: SecretKey[];
-    }
-  | {
-      type: SignerType.Remote;
-      url: string;
-      pubkeys: PubkeyHex[];
-    };
-
-/**
- * Service that sets up and handles validator attester duties.
- */
 export class ValidatorStore {
   private readonly validators: Map<PubkeyHex, BLSKeypair> | PubkeyHex[];
   private readonly genesisValidatorsRoot: Root;
@@ -89,7 +72,8 @@ export class ValidatorStore {
     return this.validators.size > 0;
   }
 
-  votingPubkeys(): BLSPubkey[] {
+  async votingPubkeys(): Promise<BLSPubkey[]> {
+    await init("blst-native");
     if (this.validators instanceof Array) {
       return this.validators.map((pubkey) => PublicKey.fromHex(pubkey).toBytes());
     }
@@ -117,14 +101,13 @@ export class ValidatorStore {
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-    const secretKey = this.getSecretKey(pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
 
     return {
       message: block,
       // signature: secretKey.sign(signingRoot).toBytes(),
       signature: this.isLocal()
-        ? secretKey.sign(signingRoot).toBytes()
+        ? this.getSecretKey(pubkey).sign(signingRoot).toBytes()
         : await requestSignature(pubkey, signingRoot, this.endpoint),
     };
   }
@@ -157,7 +140,6 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-    const secretKey = this.getSecretKey(duty.pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
       sourceEpoch: attestationData.source.epoch,
       targetEpoch: attestationData.target.epoch,
@@ -169,7 +151,7 @@ export class ValidatorStore {
       data: attestationData,
       // signature: secretKey.sign(signingRoot).toBytes(),
       signature: this.isLocal()
-        ? secretKey.sign(signingRoot).toBytes()
+        ? this.getSecretKey(duty.pubkey).sign(signingRoot).toBytes()
         : await requestSignature(duty.pubkey, signingRoot, this.endpoint),
     };
   }

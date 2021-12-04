@@ -56,9 +56,9 @@ export class IndicesService {
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
   private async pollValidatorIndicesInternal(): Promise<ValidatorIndex[]> {
-    const pubkeysToPoll = this.validatorStore
-      .votingPubkeys()
-      .filter((pubkey) => !this.pubkey2index.has(toHexString(pubkey)));
+    const pubkeysToPoll = (await this.validatorStore.votingPubkeys()).filter(
+      (pubkey) => !this.pubkey2index.has(toHexString(pubkey))
+    );
 
     if (pubkeysToPoll.length === 0) {
       return [];

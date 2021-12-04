@@ -9,7 +9,6 @@ import {getClient, Api} from "@chainsafe/lodestar-api";
 import {Clock, IClock} from "./util/clock";
 import {signAndSubmitVoluntaryExit} from "./voluntaryExit";
 import {waitForGenesis} from "./genesis";
-import {ValidatorStore} from "./services/validatorStore";
 import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
@@ -20,12 +19,31 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
+import {PubkeyHex} from "./types";
+import {ValidatorStore} from "./services/validatorStore";
+
+export enum SignerType {
+  Local,
+  Remote,
+}
+
+export type Signers =
+  | {
+      type: SignerType.Local;
+      secretKeys: SecretKey[];
+    }
+  | {
+      type: SignerType.Remote;
+      url: string;
+      pubkeys: PubkeyHex[];
+    };
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
-  secretKeys: SecretKey[];
+  // secretKeys: SecretKey[];
+  signers: Signers;
   logger: ILogger;
   graffiti?: string;
 };
@@ -47,7 +65,8 @@ type State = {status: Status.running; controller: AbortController} | {status: St
 export class Validator {
   private readonly config: IBeaconConfig;
   private readonly api: Api;
-  private readonly secretKeys: SecretKey[];
+  // private readonly secretKeys: SecretKey[];
+  private readonly signers: Signers;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
@@ -55,7 +74,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
-    const {dbOps, logger, slashingProtection, secretKeys, graffiti} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -68,7 +87,7 @@ export class Validator {
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
+    const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
@@ -81,7 +100,8 @@ export class Validator {
     this.logger = logger;
     this.api = api;
     this.clock = clock;
-    this.secretKeys = secretKeys;
+    // this.secretKeys = secretKeys;
+    this.signers = signers;
   }
 
   /** Waits for genesis and genesis time */
@@ -128,12 +148,18 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    const secretKey = this.secretKeys.find((sk) =>
-      ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
-    );
-    if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
+    let url = "";
+    let secretKey: SecretKey | undefined = undefined;
+    if (this.signers.type == SignerType.Local) {
+      secretKey = this.signers.secretKeys.find((sk) =>
+        ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
+      );
+      if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
+    } else {
+      url = this.signers.url;
+    }
+    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, url, this.api, this.config);
 
-    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, this.api, this.config);
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }
 
