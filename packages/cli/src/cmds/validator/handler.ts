@@ -1,6 +1,6 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection, Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
@@ -11,24 +11,6 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
 import {getVersion} from "../../util/version";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
-
-export enum SignerType {
-  Local,
-  Remote,
-}
-
-export type Signers =
-  | {
-      type: SignerType.Local;
-      secretKeys: SecretKey[];
-    }
-  | {
-      type: SignerType.Remote;
-      url: string;
-      pubkeys: PublicKey[];
-      secretKey: SecretKey;
-    };
 
 /**
  * Runs a validator client.

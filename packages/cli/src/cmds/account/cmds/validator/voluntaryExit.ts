@@ -1,4 +1,4 @@
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
@@ -10,26 +10,8 @@ import {getBeaconConfigFromArgs} from "../../../../config";
 import {errorLogger} from "../../../../util/logger";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
 import {getValidatorPaths} from "../../../validator/paths";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
 
 /* eslint-disable no-console */
-
-export enum SignerType {
-  Local,
-  Remote,
-}
-
-export type Signers =
-  | {
-      type: SignerType.Local;
-      secretKeys: SecretKey[];
-    }
-  | {
-      type: SignerType.Remote;
-      url: string;
-      pubkeys: PublicKey[];
-      secretKey: SecretKey;
-    };
 
 export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {
   publicKey: string;

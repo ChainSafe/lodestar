@@ -21,24 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-// import {Signers, SignerType} from "@chainsafe/lodestar-validator";
-
-export enum SignerType {
-  Local,
-  Remote,
-}
-
-export type Signers =
-  | {
-      type: SignerType.Local;
-      secretKeys: SecretKey[];
-    }
-  | {
-      type: SignerType.Remote;
-      url: string;
-      pubkeys: PublicKey[];
-      secretKey: SecretKey;
-    };
+import {Signers, SignerType} from "@chainsafe/lodestar-validator";
 
 /**
  * Run a beacon node with validator
