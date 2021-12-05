@@ -1,4 +1,4 @@
-import {SecretKey} from "@chainsafe/bls";
+import {SecretKey, Signature} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -15,8 +15,7 @@ export type SubCommitteeDuty = {
 };
 
 type ResponseType = {
-  signature: number;
-  error: number;
+  signature: string;
 };
 
 export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHex, BLSKeypair> {
@@ -94,10 +93,9 @@ export async function requestSignature(
     });
 
     const resJSON = <ResponseType>await res.json();
-    const values = Object.values(resJSON.signature);
-    const sigBytes = Uint8Array.from(values);
+    const sigBytes = Signature.fromHex(resJSON.signature).toBytes();
     return sigBytes;
   } catch (err) {
-    throw Error(`Error in requesting from remote signer API: ${err}`);
+    throw Error(`Request to remote signer API failed: ${err}`);
   }
 }
