@@ -1,6 +1,6 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {SecretKey} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
@@ -19,7 +19,6 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
-import {PubkeyHex} from "./types";
 import {ValidatorStore} from "./services/validatorStore";
 
 export enum SignerType {
@@ -35,7 +34,8 @@ export type Signers =
   | {
       type: SignerType.Remote;
       url: string;
-      pubkeys: PubkeyHex[];
+      pubkeys: PublicKey[];
+      secretKey: SecretKey;
     };
 
 export type ValidatorOptions = {

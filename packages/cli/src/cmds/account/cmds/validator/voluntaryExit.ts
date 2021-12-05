@@ -10,7 +10,7 @@ import {getBeaconConfigFromArgs} from "../../../../config";
 import {errorLogger} from "../../../../util/logger";
 import {IValidatorCliArgs, validatorOptions} from "../../../validator/options";
 import {getValidatorPaths} from "../../../validator/paths";
-import {SecretKey} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 
 /* eslint-disable no-console */
 
@@ -27,7 +27,8 @@ export type Signers =
   | {
       type: SignerType.Remote;
       url: string;
-      pubkeys: string[];
+      pubkeys: PublicKey[];
+      secretKey: SecretKey;
     };
 
 export type IValidatorVoluntaryExitArgs = IValidatorCliArgs & {

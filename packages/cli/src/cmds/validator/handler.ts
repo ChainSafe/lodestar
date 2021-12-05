@@ -11,7 +11,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
 import {getVersion} from "../../util/version";
-import {SecretKey} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 
 export enum SignerType {
   Local,
@@ -26,7 +26,8 @@ export type Signers =
   | {
       type: SignerType.Remote;
       url: string;
-      pubkeys: string[];
+      pubkeys: PublicKey[];
+      secretKey: SecretKey;
     };
 
 /**

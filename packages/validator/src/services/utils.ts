@@ -1,4 +1,4 @@
-import {SecretKey, Signature} from "@chainsafe/bls";
+import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -6,6 +6,7 @@ import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {init} from "@chainsafe/bls";
 import fetch from "cross-fetch";
 
 /** Sync committee duty associated to a single sub committee subnet */
@@ -22,6 +23,20 @@ export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHe
   const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
   for (const secretKey of secretKeys) {
     const publicKey = secretKey.toPublicKey().toBytes();
+    validators.set(toHexString(publicKey), {publicKey, secretKey});
+  }
+  return validators;
+}
+
+/**
+ * Function used when remote signer being used.
+ * For consistency with mapSecretKeysToValidators returns a mapping of the same data type,
+ * but secret key for each BLSKeypair undefined.
+ */
+export function mapPublicKeysToValidators(publicKeys: PublicKey[], secretKey: SecretKey): Map<PubkeyHex, BLSKeypair> {
+  const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
+  for (const pub of publicKeys) {
+    const publicKey = pub.toBytes();
     validators.set(toHexString(publicKey), {publicKey, secretKey});
   }
   return validators;
@@ -74,6 +89,7 @@ export async function requestSignature(
   signingRoot: string | Uint8Array,
   endpoint: string
 ): Promise<Uint8Array> {
+  await init("blst-native");
   const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
   const signingRootHex = typeof signingRoot === "string" ? signingRoot : toHexString(signingRoot);
   const body = {

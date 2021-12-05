@@ -8,7 +8,7 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
 import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {SecretKey} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
@@ -36,7 +36,8 @@ export type Signers =
   | {
       type: SignerType.Remote;
       url: string;
-      pubkeys: string[];
+      pubkeys: PublicKey[];
+      secretKey: SecretKey;
     };
 
 /**
@@ -160,15 +161,15 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     const controller = new AbortController();
     onGracefulShutdownCbs.push(async () => controller.abort());
 
-    const pubkeys: string[] = [];
+    const pubkeys: PublicKey[] = [];
     for (let i = 0; i < secretKeys.length; i++) {
-      pubkeys.push(secretKeys[i].toPublicKey().toHex());
+      pubkeys.push(secretKeys[i].toPublicKey());
     }
 
     let signers: Signers;
-    // True is for remote mode, False is local mode
+    /** True is for remote mode, False is local mode */
     if (args.mode === "remote") {
-      // If remote mode chosen but no url provided
+      /** If remote mode chosen but no url provided */
       if (!args.url) {
         throw Error("Remote mode requires --url argument");
       }
@@ -176,6 +177,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
         type: SignerType.Remote,
         url: args.url,
         pubkeys: pubkeys,
+        secretKey: new SecretKey(),
       };
     } else if (args.mode === "local") {
       signers = {
@@ -192,7 +194,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
-      // secretKeys,
       signers,
     });
 
