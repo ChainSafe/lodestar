@@ -167,7 +167,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
     let signers: Signers;
     // True is for remote mode, False is local mode
-    if (args.mode) {
+    if (args.mode === "remote") {
       // If remote mode chosen but no url provided
       if (!args.url) {
         throw Error("Remote mode requires --url argument");
@@ -177,11 +177,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
         url: args.url,
         pubkeys: pubkeys,
       };
-    } else {
+    } else if (args.mode === "local") {
       signers = {
         type: SignerType.Local,
         secretKeys: secretKeys,
       };
+    } else {
+      throw Error("Invalid mode. Only local and remote are supported");
     }
 
     // Initailize genesis once for all validators

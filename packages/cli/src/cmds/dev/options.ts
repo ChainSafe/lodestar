@@ -1,4 +1,4 @@
-import {boolean, Options} from "yargs";
+import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
@@ -10,7 +10,7 @@ interface IDevOwnArgs {
   genesisTime?: number;
   reset?: boolean;
   server: string;
-  mode: boolean;
+  mode: string;
   url?: string;
 }
 
@@ -53,11 +53,15 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     default: "http://127.0.0.1:9596",
     type: "string",
   },
+
   mode: {
-    type: "boolean",
-    default: 0,
+    description: "Signing mode. local for local signing, remote for remote signing",
+    type: "string",
+    default: "local",
   },
+
   url: {
+    description: "URL to connect to remote signing server",
     type: "string",
     default: undefined,
   },
