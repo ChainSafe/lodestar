@@ -8,6 +8,7 @@ import {Multiaddr} from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
+import {clientFromAgentVersion, ClientKind} from "./peers/client";
 
 // peers
 
@@ -67,6 +68,11 @@ export function clearMultiaddrUDP(enr: ENR): void {
 export function prettyPrintPeerId(peerId: PeerId): string {
   const id = peerId.toB58String();
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
+}
+
+export function getClientFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): ClientKind {
+  const agentVersion = getAgentVersionFromPeerStore(peerId, metadataBook);
+  return clientFromAgentVersion(agentVersion);
 }
 
 export function getAgentVersionFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): string {
