@@ -8,6 +8,8 @@ import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
+import {merge} from "@chainsafe/lodestar-beacon-state-transition";
+
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
@@ -25,9 +27,10 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // EL_BINARY_DIR: File path to locate the EL executable
 // EL_SCRIPT_DIR: Directory in kintsugi folder for the EL client, from where to execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
+// TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
 // Example:
 // ```
-// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=geth EL_PORT=8545 ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=geth EL_PORT=8545 TX_SCENARIOS=simple ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
@@ -35,6 +38,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // MERGE_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
 const terminalTotalDifficultyPreMerge = 20;
+const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
@@ -129,6 +133,18 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
   it("Send stub payloads to EL", async () => {
     const {genesisBlockHash} = await runEL("post-merge.sh", 0);
+    if (TX_SCENARIOS.includes("simple")) {
+      await sendTransaction(jsonRpcUrl, {
+        from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+        to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+        gas: "0x76c0",
+        gasPrice: "0x9184e72a000",
+        value: "0x9184e72a",
+      });
+
+      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
+    }
 
     const controller = new AbortController();
     const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl]}, controller.signal);
@@ -162,11 +178,17 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      **/
 
     const payload = await executionEngine.getPayload(payloadId);
+    if (TX_SCENARIOS.includes("simple")) {
+      if (payload.transactions.length !== 1)
+        throw new Error("Expected a simple transaction to be in the fetched payload");
+      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      if (balance != "0x0") throw new Error("Invalid Balance: " + balance);
+    }
 
     // 3. Execute the payload
     /**
      * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_executePayloadV1","params":[{"parentHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a","coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b","stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45","receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","random":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":"0x1","gasLimit":"0x1c9c380","gasUsed":"0x0","timestamp":"0x5","extraData":"0x","baseFeePerGas":"0x7","blockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858","transactions":[]}],"id":67}' http://localhost:8550
-     * **/
+     **/
 
     const payloadResult = await executionEngine.executePayload(payload);
     if (!payloadResult) {
@@ -180,6 +202,11 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      **/
 
     await executionEngine.notifyForkchoiceUpdate(bytesToData(payload.blockHash), genesisBlockHash);
+
+    if (TX_SCENARIOS.includes("simple")) {
+      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      if (balance !== "0x9184e72a") throw new Error("Invalid Balance");
+    }
 
     // Error cases
     // 1. unknown payload
@@ -310,7 +337,53 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     await Promise.all(validators.map((v) => v.start()));
 
-    await new Promise<void>((resolve) => {
+    if (TX_SCENARIOS.includes("simple")) {
+      // If mergeEpoch > 0, this is the case of pre-merge transaction submission on EL pow
+      await sendTransaction(jsonRpcUrl, {
+        from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+        to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+        gas: "0x76c0",
+        gasPrice: "0x9184e72a000",
+        value: "0x9184e72a",
+      });
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      // Play TX_SCENARIOS
+      bn.chain.emitter.on(ChainEvent.clockSlot, async (slot) => {
+        if (slot < 2) return;
+        switch (slot) {
+          // If mergeEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow
+          case 2:
+            if (TX_SCENARIOS.includes("simple")) {
+              const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+              if (balance !== "0x9184e72a") reject("Invalid Balance");
+            }
+            break;
+
+          // By this slot, ttd should be reached and merge complete
+          case Number(ttd) + 3: {
+            const headState = bn.chain.getHeadState();
+            const isMergeComplete = merge.isMergeStateType(headState) && merge.isMergeComplete(headState);
+            if (!isMergeComplete) reject("Merge not completed");
+
+            // Send another tx post-merge, total amount in destination account should be double after this is included in chain
+            if (TX_SCENARIOS.includes("simple")) {
+              await sendTransaction(jsonRpcUrl, {
+                from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
+                to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
+                gas: "0x76c0",
+                gasPrice: "0x9184e72a000",
+                value: "0x9184e72a",
+              });
+            }
+            break;
+          }
+
+          default:
+        }
+      });
+
       bn.chain.emitter.on(ChainEvent.finalized, (checkpoint) => {
         // Resolve only if the finalized checkpoint includes execution payload
         const finalizedBlock = bn.chain.forkChoice.getBlock(checkpoint.root);
@@ -346,6 +419,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       );
     }
 
+    if (TX_SCENARIOS.includes("simple")) {
+      const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
+      // 0x12309ce54 = 2 * 0x9184e72a
+      if (balance !== "0x12309ce54") throw Error("Invalid Balance");
+    }
+
     // wait for 1 slot to print current epoch stats
     await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
     stopInfoTracker();
@@ -360,6 +439,9 @@ async function waitForELOnline(url: string, signal: AbortSignal): Promise<void> 
       await shell(
         `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":67}' ${url}`
       );
+
+      console.log("Waiting for few seconds for EL to fully setup, for e.g. unlock the account...");
+      await sleep(5000, signal);
       return; // Done
     } catch (e) {
       await sleep(1000, signal);
@@ -417,4 +499,20 @@ async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<st
   }
 
   return genesisBlock.hash;
+}
+
+async function sendTransaction(url: string, transaction: Record<string, unknown>): Promise<void> {
+  await shell(
+    `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_sendTransaction","params":[${JSON.stringify(
+      transaction
+    )}],"id":67}' ${url}`
+  );
+}
+
+async function getBalance(url: string, account: string): Promise<string> {
+  const response: string = await shell(
+    `curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["${account}","latest"],"id":67}' ${url}`
+  );
+  const {result} = (JSON.parse(response) as unknown) as Record<string, string>;
+  return result;
 }
