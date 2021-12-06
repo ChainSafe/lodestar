@@ -8,7 +8,7 @@ import {Multiaddr} from "multiaddr";
 import {networkInterfaces} from "os";
 import {ENR} from "@chainsafe/discv5";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
-import {Client, clientFromAgentVersion} from "./peers/client";
+import {clientFromAgentVersion, ClientKind} from "./peers/client";
 
 // peers
 
@@ -70,7 +70,7 @@ export function prettyPrintPeerId(peerId: PeerId): string {
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
 }
 
-export function getClientFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): Client {
+export function getClientFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): ClientKind {
   const agentVersion = getAgentVersionFromPeerStore(peerId, metadataBook);
   return clientFromAgentVersion(agentVersion);
 }
