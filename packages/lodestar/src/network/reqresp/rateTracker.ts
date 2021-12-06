@@ -6,7 +6,7 @@ import {MapDef} from "../../util/map";
  */
 export class RateTracker {
   private requestsWithinWindow = 0;
-  /** Key as time in ms and value as object requested */
+  /** Key as time in second and value as object requested */
   private requests = new MapDef<number, number>(() => 0);
 
   constructor(private limit: number, private timeoutMs: number) {}
@@ -19,9 +19,9 @@ export class RateTracker {
     }
 
     this.requestsWithinWindow += objectCount;
-    const now = Date.now();
-    const curObjectCount = this.requests.getOrDefault(now);
-    this.requests.set(now, curObjectCount + objectCount);
+    const key = Math.floor(Date.now() / 1000);
+    const curObjectCount = this.requests.getOrDefault(key);
+    this.requests.set(key, curObjectCount + objectCount);
 
     return objectCount;
   }
@@ -33,11 +33,11 @@ export class RateTracker {
   private prune(): void {
     const now = Date.now();
 
-    for (const [time, count] of this.requests.entries()) {
+    for (const [timeInSec, count] of this.requests.entries()) {
       // reclaim the quota for old requests
-      if (now - time >= this.timeoutMs) {
+      if (now - timeInSec * 1000 >= this.timeoutMs) {
         this.requestsWithinWindow -= count;
-        this.requests.delete(time);
+        this.requests.delete(timeInSec);
       }
     }
 
