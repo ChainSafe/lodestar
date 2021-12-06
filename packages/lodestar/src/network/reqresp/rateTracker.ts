@@ -6,6 +6,7 @@ import {MapDef} from "../../util/map";
  */
 export class RateTracker {
   private requestsWithinWindow = 0;
+  /** Key as time in ms and value as object requested */
   private requests = new MapDef<number, number>(() => 0);
 
   constructor(private limit: number, private timeoutMs: number) {}

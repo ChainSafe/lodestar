@@ -218,13 +218,13 @@ export class ReqResp implements IReqResp {
     switch (requestTyped.method) {
       case Method.Ping:
         if (!this.responseRateLimiter.allowToProcess(peerId)) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         yield this.metadataController.seqNumber;
         break;
       case Method.Metadata:
         if (!this.responseRateLimiter.allowToProcess(peerId)) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
         // It's safe to return altair.Metadata here for all versions
@@ -232,7 +232,7 @@ export class ReqResp implements IReqResp {
         break;
       case Method.Goodbye:
         if (!this.responseRateLimiter.allowToProcess(peerId)) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         yield BigInt(0);
         break;
@@ -241,20 +241,20 @@ export class ReqResp implements IReqResp {
 
       case Method.Status:
         if (!this.responseRateLimiter.allowToProcess(peerId)) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         yield* this.reqRespHandlers.onStatus();
         break;
       case Method.BeaconBlocksByRange:
         if (!this.responseRateLimiter.allowToProcess(peerId, Math.max(requestTyped.body.count, 0))) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
 
         yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);
         break;
       case Method.BeaconBlocksByRoot:
         if (!this.responseRateLimiter.allowToProcess(peerId, requestTyped.body.length)) {
-          throw new ResponseError(RespStatus.SERVER_ERROR, "rate limit");
+          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
 
         yield* this.reqRespHandlers.onBeaconBlocksByRoot(requestTyped.body);
