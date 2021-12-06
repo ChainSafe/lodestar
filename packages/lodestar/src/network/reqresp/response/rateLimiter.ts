@@ -48,39 +48,36 @@ export class ResponseRateLimiter implements IReqRespRateLimiter {
    */
   allowToProcess(peerId: PeerId, numBlock?: number): boolean {
     const peerIdStr = peerId.toB58String();
+
+    // rate limit check for request
     const requestCountPeerTracker = this.requestCountTrackersByPeer.getOrDefault(peerIdStr);
-    const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
-
-    const rateTrackers = [
-      {tracker: this.requestCountTotalTracker, count: 1, applyPenalty: false, name: "requestCountTotalTracker"},
-      {tracker: requestCountPeerTracker, count: 1, applyPenalty: true, name: "requestCountPeerTracker"},
-    ];
-
-    if (numBlock !== undefined) {
-      rateTrackers.push(
-        ...[
-          {
-            tracker: this.blockCountTotalTracker,
-            count: numBlock,
-            applyPenalty: false,
-            name: "blockCountTotalTracker",
-          },
-          {tracker: blockCountPeerTracker, count: numBlock, applyPenalty: true, name: "blockCountPeerTracker"},
-        ]
-      );
+    if (requestCountPeerTracker.requestObjects(1) === 0) {
+      this.logger.verbose("Do not serve request due to request count rate limit", {
+        peerId: peerIdStr,
+        requestsWithinWindow: requestCountPeerTracker.getRequestedObjectsWithinWindow(),
+      });
+      this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      return false;
     }
 
-    for (const {tracker, count, applyPenalty, name} of rateTrackers) {
-      if (tracker.requestObjects(count) === 0) {
-        this.logger.warn("Do not serve request due to rate limit", {
+    if (this.requestCountTotalTracker.requestObjects(1) === 0) {
+      return false;
+    }
+
+    // rate limit check for block count
+    if (numBlock !== undefined) {
+      const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
+      if (blockCountPeerTracker.requestObjects(numBlock) === 0) {
+        this.logger.verbose("Do not serve block request due to block count rate limit", {
           peerId: peerIdStr,
-          blockCount: numBlock ?? 0,
-          rateTracker: name,
-          requestsWithinWindow: tracker.getRequestedObjectsWithinWindow(),
+          blockCount: numBlock,
+          requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
         });
-        if (applyPenalty) {
-          this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
-        }
+        this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+        return false;
+      }
+
+      if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
         return false;
       }
     }
