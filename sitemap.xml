@@ -1756,6 +1756,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.clientkind/</loc>
+         <lastmod>2021-12-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.discoveredpeerstatus/</loc>
          <lastmod>2021-12-06</lastmod>
          <changefreq>daily</changefreq>
