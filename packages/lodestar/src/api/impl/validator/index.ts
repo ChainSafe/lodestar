@@ -137,10 +137,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
-    if (!protoBeaconBlock) throw Error("BLOCK_NOT_IN_FORKCHOICE");
+    if (!protoBeaconBlock) throw new ApiError(400, "Block not in forkChoice");
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
-      throw new Error(
-        `InvalidExecutionStatus: beaconBlockRoot ${protoBeaconBlock.blockRoot}'s payload ${protoBeaconBlock.executionPayloadBlockHash} on slot ${protoBeaconBlock.slot} is not yet validated`
+      throw new NodeIsSyncing(
+        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
       );
   }
 
@@ -199,15 +199,16 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             // the VC and BN are out-of-sync due to time issues or overloading.
             getBlockRootAtSlot(headState, slot);
 
-      // Check the execution status as validator shouldn't vote on an optimistic head
-      notOnOptimisticBlockRoot(beaconBlockRoot);
-
       const targetSlot = computeStartSlotAtEpoch(attEpoch);
       const targetRoot =
         targetSlot >= headSlot
           ? // If the state is earlier than the target slot then the target *must* be the head block root.
             headBlockRoot
           : getBlockRootAtSlot(headState, targetSlot);
+
+      // Check the execution status as validator shouldn't vote on an optimistic head
+      // Check on target is sufficient as a valid target would imply a valid source
+      notOnOptimisticBlockRoot(targetRoot);
 
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
