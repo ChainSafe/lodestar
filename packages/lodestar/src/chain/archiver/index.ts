@@ -75,7 +75,8 @@ export class Archiver {
       const currentSlot = finalized.epoch * SLOTS_PER_EPOCH;
       await this.db.backfilledRanges.put(currentSlot, this.chain.anchorSlot);
 
-      // Clear previously marked sequence till anchorSlot, without touching backfill sync process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
+      // Clear previously marked sequence till anchorSlot, without touching backfill sync
+      // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
       const filteredSeqs = await this.db.backfilledRanges.keys({gt: this.chain.anchorSlot, lt: currentSlot});
       await this.db.backfilledRanges.batchDelete(filteredSeqs);
 
