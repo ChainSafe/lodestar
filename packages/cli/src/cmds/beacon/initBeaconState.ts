@@ -64,8 +64,10 @@ async function initAndVerifyWeakSubjectivityState(
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
 
-  await initStateFromAnchorState(config, db, logger, anchorState);
-  return {anchorState: wsState, wsCheckpoint};
+  anchorState = await initStateFromAnchorState(config, db, logger, anchorState);
+
+  // Return the latest anchorState but still return original wsCheckpoint to validate in backfill
+  return {anchorState, wsCheckpoint};
 }
 
 /**
@@ -139,9 +141,9 @@ export async function initBeaconState(
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
-      const anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).createTreeBackedFromBytes(stateBytes);
+      let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).createTreeBackedFromBytes(stateBytes);
       const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
-      await initStateFromAnchorState(config, db, logger, anchorState);
+      anchorState = await initStateFromAnchorState(config, db, logger, anchorState);
       return {anchorState};
     } else {
       const anchorState = await initStateFromEth1({config: chainForkConfig, db, logger, opts: options.eth1, signal});
