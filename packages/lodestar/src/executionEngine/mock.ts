@@ -25,9 +25,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
   constructor(opts: ExecutionEngineMockOpts) {
     this.knownBlocks.set(opts.genesisBlockHash, {
       parentHash: ZERO_HASH,
-      coinbase: Buffer.alloc(20, 0),
+      feeRecipient: Buffer.alloc(20, 0),
       stateRoot: ZERO_HASH,
-      receiptRoot: ZERO_HASH,
+      receiptsRoot: ZERO_HASH,
       logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
       random: ZERO_HASH,
       blockNumber: 0,
@@ -95,9 +95,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
     const payloadId = this.payloadId++;
     const payload: merge.ExecutionPayload = {
       parentHash: headBlockHash,
-      coinbase: payloadAttributes.feeRecipient,
+      feeRecipient: payloadAttributes.suggestedFeeRecipient,
       stateRoot: crypto.randomBytes(32),
-      receiptRoot: crypto.randomBytes(32),
+      receiptsRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
       random: payloadAttributes.random,
       blockNumber: parentPayload.blockNumber + 1,

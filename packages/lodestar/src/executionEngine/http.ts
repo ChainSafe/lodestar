@@ -100,7 +100,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           {
             timestamp: numToQuantity(payloadAttributes.timestamp),
             random: bytesToData(payloadAttributes.random),
-            feeRecipient: bytesToData(payloadAttributes.feeRecipient),
+            suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
           },
         ]
       : [];
@@ -191,9 +191,9 @@ type EngineApiRpcReturnTypes = {
 
 type ExecutionPayloadRpc = {
   parentHash: DATA; // 32 bytes
-  coinbase: DATA; // 20 bytes
+  feeRecipient: DATA; // 20 bytes
   stateRoot: DATA; // 32 bytes
-  receiptRoot: DATA; // 32 bytes
+  receiptsRoot: DATA; // 32 bytes
   logsBloom: DATA; // 256 bytes
   random: DATA; // 32 bytes
   blockNumber: QUANTITY;
@@ -209,9 +209,9 @@ type ExecutionPayloadRpc = {
 export function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
   return {
     parentHash: bytesToData(data.parentHash),
-    coinbase: bytesToData(data.coinbase),
+    feeRecipient: bytesToData(data.feeRecipient),
     stateRoot: bytesToData(data.stateRoot),
-    receiptRoot: bytesToData(data.receiptRoot),
+    receiptsRoot: bytesToData(data.receiptsRoot),
     logsBloom: bytesToData(data.logsBloom),
     random: bytesToData(data.random),
     blockNumber: numToQuantity(data.blockNumber),
@@ -228,9 +228,9 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
 export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
   return {
     parentHash: dataToBytes(data.parentHash, 32),
-    coinbase: dataToBytes(data.coinbase, 20),
+    feeRecipient: dataToBytes(data.feeRecipient, 20),
     stateRoot: dataToBytes(data.stateRoot, 32),
-    receiptRoot: dataToBytes(data.receiptRoot, 32),
+    receiptsRoot: dataToBytes(data.receiptsRoot, 32),
     logsBloom: dataToBytes(data.logsBloom, BYTES_PER_LOGS_BLOOM),
     random: dataToBytes(data.random, 32),
     blockNumber: quantityToNum(data.blockNumber),

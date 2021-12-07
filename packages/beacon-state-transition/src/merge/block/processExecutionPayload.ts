@@ -53,9 +53,9 @@ export function processExecutionPayload(
   // Cache execution payload header
   state.latestExecutionPayloadHeader = {
     parentHash: payload.parentHash,
-    coinbase: payload.coinbase,
+    feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
-    receiptRoot: payload.receiptRoot,
+    receiptsRoot: payload.receiptsRoot,
     logsBloom: payload.logsBloom,
     random: payload.random,
     blockNumber: payload.blockNumber,

@@ -159,7 +159,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // Note: this is created with a pre-defined genesis.json
       timestamp: quantityToNum("0x5"),
       random: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"),
-      feeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
+      suggestedFeeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
     };
 
     const finalizedBlockHash = "0x0000000000000000000000000000000000000000000000000000000000000000";
