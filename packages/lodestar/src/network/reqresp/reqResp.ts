@@ -11,7 +11,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {RespStatus, timeoutOptions} from "../../constants";
-import {IReqResp, IReqRespModules, IReqRespRateLimiter, Libp2pStream} from "./interface";
+import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
@@ -49,7 +49,7 @@ export class ReqResp implements IReqResp {
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
-  private responseRateLimiter: IReqRespRateLimiter;
+  private inboundRateLimiter: IRateLimiter;
   private networkEventBus: INetworkEventBus;
   private controller = new AbortController();
   private options?: IReqRespOptions;
@@ -65,7 +65,7 @@ export class ReqResp implements IReqResp {
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
-    this.responseRateLimiter = modules.rateLimiter;
+    this.inboundRateLimiter = modules.inboundRateLimiter;
     this.networkEventBus = modules.networkEventBus;
     this.options = options;
     this.metrics = modules.metrics;
@@ -94,6 +94,7 @@ export class ReqResp implements IReqResp {
 
   async goodbye(peerId: PeerId, request: phase0.Goodbye): Promise<void> {
     await this.sendRequest<phase0.Goodbye>(peerId, Method.Goodbye, [Version.V1], request);
+    this.inboundRateLimiter.prune(peerId);
   }
 
   async ping(peerId: PeerId): Promise<phase0.Ping> {
@@ -132,6 +133,10 @@ export class ReqResp implements IReqResp {
       request,
       request.length
     );
+  }
+
+  prune(peerId: PeerId): void {
+    this.inboundRateLimiter.prune(peerId);
   }
 
   // Helper to reduce code duplication
@@ -217,13 +222,13 @@ export class ReqResp implements IReqResp {
 
     switch (requestTyped.method) {
       case Method.Ping:
-        if (!this.responseRateLimiter.allowToProcess(peerId)) {
+        if (!this.inboundRateLimiter.allowRequest(peerId)) {
           throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         yield this.metadataController.seqNumber;
         break;
       case Method.Metadata:
-        if (!this.responseRateLimiter.allowToProcess(peerId)) {
+        if (!this.inboundRateLimiter.allowRequest(peerId)) {
           throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         // V1 -> phase0, V2 -> altair. But the type serialization of phase0.Metadata will just ignore the extra .syncnets property
@@ -231,29 +236,28 @@ export class ReqResp implements IReqResp {
         yield this.metadataController.json;
         break;
       case Method.Goodbye:
-        if (!this.responseRateLimiter.allowToProcess(peerId)) {
-          throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
-        }
+        // no need to call this.inboundRateLimiter.allowRequest
+        this.inboundRateLimiter.prune(peerId);
         yield BigInt(0);
         break;
 
       // Don't bubble Ping, Metadata, and, Goodbye requests to the app layer
 
       case Method.Status:
-        if (!this.responseRateLimiter.allowToProcess(peerId)) {
+        if (!this.inboundRateLimiter.allowRequest(peerId)) {
           throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
         yield* this.reqRespHandlers.onStatus();
         break;
       case Method.BeaconBlocksByRange:
-        if (!this.responseRateLimiter.allowToProcess(peerId, Math.max(requestTyped.body.count, 0))) {
+        if (!this.inboundRateLimiter.allowRequest(peerId, Math.max(requestTyped.body.count, 0))) {
           throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
 
         yield* this.reqRespHandlers.onBeaconBlocksByRange(requestTyped.body);
         break;
       case Method.BeaconBlocksByRoot:
-        if (!this.responseRateLimiter.allowToProcess(peerId, requestTyped.body.length)) {
+        if (!this.inboundRateLimiter.allowRequest(peerId, requestTyped.body.length)) {
           throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
         }
 

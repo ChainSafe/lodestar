@@ -1,15 +1,26 @@
 import {MapDef} from "../../util/map";
 
+type RateTrackerOpts = {
+  limit: number;
+  timeoutMs: number;
+};
+
 /**
  * The generic rate tracker allows up to `limit` objects in a period of time.
  * This could apply to both request count or block count, for both requests and responses.
  */
 export class RateTracker {
   private requestsWithinWindow = 0;
+  private limit: number;
+  private timeoutMs: number;
   /** Key as time in second and value as object requested */
-  private requests = new MapDef<number, number>(() => 0);
+  private requests: MapDef<number, number>;
 
-  constructor(private limit: number, private timeoutMs: number) {}
+  constructor(opts: RateTrackerOpts, requests = new MapDef<number, number>(() => 0)) {
+    this.limit = opts.limit;
+    this.timeoutMs = opts.timeoutMs;
+    this.requests = requests;
+  }
 
   requestObjects(objectCount: number): number {
     if (objectCount <= 0) throw Error("Invalid objectCount " + objectCount);
@@ -38,6 +49,10 @@ export class RateTracker {
       if (now - timeInSec * 1000 >= this.timeoutMs) {
         this.requestsWithinWindow -= count;
         this.requests.delete(timeInSec);
+      } else {
+        // Break after the first entry within the timeout window.
+        // Since the entries are added in order, all the rest will be within the window.
+        break;
       }
     }
 

@@ -7,7 +7,7 @@ describe("RateTracker", () => {
   const sandbox = sinon.createSandbox();
 
   beforeEach(() => {
-    rateTracker = new RateTracker(500, 60 * 1000);
+    rateTracker = new RateTracker({limit: 500, timeoutMs: 60 * 1000});
     sandbox.useFakeTimers();
   });
 
@@ -28,5 +28,17 @@ describe("RateTracker", () => {
     expect(rateTracker.getRequestedObjectsWithinWindow()).to.be.equal(100);
     expect(rateTracker.requestObjects(400)).to.be.equal(400);
     expect(rateTracker.getRequestedObjectsWithinWindow()).to.be.equal(500);
+  });
+
+  it.skip("rateTracker memory usage", () => {
+    const startMem = process.memoryUsage().heapUsed;
+    // make it full
+    for (let i = 0; i < 500; i++) {
+      rateTracker.requestObjects(1);
+      sandbox.clock.tick(500);
+    }
+    // 370k in average
+    const memUsed = process.memoryUsage().heapUsed - startMem;
+    expect(memUsed).to.be.lt(400000, "Memory usage per RateTracker should be than 400k");
   });
 });

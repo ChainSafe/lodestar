@@ -2,7 +2,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
 import {MapDef} from "../../../util/map";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";
-import {IReqRespRateLimiter} from "../interface";
+import {IRateLimiter} from "../interface";
 import {RateTracker} from "../rateTracker";
 
 interface IRateLimiterModules {
@@ -21,7 +21,7 @@ export type RateLimiterOpts = {
 /**
  * The rate tracker for all peers.
  */
-export class ResponseRateLimiter implements IReqRespRateLimiter {
+export class InboundRateLimiter implements IRateLimiter {
   private readonly logger: ILogger;
   private readonly peerRpcScores: IPeerRpcScoreStore;
   private requestCountTotalTracker: RateTracker;
@@ -30,23 +30,29 @@ export class ResponseRateLimiter implements IReqRespRateLimiter {
   private blockCountTrackersByPeer: MapDef<string, RateTracker>;
 
   constructor(opts: RateLimiterOpts, modules: IRateLimiterModules) {
-    this.requestCountTotalTracker = new RateTracker(opts.requestCountTotalLimit, opts.rateTrackerTimeoutMs);
+    this.requestCountTotalTracker = new RateTracker({
+      limit: opts.requestCountTotalLimit,
+      timeoutMs: opts.rateTrackerTimeoutMs,
+    });
     this.requestCountTrackersByPeer = new MapDef(
-      () => new RateTracker(opts.requestCountPeerLimit, opts.rateTrackerTimeoutMs)
+      () => new RateTracker({limit: opts.requestCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
     );
-    this.blockCountTotalTracker = new RateTracker(opts.blockCountTotalLimit, opts.rateTrackerTimeoutMs);
+    this.blockCountTotalTracker = new RateTracker({
+      limit: opts.blockCountTotalLimit,
+      timeoutMs: opts.rateTrackerTimeoutMs,
+    });
     this.blockCountTrackersByPeer = new MapDef(
-      () => new RateTracker(opts.blockCountPeerLimit, opts.rateTrackerTimeoutMs)
+      () => new RateTracker({limit: opts.blockCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
     );
     this.logger = modules.logger;
     this.peerRpcScores = modules.peerRpcScores;
   }
 
   /**
-   * Allow to process requests from peer or not based on the rate limit params configured.
-   * @param numBlock only apply for beacon_blocks_by_range and beacon_blocks_by_root
+   * Tracks a request from a peer and returns whether to allow the request based on the configured rate limit params.
+   * @param numBlock only applies to beacon_blocks_by_range and beacon_blocks_by_root
    */
-  allowToProcess(peerId: PeerId, numBlock?: number): boolean {
+  allowRequest(peerId: PeerId, numBlock?: number): boolean {
     const peerIdStr = peerId.toB58String();
 
     // rate limit check for request
@@ -83,5 +89,11 @@ export class ResponseRateLimiter implements IReqRespRateLimiter {
     }
 
     return true;
+  }
+
+  prune(peerId: PeerId): void {
+    const peerIdStr = peerId.toB58String();
+    this.requestCountTrackersByPeer.delete(peerIdStr);
+    this.blockCountTrackersByPeer.delete(peerIdStr);
   }
 }

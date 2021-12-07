@@ -22,6 +22,7 @@ export interface IReqResp {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
+  prune(peerId: PeerId): void;
 }
 
 export interface IReqRespModules {
@@ -32,7 +33,7 @@ export interface IReqRespModules {
   reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
-  rateLimiter: IReqRespRateLimiter;
+  inboundRateLimiter: IRateLimiter;
   networkEventBus: INetworkEventBus;
   metrics: IMetrics | null;
 }
@@ -72,11 +73,16 @@ export type Libp2pStream = {
 };
 
 /**
- * Rate limiter interface for request and response.
+ * Rate limiter interface for inbound and outbound requests.
  */
-export interface IReqRespRateLimiter {
+export interface IRateLimiter {
   /**
    * Allow to request or response based on rate limit params configured.
    */
-  allowToProcess(peerId: PeerId, objectCount?: number): boolean;
+  allowRequest(peerId: PeerId, objectCount?: number): boolean;
+
+  /**
+   * Prune by peer id
+   */
+  prune(peerId: PeerId): void;
 }
