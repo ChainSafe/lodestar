@@ -58,12 +58,14 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Signing mode. local for local signing, remote for remote signing",
     type: "string",
     default: "local",
+    group: "dev",
   },
 
   url: {
     description: "URL to connect to remote signing server",
     type: "string",
     default: undefined,
+    group: "dev",
   },
 };
 
