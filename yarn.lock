@@ -7068,10 +7068,10 @@ libp2p-mdns@^0.17.0:
     multicast-dns "^7.2.0"
     peer-id "^0.15.0"
 
-libp2p-mplex@^0.10.4:
-  version "0.10.4"
-  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.4.tgz#9f216ce481e94c748b4dc415e4555fdd8b09a9e4"
-  integrity sha512-a8Oy68EXaSBBXGOGYMuwBcpnynkhqAFJ3LiyV24u9fE4wTxvuWTr0prSyKc+KC8QsLuX3A+CAdSgxqm09NbumQ==
+libp2p-mplex@^0.10.5:
+  version "0.10.5"
+  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.5.tgz#05603689cf27844b637e483e1df2c24d2dfd0dab"
+  integrity sha512-INgYgHVR1Dl8NDRmlrRVJUWyykeQa+tda892+fB1R3igKMXKP7pstJE72WS6cznzqnltCfbxOMghyx/fJImUHA==
   dependencies:
     abort-controller "^3.0.0"
     abortable-iterator "^3.0.0"
