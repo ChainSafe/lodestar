@@ -30,8 +30,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   logger.info("Lodestar", {version: version, network: args.network});
 
   const secretKeys = await getSecretKeys(args);
-  if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
+  if (secretKeys.length === 0) {
+    throw new YargsError("No validator keystores found");
+  }
+
+  // Log pubkeys for auditing
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
+  for (const secretKey of secretKeys) {
+    logger.info(secretKey.toPublicKey().toHex());
+  }
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
