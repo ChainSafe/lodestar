@@ -54,7 +54,7 @@ jobs:
       # Install Nethermind merge interop
       - uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '5.0.x'
+          dotnet-version: '6.0.x'
       - name: Clone Nethermind merge interop branch
         run: git clone -b themerge_kintsugi_v3 https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
