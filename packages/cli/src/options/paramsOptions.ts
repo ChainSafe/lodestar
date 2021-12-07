@@ -55,7 +55,7 @@ export function parseTerminalPowArgs(args: ITerminalPowArgs): IBeaconParamsUnpar
   return parsedArgs;
 }
 
-export const paramsOptions: ICliCommandOptions<ITerminalPowArgs> = {
+export const paramsOptions: ICliCommandOptions<IParamsArgs> = {
   ...paramsOptionsByName,
 
   "terminal-total-difficulty-override": {
