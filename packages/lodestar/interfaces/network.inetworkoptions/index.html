@@ -8,15 +8,15 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.inetworkoptions/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.0.4" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.0.5" name="generator"/>
 <title>Network.inetworkoptions - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.2a4617e2.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.a617204b.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
 <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
 <link href="../../../../stylesheets/extras.css" rel="stylesheet"/>
-<script>function __md_scope(e,t,_){return new URL(_||(t===localStorage?"../../../..":"../../../.."),location).pathname+"."+e}function __md_get(e,t=localStorage,_){return JSON.parse(t.getItem(__md_scope(e,t,_)))}function __md_set(e,t,_=localStorage,o){try{_.setItem(__md_scope(e,_,o),JSON.stringify(t))}catch(e){}}</script>
+<script>__md_scope=new URL("../../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
 </head>
 <body data-md-color-accent="deep-purple" data-md-color-primary="black" data-md-color-scheme="preference" dir="ltr">
 <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)</script>
@@ -344,43 +344,43 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="optional-bootmultiaddrs"><code>Optional</code> bootMultiaddrs<a class="headerlink" href="#optional-bootmultiaddrs" title="Permanent link">¶</a></h3>
 <p>• <strong>bootMultiaddrs</strong>? : <em>string[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/options.ts#L6">packages/lodestar/src/network/options.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/options.ts#L6">packages/lodestar/src/network/options.ts:6</a></em></p>
 <hr/>
 <h3 id="optional-connecttodiscv5bootnodes"><code>Optional</code> connectToDiscv5Bootnodes<a class="headerlink" href="#optional-connecttodiscv5bootnodes" title="Permanent link">¶</a></h3>
 <p>• <strong>connectToDiscv5Bootnodes</strong>? : <em>undefined | false | true</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/options.ts#L8">packages/lodestar/src/network/options.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/options.ts#L8">packages/lodestar/src/network/options.ts:8</a></em></p>
 <hr/>
 <h3 id="discv5">discv5<a class="headerlink" href="#discv5" title="Permanent link">¶</a></h3>
 <p>• <strong>discv5</strong>: <em>IDiscv5DiscoveryInputOptions | null</em></p>
 <p><em>Inherited from <a href="../../modules/network_peers/#__type">__type</a>.<a href="../../modules/network_peers/#discv5">discv5</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/peers/peerManager.ts#L56">packages/lodestar/src/network/peers/peerManager.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/peers/peerManager.ts#L56">packages/lodestar/src/network/peers/peerManager.ts:56</a></em></p>
 <p>If null, Don't run discv5 queries, nor connect to cached peers in the peerStore</p>
 <hr/>
 <h3 id="discv5firstquerydelayms">discv5FirstQueryDelayMs<a class="headerlink" href="#discv5firstquerydelayms" title="Permanent link">¶</a></h3>
 <p>• <strong>discv5FirstQueryDelayMs</strong>: <em>number</em></p>
 <p><em>Inherited from <a href="../../modules/network_peers/#__type">__type</a>.<a href="../../modules/network_peers/#discv5firstquerydelayms">discv5FirstQueryDelayMs</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/peers/peerManager.ts#L52">packages/lodestar/src/network/peers/peerManager.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/peers/peerManager.ts#L52">packages/lodestar/src/network/peers/peerManager.ts:52</a></em></p>
 <p>Delay the 1st query after starting discv5
 See https://github.com/ChainSafe/lodestar/issues/3423</p>
 <hr/>
 <h3 id="localmultiaddrs">localMultiaddrs<a class="headerlink" href="#localmultiaddrs" title="Permanent link">¶</a></h3>
 <p>• <strong>localMultiaddrs</strong>: <em>string[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/options.ts#L5">packages/lodestar/src/network/options.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/options.ts#L5">packages/lodestar/src/network/options.ts:5</a></em></p>
 <hr/>
 <h3 id="maxpeers">maxPeers<a class="headerlink" href="#maxpeers" title="Permanent link">¶</a></h3>
 <p>• <strong>maxPeers</strong>: <em>number</em></p>
 <p><em>Inherited from <a href="../../modules/network_peers/#__type">__type</a>.<a href="../../modules/network_peers/#maxpeers">maxPeers</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/peers/peerManager.ts#L47">packages/lodestar/src/network/peers/peerManager.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/peers/peerManager.ts#L47">packages/lodestar/src/network/peers/peerManager.ts:47</a></em></p>
 <p>The maximum number of peers we allow (exceptions for subnet peers)</p>
 <hr/>
 <h3 id="optional-subscribeallsubnets"><code>Optional</code> subscribeAllSubnets<a class="headerlink" href="#optional-subscribeallsubnets" title="Permanent link">¶</a></h3>
 <p>• <strong>subscribeAllSubnets</strong>? : <em>undefined | false | true</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/options.ts#L7">packages/lodestar/src/network/options.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/options.ts#L7">packages/lodestar/src/network/options.ts:7</a></em></p>
 <hr/>
 <h3 id="targetpeers">targetPeers<a class="headerlink" href="#targetpeers" title="Permanent link">¶</a></h3>
 <p>• <strong>targetPeers</strong>: <em>number</em></p>
 <p><em>Inherited from <a href="../../modules/network_peers/#__type">__type</a>.<a href="../../modules/network_peers/#targetpeers">targetPeers</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bf5457/packages/lodestar/src/network/peers/peerManager.ts#L45">packages/lodestar/src/network/peers/peerManager.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fe09d92/packages/lodestar/src/network/peers/peerManager.ts#L45">packages/lodestar/src/network/peers/peerManager.ts:45</a></em></p>
 <p>The target number of peers we would like to connect to.</p>
 </article>
 </div>
@@ -418,7 +418,7 @@ See https://github.com/ChainSafe/lodestar/issues/3423</p>
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.ca141e46.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.6baa0517.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.cefbb252.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.a5f8ea78.min.js"></script>
 </body>
 </html>
