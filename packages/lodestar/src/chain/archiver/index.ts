@@ -73,11 +73,11 @@ export class Archiver {
 
       // Mark the sequence in backfill db from finalized slot till anchor slot as filled
       const currentSlot = finalized.epoch * SLOTS_PER_EPOCH;
-      await this.db.backfilledSequences.put(currentSlot, this.chain.anchorSlot);
+      await this.db.backfilledRanges.put(currentSlot, this.chain.anchorSlot);
 
       // Clear previously marked sequence till anchorSlot, without touching backfill sync process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
-      const filteredSeqs = await this.db.backfilledSequences.keys({gt: this.chain.anchorSlot, lt: currentSlot});
-      await this.db.backfilledSequences.batchDelete(filteredSeqs);
+      const filteredSeqs = await this.db.backfilledRanges.keys({gt: this.chain.anchorSlot, lt: currentSlot});
+      await this.db.backfilledRanges.batchDelete(filteredSeqs);
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);

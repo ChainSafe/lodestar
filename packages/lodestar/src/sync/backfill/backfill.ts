@@ -41,7 +41,7 @@ export enum BackfillSyncEvent {
 
 export enum BackfillSyncMethod {
   database = "database",
-  bfillsequences = "bfillsequences",
+  backfilled_ranges = "backfilled_ranges",
   rangesync = "rangesync",
   blockbyroot = "blockbyroot",
 }
@@ -298,7 +298,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       this.backfillStartFromSlot !== null &&
       this.backfillStartFromSlot !== undefined
     ) {
-      const filteredSeqs = await this.db.backfilledSequences.entries({
+      const filteredSeqs = await this.db.backfilledRanges.entries({
         gte: this.lastBackSyncedSlot,
         lte: this.backfillStartFromSlot,
       });
@@ -310,7 +310,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.anchorBlock = await this.db.blockArchive.get(jumpBackTo);
         this.anchorBlockRoot = null;
         this.metrics?.backfillSync.totalBlocks.inc(
-          {method: BackfillSyncMethod.bfillsequences},
+          {method: BackfillSyncMethod.backfilled_ranges},
           this.lastBackSyncedSlot - jumpBackTo
         );
         this.lastBackSyncedSlot = jumpBackTo;
@@ -318,8 +318,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           slot: jumpBackTo,
         });
       }
-      await this.db.backfilledSequences.put(this.backfillStartFromSlot, this.lastBackSyncedSlot);
-      await this.db.backfilledSequences.batchDelete(
+      await this.db.backfilledRanges.put(this.backfillStartFromSlot, this.lastBackSyncedSlot);
+      await this.db.backfilledRanges.batchDelete(
         filteredSeqs.filter((entry) => entry.key !== this.backfillStartFromSlot).map((entry) => entry.key)
       );
     }

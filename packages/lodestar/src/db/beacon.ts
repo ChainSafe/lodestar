@@ -18,7 +18,7 @@ import {
   CheckpointHeaderRepository,
   SyncCommitteeRepository,
   SyncCommitteeWitnessRepository,
-  BackfilledSequences,
+  BackfilledRanges,
 } from "./repositories";
 import {PreGenesisState, PreGenesisStateLastProcessedBlock} from "./single";
 
@@ -45,7 +45,7 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
   syncCommittee: SyncCommitteeRepository;
   syncCommitteeWitness: SyncCommitteeWitnessRepository;
 
-  backfilledSequences: BackfilledSequences;
+  backfilledRanges: BackfilledRanges;
 
   constructor(opts: IDatabaseApiOptions) {
     super(opts);
@@ -68,7 +68,8 @@ export class BeaconDb extends DatabaseService implements IBeaconDb {
     this.checkpointHeader = new CheckpointHeaderRepository(this.config, this.db, this.metrics);
     this.syncCommittee = new SyncCommitteeRepository(this.config, this.db, this.metrics);
     this.syncCommitteeWitness = new SyncCommitteeWitnessRepository(this.config, this.db, this.metrics);
-    this.backfilledSequences = new BackfilledSequences(this.config, this.db, this.metrics);
+
+    this.backfilledRanges = new BackfilledRanges(this.config, this.db, this.metrics);
   }
 
   async stop(): Promise<void> {

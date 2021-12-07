@@ -3,9 +3,9 @@ import {Slot, ssz} from "@chainsafe/lodestar-types";
 import {IDatabaseController, Bucket, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 
-export class BackfilledSequences extends Repository<Slot, Slot> {
+export class BackfilledRanges extends Repository<Slot, Slot> {
   constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
-    super(config, db, Bucket.backfilled_sequences, ssz.Slot, metrics);
+    super(config, db, Bucket.backfilled_ranges, ssz.Slot, metrics);
   }
 
   decodeKey(data: Buffer): number {
