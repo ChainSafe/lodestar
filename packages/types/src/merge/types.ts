@@ -6,9 +6,9 @@ export type Transaction = Uint8Array;
 type ExecutionPayloadFields = {
   // Execution block header fields
   parentHash: Root;
-  coinbase: ExecutionAddress;
+  feeRecipient: ExecutionAddress;
   stateRoot: Bytes32;
-  receiptRoot: Bytes32;
+  receiptsRoot: Bytes32;
   logsBloom: Uint8Array;
   random: Bytes32;
   blockNumber: number;

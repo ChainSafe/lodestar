@@ -24,7 +24,7 @@ export enum ForkChoiceUpdateStatus {
 export type PayloadAttributes = {
   timestamp: number;
   random: Uint8Array | ByteVector;
-  feeRecipient: Uint8Array | ByteVector;
+  suggestedFeeRecipient: Uint8Array | ByteVector;
 };
 
 export type ApiPayloadAttributes = {
@@ -33,7 +33,7 @@ export type ApiPayloadAttributes = {
   /** DATA, 32 Bytes - value for the random field of the new payload */
   random: DATA;
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
-  feeRecipient: DATA;
+  suggestedFeeRecipient: DATA;
 };
 /**
  * Execution engine represents an abstract protocol to interact with execution clients. Potential transports include:
