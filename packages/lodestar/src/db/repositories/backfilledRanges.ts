@@ -4,7 +4,7 @@ import {IDatabaseController, Bucket, IDbMetrics, Repository} from "@chainsafe/lo
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 
 export class BackfilledRanges extends Repository<Slot, Slot> {
-  constructor(config: IChainForkConfig, db: IDatabaseController<Buffer, Buffer>, metrics?: IDbMetrics) {
+  constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
     super(config, db, Bucket.backfilled_ranges, ssz.Slot, metrics);
   }
 

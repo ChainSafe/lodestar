@@ -14,4 +14,4 @@ export {BestPartialLightClientUpdateRepository} from "./lightclientBestPartialUp
 export {CheckpointHeaderRepository} from "./lightclientCheckpointHeader";
 export {SyncCommitteeRepository} from "./lightclientSyncCommittee";
 export {SyncCommitteeWitnessRepository} from "./lightclientSyncCommitteeWitness";
-export {BackfilledSequences} from "./backfilledSequences";
+export {BackfilledRanges} from "./backfilledRanges";
