@@ -15,10 +15,36 @@ import {
   InvalidBlockError,
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
-} from "../../../src/slashingProtection";
-import {ISlashingProtectionInterchangeTest, SPEC_TEST_LOCATION} from "./params";
+} from "../../src/slashingProtection";
+import {SPEC_TEST_LOCATION} from "./params";
 
 chai.use(chaiAsPromised);
+
+/* eslint-disable @typescript-eslint/naming-convention */
+type SlashingProtectionInterchangeTest = {
+  name: string;
+  genesis_validators_root: string;
+  steps: [
+    {
+      should_succeed: boolean;
+      contains_slashable_data: boolean;
+      interchange: any;
+      blocks: {
+        pubkey: string;
+        should_succeed: boolean;
+        slot: string;
+        signing_root?: string;
+      }[];
+      attestations: {
+        pubkey: string;
+        should_succeed: boolean;
+        source_epoch: string;
+        target_epoch: string;
+        signing_root?: string;
+      }[];
+    }
+  ];
+};
 
 /* eslint-disable no-console */
 
@@ -110,12 +136,12 @@ describe("slashing-protection-interchange-tests", () => {
   }
 });
 
-export function loadTestCases(testsPath: string): ISlashingProtectionInterchangeTest[] {
+export function loadTestCases(testsPath: string): SlashingProtectionInterchangeTest[] {
   const files = fs.readdirSync(testsPath);
   if (files.length === 0) {
     throw Error(`Not tests found in ${testsPath}`);
   }
   return files.map(
-    (file) => JSON.parse(fs.readFileSync(path.join(testsPath, file), "utf8")) as ISlashingProtectionInterchangeTest
+    (file) => JSON.parse(fs.readFileSync(path.join(testsPath, file), "utf8")) as SlashingProtectionInterchangeTest
   );
 }

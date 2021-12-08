@@ -31,6 +31,13 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      # Cache validator slashing protection data tests
+      - name: Restore spec tests cache
+        uses: actions/cache@master
+        with:
+          path: packages/validator/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
+
       - name: Lint Grafana Dashboard
         run: yarn validate-gdash
       - name: Test root binary exists
