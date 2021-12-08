@@ -71,7 +71,7 @@ type BackfillSyncEvents = {
 type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
 
 export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}) {
-  lastBackSyncedSlot?: Slot | null = null;
+  lastBackSyncedSlot: Slot | null = null;
 
   private readonly chain: IBeaconChain;
   private readonly network: INetwork;
@@ -79,7 +79,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
   private readonly metrics: IMetrics | null;
-  private wsCheckpoint?: phase0.Checkpoint | null;
+  private wsCheckpoint: phase0.Checkpoint | null;
   private checkpointSlot: Slot;
   private opts: BackfillSyncOpts;
 
@@ -88,8 +88,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
    * the reversed head of the backfill sync, from where we need to backfill
    */
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
-  private anchorBlockRoot?: Root | null = null;
-  private backfillStartFromSlot?: Slot;
+  private anchorBlockRoot: Root | null = null;
+  private backfillStartFromSlot: Slot | null = null;
 
   private processor = new ItTrigger();
   private peers = new PeerSet();
@@ -103,7 +103,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.config = modules.config;
     this.logger = modules.logger;
     this.metrics = modules.metrics;
-    this.wsCheckpoint = modules.wsCheckpoint;
+    this.wsCheckpoint = modules.wsCheckpoint ?? null;
     this.checkpointSlot = (this.wsCheckpoint?.epoch ?? 0) * SLOTS_PER_EPOCH;
     this.opts = opts ?? {batchSize: BATCH_SIZE};
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
@@ -220,7 +220,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             case BackfillSyncErrorCode.NOT_LINEAR:
               // Lets try to jump directly to the parent of this anchorBlock as previous
               // (segment) of blocks could be orphaned
-              this.anchorBlockRoot = this.anchorBlock?.message.parentRoot;
+              this.anchorBlockRoot = this.anchorBlock ? this.anchorBlock.message.parentRoot : null;
               this.anchorBlock = null;
             // falls through
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
@@ -270,9 +270,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private async checkIfCheckpointSyncedAndValidate(): Promise<void> {
     if (
       this.wsCheckpoint !== null &&
-      this.wsCheckpoint !== undefined &&
       this.lastBackSyncedSlot !== null &&
-      this.lastBackSyncedSlot !== undefined &&
       this.checkpointSlot >= this.lastBackSyncedSlot
     ) {
       // Checkpoint root should be in db now!
@@ -286,7 +284,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         );
       this.logger.info("BackfillSync - wsCheckpoint validated!", {
         root: toHexString(this.wsCheckpoint.root),
-        slot: wsDbCheckpointBlock?.message.slot,
+        slot: wsDbCheckpointBlock.message.slot,
       });
       // no need to check again
       this.wsCheckpoint = null;
@@ -294,12 +292,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   private async checkUpdateFromBackfillSequences(): Promise<void> {
-    if (
-      this.lastBackSyncedSlot !== null &&
-      this.lastBackSyncedSlot !== undefined &&
-      this.backfillStartFromSlot !== null &&
-      this.backfillStartFromSlot !== undefined
-    ) {
+    if (this.lastBackSyncedSlot !== null && this.backfillStartFromSlot !== null) {
       const filteredSeqs = await this.db.backfilledRanges.entries({
         gte: this.lastBackSyncedSlot,
         lte: this.backfillStartFromSlot,
