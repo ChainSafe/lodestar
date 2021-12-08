@@ -5,9 +5,9 @@ import {Root} from "@chainsafe/lodestar-types";
 export enum BackfillSyncErrorCode {
   /** fetched block doesn't connect to anchor block */
   NOT_ANCHORED = "not_anchored",
-  // fetched blocks are not linear
+  /** fetched blocks are not linear */
   NOT_LINEAR = "not_linear",
-  // peer doesn't have required block by root
+  /** peer doesn't have required block by root */
   MISSING_BLOCK = "missing_blocks",
   INVALID_SIGNATURE = "invalid_proposer_signature",
 }

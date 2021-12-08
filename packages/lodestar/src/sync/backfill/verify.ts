@@ -39,7 +39,7 @@ export async function verifyBlockProposerSignature(
   blocks: allForkTypes.SignedBeaconBlock[]
 ): Promise<void> {
   const signatures = blocks.reduce((sigs: ISignatureSet[], block) => {
-    /** genesis block doesn't have valid signature */
+    // genesis block doesn't have valid signature
     if (block.message.slot !== GENESIS_SLOT) sigs.push(allForks.getProposerSignatureSet(state, block));
     return sigs;
   }, []);

@@ -62,8 +62,10 @@ const syncStatus: {[K in BackfillSyncStatus]: number} = {
 };
 
 type BackfillSyncEvents = {
-  /** slot param is oldest slot synced */
-  [BackfillSyncEvent.completed]: (oldestSlotSynced: Slot) => void;
+  [BackfillSyncEvent.completed]: (
+    /** Oldest slot synced */
+    oldestSlotSynced: Slot
+  ) => void;
 };
 
 type BackfillSyncEmitter = StrictEventEmitter<EventEmitter, BackfillSyncEvents>;
@@ -81,7 +83,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private checkpointSlot: Slot;
   private opts: BackfillSyncOpts;
 
-  /** At any given point, we should have either the anchorBlock or anchorBlockRoot,
+  /**
+   * At any given point, we should have either the anchorBlock or anchorBlockRoot,
    * the reversed head of the backfill sync, from where we need to backfill
    */
   private anchorBlock: allForks.SignedBeaconBlock | null = null;
@@ -111,9 +114,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.emit(BackfillSyncEvent.completed, oldestSlotSynced);
         this.logger.info("BackfillSync completed", {oldestSlotSynced});
         this.status = BackfillSyncStatus.completed;
-        /** Sync completed, unsubscribe listeners and don't run the processor again
-         *  Backfill is never necessary again until the node shuts down
-         */
+        // Sync completed, unsubscribe listeners and don't run the processor again.
+        // Backfill is never necessary again until the node shuts down
         this.close();
       })
       .catch((e) => {
@@ -138,23 +140,24 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.processor.end(new ErrorAborted("BackfillSync"));
   }
 
-  /** Returns oldestSlotSynced */
+  /**
+   * @returns Returns oldestSlotSynced
+   */
   private async sync(): Promise<Slot> {
-    /** Start processor loop */
+    // Start processor loop
     this.processor.trigger();
     await this.initializeSync();
 
     for await (const _ of this.processor) {
       this.status = BackfillSyncStatus.syncing;
 
-      /** 1. We should always have either anchorBlock or anchorBlockRoot, they are the
-       *     anchor points for this round of the sync
-       *  2. Check if we can jump back from available backfill sequence
-       *  3. Validate checkpoint once if synced
-       *  4. Exit the sync if backfilled till genesis
-       *  5. Check and read batchSize from DB, if found yield and recontinue from top
-       *  6. If not in DB, and if peer available, read batchSize from network recontinue
-       */
+      // 1. We should always have either anchorBlock or anchorBlockRoot, they are the
+      //    anchor points for this round of the sync
+      // 2. Check if we can jump back from available backfill sequence
+      // 3. Validate checkpoint once if synced
+      // 4. Exit the sync if backfilled till genesis
+      // 5. Check and read batchSize from DB, if found yield and recontinue from top
+      // 6. If not in DB, and if peer available, read batchSize from network recontinue
       if (!this.anchorBlock && !this.anchorBlockRoot) {
         this.logger.error("BackfillSync - irrevocable error, no valid anchorBlock or anchorBlockRoot");
         /** Break sync loop and throw error */
@@ -168,7 +171,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         return GENESIS_SLOT;
       }
 
-      /** Inspect in DB for batchSize blocks, post which yield control back to the loop */
+      // Inspect in DB for batchSize blocks, post which yield control back to the loop
       const inspectDbRoot = this.anchorBlock?.message.parentRoot || this.anchorBlockRoot;
       if (!inspectDbRoot) throw new Error("BackfillSyncInternalError");
       const dbBackBlock = await this.fastBackfillDb(inspectDbRoot);
@@ -180,7 +183,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         continue;
       }
 
-      /** Try the network if nothing found in DB */
+      // Try the network if nothing found in DB
       const peer = shuffleOne(this.peers.values());
       if (!peer) {
         this.status = BackfillSyncStatus.pending;
@@ -198,7 +201,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           });
           this.lastBackSyncedSlot = this.anchorBlock.message.slot;
 
-          /** Go back to start, do checks */
+          // Go back to start, do checks
           this.processor.trigger();
           continue;
         }
@@ -215,12 +218,11 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           switch (e.type.code) {
             case BackfillSyncErrorCode.NOT_ANCHORED:
             case BackfillSyncErrorCode.NOT_LINEAR:
-              /** Lets try to jump directly to the parent of this anchorBlock as previous
-               * (segment) of blocks could be orphaned
-               */
+              // Lets try to jump directly to the parent of this anchorBlock as previous
+              // (segment) of blocks could be orphaned
               this.anchorBlockRoot = this.anchorBlock?.message.parentRoot;
               this.anchorBlock = null;
-            /* falls through */
+            // falls through
             case BackfillSyncErrorCode.INVALID_SIGNATURE:
               this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadSyncBlocks");
           }
@@ -249,7 +251,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
   private async initializeSync(): Promise<void> {
     const anchorCp = this.chain.forkChoice.getFinalizedCheckpoint();
-    /** Look in db, as finalized root might not have moved at all on a quick restart */
+    // Look in db, as finalized root might not have moved at all on a quick restart
     this.anchorBlock = await this.db.blockArchive.getByRoot(anchorCp.root);
     if (this.anchorBlock) {
       this.lastBackSyncedSlot = this.anchorBlock.message.slot;
@@ -273,10 +275,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       this.lastBackSyncedSlot !== undefined &&
       this.checkpointSlot >= this.lastBackSyncedSlot
     ) {
-      /** Checkpoint root should be in db now! */
+      // Checkpoint root should be in db now!
       const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpoint.root);
       if (!wsDbCheckpointBlock || wsDbCheckpointBlock.message.slot !== this.checkpointSlot)
-        /** TODO: explode and stop the entire node */
+        // TODO: explode and stop the entire node
         throw new Error(
           `InvalidWsCheckpoint checkpointSlot: ${this.checkpointSlot}, ${
             wsDbCheckpointBlock ? "found at: " + wsDbCheckpointBlock?.message.slot : "not found"
@@ -286,7 +288,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         root: toHexString(this.wsCheckpoint.root),
         slot: wsDbCheckpointBlock?.message.slot,
       });
-      this.wsCheckpoint = null; //no need to check again
+      // no need to check again
+      this.wsCheckpoint = null;
     }
   }
 
@@ -369,14 +372,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       verified: verifiedBlocks.length,
     });
 
-    /** If any of the block's proposer signature fail, we can't trust this peer at all */
+    // If any of the block's proposer signature fail, we can't trust this peer at all
     if (verifiedBlocks.length > 0)
       await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), verifiedBlocks);
 
     await this.db.blockArchive.batchAdd(verifiedBlocks);
     this.metrics?.backfillSync.totalBlocks.inc({method: BackfillSyncMethod.rangesync}, verifiedBlocks.length);
 
-    /** If nextAnchor provided, found some linear anchored blocks */
+    // If nextAnchor provided, found some linear anchored blocks
     if (nextAnchor !== null) {
       this.anchorBlock = nextAnchor;
       this.lastBackSyncedSlot = nextAnchor.message.slot;
