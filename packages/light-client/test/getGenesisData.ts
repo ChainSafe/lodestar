@@ -1,20 +1,21 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
+import {getInfuraBeaconUrl} from "@chainsafe/lodestar-beacon-state-transition/test/perf/infura";
+import {NetworkName} from "@chainsafe/lodestar-config/networks";
 
 // To populate packages/light-client/src/networks.ts
 //
 // ```
-// ./node_modules/.bin/ts-node test/getGenesisData.ts
+// INFURA_ETH2_CREDENTIALS=<user>:<secret> ./node_modules/.bin/ts-node test/getGenesisData.ts
 // ```
 
 /* eslint-disable no-console */
 
-const networksInInfura = ["mainnet", "prater", "pyrmont"];
-const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
+const networksInInfura: NetworkName[] = ["mainnet", "prater", "pyrmont"];
 
 async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {
-    const baseUrl = `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
+    const baseUrl = getInfuraBeaconUrl(network);
     const api = getClient(config, {baseUrl});
     const {data: genesis} = await api.beacon.getGenesis();
     console.log(network, {

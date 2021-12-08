@@ -2,12 +2,14 @@ import fs from "fs";
 import {init} from "@chainsafe/bls";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
+import {NetworkName} from "@chainsafe/lodestar-config/networks";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {allForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "../../src";
 import {parseAttesterFlags} from "../../lib/allForks";
 import {AttesterFlags} from "../../src/allForks";
 import {Validator} from "../../lib/phase0";
 import {csvAppend, readCsv} from "./csv";
+import {getInfuraBeaconUrl} from "./infura";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
 //
@@ -63,7 +65,7 @@ const validatorChangesCountZero: ValidatorChangesCount = {
   withdrawableEpoch: 0,
 };
 
-async function analyzeEpochs(network: string, fromEpoch?: number): Promise<void> {
+async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<void> {
   await init("blst-native");
 
   // Persist summary of epoch data as CSV
@@ -71,8 +73,7 @@ async function analyzeEpochs(network: string, fromEpoch?: number): Promise<void>
   const currCsv = fs.existsSync(csvPath) ? readCsv<EpochData>(csvPath) : [];
   const writeToCsv = csvAppend<EpochData>(csvPath);
 
-  const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
-  const baseUrl = `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
+  const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
   const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
 
@@ -173,9 +174,11 @@ function countAttBits(atts: phase0.PendingAttestation[]): number {
 
 const fromEpoch = process.env.FROM_EPOCH !== undefined ? parseInt(process.env.FROM_EPOCH) : undefined;
 const network = process.env.NETWORK;
-if (!network) throw Error("Must define process.env.NETWORK");
+if (!network) {
+  throw Error("Must define process.env.NETWORK");
+}
 
-analyzeEpochs(network, fromEpoch).catch((e: Error) => {
+analyzeEpochs(network as NetworkName, fromEpoch).catch((e: Error) => {
   // eslint-disable-next-line no-console
   console.error(e);
   process.exit(1);

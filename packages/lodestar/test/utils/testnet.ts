@@ -1,12 +1,10 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
-import {goerliRpcUrl} from "../testParams";
 import {fromHexString} from "@chainsafe/ssz";
 
 /** Generic testnet data taken from the Medalla testnet  */
-export const testnet = {
-  providerUrl: goerliRpcUrl,
+export const medallaTestnetConfig = {
   depositBlock: 3085928,
   // Optimized blocks for quick testing
   blockWithDepositActivity: 3124889,

@@ -25,7 +25,7 @@ import {
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {getClient} from "@chainsafe/lodestar-api";
 import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
-import {getInfuraUrl} from "./infura";
+import {getInfuraBeaconUrl} from "./infura";
 import {testCachePath} from "../cache";
 import {MutableVector} from "@chainsafe/persistent-ts";
 
@@ -457,7 +457,7 @@ export async function getNetworkCachedState(
   if (fs.existsSync(filepath)) {
     stateSsz = fs.readFileSync(filepath);
   } else {
-    const client = getClient(config, {baseUrl: getInfuraUrl(network), timeoutMs: timeout ?? 300_000});
+    const client = getClient(config, {baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000});
     stateSsz =
       computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
         ? await client.debug.getState(String(slot), "ssz")

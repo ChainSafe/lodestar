@@ -45,5 +45,7 @@ jobs:
         run: yarn coverage
       - name: E2e tests
         run: yarn test:e2e
+        env:
+          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL }}
       - name: README check
         run: yarn run check-readme

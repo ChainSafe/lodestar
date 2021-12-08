@@ -1,5 +1,10 @@
-const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
+import {NetworkName} from "@chainsafe/lodestar-config/networks";
 
-export function getInfuraUrl(network: "mainnet" | "pyrmont" | "prater"): string {
-  return `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
+export function getInfuraBeaconUrl(network: NetworkName): string {
+  const INFURA_ETH2_CREDENTIALS = process.env.INFURA_ETH2_CREDENTIALS;
+  if (!INFURA_ETH2_CREDENTIALS) {
+    throw Error("Must set ENV INFURA_ETH2_CREDENTIALS");
+  }
+
+  return `https://${INFURA_ETH2_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
 }

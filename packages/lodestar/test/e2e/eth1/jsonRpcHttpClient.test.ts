@@ -4,7 +4,7 @@ import chaiAsPromised from "chai-as-promised";
 import http from "http";
 import {AbortController} from "@chainsafe/abort-controller";
 import {JsonRpcHttpClient} from "../../../src/eth1/provider/jsonRpcHttpClient";
-import {goerliRpcUrl} from "../../testParams";
+import {getGoerliRpcUrl} from "../../testParams";
 import {IRpcPayload} from "../../../src/eth1/interface";
 
 chai.use(chaiAsPromised);
@@ -142,7 +142,7 @@ describe("eth1 / jsonRpcHttpClient", function () {
         );
       }
 
-      if (!url) url = goerliRpcUrl;
+      if (!url) url = getGoerliRpcUrl();
       if (!payload) payload = {method: "no-method", params: []};
 
       const controller = new AbortController();

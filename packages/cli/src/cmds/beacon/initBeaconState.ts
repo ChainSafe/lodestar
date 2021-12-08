@@ -10,7 +10,7 @@ import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
-import {fetchWeakSubjectivityState, getGenesisFileUrl, getInfuraBeaconUrl, infuraNetworks} from "../../networks";
+import {fetchWeakSubjectivityState, getGenesisFileUrl} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
@@ -104,11 +104,9 @@ export async function initBeaconState(
     // weak subjectivity sync from a state that needs to be fetched:
     // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
     // otherwise, the 'finalized' state is downloaded and the state itself is used for verification (all trust delegated to the remote beacon node)
-    const remoteBeaconUrl = args.weakSubjectivityServerUrl || getInfuraBeaconUrl(args.network);
+    const remoteBeaconUrl = args.weakSubjectivityServerUrl;
     if (!remoteBeaconUrl) {
-      throw new Error(
-        `Missing weak subjectivity server URL.  Use either a custom URL via --weakSubjectivityServerUrl or use one of these options for --network: ${infuraNetworks.toString()}`
-      );
+      throw Error(`Must set arg --weakSubjectivityServerUrl for network ${args.network}`);
     }
 
     let stateId = "finalized";
