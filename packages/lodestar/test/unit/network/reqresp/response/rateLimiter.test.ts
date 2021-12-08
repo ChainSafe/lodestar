@@ -18,6 +18,7 @@ describe("ResponseRateLimiter", () => {
     inboundRateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
       logger: new WinstonLogger(),
       peerRpcScores: peerRpcScoresStub,
+      metrics: null,
     });
     sandbox.useFakeTimers();
   });
@@ -126,6 +127,7 @@ describe("ResponseRateLimiter", () => {
     const rateLimiter = new InboundRateLimiter(defaultNetworkOptions, {
       logger: new WinstonLogger(),
       peerRpcScores: peerRpcScoresStub,
+      metrics: null,
     });
     const requestTyped = {method: Method.BeaconBlocksByRoot, body: [Buffer.alloc(32)]} as RequestTypedContainer;
     // Make it full: every 1/2s add a new request for all peers

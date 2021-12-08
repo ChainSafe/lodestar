@@ -1,5 +1,6 @@
 import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
+import {IMetrics} from "../../../metrics";
 import {MapDef} from "../../../util/map";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";
 import {IRateLimiter} from "../interface";
@@ -9,6 +10,7 @@ import {Method, RequestTypedContainer} from "../types";
 interface IRateLimiterModules {
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
+  metrics: IMetrics | null;
 }
 
 /**
@@ -46,6 +48,7 @@ export const defaultRateLimiterOpts = {
 export class InboundRateLimiter implements IRateLimiter {
   private readonly logger: ILogger;
   private readonly peerRpcScores: IPeerRpcScoreStore;
+  private readonly metrics: IMetrics | null;
   private requestCountTrackersByPeer: MapDef<string, RateTracker>;
   /**
    * This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
@@ -67,6 +70,7 @@ export class InboundRateLimiter implements IRateLimiter {
     );
     this.logger = modules.logger;
     this.peerRpcScores = modules.peerRpcScores;
+    this.metrics = modules.metrics;
   }
 
   /**
@@ -83,6 +87,9 @@ export class InboundRateLimiter implements IRateLimiter {
         requestsWithinWindow: requestCountPeerTracker.getRequestedObjectsWithinWindow(),
       });
       this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      if (this.metrics) {
+        this.metrics.reqRespRateLimitErrors.inc({tracker: "requestCountPeerTracker"});
+      }
       return false;
     }
 
@@ -106,10 +113,16 @@ export class InboundRateLimiter implements IRateLimiter {
           requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
         });
         this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+        if (this.metrics) {
+          this.metrics.reqRespRateLimitErrors.inc({tracker: "blockCountPeerTracker"});
+        }
         return false;
       }
 
       if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
+        if (this.metrics) {
+          this.metrics.reqRespRateLimitErrors.inc({tracker: "blockCountTotalTracker"});
+        }
         // don't apply penalty
         return false;
       }
