@@ -29,7 +29,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const secretKeys = await getSecretKeys(args);
+  const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
   if (secretKeys.length === 0) {
     throw new YargsError("No validator keystores found");
   }
@@ -46,6 +46,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
+    unlockSecretKeys?.();
   }, logger.info.bind(logger));
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
