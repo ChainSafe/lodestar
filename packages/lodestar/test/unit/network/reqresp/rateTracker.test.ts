@@ -15,6 +15,15 @@ describe("RateTracker", () => {
     sandbox.restore();
   });
 
+  /**
+   * A rate tracker with limit 500 and 1 minute track
+   * - request 300 => ok
+   * - request 300 => ok
+   * - request 100 => NOT ok
+   * - tick 1 minute to reclaim all quota (500)
+   * - request 100 => ok
+   * - request 400 => ok
+   */
   it("should request objects up to limit", () => {
     expect(rateTracker.getRequestedObjectsWithinWindow()).to.be.equal(0);
     expect(rateTracker.requestObjects(300)).to.be.equal(300);

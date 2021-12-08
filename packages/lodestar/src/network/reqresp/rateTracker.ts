@@ -5,6 +5,8 @@ type RateTrackerOpts = {
   timeoutMs: number;
 };
 
+const BUCKET_SIZE_MS = 1000;
+
 /**
  * The generic rate tracker allows up to `limit` objects in a period of time.
  * This could apply to both request count or block count, for both requests and responses.
@@ -30,7 +32,7 @@ export class RateTracker {
     }
 
     this.requestsWithinWindow += objectCount;
-    const key = Math.floor(Date.now() / 1000);
+    const key = Math.floor(Date.now() / BUCKET_SIZE_MS);
     const curObjectCount = this.requests.getOrDefault(key);
     this.requests.set(key, curObjectCount + objectCount);
 
@@ -46,7 +48,7 @@ export class RateTracker {
 
     for (const [timeInSec, count] of this.requests.entries()) {
       // reclaim the quota for old requests
-      if (now - timeInSec * 1000 >= this.timeoutMs) {
+      if (now - timeInSec * BUCKET_SIZE_MS >= this.timeoutMs) {
         this.requestsWithinWindow -= count;
         this.requests.delete(timeInSec);
       } else {

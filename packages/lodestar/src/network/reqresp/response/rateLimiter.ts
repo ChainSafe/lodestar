@@ -4,36 +4,57 @@ import {MapDef} from "../../../util/map";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";
 import {IRateLimiter} from "../interface";
 import {RateTracker} from "../rateTracker";
+import {Method, RequestTypedContainer} from "../types";
 
 interface IRateLimiterModules {
   logger: ILogger;
   peerRpcScores: IPeerRpcScoreStore;
 }
 
+/**
+ * Options:
+ * - requestCountPeerLimit: maximum request count we can serve per peer within rateTrackerTimeoutMs
+ * - blockCountPeerLimit: maximum block count we can serve per peer within rateTrackerTimeoutMs
+ * - blockCountTotalLimit: maximum block count we can serve for all peers within rateTrackerTimeoutMs
+ * - rateTrackerTimeoutMs: the time period we want to track total requests or objects, normally 1 min
+ */
 export type RateLimiterOpts = {
-  requestCountTotalLimit: number;
   requestCountPeerLimit: number;
-  blockCountTotalLimit: number;
   blockCountPeerLimit: number;
+  blockCountTotalLimit: number;
   rateTrackerTimeoutMs: number;
 };
 
 /**
- * The rate tracker for all peers.
+ * Default value for RateLimiterOpts
+ * - requestCountPeerLimit: allow to serve 50 requests per peer within 1 minute
+ * - blockCountPeerLimit: allow to serve 500 blocks per peer within 1 minute
+ * - blockCountTotalLimit: allow to serve 2000 (blocks) for all peer within 1 minute (4 x blockCountPeerLimit)
+ * - rateTrackerTimeoutMs: 1 minute
+ */
+export const defaultRateLimiterOpts = {
+  requestCountPeerLimit: 50,
+  blockCountPeerLimit: 500,
+  blockCountTotalLimit: 2000,
+  rateTrackerTimeoutMs: 60 * 1000,
+};
+
+/**
+ * This class is singleton, it has per-peer request count rate tracker and block count rate tracker
+ * and a block count rate tracker for all peers (this is lodestar specific).
  */
 export class InboundRateLimiter implements IRateLimiter {
   private readonly logger: ILogger;
   private readonly peerRpcScores: IPeerRpcScoreStore;
-  private requestCountTotalTracker: RateTracker;
   private requestCountTrackersByPeer: MapDef<string, RateTracker>;
+  /**
+   * This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
+   * same time, even through we limit block count per peer as in blockCountTrackersByPeer
+   */
   private blockCountTotalTracker: RateTracker;
   private blockCountTrackersByPeer: MapDef<string, RateTracker>;
 
   constructor(opts: RateLimiterOpts, modules: IRateLimiterModules) {
-    this.requestCountTotalTracker = new RateTracker({
-      limit: opts.requestCountTotalLimit,
-      timeoutMs: opts.rateTrackerTimeoutMs,
-    });
     this.requestCountTrackersByPeer = new MapDef(
       () => new RateTracker({limit: opts.requestCountPeerLimit, timeoutMs: opts.rateTrackerTimeoutMs})
     );
@@ -50,9 +71,8 @@ export class InboundRateLimiter implements IRateLimiter {
 
   /**
    * Tracks a request from a peer and returns whether to allow the request based on the configured rate limit params.
-   * @param numBlock only applies to beacon_blocks_by_range and beacon_blocks_by_root
    */
-  allowRequest(peerId: PeerId, numBlock?: number): boolean {
+  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean {
     const peerIdStr = peerId.toB58String();
 
     // rate limit check for request
@@ -66,12 +86,18 @@ export class InboundRateLimiter implements IRateLimiter {
       return false;
     }
 
-    if (this.requestCountTotalTracker.requestObjects(1) === 0) {
-      return false;
+    let numBlock = 0;
+    switch (requestTyped.method) {
+      case Method.BeaconBlocksByRange:
+        numBlock = requestTyped.body.count;
+        break;
+      case Method.BeaconBlocksByRoot:
+        numBlock = requestTyped.body.length;
+        break;
     }
 
     // rate limit check for block count
-    if (numBlock !== undefined) {
+    if (numBlock > 0) {
       const blockCountPeerTracker = this.blockCountTrackersByPeer.getOrDefault(peerIdStr);
       if (blockCountPeerTracker.requestObjects(numBlock) === 0) {
         this.logger.verbose("Do not serve block request due to block count rate limit", {
@@ -84,6 +110,7 @@ export class InboundRateLimiter implements IRateLimiter {
       }
 
       if (this.blockCountTotalTracker.requestObjects(numBlock) === 0) {
+        // don't apply penalty
         return false;
       }
     }

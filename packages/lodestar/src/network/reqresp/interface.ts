@@ -9,6 +9,7 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
+import {RequestTypedContainer} from "./types";
 
 export interface IReqResp {
   start(): void;
@@ -22,7 +23,7 @@ export interface IReqResp {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
-  prune(peerId: PeerId): void;
+  pruneRateLimiterData(peerId: PeerId): void;
 }
 
 export interface IReqRespModules {
@@ -33,7 +34,6 @@ export interface IReqRespModules {
   reqRespHandlers: ReqRespHandlers;
   peerMetadata: IPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
-  inboundRateLimiter: IRateLimiter;
   networkEventBus: INetworkEventBus;
   metrics: IMetrics | null;
 }
@@ -79,7 +79,7 @@ export interface IRateLimiter {
   /**
    * Allow to request or response based on rate limit params configured.
    */
-  allowRequest(peerId: PeerId, objectCount?: number): boolean;
+  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean;
 
   /**
    * Prune by peer id

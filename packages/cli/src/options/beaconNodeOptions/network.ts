@@ -12,7 +12,6 @@ export interface INetworkArgs {
   "network.subscribeAllSubnets": boolean;
   "network.connectToDiscv5Bootnodes": boolean;
   "network.discv5FirstQueryDelayMs": number;
-  "network.requestCountTotalLimit": number;
   "network.requestCountPeerLimit": number;
   "network.blockCountTotalLimit": number;
   "network.blockCountPeerLimit": number;
@@ -35,7 +34,6 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args["network.subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
-    requestCountTotalLimit: args["network.requestCountTotalLimit"],
     requestCountPeerLimit: args["network.requestCountPeerLimit"],
     blockCountTotalLimit: args["network.blockCountTotalLimit"],
     blockCountPeerLimit: args["network.blockCountPeerLimit"],
@@ -115,16 +113,10 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
-  "network.requestCountTotalLimit": {
-    type: "number",
-    description: "Max block req/resp requests per rateTrackerTimeoutMs",
-    defaultDescription: String(defaultOptions.network.requestCountTotalLimit),
-    group: "network",
-  },
-
   "network.requestCountPeerLimit": {
     type: "number",
     description: "Max block req/resp requests per peer per rateTrackerTimeoutMs",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.requestCountPeerLimit),
     group: "network",
   },
@@ -132,6 +124,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.blockCountTotalLimit": {
     type: "number",
     description: "Max block count requested per rateTrackerTimeoutMs",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.blockCountTotalLimit),
     group: "network",
   },
@@ -139,6 +132,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.blockCountPeerLimit": {
     type: "number",
     description: "Max block count requested per peer per rateTrackerTimeoutMs",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.blockCountPeerLimit),
     group: "network",
   },
@@ -146,6 +140,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
   "network.rateTrackerTimeoutMs": {
     type: "number",
     description: "Time window to track rate limit in milli seconds",
+    hidden: true,
     defaultDescription: String(defaultOptions.network.rateTrackerTimeoutMs),
     group: "network",
   },

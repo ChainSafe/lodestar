@@ -107,7 +107,7 @@ describe("network / peers / PeerManager", function () {
     ping = sinon.stub();
     beaconBlocksByRange = sinon.stub();
     beaconBlocksByRoot = sinon.stub();
-    prune = sinon.stub();
+    pruneRateLimiterData = sinon.stub();
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {

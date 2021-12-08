@@ -41,7 +41,6 @@ describe("sync / unknown block sync", function () {
       options: {
         sync: {isSingleNode: true},
         network: {
-          requestCountTotalLimit: 1000,
           requestCountPeerLimit: 1000,
         },
       },
