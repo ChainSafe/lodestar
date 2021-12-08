@@ -19,7 +19,7 @@ README.md
 .codecov.yml
 
 # Tooling
-/docker
+docker
 prometheus.yml
 
 # Docker
@@ -27,9 +27,10 @@ Dockerfile
 docker-compose.yml
 
 # Tests
-/packages/**/test
+packages/**/test
 .__testdb
-/packages/spec-test-runner/spec-tests
+packages/spec-test-runner/spec-tests
+packages/validator/spec-tests
 
 # Lodestar artifacts
 .lodestar
