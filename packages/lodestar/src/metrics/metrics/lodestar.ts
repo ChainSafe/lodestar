@@ -429,7 +429,7 @@ export function createLodestarMetrics(
     backfillSync: {
       backfilledTillSlot: register.gauge({
         name: "lodestar_backfill_till_slot",
-        help: "Total amount of backfilled blocks",
+        help: "Current lowest backfilled slot",
       }),
       totalBlocks: register.gauge<"method">({
         name: "lodestar_backfill_sync_blocks_total",
@@ -440,7 +440,7 @@ export function createLodestarMetrics(
         name: "lodestar_backfill_sync_errors_total",
         help: "Total number of errors while backfilling",
       }),
-      status: register.gauge<"status">({
+      status: register.gauge({
         name: "lodestar_backfill_sync_status",
         help: "Current backfill syncing status: [Pending, Syncing, Completed]",
       }),

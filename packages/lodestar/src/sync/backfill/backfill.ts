@@ -121,13 +121,12 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
         this.status = BackfillSyncStatus.aborted;
         this.close();
       });
-    if (this.metrics) {
-      this.metrics.backfillSync.status.addCollect(() => this.metrics?.backfillSync.status.set(syncStatus[this.status]));
-      this.metrics.backfillSync.backfilledTillSlot.addCollect(
-        () =>
-          this.lastBackSyncedSlot !== null &&
-          this.lastBackSyncedSlot !== undefined &&
-          this.metrics?.backfillSync.backfilledTillSlot.set(this.lastBackSyncedSlot)
+
+    const metrics = this.metrics;
+    if (metrics) {
+      metrics.backfillSync.status.addCollect(() => metrics.backfillSync.status.set(syncStatus[this.status]));
+      metrics.backfillSync.backfilledTillSlot.addCollect(
+        () => this.lastBackSyncedSlot != null && metrics.backfillSync.backfilledTillSlot.set(this.lastBackSyncedSlot)
       );
     }
   }
