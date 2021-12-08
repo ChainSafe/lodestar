@@ -442,7 +442,7 @@ export function createLodestarMetrics(
       }),
       status: register.gauge({
         name: "lodestar_backfill_sync_status",
-        help: "Current backfill syncing status: [Pending, Syncing, Completed]",
+        help: "Current backfill syncing status: [Aborted, Pending, Syncing, Completed]",
       }),
     },
 
