@@ -12,8 +12,6 @@ import * as prater from "./prater";
 
 export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
 export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
-/** Networks that infura supports */
-export const infuraNetworks: NetworkName[] = ["mainnet", "pyrmont", "prater"];
 
 function getNetworkData(
   network: NetworkName
@@ -36,27 +34,14 @@ function getNetworkData(
   }
 }
 
-export function getEth1ProviderUrl(networkId: number): string {
-  switch (networkId) {
-    case 1:
-      return "https://mainnet.infura.io/v3/84842078b09946638c03157f83405213";
-    case 5:
-      return "https://goerli.infura.io/v3/84842078b09946638c03157f83405213";
-    default:
-      throw Error(`Eth1 network not supported: ${networkId}`);
-  }
-}
-
 export function getNetworkBeaconParams(network: NetworkName): IChainConfig {
   return getNetworkData(network).chainConfig;
 }
 
 export function getNetworkBeaconNodeOptions(network: NetworkName): RecursivePartial<IBeaconNodeOptions> {
-  const {depositContractDeployBlock, bootEnrs, chainConfig} = getNetworkData(network);
-  const networkId = parseInt(String(chainConfig.DEPOSIT_NETWORK_ID || 1), 10);
+  const {depositContractDeployBlock, bootEnrs} = getNetworkData(network);
   return {
     eth1: {
-      providerUrls: [getEth1ProviderUrl(networkId)],
       depositContractDeployBlock,
     },
     network: {
@@ -90,16 +75,6 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
   }
   return enrs;
-}
-
-// TODO these URLs are from a local infura account.  switch with a ChainSafe account when available
-const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
-
-export function getInfuraBeaconUrl(network: NetworkName): string | undefined {
-  if (infuraNetworks.includes(network)) {
-    return `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
-  }
-  return undefined;
 }
 
 /**

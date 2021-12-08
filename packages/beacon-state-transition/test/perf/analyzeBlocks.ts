@@ -1,5 +1,6 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
+import {getInfuraBeaconUrl} from "./infura";
 
 // Analyze how eth2 blocks are in a target network to prepare accurate performance states and blocks
 
@@ -15,10 +16,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 // aggregationBitsAvg: 87.88991645944512
 
 const network = "mainnet";
-const INFURA_CREDENTIALS = "1sla4tyOFn0bB1ohyCKaH2sLmHu:b8cdb9d881039fd04fe982a5ec57b0b8";
-const baseUrl = `https://${INFURA_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
-
-const client = getClient(config, {baseUrl});
+const client = getClient(config, {baseUrl: getInfuraBeaconUrl(network)});
 
 async function run(): Promise<void> {
   const {data: headBlock} = await client.beacon.getBlockHeader("head");
