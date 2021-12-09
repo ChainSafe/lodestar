@@ -10,7 +10,7 @@ import {writeFile, readFile} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
 import {IBeaconParamsUnparsed} from "./types";
-import {parseBeaconParamsArgs} from "../options";
+import {parseBeaconParamsArgs, parseTerminalPowArgs, ITerminalPowArgs} from "../options";
 
 type IBeaconParamsCliArgs = {
   network?: NetworkName;
@@ -39,7 +39,10 @@ export function getBeaconParamsFromArgs(args: IBeaconParamsCliArgs): IChainConfi
   return getBeaconParams({
     network: args.network,
     paramsFile: getGlobalPaths(args).paramsFile,
-    additionalParamsCli: parseBeaconParamsArgs(args as Record<string, string | number>),
+    additionalParamsCli: {
+      ...parseBeaconParamsArgs(args as Record<string, string | number>),
+      ...parseTerminalPowArgs(args as ITerminalPowArgs),
+    },
   });
 }
 
