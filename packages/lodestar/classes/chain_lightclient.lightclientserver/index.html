@@ -552,7 +552,7 @@ Storing 4 witness per epoch costs <code>6848 * 4 * 32 = 876544 ~ 0.9 MB/m</code>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new LightClientServer</strong>(<code>modules</code>: <a href="../../interfaces/chain_lightclient.ilightclientinitermodules/">ILightClientIniterModules</a>, <code>genesisData</code>: <a href="../../modules/chain_lightclient/#genesisdata">GenesisData</a>): <em><a href="./">LightClientServer</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L174">packages/lodestar/src/chain/lightClient/index.ts:174</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L174">packages/lodestar/src/chain/lightClient/index.ts:174</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -576,52 +576,52 @@ Storing 4 witness per epoch costs <code>6848 * 4 * 32 = 876544 ~ 0.9 MB/m</code>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-checkpointheaders"><code>Private</code> checkpointHeaders<a class="headerlink" href="#private-checkpointheaders" title="Permanent link">¶</a></h3>
 <p>• <strong>checkpointHeaders</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, BeaconBlockHeader›</em> = new Map<blockroohex, phase0.beaconblockheader="">()</blockroohex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L171">packages/lodestar/src/chain/lightClient/index.ts:171</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L171">packages/lodestar/src/chain/lightClient/index.ts:171</a></em></p>
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L161">packages/lodestar/src/chain/lightClient/index.ts:161</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L161">packages/lodestar/src/chain/lightClient/index.ts:161</a></em></p>
 <hr/>
 <h3 id="private-readonly-db"><code>Private</code> <code>Readonly</code> db<a class="headerlink" href="#private-readonly-db" title="Permanent link">¶</a></h3>
 <p>• <strong>db</strong>: <em><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L160">packages/lodestar/src/chain/lightClient/index.ts:160</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L160">packages/lodestar/src/chain/lightClient/index.ts:160</a></em></p>
 <hr/>
 <h3 id="private-readonly-emitter"><code>Private</code> <code>Readonly</code> emitter<a class="headerlink" href="#private-readonly-emitter" title="Permanent link">¶</a></h3>
 <p>• <strong>emitter</strong>: <em><a href="../chain.chaineventemitter/">ChainEventEmitter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L162">packages/lodestar/src/chain/lightClient/index.ts:162</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L162">packages/lodestar/src/chain/lightClient/index.ts:162</a></em></p>
 <hr/>
 <h3 id="private-readonly-genesisdata"><code>Private</code> <code>Readonly</code> genesisData<a class="headerlink" href="#private-readonly-genesisdata" title="Permanent link">¶</a></h3>
 <p>• <strong>genesisData</strong>: <em><a href="../../modules/chain_lightclient/#genesisdata">GenesisData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L176">packages/lodestar/src/chain/lightClient/index.ts:176</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L176">packages/lodestar/src/chain/lightClient/index.ts:176</a></em></p>
 <hr/>
 <h3 id="private-readonly-knownsynccommittee"><code>Private</code> <code>Readonly</code> knownSyncCommittee<a class="headerlink" href="#private-readonly-knownsynccommittee" title="Permanent link">¶</a></h3>
 <p>• <strong>knownSyncCommittee</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹string››</em> = new MapDef<syncperiod, set\<dependantroothex="">&gt;(() =&gt; new Set())</syncperiod,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L164">packages/lodestar/src/chain/lightClient/index.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L164">packages/lodestar/src/chain/lightClient/index.ts:164</a></em></p>
 <hr/>
 <h3 id="private-latestheadupdate"><code>Private</code> latestHeadUpdate<a class="headerlink" href="#private-latestheadupdate" title="Permanent link">¶</a></h3>
 <p>• <strong>latestHeadUpdate</strong>: <em>routes.lightclient.LightclientHeaderUpdate | null</em> = null</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L172">packages/lodestar/src/chain/lightClient/index.ts:172</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L172">packages/lodestar/src/chain/lightClient/index.ts:172</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L163">packages/lodestar/src/chain/lightClient/index.ts:163</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L163">packages/lodestar/src/chain/lightClient/index.ts:163</a></em></p>
 <hr/>
 <h3 id="private-readonly-prevheaddata"><code>Private</code> <code>Readonly</code> prevHeadData<a class="headerlink" href="#private-readonly-prevheaddata" title="Permanent link">¶</a></h3>
 <p>• <strong>prevHeadData</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../../modules/chain_lightclient/#syncattesteddata">SyncAttestedData</a>›</em> = new Map<blockroohex, syncattesteddata="">()</blockroohex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L170">packages/lodestar/src/chain/lightClient/index.ts:170</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L170">packages/lodestar/src/chain/lightClient/index.ts:170</a></em></p>
 <p>Keep in memory since this data is very transient, not useful after a few slots</p>
 <hr/>
 <h3 id="private-storedcurrentsynccommittee"><code>Private</code> storedCurrentSyncCommittee<a class="headerlink" href="#private-storedcurrentsynccommittee" title="Permanent link">¶</a></h3>
 <p>• <strong>storedCurrentSyncCommittee</strong>: <em>boolean</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L165">packages/lodestar/src/chain/lightClient/index.ts:165</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L165">packages/lodestar/src/chain/lightClient/index.ts:165</a></em></p>
 <hr/>
 <h3 id="private-readonly-zero"><code>Private</code> <code>Readonly</code> zero<a class="headerlink" href="#private-readonly-zero" title="Permanent link">¶</a></h3>
 <p>• <strong>zero</strong>: <em>Pick‹LightClientUpdate, "finalityBranch" | "finalityHeader"›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L174">packages/lodestar/src/chain/lightClient/index.ts:174</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L174">packages/lodestar/src/chain/lightClient/index.ts:174</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getcommitteeupdates">getCommitteeUpdates<a class="headerlink" href="#getcommitteeupdates" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommitteeUpdates</strong>(<code>period</code>: SyncPeriod): <em>Promise‹LightClientUpdate›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L258">packages/lodestar/src/chain/lightClient/index.ts:258</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L258">packages/lodestar/src/chain/lightClient/index.ts:258</a></em></p>
 <p>API ROUTE to get the best available update for <code>period</code> to transition to the next sync committee.
 Criteria for best in priority order:
 - Is finalized
@@ -646,7 +646,7 @@ Criteria for best in priority order:
 <hr/>
 <h3 id="private-getfinalizedheader"><code>Private</code> getFinalizedHeader<a class="headerlink" href="#private-getfinalizedheader" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getFinalizedHeader</strong>(<code>finalizedBlockRoot</code>: Uint8Array): <em>Promise‹BeaconBlockHeader›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L502">packages/lodestar/src/chain/lightClient/index.ts:502</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L502">packages/lodestar/src/chain/lightClient/index.ts:502</a></em></p>
 <p>Get finalized header from db. Keeps a small in-memory cache to speed up most of the lookups</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -667,14 +667,14 @@ Criteria for best in priority order:
 <hr/>
 <h3 id="getheadupdate">getHeadUpdate<a class="headerlink" href="#getheadupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getHeadUpdate</strong>(): <em>Promise‹routes.lightclient.LightclientHeaderUpdate›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L308">packages/lodestar/src/chain/lightClient/index.ts:308</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L308">packages/lodestar/src/chain/lightClient/index.ts:308</a></em></p>
 <p>API ROUTE to poll LightclientHeaderUpdate.
 Clients should use the SSE type <code>lightclient_header_update</code> if available</p>
 <p><strong>Returns:</strong> <em>Promise‹routes.lightclient.LightclientHeaderUpdate›</em></p>
 <hr/>
 <h3 id="getsnapshot">getSnapshot<a class="headerlink" href="#getsnapshot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSnapshot</strong>(<code>blockRoot</code>: Uint8Array): <em>Promise‹routes.lightclient.LightclientSnapshotWithProof›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L222">packages/lodestar/src/chain/lightClient/index.ts:222</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L222">packages/lodestar/src/chain/lightClient/index.ts:222</a></em></p>
 <p>API ROUTE to get <code>currentSyncCommittee</code> and <code>nextSyncCommittee</code> from a trusted state root</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -695,7 +695,7 @@ Clients should use the SSE type <code>lightclient_header_update</code> if availa
 <hr/>
 <h3 id="private-maybestorenewbestpartialupdate"><code>Private</code> maybeStoreNewBestPartialUpdate<a class="headerlink" href="#private-maybestorenewbestpartialupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>maybeStoreNewBestPartialUpdate</strong>(<code>syncAggregate</code>: SyncAggregate, <code>attestedData</code>: <a href="../../modules/chain_lightclient/#syncattesteddata">SyncAttestedData</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L460">packages/lodestar/src/chain/lightClient/index.ts:460</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L460">packages/lodestar/src/chain/lightClient/index.ts:460</a></em></p>
 <p>Given a new <code>syncAggregate</code> maybe persist a new best partial update if its better than the current stored for
 that sync period.</p>
 <p><strong>Parameters:</strong></p>
@@ -721,7 +721,7 @@ that sync period.</p>
 <hr/>
 <h3 id="onimportblock">onImportBlock<a class="headerlink" href="#onimportblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onImportBlock</strong>(<code>block</code>: BeaconBlock, <code>postState</code>: CachedBeaconState‹allForks.BeaconState›, <code>parentBlock</code>: object): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L195">packages/lodestar/src/chain/lightClient/index.ts:195</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L195">packages/lodestar/src/chain/lightClient/index.ts:195</a></em></p>
 <p>Call after importing a block, having the postState available in memory for proof generation.
 - Persist state witness
 - Use block's syncAggregate</p>
@@ -751,7 +751,7 @@ that sync period.</p>
 <hr/>
 <h3 id="private-onsyncaggregate"><code>Private</code> onSyncAggregate<a class="headerlink" href="#private-onsyncaggregate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onSyncAggregate</strong>(<code>syncAggregate</code>: SyncAggregate, <code>signedBlockRoot</code>: Root): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L427">packages/lodestar/src/chain/lightClient/index.ts:427</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L427">packages/lodestar/src/chain/lightClient/index.ts:427</a></em></p>
 <ol>
 <li>
 <p>Subscribe to gossip topics <code>sync_committee_{subnet_id}</code> and collect <code>sync_committee_message</code>
@@ -797,7 +797,7 @@ signature: BLSSignature
 <hr/>
 <h3 id="private-persistpostblockimportdata"><code>Private</code> persistPostBlockImportData<a class="headerlink" href="#private-persistpostblockimportdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>persistPostBlockImportData</strong>(<code>block</code>: BeaconBlock, <code>postState</code>: CachedBeaconState‹allForks.BeaconState›, <code>parentBlock</code>: object): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L326">packages/lodestar/src/chain/lightClient/index.ts:326</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L326">packages/lodestar/src/chain/lightClient/index.ts:326</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>block</strong>: <em>BeaconBlock</em></p>
 <p>▪ <strong>postState</strong>: <em>CachedBeaconState‹allForks.BeaconState›</em></p>
@@ -824,7 +824,7 @@ signature: BLSSignature
 <hr/>
 <h3 id="prunenoncheckpointdata">pruneNonCheckpointData<a class="headerlink" href="#prunenoncheckpointdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneNonCheckpointData</strong>(<code>nonCheckpointBlockRoots</code>: Uint8Array[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L318">packages/lodestar/src/chain/lightClient/index.ts:318</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L318">packages/lodestar/src/chain/lightClient/index.ts:318</a></em></p>
 <p>With forkchoice data compute which block roots will never become checkpoints and prune them.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -845,7 +845,7 @@ signature: BLSSignature
 <hr/>
 <h3 id="private-storesynccommittee"><code>Private</code> storeSyncCommittee<a class="headerlink" href="#private-storesynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>storeSyncCommittee</strong>(<code>syncCommittee</code>: SyncCommittee, <code>syncCommitteeRoot</code>: Uint8Array): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/a876466/packages/lodestar/src/chain/lightClient/index.ts#L492">packages/lodestar/src/chain/lightClient/index.ts:492</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5751ee5/packages/lodestar/src/chain/lightClient/index.ts#L492">packages/lodestar/src/chain/lightClient/index.ts:492</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
