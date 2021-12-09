@@ -85,4 +85,6 @@ export interface IRateLimiter {
    * Prune by peer id
    */
   prune(peerId: PeerId): void;
+  start(): void;
+  stop(): void;
 }

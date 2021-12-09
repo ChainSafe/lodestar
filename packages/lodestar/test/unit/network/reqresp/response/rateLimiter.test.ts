@@ -115,6 +115,21 @@ describe("ResponseRateLimiter", () => {
     expect(inboundRateLimiter.allowRequest(peerId, oneBlockRequestTyped)).to.be.true;
   });
 
+  it("should remove rate tracker for disconnected peers", async () => {
+    const peerId = await PeerId.create();
+    const pruneStub = sandbox.stub(inboundRateLimiter, "pruneByPeerIdStr" as keyof InboundRateLimiter);
+    inboundRateLimiter.start();
+    const requestTyped = {method: Method.Ping, body: BigInt(1)} as RequestTypedContainer;
+    expect(inboundRateLimiter.allowRequest(peerId, requestTyped)).to.be.true;
+
+    // no request is made in 5 minutes
+    sandbox.clock.tick(5 * 60 * 1000);
+    expect(pruneStub.calledOnce).to.be.false;
+    // wait for 5 more minutes for the timer to run
+    sandbox.clock.tick(5 * 60 * 1000);
+    expect(pruneStub.calledOnce, "prune is not called").to.be.true;
+  });
+
   it.skip("rateLimiter memory usage", async function () {
     this.timeout(5000);
     const peerIds: PeerId[] = [];

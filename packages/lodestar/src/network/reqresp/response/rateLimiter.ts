@@ -27,6 +27,12 @@ export type RateLimiterOpts = {
   rateTrackerTimeoutMs: number;
 };
 
+/** Sometimes a peer request comes AFTER libp2p disconnect event, check for such peers every 10 minutes */
+const CHECK_DISCONNECTED_PEERS_INTERVAL_MS = 10 * 60 * 1000;
+
+/** Peers don't request us for 5 mins are considered disconnected */
+const DISCONNECTED_TIMEOUT_MS = 5 * 60 * 1000;
+
 /**
  * Default value for RateLimiterOpts
  * - requestCountPeerLimit: allow to serve 50 requests per peer within 1 minute
@@ -56,6 +62,10 @@ export class InboundRateLimiter implements IRateLimiter {
    */
   private blockCountTotalTracker: RateTracker;
   private blockCountTrackersByPeer: MapDef<string, RateTracker>;
+  /** Periodically check this to remove tracker of disconnected peers */
+  private lastSeenRequestsByPeer: Map<string, number>;
+  /** Interval to check lastSeenMessagesByPeer */
+  private cleanupInterval: NodeJS.Timeout | undefined = undefined;
 
   constructor(opts: RateLimiterOpts, modules: IRateLimiterModules) {
     this.requestCountTrackersByPeer = new MapDef(
@@ -71,6 +81,17 @@ export class InboundRateLimiter implements IRateLimiter {
     this.logger = modules.logger;
     this.peerRpcScores = modules.peerRpcScores;
     this.metrics = modules.metrics;
+    this.lastSeenRequestsByPeer = new Map();
+  }
+
+  start(): void {
+    this.cleanupInterval = setInterval(this.checkDisconnectedPeers.bind(this), CHECK_DISCONNECTED_PEERS_INTERVAL_MS);
+  }
+
+  stop(): void {
+    if (this.cleanupInterval !== undefined) {
+      clearInterval(this.cleanupInterval);
+    }
   }
 
   /**
@@ -78,6 +99,7 @@ export class InboundRateLimiter implements IRateLimiter {
    */
   allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean {
     const peerIdStr = peerId.toB58String();
+    this.lastSeenRequestsByPeer.set(peerIdStr, Date.now());
 
     // rate limit check for request
     const requestCountPeerTracker = this.requestCountTrackersByPeer.getOrDefault(peerIdStr);
@@ -133,7 +155,21 @@ export class InboundRateLimiter implements IRateLimiter {
 
   prune(peerId: PeerId): void {
     const peerIdStr = peerId.toB58String();
+    this.pruneByPeerIdStr(peerIdStr);
+  }
+
+  private pruneByPeerIdStr(peerIdStr: string): void {
     this.requestCountTrackersByPeer.delete(peerIdStr);
     this.blockCountTrackersByPeer.delete(peerIdStr);
+    this.lastSeenRequestsByPeer.delete(peerIdStr);
+  }
+
+  private checkDisconnectedPeers(): void {
+    const now = Date.now();
+    for (const [peerIdStr, lastSeenTime] of this.lastSeenRequestsByPeer.entries()) {
+      if (now - lastSeenTime >= DISCONNECTED_TIMEOUT_MS) {
+        this.pruneByPeerIdStr(peerIdStr);
+      }
+    }
   }
 }

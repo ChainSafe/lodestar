@@ -80,6 +80,7 @@ export class ReqResp implements IReqResp {
         (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
     }
+    this.inboundRateLimiter.start();
   }
 
   stop(): void {
@@ -87,6 +88,7 @@ export class ReqResp implements IReqResp {
       this.libp2p.unhandle(formatProtocolId(method, version, encoding));
     }
     this.controller.abort();
+    this.inboundRateLimiter.stop();
   }
 
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
