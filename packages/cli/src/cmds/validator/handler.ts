@@ -9,8 +9,9 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getSecretKeys} from "./keys";
+import {getSecretKeys, getPublicKeys} from "./keys";
 import {getVersion} from "../../util/version";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 
 /**
  * Runs a validator client.
@@ -29,13 +30,32 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const secretKeys = await getSecretKeys(args);
-  const signers: Signers = {
-    type: SignerType.Local,
-    secretKeys: secretKeys,
-  };
-  if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
-  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
+  let signers: Signers;
+  /** True is for remote mode, False is local mode */
+  if (args.mode.toLowerCase() === "remote") {
+    /** If remote mode chosen but no url provided */
+    if (!args.url) {
+      throw Error("Remote mode requires --url argument");
+    }
+    const pubkeys: PublicKey[] = await getPublicKeys(args);
+    signers = {
+      type: SignerType.Remote,
+      url: args.url,
+      pubkeys: pubkeys,
+      secretKey: new SecretKey(),
+    };
+  } else if (args.mode.toLowerCase() === "local") {
+    const secretKeys = await getSecretKeys(args);
+    if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
+    logger.info(`Decrypted ${secretKeys.length} validator keystores`);
+
+    signers = {
+      type: SignerType.Local,
+      secretKeys: secretKeys,
+    };
+  } else {
+    throw Error("Invalid mode. Only local and remote are supported");
+  }
 
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
@@ -55,6 +75,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
+
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal

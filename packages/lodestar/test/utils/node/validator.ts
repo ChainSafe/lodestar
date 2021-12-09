@@ -1,7 +1,7 @@
 import tmp from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 
@@ -31,14 +31,18 @@ export async function getAndInitDevValidators({
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     };
     const slashingProtection = new SlashingProtection(dbOps);
-
+    const secretKeys = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
+    const signers: Signers = {
+      type: SignerType.Local,
+      secretKeys: secretKeys,
+    };
     vcs.push(
       Validator.initializeFromBeaconNode({
         dbOps,
         api: useRestApi ? getNodeApiUrl(node) : node.api,
         slashingProtection,
         logger,
-        secretKeys: Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc)),
+        signers,
       })
     );
   }

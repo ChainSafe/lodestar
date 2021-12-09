@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {defaultNetwork, IGlobalArgs} from "../../options";
@@ -57,6 +57,17 @@ export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
     const validatorDirManager = new ValidatorDirManager(accountPaths);
     return await validatorDirManager.decryptAllValidators({force: args.force});
   }
+}
+
+export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<PublicKey[]> {
+  const pubkeys: PublicKey[] = [];
+  const accountPaths = getAccountPaths(args);
+  const file = fs.readFileSync(accountPaths.publicKeysFile, "utf8");
+  const arr = file.toString().replace(/\r\n/g, "\n").split("\n");
+  for (const pubkeyHex of arr) {
+    pubkeys.push(PublicKey.fromHex(pubkeyHex));
+  }
+  return pubkeys;
 }
 
 function resolveKeystorePaths(fileOrDirPath: string): string[] {

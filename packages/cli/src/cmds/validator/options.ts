@@ -16,6 +16,8 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     fromMnemonic?: string;
     mnemonicIndexes?: string;
     logFile: IBeaconPaths["logFile"];
+    mode: "local" | "remote";
+    url?: string;
   };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -74,5 +76,17 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
     type: "string",
+  },
+
+  mode: {
+    description: "Signing mode. local for local signing, remote for remote signing",
+    type: "string",
+    default: "local",
+  },
+
+  url: {
+    description: "URL to connect to remote signing server",
+    type: "string",
+    default: undefined,
   },
 };

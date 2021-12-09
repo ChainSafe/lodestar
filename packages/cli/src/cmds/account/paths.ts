@@ -6,6 +6,7 @@ export interface IAccountPaths {
   keystoresDir: string;
   secretsDir: string;
   walletsDir: string;
+  publicKeysFile: string;
 }
 
 /**
@@ -42,11 +43,13 @@ export function getAccountPaths(
   const keystoresDir = args.keystoresDir || path.join(rootDir, "keystores");
   const secretsDir = args.secretsDir || path.join(rootDir, "secrets");
   const walletsDir = args.walletsDir || path.join(rootDir, "wallets");
+  const publicKeysFile = args.publicKeysFile || path.join(rootDir, "publicKeysFile");
   return {
     ...globalPaths,
     keystoresDir,
     secretsDir,
     walletsDir,
+    publicKeysFile,
   };
 }
 
