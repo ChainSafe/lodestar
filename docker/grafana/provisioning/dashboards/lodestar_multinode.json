@@ -93,7 +93,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "up",
           "instant": false,
           "interval": "",
@@ -178,7 +178,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "beacon_head_slot",
           "interval": "",
           "legendFormat": "{{job}}",
@@ -262,7 +262,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "libp2p_peers",
           "interval": "",
           "legendFormat": "{{job}}",
@@ -347,7 +347,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "process_heap_bytes",
           "interval": "",
           "intervalFactor": 1,
@@ -433,7 +433,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(process_cpu_seconds_total[$__rate_interval])",
           "interval": "",
           "intervalFactor": 1,
@@ -493,7 +493,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "validator_monitor_validators_total",
           "instant": false,
           "interval": "",
@@ -506,7 +506,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "",
           "hide": false,
           "interval": "",
@@ -565,7 +565,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "lodestar_version",
           "instant": false,
           "interval": "",
@@ -651,7 +651,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "scrape_duration_seconds",
           "interval": "",
           "intervalFactor": 1,
@@ -737,7 +737,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "sum by (job) (\n  rate(nodejs_gc_pause_seconds_total[$__rate_interval])\n)",
           "interval": "",
           "intervalFactor": 1,
