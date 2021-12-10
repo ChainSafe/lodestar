@@ -65,7 +65,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 24,
         "x": 0,
         "y": 0
@@ -102,7 +102,6 @@
           "refId": "A"
         }
       ],
-      "title": "Up",
       "type": "stat"
     },
     {
@@ -160,7 +159,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 3
+        "y": 2
       },
       "id": 2,
       "options": {
@@ -244,7 +243,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 3
+        "y": 2
       },
       "id": 3,
       "options": {
@@ -329,7 +328,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 12
+        "y": 11
       },
       "id": 6,
       "options": {
@@ -415,7 +414,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 12
+        "y": 11
       },
       "id": 8,
       "options": {
@@ -468,7 +467,7 @@
         "h": 2,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 20
       },
       "id": 7,
       "options": {
@@ -482,7 +481,8 @@
           "values": false
         },
         "text": {
-          "valueSize": 25
+          "titleSize": 15,
+          "valueSize": 15
         },
         "textMode": "auto"
       },
@@ -540,7 +540,7 @@
         "h": 3,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 22
       },
       "id": 9,
       "options": {
@@ -632,7 +632,7 @@
         "h": 9,
         "w": 12,
         "x": 0,
-        "y": 26
+        "y": 25
       },
       "id": 4,
       "options": {
@@ -718,7 +718,7 @@
         "h": 9,
         "w": 12,
         "x": 12,
-        "y": 26
+        "y": 25
       },
       "id": 10,
       "options": {
@@ -749,6 +749,7 @@
       "type": "timeseries"
     }
   ],
+  "refresh": "30s",
   "schemaVersion": 33,
   "style": "dark",
   "tags": [],
@@ -763,6 +764,6 @@
   "timezone": "",
   "title": "Nodes overview",
   "uid": "lodestar_multinode",
-  "version": 3,
+  "version": 6,
   "weekStart": ""
 }
