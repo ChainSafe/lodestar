@@ -25,7 +25,7 @@ jobs:
         id: get_prev_tag
         run: node scripts/get_prev_tag.js
         env:
-          CURRENT_TAG: ${{ steps.tag.outputs.tagname }}
+          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
           IGNORE_PATTERN: beta
     outputs:
       is_beta: ${{ contains(github.ref, 'beta') }}
