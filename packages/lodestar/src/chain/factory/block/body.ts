@@ -133,7 +133,7 @@ async function prepareExecutionPayload(
   finalizedBlockHash: RootHex,
   state: CachedBeaconState<merge.BeaconState>,
   suggestedFeeRecipient: ExecutionAddress
-): Promise<PayloadId | null> {
+): Promise<PayloadId> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;

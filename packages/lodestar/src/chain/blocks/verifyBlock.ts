@@ -181,23 +181,17 @@ export async function verifyBlockStateTransition(
       case ExecutePayloadStatus.INVALID:
         throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
       case ExecutePayloadStatus.SYNCING:
-        // It's okay to ignore SYNCING status because:
-        // - We MUST verify execution payloads of blocks we attest
-        // - We are NOT REQUIRED to check the execution payload of blocks we don't attest
-        // When EL syncs from genesis to a chain post-merge, it doesn't know what the head, CL knows. However, we
-        // must verify (complete this fn) and import a block to sync. Since we are syncing we only need to verify
-        // consensus and trust that whatever the chain agrees is valid, is valid; no need to verify. When we
-        // verify consensus up to the head we notify forkchoice update head and then EL can sync to our head. At that
-        // point regular EL sync kicks in and it does verify the execution payload (EL blocks). If after syncing EL
-        // gets to an invalid payload or we can prepare payloads on what we consider the head that's a critical error
-        //
-        // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
-        if (partiallyVerifiedBlock.fromRangeSync) {
-          executionStatus = ExecutionStatus.Syncing;
-          break;
-        } else {
-          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
-        }
+        // It's okay to ignore SYNCING status as EL could switch into syncing
+        // 1. On intial startup/restart
+        // 2. When some reorg might have occured and EL doesn't has a parent root
+        //    (observed on devnets)
+        // 3. Because of some unavailable (and potentially invalid) root but there is no way
+        //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
+        //    will (sooner or later) build on the available parent head which will
+        //    eventually win in fork-choice as other validators vote on VALID blocks.
+        // Once EL catches up again and respond VALID, the fork choice will be updated which
+        // will either validate or prune invalid blocks
+        break;
     }
   }
 

@@ -642,8 +642,8 @@ export class ForkChoice implements IForkChoice {
    * 2. Throw critical error and exit if a block in finalized chain gets invalidated
    */
   validateLatestHash(_latestValidHash: RootHex, invalidBranchDecendantHash: RootHex | null): void {
-    if (invalidBranchDecendantHash) throw Error("NOT_IMPLEMENTED");
     // Silently ignore for now if all calls were valid
+    return;
   }
 
   private getPreMergeExecStatus(preCachedData?: OnBlockPrecachedData): ExecutionStatus.PreMerge {
