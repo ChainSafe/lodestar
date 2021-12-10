@@ -10,6 +10,7 @@ concurrency: cd-release
 on:
   push:
     tags:
+      - v*
 
 jobs:
   tag:
