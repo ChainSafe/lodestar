@@ -151,18 +151,18 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
     let signers: Signers;
     /** True is for remote mode, False is local mode */
-    if (args.mode.toLowerCase() === "remote") {
+    if (args.signingMode.toLowerCase() === "remote") {
       /** If remote mode chosen but no url provided */
-      if (!args.url) {
+      if (!args.signingUrl) {
         throw Error("Remote mode requires --url argument");
       }
       signers = {
         type: SignerType.Remote,
-        url: args.url,
+        url: args.signingUrl,
         pubkeys: pubkeys,
         secretKey: new SecretKey(),
       };
-    } else if (args.mode.toLowerCase() === "local") {
+    } else if (args.signingMode.toLowerCase() === "local") {
       signers = {
         type: SignerType.Local,
         secretKeys: secretKeys,

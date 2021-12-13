@@ -10,8 +10,8 @@ interface IDevOwnArgs {
   genesisTime?: number;
   reset?: boolean;
   server: string;
-  mode: "local" | "remote";
-  url?: string;
+  signingMode: "local" | "remote";
+  signingUrl?: string;
 }
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
@@ -54,14 +54,14 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     type: "string",
   },
 
-  mode: {
+  signingMode: {
     description: "Signing mode. local for local signing, remote for remote signing",
     type: "string",
     default: "local",
     group: "validator",
   },
 
-  url: {
+  signingUrl: {
     description: "URL to connect to remote signing server",
     type: "string",
     default: undefined,
