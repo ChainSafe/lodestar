@@ -81,7 +81,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
     // Validate status is known
     const statusEnum = ExecutePayloadStatus[status];
-    if (statusEnum === undefined || latestValidHash === undefined) {
+    if (statusEnum === undefined || (statusEnum !== ExecutePayloadStatus.SYNCING && latestValidHash === undefined)) {
       throw Error(`Invalid respose status ${status} latestValidHash: ${latestValidHash}`);
     }
 
