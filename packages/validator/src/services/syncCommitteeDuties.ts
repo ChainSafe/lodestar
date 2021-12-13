@@ -68,7 +68,7 @@ export class SyncCommitteeDutiesService {
    * https://github.com/ethereum/eth2.0-specs/pull/2400
    */
   async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProofs[]> {
-    const period = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
+    const period = computeSyncPeriodAtSlot(this.config, slot + 1); // See note above for the +1 offset
     const duties: SyncDutyAndProofs[] = [];
 
     const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
@@ -134,7 +134,7 @@ export class SyncCommitteeDutiesService {
       });
     }
 
-    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
     const syncCommitteeSubscriptions: routes.validator.SyncCommitteeSubscription[] = [];
 
     // For this and the next period, produce any beacon committee subscriptions.
@@ -186,7 +186,7 @@ export class SyncCommitteeDutiesService {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
     const dependentRoot = syncDuties.dependentRoot;
-    const period = computeSyncPeriodAtEpoch(epoch);
+    const period = computeSyncPeriodAtEpoch(this.config, epoch);
 
     let count = 0;
 
@@ -238,7 +238,7 @@ export class SyncCommitteeDutiesService {
 
   /** Run at least once per period to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
-    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
     for (const period of this.dutiesByIndexByPeriod.keys()) {
       if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {
         this.dutiesByIndexByPeriod.delete(period);

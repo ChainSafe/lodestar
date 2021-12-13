@@ -1,4 +1,5 @@
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {allForks} from "@chainsafe/lodestar-types";
 
 export type FullyVerifiedBlockFlags = {
@@ -41,6 +42,7 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
 export type FullyVerifiedBlock = FullyVerifiedBlockFlags & {
   block: allForks.SignedBeaconBlock;
   postState: CachedBeaconState<allForks.BeaconState>;
+  parentBlock: IProtoBlock;
 };
 
 /**

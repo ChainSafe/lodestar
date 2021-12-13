@@ -1,13 +1,20 @@
 import {phase0, SyncPeriod} from "@chainsafe/lodestar-types";
 
 export enum LightclientEvent {
-  newHeader = "newHeader",
-  advancedCommittee = "advancedCommittee",
+  /**
+   * New head
+   */
+  head = "head",
+  /**
+   * Stored nextSyncCommittee from an update at period `period`.
+   * Note: the SyncCommittee is stored for `period + 1`.
+   */
+  committee = "committee",
 }
 
 export type LightclientEvents = {
-  [LightclientEvent.newHeader]: (newHeader: phase0.BeaconBlockHeader) => void;
-  [LightclientEvent.advancedCommittee]: (newSnapshotPeriod: SyncPeriod) => void;
+  [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
+  [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
 };
 
 export type LightclientEmitter = MittEmitter<LightclientEvents>;

@@ -17,11 +17,21 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
         const controller = new AbortController();
 
         try {
+          // Add injected headers from other pluggins. This is required for fastify-cors for example
+          // From: https://github.com/NodeFactoryIo/fastify-sse-v2/blob/b1686a979fbf655fb9936c0560294a0c094734d4/src/plugin.ts
+          Object.entries(res.getHeaders()).forEach(([key, value]) => {
+            if (value !== undefined) res.raw.setHeader(key, value);
+          });
+
           res.raw.setHeader("Content-Type", "text/event-stream");
           res.raw.setHeader("Cache-Control", "no-cache,no-transform");
           res.raw.setHeader("Connection", "keep-alive");
           // It was reported that chrome and firefox do not play well with compressed event-streams https://github.com/lolo32/fastify-sse/issues/2
           res.raw.setHeader("x-no-compression", 1);
+          // In case this beacon node is behind a NGINX, instruct it to disable buffering which can disrupt SSE by
+          // infinitely buffering it. http://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering
+          // Source: https://stackoverflow.com/questions/13672743/eventsource-server-sent-events-through-nginx
+          res.raw.setHeader("X-Accel-Buffering", "no");
 
           await new Promise<void>((resolve, reject) => {
             api.eventstream(req.query.topics, controller.signal, (event) => {

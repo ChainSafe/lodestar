@@ -1,6 +1,8 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {IBeaconSync, SyncState} from "../sync";
@@ -28,6 +30,7 @@ export async function runNodeNotifier({
   logger: ILogger;
   signal: AbortSignal;
 }): Promise<void> {
+  const SLOTS_PER_SYNC_COMMITTEE_PERIOD = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD;
   const timeSeries = new TimeSeries({maxPoints: 10});
   let hasLowPeerCount = false; // Only log once
 
@@ -45,6 +48,8 @@ export async function runNodeNotifier({
       }
 
       const clockSlot = chain.clock.currentSlot;
+      const clockEpoch = computeEpochAtSlot(clockSlot);
+
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
@@ -92,6 +97,15 @@ export async function runNodeNotifier({
         }
       }
       logger.info(nodeState.join(" - "));
+
+      // Log important chain time-based events
+      // Log sync committee change
+      if (clockEpoch > config.ALTAIR_FORK_EPOCH) {
+        if (clockSlot % SLOTS_PER_SYNC_COMMITTEE_PERIOD === 0) {
+          const period = Math.floor(clockEpoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+          logger.info(`New sync committee period ${period}`);
+        }
+      }
 
       // Log halfway through each slot
       await sleep(timeToNextHalfSlot(config, chain), signal);

@@ -2,6 +2,7 @@
  * @module chain/stateTransition/util
  */
 
+import {IChainConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   GENESIS_EPOCH,
@@ -52,13 +53,21 @@ export function getPreviousEpoch(state: allForks.BeaconState): Epoch {
 /**
  * Return the sync committee period at slot
  */
-export function computeSyncPeriodAtSlot(slot: Slot): SyncPeriod {
-  return computeSyncPeriodAtEpoch(computeEpochAtSlot(slot));
+export function computeSyncPeriodAtSlot(config: IChainConfig, slot: Slot): SyncPeriod {
+  return computeSyncPeriodAtEpoch(config, computeEpochAtSlot(slot));
 }
 
 /**
  * Return the sync committee period at epoch
  */
-export function computeSyncPeriodAtEpoch(epoch: Epoch): SyncPeriod {
+export function computeSyncPeriodAtEpoch(config: IChainConfig, epoch: Epoch): SyncPeriod {
+  return Math.floor((epoch - config.ALTAIR_FORK_EPOCH) / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
+}
+
+/**
+ * Return the sync committee period at slot, without offseting for ALTAIR_FORK_EPOCH
+ */
+export function computeAbsoluteSyncPeriodAtSlot(slot: Slot): SyncPeriod {
+  const epoch = computeEpochAtSlot(slot);
   return Math.floor(epoch / EPOCHS_PER_SYNC_COMMITTEE_PERIOD);
 }

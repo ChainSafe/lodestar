@@ -2,7 +2,7 @@ import {PublicKey} from "@chainsafe/bls";
 import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {ArrayLike, BitVector} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../client/types";
+import {SyncCommitteeFast} from "../types";
 
 export function sumBits(bits: ArrayLike<boolean>): number {
   let sum = 0;
@@ -85,9 +85,4 @@ export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair
 export function isEmptyHeader(header: BeaconBlockHeader): boolean {
   const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue();
   return ssz.phase0.BeaconBlockHeader.equals(emptyValue, header);
-}
-
-export function isEmptySyncCommitte(syncCommittee: altair.SyncCommittee): boolean {
-  const emptyValue = ssz.altair.SyncCommittee.defaultValue();
-  return ssz.altair.SyncCommittee.equals(emptyValue, syncCommittee);
 }

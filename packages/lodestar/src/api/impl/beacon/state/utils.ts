@@ -4,7 +4,7 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodest
 import {
   CachedBeaconState,
   createCachedBeaconState,
-  computeSyncPeriodAtEpoch,
+  computeAbsoluteSyncPeriodAtSlot,
   computeEpochAtSlot,
   isActiveValidator,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -149,8 +149,8 @@ export function getSyncCommittees(
   state: allForks.BeaconState | CachedBeaconState<allForks.BeaconState>,
   epoch: Epoch
 ): ValidatorIndex[] {
-  const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
-  const requestPeriod = computeSyncPeriodAtEpoch(epoch);
+  const statePeriod = computeAbsoluteSyncPeriodAtSlot(computeEpochAtSlot(state.slot));
+  const requestPeriod = computeAbsoluteSyncPeriodAtSlot(epoch);
 
   if ((state as CachedBeaconState<allForks.BeaconState>).epochCtx !== undefined) {
     switch (requestPeriod) {

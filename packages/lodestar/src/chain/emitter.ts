@@ -1,10 +1,11 @@
 import {EventEmitter} from "events";
 import StrictEventEmitter from "strict-event-emitter-types";
 
+import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {AttestationError, BlockError} from "./errors";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {AttestationError, BlockError} from "./errors";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -95,6 +96,10 @@ export enum ChainEvent {
    * This event is guaranteed to be triggered after any block fed to the chain fails at any stage of processing.
    */
   errorBlock = "error:block",
+  /**
+   * A new lightclient header update is available to be broadcasted to connected light-clients
+   */
+  lightclientHeaderUpdate = "lightclient:header_update",
 }
 
 export interface IChainEvents {
@@ -117,6 +122,8 @@ export interface IChainEvents {
   [ChainEvent.forkChoiceReorg]: (head: IProtoBlock, oldHead: IProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;
+
+  [ChainEvent.lightclientHeaderUpdate]: (headerUpdate: routes.events.LightclientHeaderUpdate) => void;
 }
 
 /**

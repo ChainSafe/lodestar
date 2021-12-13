@@ -1,6 +1,6 @@
 import {altair, ssz, allForks, Slot, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
-import {computeSyncPeriodAtSlot} from "../../util/epoch";
+import {computeAbsoluteSyncPeriodAtSlot} from "../../util/epoch";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {PubkeyIndexMap} from "./epochContext";
 
@@ -119,8 +119,8 @@ export function getIndexedSyncCommittee(
   state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
   slot: Slot
 ): IndexedSyncCommittee {
-  const statePeriod = computeSyncPeriodAtSlot(state.slot);
-  const slotPeriod = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
+  const statePeriod = computeAbsoluteSyncPeriodAtSlot(state.slot);
+  const slotPeriod = computeAbsoluteSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
   if (slotPeriod === statePeriod) {
     return state.currentSyncCommittee;
   } else if (slotPeriod === statePeriod + 1) {
