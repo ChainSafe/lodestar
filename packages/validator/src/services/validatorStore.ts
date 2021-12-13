@@ -34,6 +34,9 @@ import {BLSKeypair, PubkeyHex} from "../types";
 import {getAggregationBits, mapSecretKeysToValidators, mapPublicKeysToValidators, requestSignature} from "./utils";
 import {SignerType, Signers} from "../validator";
 
+/**
+ * Service that sets up and handles validator attester duties.
+ */
 export class ValidatorStore {
   private readonly validators: Map<PubkeyHex, BLSKeypair>;
   private readonly genesisValidatorsRoot: Root;
