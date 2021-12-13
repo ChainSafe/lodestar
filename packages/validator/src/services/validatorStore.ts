@@ -41,6 +41,7 @@ export class ValidatorStore {
   private readonly validators: Map<PubkeyHex, BLSKeypair>;
   private readonly genesisValidatorsRoot: Root;
   private readonly remoteSignerUrl: string;
+  private readonly isLocal: boolean;
 
   constructor(
     private readonly config: IBeaconConfig,
@@ -51,18 +52,15 @@ export class ValidatorStore {
     if (signers.type === SignerType.Local) {
       this.validators = mapSecretKeysToValidators(signers.secretKeys);
       this.remoteSignerUrl = "";
+      this.isLocal = true;
     } else {
       this.validators = mapPublicKeysToValidators(signers.pubkeys, signers.secretKey);
       this.remoteSignerUrl = signers.url;
+      this.isLocal = false;
     }
 
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
-  }
-
-  /** Returns true if private keys are stored locally, otherwise  false */
-  isLocal(): boolean {
-    return this.remoteSignerUrl === "";
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -221,7 +219,7 @@ export class ValidatorStore {
   }
 
   private async getSignature(pubkey: BLSPubkey | string, signingRoot: Uint8Array): Promise<BLSSignature> {
-    if (this.isLocal()) {
+    if (this.isLocal) {
       return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
     } else {
       return await requestSignature(pubkey, signingRoot, this.remoteSignerUrl);
@@ -229,7 +227,7 @@ export class ValidatorStore {
   }
 
   private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
-    if (!this.isLocal()) {
+    if (!this.isLocal) {
       throw Error("Secret keys not stored on this machine.");
     }
 
