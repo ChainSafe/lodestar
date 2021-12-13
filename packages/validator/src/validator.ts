@@ -148,7 +148,7 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    let url = "";
+    let remoteSignerUrl = "";
     let secretKey: SecretKey | undefined = undefined;
     if (this.signers.type == SignerType.Local) {
       secretKey = this.signers.secretKeys.find((sk) =>
@@ -156,9 +156,9 @@ export class Validator {
       );
       if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
     } else {
-      url = this.signers.url;
+      remoteSignerUrl = this.signers.url;
     }
-    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, url, this.api, this.config);
+    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, remoteSignerUrl, this.api, this.config);
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }

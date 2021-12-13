@@ -87,7 +87,7 @@ export function groupSyncDutiesBySubCommitteeIndex(
 export async function requestSignature(
   pubkey: string | BLSPubkey,
   signingRoot: string | Uint8Array,
-  endpoint: string
+  remoteSignerUrl: string
 ): Promise<Uint8Array> {
   await init("blst-native");
   const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
@@ -97,7 +97,7 @@ export async function requestSignature(
   };
 
   try {
-    const url = `${endpoint}/sign/${pubkeyHex}`;
+    const url = `${remoteSignerUrl}/sign/${pubkeyHex}`;
     const headers = {
       "Content-Type": "application/json",
     };

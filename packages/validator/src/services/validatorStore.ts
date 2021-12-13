@@ -40,7 +40,7 @@ import {SignerType, Signers} from "../validator";
 export class ValidatorStore {
   private readonly validators: Map<PubkeyHex, BLSKeypair>;
   private readonly genesisValidatorsRoot: Root;
-  private readonly endpoint: string;
+  private readonly remoteSignerUrl: string;
 
   constructor(
     private readonly config: IBeaconConfig,
@@ -50,10 +50,10 @@ export class ValidatorStore {
   ) {
     if (signers.type === SignerType.Local) {
       this.validators = mapSecretKeysToValidators(signers.secretKeys);
-      this.endpoint = "";
+      this.remoteSignerUrl = "";
     } else {
       this.validators = mapPublicKeysToValidators(signers.pubkeys, signers.secretKey);
-      this.endpoint = signers.url;
+      this.remoteSignerUrl = signers.url;
     }
 
     this.slashingProtection = slashingProtection;
@@ -62,7 +62,7 @@ export class ValidatorStore {
 
   /** Returns true if private keys are stored locally, otherwise  false */
   isLocal(): boolean {
-    return this.endpoint === "";
+    return this.remoteSignerUrl === "";
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -224,7 +224,7 @@ export class ValidatorStore {
     if (this.isLocal()) {
       return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
     } else {
-      return await requestSignature(pubkey, signingRoot, this.endpoint);
+      return await requestSignature(pubkey, signingRoot, this.remoteSignerUrl);
     }
   }
 

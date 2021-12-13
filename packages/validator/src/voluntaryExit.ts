@@ -18,7 +18,7 @@ export async function signAndSubmitVoluntaryExit(
   publicKey: string,
   exitEpoch: number,
   secretKey: SecretKey | undefined,
-  endpoint: string,
+  remoteSignerUrl: string,
   api: Api,
   config: IChainForkConfig
 ): Promise<void> {
@@ -52,7 +52,7 @@ export async function signAndSubmitVoluntaryExit(
     signature:
       secretKey !== undefined
         ? secretKey.sign(signingRoot).toBytes()
-        : await requestSignature(publicKey, signingRoot, endpoint),
+        : await requestSignature(publicKey, signingRoot, remoteSignerUrl),
   };
 
   await api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
