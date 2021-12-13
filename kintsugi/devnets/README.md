@@ -8,8 +8,17 @@ This is a setup to run and join the devnet with a single shell command. This scr
 ###### Just run the script with arguments
 ```bash
 cd kintsugi/devnets
-./setup.sh --dataDir devnet3-data --elClient nethermind --devnetVars ./devnet3.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --"
+./setup.sh --dataDir devnet3-data --elClient nethermind --devnetVars ./devnet3.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --]"
 ```
+
+###### Example scenarios
+1. Run with separate terminals launched & attached (best for testing in local) : 
+`./setup.sh --dataDir devnet3data --elClient nethermind --devnetVars ./devnet3.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
+2. Run in terminal attached with logs interleaved (best for testing  in remote shell) : 
+`./setup.sh --dataDir devnet3data --elClient nethermind --devnetVars ./devnet3.vars --dockerWithSudo`
+3. Run detached (best for leaving it to run, typically after testing 1 or 2): 
+`./setup.sh --dataDir devnet3data --elClient nethermind --devnetVars ./devnet3.vars --detached  --dockerWithSudo`
+
 ###### Script parameters help
 
 1. `dataDir`: Where you want the script and client's configuration data to be setup. Should be non-existent for the first run. (The directory if already present will skip fetching the configuration, assuming it has done previously). You can also clean indivizual directories of CL/EL between the re-runs.
