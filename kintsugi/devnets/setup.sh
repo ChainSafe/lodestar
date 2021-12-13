@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+# set -e
 
 source parse-args.sh
 source ./devnet3.vars
@@ -11,80 +11,109 @@ configGitDir=$CONFIG_GIT_DIR
 
 gethImage=$GETH_IMAGE
 nethermindImage=$NETHERMIND_IMAGE
-lodestarImage=$LODESTAR_IMAGE
 
 if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ]) 
 then
-  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> --dockerWithSudo (if your docker comands require sudo)"
-  echo "example: ./setup.sh --dataDir devnet3data --elClient nethermind --devnetVars ./devnet3.vars"
+  echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
+  echo "example: ./setup.sh --dataDir devnet3data --elClient nethermind --devnetVars ./devnet3.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   exit;
 fi
 
-if [ -n "$dockerWithSudo" ]
-then 
-  dockerCmd="sudo docker"
-else 
-  dockerCmd="docker"
-fi;
 
 mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/$elClient && cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin master && cd $currentDir
 
+run_cmd(){
+  execCmd=$1;
+  if [ -n "$detached" ]
+  then
+    echo "running: $execCmd"
+    $execCmd
+  else
+    if [ -n "$withTerminal" ]
+    then
+      execCmd="$withTerminal $execCmd"
+    fi;
+    echo "running: $execCmd &"
+    $execCmd &
+  fi;
+}
 
-bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
 
+
+if [ -n "$dockerWithSudo" ]
+then 
+  dockerExec="sudo docker"
+else 
+  dockerExec="docker"
+fi;
+dockerCmd="$dockerExec run"
+
+if [ -n "$detached" ]
+then 
+  dockerCmd="$dockerCmd --detach"
+fi;
+
+if [ -n "$withTerminal" ]
+then
+  dockerCmd="$dockerCmd -it" 
+fi;
 
 if [ "$elClient" == "geth" ]
 then
-  echo "gethImage: $gethImage"  
+  echo "gethImage: $GETH_IMAGE"
+  echo "Client geth not supported, please try another, exiting ..."
+  exit;
 elif [ "$elClient" == "nethermind" ] 
 then
-  echo "nethermindImage: $nethermindImage"
+  echo "nethermindImage: $NETHERMIND_IMAGE"
   elName="$DEVNET_NAME-nethermind"
-  elCmd="$dockerCmd run --rm --name $elName -it --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $nethermindImage --datadir /data --config kintsugi  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS"
+  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS"
 fi
 
-echo "lodestarImage: $lodestarImage"
-
-echo "running: $elCmd"
-gnome-terminal --disable-factory -- $elCmd &
+run_cmd "$elCmd"
 elPid=$!
-
 echo "elPid= $elPid"
 
 
-
+echo "lodestarImage: $LODESTAR_IMAGE"
+bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
 clName="$DEVNET_NAME-lodestar"
-clCmd="$dockerCmd run --rm --name $clName -it --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $lodestarImage beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.discv5.bootEnrs $bootEnr --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.disableEth1DepositDataTracker true $LODESTAR_EXTRA_ARGS"
+clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.discv5.bootEnrs $bootEnr --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.disableEth1DepositDataTracker true $LODESTAR_EXTRA_ARGS"
 
-echo "running: $clCmd"
-gnome-terminal --disable-factory -- $clCmd &
+run_cmd "$clCmd"
 clPid=$!
-
 echo "clPid= $clPid"
 
 cleanup() {
   echo "cleaning up"
-  $dockerCmd rm $elName -f
-  $dockerCmd rm $clName -f
+  $dockerExec rm $elName -f
+  $dockerExec rm $clName -f
   elPid=null
   clPid=null
-  # Our cleanup code goes here
 }
 
 trap "echo exit signal recived;cleanup" SIGINT SIGTERM
 
-if [ -n "$elPid" ] && [ -n "$clPid" ] 
+if [ ! -n "$detached" ] && [ -n "$elPid" ] && [ -n "$clPid" ] 
 then 
 	echo "launched two terminals for el and cl clients with elPid: $elPid clPid: $clPid"
 	echo "you can watch observe the client logs at the respective terminals"
 	echo "use ctl + c on any of these three (including this) terminals to stop the process"
 	echo "waiting ..."
 	wait -n $elPid $clPid
+  echo "one of the el or cl process exited, stopping and cleanup"
 	cleanup
 fi;
 
-if [ -n "$elPid$clPid" ]
+if [ ! -n "$detached" ] && [ -n "$elPid$clPid" ]
 then
-	echo "one of the el or cl process exited, stopping and cleanup"
+	echo "one of the el or cl processes didn't launch properly"
 	cleanup
+fi;
+
+if [ -n "$detached" ]
+then 
+  echo "launched detached docker containers: $elName, $clName"
+else 
+  echo "exiting ..."
 fi;
