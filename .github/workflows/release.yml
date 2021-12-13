@@ -3,10 +3,14 @@ name: Release
 # only one can tun at a time
 concurrency: cd-release
 
+# See for rationale https://github.com/ChainSafe/lodestar/issues/3036#issuecomment-976956044
+# When a stable release is proposed, a testing period of N days starts
+# - Tag current master to v0.33.0-beta.0
+# - Bump master to v0.34.0
 on:
   push:
-    branches:
-      - "master"
+    tags:
+      - v*
 
 jobs:
   tag:
@@ -15,28 +19,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-      - name: Get latest tag
-        id: get-latest-tag
-        uses: actions-ecosystem/action-get-latest-tag@v1
-        with:
-          with_initial_version: false
-      - name: Create tag
-        id: tag
-        uses: butlerlogic/action-autotag@1.1.2
-        with:
-          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          root: "packages/lodestar" # lerna doesn't update version root package.json and this action cannot read from lerna.json
-          tag_prefix: "v"
+      - name: Get tag
+        id: get_tag
+        run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
+      - name: Get previous tag
+        id: get_prev_tag
+        run: node scripts/get_prev_tag.js
+        env:
+          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
+          IGNORE_PATTERN: beta
     outputs:
+      is_beta: ${{ contains(github.ref, 'beta') }}
       tag: ${{ steps.tag.outputs.tagname }}
-      previous_tag: ${{ steps.get-latest-tag.outputs.tag }}
-      version: ${{ steps.tag.outputs.version }}
+      prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
+      version: ${{ steps.get_version.outputs.version }}
 
   npm:
     name: Publish to NPM Registry
     runs-on: ubuntu-latest
     needs: tag
-    if: needs.tag.outputs.tag != ''
+    # Skip creating a release for beta releases (for now)
+    if: needs.tag.outputs.is_beta != 'true'
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
@@ -75,7 +78,7 @@ jobs:
           compareLink: "true"
           filterByMilestone: "false"
           unreleased: "false"
-          sinceTag: "${{ needs.tag.outputs.previous_tag }}"
+          sinceTag: "${{ needs.tag.outputs.prev_tag }}"
           maxIssues: "0"
           stripGeneratorNotice: "true"
           excludeLabels: "meta-excludefromchangelog"
@@ -115,7 +118,7 @@ jobs:
     name: Publish to Docker Hub
     runs-on: ubuntu-latest
     needs: [tag, npm]
-    if: needs.tag.outputs.tag != ''
+    if: needs.tag.outputs.is_beta != 'true'
     steps:
       - uses: actions/checkout@v2
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} 900

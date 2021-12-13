@@ -36,9 +36,9 @@ export const Transactions = new ListType<List<merge.Transaction>>({
 
 const executionPayloadFields = {
   parentHash: Root,
-  coinbase: Bytes20,
+  feeRecipient: Bytes20,
   stateRoot: Bytes32,
-  receiptRoot: Bytes32,
+  receiptsRoot: Bytes32,
   logsBloom: new ByteVectorType({length: BYTES_PER_LOGS_BLOOM}),
   random: Bytes32,
   blockNumber: Number64,
@@ -53,9 +53,9 @@ const executionPayloadFields = {
 };
 const executionPayloadCasingMap = {
   parentHash: "parent_hash",
-  coinbase: "coinbase",
+  feeRecipient: "fee_recipient",
   stateRoot: "state_root",
-  receiptRoot: "receipt_root",
+  receiptsRoot: "receipts_root",
   logsBloom: "logs_bloom",
   random: "random",
   blockNumber: "block_number",

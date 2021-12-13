@@ -63,6 +63,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
+    unlockSecretKeys?.();
   }, logger.info.bind(logger));
 
   // This AbortController interrupts the sleep() calls when waiting for genesis

@@ -126,7 +126,7 @@ async function prepareExecutionPayload(
   chain: IBeaconChain,
   finalizedBlockHash: RootHex,
   state: CachedBeaconState<merge.BeaconState>,
-  feeRecipient: ExecutionAddress
+  suggestedFeeRecipient: ExecutionAddress
 ): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
@@ -155,7 +155,7 @@ async function prepareExecutionPayload(
   return await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
     random,
-    feeRecipient,
+    suggestedFeeRecipient,
   });
 }
 

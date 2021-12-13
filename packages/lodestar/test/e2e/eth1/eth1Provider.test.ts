@@ -2,27 +2,29 @@ import "mocha";
 import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {Eth1Options} from "../../../src/eth1/options";
-import {getTestnetConfig, testnet} from "../../utils/testnet";
+import {getTestnetConfig} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {goerliTestnetDepositEvents} from "../../utils/testnet";
 import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider";
+import {getGoerliRpcUrl} from "../../testParams";
 
 describe("eth1 / Eth1Provider", function () {
   this.timeout("2 min");
-
-  const eth1Options: Eth1Options = {
-    enabled: true,
-    providerUrls: [testnet.providerUrl],
-    depositContractDeployBlock: 0,
-  };
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
   afterEach(() => controller.abort());
 
   const config = getTestnetConfig();
+
+  // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
   function getEth1Provider(): Eth1Provider {
+    const eth1Options: Eth1Options = {
+      enabled: true,
+      providerUrls: [getGoerliRpcUrl()],
+      depositContractDeployBlock: 0,
+    };
     return new Eth1Provider(config, eth1Options, controller.signal);
   }
 

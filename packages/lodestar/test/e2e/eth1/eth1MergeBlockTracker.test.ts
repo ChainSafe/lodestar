@@ -6,10 +6,10 @@ import {expect} from "chai";
 import {Eth1Provider, IEth1Provider} from "../../../src";
 import {Eth1MergeBlockTracker, StatusCode} from "../../../src/eth1/eth1MergeBlockTracker";
 import {Eth1Options} from "../../../src/eth1/options";
-import {testnet} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
 import {quantityToBigint} from "../../../src/eth1/provider/utils";
 import {ZERO_HASH} from "../../../src/constants";
+import {getGoerliRpcUrl} from "../../testParams";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -17,12 +17,6 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
   this.timeout("2 min");
 
   const logger = testLogger();
-
-  const eth1Options: Eth1Options = {
-    enabled: true,
-    providerUrls: [testnet.providerUrl],
-    depositContractDeployBlock: 0,
-  };
 
   function getConfig(ttd: bigint): IChainConfig {
     return ({
@@ -35,6 +29,16 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     } as Partial<IChainConfig>) as IChainConfig;
   }
   const eth1Config = {DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH};
+
+  // Compute lazily since getGoerliRpcUrl() throws if GOERLI_RPC_URL is not set
+  let eth1Options: Eth1Options;
+  before("Get eth1Options", () => {
+    eth1Options = {
+      enabled: true,
+      providerUrls: [getGoerliRpcUrl()],
+      depositContractDeployBlock: 0,
+    };
+  });
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));

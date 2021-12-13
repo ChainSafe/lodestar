@@ -473,10 +473,10 @@
   optionalDependencies:
     "@node-rs/crc32" "1.1.0"
 
-"@chainsafe/libp2p-noise@4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-4.1.1.tgz#87bc944d5b17b1a4d9cbe0d960ce18e03c98e757"
-  integrity sha512-/Fz86sZmnvRSf7FHxMPifzakxx9xK4KVYx6yi35KPZughop9ivJslUSCLhx/UqDHiuj3h9i04pVXET6nIjSJyQ==
+"@chainsafe/libp2p-noise@5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/libp2p-noise/-/libp2p-noise-5.0.0.tgz#526832b51ef24683e08ef89d6777b0aac94bf6f4"
+  integrity sha512-N6kAESm0r/P4jvzt6UntRkdBsMNUigRcYykioccY3lDFFBLjPkKjw6eUwbfogBGwiTxJgfFQUj28e9xTH396PQ==
   dependencies:
     "@stablelib/chacha20poly1305" "^1.0.1"
     "@stablelib/hkdf" "^1.0.1"
@@ -488,8 +488,7 @@
     it-pair "^1.0.0"
     it-pb-rpc "^0.1.11"
     it-pipe "^1.1.0"
-    libp2p-crypto "^0.19.7"
-    peer-id "^0.15.3"
+    peer-id "^0.16.0"
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
@@ -1665,6 +1664,16 @@
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@napi-rs/triples/-/triples-1.1.0.tgz#88c35b72e79a20b79bb4c9b3e2817241a1c9f4f9"
   integrity sha512-XQr74QaLeMiqhStEhLn1im9EOMnkypp7MZOwQhGzqp2Weu5eQJbpPxWxixxlYRKWPOmJjsk6qYfYH9kq43yc2w==
+
+"@noble/ed25519@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@noble/ed25519/-/ed25519-1.3.0.tgz#a55b6bdd18991d6051f819e9c71d9341706a751e"
+  integrity sha512-k6ddjHcmfHF5LoZRv2j7WktgY8C8lzAqiu5ukWfGIlPUlpLn1tn1pfILXaXHY1DCG0s3qvGM1SluLtVpckWwMA==
+
+"@noble/secp256k1@^1.3.0":
+  version "1.3.0"
+  resolved "https://registry.yarnpkg.com/@noble/secp256k1/-/secp256k1-1.3.0.tgz#426880cf0355b24d81c129af1ec31dfa6eee8b9c"
+  integrity sha512-wuFthUc6Ul4xflhY5u1+p1bDILPzVEisekxt5M+iLg4R+gG6+k2jnRR19sC9fMtzlsN5sKloBwprziDS0XlmyQ==
 
 "@node-rs/crc32-android-arm64@^1.1.0":
   version "1.2.2"
@@ -6839,22 +6848,19 @@ libp2p-crypto@^0.19.4, libp2p-crypto@^0.19.7:
     uint8arrays "^3.0.0"
     ursa-optional "^0.10.1"
 
-libp2p-crypto@^0.20.0:
-  version "0.20.0"
-  resolved "https://registry.yarnpkg.com/libp2p-crypto/-/libp2p-crypto-0.20.0.tgz#3881ccff5f1f51f48c74050d685535fb1a728488"
-  integrity sha512-WgIW9rYcWaO/5j2T6NW3R6Q46yvp2ZfFErqRMbi4/pOTL3T7+OROYpL/1iWVksWkXyurU/t2qFsIijWMxR5C4Q==
+libp2p-crypto@^0.21.0:
+  version "0.21.0"
+  resolved "https://registry.yarnpkg.com/libp2p-crypto/-/libp2p-crypto-0.21.0.tgz#a5f2aaf49434766ab899e42c92afec92ce660d39"
+  integrity sha512-fBBzK4v1xwDt8xktWpDPCTeoBhKzxc9JMv4EyPJpoqAcuoS06+0/OLODhYod5LFiSu3lsWW+JnxblLRs5O+mjA==
   dependencies:
+    "@noble/ed25519" "^1.3.0"
+    "@noble/secp256k1" "^1.3.0"
     err-code "^3.0.1"
     iso-random-stream "^2.0.0"
-    keypair "^1.0.4"
     multiformats "^9.4.5"
-    noble-ed25519 "^1.2.6"
-    noble-secp256k1 "^1.2.10"
     node-forge "^0.10.0"
-    pem-jwk "^2.0.0"
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
-    ursa-optional "^0.10.1"
 
 libp2p-gossipsub@^0.11.1:
   version "0.11.4"
@@ -6902,10 +6908,10 @@ libp2p-mdns@^0.17.0:
     multicast-dns "^7.2.0"
     peer-id "^0.15.0"
 
-libp2p-mplex@^0.10.4:
-  version "0.10.4"
-  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.4.tgz#9f216ce481e94c748b4dc415e4555fdd8b09a9e4"
-  integrity sha512-a8Oy68EXaSBBXGOGYMuwBcpnynkhqAFJ3LiyV24u9fE4wTxvuWTr0prSyKc+KC8QsLuX3A+CAdSgxqm09NbumQ==
+libp2p-mplex@^0.10.5:
+  version "0.10.5"
+  resolved "https://registry.yarnpkg.com/libp2p-mplex/-/libp2p-mplex-0.10.5.tgz#05603689cf27844b637e483e1df2c24d2dfd0dab"
+  integrity sha512-INgYgHVR1Dl8NDRmlrRVJUWyykeQa+tda892+fB1R3igKMXKP7pstJE72WS6cznzqnltCfbxOMghyx/fJImUHA==
   dependencies:
     abort-controller "^3.0.0"
     abortable-iterator "^3.0.0"
@@ -8603,6 +8609,17 @@ peer-id@^0.15.0, peer-id@^0.15.3, peer-id@^0.15.4:
     class-is "^1.1.0"
     libp2p-crypto "^0.20.0"
     minimist "^1.2.5"
+    multiformats "^9.4.5"
+    protobufjs "^6.10.2"
+    uint8arrays "^3.0.0"
+
+peer-id@^0.16.0:
+  version "0.16.0"
+  resolved "https://registry.yarnpkg.com/peer-id/-/peer-id-0.16.0.tgz#0913062cfa4378707fe69c949b5720b3efadbf32"
+  integrity sha512-EmL7FurFUduU9m1PS9cfJ5TAuCvxKQ7DKpfx3Yj6IKWyBRtosriFuOag/l3ni/dtPgPLwiA4R9IvpL7hsDLJuQ==
+  dependencies:
+    class-is "^1.1.0"
+    libp2p-crypto "^0.21.0"
     multiformats "^9.4.5"
     protobufjs "^6.10.2"
     uint8arrays "^3.0.0"

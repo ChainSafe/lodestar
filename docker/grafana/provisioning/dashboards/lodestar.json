@@ -19,14 +19,15 @@
     ]
   },
   "editable": true,
-  "gnetId": null,
+  "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": 1,
+  "iteration": 1639131826407,
   "links": [],
+  "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -39,7 +40,6 @@
       "type": "row"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -240,13 +240,10 @@
           "refId": "B"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Slot",
       "type": "timeseries"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -275,16 +272,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "last"
-          ],
+          "calcs": ["last"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "sum(lodestar_peers_by_direction_count)",
@@ -293,14 +288,11 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Peer Count",
       "transformations": [],
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -329,16 +321,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "beacon_head_slot",
@@ -347,13 +337,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Head Slot",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -382,16 +369,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "beacon_finalized_epoch",
@@ -400,13 +385,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Finalized Epoch",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -435,16 +417,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "exemplar": false,
@@ -454,13 +434,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Validators connected",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -492,16 +469,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "rate(process_cpu_user_seconds_total[1m])",
@@ -510,13 +485,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "CPU %",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -546,16 +518,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "process_heap_bytes",
@@ -564,13 +534,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Heap",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [],
@@ -604,16 +571,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "process_start_time_seconds*1000",
@@ -623,13 +588,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Uptime since",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -677,16 +639,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "value"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "lodestar_sync_status",
@@ -695,13 +655,10 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Sync status",
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -737,16 +694,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "lodestar_version",
@@ -761,7 +716,6 @@
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -783,24 +737,20 @@
         "y": 4
       },
       "id": 54,
-      "interval": null,
-      "maxDataPoints": null,
       "options": {
         "colorMode": "value",
         "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "lodestar_version",
@@ -811,14 +761,11 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Lodestar version",
       "transformations": [],
       "type": "stat"
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -854,16 +801,14 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
         "text": {},
         "textMode": "name"
       },
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "targets": [
         {
           "expr": "nodejs_version_info",
@@ -880,7 +825,6 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "unit": "short"
@@ -913,7 +857,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.1.5",
+      "pluginVersion": "8.3.1",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -931,9 +875,7 @@
         }
       ],
       "thresholds": [],
-      "timeFrom": null,
       "timeRegions": [],
-      "timeShift": null,
       "title": "Peer count",
       "tooltip": {
         "shared": true,
@@ -942,37 +884,27 @@
       },
       "type": "graph",
       "xaxis": {
-        "buckets": null,
         "mode": "time",
-        "name": null,
         "show": true,
         "values": []
       },
       "yaxes": [
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         },
         {
           "format": "short",
-          "label": null,
           "logBase": 1,
-          "max": null,
-          "min": null,
           "show": true
         }
       ],
       "yaxis": {
-        "align": false,
-        "alignLevel": null
+        "align": false
       }
     },
     {
-      "datasource": null,
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1053,14 +985,11 @@
           "refId": "A"
         }
       ],
-      "timeFrom": null,
-      "timeShift": null,
       "title": "Slots / sec",
       "type": "timeseries"
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1070,7 +999,6 @@
       "id": 104,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1110,8 +1038,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1151,13 +1078,10 @@
               "refId": "B"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Clock drift",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1223,8 +1147,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1266,13 +1189,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Sync status",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1312,8 +1232,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1354,13 +1273,10 @@
               "refId": "B"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "head drift",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "gridPos": {
             "h": 6,
             "w": 12,
@@ -1384,8 +1300,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "-",
           "type": "text"
         }
@@ -1395,7 +1309,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -1405,7 +1318,6 @@
       "id": 12,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1445,8 +1357,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1485,13 +1396,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Heap Space Used",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1531,8 +1439,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1571,13 +1478,14 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "External Memory Used",
           "type": "timeseries"
         },
         {
-          "datasource": "-- Mixed --",
+          "datasource": {
+            "type": "datasource",
+            "uid": "-- Mixed --"
+          },
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1617,8 +1525,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1651,15 +1558,16 @@
           "pluginVersion": "7.4.5",
           "targets": [
             {
-              "datasource": "Prometheus",
+              "datasource": {
+                "type": "prometheus",
+                "uid": "PBFA97CFB590B2093"
+              },
               "expr": "process_heap_bytes",
               "interval": "",
               "legendFormat": "",
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Process heap bytes",
           "type": "timeseries"
         },
@@ -1668,7 +1576,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fill": 1,
           "fillGradient": 2,
           "gridPos": {
@@ -1712,9 +1619,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "GC pause time rate",
           "tooltip": {
             "shared": true,
@@ -1723,37 +1628,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1793,8 +1688,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1833,13 +1727,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "GC reclaimed bytes (per interval)",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1879,8 +1770,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -1919,13 +1809,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "GC runs (per interval)",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -1965,8 +1852,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2005,13 +1891,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Active requests",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2051,8 +1934,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2107,13 +1989,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Event Loop Lag",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2153,8 +2032,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2193,8 +2071,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Active Handles",
           "type": "timeseries"
         },
@@ -2205,7 +2081,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fill": 1,
           "fillGradient": 2,
           "gridPos": {
@@ -2249,9 +2124,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "CPU usage % (Lodestar only)",
           "tooltip": {
             "shared": true,
@@ -2260,37 +2133,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "percent",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2329,8 +2192,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2376,7 +2238,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2386,7 +2247,6 @@
       "id": 46,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2418,8 +2278,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2459,13 +2318,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Prometheus scrape duration",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2512,8 +2368,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2568,8 +2423,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Lodestar prom-client is down",
           "type": "timeseries"
         }
@@ -2579,7 +2432,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -2589,7 +2441,6 @@
       "id": 208,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2600,8 +2451,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2625,9 +2475,7 @@
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
+              "calcs": ["lastNotNull"],
               "fields": "",
               "values": false
             },
@@ -2651,7 +2499,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -2695,9 +2542,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Validators connected",
           "tooltip": {
             "shared": true,
@@ -2706,37 +2551,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "description": "Percent of attestations having correct head",
           "fieldConfig": {
             "defaults": {
@@ -2776,8 +2611,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2823,7 +2657,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fill": 1,
           "fillGradient": 0,
           "gridPos": {
@@ -2867,9 +2700,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Avg inclusion distance",
           "tooltip": {
             "shared": true,
@@ -2878,37 +2709,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2948,8 +2769,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -2988,13 +2808,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "prev epoch ATTESTER miss ratio",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3034,8 +2851,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3074,13 +2890,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "prev epoch TARGET miss ratio",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3120,8 +2933,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -3160,8 +2972,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "prev epoch HEAD miss ratio",
           "type": "timeseries"
         },
@@ -3170,7 +2980,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "none"
@@ -3220,9 +3029,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Aggregates per epoch per validator",
           "tooltip": {
             "shared": true,
@@ -3231,33 +3038,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "none",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -3265,7 +3063,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "short"
@@ -3315,9 +3112,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Attestations per epoch per validator",
           "tooltip": {
             "shared": true,
@@ -3326,33 +3121,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -3361,7 +3147,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3371,7 +3156,6 @@
       "id": 108,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3446,7 +3230,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3521,7 +3304,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3596,7 +3378,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3671,7 +3452,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3747,7 +3527,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -3827,7 +3606,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -3837,7 +3615,6 @@
       "id": 92,
       "panels": [
         {
-          "datasource": null,
           "gridPos": {
             "h": 3,
             "w": 24,
@@ -3858,8 +3635,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "About",
           "type": "text"
         },
@@ -3868,7 +3643,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "description": "Utilization rate = total CPU time per worker per second. Graph is stacked. This ratios should be high since BLS verification is the limiting factor in the node's throughput.",
           "fieldConfig": {
             "defaults": {
@@ -3919,9 +3693,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "BLS thread pool - utilization rate",
           "tooltip": {
             "shared": true,
@@ -3930,37 +3702,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "description": "Raw throughput of the thread pool. How many individual signature sets are successfully validated per second",
           "fieldConfig": {
             "defaults": {
@@ -4001,8 +3763,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4044,13 +3805,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS thread pool - sig sets / sec",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Average sync time to validate a single signature set. Note that the set may have been verified in batch. In most normal hardware this value should be ~1-2ms",
           "fieldConfig": {
             "defaults": {
@@ -4091,8 +3849,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4134,13 +3891,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS thread pool - sig set verification time / set",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "How much async time job spent waiting in the job queue before being picked up. This number should be really low <100ms to ensure signatures are validated fast.",
           "fieldConfig": {
             "defaults": {
@@ -4181,8 +3935,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4224,13 +3977,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS thread pool - job wait time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Total length of the job queue. Note: this queue is not bounded",
           "fieldConfig": {
             "defaults": {
@@ -4271,8 +4021,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4314,13 +4063,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS thread pool - queue length",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "What percentage of total signature sets were verified in batch, which is an optimization to reduce verification costs by x2. For a synced node this should be ~100%",
           "fieldConfig": {
             "defaults": {
@@ -4361,8 +4107,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4404,8 +4149,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS thread pool - % of sigs verified in batch",
           "type": "timeseries"
         },
@@ -4414,7 +4157,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "description": "How many signature set batches fail per second. On failure all signatures in the batch have to be verified twice, so this number should be very low to make the optimization worth it.",
           "fieldConfig": {
             "defaults": {
@@ -4465,9 +4207,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "BLS thread pool - batch retries / sec",
           "tooltip": {
             "shared": true,
@@ -4476,33 +4216,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "none",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -4510,7 +4241,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "description": "How many individual signature sets are invalid vs (valid + invalid). We don't control this number since peers may send us invalid signatures. This number should be very low since we should ban bad peers. If it's too high the batch optimization may not be worth it.",
           "fieldConfig": {
             "defaults": {
@@ -4561,9 +4291,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "BLS thread pool - sig error rate",
           "tooltip": {
             "shared": true,
@@ -4572,37 +4300,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "description": "Async time from sending a message to the worker and the worker receiving it.",
           "fieldConfig": {
             "defaults": {
@@ -4643,8 +4361,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4683,13 +4400,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS worker pool - to worker latency",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Average sets per job. A set may contain +1 signatures. This number should be higher than 1 to reduce communication costs",
           "fieldConfig": {
             "defaults": {
@@ -4730,8 +4444,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4770,13 +4483,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS worker pool - sets per job",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Async time sending a message from a worker to the main thread and it receiving it.",
           "fieldConfig": {
             "defaults": {
@@ -4817,8 +4527,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4857,13 +4566,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS worker pool - from worker latency",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Average signatures per set. This number is decided by the time of object submitted to the pool:\n- Sync blocks: 128\n- Aggregates: 3\n- Attestations: 1",
           "fieldConfig": {
             "defaults": {
@@ -4904,8 +4610,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -4924,7 +4629,6 @@
             "y": 48
           },
           "id": 98,
-          "maxDataPoints": null,
           "options": {
             "graph": {},
             "legend": {
@@ -4945,8 +4649,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "BLS worker pool - sigs per set",
           "type": "timeseries"
         }
@@ -4956,7 +4658,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -4970,7 +4671,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {},
@@ -5027,9 +4727,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Block processor queue - Utilization rate",
           "tooltip": {
             "shared": true,
@@ -5038,37 +4736,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5100,8 +4788,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5141,13 +4828,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Block processor queue - Jobs / slot",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5179,8 +4863,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5220,13 +4903,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Block processor queue - Job time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5258,8 +4938,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5299,13 +4978,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Block processor queue - Dropped jobs %",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5337,8 +5013,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5378,13 +5053,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Block processor queue - Job wait time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5416,8 +5088,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5457,8 +5128,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Block processor queue - Length",
           "type": "timeseries"
         }
@@ -5468,7 +5137,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5478,7 +5146,6 @@
       "id": 110,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5510,8 +5177,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5550,13 +5216,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Utilization ratio",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5588,8 +5251,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5628,13 +5290,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Jobs / slot",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5666,8 +5325,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5706,13 +5364,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Job time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5744,8 +5399,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5784,13 +5438,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Dropped jobs %",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5822,8 +5473,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5862,13 +5512,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Job wait time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -5900,8 +5547,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -5940,8 +5586,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Regen queue - Length",
           "type": "timeseries"
         }
@@ -5951,7 +5595,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -5961,7 +5604,6 @@
       "id": 136,
       "panels": [
         {
-          "datasource": null,
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -5997,8 +5639,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6043,7 +5684,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6081,8 +5721,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               }
@@ -6148,7 +5787,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6183,8 +5821,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6228,7 +5865,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6263,8 +5899,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6309,7 +5944,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6344,8 +5978,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   }
                 ]
               },
@@ -6386,7 +6019,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -6399,8 +6031,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6424,9 +6055,7 @@
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "lastNotNull"
-              ],
+              "calcs": ["lastNotNull"],
               "fields": "",
               "values": false
             },
@@ -6452,7 +6081,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -6466,7 +6094,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "percentunit"
@@ -6516,9 +6143,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Gossip validation queue - Utilization rate",
           "tooltip": {
             "shared": true,
@@ -6527,33 +6152,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "percentunit",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -6561,7 +6177,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "none"
@@ -6611,9 +6226,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Gossip validation queue - Processed jobs / slot",
           "tooltip": {
             "shared": true,
@@ -6622,33 +6235,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "none",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -6656,7 +6260,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "s"
@@ -6707,9 +6310,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Gossip validation queues - Job time (async)",
           "tooltip": {
             "shared": true,
@@ -6718,37 +6319,27 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "s",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -6781,8 +6372,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -6821,8 +6411,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Gossip validation queue - Dropped jobs %",
           "type": "timeseries"
         },
@@ -6831,7 +6419,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "s"
@@ -6882,9 +6469,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Gossip validation queues - Job wait time",
           "tooltip": {
             "shared": true,
@@ -6893,33 +6478,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "s",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -6927,7 +6503,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "unit": "none"
@@ -6977,9 +6552,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Gossip validation queues - Length",
           "tooltip": {
             "shared": true,
@@ -6988,33 +6561,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "none",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -7023,7 +6587,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -7037,7 +6600,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {},
@@ -7094,9 +6656,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "REST API response times",
           "tooltip": {
             "shared": true,
@@ -7105,33 +6665,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "s",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "s",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": false
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -7139,7 +6690,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "custom": {}
@@ -7189,9 +6739,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "REST API queries / slot",
           "tooltip": {
             "shared": true,
@@ -7200,33 +6748,24 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
           "yaxes": [
             {
               "format": "none",
-              "label": null,
               "logBase": 2,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -7235,7 +6774,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -7245,7 +6783,6 @@
       "id": 28,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7286,8 +6823,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7328,13 +6864,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Goodbyes received",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7374,8 +6907,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7433,13 +6965,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Peer connected event",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7482,8 +7011,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7524,13 +7052,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Goodbyes sent",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7570,8 +7095,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7628,13 +7152,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Peer disconnected event",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7674,8 +7195,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7716,13 +7236,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Total unique peers connected to",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -7762,8 +7279,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -7804,8 +7320,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Peer connect events offset (must be 0-1)",
           "type": "timeseries"
         },
@@ -7814,7 +7328,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -7865,9 +7378,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Requested peers to connect",
           "tooltip": {
             "shared": true,
@@ -7876,9 +7387,7 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -7886,25 +7395,18 @@
             {
               "$$hashKey": "object:430",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:431",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -7912,7 +7414,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -7963,9 +7464,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Requested peers to disconnect",
           "tooltip": {
             "shared": true,
@@ -7974,9 +7473,7 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -7984,25 +7481,18 @@
             {
               "$$hashKey": "object:430",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:431",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -8010,7 +7500,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -8061,9 +7550,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Requested subnets to query",
           "tooltip": {
             "shared": true,
@@ -8072,9 +7559,7 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -8082,25 +7567,18 @@
             {
               "$$hashKey": "object:430",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:431",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         },
         {
@@ -8108,7 +7586,6 @@
           "bars": false,
           "dashLength": 10,
           "dashes": false,
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "links": []
@@ -8159,9 +7636,7 @@
             }
           ],
           "thresholds": [],
-          "timeFrom": null,
           "timeRegions": [],
-          "timeShift": null,
           "title": "Requested total peers in subnets",
           "tooltip": {
             "shared": true,
@@ -8170,9 +7645,7 @@
           },
           "type": "graph",
           "xaxis": {
-            "buckets": null,
             "mode": "time",
-            "name": null,
             "show": true,
             "values": []
           },
@@ -8180,25 +7653,18 @@
             {
               "$$hashKey": "object:430",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             },
             {
               "$$hashKey": "object:431",
               "format": "short",
-              "label": null,
               "logBase": 1,
-              "max": null,
-              "min": null,
               "show": true
             }
           ],
           "yaxis": {
-            "align": false,
-            "alignLevel": null
+            "align": false
           }
         }
       ],
@@ -8207,7 +7673,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -8217,7 +7682,6 @@
       "id": 66,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8229,8 +7693,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8248,9 +7711,7 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "last"
-              ],
+              "calcs": ["last"],
               "fields": "",
               "values": false
             },
@@ -8267,13 +7728,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Mesh Peers per Topic",
           "type": "bargauge"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8312,8 +7770,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8348,13 +7805,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Mesh Peers per Topic",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8367,8 +7821,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8386,9 +7839,7 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "last"
-              ],
+              "calcs": ["last"],
               "fields": "",
               "values": false
             },
@@ -8405,13 +7856,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Attnet mesh peers per subnet",
           "type": "bargauge"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8424,8 +7872,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8443,9 +7890,7 @@
             "displayMode": "lcd",
             "orientation": "auto",
             "reduceOptions": {
-              "calcs": [
-                "last"
-              ],
+              "calcs": ["last"],
               "fields": "",
               "values": false
             },
@@ -8462,13 +7907,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "syncnet mesh peers per subnet",
           "type": "bargauge"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8507,8 +7949,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8542,13 +7983,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Attnet count with > 0 mesh peers",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8587,8 +8025,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "semi-dark-green",
-                    "value": null
+                    "color": "semi-dark-green"
                   }
                 ]
               }
@@ -8622,8 +8059,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Syncnet count with > 0 mesh peers",
           "type": "timeseries"
         }
@@ -8633,7 +8068,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -8643,7 +8077,6 @@
       "id": 232,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8683,8 +8116,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8723,13 +8155,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "onDiscovered result",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8769,8 +8198,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8840,13 +8268,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "dial time seconds",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8886,8 +8311,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -8926,13 +8350,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Not dropped rate of useful ENRs",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -8972,8 +8393,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9012,13 +8432,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Useful ENRs rate vs all seen ENRs",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9058,8 +8475,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9098,13 +8514,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "dial error rate (cumulative)",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9144,8 +8557,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9184,13 +8596,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "dial attempt rate / second",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9230,8 +8639,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9248,9 +8656,7 @@
                   "id": "byNames",
                   "options": {
                     "mode": "exclude",
-                    "names": [
-                      "start"
-                    ],
+                    "names": ["start"],
                     "prefix": "All except:",
                     "readOnly": true
                   }
@@ -9295,13 +8701,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "FINDNODE requests",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9341,8 +8744,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9381,13 +8783,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "FINDNODE query avg time",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9427,8 +8826,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9466,13 +8864,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Sent Message Count",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9512,8 +8907,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9551,13 +8945,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Received Message Count",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9597,8 +8988,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9636,13 +9026,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Connected Peer Count",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9682,8 +9069,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9721,13 +9107,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Active Session Count",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9767,8 +9150,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9807,13 +9189,10 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "KAD Table Size",
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9853,8 +9232,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9893,8 +9271,6 @@
               "refId": "A"
             }
           ],
-          "timeFrom": null,
-          "timeShift": null,
           "title": "Cached ENRs set size",
           "type": "timeseries"
         }
@@ -9904,7 +9280,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -9914,7 +9289,6 @@
       "id": 164,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -9947,8 +9321,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -9991,7 +9364,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10024,8 +9396,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10073,7 +9444,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10083,7 +9453,6 @@
       "id": 166,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10122,8 +9491,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10218,7 +9586,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10257,8 +9624,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10305,7 +9671,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10315,7 +9680,6 @@
       "id": 188,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10355,8 +9719,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10398,7 +9761,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10438,8 +9800,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10480,7 +9841,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10520,8 +9880,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10563,7 +9922,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10603,8 +9961,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10646,7 +10003,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10686,8 +10042,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10728,7 +10083,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "gridPos": {
             "h": 8,
             "w": 12,
@@ -10750,7 +10104,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -10760,7 +10113,6 @@
       "id": 214,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10799,8 +10151,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10849,7 +10200,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10888,8 +10238,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -10938,7 +10287,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -10977,8 +10325,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11019,7 +10366,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11058,8 +10404,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11108,7 +10453,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11147,8 +10491,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11202,7 +10545,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -11212,7 +10554,6 @@
       "id": 270,
       "panels": [
         {
-          "datasource": null,
           "description": "",
           "fieldConfig": {
             "defaults": {
@@ -11252,8 +10593,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11294,7 +10634,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11333,8 +10672,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11375,7 +10713,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11414,8 +10751,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11457,7 +10793,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11496,8 +10831,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11539,7 +10873,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11580,8 +10913,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11623,7 +10955,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11664,8 +10995,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11707,7 +11037,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11748,8 +11077,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11791,7 +11119,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -11832,8 +11159,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11880,7 +11206,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -11890,7 +11215,6 @@
       "id": 246,
       "panels": [
         {
-          "datasource": null,
           "description": "Time elappsed between block slot time and the time block received via gossip",
           "fieldConfig": {
             "defaults": {
@@ -11930,8 +11254,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -11973,7 +11296,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Time elappsed between block slot time and the time block processed",
           "fieldConfig": {
             "defaults": {
@@ -12013,8 +11335,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12061,7 +11382,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -12071,7 +11391,6 @@
       "id": 252,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12110,8 +11429,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12152,7 +11470,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12191,8 +11508,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12233,7 +11549,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12272,8 +11587,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12314,7 +11628,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12353,8 +11666,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12395,7 +11707,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12434,8 +11745,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12476,7 +11786,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12515,8 +11824,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12557,7 +11865,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12596,8 +11903,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12638,7 +11944,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12677,8 +11982,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12724,7 +12028,6 @@
     },
     {
       "collapsed": true,
-      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -12734,7 +12037,6 @@
       "id": 309,
       "panels": [
         {
-          "datasource": null,
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12773,8 +12075,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12846,7 +12147,6 @@
           "type": "timeseries"
         },
         {
-          "datasource": null,
           "description": "Cache Hit Count: number of state cache hit\nWaste Count: number of state that's not used",
           "fieldConfig": {
             "defaults": {
@@ -12886,8 +12186,7 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green",
-                    "value": null
+                    "color": "green"
                   },
                   {
                     "color": "red",
@@ -12957,32 +12256,41 @@
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 30,
+  "schemaVersion": 33,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "datasource": {
+          "type": "prometheus",
+          "uid": "PBFA97CFB590B2093"
+        },
+        "filters": [
+          {
+            "condition": "",
+            "key": "job",
+            "operator": "=",
+            "value": "contabo-1"
+          }
+        ],
+        "hide": 0,
+        "name": "ByJob",
+        "skipUrlSync": false,
+        "type": "adhoc"
+      }
+    ]
   },
   "time": {
     "from": "now-12h",
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ]
+    "refresh_intervals": ["5s", "10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
   },
   "timezone": "",
   "title": "Lodestar",
   "uid": "lodestar",
-  "version": 5
+  "version": 2,
+  "weekStart": ""
 }

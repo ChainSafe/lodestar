@@ -13,14 +13,18 @@ import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
 
 describe("chain / lightclient", function () {
+  /**
+   * Max distance between beacon node head and lightclient head
+   * If SECONDS_PER_SLOT === 1, there should be some margin for slow blocks,
+   * 4 = 4 sec should be good enough.
+   */
+  const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
   const targetSyncCommittee = 3;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
   /** Given 100% participation the fastest epoch to reach finalization is +2 epochs. -1 for margin */
   const targetSlotToReach = computeStartSlotAtEpoch(finalizedEpochToReach + 2) - 1;
-  /** Max distance between beacon node head and lightclient head */
-  const maxLcHeadTrackingDiffSlots = 2;
   const restPort = 9000;
 
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH"> = {
@@ -29,7 +33,11 @@ describe("chain / lightclient", function () {
     ALTAIR_FORK_EPOCH: 0,
   };
 
-  it("should do a finalized sync from another BN", async function () {
+  // Sometimes the machine may slow down and the lightclient head is too old.
+  // This is a rare event, with maxLcHeadTrackingDiffSlots = 4, SECONDS_PER_SLOT = 1
+  this.retries(2);
+
+  it("Lightclient track head on server configuration", async function () {
     this.timeout("10 min");
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
