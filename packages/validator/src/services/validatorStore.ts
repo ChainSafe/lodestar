@@ -229,11 +229,11 @@ export class ValidatorStore {
   }
 
   private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     if (!this.isLocal()) {
       throw Error("Secret keys not stored on this machine.");
     }
 
+    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
     const validator = this.validators.get(pubkeyHex);
 
