@@ -2,12 +2,11 @@ import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
-import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
-import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {Clock, IClock} from "./util/clock";
-import {signAndSubmitVoluntaryExit} from "./voluntaryExit";
 import {waitForGenesis} from "./genesis";
 import {ValidatorStore} from "./services/validatorStore";
 import {BlockProposingService} from "./services/block";
@@ -45,13 +44,11 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  * Main class for the Validator client.
  */
 export class Validator {
-  private readonly config: IBeaconConfig;
   private readonly api: Api;
-  private readonly secretKeys: SecretKey[];
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly logger: ILogger;
+  private readonly validatorStore: ValidatorStore;
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
@@ -68,7 +65,7 @@ export class Validator {
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys, genesis);
+    const validatorStore = new ValidatorStore(config, slashingProtection, secretKeys);
     const indicesService = new IndicesService(logger, api, validatorStore);
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
@@ -77,11 +74,9 @@ export class Validator {
     new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
-    this.config = config;
-    this.logger = logger;
     this.api = api;
     this.clock = clock;
-    this.secretKeys = secretKeys;
+    this.validatorStore = validatorStore;
   }
 
   /** Waits for genesis and genesis time */
@@ -128,13 +123,14 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    const secretKey = this.secretKeys.find((sk) =>
-      ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
-    );
-    if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
+    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {indices: [publicKey]});
+    const stateValidator = stateValidators[0];
+    if (stateValidator === undefined) {
+      throw new Error(`Validator ${publicKey} not found in beacon chain.`);
+    }
 
-    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, this.api, this.config);
-    this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
+    const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
+    await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
   }
 
   /** Provide the current AbortSignal to the api instance */

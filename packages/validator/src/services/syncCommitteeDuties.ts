@@ -221,7 +221,7 @@ export class SyncCommitteeDutiesService {
     // TODO: Cache this value
     const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
     // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
+    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? toHexString(duty.pubkey);
 
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const index of duty.validatorSyncCommitteeIndices) {

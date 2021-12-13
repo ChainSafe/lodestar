@@ -1,8 +1,5 @@
-import {SecretKey} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
-import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 
@@ -11,15 +8,6 @@ export type SubCommitteeDuty = {
   duty: routes.validator.SyncDuty;
   selectionProof: SyncSelectionProof["selectionProof"];
 };
-
-export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHex, BLSKeypair> {
-  const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
-  for (const secretKey of secretKeys) {
-    const publicKey = secretKey.toPublicKey().toBytes();
-    validators.set(toHexString(publicKey), {publicKey, secretKey});
-  }
-  return validators;
-}
 
 export function getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
   return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);
