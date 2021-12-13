@@ -2,6 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
 import {Validator, SlashingProtection, Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {PublicKey} from "@chainsafe/bls";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
@@ -9,9 +10,8 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getSecretKeys, getPublicKeys} from "./keys";
+import {getSecretKeys, getPublicKeys, getSignersObject} from "./keys";
 import {getVersion} from "../../util/version";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
 
 /**
  * Runs a validator client.
@@ -41,29 +41,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     logger.info(secretKey.toPublicKey().toHex());
   }
 
-  let signers: Signers;
-  /** True is for remote mode, False is local mode */
-  if (args.signingMode.toLowerCase() === "remote") {
-    /** If remote mode chosen but no url provided */
-    if (!args.signingUrl) {
-      throw Error("Remote mode requires --url argument");
-    }
-    const pubkeys: PublicKey[] = await getPublicKeys(args);
-    signers = {
-      type: SignerType.Remote,
-      url: args.signingUrl,
-      pubkeys: pubkeys,
-      secretKey: new SecretKey(),
-    };
-  } else if (args.signingMode.toLowerCase() === "local") {
-    signers = {
-      type: SignerType.Local,
-      secretKeys: secretKeys,
-    };
-  } else {
-    throw Error("Invalid mode. Only local and remote are supported");
-  }
-
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
@@ -83,6 +60,10 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
+
+  const pubkeys: PublicKey[] = getPublicKeys(args);
+  const signers: Signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, pubkeys);
+
 
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},

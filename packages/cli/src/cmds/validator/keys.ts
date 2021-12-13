@@ -4,6 +4,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
@@ -84,7 +85,7 @@ export async function getSecretKeys(
   }
 }
 
-export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<PublicKey[]> {
+export function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): PublicKey[] {
   const pubkeys: PublicKey[] = [];
   const accountPaths = getAccountPaths(args);
   const file = fs.readFileSync(accountPaths.publicKeysFile, "utf8");
@@ -93,6 +94,44 @@ export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Prom
     pubkeys.push(PublicKey.fromHex(pubkeyHex));
   }
   return pubkeys;
+}
+
+export function getPublicKeysFromSecretKeys(secretKeys: SecretKey[]): PublicKey[] {
+  const pubkeys: PublicKey[] = [];
+  for (let i = 0; i < secretKeys.length; i++) {
+    pubkeys.push(secretKeys[i].toPublicKey());
+  }
+  return pubkeys;
+}
+
+export function getSignersObject(
+  signingMode: string,
+  signingUrl: string | undefined,
+  secretKeys: SecretKey[],
+  pubkeys: PublicKey[],
+): Signers {
+  let signers: Signers;
+  /** True is for remote mode, False is local mode */
+  if (signingMode.toLowerCase() === "remote") {
+    /** If remote mode chosen but no url provided */
+    if (!signingUrl) {
+      throw Error("Remote mode requires --url argument");
+    }
+    signers = {
+      type: SignerType.Remote,
+      url: signingUrl,
+      pubkeys: pubkeys,
+      secretKey: new SecretKey(),
+    };
+  } else if (signingMode.toLowerCase() === "local") {
+    signers = {
+      type: SignerType.Local,
+      secretKeys: secretKeys,
+    };
+  } else {
+    throw Error("Invalid mode. Only local and remote are supported");
+  }
+  return signers;
 }
 
 function resolveKeystorePaths(fileOrDirPath: string): string[] {

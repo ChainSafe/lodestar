@@ -6,7 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, Signers, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,7 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import {Signers, SignerType} from "@chainsafe/lodestar-validator";
+import {getSignersObject, getPublicKeysFromSecretKeys} from "../validator/keys";
 
 /**
  * Run a beacon node with validator
@@ -144,32 +144,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     const controller = new AbortController();
     onGracefulShutdownCbs.push(async () => controller.abort());
 
-    const pubkeys: PublicKey[] = [];
-    for (let i = 0; i < secretKeys.length; i++) {
-      pubkeys.push(secretKeys[i].toPublicKey());
-    }
-
-    let signers: Signers;
-    /** True is for remote mode, False is local mode */
-    if (args.signingMode.toLowerCase() === "remote") {
-      /** If remote mode chosen but no url provided */
-      if (!args.signingUrl) {
-        throw Error("Remote mode requires --url argument");
-      }
-      signers = {
-        type: SignerType.Remote,
-        url: args.signingUrl,
-        pubkeys: pubkeys,
-        secretKey: new SecretKey(),
-      };
-    } else if (args.signingMode.toLowerCase() === "local") {
-      signers = {
-        type: SignerType.Local,
-        secretKeys: secretKeys,
-      };
-    } else {
-      throw Error("Invalid mode. Only local and remote are supported");
-    }
+    const pubkeys: PublicKey[] = getPublicKeysFromSecretKeys(secretKeys);
+    const signers: Signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, pubkeys);
 
     // Initailize genesis once for all validators
     const validator = await Validator.initializeFromBeaconNode({
