@@ -21,7 +21,7 @@ services:
     # This limit is bit tight for a Prater node, it is recommended to raise the limit
     # since memory may spike during certain network conditions.
     environment:
-      NODE_OPTIONS: --max_old_space_size=6144
+      NODE_OPTIONS: --max-old-space-size=4096
       LODESTAR_PRESET: minimal
 
   geth:
