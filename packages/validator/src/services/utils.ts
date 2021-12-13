@@ -1,12 +1,12 @@
+import fetch from "cross-fetch";
 import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
+import {BLSPubkey} from "@chainsafe/lodestar-types";
 import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
-import {BLSPubkey} from "@chainsafe/lodestar-types";
-import fetch from "cross-fetch";
 
 /** Sync committee duty associated to a single sub committee subnet */
 export type SubCommitteeDuty = {
