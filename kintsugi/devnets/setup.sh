@@ -20,7 +20,7 @@ then
 fi
 
 
-mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/$elClient && cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin master && cd $currentDir
+mkdir $dataDir && mkdir $dataDir/lodestar && mkdir $dataDir/geth && mkdir $dataDir/nethermind && cd $dataDir && git init && git remote add -f origin $setupConfigUrl && git config core.sparseCheckout true && echo "$configGitDir/*" >> .git/info/sparse-checkout && git pull --depth=1 origin master && cd $currentDir
 
 run_cmd(){
   execCmd=$1;
@@ -61,8 +61,14 @@ fi;
 if [ "$elClient" == "geth" ]
 then
   echo "gethImage: $GETH_IMAGE"
-  echo "Client geth not supported, please try another, exiting ..."
-  exit;
+  elName="$DEVNET_NAME-geth"
+  if [ ! -n "$(ls -A $dataDir/geth)" ]
+  then 
+    echo "setting up geth directory"
+    $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --catalyst --datadir /data init /config/genesis.json
+  fi;
+  bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
+  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $bootNode --datadir /data $GETH_EXTRA_ARGS"
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
