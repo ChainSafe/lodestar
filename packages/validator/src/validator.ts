@@ -42,7 +42,6 @@ export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
-  // secretKeys: SecretKey[];
   signers: Signers;
   logger: ILogger;
   graffiti?: string;
@@ -65,7 +64,6 @@ type State = {status: Status.running; controller: AbortController} | {status: St
 export class Validator {
   private readonly config: IBeaconConfig;
   private readonly api: Api;
-  // private readonly secretKeys: SecretKey[];
   private readonly signers: Signers;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;

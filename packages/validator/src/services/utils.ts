@@ -30,7 +30,7 @@ export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHe
 /**
  * Function used when remote signer being used.
  * For consistency with mapSecretKeysToValidators returns a mapping of the same data type,
- * but secret key for each BLSKeypair undefined.
+ * but secret key for each BLSKeypair is undefined.
  */
 export function mapPublicKeysToValidators(publicKeys: PublicKey[], secretKey: SecretKey): Map<PubkeyHex, BLSKeypair> {
   const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
