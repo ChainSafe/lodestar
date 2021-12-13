@@ -1,12 +1,11 @@
 import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import {init} from "@chainsafe/bls";
 import fetch from "cross-fetch";
 
 /** Sync committee duty associated to a single sub committee subnet */
@@ -89,7 +88,6 @@ export async function requestSignature(
   signingRoot: string | Uint8Array,
   remoteSignerUrl: string
 ): Promise<Uint8Array> {
-  await init("blst-native");
   const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
   const signingRootHex = typeof signingRoot === "string" ? signingRoot : toHexString(signingRoot);
   const body = {
@@ -109,7 +107,7 @@ export async function requestSignature(
     });
 
     const resJSON = <ResponseType>await res.json();
-    const sigBytes = Signature.fromHex(resJSON.signature).toBytes();
+    const sigBytes = fromHexString(resJSON.signature);
     return sigBytes;
   } catch (err) {
     throw Error(`Request to remote signer API failed: ${err}`);
