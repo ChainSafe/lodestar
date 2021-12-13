@@ -30,6 +30,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
+  const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
+  if (secretKeys.length === 0) {
+    throw new YargsError("No validator keystores found");
+  }
+
+  // Log pubkeys for auditing
+  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
+  for (const secretKey of secretKeys) {
+    logger.info(secretKey.toPublicKey().toHex());
+  }
+
   let signers: Signers;
   /** True is for remote mode, False is local mode */
   if (args.signingMode.toLowerCase() === "remote") {
@@ -45,10 +56,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       secretKey: new SecretKey(),
     };
   } else if (args.signingMode.toLowerCase() === "local") {
-    const secretKeys = await getSecretKeys(args);
-    if (secretKeys.length === 0) throw new YargsError("No validator keystores found");
-    logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-
     signers = {
       type: SignerType.Local,
       secretKeys: secretKeys,
