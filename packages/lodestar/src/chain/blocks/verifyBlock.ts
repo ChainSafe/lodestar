@@ -191,6 +191,7 @@ export async function verifyBlockStateTransition(
         //    eventually win in fork-choice as other validators vote on VALID blocks.
         // Once EL catches up again and respond VALID, the fork choice will be updated which
         // will either validate or prune invalid blocks
+        executionStatus = ExecutionStatus.Syncing;
         break;
     }
   }
