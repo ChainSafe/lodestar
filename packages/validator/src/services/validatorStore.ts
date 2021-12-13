@@ -220,26 +220,16 @@ export class ValidatorStore {
 
   private async getSignature(pubkey: BLSPubkey | string, signingRoot: Uint8Array): Promise<BLSSignature> {
     if (this.isLocal) {
-      return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
+      // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
+      const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
+      const validator = this.validators.get(pubkeyHex);
+      if (!validator) {
+        throw Error(`Validator ${pubkeyHex} not in local validators map`);
+      }
+      return validator.secretKey.sign(signingRoot).toBytes();
     } else {
       return await requestSignature(pubkey, signingRoot, this.remoteSignerUrl);
     }
-  }
-
-  private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
-    if (!this.isLocal) {
-      throw Error("Secret keys not stored on this machine.");
-    }
-
-    // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
-    const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
-    const validator = this.validators.get(pubkeyHex);
-
-    if (!validator) {
-      throw Error(`Validator ${pubkeyHex} not in local validators map`);
-    }
-
-    return validator.secretKey;
   }
 
   /** Prevent signing bad data sent by the Beacon node */
