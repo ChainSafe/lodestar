@@ -64,7 +64,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const pubkeys: PublicKey[] = getPublicKeys(args);
   const signers: Signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, pubkeys);
 
-
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
