@@ -82,7 +82,7 @@ export class KeymanagerApi implements Api {
 
         const keystore = Keystore.parse(keystoreStr);
 
-        // Check for duplicats and skip keystore before decrypting
+        // Check for duplicates and skip keystore before decrypting
         if (this.validatorStore.hasVotingPubkey(keystore.pubkey)) {
           statuses[i] = {status: ImportStatus.duplicate};
           continue;
