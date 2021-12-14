@@ -68,7 +68,7 @@ then
     $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --catalyst --datadir /data init /config/genesis.json
   fi;
   bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
-  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $bootNode --datadir /data $GETH_EXTRA_ARGS"
+  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $GETH_EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
