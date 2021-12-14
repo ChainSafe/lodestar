@@ -1,4 +1,3 @@
-import {SecretKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,

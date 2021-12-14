@@ -108,7 +108,7 @@ export function getSignersObject(
   signingMode: string,
   signingUrl: string | undefined,
   secretKeys: SecretKey[],
-  pubkeys: PublicKey[],
+  pubkeys: PublicKey[]
 ): Signers {
   let signers: Signers;
   /** True is for remote mode, False is local mode */

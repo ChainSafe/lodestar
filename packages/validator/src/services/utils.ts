@@ -1,5 +1,5 @@
 import fetch from "cross-fetch";
-import {PublicKey, SecretKey, Signature} from "@chainsafe/bls";
+import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";

@@ -1,6 +1,6 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection, Signers, SignerType} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection, Signers} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {PublicKey} from "@chainsafe/bls";
 import {getBeaconConfigFromArgs} from "../../config";
