@@ -1,51 +1,23 @@
 import {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
+import {
+  Api,
+  ImportStatus,
+  DeletionStatus,
+  KeystoreStr,
+  SlashingProtectionData,
+} from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {SlashingProtection, Interchange} from "../slashingProtection";
+import {ISlashingProtection, Interchange} from "../slashingProtection";
 import {ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
+import {Root} from "@chainsafe/lodestar-types";
 
-enum ImportStatus {
-  /** Keystore successfully decrypted and imported to keymanager permanent storage */
-  imported = "imported",
-  /** Keystore's pubkey is already known to the keymanager */
-  duplicate = "duplicate",
-  /** Any other status different to the above: decrypting error, I/O errors, etc. */
-  error = "error",
-}
-
-enum DeletionStatus {
-  /** key was active and removed */
-  deleted = "deleted",
-  /** slashing protection data returned but key was not active */
-  not_active = "not_active",
-  /** key was not found to be removed, and no slashing data can be returned */
-  not_found = "not_found",
-  /** unexpected condition meant the key could not be removed (the key was actually found, but we couldn't stop using it) - this would be a sign that making it active elsewhere would almost certainly cause you headaches / slashing conditions etc. */
-  error = "error",
-}
-
-/**
- * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
- * ```
- * '{"version":4,"uuid":"9f75a3fa-1e5a-49f9-be3d-f5a19779c6fa","path":"m/12381/3600/0/0/0","pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a","crypto":{"kdf":{"function":"pbkdf2","params":{"dklen":32,"c":262144,"prf":"hmac-sha256","salt":"8ff8f22ef522a40f99c6ce07fdcfc1db489d54dfbc6ec35613edf5d836fa1407"},"message":""},"checksum":{"function":"sha256","params":{},"message":"9678a69833d2576e3461dd5fa80f6ac73935ae30d69d07659a709b3cd3eddbe3"},"cipher":{"function":"aes-128-ctr","params":{"iv":"31b69f0ac97261e44141b26aa0da693f"},"message":"e8228bafec4fcbaca3b827e586daad381d53339155b034e5eaae676b715ab05e"}}}'
- * ```
- */
-type KeystoreStr = string;
-
-/**
- * JSON serialized representation of the slash protection data in format defined in EIP-3076: Slashing Protection Interchange Format.
- * ```
- * '{"metadata":{"interchange_format_version":"5","genesis_validators_root":"0xcf8e0d4e9587369b2301d0790347320302cc0943d5a1884560367e8208d920f2"},"data":[{"pubkey":"0x93247f2209abcacf57b75a51dafae777f9dd38bc7053d1af526f220a7489a6d3a2753e5f3e8b1cfe39b56f43611df74a","signed_blocks":[],"signed_attestations":[]}]}'
- * ```
- */
-type SlashingProtectionData = string;
-
-export class KeymanagerApi {
+export class KeymanagerApi implements Api {
   constructor(
     private readonly validatorStore: ValidatorStore,
-    private readonly slashingProtection: SlashingProtection,
-    private readonly genesisValidatorRoot: Uint8Array
+    private readonly slashingProtection: ISlashingProtection,
+    private readonly genesisValidatorRoot: Uint8Array | Root
   ) {}
 
   /**

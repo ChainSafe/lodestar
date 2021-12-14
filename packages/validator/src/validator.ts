@@ -19,6 +19,7 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
+import {KeymanagerApi} from "./keymanager/impl";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -44,6 +45,8 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  * Main class for the Validator client.
  */
 export class Validator {
+  readonly keymanager: KeymanagerApi;
+
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
@@ -73,6 +76,8 @@ export class Validator {
     new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
     new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
+
+    this.keymanager = new KeymanagerApi(validatorStore, slashingProtection, genesis.genesisValidatorsRoot);
 
     this.api = api;
     this.clock = clock;

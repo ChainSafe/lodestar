@@ -2,6 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
 import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
@@ -45,7 +46,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
+    await Promise.all(onGracefulShutdownCbs.map((cb) => cb()));
     unlockSecretKeys?.();
   }, logger.info.bind(logger));
 
@@ -63,6 +64,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     {dbOps, slashingProtection, api, logger, secretKeys, graffiti},
     controller.signal
   );
-  onGracefulShutdownCbs.push(async () => await validator.stop());
+
+  // Start keymanager API backend
+  if (args.keymanagerEnabled) {
+    const keymanagerRestApi = new KeymanagerRestApi(
+      {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
+      {config, logger, api: validator.keymanager}
+    );
+    await keymanagerRestApi.listen();
+    onGracefulShutdownCbs.push(() => keymanagerRestApi.close());
+  }
+
+  onGracefulShutdownCbs.push(() => validator.stop());
   await validator.start();
 }
