@@ -2,6 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
+import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee";
@@ -37,7 +38,7 @@ describe("SyncCommitteeService", function () {
   before(() => {
     const secretKeys = Array.from({length: 1}, (_, i) => bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1)));
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys);
+    validatorStore.votingPubkeys.returns(pubkeys.map((pk) => toHexString(pk)));
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.hasSomeValidators.returns(true);
     validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
