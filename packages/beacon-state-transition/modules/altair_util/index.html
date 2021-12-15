@@ -339,11 +339,11 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-max_random_byte"><code>Const</code> MAX_RANDOM_BYTE<a class="headerlink" href="#const-max_random_byte" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_RANDOM_BYTE</strong>: <em>number</em> = 2 ** 8 - 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L10">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L10">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:10</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="addflag">addFlag<a class="headerlink" href="#addflag" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addFlag</strong>(<code>flags</code>: ParticipationFlags, <code>flagIndex</code>: number): <em>ParticipationFlags</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/misc.ts#L5">packages/beacon-state-transition/src/altair/util/misc.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/misc.ts#L5">packages/beacon-state-transition/src/altair/util/misc.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -367,7 +367,7 @@
 <hr/>
 <h3 id="computebaserewardperincrement">computeBaseRewardPerIncrement<a class="headerlink" href="#computebaserewardperincrement" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeBaseRewardPerIncrement</strong>(<code>totalActiveStakeByIncrement</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/misc.ts#L19">packages/beacon-state-transition/src/altair/util/misc.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/misc.ts#L19">packages/beacon-state-transition/src/altair/util/misc.ts:19</a></em></p>
 <p>Before we manage bigIntSqrt(totalActiveStake) as BigInt and return BigInt.
 bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <p><strong>Parameters:</strong></p>
@@ -389,7 +389,7 @@ bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <hr/>
 <h3 id="getnextsynccommittee">getNextSyncCommittee<a class="headerlink" href="#getnextsynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNextSyncCommittee</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>, <code>activeValidatorIndices</code>: ValidatorIndex[], <code>effectiveBalances</code>: MutableVector‹number›): <em>SyncCommittee</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L52">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L52">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:52</a></em></p>
 <p>Return the sync committee for a given state and epoch.</p>
 <p>SLOW CODE - 🐢</p>
 <p><strong>Parameters:</strong></p>
@@ -419,7 +419,7 @@ bigIntSqrt(totalActiveStake) should fit a number (2 ** 53 -1 max)</p>
 <hr/>
 <h3 id="getnextsynccommitteeindices">getNextSyncCommitteeIndices<a class="headerlink" href="#getnextsynccommitteeindices" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNextSyncCommitteeIndices</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>, <code>activeValidatorIndices</code>: ValidatorIndex[], <code>effectiveBalances</code>: MutableVector‹number›): <em>ValidatorIndex[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L22">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/syncCommittee.ts#L22">packages/beacon-state-transition/src/altair/util/syncCommittee.ts:22</a></em></p>
 <p>TODO: NAIVE</p>
 <p>Return the sync committee indices for a given state and epoch.
 Aligns <code>epoch</code> to <code>baseEpoch</code> so the result is the same with any <code>epoch</code> within a sync period.
@@ -453,7 +453,7 @@ Aligns <code>epoch</code> to <code>baseEpoch</code> so the result is the same wi
 <hr/>
 <h3 id="hasflag">hasFlag<a class="headerlink" href="#hasflag" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasFlag</strong>(<code>flags</code>: ParticipationFlags, <code>flagIndex</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0150e17/packages/beacon-state-transition/src/altair/util/misc.ts#L10">packages/beacon-state-transition/src/altair/util/misc.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b06c013/packages/beacon-state-transition/src/altair/util/misc.ts#L10">packages/beacon-state-transition/src/altair/util/misc.ts:10</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>

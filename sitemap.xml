@@ -861,6 +861,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/protoarray.executionstatus/</loc>
+         <lastmod>2021-12-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/protoarray.protoarrayerrorcode/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
@@ -882,16 +887,6 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/forkchoice.iqueuedattestation/</loc>
-         <lastmod>2021-12-15</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/protoarray.iprotoblock/</loc>
-         <lastmod>2021-12-15</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/protoarray.iprotonode/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
