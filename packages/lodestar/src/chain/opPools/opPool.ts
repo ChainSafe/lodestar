@@ -112,14 +112,16 @@ export class OpPool {
   }
 
   /**
-   * Get proposer and attester slashings for inclusion in a block.
+   * Get proposer and attester slashings and voluntary exits for inclusion in a block.
    *
-   * This function computes both types of slashings together, because attester slashings may be invalidated by
-   * proposer slashings included earlier in the block.
+   * This function computes both types of slashings and exits, because attester slashings and exits may be invalidated by
+   * slashings included earlier in the block.
    */
-  getSlashings(state: CachedBeaconState<allForks.BeaconState>): [phase0.AttesterSlashing[], phase0.ProposerSlashing[]] {
+  getSlashingsAndExits(
+    state: CachedBeaconState<allForks.BeaconState>
+  ): [phase0.AttesterSlashing[], phase0.ProposerSlashing[], phase0.SignedVoluntaryExit[]] {
     const stateEpoch = computeEpochAtSlot(state.slot);
-    const toBeSlashedIndices: ValidatorIndex[] = [];
+    const toBeSlashedIndices = new Set<ValidatorIndex>();
     const proposerSlashings: phase0.ProposerSlashing[] = [];
 
     for (const proposerSlashing of this.proposerSlashings.values()) {
@@ -128,7 +130,7 @@ export class OpPool {
       if (!validator.slashed && validator.activationEpoch <= stateEpoch && stateEpoch < validator.withdrawableEpoch) {
         proposerSlashings.push(proposerSlashing);
         // Set of validators to be slashed, so we don't attempt to construct invalid attester slashings.
-        toBeSlashedIndices.push(index);
+        toBeSlashedIndices.add(index);
         if (proposerSlashings.length >= MAX_PROPOSER_SLASHINGS) {
           break;
         }
@@ -137,32 +139,45 @@ export class OpPool {
 
     const attesterSlashings: phase0.AttesterSlashing[] = [];
     attesterSlashing: for (const attesterSlashing of this.attesterSlashings.values()) {
+      /** Indices slashable in this attester slashing */
+      const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
         const validator = state.validators[index];
-        if (isSlashableAtEpoch(validator, stateEpoch)) {
-          // At least one validator is slashable, include. TODO: Optimize including the biggest attester slashings
-          attesterSlashings.push(attesterSlashing.attesterSlashing);
+
+        // If we already have a slashing for this index, we can continue on to the next slashing
+        if (toBeSlashedIndices.has(index)) {
           continue attesterSlashing;
+        }
+        if (isSlashableAtEpoch(validator, stateEpoch)) {
+          slashableIndices.add(index);
+        }
+      }
+
+      // If there were slashable indices in this slashing
+      // Then include the slashing and count the slashable indices
+      if (slashableIndices.size) {
+        attesterSlashings.push(attesterSlashing.attesterSlashing);
+        for (const index of slashableIndices) {
+          toBeSlashedIndices.add(index);
         }
       }
     }
 
-    return [attesterSlashings, proposerSlashings];
-  }
-
-  /** Get a list of voluntary exits for inclusion in a block */
-  getVoluntaryExits(state: CachedBeaconState<allForks.BeaconState>): phase0.SignedVoluntaryExit[] {
     const voluntaryExits: phase0.SignedVoluntaryExit[] = [];
     for (const voluntaryExit of this.voluntaryExits.values()) {
-      if (allForks.isValidVoluntaryExit(state, voluntaryExit, false)) {
+      if (
+        !toBeSlashedIndices.has(voluntaryExit.message.validatorIndex) &&
+        allForks.isValidVoluntaryExit(state, voluntaryExit, false)
+      ) {
         voluntaryExits.push(voluntaryExit);
         if (voluntaryExits.length >= MAX_VOLUNTARY_EXITS) {
           break;
         }
       }
     }
-    return voluntaryExits;
+
+    return [attesterSlashings, proposerSlashings, voluntaryExits];
   }
 
   /** For beacon pool API */

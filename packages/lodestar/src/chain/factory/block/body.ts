@@ -61,8 +61,7 @@ export async function assembleBody(
   //   }
   // }
 
-  const [attesterSlashings, proposerSlashings] = chain.opPool.getSlashings(currentState);
-  const voluntaryExits = chain.opPool.getVoluntaryExits(currentState);
+  const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
   const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
   const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(
     currentState as CachedBeaconState<allForks.BeaconState>
