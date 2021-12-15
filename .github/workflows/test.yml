@@ -3,7 +3,6 @@ name: Tests
 on: [pull_request, push]
 
 env:
-  GOERLI_RPC_URL: {{ secrets.GOERLI_RPC_URL }}
   GOERLI_RPC_DEFAULT_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213
 
 jobs:
@@ -57,6 +56,6 @@ jobs:
       - name: E2e tests
         run: yarn test:e2e
         env:
-          GOERLI_RPC_URL: ${{ env.GOERLI_RPC_URL!=0 && env.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
+          GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
       - name: README check
         run: yarn run check-readme
