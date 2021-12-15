@@ -108,7 +108,7 @@ describe("ExecutionEngine / http", () => {
       result: {status: "VALID", latestValidHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"},
     };
 
-    const status = await executionEngine.executePayload(parseExecutionPayload(request.params[0]));
+    const {status} = await executionEngine.executePayload(parseExecutionPayload(request.params[0]));
 
     expect(status).to.equal("VALID", "Wrong returned execute payload result");
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
