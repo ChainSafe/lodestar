@@ -10,6 +10,7 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {merge} from "@chainsafe/lodestar-beacon-state-transition";
 
+import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
@@ -191,7 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      **/
 
     const payloadResult = await executionEngine.executePayload(payload);
-    if (!payloadResult) {
+    if (payloadResult !== ExecutePayloadStatus.VALID) {
       throw Error("getPayload returned payload that executePayload deems invalid");
     }
 

@@ -636,12 +636,12 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
-   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidate till hash provided
    * TODO: implementation:
    * 1. verify is_merge_block if the mergeblock has not yet been validated
    * 2. Throw critical error and exit if a block in finalized chain gets invalidated
    */
-  validateLatestHash(_latestValidHash: RootHex, _invalidBranchDecendantHash: RootHex | null): void {
+  validateLatestHash(_latestValidHash: RootHex, _invalidateTillHash: RootHex | null): void {
     // Silently ignore for now if all calls were valid
     return;
   }

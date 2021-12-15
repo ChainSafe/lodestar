@@ -165,21 +165,29 @@ export async function verifyBlockStateTransition(
   let executionStatus = ExecutionStatus.PreMerge;
   if (executionPayloadEnabled) {
     // TODO: Handle better executePayload() returning error is syncing
-    const status = await chain.executionEngine.executePayload(
+    const execResult = await chain.executionEngine.executePayload(
       // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
       // For clarity and since it's needed anyway, just send the struct representation at this level such that
       // executePayload() can expect a regular JS object.
       // TODO: If blocks are no longer TreeBacked, remove.
-      executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled,
-      chain.forkChoice
+      executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
     );
 
-    switch (status) {
+    switch (execResult.status) {
       case ExecutePayloadStatus.VALID:
         executionStatus = ExecutionStatus.Valid;
+        chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         break; // OK
-      case ExecutePayloadStatus.INVALID:
+      case ExecutePayloadStatus.INVALID: {
+        // If the parentRoot is not same as latestValidHash, then the branch from latestValidHash
+        // to parentRoot needs to be invalidated
+        const parentHashHex = toHexString(block.message.parentRoot);
+        chain.forkChoice.validateLatestHash(
+          execResult.latestValidHash,
+          parentHashHex !== execResult.latestValidHash ? parentHashHex : null
+        );
         throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+      }
       case ExecutePayloadStatus.SYNCING:
         // It's okay to ignore SYNCING status as EL could switch into syncing
         // 1. On intial startup/restart
@@ -192,6 +200,9 @@ export async function verifyBlockStateTransition(
         // Once EL catches up again and respond VALID, the fork choice will be updated which
         // will either validate or prune invalid blocks
         executionStatus = ExecutionStatus.Syncing;
+        if (execResult.latestValidHash) {
+          chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
+        }
         break;
     }
   }
