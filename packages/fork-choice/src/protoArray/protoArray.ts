@@ -50,7 +50,7 @@ export class ProtoArray {
       ...block,
       // We are using the blockROot as the targetRoot, since it always lies on an epoch boundary
       targetRoot: block.blockRoot,
-    });
+    } as IProtoBlock);
     return protoArray;
   }
 

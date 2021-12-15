@@ -6,7 +6,7 @@ import {allForks, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lo
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconState, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {CheckpointWithHex, IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
@@ -177,11 +177,13 @@ function mockForkChoice(): IForkChoice {
     parentRoot: rootHex,
     stateRoot: rootHex,
     targetRoot: rootHex,
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: 0,
     justifiedRoot: rootHex,
     finalizedEpoch: 0,
     finalizedRoot: rootHex,
+
+    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
   const checkpoint: CheckpointWithHex = {epoch: 0, root, rootHex};
 
@@ -218,5 +220,6 @@ function mockForkChoice(): IForkChoice {
     getBlockSummariesByParentRoot: () => [block],
     getBlockSummariesAtSlot: () => [block],
     getCommonAncestorDistance: () => null,
+    validateLatestHash: () => {},
   };
 }

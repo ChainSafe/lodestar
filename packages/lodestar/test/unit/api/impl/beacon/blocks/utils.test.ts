@@ -1,5 +1,5 @@
 import {SinonStubbedInstance} from "sinon";
-import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {expect, use} from "chai";
 import {toHexString} from "@chainsafe/ssz";
@@ -32,11 +32,13 @@ describe("block api utils", function () {
         parentRoot: expectedRootHex,
         targetRoot: expectedRootHex,
         stateRoot: expectedRootHex,
-        executionPayloadBlockHash: null,
+
         finalizedEpoch: 0,
         finalizedRoot: expectedRootHex,
         justifiedEpoch: 0,
         justifiedRoot: expectedRootHex,
+
+        ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
       };
     });
 

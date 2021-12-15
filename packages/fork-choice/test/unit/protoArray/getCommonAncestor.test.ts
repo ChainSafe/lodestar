@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {ProtoArray} from "../../../src";
+import {ProtoArray, ExecutionStatus} from "../../../src";
 
 describe("getCommonAncestor", () => {
   const blocks: {slot: number; root: string; parent: string}[] = [
@@ -29,11 +29,13 @@ describe("getCommonAncestor", () => {
     stateRoot: "-",
     parentRoot: "-",
     blockRoot: "0",
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,
     finalizedRoot: "-",
+
+    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   });
 
   for (const block of blocks) {
@@ -43,11 +45,13 @@ describe("getCommonAncestor", () => {
       parentRoot: block.parent,
       stateRoot: "-",
       targetRoot: "-",
-      executionPayloadBlockHash: null,
+
       justifiedEpoch: 0,
       justifiedRoot: "-",
       finalizedEpoch: 0,
       finalizedRoot: "-",
+
+      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     });
   }
 

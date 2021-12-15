@@ -1,5 +1,5 @@
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {allForks} from "@chainsafe/lodestar-types";
 
 export type FullyVerifiedBlockFlags = {
@@ -19,6 +19,10 @@ export type FullyVerifiedBlockFlags = {
    * Used by range sync.
    */
   ignoreIfFinalized?: boolean;
+  /**
+   * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
+   */
+  executionStatus?: ExecutionStatus;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {

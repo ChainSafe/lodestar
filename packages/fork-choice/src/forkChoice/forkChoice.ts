@@ -11,7 +11,7 @@ import {
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
 import {computeDeltas} from "../protoArray/computeDeltas";
-import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock} from "../protoArray/interface";
+import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
@@ -296,9 +296,8 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (
-      merge.isMergeStateType(state) &&
-      merge.isMergeBlockBodyType(block.body) &&
-      merge.isMergeBlock(state, block.body)
+      preCachedData?.isMergeBlock ||
+      (merge.isMergeStateType(state) && merge.isMergeBlockBodyType(block.body) && merge.isMergeBlock(state, block.body))
     )
       assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
 
@@ -368,13 +367,20 @@ export class ForkChoice implements IForkChoice {
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
-      executionPayloadBlockHash: merge.isMergeBlockBodyType(block.body)
-        ? toHexString(block.body.executionPayload.blockHash)
-        : null,
+
       justifiedEpoch: stateJustifiedEpoch,
       justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+
+      ...(merge.isMergeBlockBodyType(block.body) &&
+      merge.isMergeStateType(state) &&
+      merge.isExecutionEnabled(state, block.body)
+        ? {
+            executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionStatus: this.getPostMergeExecStatus(preCachedData),
+          }
+        : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(preCachedData)}),
     });
   }
 
@@ -627,6 +633,35 @@ export class ForkChoice implements IForkChoice {
     }
 
     return newNode.slot - commonAncestor.slot;
+  }
+
+  /**
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidate till hash provided
+   * TODO: implementation:
+   * 1. verify is_merge_block if the mergeblock has not yet been validated
+   * 2. Throw critical error and exit if a block in finalized chain gets invalidated
+   */
+  validateLatestHash(_latestValidHash: RootHex, _invalidateTillHash: RootHex | null): void {
+    // Silently ignore for now if all calls were valid
+    return;
+  }
+
+  private getPreMergeExecStatus(preCachedData?: OnBlockPrecachedData): ExecutionStatus.PreMerge {
+    const executionStatus = preCachedData?.executionStatus || ExecutionStatus.PreMerge;
+    if (executionStatus !== ExecutionStatus.PreMerge)
+      throw Error(`Invalid pre-merge execution status: expected: ${ExecutionStatus.PreMerge}, got ${executionStatus}`);
+    return executionStatus;
+  }
+
+  private getPostMergeExecStatus(
+    preCachedData?: OnBlockPrecachedData
+  ): ExecutionStatus.Valid | ExecutionStatus.Syncing {
+    const executionStatus = preCachedData?.executionStatus || ExecutionStatus.Syncing;
+    if (executionStatus === ExecutionStatus.PreMerge)
+      throw Error(
+        `Invalid post-merge execution status: expected: ${ExecutionStatus.Syncing} or ${ExecutionStatus.Valid} , got ${executionStatus}`
+      );
+    return executionStatus;
   }
 
   private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: number[]): void {
@@ -922,6 +957,10 @@ function assertValidTerminalPowBlock(
       );
   } else {
     // If no TERMINAL_BLOCK_HASH override, check ttd
+
+    // Delay powBlock checks if the payload execution status is unknown because of syncing response in executePayload call while verifying
+    if (preCachedData?.executionStatus === ExecutionStatus.Syncing) return;
+
     const {powBlock, powBlockParent} = preCachedData || {};
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
     if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
