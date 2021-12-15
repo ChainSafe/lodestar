@@ -8,10 +8,10 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/api/modules/client_utils/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.0" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.2" name="generator"/>
 <title>Client utils - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.82f3c0b9.min.css" rel="stylesheet"/>
-<link href="../../../../assets/stylesheets/palette.9204c3b2.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.f7951f6f.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
 <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
@@ -483,7 +483,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="fetchopts_1">FetchOpts<a class="headerlink" href="#fetchopts_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>FetchOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/httpClient.ts#L18">packages/api/src/client/utils/httpClient.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/httpClient.ts#L18">packages/api/src/client/utils/httpClient.ts:18</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -505,7 +505,7 @@
 <hr/>
 <h3 id="httpclientoptions_1">HttpClientOptions<a class="headerlink" href="#httpclientoptions_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>HttpClientOptions</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/httpClient.ts#L32">packages/api/src/client/utils/httpClient.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/httpClient.ts#L32">packages/api/src/client/utils/httpClient.ts:32</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -524,7 +524,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="generategenericjsonclient_1">generateGenericJsonClient<a class="headerlink" href="#generategenericjsonclient_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>generateGenericJsonClient</strong>‹<strong>Api</strong>, <strong>ReqTypes</strong>›(<code>routesData</code>: <a href="../utils/#routesdata">RoutesData</a>‹Api›, <code>reqSerializers</code>: <a href="../utils/#reqserializers">ReqSerializers</a>‹Api, ReqTypes›, <code>returnTypes</code>: <a href="../utils/#returntypes">ReturnTypes</a>‹Api›, <code>fetchFn</code>: <a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a>): <em>Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/client.ts#L58">packages/api/src/client/utils/client.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/client.ts#L58">packages/api/src/client/utils/client.ts:58</a></em></p>
 <p>Get a generic JSON client from route definition, request serializer and return types.</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>Api</strong>: <em>Record‹string, <a href="../utils/#routegeneric">RouteGeneric</a>›</em></p>
@@ -560,7 +560,7 @@
 <hr/>
 <h3 id="geterrormessage">getErrorMessage<a class="headerlink" href="#geterrormessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getErrorMessage</strong>(<code>errBody</code>: string): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/httpClient.ts#L119">packages/api/src/client/utils/httpClient.ts:119</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/httpClient.ts#L119">packages/api/src/client/utils/httpClient.ts:119</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -580,7 +580,7 @@
 <hr/>
 <h3 id="getfetchoptsserializer_1">getFetchOptsSerializer<a class="headerlink" href="#getfetchoptsserializer_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getFetchOptsSerializer</strong>‹<strong>Fn</strong>, <strong>ReqType</strong>›(<code>routeDef</code>: <a href="../utils/#routedef">RouteDef</a>, <code>reqSerializer</code>: <a href="../utils/#reqserializer">ReqSerializer</a>‹Fn, ReqType›): <em>getFetchOpts</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/client.ts#L26">packages/api/src/client/utils/client.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/client.ts#L26">packages/api/src/client/utils/client.ts:26</a></em></p>
 <p>Format FetchFn opts from Fn arguments given a route definition and request serializer.
 For routes that return only JSOn use @see getGenericJsonClient</p>
 <p><strong>Type parameters:</strong></p>
@@ -609,7 +609,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="getfetchoptsserializers_1">getFetchOptsSerializers<a class="headerlink" href="#getfetchoptsserializers_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getFetchOptsSerializers</strong>‹<strong>Api</strong>, <strong>ReqTypes</strong>›(<code>routesData</code>: <a href="../utils/#routesdata">RoutesData</a>‹Api›, <code>reqSerializers</code>: <a href="../utils/#reqserializers">ReqSerializers</a>‹Api, ReqTypes›): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/client.ts#L48">packages/api/src/client/utils/client.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/client.ts#L48">packages/api/src/client/utils/client.ts:48</a></em></p>
 <p>Generate <code>getFetchOptsSerializer()</code> functions for all routes in <code>Api</code></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>Api</strong>: <em>Record‹string, <a href="../utils/#routegeneric">RouteGeneric</a>›</em></p>
@@ -637,7 +637,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="isabortederror">isAbortedError<a class="headerlink" href="#isabortederror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isAbortedError</strong>(<code>e</code>: <a href="../../classes/client_utils.httperror/#static-error">Error</a>): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/httpClient.ts#L115">packages/api/src/client/utils/httpClient.ts:115</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/httpClient.ts#L115">packages/api/src/client/utils/httpClient.ts:115</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -657,7 +657,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="stringifyquery">stringifyQuery<a class="headerlink" href="#stringifyquery" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stringifyQuery</strong>(<code>query</code>: unknown): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/format.ts#L7">packages/api/src/client/utils/format.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/format.ts#L7">packages/api/src/client/utils/format.ts:7</a></em></p>
 <p>Eth2.0 API requires the query with format:
 - arrayFormat: repeat <code>topic=topic1&amp;topic=topic2</code></p>
 <p><strong>Parameters:</strong></p>
@@ -679,7 +679,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="urljoin">urlJoin<a class="headerlink" href="#urljoin" title="Permanent link">¶</a></h3>
 <p>▸ <strong>urlJoin</strong>(...<code>args</code>: string[]): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/78b23bc/packages/api/src/client/utils/format.ts#L14">packages/api/src/client/utils/format.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/434891d/packages/api/src/client/utils/format.ts#L14">packages/api/src/client/utils/format.ts:14</a></em></p>
 <p>TODO: Optimize, two regex is a bit wasteful</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -733,7 +733,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.cefbb252.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.17f42bbf.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.649a939e.min.js"></script>
 </body>
 </html>
