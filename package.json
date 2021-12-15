@@ -24,7 +24,7 @@
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
     "test:spec-main": "lerna run test:spec-main --no-bail",
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
-    "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS=--max_old_space_size=4096 benchmark --config .benchrc.yaml",
+    "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS=--max-old-space-size=4096 benchmark --config .benchrc.yaml",
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)",
