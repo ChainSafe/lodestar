@@ -1451,6 +1451,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp.ratetracker/</loc>
+         <lastmod>2021-12-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp.reqresp/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
@@ -1472,6 +1477,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_request.requestinternalerror/</loc>
+         <lastmod>2021-12-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_response.inboundratelimiter/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2126,6 +2136,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp.iratelimiter/</loc>
+         <lastmod>2021-12-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp.ireqresp/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
@@ -2147,6 +2162,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_request.irequesterrormetadata/</loc>
+         <lastmod>2021-12-15</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_response.iratelimitermodules/</loc>
          <lastmod>2021-12-15</lastmod>
          <changefreq>daily</changefreq>
     </url>
