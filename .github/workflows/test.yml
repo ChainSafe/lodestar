@@ -3,7 +3,7 @@ name: Tests
 on: [pull_request, push]
 
 env:
-  GOERLI_RPC_URL: https://goerli.infura.io/v3/84842078b09946638c03157f83405213
+  GOERLI_RPC_URL: {{ secrets.GOERLI_RPC_URL || https://goerli.infura.io/v3/84842078b09946638c03157f83405213 }}
 
 jobs:
   tests-main:
