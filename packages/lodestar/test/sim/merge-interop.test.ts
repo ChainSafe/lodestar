@@ -192,7 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      **/
 
     const payloadResult = await executionEngine.executePayload(payload);
-    if (payloadResult !== ExecutePayloadStatus.VALID) {
+    if (payloadResult.status !== ExecutePayloadStatus.VALID) {
       throw Error("getPayload returned payload that executePayload deems invalid");
     }
 
