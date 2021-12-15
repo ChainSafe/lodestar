@@ -135,9 +135,32 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   }
 
+  /**
+   * Post merge, the CL and EL could be out of step in the sync, and could result in
+   * Syncing status of the chain head. To be precise:
+   * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
+   * 2. CL could be on an invalid chain of execution blocks with a non-existent
+   *    or non-available parent that never syncs up
+   *
+   * Both the above scenarios could be problematic and hence validator shouldn't participate
+   * or weigh its vote on a head till it resolves to a Valid execution status.
+   * Following activities should be skipped on an Optimistic head (with Syncing status):
+   * 1. Attestation if targetRoot is optimistic
+   * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
+   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
+   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
+   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
+   *
+   * TODO/PENDING: SyncCommitteeSignatures should also be aborted, the best way to address this
+   *   is still in flux and will be updated as and when other CL's figure this out.
+   */
+
   function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
     const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
-    if (!protoBeaconBlock) throw new ApiError(400, "Block not in forkChoice");
+    if (!protoBeaconBlock) {
+      throw new ApiError(400, "Block not in forkChoice");
+    }
+
     if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
