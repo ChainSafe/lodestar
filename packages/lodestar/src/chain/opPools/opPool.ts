@@ -156,7 +156,7 @@ export class OpPool {
 
       // If there were slashable indices in this slashing
       // Then include the slashing and count the slashable indices
-      if (slashableIndices.size) {
+      if (slashableIndices.size > 0) {
         attesterSlashings.push(attesterSlashing.attesterSlashing);
         for (const index of slashableIndices) {
           toBeSlashedIndices.add(index);
