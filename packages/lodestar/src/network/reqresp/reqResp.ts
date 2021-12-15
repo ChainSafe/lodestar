@@ -10,10 +10,10 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
-import {timeoutOptions} from "../../constants";
-import {IReqResp, IReqRespModules, Libp2pStream} from "./interface";
+import {RespStatus, timeoutOptions} from "../../constants";
+import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
-import {handleRequest} from "./response";
+import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
@@ -33,6 +33,7 @@ import {
   protocolsSupported,
   IncomingResponseBody,
 } from "./types";
+import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
@@ -49,6 +50,7 @@ export class ReqResp implements IReqResp {
   private metadataController: MetadataController;
   private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
+  private inboundRateLimiter: IRateLimiter;
   private networkEventBus: INetworkEventBus;
   private controller = new AbortController();
   private options?: IReqRespOptions;
@@ -56,7 +58,7 @@ export class ReqResp implements IReqResp {
   private respCount = 0;
   private metrics: IMetrics | null;
 
-  constructor(modules: IReqRespModules, options?: IReqRespOptions) {
+  constructor(modules: IReqRespModules, options: IReqRespOptions & RateLimiterOpts) {
     this.config = modules.config;
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
@@ -64,6 +66,7 @@ export class ReqResp implements IReqResp {
     this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
+    this.inboundRateLimiter = new InboundRateLimiter(options, {...modules});
     this.networkEventBus = modules.networkEventBus;
     this.options = options;
     this.metrics = modules.metrics;
@@ -77,6 +80,7 @@ export class ReqResp implements IReqResp {
         (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
     }
+    this.inboundRateLimiter.start();
   }
 
   stop(): void {
@@ -84,6 +88,7 @@ export class ReqResp implements IReqResp {
       this.libp2p.unhandle(formatProtocolId(method, version, encoding));
     }
     this.controller.abort();
+    this.inboundRateLimiter.stop();
   }
 
   async status(peerId: PeerId, request: phase0.Status): Promise<phase0.Status> {
@@ -130,6 +135,10 @@ export class ReqResp implements IReqResp {
       request,
       request.length
     );
+  }
+
+  pruneRateLimiterData(peerId: PeerId): void {
+    this.inboundRateLimiter.prune(peerId);
   }
 
   // Helper to reduce code duplication
@@ -212,6 +221,10 @@ export class ReqResp implements IReqResp {
     peerId: PeerId
   ): AsyncIterable<OutgoingResponseBody> {
     const requestTyped = {method: protocol.method, body: requestBody} as RequestTypedContainer;
+
+    if (requestTyped.method !== Method.Goodbye && !this.inboundRateLimiter.allowRequest(peerId, requestTyped)) {
+      throw new ResponseError(RespStatus.RATE_LIMITED, "rate limit");
+    }
 
     switch (requestTyped.method) {
       case Method.Ping:

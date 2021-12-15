@@ -7,7 +7,7 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 import {getReqRespHandlers, Network} from "../../../src/network";
-import {INetworkOptions} from "../../../src/network/options";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
 import {GossipType, GossipHandlers} from "../../../src/network/gossip";
 
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -21,6 +21,7 @@ import {testLogger} from "../../utils/logger";
 const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 const opts: INetworkOptions = {
+  ...defaultNetworkOptions,
   maxPeers: 1,
   targetPeers: 1,
   bootMultiaddrs: [],
