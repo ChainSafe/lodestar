@@ -130,7 +130,7 @@ export class ProtoArray {
       // Apply the delta to the node
       node.weight += nodeDelta;
 
-      // If the node has a parent, try to update its best-child and best-descendant
+      // Update the parent delta (if any)
       const parentIndex = node.parent;
       if (parentIndex !== undefined) {
         const parentDelta = deltas[parentIndex];
@@ -143,7 +143,26 @@ export class ProtoArray {
 
         // back-propagate the nodes delta to its parent
         deltas[parentIndex] += nodeDelta;
+      }
+    }
 
+    // A second time, iterate backwards through all indices in `this.nodes`.
+    //
+    // We _must_ perform these functions separate from the weight-updating loop above to ensure
+    // that we have a fully coherent set of weights before updating parent
+    // best-child/descendant.
+    for (let nodeIndex = this.nodes.length - 1; nodeIndex >= 0; nodeIndex--) {
+      const node = this.nodes[nodeIndex];
+      if (node === undefined) {
+        throw new ProtoArrayError({
+          code: ProtoArrayErrorCode.INVALID_NODE_INDEX,
+          index: nodeIndex,
+        });
+      }
+
+      // If the node has a parent, try to update its best-child and best-descendant.
+      const parentIndex = node.parent;
+      if (parentIndex !== undefined) {
         this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex);
       }
     }
