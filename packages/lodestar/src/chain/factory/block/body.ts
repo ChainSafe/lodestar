@@ -23,7 +23,6 @@ import {
   getCurrentEpoch,
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
@@ -46,8 +45,7 @@ export async function assembleBody(
     parentSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: ExecutionAddress;
-  },
-  logger?: ILogger | null
+  }
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -94,29 +92,21 @@ export async function assembleBody(
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
 
-    let executionPayload: merge.ExecutionPayload | null = null;
-    try {
-      // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
-      // the EL returns Syncing on this request to prepare a payload
-      const payloadId = await prepareExecutionPayload(
-        chain,
-        finalizedBlockHash ?? ZERO_HASH_HEX,
-        currentState as CachedBeaconState<merge.BeaconState>,
-        feeRecipient
-      );
-      executionPayload = await chain.executionEngine.getPayload(payloadId);
-    } catch (e) {
-      // 1. If Merge is complete, then fail hard i.e. can't produce block
-      // 2. Otherwise this was going to be mergeBlock, just propose a pre-merge block with
-      //    empty execution and keep the chain going
-      if (merge.isMergeComplete(currentState as CachedBeaconState<merge.BeaconState>)) throw e;
-      logger?.warn("Failed to produce execution payload", {}, e as Error);
+    // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
+    // the EL returns Syncing on this request to prepare a payload
+    const payloadId = await prepareExecutionPayload(
+      chain,
+      finalizedBlockHash ?? ZERO_HASH_HEX,
+      currentState as CachedBeaconState<merge.BeaconState>,
+      feeRecipient
+    );
+
+    if (payloadId === null) {
+      // Pre-merge, propose a pre-merge block with empty execution and keep the chain going
+      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+    } else {
+      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     }
-
-    if (!executionPayload) logger?.verbose("Assembling block with empty executionPayload");
-
-    (blockBody as merge.BeaconBlockBody).executionPayload =
-      executionPayload ?? ssz.merge.ExecutionPayload.defaultValue();
   }
 
   return blockBody;
@@ -126,13 +116,15 @@ export async function assembleBody(
  * Produce ExecutionPayload for pre-merge, merge, and post-merge.
  *
  * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
+ *
+ * @returns PayloadId = pow block found, null = pow NOT found
  */
 async function prepareExecutionPayload(
   chain: IBeaconChain,
   finalizedBlockHash: RootHex,
   state: CachedBeaconState<merge.BeaconState>,
   suggestedFeeRecipient: ExecutionAddress
-): Promise<PayloadId> {
+): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
@@ -149,7 +141,7 @@ async function prepareExecutionPayload(
     const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
-      throw new Error("InvalidTerminalPow: terminal pow block not found yet");
+      return null;
     } else {
       // Signify merge via producing on top of the last PoW block
       parentHash = terminalPowBlockHash;
