@@ -17,4 +17,4 @@ Typescript implementation of the Eth2.0 keymanager API backend. Follows the stan
 
 ## License
 
-LGPL-3.0 [ChainSafe Systems](https://chainsafe.io)
+Apache-2.0 [ChainSafe Systems](https://chainsafe.io)

@@ -1,9 +1,9 @@
 {
   "name": "@chainsafe/lodestar-keymanager-server",
   "version": "0.34.0",
-  "description": "A Typescript implementation of the validator client",
+  "description": "A Typescript implementation of the keymanager server",
   "author": "ChainSafe Systems",
-  "license": "LGPL-3.0",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
