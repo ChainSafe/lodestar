@@ -503,7 +503,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ReqResp</strong>(<code>modules</code>: <a href="../../interfaces/network_reqresp.ireqrespmodules/">IReqRespModules</a>, <code>options</code>: <a href="../../modules/network_reqresp/#ireqrespoptions">IReqRespOptions</a> &amp; <a href="../../modules/network_reqresp_response/#ratelimiteropts">RateLimiterOpts</a>): <em><a href="./">ReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L59">packages/lodestar/src/network/reqresp/reqResp.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L59">packages/lodestar/src/network/reqresp/reqResp.ts:59</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -527,64 +527,64 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-config"><code>Private</code> config<a class="headerlink" href="#private-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L46">packages/lodestar/src/network/reqresp/reqResp.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L46">packages/lodestar/src/network/reqresp/reqResp.ts:46</a></em></p>
 <hr/>
 <h3 id="private-controller"><code>Private</code> controller<a class="headerlink" href="#private-controller" title="Permanent link">¶</a></h3>
 <p>• <strong>controller</strong>: <em>AbortController‹›</em> = new AbortController()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L55">packages/lodestar/src/network/reqresp/reqResp.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L55">packages/lodestar/src/network/reqresp/reqResp.ts:55</a></em></p>
 <hr/>
 <h3 id="private-inboundratelimiter"><code>Private</code> inboundRateLimiter<a class="headerlink" href="#private-inboundratelimiter" title="Permanent link">¶</a></h3>
 <p>• <strong>inboundRateLimiter</strong>: <em><a href="../../interfaces/network_reqresp.iratelimiter/">IRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L53">packages/lodestar/src/network/reqresp/reqResp.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L53">packages/lodestar/src/network/reqresp/reqResp.ts:53</a></em></p>
 <hr/>
 <h3 id="private-libp2p"><code>Private</code> libp2p<a class="headerlink" href="#private-libp2p" title="Permanent link">¶</a></h3>
 <p>• <strong>libp2p</strong>: <em>LibP2p</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L47">packages/lodestar/src/network/reqresp/reqResp.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L47">packages/lodestar/src/network/reqresp/reqResp.ts:47</a></em></p>
 <hr/>
 <h3 id="private-logger"><code>Private</code> logger<a class="headerlink" href="#private-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L48">packages/lodestar/src/network/reqresp/reqResp.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L48">packages/lodestar/src/network/reqresp/reqResp.ts:48</a></em></p>
 <hr/>
 <h3 id="private-metadatacontroller"><code>Private</code> metadataController<a class="headerlink" href="#private-metadatacontroller" title="Permanent link">¶</a></h3>
 <p>• <strong>metadataController</strong>: <em><a href="../network.metadatacontroller/">MetadataController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L50">packages/lodestar/src/network/reqresp/reqResp.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L50">packages/lodestar/src/network/reqresp/reqResp.ts:50</a></em></p>
 <hr/>
 <h3 id="private-metrics"><code>Private</code> metrics<a class="headerlink" href="#private-metrics" title="Permanent link">¶</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L59">packages/lodestar/src/network/reqresp/reqResp.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L59">packages/lodestar/src/network/reqresp/reqResp.ts:59</a></em></p>
 <hr/>
 <h3 id="private-networkeventbus"><code>Private</code> networkEventBus<a class="headerlink" href="#private-networkeventbus" title="Permanent link">¶</a></h3>
 <p>• <strong>networkEventBus</strong>: <em><a href="../../modules/network/#inetworkeventbus">INetworkEventBus</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L54">packages/lodestar/src/network/reqresp/reqResp.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L54">packages/lodestar/src/network/reqresp/reqResp.ts:54</a></em></p>
 <hr/>
 <h3 id="private-optional-options"><code>Private</code> <code>Optional</code> options<a class="headerlink" href="#private-optional-options" title="Permanent link">¶</a></h3>
 <p>• <strong>options</strong>? : <em><a href="../../modules/network_reqresp/#ireqrespoptions">IReqRespOptions</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L56">packages/lodestar/src/network/reqresp/reqResp.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L56">packages/lodestar/src/network/reqresp/reqResp.ts:56</a></em></p>
 <hr/>
 <h3 id="private-peermetadata"><code>Private</code> peerMetadata<a class="headerlink" href="#private-peermetadata" title="Permanent link">¶</a></h3>
 <p>• <strong>peerMetadata</strong>: <em><a href="../../interfaces/network_peers.ipeermetadatastore/">IPeerMetadataStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L51">packages/lodestar/src/network/reqresp/reqResp.ts:51</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L51">packages/lodestar/src/network/reqresp/reqResp.ts:51</a></em></p>
 <hr/>
 <h3 id="private-peerrpcscores"><code>Private</code> peerRpcScores<a class="headerlink" href="#private-peerrpcscores" title="Permanent link">¶</a></h3>
 <p>• <strong>peerRpcScores</strong>: <em><a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L52">packages/lodestar/src/network/reqresp/reqResp.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L52">packages/lodestar/src/network/reqresp/reqResp.ts:52</a></em></p>
 <hr/>
 <h3 id="private-reqcount"><code>Private</code> reqCount<a class="headerlink" href="#private-reqcount" title="Permanent link">¶</a></h3>
 <p>• <strong>reqCount</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L57">packages/lodestar/src/network/reqresp/reqResp.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L57">packages/lodestar/src/network/reqresp/reqResp.ts:57</a></em></p>
 <hr/>
 <h3 id="private-reqresphandlers"><code>Private</code> reqRespHandlers<a class="headerlink" href="#private-reqresphandlers" title="Permanent link">¶</a></h3>
 <p>• <strong>reqRespHandlers</strong>: <em><a href="../../modules/network_reqresp/#reqresphandlers">ReqRespHandlers</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L49">packages/lodestar/src/network/reqresp/reqResp.ts:49</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L49">packages/lodestar/src/network/reqresp/reqResp.ts:49</a></em></p>
 <hr/>
 <h3 id="private-respcount"><code>Private</code> respCount<a class="headerlink" href="#private-respcount" title="Permanent link">¶</a></h3>
 <p>• <strong>respCount</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L58">packages/lodestar/src/network/reqresp/reqResp.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L58">packages/lodestar/src/network/reqresp/reqResp.ts:58</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="beaconblocksbyrange">beaconBlocksByRange<a class="headerlink" href="#beaconblocksbyrange" title="Permanent link">¶</a></h3>
 <p>▸ <strong>beaconBlocksByRange</strong>(<code>peerId</code>: PeerId, <code>request</code>: BeaconBlocksByRangeRequest): <em>Promise‹allForks.SignedBeaconBlock[]›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L112">packages/lodestar/src/network/reqresp/reqResp.ts:112</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L112">packages/lodestar/src/network/reqresp/reqResp.ts:112</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -609,7 +609,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="beaconblocksbyroot">beaconBlocksByRoot<a class="headerlink" href="#beaconblocksbyroot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>beaconBlocksByRoot</strong>(<code>peerId</code>: PeerId, <code>request</code>: phase0.BeaconBlocksByRootRequest): <em>Promise‹allForks.SignedBeaconBlock[]›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L127">packages/lodestar/src/network/reqresp/reqResp.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L127">packages/lodestar/src/network/reqresp/reqResp.ts:127</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -633,7 +633,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <hr/>
 <h3 id="private-getrequesthandler"><code>Private</code> getRequestHandler<a class="headerlink" href="#private-getrequesthandler" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getRequestHandler</strong>(<code>__namedParameters</code>: object): <em>(Anonymous function)</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L186">packages/lodestar/src/network/reqresp/reqResp.ts:186</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L186">packages/lodestar/src/network/reqresp/reqResp.ts:186</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
 <table>
@@ -663,7 +663,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="goodbye">goodbye<a class="headerlink" href="#goodbye" title="Permanent link">¶</a></h3>
 <p>▸ <strong>goodbye</strong>(<code>peerId</code>: PeerId, <code>request</code>: phase0.Goodbye): <em>Promise‹void›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L98">packages/lodestar/src/network/reqresp/reqResp.ts:98</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L98">packages/lodestar/src/network/reqresp/reqResp.ts:98</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -688,7 +688,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="metadata">metadata<a class="headerlink" href="#metadata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>metadata</strong>(<code>peerId</code>: PeerId, <code>fork?</code>: ForkName): <em>Promise‹allForks.Metadata›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L106">packages/lodestar/src/network/reqresp/reqResp.ts:106</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L106">packages/lodestar/src/network/reqresp/reqResp.ts:106</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -712,7 +712,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <hr/>
 <h3 id="private-onrequest"><code>Private</code> onRequest<a class="headerlink" href="#private-onrequest" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onRequest</strong>(<code>protocol</code>: <a href="../../modules/network_reqresp/#protocol">Protocol</a>, <code>requestBody</code>: <a href="../../modules/network_reqresp/#requestbody">RequestBody</a>, <code>peerId</code>: PeerId): <em>AsyncIterable‹<a href="../../modules/network_reqresp/#outgoingresponsebody">OutgoingResponseBody</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L218">packages/lodestar/src/network/reqresp/reqResp.ts:218</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L218">packages/lodestar/src/network/reqresp/reqResp.ts:218</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -741,7 +741,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="ping">ping<a class="headerlink" href="#ping" title="Permanent link">¶</a></h3>
 <p>▸ <strong>ping</strong>(<code>peerId</code>: PeerId): <em>Promise‹phase0.Ping›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L102">packages/lodestar/src/network/reqresp/reqResp.ts:102</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L102">packages/lodestar/src/network/reqresp/reqResp.ts:102</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -762,7 +762,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="pruneratelimiterdata">pruneRateLimiterData<a class="headerlink" href="#pruneratelimiterdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneRateLimiterData</strong>(<code>peerId</code>: PeerId): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L140">packages/lodestar/src/network/reqresp/reqResp.ts:140</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L140">packages/lodestar/src/network/reqresp/reqResp.ts:140</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -782,7 +782,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <hr/>
 <h3 id="private-sendrequest"><code>Private</code> sendRequest<a class="headerlink" href="#private-sendrequest" title="Permanent link">¶</a></h3>
 <p>▸ <strong>sendRequest</strong>‹<strong>T</strong>›(<code>peerId</code>: PeerId, <code>method</code>: <a href="../../enums/network_reqresp.method/">Method</a>, <code>versions</code>: <a href="../../enums/network_reqresp.version/">Version</a>[], <code>body</code>: <a href="../../modules/network_reqresp/#requestbody">RequestBody</a>, <code>maxResponses</code>: number): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L145">packages/lodestar/src/network/reqresp/reqResp.ts:145</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L145">packages/lodestar/src/network/reqresp/reqResp.ts:145</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong>: <em><a href="../../modules/network_reqresp/#incomingresponsebody">IncomingResponseBody</a> | <a href="../../modules/network_reqresp/#incomingresponsebody">IncomingResponseBody</a>[]</em></p>
 <p><strong>Parameters:</strong></p>
@@ -827,13 +827,13 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L75">packages/lodestar/src/network/reqresp/reqResp.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L75">packages/lodestar/src/network/reqresp/reqResp.ts:75</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="status">status<a class="headerlink" href="#status" title="Permanent link">¶</a></h3>
 <p>▸ <strong>status</strong>(<code>peerId</code>: PeerId, <code>request</code>: Status): <em>Promise‹Status›</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L94">packages/lodestar/src/network/reqresp/reqResp.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L94">packages/lodestar/src/network/reqresp/reqResp.ts:94</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -858,7 +858,7 @@ https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stop</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.ireqresp/">IReqResp</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f40f42b/packages/lodestar/src/network/reqresp/reqResp.ts#L86">packages/lodestar/src/network/reqresp/reqResp.ts:86</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d05dd6/packages/lodestar/src/network/reqresp/reqResp.ts#L86">packages/lodestar/src/network/reqresp/reqResp.ts:86</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
 </div>
