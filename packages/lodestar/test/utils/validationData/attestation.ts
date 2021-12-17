@@ -107,7 +107,7 @@ export function getAttestationValidData(
 
   // Add state to regen
   const regen = ({
-    getCheckpointState: async () => (state as unknown) as CachedBeaconState<allForks.BeaconState>,
+    getState: async () => (state as unknown) as CachedBeaconState<allForks.BeaconState>,
   } as Partial<IStateRegenerator>) as IStateRegenerator;
 
   const chain = ({
