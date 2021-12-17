@@ -49,6 +49,8 @@ export class PrecomputeNextEpochTransitionScheduler {
 
     const {slot: headSlot, blockRoot} = this.chain.forkChoice.getHead();
     const nextEpoch = computeEpochAtSlot(clockSlot) + 1;
+    // Don't want to pre compute epoch transition at pre genesis
+    if (nextEpoch <= 0) return;
     // node may be syncing or out of synced
     if (headSlot < clockSlot) {
       this.metrics?.precomputeNextEpochTransition.count.inc({result: "skip"}, 1);
