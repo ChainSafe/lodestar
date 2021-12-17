@@ -115,7 +115,7 @@ export function getSignersObject(
   if (signingMode.toLowerCase() === "remote") {
     /** If remote mode chosen but no url provided */
     if (!signingUrl) {
-      throw Error("Remote mode requires --url argument");
+      throw new YargsError("Remote mode requires --signingUrl argument");
     }
     signers = {
       type: SignerType.Remote,
@@ -129,7 +129,7 @@ export function getSignersObject(
       secretKeys: secretKeys,
     };
   } else {
-    throw Error("Invalid mode. Only local and remote are supported");
+    throw new YargsError("Invalid mode. Only local and remote are supported");
   }
   return signers;
 }

@@ -156,6 +156,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       signers,
     });
 
+    logger.info(`Starting validators in ${args.signingMode.toLowerCase()} signing mode`);
+
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();
   }
