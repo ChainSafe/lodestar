@@ -4,7 +4,6 @@ import {defaultAccountPaths} from "../../paths";
 export interface IAccountValidatorArgs {
   keystoresDir?: string;
   secretsDir?: string;
-  publicKeysFile?: string;
 }
 
 export const accountValidatorOptions: ICliCommandOptions<IAccountValidatorArgs> = {
@@ -17,13 +16,6 @@ export const accountValidatorOptions: ICliCommandOptions<IAccountValidatorArgs> 
   secretsDir: {
     description: "Directory for storing validator keystore secrets.",
     defaultDescription: defaultAccountPaths.secretsDir,
-    type: "string",
-  },
-
-  publicKeysFile: {
-    description: "File for storing public keys",
-    defaultDescription: defaultAccountPaths.publicKeysFile,
-    default: "./publicKeysFile",
     type: "string",
   },
 };

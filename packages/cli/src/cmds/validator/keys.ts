@@ -87,10 +87,14 @@ export async function getSecretKeys(
 
 export function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): PublicKey[] {
   const pubkeys: PublicKey[] = [];
-  const accountPaths = getAccountPaths(args);
-  const file = fs.readFileSync(accountPaths.publicKeysFile, "utf8");
-  const arr = file.toString().replace(/\r\n/g, "\n").split("\n");
-  for (const pubkeyHex of arr) {
+
+  if (!args.publicKeys) {
+    throw new YargsError("No public keys found.");
+  }
+
+  const publicKeys: string[] = args.publicKeys?.split(",");
+
+  for (const pubkeyHex of publicKeys) {
     pubkeys.push(PublicKey.fromHex(pubkeyHex));
   }
   return pubkeys;

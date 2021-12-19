@@ -18,6 +18,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     logFile: IBeaconPaths["logFile"];
     signingMode: "local" | "remote";
     signingUrl?: string;
+    publicKeys: string;
   };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -86,6 +87,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   signingUrl: {
     description: "URL to connect to remote signing server",
+    type: "string",
+    default: undefined,
+  },
+
+  publicKeys: {
+    description: "Comma seperated public keys to use for remote API.",
     type: "string",
     default: undefined,
   },
