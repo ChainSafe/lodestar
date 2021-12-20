@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/cli/classes/validatordir.validatordir-1/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.2" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.3" name="generator"/>
 <title>Validatordir.validatordir 1 - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.f7951f6f.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.edf004c2.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -399,7 +399,7 @@ access from multiple processes.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ValidatorDir</strong>(<code>baseDir</code>: string, <code>pubkey</code>: string, <code>options?</code>: <a href="../../modules/validatordir/#ivalidatordiroptions">IValidatorDirOptions</a>): <em><a href="./">ValidatorDir</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L54">packages/cli/src/validatorDir/ValidatorDir.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L54">packages/cli/src/validatorDir/ValidatorDir.ts:54</a></em></p>
 <p>Open <code>dir</code>, creating a lockfile to prevent concurrent access.
 Errors if there is a filesystem error or if a lockfile already exists</p>
 <p><strong>Parameters:</strong></p>
@@ -429,28 +429,28 @@ Errors if there is a filesystem error or if a lockfile already exists</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="dir">dir<a class="headerlink" href="#dir" title="Permanent link">¶</a></h3>
 <p>• <strong>dir</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L53">packages/cli/src/validatorDir/ValidatorDir.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L53">packages/cli/src/validatorDir/ValidatorDir.ts:53</a></em></p>
 <hr/>
 <h3 id="private-lockfilepath"><code>Private</code> lockfilePath<a class="headerlink" href="#private-lockfilepath" title="Permanent link">¶</a></h3>
 <p>• <strong>lockfilePath</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L54">packages/cli/src/validatorDir/ValidatorDir.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L54">packages/cli/src/validatorDir/ValidatorDir.ts:54</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="close">close<a class="headerlink" href="#close" title="Permanent link">¶</a></h3>
 <p>▸ <strong>close</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L82">packages/cli/src/validatorDir/ValidatorDir.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L82">packages/cli/src/validatorDir/ValidatorDir.ts:82</a></em></p>
 <p>Removes the lockfile associated with this validator dir</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="eth1depositdata">eth1DepositData<a class="headerlink" href="#eth1depositdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>eth1DepositData</strong>(): <em><a href="../../interfaces/validatordir.ieth1depositdata/">IEth1DepositData</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L148">packages/cli/src/validatorDir/ValidatorDir.ts:148</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L148">packages/cli/src/validatorDir/ValidatorDir.ts:148</a></em></p>
 <p>Attempts to read files in <code>this.dir</code> and return an <code>Eth1DepositData</code> that can be used for
 submitting an Eth1 deposit.</p>
 <p><strong>Returns:</strong> <em><a href="../../interfaces/validatordir.ieth1depositdata/">IEth1DepositData</a></em></p>
 <hr/>
 <h3 id="eth1deposittxhashexists">eth1DepositTxHashExists<a class="headerlink" href="#eth1deposittxhashexists" title="Permanent link">¶</a></h3>
 <p>▸ <strong>eth1DepositTxHashExists</strong>(): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L129">packages/cli/src/validatorDir/ValidatorDir.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L129">packages/cli/src/validatorDir/ValidatorDir.ts:129</a></em></p>
 <p>Indicates if there is a file containing an eth1 deposit transaction. This can be used to
 check if a deposit transaction has been created.</p>
 <p><em>Note</em>: It's possible to submit an Eth1 deposit without creating this file, so use caution
@@ -459,7 +459,7 @@ when relying upon this value.</p>
 <hr/>
 <h3 id="saveeth1deposittxhash">saveEth1DepositTxHash<a class="headerlink" href="#saveeth1deposittxhash" title="Permanent link">¶</a></h3>
 <p>▸ <strong>saveEth1DepositTxHash</strong>(<code>txHash</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L136">packages/cli/src/validatorDir/ValidatorDir.ts:136</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L136">packages/cli/src/validatorDir/ValidatorDir.ts:136</a></em></p>
 <p>Saves the <code>tx_hash</code> to a file in <code>this.dir</code>.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -480,7 +480,7 @@ when relying upon this value.</p>
 <hr/>
 <h3 id="unlockkeypair">unlockKeypair<a class="headerlink" href="#unlockkeypair" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unlockKeypair</strong>(<code>keystorePath</code>: string, <code>secretsDir</code>: string): <em>Promise‹SecretKey›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L115">packages/cli/src/validatorDir/ValidatorDir.ts:115</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L115">packages/cli/src/validatorDir/ValidatorDir.ts:115</a></em></p>
 <p>Decrypts a keystore in the validator's dir</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -508,7 +508,7 @@ when relying upon this value.</p>
 <hr/>
 <h3 id="votingkeypair">votingKeypair<a class="headerlink" href="#votingkeypair" title="Permanent link">¶</a></h3>
 <p>▸ <strong>votingKeypair</strong>(<code>secretsDir</code>: string): <em>Promise‹SecretKey›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L93">packages/cli/src/validatorDir/ValidatorDir.ts:93</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L93">packages/cli/src/validatorDir/ValidatorDir.ts:93</a></em></p>
 <p>Attempts to read the keystore in <code>this.dir</code> and decrypt the secretKey using
 a password file in <code>password_dir</code>.
 The password file that is used will be based upon the pubkey value in the keystore.
@@ -534,7 +534,7 @@ Errors if there is a filesystem error, a password is missing or the password is 
 <hr/>
 <h3 id="withdrawalkeypair">withdrawalKeypair<a class="headerlink" href="#withdrawalkeypair" title="Permanent link">¶</a></h3>
 <p>▸ <strong>withdrawalKeypair</strong>(<code>secretsDir</code>: string): <em>Promise‹SecretKey›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/53f31a7/packages/cli/src/validatorDir/ValidatorDir.ts#L105">packages/cli/src/validatorDir/ValidatorDir.ts:105</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/cli/src/validatorDir/ValidatorDir.ts#L105">packages/cli/src/validatorDir/ValidatorDir.ts:105</a></em></p>
 <p>Attempts to read the keystore in <code>this.dir</code> and decrypt the secretKey using
 a password file in <code>password_dir</code>.
 The password file that is used will be based upon the pubkey value in the keystore.
@@ -594,6 +594,6 @@ Errors if there is a filesystem error, a password is missing or the password is 
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.0bbba5b5.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.649a939e.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.e1a181d9.min.js"></script>
 </body>
 </html>
