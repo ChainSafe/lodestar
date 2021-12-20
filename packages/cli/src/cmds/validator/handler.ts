@@ -55,7 +55,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     }, logger.info.bind(logger));
     signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, []);
   } else if (args.signingMode == "remote") {
-    const pubkeys: PublicKey[] = getPublicKeys(args);
+    const pubkeys: PublicKey[] = await getPublicKeys(args);
     signers = getSignersObject(args.signingMode, args.signingUrl, [], pubkeys);
   } else {
     throw new YargsError("Invalid signing mode. Only local and remote are supported");

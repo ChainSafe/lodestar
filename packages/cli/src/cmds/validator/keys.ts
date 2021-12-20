@@ -4,7 +4,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {Signers, SignerType} from "@chainsafe/lodestar-validator";
+import {Signers, SignerType, requestKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
@@ -85,19 +85,36 @@ export async function getSecretKeys(
   }
 }
 
-export function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): PublicKey[] {
+export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<PublicKey[]> {
   const pubkeys: PublicKey[] = [];
+  let publicKeys: string[] = [];
 
   if (!args.publicKeys) {
     throw new YargsError("No public keys found.");
   }
 
-  const publicKeys: string[] = args.publicKeys?.split(",");
+  if (isValidHttpUrl(args.publicKeys)) {
+    // TODO: Make a reuqest to return publicKeys
+    publicKeys = await requestKeys(args.signingUrl);
+  } else {
+    publicKeys = args.publicKeys?.split(",");
+  }
 
   for (const pubkeyHex of publicKeys) {
     pubkeys.push(PublicKey.fromHex(pubkeyHex));
   }
   return pubkeys;
+}
+
+export function isValidHttpUrl(input: string): boolean {
+  let url;
+  try {
+    url = new URL(input);
+  } catch (_) {
+    return false;
+  }
+
+  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 export function getPublicKeysFromSecretKeys(secretKeys: SecretKey[]): PublicKey[] {

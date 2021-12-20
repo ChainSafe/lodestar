@@ -14,8 +14,16 @@ export type SubCommitteeDuty = {
   selectionProof: SyncSelectionProof["selectionProof"];
 };
 
-type ResponseType = {
+export type ResponseType = {
   signature: string;
+};
+
+export type PublicKeysObject = {
+  keys: string[];
+};
+
+export type UpcheckObject = {
+  status: string;
 };
 
 export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHex, BLSKeypair> {
@@ -111,5 +119,49 @@ export async function requestSignature(
     return sigBytes;
   } catch (err) {
     throw Error(`Request to remote signer API failed: ${err}`);
+  }
+}
+
+/**
+ * Return public keys from the server.
+ */
+export async function requestKeys(remoteUrl: string | undefined): Promise<string[]> {
+  try {
+    const url = `${remoteUrl}/keys`;
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: headers,
+    });
+
+    const resJSON = <PublicKeysObject>await res.json();
+    return resJSON.keys;
+  } catch (err) {
+    throw Error(`Request to retrieve public keys failed: ${err}`);
+  }
+}
+
+/**
+ * Return public keys from the server.
+ */
+export async function serverUpCheck(remoteUrl: string): Promise<boolean> {
+  try {
+    const url = `${remoteUrl}/upcheck`;
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    const res = await fetch(url, {
+      method: "GET",
+      headers: headers,
+    });
+
+    const resJSON = <UpcheckObject>await res.json();
+    return resJSON.status === "OK";
+  } catch (err) {
+    throw Error(`Request to retrieve public keys failed: ${err}`);
   }
 }
