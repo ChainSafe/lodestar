@@ -107,18 +107,22 @@ export async function requestSignature(
     const headers = {
       "Content-Type": "application/json",
     };
-
     const res = await fetch(url, {
       method: "POST",
       headers: headers,
       body: JSON.stringify(body),
     });
 
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw Error(`${errBody}`);
+    }
+
     const resJSON = <ResponseType>await res.json();
     const sigBytes = fromHexString(resJSON.signature);
     return sigBytes;
   } catch (err) {
-    throw Error(`Request to remote signer API failed: ${err}`);
+    throw (err as Error).message;
   }
 }
 
@@ -137,15 +141,20 @@ export async function requestKeys(remoteUrl: string | undefined): Promise<string
       headers: headers,
     });
 
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw Error(`${errBody}`);
+    }
+
     const resJSON = <PublicKeysObject>await res.json();
     return resJSON.keys;
   } catch (err) {
-    throw Error(`Request to retrieve public keys failed: ${err}`);
+    throw (err as Error).message;
   }
 }
 
 /**
- * Return public keys from the server.
+ * Return upcheck status from server.
  */
 export async function serverUpCheck(remoteUrl: string): Promise<boolean> {
   try {
@@ -162,6 +171,6 @@ export async function serverUpCheck(remoteUrl: string): Promise<boolean> {
     const resJSON = <UpcheckObject>await res.json();
     return resJSON.status === "OK";
   } catch (err) {
-    throw Error(`Request to retrieve public keys failed: ${err}`);
+    throw (err as Error).message;
   }
 }
