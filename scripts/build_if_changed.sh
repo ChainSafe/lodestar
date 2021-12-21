@@ -40,7 +40,6 @@ fi
 
 # If there are changes, build
 if [ "$SHOULD_BUILD" = true ]; then
-    # Empty, no changes
     npm run build
 fi
 
