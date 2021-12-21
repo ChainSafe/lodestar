@@ -5,7 +5,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {merge, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
-import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
 

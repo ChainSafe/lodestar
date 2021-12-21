@@ -6,7 +6,7 @@ import {altair, phase0, allForks} from "@chainsafe/lodestar-beacon-state-transit
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
