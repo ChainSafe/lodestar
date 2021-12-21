@@ -432,27 +432,27 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-attesterslashingindexes"><code>Private</code> <code>Readonly</code> attesterSlashingIndexes<a class="headerlink" href="#private-readonly-attesterslashingindexes" title="Permanent link">¶</a></h3>
 <p>• <strong>attesterSlashingIndexes</strong>: <em>Set‹number›</em> = new Set<validatorindex>()</validatorindex></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L27">packages/lodestar/src/chain/opPools/opPool.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L27">packages/lodestar/src/chain/opPools/opPool.ts:27</a></em></p>
 <p>Set of seen attester slashing indexes. No need to prune</p>
 <hr/>
 <h3 id="private-readonly-attesterslashings"><code>Private</code> <code>Readonly</code> attesterSlashings<a class="headerlink" href="#private-readonly-attesterslashings" title="Permanent link">¶</a></h3>
 <p>• <strong>attesterSlashings</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../../modules/chain_oppools/#attesterslashingcached">AttesterSlashingCached</a>›</em> = new Map<hexroot, attesterslashingcached="">()</hexroot,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L21">packages/lodestar/src/chain/opPools/opPool.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L21">packages/lodestar/src/chain/opPools/opPool.ts:21</a></em></p>
 <p>Map of uniqueId(AttesterSlashing) -&gt; AttesterSlashing</p>
 <hr/>
 <h3 id="private-readonly-proposerslashings"><code>Private</code> <code>Readonly</code> proposerSlashings<a class="headerlink" href="#private-readonly-proposerslashings" title="Permanent link">¶</a></h3>
 <p>• <strong>proposerSlashings</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹number, ProposerSlashing›</em> = new Map<validatorindex, phase0.proposerslashing="">()</validatorindex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L23">packages/lodestar/src/chain/opPools/opPool.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L23">packages/lodestar/src/chain/opPools/opPool.ts:23</a></em></p>
 <p>Map of to slash validator index -&gt; ProposerSlashing</p>
 <hr/>
 <h3 id="private-readonly-voluntaryexits"><code>Private</code> <code>Readonly</code> voluntaryExits<a class="headerlink" href="#private-readonly-voluntaryexits" title="Permanent link">¶</a></h3>
 <p>• <strong>voluntaryExits</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹number, SignedVoluntaryExit›</em> = new Map<validatorindex, phase0.signedvoluntaryexit="">()</validatorindex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L25">packages/lodestar/src/chain/opPools/opPool.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L25">packages/lodestar/src/chain/opPools/opPool.ts:25</a></em></p>
 <p>Map of to exit validator index -&gt; SignedVoluntaryExit</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="frompersisted">fromPersisted<a class="headerlink" href="#frompersisted" title="Permanent link">¶</a></h3>
 <p>▸ <strong>fromPersisted</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L29">packages/lodestar/src/chain/opPools/opPool.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L29">packages/lodestar/src/chain/opPools/opPool.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -472,25 +472,25 @@
 <hr/>
 <h3 id="getallattesterslashings">getAllAttesterSlashings<a class="headerlink" href="#getallattesterslashings" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAllAttesterSlashings</strong>(): <em>AttesterSlashing[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L184">packages/lodestar/src/chain/opPools/opPool.ts:184</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L184">packages/lodestar/src/chain/opPools/opPool.ts:184</a></em></p>
 <p>For beacon pool API</p>
 <p><strong>Returns:</strong> <em>AttesterSlashing[]</em></p>
 <hr/>
 <h3 id="getallproposerslashings">getAllProposerSlashings<a class="headerlink" href="#getallproposerslashings" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAllProposerSlashings</strong>(): <em>ProposerSlashing[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L189">packages/lodestar/src/chain/opPools/opPool.ts:189</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L189">packages/lodestar/src/chain/opPools/opPool.ts:189</a></em></p>
 <p>For beacon pool API</p>
 <p><strong>Returns:</strong> <em>ProposerSlashing[]</em></p>
 <hr/>
 <h3 id="getallvoluntaryexits">getAllVoluntaryExits<a class="headerlink" href="#getallvoluntaryexits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAllVoluntaryExits</strong>(): <em>SignedVoluntaryExit[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L194">packages/lodestar/src/chain/opPools/opPool.ts:194</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L194">packages/lodestar/src/chain/opPools/opPool.ts:194</a></em></p>
 <p>For beacon pool API</p>
 <p><strong>Returns:</strong> <em>SignedVoluntaryExit[]</em></p>
 <hr/>
 <h3 id="getslashingsandexits">getSlashingsAndExits<a class="headerlink" href="#getslashingsandexits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSlashingsAndExits</strong>(<code>state</code>: CachedBeaconState‹allForks.BeaconState›): <em>[AttesterSlashing[], ProposerSlashing[], SignedVoluntaryExit[]]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L120">packages/lodestar/src/chain/opPools/opPool.ts:120</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L120">packages/lodestar/src/chain/opPools/opPool.ts:120</a></em></p>
 <p>Get proposer and attester slashings and voluntary exits for inclusion in a block.</p>
 <p>This function computes both types of slashings and exits, because attester slashings and exits may be invalidated by
 slashings included earlier in the block.</p>
@@ -513,7 +513,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="hasseenattesterslashing">hasSeenAttesterSlashing<a class="headerlink" href="#hasseenattesterslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasSeenAttesterSlashing</strong>(<code>intersectingIndices</code>: ValidatorIndex[]): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L73">packages/lodestar/src/chain/opPools/opPool.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L73">packages/lodestar/src/chain/opPools/opPool.ts:73</a></em></p>
 <p>Returns false if at least one intersecting index has not been seen yet</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -534,7 +534,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="hasseenproposerslashing">hasSeenProposerSlashing<a class="headerlink" href="#hasseenproposerslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasSeenProposerSlashing</strong>(<code>validatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L86">packages/lodestar/src/chain/opPools/opPool.ts:86</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L86">packages/lodestar/src/chain/opPools/opPool.ts:86</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -554,7 +554,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="hasseenvoluntaryexit">hasSeenVoluntaryExit<a class="headerlink" href="#hasseenvoluntaryexit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasSeenVoluntaryExit</strong>(<code>validatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L82">packages/lodestar/src/chain/opPools/opPool.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L82">packages/lodestar/src/chain/opPools/opPool.ts:82</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -574,7 +574,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="insertattesterslashing">insertAttesterSlashing<a class="headerlink" href="#insertattesterslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertAttesterSlashing</strong>(<code>attesterSlashing</code>: AttesterSlashing, <code>rootHash?</code>: Uint8Array): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L91">packages/lodestar/src/chain/opPools/opPool.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L91">packages/lodestar/src/chain/opPools/opPool.ts:91</a></em></p>
 <p>Must be validated beforehand</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -599,7 +599,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="insertproposerslashing">insertProposerSlashing<a class="headerlink" href="#insertproposerslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertProposerSlashing</strong>(<code>proposerSlashing</code>: ProposerSlashing): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L105">packages/lodestar/src/chain/opPools/opPool.ts:105</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L105">packages/lodestar/src/chain/opPools/opPool.ts:105</a></em></p>
 <p>Must be validated beforehand</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -620,7 +620,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="insertvoluntaryexit">insertVoluntaryExit<a class="headerlink" href="#insertvoluntaryexit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertVoluntaryExit</strong>(<code>voluntaryExit</code>: SignedVoluntaryExit): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L110">packages/lodestar/src/chain/opPools/opPool.ts:110</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L110">packages/lodestar/src/chain/opPools/opPool.ts:110</a></em></p>
 <p>Must be validated beforehand</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -641,7 +641,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="pruneall">pruneAll<a class="headerlink" href="#pruneall" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneAll</strong>(<code>headState</code>: allForks.BeaconState): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L201">packages/lodestar/src/chain/opPools/opPool.ts:201</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L201">packages/lodestar/src/chain/opPools/opPool.ts:201</a></em></p>
 <p>Prune all types of transactions given the latest head state</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -662,7 +662,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="private-pruneattesterslashings"><code>Private</code> pruneAttesterSlashings<a class="headerlink" href="#private-pruneattesterslashings" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneAttesterSlashings</strong>(<code>headState</code>: allForks.BeaconState): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L210">packages/lodestar/src/chain/opPools/opPool.ts:210</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L210">packages/lodestar/src/chain/opPools/opPool.ts:210</a></em></p>
 <p>Prune attester slashings for all slashed or withdrawn validators.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -683,7 +683,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="private-pruneproposerslashings"><code>Private</code> pruneProposerSlashings<a class="headerlink" href="#private-pruneproposerslashings" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneProposerSlashings</strong>(<code>headState</code>: allForks.BeaconState): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L235">packages/lodestar/src/chain/opPools/opPool.ts:235</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L235">packages/lodestar/src/chain/opPools/opPool.ts:235</a></em></p>
 <p>Prune proposer slashings for validators which are exited in the finalized epoch.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -704,7 +704,7 @@ slashings included earlier in the block.</p>
 <hr/>
 <h3 id="private-prunevoluntaryexits"><code>Private</code> pruneVoluntaryExits<a class="headerlink" href="#private-prunevoluntaryexits" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneVoluntaryExits</strong>(<code>headState</code>: allForks.BeaconState): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L249">packages/lodestar/src/chain/opPools/opPool.ts:249</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L249">packages/lodestar/src/chain/opPools/opPool.ts:249</a></em></p>
 <p>Call after finalizing
 Prune if validator has already exited at or before the finalized checkpoint of the head.</p>
 <p><strong>Parameters:</strong></p>
@@ -726,7 +726,7 @@ Prune if validator has already exited at or before the finalized checkpoint of t
 <hr/>
 <h3 id="topersisted">toPersisted<a class="headerlink" href="#topersisted" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toPersisted</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89dd289/packages/lodestar/src/chain/opPools/opPool.ts#L47">packages/lodestar/src/chain/opPools/opPool.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/148ac6f/packages/lodestar/src/chain/opPools/opPool.ts#L47">packages/lodestar/src/chain/opPools/opPool.ts:47</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
