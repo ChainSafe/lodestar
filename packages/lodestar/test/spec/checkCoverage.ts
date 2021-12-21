@@ -46,7 +46,7 @@ const forksToIgnore = new Set<string>([]);
 
 const knownPresets = ["mainnet", "minimal"];
 const knownForks = ["altair", "merge", "phase0"];
-const lodestarTests = path.join(__dirname, "spec");
+const lodestarTests = path.join(__dirname, "../spec");
 
 const missingTests = new Set<string>();
 
