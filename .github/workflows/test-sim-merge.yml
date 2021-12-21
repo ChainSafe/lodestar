@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: 9a9e416d82b395b1f134eba19490ca130d3de8fe
-  NETHERMIND_COMMIT: 48ea18a48133f91e0e57af8a8120e2a8baceab2e
+  GETH_COMMIT: dfa207dc45e23a14c7d70453d13b6828b2230e5a
+  NETHERMIND_COMMIT: 0aaa60c6b6143d83d5c8c2246426956b0c4abfa2
 
 jobs:
   sim-merge-tests:
@@ -38,7 +38,7 @@ jobs:
       #Install Geth merge interop
       - uses: actions/setup-go@v2
       - name: Clone Geth merge interop branch
-        run: git clone -b merge-devnet-4 https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+        run: git clone -b merge-kintsugi https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
       - name: Build Geth
         run: cd go-ethereum && make
 
@@ -56,7 +56,7 @@ jobs:
         with:
           dotnet-version: '6.0.x'
       - name: Clone Nethermind merge interop branch
-        run: git clone -b themerge_kintsugi_v3 https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b themerge_kintsugi https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 
