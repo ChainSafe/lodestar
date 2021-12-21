@@ -48,60 +48,56 @@ const knownPresets = ["mainnet", "minimal"];
 const knownForks = ["altair", "merge", "phase0"];
 const lodestarTests = path.join(__dirname, "spec");
 
-describe("Check tests", () => {
-  it("Ensure all spec tests are covered", () => {
-    const missingTests = new Set<string>();
+const missingTests = new Set<string>();
 
-    const specTestsTestPath = path.join(SPEC_TEST_LOCATION, "tests");
-    const specTestsTestLs = fs.readdirSync(specTestsTestPath);
-    expect(specTestsTestLs).to.deep.equal(["general", ...knownPresets], "New dir in spec-tests/tests");
+const specTestsTestPath = path.join(SPEC_TEST_LOCATION, "tests");
+const specTestsTestLs = fs.readdirSync(specTestsTestPath);
+expect(specTestsTestLs).to.deep.equal(["general", ...knownPresets], "New dir in spec-tests/tests");
 
-    for (const preset of knownPresets) {
-      const presetDirPath = path.join(specTestsTestPath, preset);
-      const presetDirLs = fs.readdirSync(presetDirPath);
-      expect(presetDirLs).to.deep.equal(knownForks, `New fork in spec-tests/tests/${preset}`);
+for (const preset of knownPresets) {
+  const presetDirPath = path.join(specTestsTestPath, preset);
+  const presetDirLs = fs.readdirSync(presetDirPath);
+  expect(presetDirLs).to.deep.equal(knownForks, `New fork in spec-tests/tests/${preset}`);
 
-      for (const fork of knownForks) {
-        if (forksToIgnore.has(fork)) continue;
-        ensureDirTestCoverage(presetDirPath, fork);
-      }
+  for (const fork of knownForks) {
+    if (forksToIgnore.has(fork)) continue;
+    ensureDirTestCoverage(presetDirPath, fork);
+  }
+}
+
+if (missingTests.size > 0) {
+  throw Error(`Some spec tests are not covered: \n${Array.from(missingTests.values()).join("\n")}`);
+}
+
+/**
+ * Ensure there are Lodestar spec tests for all EF spec tests
+ * @param rootTestDir EF spec test root dir: /spec-tests/tests/minimal/
+ * @param testRelDir /altair/
+ */
+function ensureDirTestCoverage(rootTestDir: string, testRelDir: string): void {
+  // spec-tests/tests/mainnet/phase0/
+  // ├── epoch_processing
+  // ├── finality
+  // ├── fork_choice
+  // ├── genesis
+  // ├── operations
+  // ├── rewards
+  // ├── sanity
+  // ├── shuffling
+  // └── ssz_static
+  for (const testGroup of fs.readdirSync(path.join(rootTestDir, testRelDir))) {
+    const testDir = path.join(lodestarTests, testRelDir, testGroup);
+    const testFile = testDir + ".test.ts";
+    if (existsDir(testDir)) {
+      // Check next dir level
+      ensureDirTestCoverage(rootTestDir, path.join(testRelDir, testGroup));
+    } else if (existsFile(testFile)) {
+      // Is file, assume it covers all cases
+    } else {
+      missingTests.add(path.relative(lodestarTests, testDir));
     }
-
-    if (missingTests.size > 0) {
-      throw Error(`Some spec tests are not covered: \n${Array.from(missingTests.values()).join("\n")}`);
-    }
-
-    /**
-     * Ensure there are Lodestar spec tests for all EF spec tests
-     * @param rootTestDir EF spec test root dir: /spec-tests/tests/minimal/
-     * @param testRelDir /altair/
-     */
-    function ensureDirTestCoverage(rootTestDir: string, testRelDir: string): void {
-      // spec-tests/tests/mainnet/phase0/
-      // ├── epoch_processing
-      // ├── finality
-      // ├── fork_choice
-      // ├── genesis
-      // ├── operations
-      // ├── rewards
-      // ├── sanity
-      // ├── shuffling
-      // └── ssz_static
-      for (const testGroup of fs.readdirSync(path.join(rootTestDir, testRelDir))) {
-        const testDir = path.join(lodestarTests, testRelDir, testGroup);
-        const testFile = testDir + ".test.ts";
-        if (existsDir(testDir)) {
-          // Check next dir level
-          ensureDirTestCoverage(rootTestDir, path.join(testRelDir, testGroup));
-        } else if (existsFile(testFile)) {
-          // Is file, assume it covers all cases
-        } else {
-          missingTests.add(path.relative(lodestarTests, testDir));
-        }
-      }
-    }
-  });
-});
+  }
+}
 
 function existsDir(p: string): boolean {
   try {
