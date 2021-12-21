@@ -30,25 +30,36 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
-  if (secretKeys.length === 0) {
-    throw new YargsError("No validator keystores found");
-  }
-
-  // Log pubkeys for auditing
-  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-  for (const secretKey of secretKeys) {
-    logger.info(secretKey.toPublicKey().toHex());
-  }
-
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
-  onGracefulShutdown(async () => {
-    for (const cb of onGracefulShutdownCbs) await cb();
-    unlockSecretKeys?.();
-  }, logger.info.bind(logger));
+
+  let signers: Signers;
+
+  if (args.signingMode == "local") {
+    const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
+    if (secretKeys.length === 0) {
+      throw new YargsError("No validator keystores found");
+    }
+
+    // Log pubkeys for auditing
+    logger.info(`Decrypted ${secretKeys.length} validator keystores`);
+    for (const secretKey of secretKeys) {
+      logger.info(secretKey.toPublicKey().toHex());
+    }
+
+    onGracefulShutdown(async () => {
+      for (const cb of onGracefulShutdownCbs) await cb();
+      unlockSecretKeys?.();
+    }, logger.info.bind(logger));
+    signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, []);
+  } else if (args.signingMode == "remote") {
+    const pubkeys: PublicKey[] = await getPublicKeys(args);
+    signers = getSignersObject(args.signingMode, args.signingUrl, [], pubkeys);
+  } else {
+    throw new YargsError("Invalid signing mode. Only local and remote are supported");
+  }
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
   const controller = new AbortController();
@@ -61,13 +72,13 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   };
   const slashingProtection = new SlashingProtection(dbOps);
 
-  const pubkeys: PublicKey[] = getPublicKeys(args);
-  const signers: Signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, pubkeys);
-
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
+
+  logger.info(`Starting validators in ${args.signingMode.toLowerCase()} signing mode`);
+
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
 }

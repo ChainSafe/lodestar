@@ -4,7 +4,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {Signers, SignerType} from "@chainsafe/lodestar-validator";
+import {Signers, SignerType, requestKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
@@ -85,15 +85,36 @@ export async function getSecretKeys(
   }
 }
 
-export function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): PublicKey[] {
+export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<PublicKey[]> {
   const pubkeys: PublicKey[] = [];
-  const accountPaths = getAccountPaths(args);
-  const file = fs.readFileSync(accountPaths.publicKeysFile, "utf8");
-  const arr = file.toString().replace(/\r\n/g, "\n").split("\n");
-  for (const pubkeyHex of arr) {
+  let publicKeys: string[] = [];
+
+  if (!args.publicKeys) {
+    throw new YargsError("No public keys found.");
+  }
+
+  if (isValidHttpUrl(args.publicKeys)) {
+    // TODO: Make a reuqest to return publicKeys
+    publicKeys = await requestKeys(args.signingUrl);
+  } else {
+    publicKeys = args.publicKeys?.split(",");
+  }
+
+  for (const pubkeyHex of publicKeys) {
     pubkeys.push(PublicKey.fromHex(pubkeyHex));
   }
   return pubkeys;
+}
+
+export function isValidHttpUrl(input: string): boolean {
+  let url;
+  try {
+    url = new URL(input);
+  } catch (_) {
+    return false;
+  }
+
+  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 export function getPublicKeysFromSecretKeys(secretKeys: SecretKey[]): PublicKey[] {
@@ -115,7 +136,7 @@ export function getSignersObject(
   if (signingMode.toLowerCase() === "remote") {
     /** If remote mode chosen but no url provided */
     if (!signingUrl) {
-      throw Error("Remote mode requires --url argument");
+      throw new YargsError("Remote mode requires --signingUrl argument");
     }
     signers = {
       type: SignerType.Remote,
@@ -129,7 +150,7 @@ export function getSignersObject(
       secretKeys: secretKeys,
     };
   } else {
-    throw Error("Invalid mode. Only local and remote are supported");
+    throw new YargsError("Invalid mode. Only local and remote are supported");
   }
   return signers;
 }
