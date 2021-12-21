@@ -4,7 +4,7 @@ import fs from "fs";
 // eslint-disable-next-line no-restricted-imports
 import {parseInvalidTestcase, parseValidTestcase} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {CompositeType, isCompositeType, toHexString, Type} from "@chainsafe/ssz";
-import {SPEC_TEST_LOCATION} from "../../../specTestVersioning";
+import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 
 // Test types defined here
 import {getTestType} from "./types";
