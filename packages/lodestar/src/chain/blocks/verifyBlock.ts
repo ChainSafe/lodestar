@@ -204,6 +204,21 @@ export async function verifyBlockStateTransition(
           chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         }
         break;
+      case ExecutePayloadStatus.ELERROR:
+        // There can be many reasons for which EL failed some of the observed ones are
+        // 1. Connection refused / can't connect to EL port
+        // 2. EL Internal Error
+        // 3. Geth sometimes gives invalid merkel root error which means invalid
+        //    but expects it to be handled in CL as of now. But we should log as warning
+        //    and give it as optimistic treatment and expect any other non-geth CL<>EL
+        //    combination to reject the invalid block and propose a block.
+        //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
+        //    as the network is geth dominated, till a non geth node proposes and moves network
+        //    forward
+        executionStatus = ExecutionStatus.Syncing;
+        chain.logger.warn("executePayload error-ed, treating the payload optimistic for now", {
+          error: execResult.validationError,
+        });
     }
   }
 

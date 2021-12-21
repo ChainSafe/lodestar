@@ -68,24 +68,62 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_executePayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash} = await this.rpc.fetch<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [serializedExecutionPayload],
-    });
+    const {status, latestValidHash, validationError} = await this.rpc
+      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [serializedExecutionPayload],
+      })
+      /**
+       * If there are errors by EL like connection refused, internal error, they need to be
+       * treated seperate from being INVALID. For now, just pass the error upstream.
+       */
+      .catch((e: Error) => ({status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message}));
+
+    let execResponse: ExecutePayloadResponse;
 
     // Validate status is known
     const statusEnum = ExecutePayloadStatus[status];
-    if (statusEnum === undefined) {
-      throw Error(`Invalid EL status on executePayload: ${status}`);
+    switch (statusEnum) {
+      case ExecutePayloadStatus.VALID:
+        if (latestValidHash == null) {
+          execResponse = {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          execResponse = {status: statusEnum, latestValidHash, validationError: null};
+        }
+        break;
+      case ExecutePayloadStatus.INVALID:
+        if (latestValidHash == null) {
+          execResponse = {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          execResponse = {status: statusEnum, latestValidHash, validationError};
+        }
+        break;
+      case ExecutePayloadStatus.SYNCING:
+        execResponse = {status: statusEnum, latestValidHash, validationError: null};
+        break;
+      case ExecutePayloadStatus.ELERROR:
+        execResponse = {
+          status: statusEnum,
+          latestValidHash: null,
+          validationError: validationError ?? "Unidentified ELERROR",
+        };
+        break;
+      default:
+        execResponse = {
+          status: ExecutePayloadStatus.ELERROR,
+          latestValidHash: null,
+          validationError: `Invalid EL status on executePayload: ${status}`,
+        };
     }
-    if (statusEnum !== ExecutePayloadStatus.SYNCING && latestValidHash == null) {
-      throw Error(`Invalid latestValidHash for ${status}`);
-    }
-
-    return {status, latestValidHash};
+    return execResponse;
   }
 
   /**
@@ -186,7 +224,11 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayloadV1: {status: ExecutePayloadStatus; latestValidHash: DATA};
+  engine_executePayloadV1: {
+    status: ExecutePayloadStatus.VALID | ExecutePayloadStatus.INVALID | ExecutePayloadStatus.SYNCING;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_consensusValidated: void;
   engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**

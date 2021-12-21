@@ -61,11 +61,15 @@ export class ExecutionEngineMock implements IExecutionEngine {
   async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
     // Only validate that parent is known
     if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
-      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot};
+      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot, validationError: null};
     }
 
     this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
-    return {status: ExecutePayloadStatus.VALID, latestValidHash: toHexString(executionPayload.blockHash)};
+    return {
+      status: ExecutePayloadStatus.VALID,
+      latestValidHash: toHexString(executionPayload.blockHash),
+      validationError: null,
+    };
   }
 
   /**
