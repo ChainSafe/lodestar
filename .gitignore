@@ -56,4 +56,7 @@ packages/lodestar/.tmpdb/
 # Git artifacts
 packages/cli/.git-data.json
 
+# Build artifacts
+.last_build_unixsec
+
 temp/
