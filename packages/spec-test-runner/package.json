@@ -20,6 +20,7 @@
     "lib/**/*.js.map"
   ],
   "scripts": {
+    "build": "exit 0",
     "check-types": "tsc --noEmit",
     "download-spec-tests": "node -r ts-node/register test/downloadTests.ts",
     "check-tests": "mocha test/checkTests.test.ts",
