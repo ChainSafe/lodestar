@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "version": "0.34.0",
+  "version": "0.35.0",
   "main": "lib/index.js",
   "files": [
     "lib/**/*.d.ts",
@@ -43,14 +43,14 @@
   "dependencies": {
     "@chainsafe/bit-utils": "0.1.6",
     "@chainsafe/bls": "6.0.3",
-    "@chainsafe/lodestar": "^0.34.0",
-    "@chainsafe/lodestar-beacon-state-transition": "^0.34.0",
-    "@chainsafe/lodestar-config": "^0.34.0",
-    "@chainsafe/lodestar-params": "^0.34.0",
-    "@chainsafe/lodestar-spec-test-util": "^0.34.0",
-    "@chainsafe/lodestar-types": "^0.34.0",
-    "@chainsafe/lodestar-utils": "^0.34.0",
-    "@chainsafe/lodestar-validator": "^0.34.0",
+    "@chainsafe/lodestar": "^0.35.0",
+    "@chainsafe/lodestar-beacon-state-transition": "^0.35.0",
+    "@chainsafe/lodestar-config": "^0.35.0",
+    "@chainsafe/lodestar-params": "^0.35.0",
+    "@chainsafe/lodestar-spec-test-util": "^0.35.0",
+    "@chainsafe/lodestar-types": "^0.35.0",
+    "@chainsafe/lodestar-utils": "^0.35.0",
+    "@chainsafe/lodestar-validator": "^0.35.0",
     "@chainsafe/persistent-merkle-tree": "^0.3.7",
     "@chainsafe/ssz": "^0.8.20",
     "@types/yargs": "^17.0.2"
