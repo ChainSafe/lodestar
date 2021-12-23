@@ -84,6 +84,10 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         } else if (e instanceof ErrorAborted) {
           errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+
+          // What would be better way of handling this
+        } else if (e.message === "Only absolute URLs are supported") {
+          errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         } else {
           errResponse = {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
         }
