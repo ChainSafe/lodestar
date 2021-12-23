@@ -215,10 +215,13 @@ export async function verifyBlockStateTransition(
         //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
         //    as the network is geth dominated, till a non geth node proposes and moves network
         //    forward
-        executionStatus = ExecutionStatus.Syncing;
-        chain.logger.warn("executePayload error-ed, treating the payload optimistic for now", {
-          error: execResult.validationError,
+        // For network/unreachable errors, an optimization can be added to replay these blocks
+        // back. But for now, lets assume other mechanisms like unknown parent block of a future
+        // child block will cause it to replay
+        chain.logger.error("Execution engine api for executePayload failed with error", {
+          validationError: execResult.validationError,
         });
+        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED});
     }
   }
 
