@@ -25,10 +25,10 @@ validators
 .vscode
 
 # Tests artifacts
-packages/validator/spec-tests
+packages/*/spec-tests
+packages/*/benchmark_data
 packages/lodestar/test-logs/
 packages/beacon-state-transition/test-cache
-packages/*/benchmark_data
 benchmark_data
 invalidSszObjects/
 
