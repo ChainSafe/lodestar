@@ -12,7 +12,7 @@ services:
     # A validator client requires very little memory. This limit allows to run the validator
     # along with the beacon_node in a 8GB machine and be safe on memory spikes.
     environment:
-      NODE_OPTIONS: --max_old_space_size=2048
+      NODE_OPTIONS: --max-old-space-size=2048
 
 volumes:
   validator:

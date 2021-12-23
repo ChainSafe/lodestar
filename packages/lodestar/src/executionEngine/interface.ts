@@ -1,5 +1,6 @@
 import {merge, Root, RootHex} from "@chainsafe/lodestar-types";
 import {ByteVector} from "@chainsafe/ssz";
+
 import {DATA, QUANTITY} from "../eth1/provider/utils";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
@@ -13,6 +14,10 @@ export enum ExecutePayloadStatus {
   /** sync process is in progress */
   SYNCING = "SYNCING",
 }
+
+export type ExecutePayloadResponse =
+  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null}
+  | {status: ExecutePayloadStatus.VALID | ExecutePayloadStatus.INVALID; latestValidHash: RootHex};
 
 export enum ForkChoiceUpdateStatus {
   /** given payload is valid */
@@ -51,7 +56,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus>;
+  executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates

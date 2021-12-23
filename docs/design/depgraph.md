@@ -78,7 +78,7 @@ Let's talk about how each package fits together in finer detail, from top to bot
 
 ## @chainsafe/lodestar-types
 
-[@chainsafe/lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) contains eth2 ssz types and datastructrues.
+[@chainsafe/lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) contains eth2 ssz types and data structures.
 
 ## @chainsafe/lodestar-config
 

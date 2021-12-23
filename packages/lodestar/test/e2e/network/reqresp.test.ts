@@ -8,7 +8,7 @@ import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
-import {INetworkOptions} from "../../../src/network/options";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
 import {Method, Encoding} from "../../../src/network/reqresp/types";
 import {ReqRespHandlers} from "../../../src/network/reqresp/handlers";
 import {RequestError, RequestErrorCode} from "../../../src/network/reqresp/request";
@@ -38,6 +38,7 @@ describe("network / ReqResp", function () {
 
   const multiaddr = "/ip4/127.0.0.1/tcp/0";
   const networkOptsDefault: INetworkOptions = {
+    ...defaultNetworkOptions,
     maxPeers: 1,
     targetPeers: 1,
     bootMultiaddrs: [],

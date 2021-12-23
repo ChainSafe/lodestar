@@ -2,10 +2,6 @@ import {LeafNode, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-t
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
-const n = 250_000;
-const ih = Math.round(n / 2);
-const runsFactor = 1000;
-
 // Understand the cost of each array-ish data structure to:
 // - Get one element
 // - Set one element
@@ -44,6 +40,10 @@ const runsFactor = 1000;
 // ✓ Array 250000 set(249999)                                             2100840 ops/s    476.0000 ns/op        -    1245961 runs   1.08 s
 // ✓ Array 250000 iterate all - loop                                     3009.592 ops/s    332.2710 us/op        -       3006 runs   1.00 s
 
+const n = 250_000;
+const ih = Math.round(n / 2);
+const runsFactor = 1000;
+
 describe("Tree (persistent-merkle-tree)", () => {
   // Don't track regressions in CI
   setBenchOpts({noThreshold: true});
@@ -54,11 +54,11 @@ describe("Tree (persistent-merkle-tree)", () => {
   let tree: Tree;
 
   before(function () {
-    this.timeout(60_000);
+    this.timeout(120_000);
     tree = getTree(d, n);
   });
 
-  itBench({id: `Tree ${d} ${n} create`, timeoutBench: 60_000}, () => {
+  itBench({id: `Tree ${d} ${n} create`, timeoutBench: 120_000}, () => {
     getTree(d, n);
   });
 

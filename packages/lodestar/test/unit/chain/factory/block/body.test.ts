@@ -45,12 +45,12 @@ describe("blockAssembly - body", function () {
 
   it("should generate block body", async function () {
     const {chain, opPool, dbStub, aggregatedAttestationPool} = getStubs();
-    opPool.getSlashings.returns([
+    opPool.getSlashingsAndExits.returns([
       [ssz.phase0.AttesterSlashing.defaultValue()],
       [ssz.phase0.ProposerSlashing.defaultValue()],
+      [generateEmptySignedVoluntaryExit()],
     ]);
     aggregatedAttestationPool.getAttestationsForBlock.returns([generateEmptyAttestation()]);
-    opPool.getVoluntaryExits.returns([generateEmptySignedVoluntaryExit()]);
     dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
 
     const result = await assembleBody(chain, generateCachedState(), {

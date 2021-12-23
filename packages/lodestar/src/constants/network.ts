@@ -32,6 +32,10 @@ export enum RespStatus {
    * The responder does not have requested resource.  The response payload adheres to the ErrorMessage schema (described below). Note: This response code is only valid as a response to BlocksByRange
    */
   RESOURCE_UNAVAILABLE = 3,
+  /**
+   * Our node does not have bandwidth to serve requests due to either per-peer quota or total quota.
+   */
+  RATE_LIMITED = 139,
 }
 
 export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;

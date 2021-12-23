@@ -38,36 +38,36 @@ jobs:
       - name: Restore spec tests cache
         uses: actions/cache@master
         with:
-          path: packages/spec-test-runner/spec-tests
-          key: spec-test-data-${{ hashFiles('packages/spec-test-runner/test/specTestVersioning.ts') }}
+          path: packages/lodestar/spec-tests
+          key: spec-test-data-${{ hashFiles('packages/lodestar/test/spec/specTestVersioning.ts') }}
       - name: Download spec tests
         run: yarn download-spec-tests
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Check spec tests
-        run: yarn check-tests
-        working-directory: packages/spec-test-runner
+        run: yarn check-spec-tests
+        working-directory: packages/lodestar
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
       # many of the suites have identical names for minimal and mainnet
       - name: Spec tests general
         run: yarn test:spec-general
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests phase0-minimal
         run: yarn test:spec-phase0-minimal
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests phase0-mainnet
         run: yarn test:spec-phase0-mainnet
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests altair-minimal
         run: yarn test:spec-altair-minimal
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests altair-mainnet
         run: yarn test:spec-altair-mainnet
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests merge-minimal
         run: yarn test:spec-merge-minimal
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar
       - name: Spec tests merge-mainnet
         run: yarn test:spec-merge-mainnet
-        working-directory: packages/spec-test-runner
+        working-directory: packages/lodestar

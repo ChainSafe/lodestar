@@ -492,6 +492,7 @@ export class PeerManager {
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
+    this.reqResp.pruneRateLimiterData(peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
   };
 

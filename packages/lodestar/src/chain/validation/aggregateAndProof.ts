@@ -55,22 +55,22 @@ export async function validateGossipAggregateAndProof(
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
   // [REJECT] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
-  const targetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAggregateAndProof)
+  const attHeadState = await chain.regen
+    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAggregateAndProof)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
         error: e as Error,
       });
     });
 
-  const committeeIndices = getCommitteeIndices(targetState, attSlot, attData.index);
+  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attData.index);
   const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregate.aggregationBits);
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices: attestingIndices as List<number>,
@@ -102,11 +102,11 @@ export async function validateGossipAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = targetState.index2pubkey[aggregateAndProof.aggregatorIndex];
+  const aggregator = attHeadState.index2pubkey[aggregateAndProof.aggregatorIndex];
   const signatureSets = [
-    getSelectionProofSignatureSet(targetState, attSlot, aggregator, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(targetState, attEpoch, aggregator, signedAggregateAndProof),
-    allForks.getIndexedAttestationSignatureSet(targetState, indexedAttestation),
+    getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),
+    allForks.getIndexedAttestationSignatureSet(attHeadState, indexedAttestation),
   ];
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});

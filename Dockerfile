@@ -16,6 +16,6 @@ RUN /usr/app/node_modules/.bin/lodestar --help
 # NodeJS applications have a default memory limit of 2.5GB.
 # This limit is bit tight for a Prater node, it is recommended to raise the limit
 # since memory may spike during certain network conditions.
-ENV NODE_OPTIONS=--max_old_space_size=6144
+ENV NODE_OPTIONS=--max-old-space-size=4096
 
 ENTRYPOINT ["node", "/usr/app/node_modules/.bin/lodestar"]

@@ -23,7 +23,6 @@ import {
   getCurrentEpoch,
   merge,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {IBeaconChain} from "../../interface";
 import {PayloadId} from "../../../executionEngine/interface";
@@ -46,8 +45,7 @@ export async function assembleBody(
     parentSlot: Slot;
     parentBlockRoot: Root;
     feeRecipient: ExecutionAddress;
-  },
-  logger?: ILogger | null
+  }
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
   // Iterate through the naive aggregation pool and ensure all the attestations from there
@@ -61,8 +59,7 @@ export async function assembleBody(
   //   }
   // }
 
-  const [attesterSlashings, proposerSlashings] = chain.opPool.getSlashings(currentState);
-  const voluntaryExits = chain.opPool.getVoluntaryExits(currentState);
+  const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
   const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
   const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(
     currentState as CachedBeaconState<allForks.BeaconState>
@@ -95,23 +92,21 @@ export async function assembleBody(
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
 
-    let executionPayload: merge.ExecutionPayload | null = null;
-    try {
-      const payloadId = await prepareExecutionPayload(
-        chain,
-        finalizedBlockHash ?? ZERO_HASH_HEX,
-        currentState as CachedBeaconState<merge.BeaconState>,
-        feeRecipient
-      );
-      if (payloadId) executionPayload = await chain.executionEngine.getPayload(payloadId);
-    } catch (e) {
-      logger?.warn("Failed to produce execution payload", {}, e as Error);
+    // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
+    // the EL returns Syncing on this request to prepare a payload
+    const payloadId = await prepareExecutionPayload(
+      chain,
+      finalizedBlockHash ?? ZERO_HASH_HEX,
+      currentState as CachedBeaconState<merge.BeaconState>,
+      feeRecipient
+    );
+
+    if (payloadId === null) {
+      // Pre-merge, propose a pre-merge block with empty execution and keep the chain going
+      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+    } else {
+      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     }
-
-    if (!executionPayload) logger?.verbose("Assembling block with empty executionPayload");
-
-    (blockBody as merge.BeaconBlockBody).executionPayload =
-      executionPayload ?? ssz.merge.ExecutionPayload.defaultValue();
   }
 
   return blockBody;
@@ -121,6 +116,8 @@ export async function assembleBody(
  * Produce ExecutionPayload for pre-merge, merge, and post-merge.
  *
  * Expects `eth1MergeBlockFinder` to be actively searching for blocks well in advance to being called.
+ *
+ * @returns PayloadId = pow block found, null = pow NOT found
  */
 async function prepareExecutionPayload(
   chain: IBeaconChain,
@@ -136,7 +133,11 @@ async function prepareExecutionPayload(
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
     )
-      return null;
+      throw new Error(
+        `InvalidMergeTBH epoch: expected >= ${
+          chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH
+        }, actual: ${getCurrentEpoch(state)}`
+      );
     const terminalPowBlockHash = chain.eth1.getTerminalPowBlock();
     if (terminalPowBlockHash === null) {
       // Pre-merge, no prepare payload call is needed
@@ -152,11 +153,13 @@ async function prepareExecutionPayload(
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
   const random = getRandaoMix(state, state.currentShuffling.epoch);
-  return await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
+  const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
     random,
     suggestedFeeRecipient,
   });
+  if (!payloadId) throw new Error("InvalidPayloadId: Null");
+  return payloadId;
 }
 
 /** process_sync_committee_contributions is implemented in syncCommitteeContribution.getSyncAggregate */

@@ -167,6 +167,11 @@ export function createBeaconMetrics(register: RegistryMetricCreator) {
       name: "beacon_reqresp_dial_errors_total",
       help: "Count total dial errors",
     }),
+    reqRespRateLimitErrors: register.gauge<"tracker">({
+      name: "beacon_reqresp_rate_limiter_errors_total",
+      help: "Count rate limiter errors",
+      labelNames: ["tracker"],
+    }),
 
     blockProductionTime: register.histogram({
       name: "beacon_block_production_seconds",

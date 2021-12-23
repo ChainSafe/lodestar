@@ -2,7 +2,13 @@ import crypto from "crypto";
 import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
+import {
+  ExecutePayloadStatus,
+  ExecutePayloadResponse,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 const INTEROP_GAS_LIMIT = 30e6;
 
@@ -52,14 +58,14 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
+  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
     // Only validate that parent is known
     if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
-      return ExecutePayloadStatus.INVALID;
+      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot};
     }
 
     this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
-    return ExecutePayloadStatus.VALID;
+    return {status: ExecutePayloadStatus.VALID, latestValidHash: toHexString(executionPayload.blockHash)};
   }
 
   /**
