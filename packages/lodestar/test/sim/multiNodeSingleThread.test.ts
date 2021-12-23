@@ -37,82 +37,88 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
-  for (const {nodeCount, validatorsPerNode, event, altairForkEpoch} of testCases) {
-    it(`singleThread ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
-      this.timeout("10 min");
+  // TODO test multiNode with remote;
+  const signersChoices = ["local"];
 
-      const nodes: BeaconNode[] = [];
-      const validators: Validator[] = [];
-      const loggers: ILogger[] = [];
-      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+  for (const signingMode of signersChoices) {
+    for (const {nodeCount, validatorsPerNode, event, altairForkEpoch} of testCases) {
+      it(`singleThread ${signingMode} ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
+        this.timeout("10 min");
 
-      for (let i = 0; i < nodeCount; i++) {
-        const testLoggerOpts: TestLoggerOpts = {
-          logLevel: LogLevel.info,
-          logFile: `${logFilesDir}/singlethread_multinode_altair-${altairForkEpoch}.log`,
-          timestampFormat: {
-            format: TimestampFormatCode.EpochSlot,
+        const nodes: BeaconNode[] = [];
+        const validators: Validator[] = [];
+        const loggers: ILogger[] = [];
+        // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+        const genesisSlotsDelay = 3;
+        const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+
+        for (let i = 0; i < nodeCount; i++) {
+          const testLoggerOpts: TestLoggerOpts = {
+            logLevel: LogLevel.info,
+            logFile: `${logFilesDir}/singlethread_multinode_altair-${altairForkEpoch}.log`,
+            timestampFormat: {
+              format: TimestampFormatCode.EpochSlot,
+              genesisTime,
+              slotsPerEpoch: SLOTS_PER_EPOCH,
+              secondsPerSlot: testParams.SECONDS_PER_SLOT,
+            },
+          };
+          const logger = testLogger(`Node ${i}`, testLoggerOpts);
+
+          const node = await getDevBeaconNode({
+            params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
+            options: {api: {rest: {port: 10000 + i}}},
+            validatorCount: nodeCount * validatorsPerNode,
             genesisTime,
-            slotsPerEpoch: SLOTS_PER_EPOCH,
-            secondsPerSlot: testParams.SECONDS_PER_SLOT,
-          },
-        };
-        const logger = testLogger(`Node ${i}`, testLoggerOpts);
+            logger,
+          });
 
-        const node = await getDevBeaconNode({
-          params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
-          options: {api: {rest: {port: 10000 + i}}},
-          validatorCount: nodeCount * validatorsPerNode,
-          genesisTime,
-          logger,
+          const nodeValidators = await getAndInitDevValidators({
+            node,
+            validatorsPerClient: validatorsPerNode,
+            validatorClientCount: 1,
+            startIndex: i * validatorsPerNode,
+            testLoggerOpts,
+            signingMode,
+          });
+
+          loggers.push(logger);
+          nodes.push(node);
+          validators.push(...nodeValidators);
+        }
+
+        const stopInfoTracker = simTestInfoTracker(nodes[0], loggers[0]);
+
+        onDoneHandlers.push(async () => {
+          await Promise.all(validators.map((validator) => validator.stop()));
+          console.log("--- Stopped all validators ---");
+          // wait for 1 slot
+          await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
+
+          stopInfoTracker();
+          await Promise.all(nodes.map((node) => node.close()));
+          console.log("--- Stopped all nodes ---");
+          // Wait a bit for nodes to shutdown
+          await sleep(3000);
         });
 
-        const nodeValidators = await getAndInitDevValidators({
-          node,
-          validatorsPerClient: validatorsPerNode,
-          validatorClientCount: 1,
-          startIndex: i * validatorsPerNode,
-          testLoggerOpts,
-        });
-
-        loggers.push(logger);
-        nodes.push(node);
-        validators.push(...nodeValidators);
-      }
-
-      const stopInfoTracker = simTestInfoTracker(nodes[0], loggers[0]);
-
-      onDoneHandlers.push(async () => {
-        await Promise.all(validators.map((validator) => validator.stop()));
-        console.log("--- Stopped all validators ---");
-        // wait for 1 slot
-        await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
-
-        stopInfoTracker();
-        await Promise.all(nodes.map((node) => node.close()));
-        console.log("--- Stopped all nodes ---");
-        // Wait a bit for nodes to shutdown
-        await sleep(3000);
-      });
-
-      // Connect all nodes with each other
-      for (let i = 0; i < nodeCount; i++) {
-        for (let j = 0; j < nodeCount; j++) {
-          if (i !== j) {
-            await connect(nodes[i].network as Network, nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
+        // Connect all nodes with each other
+        for (let i = 0; i < nodeCount; i++) {
+          for (let j = 0; j < nodeCount; j++) {
+            if (i !== j) {
+              await connect(nodes[i].network as Network, nodes[j].network.peerId, nodes[j].network.localMultiaddrs);
+            }
           }
         }
-      }
 
-      // Start all validators at once.
-      await Promise.all(validators.map((validator) => validator.start()));
+        // Start all validators at once.
+        await Promise.all(validators.map((validator) => validator.start()));
 
-      // Wait for justified checkpoint on all nodes
-      await Promise.all(nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, event, 240000)));
-      console.log("--- All nodes reached justified checkpoint ---");
-    });
+        // Wait for justified checkpoint on all nodes
+        await Promise.all(nodes.map((node) => waitForEvent<phase0.Checkpoint>(node.chain.emitter, event, 240000)));
+        console.log("--- All nodes reached justified checkpoint ---");
+      });
+    }
   }
 
   afterEach("Stop nodes and validators", async function () {

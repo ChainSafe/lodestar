@@ -329,6 +329,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
       testLoggerOpts,
+      // TODO test merge-interop with remote;
+      signingMode: "local",
     });
 
     afterEachCallbacks.push(async function () {

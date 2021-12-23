@@ -43,81 +43,87 @@ describe("Run single node single thread interop validators (no eth1) until check
     {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: 0},
   ];
 
-  for (const {event, altairEpoch, mergeEpoch} of testCases) {
-    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} merge ${mergeEpoch}`, async function () {
-      // Should reach justification in 3 epochs max, and finalization in 4 epochs max
-      const expectedEpochsToFinish = event === ChainEvent.justified ? 3 : 4;
-      // 1 epoch of margin of error
-      const epochsOfMargin = 1;
-      const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
+  // EIP-3030
+  const signerChoices = ["local", "remote"];
 
-      // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
+  for (const signingMode of signerChoices) {
+    for (const {event, altairEpoch, mergeEpoch} of testCases) {
+      it(`singleNode ${signingMode} ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} merge ${mergeEpoch}`, async function () {
+        // Should reach justification in 3 epochs max, and finalization in 4 epochs max
+        const expectedEpochsToFinish = event === ChainEvent.justified ? 3 : 4;
+        // 1 epoch of margin of error
+        const epochsOfMargin = 1;
+        const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
 
-      const timeout =
-        ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
-        testParams.SECONDS_PER_SLOT *
-        1000;
+        // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+        const genesisSlotsDelay = 3;
 
-      this.timeout(timeout + 2 * timeoutSetupMargin);
+        const timeout =
+          ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
+          testParams.SECONDS_PER_SLOT *
+          1000;
 
-      const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+        this.timeout(timeout + 2 * timeoutSetupMargin);
 
-      const testLoggerOpts: TestLoggerOpts = {
-        logLevel: LogLevel.info,
-        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_merge-${mergeEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
-        timestampFormat: {
-          format: TimestampFormatCode.EpochSlot,
+        const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
+
+        const testLoggerOpts: TestLoggerOpts = {
+          logLevel: LogLevel.info,
+          logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_merge-${mergeEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
+          timestampFormat: {
+            format: TimestampFormatCode.EpochSlot,
+            genesisTime,
+            slotsPerEpoch: SLOTS_PER_EPOCH,
+            secondsPerSlot: testParams.SECONDS_PER_SLOT,
+          },
+        };
+        const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+        const bn = await getDevBeaconNode({
+          params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, MERGE_FORK_EPOCH: mergeEpoch},
+          options: {
+            api: {rest: {enabled: true} as RestApiOptions},
+            sync: {isSingleNode: true},
+            executionEngine: {mode: "mock", genesisBlockHash: toHexString(INTEROP_BLOCK_HASH)},
+          },
+          validatorCount: validatorClientCount * validatorsPerClient,
+          logger: loggerNodeA,
           genesisTime,
-          slotsPerEpoch: SLOTS_PER_EPOCH,
-          secondsPerSlot: testParams.SECONDS_PER_SLOT,
-        },
-      };
-      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+        });
 
-      const bn = await getDevBeaconNode({
-        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, MERGE_FORK_EPOCH: mergeEpoch},
-        options: {
-          api: {rest: {enabled: true} as RestApiOptions},
-          sync: {isSingleNode: true},
-          executionEngine: {mode: "mock", genesisBlockHash: toHexString(INTEROP_BLOCK_HASH)},
-        },
-        validatorCount: validatorClientCount * validatorsPerClient,
-        logger: loggerNodeA,
-        genesisTime,
+        const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
+
+        const justificationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
+        const validators = await getAndInitDevValidators({
+          node: bn,
+          validatorsPerClient,
+          validatorClientCount,
+          startIndex: 0,
+          // At least one sim test must use the REST API for beacon <-> validator comms
+          useRestApi: true,
+          testLoggerOpts,
+          signingMode,
+        });
+
+        await Promise.all(validators.map((v) => v.start()));
+
+        try {
+          await justificationEventListener;
+          console.log(`\nGot event ${event}, stopping validators and nodes\n`);
+        } catch (e) {
+          (e as Error).message = `failed to get event: ${event}: ${(e as Error).message}`;
+          throw e;
+        } finally {
+          await Promise.all(validators.map((v) => v.stop()));
+
+          // wait for 1 slot
+          await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+          stopInfoTracker();
+          await bn.close();
+          console.log("\n\nDone\n\n");
+          await sleep(1000);
+        }
       });
-
-      const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
-
-      const justificationEventListener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
-      const validators = await getAndInitDevValidators({
-        node: bn,
-        validatorsPerClient,
-        validatorClientCount,
-        startIndex: 0,
-        // At least one sim test must use the REST API for beacon <-> validator comms
-        useRestApi: true,
-        testLoggerOpts,
-      });
-
-      await Promise.all(validators.map((v) => v.start()));
-
-      try {
-        await justificationEventListener;
-        console.log(`\nGot event ${event}, stopping validators and nodes\n`);
-      } catch (e) {
-        (e as Error).message = `failed to get event: ${event}: ${(e as Error).message}`;
-        throw e;
-      } finally {
-        await Promise.all(validators.map((v) => v.stop()));
-
-        // wait for 1 slot
-        await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
-        stopInfoTracker();
-        await bn.close();
-        console.log("\n\nDone\n\n");
-        await sleep(1000);
-      }
-    });
+    }
   }
 });
