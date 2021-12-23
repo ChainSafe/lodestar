@@ -166,7 +166,7 @@ export class Batch {
   /**
    * Processing -> AwaitingProcessing
    */
-  executionNotReady(): void {
+  requeueForProcessing(): void {
     if (this.state.status !== BatchStatus.Processing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }

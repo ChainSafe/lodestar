@@ -5,7 +5,7 @@ import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network";
-import {ChainSegmentError, BlockError, BlockErrorCode} from "../../chain/errors";
+import {ChainSegmentError, BlockErrorCode} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
 import {byteArrayEquals} from "../../util/bytes";
 import {PeerMap} from "../../util/peerMap";
@@ -412,6 +412,7 @@ export class SyncChain {
 
     // wrapError ensures to never call both batch success() and batch error()
     const res = await wrapError(this.processChainSegment(blocks));
+    let downloadNewBatch = true;
 
     if (!res.err) {
       batch.processingSuccess();
@@ -425,12 +426,15 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
-      if (res.err instanceof BlockError) {
+      if (res.err instanceof ChainSegmentError) {
         switch (res.err.type.code) {
           case BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE:
           case BlockErrorCode.EXECUTION_ENGINE_SYNCING:
-            batch.executionNotReady();
+            batch.requeueForProcessing();
+            this.logger.verbose("waiting for few seconds for Execution engine to be ready");
             await sleep(this.config.SECONDS_PER_SLOT * 1000);
+            // Potentially process next AwaitingProcessing batch
+            downloadNewBatch = false;
             break;
 
           // TODO: Is there any other better recourse we can have here
@@ -439,6 +443,8 @@ export class SyncChain {
           default:
             batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
         }
+      } else {
+        batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
       }
 
       // At least one block was successfully verified and imported, so we can be sure all
@@ -459,7 +465,12 @@ export class SyncChain {
     }
 
     // A batch is no longer in Processing status, queue has an empty spot to download next batch
-    this.triggerBatchDownloader();
+    if (downloadNewBatch) {
+      this.triggerBatchDownloader();
+    } else {
+      // The batch has been re-queued for processing
+      this.triggerBatchProcessor();
+    }
   }
 
   /**
