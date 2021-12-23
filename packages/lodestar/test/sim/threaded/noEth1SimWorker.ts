@@ -96,6 +96,8 @@ async function runWorker(): Promise<void> {
     validatorsPerClient: validatorsPerNode,
     startIndex,
     testLoggerOpts,
+    // TODO test multiNode with remote;
+    signingMode: "local",
   });
   await Promise.all(validators.map((validator) => validator.start()));
 }

@@ -1,9 +1,10 @@
+import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import fastify from "fastify";
 import fs from "fs";
 import {IncomingMessage} from "http";
 import {fromHexString} from "@chainsafe/ssz";
 import {SecretKey, init} from "@chainsafe/bls";
-import {rootDir, keyPairFileData} from "./constants";
+import {rootDir, PORT} from "./constants";
 
 export const filename = `${rootDir}/keyPairs.txt`;
 
@@ -14,7 +15,8 @@ interface ISignParams {
   identifier: string; // BLS public key as a hex string.
 }
 
-export async function createServer(): Promise<void> {
+export async function createServer(numOfKeys: number): Promise<void> {
+  generateFile(numOfKeys);
   const afterEachCallbacks: (() => Promise<any> | any)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
@@ -48,14 +50,17 @@ export async function createServer(): Promise<void> {
     await init("blst-native");
     const identifier: string = req.params.identifier;
     const signingRoot: string = req.body.signingRoot;
-    const pkHex = identifier.startsWith("0x") ? identifier.slice(2) : identifier;
+    // const pkHex = identifier.startsWith("0x") ? identifier.slice(2) : identifier;
     try {
       const keyPairs = fs.readFileSync(filename, {encoding: "utf8", flag: "r"}).split("\n");
       const publicKeys = keyPairs.map((item) => item.split(",")[0]);
       const secretKeys = keyPairs.map((item) => item.split(",")[1]);
-      const index = publicKeys.indexOf(pkHex);
+      const index = publicKeys.indexOf(identifier);
       if (index === -1) {
-        return await res.code(404).send({error: `Key not found: ${identifier}`});
+        const index = publicKeys.indexOf(identifier.slice(2));
+        if (index === -1) {
+          return await res.code(404).send({error: `Key not found: ${identifier}`});
+        }
       }
       const skHex = secretKeys[index];
       const secretKey = SecretKey.fromHex(skHex);
@@ -76,20 +81,31 @@ export async function createServer(): Promise<void> {
   afterEachCallbacks.push(async () => {
     for (const req of reqs) req.destroy();
     await server.close();
+    removeFile();
   });
-  await server.listen(7890);
+  await server.listen(PORT);
 }
 
-export const generateFile = (): void => {
+export const generateFile = (numOfKeys: number): void => {
   fs.open(filename, "r", function (err) {
     if (!err) {
       removeFile();
     }
-    writeKeysToFile();
+    writeKeysToFile(numOfKeys);
   });
 };
 
-const writeKeysToFile = (): void => {
+const writeKeysToFile = (numOfKeys: number): void => {
+  const secretKeys = Array.from({length: numOfKeys}, (_, i) => interopSecretKey(i));
+  const secretKeysHex = secretKeys.map((sk) => sk.toHex());
+  const publicKeysHex = secretKeys.map((sk) => sk.toPublicKey().toHex());
+  let keyPairFileData = "";
+  for (let i = 0; i < secretKeysHex.length; i++) {
+    keyPairFileData += `${publicKeysHex[i]},${secretKeysHex[i]}`;
+    if (i !== secretKeysHex.length - 1) {
+      keyPairFileData += "\n";
+    }
+  }
   fs.writeFile(filename, keyPairFileData, function (err) {
     if (err) {
       console.log(err);
