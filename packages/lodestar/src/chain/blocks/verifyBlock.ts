@@ -1,7 +1,7 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -36,13 +36,14 @@ export async function verifyBlock(
 ): Promise<FullyVerifiedBlock> {
   const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
 
-  const postState = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const {postState, executionStatus} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
 
   return {
     block: partiallyVerifiedBlock.block,
     postState,
     parentBlock,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
+    executionStatus,
   };
 }
 
@@ -113,7 +114,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<CachedBeaconState<allForks.BeaconState>> {
+): Promise<{postState: CachedBeaconState<allForks.BeaconState>; executionStatus: ExecutionStatus}> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -161,9 +162,10 @@ export async function verifyBlockStateTransition(
     }
   }
 
+  let executionStatus = ExecutionStatus.PreMerge;
   if (executionPayloadEnabled) {
     // TODO: Handle better executePayload() returning error is syncing
-    const status = await chain.executionEngine.executePayload(
+    const execResult = await chain.executionEngine.executePayload(
       // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
       // For clarity and since it's needed anyway, just send the struct representation at this level such that
       // executePayload() can expect a regular JS object.
@@ -171,28 +173,37 @@ export async function verifyBlockStateTransition(
       executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
     );
 
-    switch (status) {
+    switch (execResult.status) {
       case ExecutePayloadStatus.VALID:
+        executionStatus = ExecutionStatus.Valid;
+        chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         break; // OK
-      case ExecutePayloadStatus.INVALID:
+      case ExecutePayloadStatus.INVALID: {
+        // If the parentRoot is not same as latestValidHash, then the branch from latestValidHash
+        // to parentRoot needs to be invalidated
+        const parentHashHex = toHexString(block.message.parentRoot);
+        chain.forkChoice.validateLatestHash(
+          execResult.latestValidHash,
+          parentHashHex !== execResult.latestValidHash ? parentHashHex : null
+        );
         throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+      }
       case ExecutePayloadStatus.SYNCING:
-        // It's okay to ignore SYNCING status because:
-        // - We MUST verify execution payloads of blocks we attest
-        // - We are NOT REQUIRED to check the execution payload of blocks we don't attest
-        // When EL syncs from genesis to a chain post-merge, it doesn't know what the head, CL knows. However, we
-        // must verify (complete this fn) and import a block to sync. Since we are syncing we only need to verify
-        // consensus and trust that whatever the chain agrees is valid, is valid; no need to verify. When we
-        // verify consensus up to the head we notify forkchoice update head and then EL can sync to our head. At that
-        // point regular EL sync kicks in and it does verify the execution payload (EL blocks). If after syncing EL
-        // gets to an invalid payload or we can prepare payloads on what we consider the head that's a critical error
-        //
-        // TODO: Exit with critical error if we can't prepare payloads on top of what we consider head.
-        if (partiallyVerifiedBlock.fromRangeSync) {
-          break;
-        } else {
-          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
+        // It's okay to ignore SYNCING status as EL could switch into syncing
+        // 1. On intial startup/restart
+        // 2. When some reorg might have occured and EL doesn't has a parent root
+        //    (observed on devnets)
+        // 3. Because of some unavailable (and potentially invalid) root but there is no way
+        //    of knowing if this is invalid/unavailable. For unavailable block, some proposer
+        //    will (sooner or later) build on the available parent head which will
+        //    eventually win in fork-choice as other validators vote on VALID blocks.
+        // Once EL catches up again and respond VALID, the fork choice will be updated which
+        // will either validate or prune invalid blocks
+        executionStatus = ExecutionStatus.Syncing;
+        if (execResult.latestValidHash) {
+          chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         }
+        break;
     }
   }
 
@@ -201,5 +212,5 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
   }
 
-  return postState;
+  return {postState, executionStatus};
 }

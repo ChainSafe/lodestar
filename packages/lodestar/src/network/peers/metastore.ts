@@ -45,12 +45,16 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
       serialize: (v) => Buffer.from(v, "utf8"),
       deserialize: (b) => Buffer.from(b).toString("utf8") as ReqRespEncoding,
     };
+    const floatSerdes: BucketSerdes<number> = {
+      serialize: (f) => Buffer.from(String(f), "utf8"),
+      deserialize: (b) => parseFloat(Buffer.from(b).toString("utf8")),
+    };
 
     this.encoding = this.typedStore("encoding", stringSerdes);
     // Discard existing `metadata` stored values. Store both phase0 and altair Metadata objects as altair
     // Serializing altair.Metadata instead of phase0.Metadata has a cost of just `SYNC_COMMITTEE_SUBNET_COUNT // 8` bytes
     this.metadata = this.typedStore("metadata-altair", metadataV2Serdes);
-    this.rpcScore = this.typedStore("score", number64Serdes);
+    this.rpcScore = this.typedStore("score", floatSerdes);
     this.rpcScoreLastUpdate = this.typedStore("score-last-update", number64Serdes);
   }
 

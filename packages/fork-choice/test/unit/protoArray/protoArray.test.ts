@@ -1,7 +1,7 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
 
-import {ProtoArray} from "../../../src";
+import {ProtoArray, ExecutionStatus} from "../../../src";
 
 describe("ProtoArray", () => {
   it("finalized descendant", () => {
@@ -19,11 +19,13 @@ describe("ProtoArray", () => {
       stateRoot,
       parentRoot,
       blockRoot: finalizedRoot,
-      executionPayloadBlockHash: null,
+
       justifiedEpoch: genesisEpoch,
       justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
       finalizedRoot: stateRoot,
+
+      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     });
 
     // Add block that is a finalized descendant.
@@ -33,11 +35,13 @@ describe("ProtoArray", () => {
       parentRoot: finalizedRoot,
       stateRoot,
       targetRoot: finalizedRoot,
-      executionPayloadBlockHash: null,
+
       justifiedEpoch: genesisEpoch,
       justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
       finalizedRoot: stateRoot,
+
+      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     });
 
     // Add block that is *not* a finalized descendant.
@@ -47,11 +51,13 @@ describe("ProtoArray", () => {
       parentRoot: unknown,
       stateRoot,
       targetRoot: finalizedRoot,
-      executionPayloadBlockHash: null,
+
       justifiedEpoch: genesisEpoch,
       justifiedRoot: stateRoot,
       finalizedEpoch: genesisEpoch,
       finalizedRoot: stateRoot,
+
+      ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
     });
 
     // ancestorRoot, descendantRoot, isDescendant

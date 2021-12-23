@@ -1,5 +1,5 @@
 export {ProtoArray} from "./protoArray/protoArray";
-export {IProtoBlock, IProtoNode} from "./protoArray/interface";
+export {IProtoBlock, IProtoNode, ExecutionStatus} from "./protoArray/interface";
 
 export {ForkChoice} from "./forkChoice/forkChoice";
 export {

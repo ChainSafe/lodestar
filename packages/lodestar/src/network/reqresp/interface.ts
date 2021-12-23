@@ -9,6 +9,7 @@ import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
+import {RequestTypedContainer} from "./types";
 
 export interface IReqResp {
   start(): void;
@@ -22,6 +23,7 @@ export interface IReqResp {
     request: phase0.BeaconBlocksByRangeRequest
   ): Promise<allForks.SignedBeaconBlock[]>;
   beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
+  pruneRateLimiterData(peerId: PeerId): void;
 }
 
 export interface IReqRespModules {
@@ -69,3 +71,20 @@ export type Libp2pStream = {
    */
   abort: (err: Error) => void;
 };
+
+/**
+ * Rate limiter interface for inbound and outbound requests.
+ */
+export interface IRateLimiter {
+  /**
+   * Allow to request or response based on rate limit params configured.
+   */
+  allowRequest(peerId: PeerId, requestTyped: RequestTypedContainer): boolean;
+
+  /**
+   * Prune by peer id
+   */
+  prune(peerId: PeerId): void;
+  start(): void;
+  stop(): void;
+}

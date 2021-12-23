@@ -1,5 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
+import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -13,13 +15,13 @@ import {
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   ExecutePayloadStatus,
+  ExecutePayloadResponse,
   ForkChoiceUpdateStatus,
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
 } from "./interface";
-import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -63,23 +65,27 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
+  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_executePayloadV1";
-    const {status} = await this.rpc.fetch<
+    const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
+    const {status, latestValidHash} = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
       EngineApiRpcParamTypes[typeof method]
     >({
       method,
-      params: [serializeExecutionPayload(executionPayload)],
+      params: [serializedExecutionPayload],
     });
 
     // Validate status is known
     const statusEnum = ExecutePayloadStatus[status];
     if (statusEnum === undefined) {
-      throw Error(`Unknown status ${status}`);
+      throw Error(`Invalid EL status on executePayload: ${status}`);
+    }
+    if (statusEnum !== ExecutePayloadStatus.SYNCING && latestValidHash == null) {
+      throw Error(`Invalid latestValidHash for ${status}`);
     }
 
-    return statusEnum;
+    return {status, latestValidHash};
   }
 
   /**
@@ -180,7 +186,7 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayloadV1: {status: ExecutePayloadStatus};
+  engine_executePayloadV1: {status: ExecutePayloadStatus; latestValidHash: DATA};
   engine_consensusValidated: void;
   engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**

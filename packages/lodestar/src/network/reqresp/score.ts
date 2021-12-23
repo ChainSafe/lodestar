@@ -12,6 +12,14 @@ const libp2pErrorCodes = {
   ERR_UNSUPPORTED_PROTOCOL: "ERR_UNSUPPORTED_PROTOCOL",
 };
 
+/**
+ * Multi stream select error code
+ * https://github.com/multiformats/js-multistream-select/blame/cf4e297b362a43bde2ea117085ceba78cbce1c12/src/select.js#L50
+ */
+const multiStreamSelectErrorCodes = {
+  protocolSelectionFailed: "protocol selection failed",
+};
+
 export function onOutgoingReqRespError(e: Error, method: Method): PeerAction | null {
   if (e instanceof RequestError) {
     switch (e.type.code) {
@@ -25,8 +33,9 @@ export function onOutgoingReqRespError(e: Error, method: Method): PeerAction | n
 
       case RequestErrorCode.DIAL_TIMEOUT:
       case RequestErrorCode.DIAL_ERROR:
-        return PeerAction.LowToleranceError;
-
+        return e.message.includes(multiStreamSelectErrorCodes.protocolSelectionFailed) && method === Method.Ping
+          ? PeerAction.Fatal
+          : PeerAction.LowToleranceError;
       // TODO: Detect SSZDecodeError and return PeerAction.Fatal
 
       case RequestErrorCode.TTFB_TIMEOUT:

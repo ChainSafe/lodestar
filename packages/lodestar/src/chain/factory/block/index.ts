@@ -6,7 +6,6 @@ import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-tran
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Bytes96, ExecutionAddress, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
-import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {ZERO_HASH} from "../../../constants";
 import {IMetrics} from "../../../metrics";
@@ -17,11 +16,10 @@ import {RegenCaller} from "../../regen";
 type AssembleBlockModules = {
   chain: IBeaconChain;
   metrics: IMetrics | null;
-  logger?: ILogger | null;
 };
 
 export async function assembleBlock(
-  {chain, metrics, logger}: AssembleBlockModules,
+  {chain, metrics}: AssembleBlockModules,
   {
     randaoReveal,
     graffiti,
@@ -43,19 +41,14 @@ export async function assembleBlock(
     proposerIndex: state.getBeaconProposer(slot),
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
-    body: await assembleBody(
-      chain,
-      state,
-      {
-        randaoReveal,
-        graffiti,
-        blockSlot: slot,
-        parentSlot: slot - 1,
-        parentBlockRoot,
-        feeRecipient,
-      },
-      logger
-    ),
+    body: await assembleBody(chain, state, {
+      randaoReveal,
+      graffiti,
+      blockSlot: slot,
+      parentSlot: slot - 1,
+      parentBlockRoot,
+      feeRecipient,
+    }),
   };
 
   block.stateRoot = computeNewStateRoot({config: chain.config, metrics}, state, block);
