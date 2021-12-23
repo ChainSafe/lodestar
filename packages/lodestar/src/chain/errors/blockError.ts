@@ -95,10 +95,10 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
-  | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED};
+  | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID; errorMessage: string}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE; errorMessage: string}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING; errorMessage: string}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED; errorMessage: string};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

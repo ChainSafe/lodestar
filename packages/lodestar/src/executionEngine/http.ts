@@ -1,6 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 
 import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
@@ -77,7 +78,17 @@ export class ExecutionEngineHttp implements IExecutionEngine {
        * If there are errors by EL like connection refused, internal error, they need to be
        * treated seperate from being INVALID. For now, just pass the error upstream.
        */
-      .catch((e: Error) => ({status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message}));
+      .catch((e: Error) => {
+        let errResponse: EngineApiRpcReturnTypes[typeof method];
+        if (e instanceof TimeoutError) {
+          errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+        } else if (e instanceof ErrorAborted) {
+          errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+        } else {
+          errResponse = {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        }
+        return errResponse;
+      });
 
     let execResponse: ExecutePayloadResponse;
 
@@ -109,6 +120,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       case ExecutePayloadStatus.SYNCING:
         execResponse = {status: statusEnum, latestValidHash, validationError: null};
         break;
+      case ExecutePayloadStatus.UNAVAILABLE:
       case ExecutePayloadStatus.ELERROR:
         execResponse = {
           status: statusEnum,
@@ -225,7 +237,12 @@ type EngineApiRpcReturnTypes = {
    * - status: String - the result of the payload execution:
    */
   engine_executePayloadV1: {
-    status: ExecutePayloadStatus.VALID | ExecutePayloadStatus.INVALID | ExecutePayloadStatus.SYNCING;
+    status:
+      | ExecutePayloadStatus.VALID
+      | ExecutePayloadStatus.INVALID
+      | ExecutePayloadStatus.SYNCING
+      | ExecutePayloadStatus.ELERROR
+      | ExecutePayloadStatus.UNAVAILABLE;
     latestValidHash: DATA | null;
     validationError: string | null;
   };

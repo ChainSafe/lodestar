@@ -193,7 +193,10 @@ export async function verifyBlockStateTransition(
           execResult.latestValidHash,
           parentHashHex !== execResult.latestValidHash ? parentHashHex : null
         );
-        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
+          errorMessage: execResult.validationError ?? "",
+        });
       }
       case ExecutePayloadStatus.SYNCING: {
         // It's okay to ignore SYNCING status as EL could switch into syncing
@@ -222,7 +225,10 @@ export async function verifyBlockStateTransition(
           justifiedBlock.executionStatus === ExecutionStatus.PreMerge ||
           block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
         ) {
-          throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING});
+          throw new BlockError(block, {
+            code: BlockErrorCode.EXECUTION_ENGINE_SYNCING,
+            errorMessage: `not safe to import SYNCING payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot`,
+          });
         }
 
         executionStatus = ExecutionStatus.Syncing;
@@ -231,24 +237,31 @@ export async function verifyBlockStateTransition(
         }
         break;
       }
+
+      // There can be many reasons for which EL failed some of the observed ones are
+      // 1. Connection refused / can't connect to EL port
+      // 2. EL Internal Error
+      // 3. Geth sometimes gives invalid merkel root error which means invalid
+      //    but expects it to be handled in CL as of now. But we should log as warning
+      //    and give it as optimistic treatment and expect any other non-geth CL<>EL
+      //    combination to reject the invalid block and propose a block.
+      //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
+      //    as the network is geth dominated, till a non geth node proposes and moves network
+      //    forward
+      // For network/unreachable errors, an optimization can be added to replay these blocks
+      // back. But for now, lets assume other mechanisms like unknown parent block of a future
+      // child block will cause it to replay
       case ExecutePayloadStatus.ELERROR:
-        // There can be many reasons for which EL failed some of the observed ones are
-        // 1. Connection refused / can't connect to EL port
-        // 2. EL Internal Error
-        // 3. Geth sometimes gives invalid merkel root error which means invalid
-        //    but expects it to be handled in CL as of now. But we should log as warning
-        //    and give it as optimistic treatment and expect any other non-geth CL<>EL
-        //    combination to reject the invalid block and propose a block.
-        //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
-        //    as the network is geth dominated, till a non geth node proposes and moves network
-        //    forward
-        // For network/unreachable errors, an optimization can be added to replay these blocks
-        // back. But for now, lets assume other mechanisms like unknown parent block of a future
-        // child block will cause it to replay
-        chain.logger.error("Execution engine api for executePayload failed with error", {
-          validationError: execResult.validationError,
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERRORED,
+          errorMessage: execResult.validationError,
         });
-        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED});
+
+      case ExecutePayloadStatus.UNAVAILABLE:
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE,
+          errorMessage: execResult.validationError,
+        });
     }
   }
 
