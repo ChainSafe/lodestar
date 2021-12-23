@@ -1,4 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 import {IMetricsOptions} from "../options";
 
@@ -11,7 +10,7 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata: IMetricsOptions["metadata"],
-  anchorState?: allForks.BeaconState
+  {genesisTime}: {genesisTime: number}
 ) {
   if (metadata) {
     register.static<"semver" | "branch" | "commit" | "version" | "network">({
@@ -22,14 +21,12 @@ export function createLodestarMetrics(
   }
 
   // Initial static metrics
-  if (anchorState) {
-    register
-      .gauge({
-        name: "lodestar_genesis_time",
-        help: "Genesis time in seconds",
-      })
-      .set(anchorState.genesisTime);
-  }
+  register
+    .gauge({
+      name: "lodestar_genesis_time",
+      help: "Genesis time in seconds",
+    })
+    .set(genesisTime);
 
   return {
     clockSlot: register.gauge({
@@ -674,5 +671,11 @@ export function createLodestarMetrics(
         help: "Total number of precomputing next epoch transition wasted",
       }),
     },
+
+    asyncLag: register.histogram({
+      name: "lodestar_async_lag_seconds",
+      help: "Async lag in seconds",
+      buckets: [0.1, 1, 10],
+    }),
   };
 }

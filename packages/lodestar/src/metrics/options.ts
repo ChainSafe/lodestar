@@ -8,14 +8,18 @@ export interface IMetricsOptions {
   serverPort?: number;
   gatewayUrl?: string;
   listenAddr?: string;
+  asyncLagIntervalMs?: number;
+  disabledUnhandledRejectionMetric?: boolean;
   /** Optional metadata to send to Prometheus */
   metadata?: LodestarGitData & {network: string};
 }
 
-export const defaultMetricsOptions: IMetricsOptions = {
+export const defaultMetricsOptions: IMetricsOptions &
+  Required<Pick<IMetricsOptions, "enabled" | "timeout" | "serverPort" | "asyncLagIntervalMs">> = {
   enabled: false,
   timeout: 5000,
   serverPort: 8008,
+  asyncLagIntervalMs: 1000,
 };
 
 export type LodestarGitData = {

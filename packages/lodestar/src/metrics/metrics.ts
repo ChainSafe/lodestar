@@ -1,40 +1,50 @@
-/**
- * @module metrics
- */
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
 import {collectDefaultMetrics, Counter, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";
-import {IMetricsOptions} from "./options";
+import {defaultMetricsOptions, IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
+import {trackAsyncLag} from "./asyncLag";
 
 export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
 
 export function createMetrics(
   opts: IMetricsOptions,
   config: IChainForkConfig,
-  anchorState: allForks.BeaconState,
+  genesisData: {genesisTime: number},
+  signal: AbortSignal,
   registries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
-  const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
+  const lodestar = createLodestarMetrics(register, opts.metadata, genesisData);
 
-  const genesisTime = anchorState.genesisTime;
+  // Track async lag, set asyncLagIntervalMs ==0 0 to disable trackAsyncLag()
+  const asyncLagIntervalMs = opts.asyncLagIntervalMs ?? defaultMetricsOptions.asyncLagIntervalMs;
+  if (asyncLagIntervalMs > 0) {
+    trackAsyncLag(lodestar, opts.asyncLagIntervalMs ?? defaultMetricsOptions.asyncLagIntervalMs, signal).catch(() => {
+      // Ignore errors
+    });
+  }
+
+  const genesisTime = genesisData.genesisTime;
   const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime);
   // Register a single collect() function to run all validatorMonitor metrics
   lodestar.validatorMonitor.validatorsTotal.addCollect(() => {
     const clockSlot = getCurrentSlot(config, genesisTime);
     validatorMonitor.scrapeMetrics(clockSlot);
   });
-  process.on("unhandledRejection", (_error) => {
-    lodestar.unhandeledPromiseRejections.inc();
-  });
+
+  if (!opts.disabledUnhandledRejectionMetric) {
+    process.on("unhandledRejection", (_error) => {
+      lodestar.unhandeledPromiseRejections.inc();
+    });
+  }
 
   collectDefaultMetrics({
     register,
