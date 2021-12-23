@@ -189,6 +189,7 @@ export class UnknownBlockSync {
 
           case BlockErrorCode.PARENT_UNKNOWN:
           case BlockErrorCode.PRESTATE_MISSING:
+          case BlockErrorCode.EXECUTION_ENGINE_SYNCING:
           case BlockErrorCode.EXECUTION_ENGINE_ERRORED:
             // Should no happen, mark as pending to try again latter
             this.logger.error("Attempted to process block but its parent was still unknown", errorData, res.err);
