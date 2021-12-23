@@ -1,11 +1,11 @@
 import PeerId from "peer-id";
 import {Epoch, Root, Slot, phase0, allForks} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
 import {PeerAction} from "../../network";
-import {ChainSegmentError} from "../../chain/errors";
+import {ChainSegmentError, BlockError, BlockErrorCode} from "../../chain/errors";
 import {ItTrigger} from "../../util/itTrigger";
 import {byteArrayEquals} from "../../util/bytes";
 import {PeerMap} from "../../util/peerMap";
@@ -425,7 +425,21 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
-      batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      if (res.err instanceof BlockError) {
+        switch (res.err.type.code) {
+          case BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE:
+          case BlockErrorCode.EXECUTION_ENGINE_SYNCING:
+            batch.executionNotReady();
+            await sleep(this.config.SECONDS_PER_SLOT * 1000);
+            break;
+
+          // TODO: Is there any other better recourse we can have here
+          // than to process till some attempts and then throw
+          case BlockErrorCode.EXECUTION_ENGINE_ERRORED:
+          default:
+            batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+        }
+      }
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.

@@ -57,6 +57,8 @@ export enum BlockErrorCode {
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
   /** Execution engine returned not valid after executePayload() call */
   EXECUTION_PAYLOAD_NOT_VALID = "BLOCK_ERROR_EXECUTION_PAYLOAD_NOT_VALID",
+  /** Execution engine is unavailable */
+  EXECUTION_ENGINE_UNAVAILABLE = "BLOCK_ERROR_EXECUTION_ENGINE_UNAVAILABLE",
   /** Execution engine is syncing */
   EXECUTION_ENGINE_SYNCING = "BLOCK_ERROR_EXECUTION_ENGINE_SYNCING",
   /** Execution engine api errored */
@@ -94,6 +96,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID}
+  | {code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE}
   | {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING}
   | {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED};
 

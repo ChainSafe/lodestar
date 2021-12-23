@@ -38,12 +38,14 @@ export type Attempt = {
   peer: PeerId;
   /** The hash of the blocks of the attempt */
   hash: Uint8Array;
+  /** Blocks of the attempt */
+  blocks: allForks.SignedBeaconBlock[];
 };
 
 export type BatchState =
   | {status: BatchStatus.AwaitingDownload}
   | {status: BatchStatus.Downloading; peer: PeerId}
-  | {status: BatchStatus.AwaitingProcessing; peer: PeerId; blocks: allForks.SignedBeaconBlock[]}
+  | {status: BatchStatus.AwaitingProcessing; attempt: Attempt}
   | {status: BatchStatus.Processing; attempt: Attempt}
   | {status: BatchStatus.AwaitingValidation; attempt: Attempt};
 
@@ -116,8 +118,8 @@ export class Batch {
     if (this.state.status !== BatchStatus.Downloading) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Downloading));
     }
-
-    this.state = {status: BatchStatus.AwaitingProcessing, peer: this.state.peer, blocks};
+    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
+    this.state = {status: BatchStatus.AwaitingProcessing, attempt: {peer: this.state.peer, hash, blocks}};
   }
 
   /**
@@ -144,9 +146,9 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingProcessing));
     }
 
-    const blocks = this.state.blocks;
-    const hash = hashBlocks(blocks, this.config); // tracks blocks to report peer on processing error
-    this.state = {status: BatchStatus.Processing, attempt: {peer: this.state.peer, hash}};
+    const blocks = this.state.attempt.blocks;
+
+    this.state = {status: BatchStatus.Processing, attempt: this.state.attempt};
     return blocks;
   }
 
@@ -159,6 +161,17 @@ export class Batch {
     }
 
     this.state = {status: BatchStatus.AwaitingValidation, attempt: this.state.attempt};
+  }
+
+  /**
+   * Processing -> AwaitingProcessing
+   */
+  executionNotReady(): void {
+    if (this.state.status !== BatchStatus.Processing) {
+      throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
+    }
+
+    this.state = {status: BatchStatus.AwaitingProcessing, attempt: this.state.attempt};
   }
 
   /**
