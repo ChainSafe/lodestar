@@ -568,7 +568,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             /** everything saved in db between a backfilled range is a connected sequence
              * we only need to check if prevFinalizedCheckpointBlock is in db
              */
-            const prevBackfillCpBlock = await this.db.blockArchive.get(jumpBackTo);
+            const prevBackfillCpBlock = await this.db.blockArchive.getByRoot(this.prevFinalizedCheckpointBlock.root);
             if (
               prevBackfillCpBlock != null &&
               this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
