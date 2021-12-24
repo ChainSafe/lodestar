@@ -2,15 +2,16 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import crypto from "crypto";
-import {ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IMetrics} from "../../metrics";
 import {ENRKey, SubnetType} from "../metadata";
 import {prettyPrintPeerId} from "../util";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {pruneSetToMax} from "../../util/map";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;
@@ -286,11 +287,15 @@ export class PeerDiscovery {
       }
 
       // Are this fields mandatory?
-      const attnetsBytes = enr.get(ENRKey.attnets);
-      const syncnetsBytes = enr.get(ENRKey.syncnets);
-      // TODO: Optimize bitfield parsing
-      const attnets = attnetsBytes ? (ssz.phase0.AttestationSubnets.deserialize(attnetsBytes) as boolean[]) : [];
-      const syncnets = syncnetsBytes ? (ssz.altair.SyncSubnets.deserialize(syncnetsBytes) as boolean[]) : [];
+      const attnetsBytes = enr.get(ENRKey.attnets); // 64 bits
+      const syncnetsBytes = enr.get(ENRKey.syncnets); // 4 bits
+
+      // Use faster version than ssz's implementation that leverages pre-cached.
+      // Some nodes don't serialize the bitfields properly, encoding the syncnets as attnets,
+      // which cause the ssz implementation to throw on validation. deserializeEnrSubnets() will
+      // never throw and treat too long or too short bitfields as zero-ed
+      const attnets = attnetsBytes ? deserializeEnrSubnets(attnetsBytes, ATTESTATION_SUBNET_COUNT) : zeroAttnets;
+      const syncnets = syncnetsBytes ? deserializeEnrSubnets(syncnetsBytes, SYNC_COMMITTEE_SUBNET_COUNT) : zeroSyncnets;
 
       // Should dial peer?
       const cachedPeer: CachedENR = {
