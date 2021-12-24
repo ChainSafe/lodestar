@@ -221,8 +221,9 @@ export async function verifyBlockStateTransition(
         //    imported.
         const justifiedBlock = chain.forkChoice.getJustifiedBlock();
         const clockSlot = getCurrentSlot(chain.config, postState.genesisTime);
+
         if (
-          justifiedBlock.executionStatus === ExecutionStatus.PreMerge ||
+          justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
           block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
         ) {
           throw new BlockError(block, {
