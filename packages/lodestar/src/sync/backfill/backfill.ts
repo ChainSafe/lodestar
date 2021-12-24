@@ -3,7 +3,7 @@ import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
 import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {List, toHexString} from "@chainsafe/ssz";
@@ -39,6 +39,7 @@ type BackfillModules = BackfillSyncModules & {
   syncAnchor: BackFillSyncAnchor;
   backfillStartFromSlot: Slot;
   prevFinalizedCheckpointBlock: BackfillBlockHeader;
+  wsCheckpointHeader: BackfillBlockHeader | null;
 };
 
 export type BackfillSyncOpts = {
@@ -122,7 +123,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
    * 2. Else if it lies outside the backfilled range, the linkage to this checkpoint in
    *    backfill needs to be verified.
    */
-  private wsCheckpoint: BackfillBlockHeader | null;
+  private wsCheckpointHeader: BackfillBlockHeader | null;
   private wsValidated = false;
 
   /**
@@ -155,9 +156,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.syncAnchor = modules.syncAnchor;
     this.backfillStartFromSlot = modules.backfillStartFromSlot;
     this.prevFinalizedCheckpointBlock = modules.prevFinalizedCheckpointBlock;
-    this.wsCheckpoint = modules.wsCheckpoint
-      ? {root: modules.wsCheckpoint.root, slot: modules.wsCheckpoint.epoch * SLOTS_PER_EPOCH}
-      : null;
+    this.wsCheckpointHeader = modules.wsCheckpointHeader;
 
     this.chain = modules.chain;
     this.network = modules.network;
@@ -207,7 +206,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     modules: BackfillSyncModules,
     opts?: BackfillSyncOpts
   ): Promise<T | null> {
-    const {config, anchorState, db} = modules;
+    const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
     const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
     const syncAnchor = {
@@ -222,31 +221,34 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       epoch: anchorCp.epoch,
     });
 
-    let prevFinalizedCheckpointBlock: BackfillBlockHeader;
-    const lastDbState = (
-      await db.stateArchive.values({
-        lt: backfillStartFromSlot,
-        reverse: true,
-        limit: 1,
-      })
-    )[0];
-    if (lastDbState !== undefined) {
-      /** TODO can we get header from blockArchive via slot? */
-      const {checkpoint: prevDbCp} = computeAnchorCheckpoint(config, lastDbState);
-      prevFinalizedCheckpointBlock = {root: prevDbCp.root, slot: lastDbState.slot};
-      modules.logger.verbose("Found a previous non validated finalized or wsCheckpoint block", {
-        root: toHexString(prevFinalizedCheckpointBlock.root),
-        slot: prevFinalizedCheckpointBlock.slot,
-      });
-    } else {
-      /**
-       * GENESIS_SLOT -1 is the placeholder for parentHash of the genesis block i.e. block
-       * at GENESIS_SLOT -1, which should always be ZERO_HASH
-       */
-      prevFinalizedCheckpointBlock = {root: ZERO_HASH, slot: GENESIS_SLOT - 1};
-    }
+    /**
+     * The way we initialize beacon node, wsCheckpoint's slot is always <= anchorSlot
+     * If:
+     *   the root belonging to wsCheckpoint is in the DB, we need to verify linkage to it
+     *   i.e. it becomes our first prevFinalizedCheckpointBlock
+     * Else
+     *   we initialize prevFinalizedCheckpointBlock from the last stored db finalized state
+     *   for verification and when we go below its epoch we just check if a correct block
+     *   corresponding to wsCheckpoint root was stored.
+     *
+     * and then we continue going back and verifying the next unconnected previous finalized
+     * or wsCheckpoints identifiable as the keys of backfill sync.
+     */
+    const wsCheckpointHeader: BackfillBlockHeader | null = wsCheckpoint
+      ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
+      : null;
+    const prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+      config,
+      db,
+      anchorState.slot,
+      wsCheckpointHeader,
+      logger
+    );
 
-    return new this({syncAnchor, backfillStartFromSlot, prevFinalizedCheckpointBlock, ...modules}, opts) as T;
+    return new this(
+      {syncAnchor, backfillStartFromSlot, wsCheckpointHeader, prevFinalizedCheckpointBlock, ...modules},
+      opts
+    ) as T;
   }
 
   /** Throw / return all AsyncGenerators */
@@ -346,14 +348,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.syncAnchor.lastBackSyncedBlock.slot,
               this.syncAnchor.lastBackSyncedBlock.block
             );
-            await this.setNextPrevFinalizedOrWsCheckpointBlock();
-          } else {
-            /**
-             * GENESIS_SLOT -1 is the placeholder for parentHash of the genesis block
-             * which should always be ZERO_HASH.
-             */
-            this.prevFinalizedCheckpointBlock = {root: ZERO_HASH, slot: GENESIS_SLOT - 1};
           }
+          this.prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+            this.config,
+            this.db,
+            this.syncAnchor.lastBackSyncedBlock.slot,
+            this.wsCheckpointHeader,
+            this.logger
+          );
         }
 
         if (this.syncAnchor.lastBackSyncedBlock.slot === GENESIS_SLOT) {
@@ -367,7 +369,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           await this.db.blockArchive.put(GENESIS_SLOT, this.syncAnchor.lastBackSyncedBlock.block);
         }
 
-        if (this.wsCheckpoint && !this.wsValidated) {
+        if (this.wsCheckpointHeader && !this.wsValidated) {
           await this.checkIfCheckpointSyncedAndValidate();
         }
 
@@ -486,29 +488,32 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (this.syncAnchor.lastBackSyncedBlock == null) {
       throw Error("Invalid lastBackSyncedBlock for checkpoint validation");
     }
-    if (this.wsCheckpoint == null) {
+    if (this.wsCheckpointHeader == null) {
       throw Error("Invalid null checkpoint for validation");
     }
     if (this.wsValidated) return;
 
-    if (this.wsCheckpoint.slot >= this.syncAnchor.lastBackSyncedBlock.slot) {
+    if (this.wsCheckpointHeader.slot >= this.syncAnchor.lastBackSyncedBlock.slot) {
       // Checkpoint root should be in db now!
-      const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpoint.root);
+      const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpointHeader.root);
       if (
         !wsDbCheckpointBlock ||
-        Math.floor(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !== this.wsCheckpoint.slot / SLOTS_PER_EPOCH
+        Math.floor(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !==
+          this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
       )
         // TODO: explode and stop the entire node
         throw new Error(
-          `InvalidWsCheckpoint root=${this.wsCheckpoint.root}, epoch=${this.wsCheckpoint.slot / SLOTS_PER_EPOCH}, ${
+          `InvalidWsCheckpoint root=${this.wsCheckpointHeader.root}, epoch=${
+            this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
+          }, ${
             wsDbCheckpointBlock
               ? "found at epoch=" + Math.floor(wsDbCheckpointBlock?.message.slot / SLOTS_PER_EPOCH)
               : "not found"
           }`
         );
       this.logger.info("BackfillSync - wsCheckpoint validated!", {
-        root: toHexString(this.wsCheckpoint.root),
-        epoch: this.wsCheckpoint.slot / SLOTS_PER_EPOCH,
+        root: toHexString(this.wsCheckpointHeader.root),
+        epoch: this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH,
       });
       this.wsValidated = true;
     }
@@ -595,7 +600,13 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
              * prevFinalizedCheckpointBlock must have been validated, update to a new unverified
              * finalized or wsCheckpoint behind the new lastBackSyncedBlock
              */
-            await this.setNextPrevFinalizedOrWsCheckpointBlock();
+            this.prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+              this.config,
+              this.db,
+              jumpBackTo,
+              this.wsCheckpointHeader,
+              this.logger
+            );
           }
 
           this.metrics?.backfillSync.totalBlocks.inc(
@@ -613,37 +624,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
 
     return validSequence;
-  }
-
-  private async setNextPrevFinalizedOrWsCheckpointBlock(): Promise<void> {
-    const anchorSlot = this.syncAnchor.lastBackSyncedBlock?.slot ?? this.backfillStartFromSlot;
-    const nextPrevFinOrWsSlot =
-      (
-        await this.db.backfilledRanges.keys({
-          lt: anchorSlot,
-          reverse: true,
-          limit: 1,
-        })
-      )[0] ?? GENESIS_SLOT;
-
-    const nextPrevFinOrWsBlock = await this.db.blockArchive.get(nextPrevFinOrWsSlot);
-    if (nextPrevFinOrWsBlock) {
-      const nextPrevFinOrWsHeader = blockToHeader(this.config, nextPrevFinOrWsBlock.message);
-      const nextPrevFinOrWsRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(nextPrevFinOrWsHeader);
-      this.prevFinalizedCheckpointBlock = {root: nextPrevFinOrWsRoot, slot: nextPrevFinOrWsSlot};
-    } else {
-      /** GENESIS_SLOT -1 is the placeholder for parentHash of the genesis block
-       * which should always be ZERO_HASH
-       */
-      this.prevFinalizedCheckpointBlock = {root: ZERO_HASH, slot: GENESIS_SLOT - 1};
-    }
-
-    this.logger.verbose("Updating the previous finalized or ws checkpoint root for validation", {
-      root: toHexString(this.prevFinalizedCheckpointBlock.root),
-      slot: this.prevFinalizedCheckpointBlock.slot,
-    });
-
-    return;
   }
 
   private async fastBackfillDb(): Promise<boolean> {
@@ -789,4 +769,76 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
     if (error) throw new BackfillSyncError({code: error});
   }
+}
+
+async function extractPreviousOrWsCheckpoint(
+  config: IChainForkConfig,
+  db: IBeaconDb,
+  belowSlot: Slot,
+  wsCheckpointHeader: BackfillBlockHeader | null,
+  logger?: ILogger
+): Promise<BackfillBlockHeader> {
+  /** Anything below genesis block is just zero hash */
+  if (belowSlot <= GENESIS_SLOT) return {root: ZERO_HASH, slot: belowSlot - 1};
+
+  const lastDbState = (
+    await db.stateArchive.values({
+      lt: belowSlot,
+      reverse: true,
+      limit: 1,
+    })
+  )[0];
+  const lastDbStateSlot = lastDbState?.slot ?? GENESIS_SLOT;
+
+  /**
+   * 1. If wsCheckpoint is above or equal to belowSlot, it has been verified so it has
+   *    no role in selection of next "previous finalized or ws checkpoint"
+   * 2. If its below the belowSlot but the block is not in DB, so it will be checked for epoch
+   *    correctness of a corresponding block read from DB when we backfill till/below that
+   *    epoch. So again no role in selection of next "previous finalized or ws checkpoint"
+   * 3. If we have a block corresponding to wsCheckpoint below belowSlot, so that is a candidate
+   *    for the next "previous finalized or ws checkpoint"
+   *  */
+  const wsCheckpointSlot =
+    wsCheckpointHeader !== null && wsCheckpointHeader.slot < belowSlot
+      ? (await db.blockArchive.getByRoot(wsCheckpointHeader.root))?.message.slot ?? GENESIS_SLOT
+      : GENESIS_SLOT;
+
+  /**
+   * 1. If there is a backfilledRanges key (backfilledRanges key is always a previous finalized
+   *    or wsCheckpoint), it should also have a corresponding block in DB. And hence is a
+   *    candidate for next "previous finalized or ws checkpoint"
+   */
+  const nextBackfilledStartSlot =
+    (
+      await db.backfilledRanges.keys({
+        lt: belowSlot,
+        reverse: true,
+        limit: 1,
+      })
+    )[0] ?? GENESIS_SLOT;
+
+  /**
+   * This is our next "previous finalized or ws checkpoint" slot. If we able to find
+   * a corresponding block in DB, then that becomes next "previous finalized or wscheckpoint"
+   */
+  const nextPrevFinOrWsSlot = Math.max(lastDbStateSlot, wsCheckpointSlot, nextBackfilledStartSlot);
+  const nextPrevFinOrWsBlock = await db.blockArchive.get(nextPrevFinOrWsSlot);
+  let prevFinalizedCheckpointBlock: BackfillBlockHeader;
+  if (nextPrevFinOrWsBlock != null) {
+    const header = blockToHeader(config, nextPrevFinOrWsBlock.message);
+    const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
+    prevFinalizedCheckpointBlock = {root, slot: nextPrevFinOrWsSlot};
+    logger?.verbose("Found a previous non validated finalized or wsCheckpoint block", {
+      root: toHexString(prevFinalizedCheckpointBlock.root),
+      slot: prevFinalizedCheckpointBlock.slot,
+    });
+  } else {
+    /**
+     * GENESIS_SLOT -1 is the placeholder for parentHash of the genesis block
+     * which should always be ZERO_HASH.
+     */
+    prevFinalizedCheckpointBlock = {root: ZERO_HASH, slot: GENESIS_SLOT - 1};
+  }
+  return prevFinalizedCheckpointBlock;
 }

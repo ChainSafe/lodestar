@@ -123,13 +123,13 @@ describe("Start from WSS", function () {
     });
     afterEachCallbacks.push(() => bnStartingFromWSS.close());
 
-    if (!bnStartingFromWSS.sync.backfillSync) return;
+    if (!bnStartingFromWSS.backfillSync) return;
 
     const head = bn.chain.forkChoice.getHead();
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!head) throw Error("First beacon node has no head block");
     const waitForSynced = waitForEvent<Slot>(
-      bnStartingFromWSS.sync.backfillSync,
+      bnStartingFromWSS.backfillSync,
       BackfillSyncEvent.completed,
       100000,
       (slot) => slot == GENESIS_SLOT

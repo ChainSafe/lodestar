@@ -7,13 +7,11 @@ import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
 import {IBeaconDb} from "../db";
 import {SyncChainDebugState} from "./range/chain";
-import {BackfillSync} from "./backfill";
 export {SyncChainDebugState};
 
 export type SyncingStatus = routes.node.SyncingStatus;
 
 export interface IBeaconSync {
-  backfillSync?: BackfillSync | null;
   state: SyncState;
   close(): void;
   getSyncStatus(): SyncingStatus;
