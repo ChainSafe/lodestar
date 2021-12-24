@@ -1,21 +1,28 @@
 import {allForks, CachedBeaconState, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {Root, allForks as allForkTypes, ssz} from "@chainsafe/lodestar-types";
+import {Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {IBlsVerifier} from "../../chain/bls";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
+
+export type BackfillBlockHeader = {
+  slot: Slot;
+  root: Root;
+};
+
+export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconBlock};
 
 export function verifyBlockSequence(
   config: IBeaconConfig,
   blocks: allForkTypes.SignedBeaconBlock[],
   anchorRoot: Root
 ): {
-  nextAnchor: allForkTypes.SignedBeaconBlock | null;
+  nextAnchor: BackfillBlock | null;
   verifiedBlocks: allForkTypes.SignedBeaconBlock[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
   let nextRoot: Root = anchorRoot;
-  let nextAnchor: allForkTypes.SignedBeaconBlock | null = null;
+  let nextAnchor: BackfillBlock | null = null;
 
   const verifiedBlocks: allForkTypes.SignedBeaconBlock[] = [];
   for (const block of blocks.reverse()) {
@@ -27,8 +34,8 @@ export function verifyBlockSequence(
       return {nextAnchor, verifiedBlocks, error: BackfillSyncErrorCode.NOT_LINEAR};
     }
     verifiedBlocks.push(block);
+    nextAnchor = {block, slot: block.message.slot, root: nextRoot};
     nextRoot = block.message.parentRoot;
-    nextAnchor = block;
   }
   return {nextAnchor, verifiedBlocks};
 }

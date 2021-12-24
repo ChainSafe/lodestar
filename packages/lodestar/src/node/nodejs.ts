@@ -15,6 +15,7 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
+import {BackfillSync} from "../sync/backfill";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
@@ -34,6 +35,7 @@ export interface IBeaconNodeModules {
   chain: IBeaconChain;
   api: Api;
   sync: IBeaconSync;
+  backfillSync: BackfillSync | null;
   metricsServer?: HttpMetricsServer;
   restApi?: RestApi;
   controller?: AbortController;
@@ -71,6 +73,7 @@ export class BeaconNode {
   api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
+  backfillSync: BackfillSync | null;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -86,6 +89,7 @@ export class BeaconNode {
     api,
     restApi,
     sync,
+    backfillSync,
     controller,
   }: IBeaconNodeModules) {
     this.opts = opts;
@@ -98,6 +102,7 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
+    this.backfillSync = backfillSync;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -164,6 +169,19 @@ export class BeaconNode {
       logger: logger.child(opts.logger.sync),
     });
 
+    const backfillSync = wsCheckpoint
+      ? await BackfillSync.init({
+          config,
+          db,
+          chain,
+          metrics,
+          network,
+          wsCheckpoint,
+          anchorState,
+          logger: logger.child(opts.logger.sync),
+        })
+      : null;
+
     const api = getApi(opts.api, {
       config,
       logger: logger.child(opts.logger.api),
@@ -206,6 +224,7 @@ export class BeaconNode {
       api,
       restApi,
       sync,
+      backfillSync,
       controller,
     }) as T;
   }
@@ -217,6 +236,7 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
+      this.backfillSync?.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();
