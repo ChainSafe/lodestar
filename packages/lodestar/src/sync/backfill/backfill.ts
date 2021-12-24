@@ -40,6 +40,7 @@ type BackfillModules = BackfillSyncModules & {
   backfillStartFromSlot: Slot;
   prevFinalizedCheckpointBlock: BackfillBlockHeader;
   wsCheckpointHeader: BackfillBlockHeader | null;
+  backfillRangeWrittenSlot: Slot | null;
 };
 
 export type BackfillSyncOpts = {
@@ -222,6 +223,12 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     });
 
     /**
+     * Load the previous written to slot for the key  backfillStartFromSlot
+     * in backfilledRanges
+     */
+    const backfillRangeWrittenSlot = await db.backfilledRanges.get(backfillStartFromSlot);
+
+    /**
      * The way we initialize beacon node, wsCheckpoint's slot is always <= anchorSlot
      * If:
      *   the root belonging to wsCheckpoint is in the DB, we need to verify linkage to it
@@ -246,7 +253,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     );
 
     return new this(
-      {syncAnchor, backfillStartFromSlot, wsCheckpointHeader, prevFinalizedCheckpointBlock, ...modules},
+      {
+        syncAnchor,
+        backfillStartFromSlot,
+        backfillRangeWrittenSlot,
+        wsCheckpointHeader,
+        prevFinalizedCheckpointBlock,
+        ...modules,
+      },
       opts
     ) as T;
   }
