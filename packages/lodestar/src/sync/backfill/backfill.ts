@@ -814,10 +814,19 @@ async function extractPreviousOrWsCheckpoint(
    * 3. If we have a block corresponding to wsCheckpoint below belowSlot, so that is a candidate
    *    for the next "previous finalized or ws checkpoint"
    *  */
-  const wsCheckpointSlot =
+  let wsCheckpointSlot =
     wsCheckpointHeader !== null && wsCheckpointHeader.slot < belowSlot
       ? (await db.blockArchive.getByRoot(wsCheckpointHeader.root))?.message.slot ?? GENESIS_SLOT
       : GENESIS_SLOT;
+
+  /**
+   * We could still get wsCheckpointSlot >= belowSlot if   wsCheckpointSlot is not at
+   * epoch boundary, so wsCheckpointHeader.slot < belowSlot as wsCheckpointHeader.slot
+   * is a calculated estimate for estimating when to verify asap.
+   * In case this happens, wsCheckpoint would already be verified or starting point of
+   * backfillSync.
+   */
+  if (wsCheckpointSlot >= belowSlot) wsCheckpointSlot = GENESIS_SLOT;
 
   /**
    * 1. If there is a backfilledRanges key (backfilledRanges key is always a previous finalized
