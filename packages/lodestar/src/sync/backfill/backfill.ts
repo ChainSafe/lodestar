@@ -692,6 +692,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
     const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot] as List<Root>);
     if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
+
+    /** GENESIS_SLOT doesn't has valid signature */
+    if (anchorBlock.message.slot === GENESIS_SLOT) return;
     await verifyBlockProposerSignature(this.chain.bls, this.chain.getHeadState(), [anchorBlock]);
 
     /**
