@@ -145,7 +145,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private prevFinalizedCheckpointBlock: BackfillBlockHeader;
   /** Starting point that this specific backfill sync "session" started from */
   private backfillStartFromSlot: Slot;
-  private backfillRangeWrittenSlot: Slot | null = null;
+  private backfillRangeWrittenSlot: Slot | null;
 
   private processor = new ItTrigger();
   private peers = new PeerSet();
@@ -156,6 +156,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     this.syncAnchor = modules.syncAnchor;
     this.backfillStartFromSlot = modules.backfillStartFromSlot;
+    this.backfillRangeWrittenSlot = modules.backfillRangeWrittenSlot;
     this.prevFinalizedCheckpointBlock = modules.prevFinalizedCheckpointBlock;
     this.wsCheckpointHeader = modules.wsCheckpointHeader;
 
