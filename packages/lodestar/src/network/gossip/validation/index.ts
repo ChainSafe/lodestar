@@ -1,4 +1,5 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Json} from "@chainsafe/ssz";
@@ -14,15 +15,14 @@ import {
   ProcessRpcMessageFn,
   GossipTopic,
   ProcessRpcMessageFnsByType,
+  GossipJobQueues,
 } from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
 import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
-import {GossipJobQueues} from "..";
 import {createProcessRpcMessageQueues} from "./queue";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
