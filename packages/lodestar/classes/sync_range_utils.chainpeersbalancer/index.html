@@ -361,7 +361,7 @@ Shuffles peers only once on instantiation</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ChainPeersBalancer</strong>(<code>peers</code>: PeerId[], <code>batches</code>: <a href="../sync_range.batch/">Batch</a>[]): <em><a href="./">ChainPeersBalancer</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L13">packages/lodestar/src/sync/range/utils/peerBalancer.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L13">packages/lodestar/src/sync/range/utils/peerBalancer.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -385,15 +385,15 @@ Shuffles peers only once on instantiation</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-activerequestsbypeer"><code>Private</code> activeRequestsByPeer<a class="headerlink" href="#private-activerequestsbypeer" title="Permanent link">¶</a></h3>
 <p>• <strong>activeRequestsByPeer</strong>: <em><a href="../util.peermap/">PeerMap</a>‹number›</em> = new PeerMap<number>()</number></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L13">packages/lodestar/src/sync/range/utils/peerBalancer.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L13">packages/lodestar/src/sync/range/utils/peerBalancer.ts:13</a></em></p>
 <hr/>
 <h3 id="private-peers"><code>Private</code> peers<a class="headerlink" href="#private-peers" title="Permanent link">¶</a></h3>
 <p>• <strong>peers</strong>: <em>PeerId[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L12">packages/lodestar/src/sync/range/utils/peerBalancer.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L12">packages/lodestar/src/sync/range/utils/peerBalancer.ts:12</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="bestpeertoretrybatch">bestPeerToRetryBatch<a class="headerlink" href="#bestpeertoretrybatch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>bestPeerToRetryBatch</strong>(<code>batch</code>: <a href="../sync_range.batch/">Batch</a>): <em>PeerId | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L30">packages/lodestar/src/sync/range/utils/peerBalancer.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L30">packages/lodestar/src/sync/range/utils/peerBalancer.ts:30</a></em></p>
 <p>Return the most suitable peer to retry
 Sort peers by (1) no failed request (2) less active requests, then pick first</p>
 <p><strong>Parameters:</strong></p>
@@ -415,7 +415,7 @@ Sort peers by (1) no failed request (2) less active requests, then pick first</p
 <hr/>
 <h3 id="idlepeers">idlePeers<a class="headerlink" href="#idlepeers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>idlePeers</strong>(): <em>PeerId[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L43">packages/lodestar/src/sync/range/utils/peerBalancer.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/sync/range/utils/peerBalancer.ts#L43">packages/lodestar/src/sync/range/utils/peerBalancer.ts:43</a></em></p>
 <p>Return peers with 0 or no active requests</p>
 <p><strong>Returns:</strong> <em>PeerId[]</em></p>
 </article>

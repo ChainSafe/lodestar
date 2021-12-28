@@ -421,7 +421,7 @@ Supports a single itemProcessor, for arbitrary functions use the JobFnQueue</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new JobItemQueue</strong>(<code>itemProcessor</code>: function, <code>opts</code>: <a href="../../modules/util_queue/#jobqueueopts">JobQueueOpts</a>, <code>metrics?</code>: <a href="../../modules/util_queue/#iqueuemetrics">IQueueMetrics</a>): <em><a href="./">JobItemQueue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L20">packages/lodestar/src/util/queue/itemQueue.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L20">packages/lodestar/src/util/queue/itemQueue.ts:20</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>itemProcessor</strong>: <em>function</em></p>
 <p>▸ (...<code>args</code>: Args): <em>Promise‹R›</em></p>
@@ -446,7 +446,7 @@ Supports a single itemProcessor, for arbitrary functions use the JobFnQueue</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-itemprocessor"><code>Private</code> <code>Readonly</code> itemProcessor<a class="headerlink" href="#private-readonly-itemprocessor" title="Permanent link">¶</a></h3>
 <p>• <strong>itemProcessor</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L23">packages/lodestar/src/util/queue/itemQueue.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L23">packages/lodestar/src/util/queue/itemQueue.ts:23</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <p>▸ (...<code>args</code>: Args): <em>Promise‹R›</em></p>
 <p><strong>Parameters:</strong></p>
@@ -467,42 +467,42 @@ Supports a single itemProcessor, for arbitrary functions use the JobFnQueue</p>
 <hr/>
 <h3 id="private-readonly-jobs"><code>Private</code> <code>Readonly</code> jobs<a class="headerlink" href="#private-readonly-jobs" title="Permanent link">¶</a></h3>
 <p>• <strong>jobs</strong>: <em>object[]</em> = []</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L12">packages/lodestar/src/util/queue/itemQueue.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L12">packages/lodestar/src/util/queue/itemQueue.ts:12</a></em></p>
 <hr/>
 <h3 id="private-lastyield"><code>Private</code> lastYield<a class="headerlink" href="#private-lastyield" title="Permanent link">¶</a></h3>
 <p>• <strong>lastYield</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L20">packages/lodestar/src/util/queue/itemQueue.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L20">packages/lodestar/src/util/queue/itemQueue.ts:20</a></em></p>
 <hr/>
 <h3 id="private-optional-readonly-metrics"><code>Private</code> <code>Optional</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-optional-readonly-metrics" title="Permanent link">¶</a></h3>
 <p>• <strong>metrics</strong>? : <em><a href="../../modules/util_queue/#iqueuemetrics">IQueueMetrics</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L18">packages/lodestar/src/util/queue/itemQueue.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L18">packages/lodestar/src/util/queue/itemQueue.ts:18</a></em></p>
 <hr/>
 <h3 id="private-readonly-opts"><code>Private</code> <code>Readonly</code> opts<a class="headerlink" href="#private-readonly-opts" title="Permanent link">¶</a></h3>
 <p>• <strong>opts</strong>: <em>Required‹<a href="../../modules/util_queue/#jobqueueopts">JobQueueOpts</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L11">packages/lodestar/src/util/queue/itemQueue.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L11">packages/lodestar/src/util/queue/itemQueue.ts:11</a></em></p>
 <hr/>
 <h3 id="private-runningjobs"><code>Private</code> runningJobs<a class="headerlink" href="#private-runningjobs" title="Permanent link">¶</a></h3>
 <p>• <strong>runningJobs</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L19">packages/lodestar/src/util/queue/itemQueue.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L19">packages/lodestar/src/util/queue/itemQueue.ts:19</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-abortalljobs"><code>Private</code> abortAllJobs<a class="headerlink" href="#private-abortalljobs" title="Permanent link">¶</a></h3>
 <p>▸ <strong>abortAllJobs</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L105">packages/lodestar/src/util/queue/itemQueue.ts:105</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L105">packages/lodestar/src/util/queue/itemQueue.ts:105</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="dropalljobs">dropAllJobs<a class="headerlink" href="#dropalljobs" title="Permanent link">¶</a></h3>
 <p>▸ <strong>dropAllJobs</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L62">packages/lodestar/src/util/queue/itemQueue.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L62">packages/lodestar/src/util/queue/itemQueue.ts:62</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="getitems">getItems<a class="headerlink" href="#getitems" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getItems</strong>(): <em>object[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L58">packages/lodestar/src/util/queue/itemQueue.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L58">packages/lodestar/src/util/queue/itemQueue.ts:58</a></em></p>
 <p><strong>Returns:</strong> <em>object[]</em></p>
 <hr/>
 <h3 id="push">push<a class="headerlink" href="#push" title="Permanent link">¶</a></h3>
 <p>▸ <strong>push</strong>(...<code>args</code>: Args): <em>Promise‹R›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L36">packages/lodestar/src/util/queue/itemQueue.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L36">packages/lodestar/src/util/queue/itemQueue.ts:36</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -522,7 +522,7 @@ Supports a single itemProcessor, for arbitrary functions use the JobFnQueue</p>
 <hr/>
 <h3 id="private-runjob"><code>Private</code> runJob<a class="headerlink" href="#private-runjob" title="Permanent link">¶</a></h3>
 <p>▸ <strong>runJob</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/38dbc47/packages/lodestar/src/util/queue/itemQueue.ts#L66">packages/lodestar/src/util/queue/itemQueue.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fcbc459/packages/lodestar/src/util/queue/itemQueue.ts#L66">packages/lodestar/src/util/queue/itemQueue.ts:66</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 </article>
 </div>
