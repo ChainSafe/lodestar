@@ -108,6 +108,8 @@ export class Eth2Gossipsub extends Gossipsub {
       metrics,
       signal,
     });
+    // this.processRpcMessageFnsByType has the same logic to libp2p-gossipsub Gossipsub._processRpcMessage
+    // except that it wraps that logic in a queue
     const {processRpcMessagesFnByType, jobQueues} = createProcessRpcMessageFnsByType(
       super._processRpcMessage.bind(this),
       signal,
@@ -217,19 +219,14 @@ export class Eth2Gossipsub extends Gossipsub {
     return true;
   }
 
-  // // Snippet of _processRpcMessage from https://github.com/libp2p/js-libp2p-interfaces/blob/92245d66b0073f0a72fed9f7abcf4b533102f1fd/packages/interfaces/src/pubsub/index.js#L442
-  // async _processRpcMessage(msg: InMessage): Promise<void> {
-  //   try {
-  //     await this.validate(msg);
-  //   } catch (err) {
-  //     this.log("Message is invalid, dropping it. %O", err);
-  //     return;
-  //   }
-  // }
-
   /**
-   * Extend super._processRpcMessage() to wrap its logic in queue,
-   * this is the entry point for lodestar gossip queue implementation.
+   * The same logic to libp2p-gossipsub Gossipsub._processRpcMessage() but we wrap its logic in queues,
+   * this is the entry point for lodestar gossip queue implementation, see the constructor for how we create the queue.
+   * libp2p-gossipsub Gossipsub._processRpcMessage() will then call libp2p-interface
+   * PubsubBaseProtocol._processRpcMessage()
+   * See https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.11.1/ts/index.ts#L417
+   * which call lodestar Eth2Gossipsub.validate() in the end
+   * See https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L442
    */
   async _processRpcMessage(message: InMessage): Promise<void> {
     // messages must have a single topicID
@@ -246,9 +243,12 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   /**
-   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
-   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
-   * Note: this executes in queues and does not call super. All logic is re-implemented below
+   * This is called from libp2p-interface PubsubBaseProtocol._processRpcMessage()
+   * See https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L449
+   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L567
+   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.11.1/ts/index.ts#L436
+   * Note: this runs inside queues (see _processRpcMessage() above) and does not call super.
+   * All logic is re-implemented below.
    */
   async validate(message: InMessage): Promise<void> {
     try {
