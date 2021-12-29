@@ -306,12 +306,19 @@
 <p>To select a known testnet or mainnet, use the <code>--network</code> flag. <code>mainnet</code> is selected by default, and a list of available networks is listed with the <code>--help</code> flag. Setting the <code>--network</code> flag will conveniently configure the beacon node or validator client for the selected network. For power users, any configuration option should be able to be overridden.</p>
 <h2 id="initialize-a-beacon-node-optional">Initialize a beacon node (optional)<a class="headerlink" href="#initialize-a-beacon-node-optional" title="Permanent link">¶</a></h2>
 <p>If you would like to initialize your beacon node with the basic files required to run on a testnet or mainnet before actually running the node (Especially useful for configuring a new testnet), you can run the following command:</p>
-<div class="highlight"><pre><span></span><code>./lodestar beacon init --network <span class="nv">$NETWORK_NAME</span>
+<div class="highlight"><pre><span></span><code>./lodestar init --network <span class="nv">$NETWORK_NAME</span>
 </code></pre></div>
 <p>By default, lodestar stores all configuration and chain data at the path <code>$XDG_DATA_HOME/lodestar/$NETWORK_NAME</code>.</p>
 <h2 id="run-a-beacon-node">Run a beacon node<a class="headerlink" href="#run-a-beacon-node" title="Permanent link">¶</a></h2>
 <p>To start a Lodestar beacon run the command:</p>
 <div class="highlight"><pre><span></span><code>./lodestar beacon --network <span class="nv">$NETWORK_NAME</span>
+</code></pre></div>
+<p>This will assume an eth1 client is available at the default location of <code>localhost:8545</code>. </p>
+<p>In case eth1 clients are available at different locations, use <code>--eth1.providerUrls</code> to specify these locations in the command: </p>
+<div class="highlight"><pre><span></span><code>./lodestar beacon --network <span class="nv">$NETWORK_NAME</span> --eth1.providerUrls eth1.url1 eth1.url2
+</code></pre></div>
+<p>It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the <code>eth1.enabled</code> option in the command: </p>
+<div class="highlight"><pre><span></span><code>./lodestar beacon --eth1.enabled <span class="nb">false</span> --network <span class="nv">$NETWORK_NAME</span>
 </code></pre></div>
 <p>Immediately you should see confirmation that the node has started</p>
 <div class="highlight"><pre><span></span><code>Jul-09 <span class="m">17</span>:32:34.895 <span class="o">[]</span>                 info: Lodestar <span class="nv">version</span><span class="o">=</span><span class="m">0</span>.26.0 master 8058d367, <span class="nv">network</span><span class="o">=</span>prater
