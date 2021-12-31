@@ -160,6 +160,17 @@ export function createLodestarMetrics(
       }),
     },
 
+    gossipPeer: {
+      scoreByThreshold: register.gauge<"threshold">({
+        name: "lodestar_gossip_peer_score_by_threshold_count",
+        help: "Gossip peer score by threashold",
+        labelNames: ["threshold"],
+      }),
+      score: register.avgMinMax({
+        name: "lodestar_gossip_score_avg_min_max",
+        help: "Avg min max of all gossip peer scores",
+      }),
+    },
     gossipMesh: {
       peersByType: register.gauge<"type" | "fork">({
         name: "lodestar_gossip_mesh_peers_by_type_count",
