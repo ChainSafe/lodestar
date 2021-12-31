@@ -456,6 +456,31 @@ export class Eth2Gossipsub extends Gossipsub {
         }
       }
     }
+
+    // track gossip peer score
+    let peerCountScoreGraylist = 0;
+    let peerCountScorePublish = 0;
+    let peerCountScoreGossip = 0;
+    let peerCountScoreMesh = 0;
+    const {graylistThreshold, publishThreshold, gossipThreshold} = gossipScoreThresholds;
+    const {scoreByThreshold, score: scoreMetric} = metrics.gossipPeer;
+    const gossipScores = [];
+
+    for (const peerIdStr of this.peers.keys()) {
+      const score = this.score.score(peerIdStr);
+      if (score >= graylistThreshold) peerCountScoreGraylist++;
+      if (score >= publishThreshold) peerCountScorePublish++;
+      if (score >= gossipThreshold) peerCountScoreGossip++;
+      if (score >= 0) peerCountScoreMesh++;
+      gossipScores.push(score);
+    }
+
+    scoreByThreshold.set({threshold: "graylist"}, peerCountScoreGraylist);
+    scoreByThreshold.set({threshold: "publish"}, peerCountScorePublish);
+    scoreByThreshold.set({threshold: "gossip"}, peerCountScoreGossip);
+    scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
+
+    scoreMetric.set(gossipScores);
   }
 }
 
