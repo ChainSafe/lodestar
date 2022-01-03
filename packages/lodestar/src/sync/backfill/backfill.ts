@@ -342,11 +342,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             /** Break sync loop and throw error */
             break;
           }
-          this.logger.verbose(
-            `Found the previous finalized or wsCheckpoint block with root=${toHexString(
-              this.prevFinalizedCheckpointBlock.root
-            )} at slot=${this.prevFinalizedCheckpointBlock.slot}`
-          );
+          this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
+            root: toHexString(this.prevFinalizedCheckpointBlock.root),
+            slot: this.prevFinalizedCheckpointBlock.slot,
+          });
           /**
            * 1. If this is not a genesis block save this block in DB as this wasn't saved
            *    earlier pending validation. Genesis block will be saved with extra validation
@@ -572,7 +571,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               prevBackfillCpBlock != null &&
               this.prevFinalizedCheckpointBlock.slot === prevBackfillCpBlock.message.slot
             ) {
-              this.logger.verbose("previous finalized or wsCheckpoint found!", {
+              this.logger.verbose("Validated current prevFinalizedCheckpointBlock", {
                 root: toHexString(this.prevFinalizedCheckpointBlock.root),
                 slot: prevBackfillCpBlock.message.slot,
               });
@@ -859,7 +858,7 @@ async function extractPreviousFinOrWsCheckpoint(
     const header = blockToHeader(config, nextPrevFinOrWsBlock.message);
     const root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
     prevFinalizedCheckpointBlock = {root, slot: nextPrevFinOrWsBlock.message.slot};
-    logger?.verbose("Found a previous non validated finalized or wsCheckpoint block", {
+    logger?.debug("Extracted new prevFinalizedCheckpointBlock as potential previous finalized or wsCheckpoint", {
       root: toHexString(prevFinalizedCheckpointBlock.root),
       slot: prevFinalizedCheckpointBlock.slot,
     });
