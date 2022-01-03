@@ -200,9 +200,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   /**
-   * Use the root of the anchorState of the beacon node as the starting point of the backfill sync
-   * with its expected slot to be anchorState.slot, which will be validated once the block
-   * is resolved in the backfill sync.
+   * Use the root of the anchorState of the beacon node as the starting point of the
+   * backfill sync with its expected slot to be anchorState.slot, which will be
+   * validated once the block is resolved in the backfill sync.
+   *
+   * NOTE: init here is quite light involving couple of
+   *
+   *   1. db keys lookup in stateArchive/backfilledRanges
+   *   2. computing root(s) for anchorBlockRoot and prevFinalizedCheckpointBlock
    */
   static async init<T extends BackfillSync = BackfillSync>(
     modules: BackfillSyncModules,
@@ -245,7 +250,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const wsCheckpointHeader: BackfillBlockHeader | null = wsCheckpoint
       ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
       : null;
-    const prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
       config,
       db,
       anchorState.slot,
@@ -364,7 +369,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
               this.syncAnchor.lastBackSyncedBlock.block
             );
           }
-          this.prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+          this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
             this.config,
             this.db,
             this.syncAnchor.lastBackSyncedBlock.slot,
@@ -615,7 +620,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
              * prevFinalizedCheckpointBlock must have been validated, update to a new unverified
              * finalized or wsCheckpoint behind the new lastBackSyncedBlock
              */
-            this.prevFinalizedCheckpointBlock = await extractPreviousOrWsCheckpoint(
+            this.prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(
               this.config,
               this.db,
               jumpBackTo,
@@ -789,7 +794,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 }
 
-async function extractPreviousOrWsCheckpoint(
+async function extractPreviousFinOrWsCheckpoint(
   config: IChainForkConfig,
   db: IBeaconDb,
   belowSlot: Slot,
@@ -799,14 +804,22 @@ async function extractPreviousOrWsCheckpoint(
   /** Anything below genesis block is just zero hash */
   if (belowSlot <= GENESIS_SLOT) return {root: ZERO_HASH, slot: belowSlot - 1};
 
-  const lastDbState = (
-    await db.stateArchive.values({
-      lt: belowSlot,
-      reverse: true,
-      limit: 1,
-    })
-  )[0];
-  const lastDbStateSlot = lastDbState?.slot ?? GENESIS_SLOT;
+  /**
+   * Keys of stateArchive are slots where finalized state has been written in db, and are
+   * potential point(s) of verification.
+   *
+   * We could have also used blockArchive, but in a previously written (and potentially)
+   * huge segment of blocks, that would throw up as many verification points as blocks
+   *  written. Keys of stateArchive are far more sparce in comparision.
+   */
+  const lastDbStateSlot =
+    (
+      await db.stateArchive.keys({
+        lt: belowSlot,
+        reverse: true,
+        limit: 1,
+      })
+    )[0] ?? GENESIS_SLOT;
 
   /**
    * 1. If wsCheckpoint is above or equal to belowSlot, it has been verified so it has
