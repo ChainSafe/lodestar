@@ -12424,7 +12424,26 @@
                 ]
               }
             },
-            "overrides": []
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "prev finalized or ws slot for validation"
+                },
+                "properties": [
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "dash": [
+                        10,
+                        10
+                      ],
+                      "fill": "dash"
+                    }
+                  }
+                ]
+              }
+            ]
           },
           "gridPos": {
             "h": 8,
@@ -12456,7 +12475,7 @@
               "expr": "lodestar_backfill_prev_fin_or_ws_slot",
               "hide": false,
               "interval": "",
-              "legendFormat": "prev finalized or ws slot to validate",
+              "legendFormat": "prev finalized or ws slot for validation",
               "refId": "B"
             }
           ],
