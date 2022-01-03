@@ -21,16 +21,24 @@ import SHA256 from "@chainsafe/as-sha256";
 //
 // # Collisions rates
 // (not hashed, byte offset = 1)
-// bytes 1, collision rate 1
-// bytes 2, collision rate 0.92230224609375
-// bytes 3, collision rate 0.00013267993927001953
-// bytes 4, collision rate 2.0954757928848267e-9
+// bytes 1, collisions 256, collisions rate 1
+// bytes 2, collisions 60444, collisions rate 0.92230224609375
+// bytes 3, collisions 2226, collisions rate 0.00013267993927001953
+// bytes 4, collisions 9, collisions rate 2.0954757928848267e-9
+// bytes 5, collisions 0, collisions rate 0
+// bytes 6, collisions 0, collisions rate 0
+// bytes 7, collisions 0, collisions rate 0
+// bytes 8, collisions 0, collisions rate 0
 //
 // (hashed)
-// bytes 1, collision rate 1
-// bytes 2, collision rate 0.92401123046875
-// bytes 3, collision rate 0.00013625621795654297
-// bytes 4, collision rate 3.026798367500305e-9
+// bytes 1, collisions 256, collisions rate 1
+// bytes 2, collisions 60556, collisions rate 0.92401123046875
+// bytes 3, collisions 2286, collisions rate 0.00013625621795654297
+// bytes 4, collisions 13, collisions rate 3.026798367500305e-9
+// bytes 5, collisions 0, collisions rate 0
+// bytes 6, collisions 0, collisions rate 0
+// bytes 7, collisions 0, collisions rate 0
+// bytes 8, collisions 0, collisions rate 0
 
 const filepath = "mainnet_pubkeys.csv";
 
@@ -72,9 +80,9 @@ function analyzeBytesFrequencies(pubkeys: string[]): void {
 
 function analyzeBytesCollisions(pubkeys: string[]): void {
   const offset = 1;
-  const useHash = true;
+  const useHash = false;
 
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 8; i++) {
     const keySet = new Set<string>();
     const collisions = new Map<string, number>();
 
@@ -96,7 +104,7 @@ function analyzeBytesCollisions(pubkeys: string[]): void {
     }
 
     // eslint-disable-next-line no-console
-    console.log(`bytes ${i}, collision rate ${collisions.size / 256 ** i}`);
+    console.log(`bytes ${i}, collisions ${collisions.size}, collisions rate ${collisions.size / 256 ** i}`);
   }
 }
 

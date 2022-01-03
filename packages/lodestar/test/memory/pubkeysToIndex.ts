@@ -26,6 +26,18 @@ testRunnerMemoryBpi([
     getInstance: () => getRandomMap(pkCount, () => crypto.randomBytes(48).toString("hex")),
   },
   {
+    id: "Map BLS pubkey 8 bytes hex",
+    getInstance: () => getRandomMap(pkCount, () => crypto.randomBytes(8).toString("hex")),
+  },
+  {
+    id: "Map BLS pubkey 8 bytes base64",
+    getInstance: () => getRandomMap(pkCount, () => crypto.randomBytes(8).toString("base64")),
+  },
+  {
+    id: "Map BLS pubkey 6 bytes hex",
+    getInstance: () => getRandomMap(pkCount, () => crypto.randomBytes(6).toString("hex")),
+  },
+  {
     id: "Map BLS pubkey 4 bytes hex",
     getInstance: () => getRandomMap(pkCount, () => crypto.randomBytes(4).toString("hex")),
   },

@@ -91,7 +91,7 @@ export function processDeposit(
     }
 
     // now that there is a new validator, update the epoch context with the new pubkey
-    epochCtx.addPubkey(validators.length - 1, pubkey);
+    epochCtx.addPubkey(validators.length - 1, pubkey, state);
   } else {
     // increase balance by deposit amount
     increaseBalance(state, cachedIndex, Number(amount));
