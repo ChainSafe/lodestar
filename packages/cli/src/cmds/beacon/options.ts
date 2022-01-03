@@ -154,6 +154,13 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
     description: "Path to output all logs to a persistent log file",
     type: "string",
   },
+
+  bootnodesFile: {
+    hidden: true,
+    description: "Bootnode ENR file path",
+    defaultDescription: defaultBeaconPaths.bootnodesFile,
+    type: "string",
+  },
 };
 
 export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs;
