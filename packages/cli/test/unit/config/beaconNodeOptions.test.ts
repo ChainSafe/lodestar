@@ -1,5 +1,4 @@
-import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {defaultOptions} from "@chainsafe/lodestar";
 import {expect} from "chai";
 import fs from "fs";
 import path from "path";
@@ -39,14 +38,14 @@ describe("config / beaconNodeOptions", () => {
     const rootDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, expectedBootEnr);
+
     const beaconPaths = getBeaconPaths({rootDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
-    const injectableBootEnrs = await getInjectableBootEnrs(beaconPaths.bootnodesFile);
-
     const beaconNodeOptions = new BeaconNodeOptions({
       network: "pyrmont",
-      beaconNodeOptionsCli: injectableBootEnrs,
+      bootnodesFile: beaconPaths.bootnodesFile,
+      beaconNodeOptionsCli: {},
     });
 
     // Asserts only part of the data structure to avoid unnecesary duplicate code
@@ -61,15 +60,14 @@ describe("config / beaconNodeOptions", () => {
     const rootDir = testFilesDir;
     const bootnodesFile = path.join(testFilesDir, "bootnodesFile.txt");
     fs.writeFileSync(bootnodesFile, bootnodesFileContent);
+
     const beaconPaths = getBeaconPaths({rootDir});
     beaconPaths.bootnodesFile = bootnodesFile;
 
-    const injectableBootEnrs = await getInjectableBootEnrs(beaconPaths.bootnodesFile);
-    const beaconNodeOptionsCli = mergeBeaconNodeOptions(injectableBootEnrs, enrsToNetworkConfig([expectedBootEnr]));
-
     const beaconNodeOptions = new BeaconNodeOptions({
       network: "pyrmont",
-      beaconNodeOptionsCli,
+      bootnodesFile: beaconPaths.bootnodesFile,
+      beaconNodeOptionsCli: enrsToNetworkConfig([expectedBootEnr]),
     });
 
     // Asserts only part of the data structure to avoid unnecesary duplicate code
@@ -193,16 +191,6 @@ enr:-Ku4QPp9z1W4tAO8Ber_NQierYaOStqhDqQdOPY3bB3jDgkjcbk6YrEnVYIiCBbTxuar3CzS528d
 });
 
 describe("mergeBeaconNodeOptions", () => {
-  const enrsToNetworkConfig = (enrs: string[]): RecursivePartial<IBeaconNodeOptions> => {
-    return {
-      network: {
-        discv5: {
-          bootEnrs: enrs,
-        },
-      },
-    };
-  };
-
   const testCases: {name: string; networkEnrs: string[]; cliEnrs: string[]; resultEnrs: string[]}[] = [
     {name: "normal case", networkEnrs: ["enr-1", "enr-2", "enr-3"], cliEnrs: ["new-enr"], resultEnrs: ["new-enr"]},
     // TODO: investigate arrayMerge has no effect?
