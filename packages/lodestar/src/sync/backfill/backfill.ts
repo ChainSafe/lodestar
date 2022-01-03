@@ -196,6 +196,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           this.syncAnchor.lastBackSyncedBlock?.slot ?? this.backfillStartFromSlot
         )
       );
+      metrics.backfillSync.prevFinOrWsSlot.addCollect(() =>
+        metrics.backfillSync.prevFinOrWsSlot.set(Math.max(this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT))
+      );
     }
   }
 

@@ -431,6 +431,10 @@ export function createLodestarMetrics(
         name: "lodestar_backfill_till_slot",
         help: "Current lowest backfilled slot",
       }),
+      prevFinOrWsSlot: register.gauge({
+        name: "lodestar_backfill_prev_fin_or_ws_slot",
+        help: "Slot of previous finalized or wsCheckpoint block to be validated",
+      }),
       totalBlocks: register.gauge<"method">({
         name: "lodestar_backfill_sync_blocks_total",
         help: "Total amount of backfilled blocks",
