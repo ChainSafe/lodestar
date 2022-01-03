@@ -8,8 +8,8 @@ import {TreeBacked} from "@chainsafe/ssz";
 import fs from "fs";
 import got from "got";
 import * as mainnet from "./mainnet";
-import * as prater from "./prater";
 import * as pyrmont from "./pyrmont";
+import * as prater from "./prater";
 
 export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
 export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
