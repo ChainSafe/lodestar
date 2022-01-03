@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
-import {enrsToNetworkConfig, getInjectableBootEnrs, parseBootnodesFile} from "../../../src/networks";
+import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks";
 import {bootEnrs as pyrmontBootEnrs} from "../../../src/networks/pyrmont";
 import {testFilesDir} from "../../utils";
 
