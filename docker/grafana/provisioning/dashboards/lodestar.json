@@ -12349,7 +12349,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 24
+            "y": 39
           },
           "id": 315,
           "options": {
@@ -12430,13 +12430,13 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 24
+            "y": 39
           },
           "id": 317,
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "hidden",
+              "displayMode": "list",
               "placement": "bottom"
             },
             "tooltip": {
@@ -12448,11 +12448,19 @@
               "exemplar": false,
               "expr": "lodestar_backfill_till_slot",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "last backfilled slot",
               "refId": "A"
+            },
+            {
+              "exemplar": false,
+              "expr": "lodestar_backfill_prev_fin_or_ws_slot",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "prev finalized or ws slot to validate",
+              "refId": "B"
             }
           ],
-          "title": "Backfilled Till Slot",
+          "title": "Backfilled Till",
           "type": "timeseries"
         },
         {
@@ -12513,7 +12521,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 32
+            "y": 47
           },
           "id": 319,
           "options": {
@@ -12594,7 +12602,7 @@
             "h": 8,
             "w": 12,
             "x": 12,
-            "y": 32
+            "y": 47
           },
           "id": 321,
           "options": {
