@@ -81,7 +81,7 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
 /**
  * Reads and parses a list of bootnodes for a network from a file.
  */
-export async function readBootnodes(bootnodesFilePath: string): Promise<string[]> {
+export function readBootnodes(bootnodesFilePath: string): string[] {
   const bootnodesFile = fs.readFileSync(bootnodesFilePath, "utf8");
 
   const bootnodes = parseBootnodesFile(bootnodesFile);
@@ -115,10 +115,8 @@ export function parseBootnodesFile(bootnodesFile: string): string[] {
  * Parses a file to get a list of bootnodes for a network if given a valid path,
  * and returns the bootnodes in an "injectable" network options format.
  */
-export async function getInjectableBootEnrs(
-  bootnodesFilepath: string | undefined
-): Promise<RecursivePartial<IBeaconNodeOptions>> {
-  const bootEnrs = bootnodesFilepath ? await readBootnodes(bootnodesFilepath) : [];
+export function getInjectableBootEnrs(bootnodesFilepath: string): RecursivePartial<IBeaconNodeOptions> {
+  const bootEnrs = readBootnodes(bootnodesFilepath);
   const injectableBootEnrs = enrsToNetworkConfig(bootEnrs);
 
   return injectableBootEnrs;
