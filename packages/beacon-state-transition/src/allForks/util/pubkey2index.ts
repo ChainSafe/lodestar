@@ -18,6 +18,8 @@ const BYTES_PER_BLS_PUBKEY = 48;
 
 /**
  * Pubkey map with short keys to save memory. Each value may contain an index or a sub map if there are collisions.
+ *
+ * NOTE: Will return incorrect results if doing .get() on a pubkey that collides
  */
 export class PubkeyIndexMap {
   // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
@@ -67,14 +69,15 @@ export class PubkeyIndexMap {
         throw Error(`Attempting to set existing PubkeyIndexMap entry prevIndex: ${indexOrMap} index: ${index}`);
       }
 
-      // Set map in current map
       const submap = new PubkeyIndexMap(bytesOffset);
-      this.map.set(key, submap);
 
       // Add prev entry and new entry
       const prevPubkey = state.validators[indexOrMap].pubkey.valueOf() as Uint8Array;
       submap.set(prevPubkey, indexOrMap, state);
       submap.set(pubkey, index, state);
+
+      // Commit the new submap after storing both keys in case they are the same and .set() throws
+      this.map.set(key, submap);
     }
 
     // Already existing submap, forward call
