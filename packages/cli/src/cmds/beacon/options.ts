@@ -157,7 +157,7 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
 
   bootnodesFile: {
     hidden: true,
-    description: "Bootnode ENR file path",
+    description: "Bootnodes file path",
     defaultDescription: defaultBeaconPaths.bootnodesFile,
     type: "string",
   },
