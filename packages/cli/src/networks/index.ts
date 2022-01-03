@@ -82,14 +82,15 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
  * Reads and parses a list of bootnodes for a network from a file.
  */
 export async function readBootnodes(bootnodesFilePath: string): Promise<string[]> {
-  if (!fs.existsSync(bootnodesFilePath)) {
-    // eslint-disable-next-line no-console
-    console.error("Bootnode file not found. Using default bootnodes.");
-    return [];
-  }
   const bootnodesFile = fs.readFileSync(bootnodesFilePath, "utf8");
 
-  return parseBootnodesFile(bootnodesFile);
+  const bootnodes = parseBootnodesFile(bootnodesFile);
+
+  if (bootnodes.length === 0) {
+    throw new Error(`No bootnodes found on file ${bootnodesFilePath}`);
+  }
+
+  return bootnodes;
 }
 
 /**
