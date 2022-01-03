@@ -44,9 +44,6 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
     beaconNodeOptionsCli,
   });
 
-  // eslint-disable-next-line no-console
-  console.log(beaconNodeOptions.get()?.network?.discv5?.bootEnrs);
-
   // Auto-setup network
   // Only download files if network.discv5.bootEnrs arg is not specified
   const bOpts = beaconNodeOptions.get();
