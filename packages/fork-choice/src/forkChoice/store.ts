@@ -1,5 +1,5 @@
 import {phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
+import {toHexNoPrefix} from "../util";
 
 /**
  * Stores checkpoints in a hybrid format:
@@ -79,7 +79,7 @@ export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWi
   return {
     epoch: checkpoint.epoch,
     root,
-    rootHex: toHexString(root),
+    rootHex: toHexNoPrefix(root),
   };
 }
 

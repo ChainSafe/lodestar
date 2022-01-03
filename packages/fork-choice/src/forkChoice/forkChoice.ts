@@ -1,4 +1,4 @@
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {readonlyValues} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
 import {
@@ -15,6 +15,7 @@ import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../prot
 import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
+import {toHexNoPrefix} from "../util";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
@@ -240,7 +241,7 @@ export class ForkChoice implements IForkChoice {
    */
   onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void {
     const {parentRoot, slot} = block;
-    const parentRootHex = toHexString(parentRoot);
+    const parentRootHex = toHexNoPrefix(parentRoot);
     // Parent block must be known
     if (!this.protoArray.hasBlock(parentRootHex)) {
       throw new ForkChoiceError({
@@ -363,21 +364,21 @@ export class ForkChoice implements IForkChoice {
     // it can still be identified as the head even if it doesn't have any votes.
     this.protoArray.onBlock({
       slot: slot,
-      blockRoot: toHexString(blockRoot),
+      blockRoot: toHexNoPrefix(blockRoot),
       parentRoot: parentRootHex,
-      targetRoot: toHexString(targetRoot),
-      stateRoot: toHexString(block.stateRoot),
+      targetRoot: toHexNoPrefix(targetRoot),
+      stateRoot: toHexNoPrefix(block.stateRoot),
 
       justifiedEpoch: stateJustifiedEpoch,
-      justifiedRoot: toHexString(state.currentJustifiedCheckpoint.root),
+      justifiedRoot: toHexNoPrefix(state.currentJustifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
-      finalizedRoot: toHexString(state.finalizedCheckpoint.root),
+      finalizedRoot: toHexNoPrefix(state.finalizedCheckpoint.root),
 
       ...(merge.isMergeBlockBodyType(block.body) &&
       merge.isMergeStateType(state) &&
       merge.isExecutionEnabled(state, block.body)
         ? {
-            executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
+            executionPayloadBlockHash: toHexNoPrefix(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),
           }
         : {executionPayloadBlockHash: null, executionStatus: this.getPreMergeExecStatus(preCachedData)}),
@@ -418,7 +419,7 @@ export class ForkChoice implements IForkChoice {
     // to genesis just by being present in the chain.
     const attestationData = attestation.data;
     const {slot, beaconBlockRoot} = attestationData;
-    const blockRootHex = toHexString(beaconBlockRoot);
+    const blockRootHex = toHexNoPrefix(beaconBlockRoot);
     const epoch = attestationData.target.epoch;
     if (ssz.Root.equals(beaconBlockRoot, ZERO_HASH)) {
       return;
@@ -477,11 +478,11 @@ export class ForkChoice implements IForkChoice {
 
   /** Returns `true` if the block is known **and** a descendant of the finalized root. */
   hasBlock(blockRoot: Root): boolean {
-    return this.hasBlockHex(toHexString(blockRoot));
+    return this.hasBlockHex(toHexNoPrefix(blockRoot));
   }
   /** Returns a `IProtoBlock` if the block is known **and** a descendant of the finalized root. */
   getBlock(blockRoot: Root): IProtoBlock | null {
-    return this.getBlockHex(toHexString(blockRoot));
+    return this.getBlockHex(toHexNoPrefix(blockRoot));
   }
 
   /**
@@ -717,7 +718,7 @@ export class ForkChoice implements IForkChoice {
     //
     // A prior `if` statement protects against a justified_slot that is greater than
     // `state.slot`
-    const justifiedAncestor = this.getAncestor(toHexString(newJustifiedCheckpoint.root), justifiedSlot);
+    const justifiedAncestor = this.getAncestor(toHexNoPrefix(newJustifiedCheckpoint.root), justifiedSlot);
     if (justifiedAncestor !== this.fcStore.justifiedCheckpoint.rootHex) {
       return false;
     }
@@ -752,9 +753,9 @@ export class ForkChoice implements IForkChoice {
     const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
     const attestationData = indexedAttestation.data;
     const {target, slot, beaconBlockRoot} = attestationData;
-    const beaconBlockRootHex = toHexString(beaconBlockRoot);
+    const beaconBlockRootHex = toHexNoPrefix(beaconBlockRoot);
     const {epoch: targetEpoch, root: targetRoot} = target;
-    const targetRootHex = toHexString(targetRoot);
+    const targetRootHex = toHexNoPrefix(targetRoot);
 
     // Attestation must be from the current of previous epoch.
     if (targetEpoch > epochNow) {
@@ -808,7 +809,7 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
-          root: toHexString(targetRoot),
+          root: toHexNoPrefix(targetRoot),
         },
       });
     }
@@ -827,7 +828,7 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
-          beaconBlockRoot: toHexString(beaconBlockRoot),
+          beaconBlockRoot: toHexNoPrefix(beaconBlockRoot),
         },
       });
     }
@@ -843,7 +844,7 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.INVALID_TARGET,
-          attestation: toHexString(targetRoot),
+          attestation: toHexNoPrefix(targetRoot),
           local: expectedTargetHex,
         },
       });
@@ -951,7 +952,7 @@ function assertValidTerminalPowBlock(
     // powBock.blockhash is hex, so we just pick the corresponding root
     if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
       throw new Error(
-        `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
+        `Invalid terminal block hash, expected: ${toHexNoPrefix(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexNoPrefix(
           block.body.executionPayload.parentHash
         )}`
       );
