@@ -1,8 +1,16 @@
 import fs from "fs";
-import {BeaconNodeOptions, getBeaconConfigFromArgs, initPeerId, initEnr, readPeerId, readEnr} from "../../config";
+import {
+  BeaconNodeOptions,
+  getBeaconConfigFromArgs,
+  initPeerId,
+  initEnr,
+  readPeerId,
+  readEnr,
+  mergeBeaconNodeOptions,
+} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";
-import {fetchBootnodes} from "../../networks";
+import {fetchBootnodes, getInjectableBootEnrs} from "../../networks";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -23,11 +31,21 @@ export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<Retu
 
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
+
+  const injectableBootEnrs = await getInjectableBootEnrs(beaconPaths.bootnodesFile);
+  // Merge CLI-provided beacon options in order:
+  // - Injected bootnode ENRs if its specified
+  // - Any other options obtained through CLI
+  const beaconNodeOptionsCli = mergeBeaconNodeOptions(injectableBootEnrs, parseBeaconNodeArgs(args));
+
   const beaconNodeOptions = new BeaconNodeOptions({
     network: args.network || "mainnet",
     configFile: beaconPaths.configFile,
-    beaconNodeOptionsCli: parseBeaconNodeArgs(args),
+    beaconNodeOptionsCli,
   });
+
+  // eslint-disable-next-line no-console
+  console.log(beaconNodeOptions.get()?.network?.discv5?.bootEnrs);
 
   // Auto-setup network
   // Only download files if network.discv5.bootEnrs arg is not specified
