@@ -79,7 +79,7 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
 }
 
 /**
- * Reads a list of bootnodes for a network from a file.
+ * Reads and parses a list of bootnodes for a network from a file.
  */
 export async function readBootnodes(bootnodesFilePath: string): Promise<string[]> {
   if (!fs.existsSync(bootnodesFilePath)) {
@@ -94,7 +94,8 @@ export async function readBootnodes(bootnodesFilePath: string): Promise<string[]
 
 /**
  * Parses a file to get a list of bootnodes for a network.
- * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines
+ * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines, or commas for
+ * parsing plaintext, YAML, JSON and/or env files.
  */
 export function parseBootnodesFile(bootnodesFile: string): string[] {
   const enrs = [];
@@ -109,14 +110,10 @@ export function parseBootnodesFile(bootnodesFile: string): string[] {
   return enrs;
 }
 
-export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
-  if (enrs.length === 0) {
-    return {};
-  }
-
-  return {network: {discv5: {bootEnrs: enrs}}};
-}
-
+/**
+ * Parses a file to get a list of bootnodes for a network if given a valid path,
+ * and returns the bootnodes in an "injectable" network options format.
+ */
 export async function getInjectableBootEnrs(
   bootnodesFilepath: string | undefined
 ): Promise<RecursivePartial<IBeaconNodeOptions>> {
@@ -124,6 +121,18 @@ export async function getInjectableBootEnrs(
   const injectableBootEnrs = enrsToNetworkConfig(bootEnrs);
 
   return injectableBootEnrs;
+}
+
+/**
+ * Given an array of bootnodes, returns them in an "injectable" format,
+ * or an empty object if given an empty array.
+ */
+export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
+  if (enrs.length === 0) {
+    return {};
+  }
+
+  return {network: {discv5: {bootEnrs: enrs}}};
 }
 
 /**
