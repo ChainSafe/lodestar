@@ -116,8 +116,6 @@ export class PeerManager {
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
 
-  private seenPeers = new Set<string>();
-
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
@@ -477,7 +475,6 @@ export class PeerManager {
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction});
-    this.seenPeers.add(peer.toB58String());
   };
 
   /**
@@ -540,7 +537,6 @@ export class PeerManager {
     }
 
     metrics.peers.set(total);
-    metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
     metrics.peersSync.set(syncPeers);
   }
 }
