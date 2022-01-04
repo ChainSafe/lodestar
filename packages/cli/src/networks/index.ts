@@ -125,14 +125,9 @@ export function getInjectableBootEnrs(bootnodesFilepath: string): RecursiveParti
 }
 
 /**
- * Given an array of bootnodes, returns them in an "injectable" format,
- * or an empty object if given an empty array.
+ * Given an array of bootnodes, returns them in an injectable format
  */
 export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
-  if (enrs.length === 0) {
-    return {};
-  }
-
   return {network: {discv5: {bootEnrs: enrs}}};
 }
 
