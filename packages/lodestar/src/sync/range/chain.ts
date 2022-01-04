@@ -429,7 +429,7 @@ export class SyncChain {
       this.triggerBatchProcessor();
     } else {
       this.logger.verbose("Batch process error", {id: this.logId, ...batch.getMetadata()}, res.err);
-      batch.processingError(); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
+      batch.processingError(res.err); // Throws after MAX_BATCH_PROCESSING_ATTEMPTS
 
       // At least one block was successfully verified and imported, so we can be sure all
       // previous batches are valid and we only need to download the current failed batch.
