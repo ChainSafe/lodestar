@@ -271,17 +271,16 @@ export class SyncChain {
       this.status = SyncChainStatus.Error;
       this.logger.verbose("SyncChain Error", {id: this.logId}, e as Error);
 
-      // A batch could not be processed after max retry limit. It's likely that all peers
-      // in this chain are sending invalid batches repeatedly so are either malicious or faulty.
-      // We drop the chain and report all peers.
-      // There are some edge cases with forks that could cause this situation, but it's unlikely.
-      if (e instanceof BatchError && e.type.code === BatchErrorCode.MAX_PROCESSING_ATTEMPTS) {
-        for (const peer of this.peerset.keys()) {
-          this.reportPeer(peer, PeerAction.LowToleranceError, "SyncChainMaxProcessingAttempts");
+      // If a batch exceeds it's retry limit, maybe downscore peers.
+      // shouldDownscoreOnBatchError() functions enforces that all BatchErrorCode values are covered
+      if (e instanceof BatchError) {
+        const shouldReportPeer = shouldReportPeerOnBatchError(e.type.code);
+        if (shouldReportPeer) {
+          for (const peer of this.peerset.keys()) {
+            this.reportPeer(peer, shouldReportPeer.action, shouldReportPeer.reason);
+          }
         }
       }
-
-      // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
 
       throw e;
     }
@@ -479,5 +478,28 @@ export class SyncChain {
     }
 
     this.startEpoch = newStartEpoch;
+  }
+}
+
+/**
+ * Enforces that a report peer action is defined for all BatchErrorCode exhaustively.
+ * If peer should not be downscored, returns null.
+ */
+export function shouldReportPeerOnBatchError(
+  code: BatchErrorCode
+): {action: PeerAction.LowToleranceError; reason: string} | null {
+  switch (code) {
+    // A batch could not be processed after max retry limit. It's likely that all peers
+    // in this chain are sending invalid batches repeatedly so are either malicious or faulty.
+    // We drop the chain and report all peers.
+    // There are some edge cases with forks that could cause this situation, but it's unlikely.
+    case BatchErrorCode.MAX_PROCESSING_ATTEMPTS:
+      return {action: PeerAction.LowToleranceError, reason: "SyncChainMaxProcessingAttempts"};
+
+    // TODO: Should peers be reported for MAX_DOWNLOAD_ATTEMPTS?
+    case BatchErrorCode.WRONG_STATUS:
+    case BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS:
+    case BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS:
+      return null;
   }
 }
