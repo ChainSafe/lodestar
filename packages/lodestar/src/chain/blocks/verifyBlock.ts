@@ -229,7 +229,7 @@ export async function verifyBlockStateTransition(
           block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
         ) {
           throw new BlockError(block, {
-            code: BlockErrorCode.EXECUTION_ENGINE_SYNCING,
+            code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
             errorMessage: `not safe to import SYNCING payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot`,
           });
         }
@@ -255,14 +255,9 @@ export async function verifyBlockStateTransition(
       // back. But for now, lets assume other mechanisms like unknown parent block of a future
       // child block will cause it to replay
       case ExecutePayloadStatus.ELERROR:
-        throw new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_ENGINE_ERRORED,
-          errorMessage: execResult.validationError,
-        });
-
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE,
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
           errorMessage: execResult.validationError,
         });
     }

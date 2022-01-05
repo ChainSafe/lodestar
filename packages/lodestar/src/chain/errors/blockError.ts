@@ -57,12 +57,8 @@ export enum BlockErrorCode {
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
   /** Execution engine returned not valid after executePayload() call */
   EXECUTION_PAYLOAD_NOT_VALID = "BLOCK_ERROR_EXECUTION_PAYLOAD_NOT_VALID",
-  /** Execution engine is unavailable */
-  EXECUTION_ENGINE_UNAVAILABLE = "BLOCK_ERROR_EXECUTION_ENGINE_UNAVAILABLE",
-  /** Execution engine is syncing */
-  EXECUTION_ENGINE_SYNCING = "BLOCK_ERROR_EXECUTION_ENGINE_SYNCING",
-  /** Execution engine api errored */
-  EXECUTION_ENGINE_ERRORED = "BLOCK_ERROR_EXECUTION_ENGINE_ERRORED",
+  /** Execution engine is unavailable, syncing, or api call errored. Peers must not be downscored on this code */
+  EXECUTION_ENGINE_ERROR = "BLOCK_ERROR_EXECUTION_ERROR",
 }
 
 export type BlockErrorType =
@@ -96,9 +92,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
   | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID; errorMessage: string}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE; errorMessage: string}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_SYNCING; errorMessage: string}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERRORED; errorMessage: string};
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; errorMessage: string};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 

@@ -172,12 +172,7 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    if (
-      err instanceof ChainSegmentError &&
-      (err.type.code === BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE ||
-        err.type.code === BlockErrorCode.EXECUTION_ENGINE_SYNCING ||
-        err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERRORED)
-    ) {
+    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
       this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);

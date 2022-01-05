@@ -194,9 +194,7 @@ export class UnknownBlockSync {
             pendingBlock.status = PendingBlockStatus.pending;
             break;
 
-          case BlockErrorCode.EXECUTION_ENGINE_SYNCING:
-          case BlockErrorCode.EXECUTION_ENGINE_ERRORED:
-          case BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE:
+          case BlockErrorCode.EXECUTION_ENGINE_ERROR:
             // Removing the block(s) without penalizing the peers, hoping for EL to
             // recover on a latter download + verify attempt
             this.removeAllDescendants(pendingBlock);

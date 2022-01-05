@@ -105,9 +105,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
               case BlockErrorCode.ALREADY_KNOWN:
               case BlockErrorCode.PARENT_UNKNOWN:
               case BlockErrorCode.PRESTATE_MISSING:
-              case BlockErrorCode.EXECUTION_ENGINE_UNAVAILABLE:
-              case BlockErrorCode.EXECUTION_ENGINE_SYNCING:
-              case BlockErrorCode.EXECUTION_ENGINE_ERRORED:
+              case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
                 network.peerRpcScores.applyAction(
