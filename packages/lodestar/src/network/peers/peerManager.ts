@@ -9,7 +9,7 @@ import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constan
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId} from "../util";
+import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
 import {ISubnetsService} from "../subnets";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
@@ -519,17 +519,24 @@ export class PeerManager {
   private runPeerCountMetrics(metrics: IMetrics): void {
     let total = 0;
     const peersByDirection = new Map<string, number>();
+    const peersByClient = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
+        const client = getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+        peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
         total++;
       }
     }
 
     for (const [direction, peers] of peersByDirection.entries()) {
       metrics.peersByDirection.set({direction}, peers);
+    }
+
+    for (const [client, peers] of peersByClient.entries()) {
+      metrics.peersByClient.set({client}, peers);
     }
 
     let syncPeers = 0;
