@@ -44,6 +44,11 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by direction",
       labelNames: ["direction"],
     }),
+    peersByClient: register.gauge<"client">({
+      name: "lodestar_peers_by_client_count",
+      help: "number of peers, labeled by client",
+      labelNames: ["client"],
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
