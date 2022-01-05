@@ -84,8 +84,15 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       });
 
     // Validate status is known
-    const statusEnum = ExecutePayloadStatus[status];
-    switch (statusEnum) {
+    if (!ExecutePayloadStatus[status]) {
+      return {
+        status: ExecutePayloadStatus.ELERROR,
+        latestValidHash: null,
+        validationError: `Invalid EL status on executePayload: ${status}`,
+      };
+    }
+
+    switch (status) {
       case ExecutePayloadStatus.VALID:
         if (latestValidHash == null) {
           return {
@@ -94,7 +101,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             validationError: `Invalid null latestValidHash for status=${status}`,
           };
         } else {
-          return {status: statusEnum, latestValidHash, validationError: null};
+          return {status, latestValidHash, validationError: null};
         }
 
       case ExecutePayloadStatus.INVALID:
@@ -105,25 +112,18 @@ export class ExecutionEngineHttp implements IExecutionEngine {
             validationError: `Invalid null latestValidHash for status=${status}`,
           };
         } else {
-          return {status: statusEnum, latestValidHash, validationError};
+          return {status, latestValidHash, validationError};
         }
 
       case ExecutePayloadStatus.SYNCING:
-        return {status: statusEnum, latestValidHash, validationError: null};
+        return {status, latestValidHash, validationError: null};
 
       case ExecutePayloadStatus.UNAVAILABLE:
       case ExecutePayloadStatus.ELERROR:
         return {
-          status: statusEnum,
+          status,
           latestValidHash: null,
-          validationError: validationError ?? "Unidentified ELERROR",
-        };
-
-      default:
-        return {
-          status: ExecutePayloadStatus.ELERROR,
-          latestValidHash: null,
-          validationError: `Invalid EL status on executePayload: ${status}`,
+          validationError: validationError ?? "Unknown ELERROR",
         };
     }
   }
