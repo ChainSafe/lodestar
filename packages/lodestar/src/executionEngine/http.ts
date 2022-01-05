@@ -1,9 +1,8 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
-import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 
-import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
   numToQuantity,
@@ -74,19 +73,13 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         method,
         params: [serializedExecutionPayload],
       })
-      /**
-       * If there are errors by EL like connection refused, internal error, they need to be
-       * treated seperate from being INVALID. For now, just pass the error upstream.
-       */
+      // If there are errors by EL like connection refused, internal error, they need to be
+      // treated seperate from being INVALID. For now, just pass the error upstream.
       .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
-        if (
-          e instanceof TimeoutError ||
-          e instanceof ErrorAborted ||
-          e.message === "Only absolute URLs are supported"
-        ) {
-          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
-        } else {
+        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
           return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        } else {
+          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         }
       });
 
