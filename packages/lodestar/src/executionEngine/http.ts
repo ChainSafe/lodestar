@@ -78,66 +78,61 @@ export class ExecutionEngineHttp implements IExecutionEngine {
        * If there are errors by EL like connection refused, internal error, they need to be
        * treated seperate from being INVALID. For now, just pass the error upstream.
        */
-      .catch((e: Error) => {
-        let errResponse: EngineApiRpcReturnTypes[typeof method];
+      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
         if (
           e instanceof TimeoutError ||
           e instanceof ErrorAborted ||
           e.message === "Only absolute URLs are supported"
         ) {
-          errResponse = {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         } else {
-          errResponse = {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
         }
-        return errResponse;
       });
-
-    let execResponse: ExecutePayloadResponse;
 
     // Validate status is known
     const statusEnum = ExecutePayloadStatus[status];
     switch (statusEnum) {
       case ExecutePayloadStatus.VALID:
         if (latestValidHash == null) {
-          execResponse = {
+          return {
             status: ExecutePayloadStatus.ELERROR,
             latestValidHash: null,
             validationError: `Invalid null latestValidHash for status=${status}`,
           };
         } else {
-          execResponse = {status: statusEnum, latestValidHash, validationError: null};
+          return {status: statusEnum, latestValidHash, validationError: null};
         }
-        break;
+
       case ExecutePayloadStatus.INVALID:
         if (latestValidHash == null) {
-          execResponse = {
+          return {
             status: ExecutePayloadStatus.ELERROR,
             latestValidHash: null,
             validationError: `Invalid null latestValidHash for status=${status}`,
           };
         } else {
-          execResponse = {status: statusEnum, latestValidHash, validationError};
+          return {status: statusEnum, latestValidHash, validationError};
         }
-        break;
+
       case ExecutePayloadStatus.SYNCING:
-        execResponse = {status: statusEnum, latestValidHash, validationError: null};
-        break;
+        return {status: statusEnum, latestValidHash, validationError: null};
+
       case ExecutePayloadStatus.UNAVAILABLE:
       case ExecutePayloadStatus.ELERROR:
-        execResponse = {
+        return {
           status: statusEnum,
           latestValidHash: null,
           validationError: validationError ?? "Unidentified ELERROR",
         };
-        break;
+
       default:
-        execResponse = {
+        return {
           status: ExecutePayloadStatus.ELERROR,
           latestValidHash: null,
           validationError: `Invalid EL status on executePayload: ${status}`,
         };
     }
-    return execResponse;
   }
 
   /**
