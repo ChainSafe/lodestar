@@ -72,7 +72,7 @@ export class Batch {
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
   /** The `Attempts` that have been made and failed because of execution malfunction. */
-  readonly executionMalfunctionAttempts: Attempt[] = [];
+  readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerId[] = [];
   private readonly config: IChainForkConfig;
@@ -178,7 +178,7 @@ export class Batch {
         err.type.code === BlockErrorCode.EXECUTION_ENGINE_SYNCING ||
         err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERRORED)
     ) {
-      this.onExecutionMalfunction(this.state.attempt);
+      this.onExecutionEngineError(this.state.attempt);
     } else {
       this.onProcessingError(this.state.attempt);
     }
@@ -205,10 +205,10 @@ export class Batch {
     return this.state.attempt;
   }
 
-  private onExecutionMalfunction(attempt: Attempt): void {
-    this.executionMalfunctionAttempts.push(attempt);
-    if (this.executionMalfunctionAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
-      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_MALFUNCTION_ATTEMPTS}));
+  private onExecutionEngineError(attempt: Attempt): void {
+    this.executionErrorAttempts.push(attempt);
+    if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
     }
 
     this.state = {status: BatchStatus.AwaitingDownload};
@@ -237,14 +237,14 @@ export enum BatchErrorCode {
   WRONG_STATUS = "BATCH_ERROR_WRONG_STATUS",
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
-  MAX_EXECUTION_ENGINE_MALFUNCTION_ATTEMPTS = "MAX_EXECUTION_ENGINE_MALFUNCTION_ATTEMPTS",
+  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
 }
 
 type BatchErrorType =
   | {code: BatchErrorCode.WRONG_STATUS; expectedStatus: BatchStatus}
   | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
   | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}
-  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_MALFUNCTION_ATTEMPTS};
+  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS};
 
 type BatchErrorMetadata = {
   startEpoch: number;
