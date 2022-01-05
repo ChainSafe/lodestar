@@ -201,10 +201,6 @@ export class SyncChain {
     return toArr(this.batches).map((batch) => batch.getMetadata());
   }
 
-  get startEpochValue(): Epoch {
-    return this.startEpoch;
-  }
-
   get isSyncing(): boolean {
     return this.status === SyncChainStatus.Syncing;
   }
