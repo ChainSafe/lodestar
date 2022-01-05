@@ -194,6 +194,12 @@ export class UnknownBlockSync {
             pendingBlock.status = PendingBlockStatus.pending;
             break;
 
+          case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+            // Removing the block(s) without penalizing the peers, hoping for EL to
+            // recover on a latter download + verify attempt
+            this.removeAllDescendants(pendingBlock);
+            break;
+
           default:
             // Block is not correct with respect to our chain. Log error loudly
             this.logger.error("Error processing block from unknown parent sync", errorData, res.err);
@@ -266,14 +272,11 @@ export class UnknownBlockSync {
    */
   private removeAndDownscoreAllDescendants(block: PendingBlock): void {
     // Get all blocks that are a descendat of this one
-    const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
-
-    this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
+    const badPendingBlocks = this.removeAllDescendants(block);
 
     for (const block of badPendingBlocks) {
-      this.pendingBlocks.delete(block.blockRootHex);
       this.knownBadBlocks.add(block.blockRootHex);
-      this.logger.error("Removing and banning unknown parent block", {
+      this.logger.error("Banning unknown parent block", {
         root: block.blockRootHex,
         slot: block.signedBlock.message.slot,
       });
@@ -287,5 +290,22 @@ export class UnknownBlockSync {
 
     // Prune knownBadBlocks
     pruneSetToMax(this.knownBadBlocks, MAX_KNOWN_BAD_BLOCKS);
+  }
+
+  private removeAllDescendants(block: PendingBlock): PendingBlock[] {
+    // Get all blocks that are a descendat of this one
+    const badPendingBlocks = [block, ...getAllDescendantBlocks(block.blockRootHex, this.pendingBlocks)];
+
+    this.metrics?.syncUnknownBlock.removedBlocks.inc(badPendingBlocks.length);
+
+    for (const block of badPendingBlocks) {
+      this.pendingBlocks.delete(block.blockRootHex);
+      this.logger.error("Removing unknown parent block", {
+        root: block.blockRootHex,
+        slot: block.signedBlock.message.slot,
+      });
+    }
+
+    return badPendingBlocks;
   }
 }

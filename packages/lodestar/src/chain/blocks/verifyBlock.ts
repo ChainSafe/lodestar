@@ -1,5 +1,12 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, computeStartSlotAtEpoch, allForks, merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
+import {
+  CachedBeaconState,
+  computeStartSlotAtEpoch,
+  allForks,
+  merge,
+  getCurrentSlot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -162,7 +169,7 @@ export async function verifyBlockStateTransition(
     }
   }
 
-  let executionStatus = ExecutionStatus.PreMerge;
+  let executionStatus: ExecutionStatus;
   if (executionPayloadEnabled) {
     // TODO: Handle better executePayload() returning error is syncing
     const execResult = await chain.executionEngine.executePayload(
@@ -178,6 +185,7 @@ export async function verifyBlockStateTransition(
         executionStatus = ExecutionStatus.Valid;
         chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         break; // OK
+
       case ExecutePayloadStatus.INVALID: {
         // If the parentRoot is not same as latestValidHash, then the branch from latestValidHash
         // to parentRoot needs to be invalidated
@@ -186,9 +194,13 @@ export async function verifyBlockStateTransition(
           execResult.latestValidHash,
           parentHashHex !== execResult.latestValidHash ? parentHashHex : null
         );
-        throw new BlockError(block, {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID});
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
+          errorMessage: execResult.validationError ?? "",
+        });
       }
-      case ExecutePayloadStatus.SYNCING:
+
+      case ExecutePayloadStatus.SYNCING: {
         // It's okay to ignore SYNCING status as EL could switch into syncing
         // 1. On intial startup/restart
         // 2. When some reorg might have occured and EL doesn't has a parent root
@@ -199,12 +211,59 @@ export async function verifyBlockStateTransition(
         //    eventually win in fork-choice as other validators vote on VALID blocks.
         // Once EL catches up again and respond VALID, the fork choice will be updated which
         // will either validate or prune invalid blocks
+        //
+        // When to import such blocks:
+        // From: https://github.com/ethereum/consensus-specs/pull/2770/files
+        // A block MUST NOT be optimistically imported, unless either of the following
+        // conditions are met:
+        //
+        // 1. The justified checkpoint has execution enabled
+        // 2. The current slot (as per the system clock) is at least
+        //    SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY ahead of the slot of the block being
+        //    imported.
+        const justifiedBlock = chain.forkChoice.getJustifiedBlock();
+        const clockSlot = getCurrentSlot(chain.config, postState.genesisTime);
+
+        if (
+          justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
+          block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
+        ) {
+          throw new BlockError(block, {
+            code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+            errorMessage: `not safe to import SYNCING payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot`,
+          });
+        }
+
         executionStatus = ExecutionStatus.Syncing;
         if (execResult.latestValidHash) {
           chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         }
         break;
+      }
+
+      // There can be many reasons for which EL failed some of the observed ones are
+      // 1. Connection refused / can't connect to EL port
+      // 2. EL Internal Error
+      // 3. Geth sometimes gives invalid merkel root error which means invalid
+      //    but expects it to be handled in CL as of now. But we should log as warning
+      //    and give it as optimistic treatment and expect any other non-geth CL<>EL
+      //    combination to reject the invalid block and propose a block.
+      //    On kintsugi devnet, this has been observed to cause contiguous proposal failures
+      //    as the network is geth dominated, till a non geth node proposes and moves network
+      //    forward
+      // For network/unreachable errors, an optimization can be added to replay these blocks
+      // back. But for now, lets assume other mechanisms like unknown parent block of a future
+      // child block will cause it to replay
+      case ExecutePayloadStatus.ELERROR:
+      case ExecutePayloadStatus.UNAVAILABLE:
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          errorMessage: execResult.validationError,
+        });
     }
+  } else {
+    // isExecutionEnabled() -> false
+    executionStatus = ExecutionStatus.PreMerge;
   }
 
   // Check state root matches

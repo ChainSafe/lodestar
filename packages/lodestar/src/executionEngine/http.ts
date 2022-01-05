@@ -2,7 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
-import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
   numToQuantity,
@@ -68,24 +68,64 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_executePayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
-    const {status, latestValidHash} = await this.rpc.fetch<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [serializedExecutionPayload],
-    });
+    const {status, latestValidHash, validationError} = await this.rpc
+      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [serializedExecutionPayload],
+      })
+      // If there are errors by EL like connection refused, internal error, they need to be
+      // treated seperate from being INVALID. For now, just pass the error upstream.
+      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
+        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
+          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        } else {
+          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+        }
+      });
 
     // Validate status is known
-    const statusEnum = ExecutePayloadStatus[status];
-    if (statusEnum === undefined) {
-      throw Error(`Invalid EL status on executePayload: ${status}`);
-    }
-    if (statusEnum !== ExecutePayloadStatus.SYNCING && latestValidHash == null) {
-      throw Error(`Invalid latestValidHash for ${status}`);
+    if (!ExecutePayloadStatus[status]) {
+      return {
+        status: ExecutePayloadStatus.ELERROR,
+        latestValidHash: null,
+        validationError: `Invalid EL status on executePayload: ${status}`,
+      };
     }
 
-    return {status, latestValidHash};
+    switch (status) {
+      case ExecutePayloadStatus.VALID:
+        if (latestValidHash == null) {
+          return {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          return {status, latestValidHash, validationError: null};
+        }
+
+      case ExecutePayloadStatus.INVALID:
+        if (latestValidHash == null) {
+          return {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          return {status, latestValidHash, validationError};
+        }
+
+      case ExecutePayloadStatus.SYNCING:
+        return {status, latestValidHash, validationError: null};
+
+      case ExecutePayloadStatus.UNAVAILABLE:
+      case ExecutePayloadStatus.ELERROR:
+        return {
+          status,
+          latestValidHash: null,
+          validationError: validationError ?? "Unknown ELERROR",
+        };
+    }
   }
 
   /**
@@ -186,7 +226,16 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayloadV1: {status: ExecutePayloadStatus; latestValidHash: DATA};
+  engine_executePayloadV1: {
+    status:
+      | ExecutePayloadStatus.VALID
+      | ExecutePayloadStatus.INVALID
+      | ExecutePayloadStatus.SYNCING
+      | ExecutePayloadStatus.ELERROR
+      | ExecutePayloadStatus.UNAVAILABLE;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_consensusValidated: void;
   engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**

@@ -13,11 +13,21 @@ export enum ExecutePayloadStatus {
   INVALID = "INVALID",
   /** sync process is in progress */
   SYNCING = "SYNCING",
+  /** EL error */
+  ELERROR = "ELERROR",
+  /** EL unavailable */
+  UNAVAILABLE = "UNAVAILABLE",
 }
 
 export type ExecutePayloadResponse =
-  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null}
-  | {status: ExecutePayloadStatus.VALID | ExecutePayloadStatus.INVALID; latestValidHash: RootHex};
+  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null; validationError: null}
+  | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex; validationError: string | null}
+  | {
+      status: ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
+      latestValidHash: null;
+      validationError: string;
+    };
 
 export enum ForkChoiceUpdateStatus {
   /** given payload is valid */
