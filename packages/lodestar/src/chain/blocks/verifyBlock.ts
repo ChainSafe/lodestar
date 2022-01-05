@@ -169,7 +169,7 @@ export async function verifyBlockStateTransition(
     }
   }
 
-  let executionStatus = ExecutionStatus.PreMerge;
+  let executionStatus: ExecutionStatus;
   if (executionPayloadEnabled) {
     // TODO: Handle better executePayload() returning error is syncing
     const execResult = await chain.executionEngine.executePayload(
@@ -185,6 +185,7 @@ export async function verifyBlockStateTransition(
         executionStatus = ExecutionStatus.Valid;
         chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
         break; // OK
+
       case ExecutePayloadStatus.INVALID: {
         // If the parentRoot is not same as latestValidHash, then the branch from latestValidHash
         // to parentRoot needs to be invalidated
@@ -198,6 +199,7 @@ export async function verifyBlockStateTransition(
           errorMessage: execResult.validationError ?? "",
         });
       }
+
       case ExecutePayloadStatus.SYNCING: {
         // It's okay to ignore SYNCING status as EL could switch into syncing
         // 1. On intial startup/restart
@@ -264,6 +266,9 @@ export async function verifyBlockStateTransition(
           errorMessage: execResult.validationError,
         });
     }
+  } else {
+    // isExecutionEnabled() -> false
+    executionStatus = ExecutionStatus.PreMerge;
   }
 
   // Check state root matches
