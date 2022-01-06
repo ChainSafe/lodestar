@@ -73,10 +73,6 @@ export function createLodestarMetrics(
       help: "Total number of goodbye sent, labeled by reason",
       labelNames: ["reason"],
     }),
-    peersTotalUniqueConnected: register.gauge({
-      name: "lodestar_peers_total_unique_connected",
-      help: "Total number of unique peers that have had a connection with",
-    }),
     peersRequestedToConnect: register.gauge({
       name: "lodestar_peers_requested_total_to_connect",
       help: "Priorization results total peers count requested to connect",
