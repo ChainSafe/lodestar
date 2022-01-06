@@ -25,6 +25,7 @@ presetStatus.frozen = true;
  */
 export const ACTIVE_PRESET: PresetName =
   userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
