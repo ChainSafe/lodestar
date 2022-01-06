@@ -35,7 +35,7 @@ export interface IBeaconNodeModules {
   chain: IBeaconChain;
   api: Api;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
+  backfillSync: BackfillSync;
   metricsServer?: HttpMetricsServer;
   restApi?: RestApi;
   controller?: AbortController;
@@ -73,7 +73,7 @@ export class BeaconNode {
   api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
-  backfillSync: BackfillSync | null;
+  backfillSync: BackfillSync;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -169,18 +169,16 @@ export class BeaconNode {
       logger: logger.child(opts.logger.sync),
     });
 
-    const backfillSync = wsCheckpoint
-      ? await BackfillSync.init({
-          config,
-          db,
-          chain,
-          metrics,
-          network,
-          wsCheckpoint,
-          anchorState,
-          logger: logger.child(opts.logger.sync),
-        })
-      : null;
+    const backfillSync = await BackfillSync.init({
+      config,
+      db,
+      chain,
+      metrics,
+      network,
+      wsCheckpoint,
+      anchorState,
+      logger: logger.child(opts.logger.sync),
+    });
 
     const api = getApi(opts.api, {
       config,

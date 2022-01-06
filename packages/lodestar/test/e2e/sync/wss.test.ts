@@ -123,8 +123,6 @@ describe("Start from WSS", function () {
     });
     afterEachCallbacks.push(() => bnStartingFromWSS.close());
 
-    if (!bnStartingFromWSS.backfillSync) return;
-
     const head = bn.chain.forkChoice.getHead();
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!head) throw Error("First beacon node has no head block");
