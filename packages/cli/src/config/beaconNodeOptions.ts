@@ -3,7 +3,7 @@ import {Json} from "@chainsafe/ssz";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {writeFile, readFile} from "../util";
-import {getNetworkBeaconNodeOptions, NetworkName} from "../networks";
+import {getInjectableBootEnrs, getNetworkBeaconNodeOptions, NetworkName} from "../networks";
 
 export class BeaconNodeOptions {
   private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;
@@ -17,15 +17,18 @@ export class BeaconNodeOptions {
   constructor({
     network,
     configFile,
+    bootnodesFile,
     beaconNodeOptionsCli,
   }: {
     network?: NetworkName;
     configFile?: string;
+    bootnodesFile?: string;
     beaconNodeOptionsCli: RecursivePartial<IBeaconNodeOptions>;
   }) {
     this.beaconNodeOptions = mergeBeaconNodeOptions(
       network ? getNetworkBeaconNodeOptions(network) : {},
       configFile ? readBeaconNodeOptions(configFile) : {},
+      bootnodesFile ? getInjectableBootEnrs(bootnodesFile) : {},
       beaconNodeOptionsCli
     );
   }

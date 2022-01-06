@@ -1,11 +1,12 @@
-import got from "got";
-import {TreeBacked} from "@chainsafe/ssz";
-import {allForks} from "@chainsafe/lodestar-types";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
+import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {allForks} from "@chainsafe/lodestar-types";
+import {RecursivePartial} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {TreeBacked} from "@chainsafe/ssz";
+import fs from "fs";
+import got from "got";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
@@ -75,6 +76,59 @@ export async function fetchBootnodes(network: NetworkName): Promise<string[]> {
     if (line.includes("enr:")) enrs.push("enr:" + line.split("enr:")[1]);
   }
   return enrs;
+}
+
+/**
+ * Reads and parses a list of bootnodes for a network from a file.
+ */
+export function readBootnodes(bootnodesFilePath: string): string[] {
+  const bootnodesFile = fs.readFileSync(bootnodesFilePath, "utf8");
+
+  const bootnodes = parseBootnodesFile(bootnodesFile);
+
+  if (bootnodes.length === 0) {
+    throw new Error(`No bootnodes found on file ${bootnodesFilePath}`);
+  }
+
+  return bootnodes;
+}
+
+/**
+ * Parses a file to get a list of bootnodes for a network.
+ * Bootnodes file is expected to contain bootnode ENR's concatenated by newlines, or commas for
+ * parsing plaintext, YAML, JSON and/or env files.
+ */
+export function parseBootnodesFile(bootnodesFile: string): string[] {
+  const enrs = [];
+  for (const line of bootnodesFile.trim().split(/\r?\n/)) {
+    for (const entry of line.split(",")) {
+      const sanitizedEntry = entry.replace(/['",[\]{}.]+/g, "").trim();
+
+      if (sanitizedEntry.includes("enr:-")) {
+        const parsedEnr = `enr:-${sanitizedEntry.split("enr:-")[1]}`;
+        enrs.push(parsedEnr);
+      }
+    }
+  }
+  return enrs;
+}
+
+/**
+ * Parses a file to get a list of bootnodes for a network if given a valid path,
+ * and returns the bootnodes in an "injectable" network options format.
+ */
+export function getInjectableBootEnrs(bootnodesFilepath: string): RecursivePartial<IBeaconNodeOptions> {
+  const bootEnrs = readBootnodes(bootnodesFilepath);
+  const injectableBootEnrs = enrsToNetworkConfig(bootEnrs);
+
+  return injectableBootEnrs;
+}
+
+/**
+ * Given an array of bootnodes, returns them in an injectable format
+ */
+export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNodeOptions> {
+  return {network: {discv5: {bootEnrs: enrs}}};
 }
 
 /**

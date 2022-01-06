@@ -11,6 +11,7 @@ export interface IBeaconPaths {
   peerIdFile: string;
   enrFile: string;
   logFile?: string;
+  bootnodesFile?: string;
 }
 
 /**
@@ -41,6 +42,7 @@ export function getBeaconPaths(
   const peerIdFile = args.peerIdFile || path.join(beaconDir, "peer-id.json");
   const enrFile = args.enrFile || path.join(beaconDir, "enr");
   const logFile = args.logFile;
+  const bootnodesFile = args.bootnodesFile;
 
   return {
     ...globalPaths,
@@ -52,6 +54,7 @@ export function getBeaconPaths(
     peerIdFile,
     enrFile,
     logFile,
+    bootnodesFile,
   };
 }
 
