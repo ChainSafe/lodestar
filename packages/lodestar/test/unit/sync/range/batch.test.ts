@@ -62,7 +62,7 @@ describe("sync / range / batch", () => {
     expect(batch.state.status).to.equal(BatchStatus.AwaitingValidation, "Wrong status on processingSuccess");
 
     // validationError: AwaitingValidation -> AwaitingDownload
-    batch.validationError();
+    batch.validationError(new Error());
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on validationError");
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation

@@ -182,12 +182,16 @@ export class Batch {
   /**
    * AwaitingValidation -> AwaitingDownload
    */
-  validationError(): void {
+  validationError(err: Error): void {
     if (this.state.status !== BatchStatus.AwaitingValidation) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    this.onProcessingError(this.state.attempt);
+    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+      this.onExecutionEngineError(this.state.attempt);
+    } else {
+      this.onProcessingError(this.state.attempt);
+    }
   }
 
   /**
