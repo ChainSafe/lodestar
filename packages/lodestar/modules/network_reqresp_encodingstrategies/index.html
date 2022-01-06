@@ -298,7 +298,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="readencodedpayload">readEncodedPayload<a class="headerlink" href="#readencodedpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readEncodedPayload</strong>‹<strong>T</strong>›(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>, <code>options?</code>: <a href="../../interfaces/network_reqresp_encodingstrategies_sszsnappy.isszsnappyoptions/">ISszSnappyOptions</a>): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5765f37/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L23">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/68b2995/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L23">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:23</a></em></p>
 <p>Consumes a stream source to read encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
@@ -335,7 +335,7 @@
 <hr/>
 <h3 id="writeencodedpayload">writeEncodedPayload<a class="headerlink" href="#writeencodedpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeEncodedPayload</strong>‹<strong>T</strong>›(<code>body</code>: T, <code>encoding</code>: <a href="../../enums/network_reqresp.encoding/">Encoding</a>, <code>serializer</code>: <a href="../network_reqresp/#outgoingserializer">OutgoingSerializer</a>): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5765f37/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L44">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/68b2995/packages/lodestar/src/network/reqresp/encodingStrategies/index.ts#L44">packages/lodestar/src/network/reqresp/encodingStrategies/index.ts:44</a></em></p>
 <p>Yields byte chunks for encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;
 </code></pre></div></p>
