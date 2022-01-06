@@ -1201,6 +1201,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.backfilledranges/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.bestpartiallightclientupdaterepository/</loc>
          <lastmod>2022-01-06</lastmod>
          <changefreq>daily</changefreq>
@@ -1522,6 +1527,16 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync.unknownblocksync/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_backfill.backfillsync/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_backfill.backfillsyncerror/</loc>
          <lastmod>2022-01-06</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -1857,6 +1872,26 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync.syncstate/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncerrorcode/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncevent/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncmethod/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncstatus/</loc>
          <lastmod>2022-01-06</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2562,6 +2597,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync/</loc>
+         <lastmod>2022-01-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync_backfill/</loc>
          <lastmod>2022-01-06</lastmod>
          <changefreq>daily</changefreq>
     </url>
