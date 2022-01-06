@@ -472,160 +472,160 @@
 <h2 id="enumeration-members_1">Enumeration members<a class="headerlink" href="#enumeration-members_1" title="Permanent link">¶</a></h2>
 <h3 id="aggregator_already_known">AGGREGATOR_ALREADY_KNOWN<a class="headerlink" href="#aggregator_already_known" title="Permanent link">¶</a></h3>
 <p>• <strong>AGGREGATOR_ALREADY_KNOWN</strong>: = "ATTESTATION_ERROR_AGGREGATOR_ALREADY_KNOWN"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L38">packages/lodestar/src/chain/errors/attestationError.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L38">packages/lodestar/src/chain/errors/attestationError.ts:38</a></em></p>
 <p>There has already been an aggregation observed for this validator, we refuse to process a second.</p>
 <hr/>
 <h3 id="aggregator_index_too_high">AGGREGATOR_INDEX_TOO_HIGH<a class="headerlink" href="#aggregator_index_too_high" title="Permanent link">¶</a></h3>
 <p>• <strong>AGGREGATOR_INDEX_TOO_HIGH</strong>: = "ATTESTATION_ERROR_AGGREGATOR_INDEX_TOO_HIGH"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L42">packages/lodestar/src/chain/errors/attestationError.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L42">packages/lodestar/src/chain/errors/attestationError.ts:42</a></em></p>
 <p>The aggregator index is higher than the maximum possible validator count.</p>
 <hr/>
 <h3 id="aggregator_not_in_committee">AGGREGATOR_NOT_IN_COMMITTEE<a class="headerlink" href="#aggregator_not_in_committee" title="Permanent link">¶</a></h3>
 <p>• <strong>AGGREGATOR_NOT_IN_COMMITTEE</strong>: = "ATTESTATION_ERROR_AGGREGATOR_NOT_IN_COMMITTEE"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L26">packages/lodestar/src/chain/errors/attestationError.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L26">packages/lodestar/src/chain/errors/attestationError.ts:26</a></em></p>
 <p>The <code>selection_proof</code> on the aggregate attestation selects it as a validator,
 however the aggregator index is not in the committee for that attestation.</p>
 <hr/>
 <h3 id="aggregator_pubkey_unknown">AGGREGATOR_PUBKEY_UNKNOWN<a class="headerlink" href="#aggregator_pubkey_unknown" title="Permanent link">¶</a></h3>
 <p>• <strong>AGGREGATOR_PUBKEY_UNKNOWN</strong>: = "ATTESTATION_ERROR_AGGREGATOR_PUBKEY_UNKNOWN"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L30">packages/lodestar/src/chain/errors/attestationError.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L30">packages/lodestar/src/chain/errors/attestationError.ts:30</a></em></p>
 <p>The aggregator index refers to a validator index that we have not seen.</p>
 <hr/>
 <h3 id="attestation_already_known">ATTESTATION_ALREADY_KNOWN<a class="headerlink" href="#attestation_already_known" title="Permanent link">¶</a></h3>
 <p>• <strong>ATTESTATION_ALREADY_KNOWN</strong>: = "ATTESTATION_ERROR_ATTESTATION_ALREADY_KNOWN"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L34">packages/lodestar/src/chain/errors/attestationError.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L34">packages/lodestar/src/chain/errors/attestationError.ts:34</a></em></p>
 <p>The attestation has been seen before; either in a block, on the gossip network or from a local validator.</p>
 <hr/>
 <h3 id="attests_to_future_block">ATTESTS_TO_FUTURE_BLOCK<a class="headerlink" href="#attests_to_future_block" title="Permanent link">¶</a></h3>
 <p>• <strong>ATTESTS_TO_FUTURE_BLOCK</strong>: = "ATTESTATION_ERROR_ATTESTS_TO_FUTURE_BLOCK"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L87">packages/lodestar/src/chain/errors/attestationError.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L87">packages/lodestar/src/chain/errors/attestationError.ts:87</a></em></p>
 <p>The attestation is attesting to a state that is later than itself. (Viz., attesting to the future).</p>
 <hr/>
 <h3 id="bad_target_epoch">BAD_TARGET_EPOCH<a class="headerlink" href="#bad_target_epoch" title="Permanent link">¶</a></h3>
 <p>• <strong>BAD_TARGET_EPOCH</strong>: = "ATTESTATION_ERROR_BAD_TARGET_EPOCH"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L50">packages/lodestar/src/chain/errors/attestationError.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L50">packages/lodestar/src/chain/errors/attestationError.ts:50</a></em></p>
 <p>The <code>attestation.data.slot</code> is not from the same epoch as <code>data.target.epoch</code>.</p>
 <hr/>
 <h3 id="beacon_chain_error">BEACON_CHAIN_ERROR<a class="headerlink" href="#beacon_chain_error" title="Permanent link">¶</a></h3>
 <p>• <strong>BEACON_CHAIN_ERROR</strong>: = "ATTESTATION_ERROR_BEACON_CHAIN_ERROR"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L99">packages/lodestar/src/chain/errors/attestationError.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L99">packages/lodestar/src/chain/errors/attestationError.ts:99</a></em></p>
 <p>There was an error whilst processing the attestation. It is not known if it is valid or invalid.</p>
 <hr/>
 <h3 id="committee_index_out_of_range">COMMITTEE_INDEX_OUT_OF_RANGE<a class="headerlink" href="#committee_index_out_of_range" title="Permanent link">¶</a></h3>
 <p>• <strong>COMMITTEE_INDEX_OUT_OF_RANGE</strong>: = "ATTESTATION_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L119">packages/lodestar/src/chain/errors/attestationError.ts:119</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L119">packages/lodestar/src/chain/errors/attestationError.ts:119</a></em></p>
 <p>Committee index out of range.</p>
 <hr/>
 <h3 id="empty_aggregation_bitfield">EMPTY_AGGREGATION_BITFIELD<a class="headerlink" href="#empty_aggregation_bitfield" title="Permanent link">¶</a></h3>
 <p>• <strong>EMPTY_AGGREGATION_BITFIELD</strong>: = "ATTESTATION_ERROR_EMPTY_AGGREGATION_BITFIELD"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L21">packages/lodestar/src/chain/errors/attestationError.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L21">packages/lodestar/src/chain/errors/attestationError.ts:21</a></em></p>
 <p>The attestations aggregation bits were empty when they shouldn't be.</p>
 <hr/>
 <h3 id="future_epoch">FUTURE_EPOCH<a class="headerlink" href="#future_epoch" title="Permanent link">¶</a></h3>
 <p>• <strong>FUTURE_EPOCH</strong>: = "ATTESTATION_ERROR_FUTURE_EPOCH"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L79">packages/lodestar/src/chain/errors/attestationError.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L79">packages/lodestar/src/chain/errors/attestationError.ts:79</a></em></p>
 <p>The attestation is for an epoch in the future (with respect to the gossip clock disparity).</p>
 <hr/>
 <h3 id="future_slot">FUTURE_SLOT<a class="headerlink" href="#future_slot" title="Permanent link">¶</a></h3>
 <p>• <strong>FUTURE_SLOT</strong>: = "ATTESTATION_ERROR_FUTURE_SLOT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L12">packages/lodestar/src/chain/errors/attestationError.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L12">packages/lodestar/src/chain/errors/attestationError.ts:12</a></em></p>
 <p>The attestation is from a slot that is later than the current slot (with respect to the gossip clock disparity).</p>
 <hr/>
 <h3 id="head_not_target_descendant">HEAD_NOT_TARGET_DESCENDANT<a class="headerlink" href="#head_not_target_descendant" title="Permanent link">¶</a></h3>
 <p>• <strong>HEAD_NOT_TARGET_DESCENDANT</strong>: = "ATTESTATION_ERROR_HEAD_NOT_TARGET_DESCENDANT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L54">packages/lodestar/src/chain/errors/attestationError.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L54">packages/lodestar/src/chain/errors/attestationError.ts:54</a></em></p>
 <p>The <code>attestation.data.beaconBlockRoot</code> is not a descendant of <code>data.target.root</code>.</p>
 <hr/>
 <h3 id="invalid">INVALID<a class="headerlink" href="#invalid" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID</strong>: = "ATTESTATION_ERROR_INVALID"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L95">packages/lodestar/src/chain/errors/attestationError.ts:95</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L95">packages/lodestar/src/chain/errors/attestationError.ts:95</a></em></p>
 <p>The attestation failed the <code>state_processing</code> verification stage.</p>
 <hr/>
 <h3 id="invalid_aggregator">INVALID_AGGREGATOR<a class="headerlink" href="#invalid_aggregator" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID_AGGREGATOR</strong>: = "ATTESTATION_ERROR_INVALID_AGGREGATOR"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L127">packages/lodestar/src/chain/errors/attestationError.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L127">packages/lodestar/src/chain/errors/attestationError.ts:127</a></em></p>
 <p>Invalid aggregator.</p>
 <hr/>
 <h3 id="invalid_indexed_attestation">INVALID_INDEXED_ATTESTATION<a class="headerlink" href="#invalid_indexed_attestation" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID_INDEXED_ATTESTATION</strong>: = "ATTESTATION_ERROR_INVALID_INDEXED_ATTESTATION"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L131">packages/lodestar/src/chain/errors/attestationError.ts:131</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L131">packages/lodestar/src/chain/errors/attestationError.ts:131</a></em></p>
 <p>Invalid attestation indexes: not sorted or unique</p>
 <hr/>
 <h3 id="invalid_signature">INVALID_SIGNATURE<a class="headerlink" href="#invalid_signature" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID_SIGNATURE</strong>: = "ATTESTATION_ERROR_INVALID_SIGNATURE"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L62">packages/lodestar/src/chain/errors/attestationError.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L62">packages/lodestar/src/chain/errors/attestationError.ts:62</a></em></p>
 <p>A signature on the attestation is invalid.</p>
 <hr/>
 <h3 id="invalid_subnet_id">INVALID_SUBNET_ID<a class="headerlink" href="#invalid_subnet_id" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID_SUBNET_ID</strong>: = "ATTESTATION_ERROR_INVALID_SUBNET_ID"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L91">packages/lodestar/src/chain/errors/attestationError.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L91">packages/lodestar/src/chain/errors/attestationError.ts:91</a></em></p>
 <p>The attestation was received on an invalid attestation subnet.</p>
 <hr/>
 <h3 id="invalid_target_root">INVALID_TARGET_ROOT<a class="headerlink" href="#invalid_target_root" title="Permanent link">¶</a></h3>
 <p>• <strong>INVALID_TARGET_ROOT</strong>: = "ATTESTATION_ERROR_INVALID_TARGET_ROOT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L111">packages/lodestar/src/chain/errors/attestationError.ts:111</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L111">packages/lodestar/src/chain/errors/attestationError.ts:111</a></em></p>
 <p>The current finalized checkpoint is not an ancestor of the block defined by attestation.data.beacon_block_root.</p>
 <hr/>
 <h3 id="known_bad_block">KNOWN_BAD_BLOCK<a class="headerlink" href="#known_bad_block" title="Permanent link">¶</a></h3>
 <p>• <strong>KNOWN_BAD_BLOCK</strong>: = "ATTESTATION_ERROR_KNOWN_BAD_BLOCK"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L107">packages/lodestar/src/chain/errors/attestationError.ts:107</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L107">packages/lodestar/src/chain/errors/attestationError.ts:107</a></em></p>
 <p>Block did not pass validation during block processing.</p>
 <hr/>
 <h3 id="missing_attestation_head_state">MISSING_ATTESTATION_HEAD_STATE<a class="headerlink" href="#missing_attestation_head_state" title="Permanent link">¶</a></h3>
 <p>• <strong>MISSING_ATTESTATION_HEAD_STATE</strong>: = "ATTESTATION_ERROR_MISSING_ATTESTATION_HEAD_STATE"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L123">packages/lodestar/src/chain/errors/attestationError.ts:123</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L123">packages/lodestar/src/chain/errors/attestationError.ts:123</a></em></p>
 <p>Missing attestation head state</p>
 <hr/>
 <h3 id="not_exactly_one_aggregation_bit_set">NOT_EXACTLY_ONE_AGGREGATION_BIT_SET<a class="headerlink" href="#not_exactly_one_aggregation_bit_set" title="Permanent link">¶</a></h3>
 <p>• <strong>NOT_EXACTLY_ONE_AGGREGATION_BIT_SET</strong>: = "ATTESTATION_ERROR_NOT_EXACTLY_ONE_AGGREGATION_BIT_SET"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L71">packages/lodestar/src/chain/errors/attestationError.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L71">packages/lodestar/src/chain/errors/attestationError.ts:71</a></em></p>
 <p>The unaggregated attestation doesn't have only one aggregation bit set.</p>
 <hr/>
 <h3 id="no_committee_for_slot_and_index">NO_COMMITTEE_FOR_SLOT_AND_INDEX<a class="headerlink" href="#no_committee_for_slot_and_index" title="Permanent link">¶</a></h3>
 <p>• <strong>NO_COMMITTEE_FOR_SLOT_AND_INDEX</strong>: = "ATTESTATION_ERROR_NO_COMMITTEE_FOR_SLOT_AND_INDEX"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L67">packages/lodestar/src/chain/errors/attestationError.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L67">packages/lodestar/src/chain/errors/attestationError.ts:67</a></em></p>
 <p>There is no committee for the slot and committee index of this attestation
 and the attestation should not have been produced.</p>
 <hr/>
 <h3 id="past_epoch">PAST_EPOCH<a class="headerlink" href="#past_epoch" title="Permanent link">¶</a></h3>
 <p>• <strong>PAST_EPOCH</strong>: = "ATTESTATION_ERROR_PAST_EPOCH"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L83">packages/lodestar/src/chain/errors/attestationError.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L83">packages/lodestar/src/chain/errors/attestationError.ts:83</a></em></p>
 <p>The attestation is for an epoch in the past (with respect to the gossip clock disparity).</p>
 <hr/>
 <h3 id="past_slot">PAST_SLOT<a class="headerlink" href="#past_slot" title="Permanent link">¶</a></h3>
 <p>• <strong>PAST_SLOT</strong>: = "ATTESTATION_ERROR_PAST_SLOT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L17">packages/lodestar/src/chain/errors/attestationError.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L17">packages/lodestar/src/chain/errors/attestationError.ts:17</a></em></p>
 <p>The attestation is from a slot that is prior to the earliest permissible slot
 (with respect to the gossip clock disparity).</p>
 <hr/>
 <h3 id="prior_attestation_known">PRIOR_ATTESTATION_KNOWN<a class="headerlink" href="#prior_attestation_known" title="Permanent link">¶</a></h3>
 <p>• <strong>PRIOR_ATTESTATION_KNOWN</strong>: = "ATTESTATION_ERROR_PRIOR_ATTESTATION_KNOWN"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L75">packages/lodestar/src/chain/errors/attestationError.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L75">packages/lodestar/src/chain/errors/attestationError.ts:75</a></em></p>
 <p>We have already observed an attestation for the <code>validator_index</code> and refuse to process another.</p>
 <hr/>
 <h3 id="target_block_not_an_ancestor_of_lmd_block">TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK<a class="headerlink" href="#target_block_not_an_ancestor_of_lmd_block" title="Permanent link">¶</a></h3>
 <p>• <strong>TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK</strong>: = "ATTESTATION_ERROR_TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L115">packages/lodestar/src/chain/errors/attestationError.ts:115</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L115">packages/lodestar/src/chain/errors/attestationError.ts:115</a></em></p>
 <p>The The attestation target block is not an ancestor of the block named in the LMD vote.</p>
 <hr/>
 <h3 id="target_state_missing">TARGET_STATE_MISSING<a class="headerlink" href="#target_state_missing" title="Permanent link">¶</a></h3>
 <p>• <strong>TARGET_STATE_MISSING</strong>: = "ATTESTATION_ERROR_TARGET_STATE_MISSING"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L8">packages/lodestar/src/chain/errors/attestationError.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L8">packages/lodestar/src/chain/errors/attestationError.ts:8</a></em></p>
 <p>The target state cannot be fetched</p>
 <hr/>
 <h3 id="unknown_beacon_block_root">UNKNOWN_BEACON_BLOCK_ROOT<a class="headerlink" href="#unknown_beacon_block_root" title="Permanent link">¶</a></h3>
 <p>• <strong>UNKNOWN_BEACON_BLOCK_ROOT</strong>: = "ATTESTATION_ERROR_UNKNOWN_BEACON_BLOCK_ROOT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L46">packages/lodestar/src/chain/errors/attestationError.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L46">packages/lodestar/src/chain/errors/attestationError.ts:46</a></em></p>
 <p>The <code>attestation.data.beacon_block_root</code> block is unknown.</p>
 <hr/>
 <h3 id="unknown_target_root">UNKNOWN_TARGET_ROOT<a class="headerlink" href="#unknown_target_root" title="Permanent link">¶</a></h3>
 <p>• <strong>UNKNOWN_TARGET_ROOT</strong>: = "ATTESTATION_ERROR_UNKNOWN_TARGET_ROOT"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L58">packages/lodestar/src/chain/errors/attestationError.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L58">packages/lodestar/src/chain/errors/attestationError.ts:58</a></em></p>
 <p>The target root of the attestation points to a block that we have not verified.</p>
 <hr/>
 <h3 id="wrong_number_of_aggregation_bits">WRONG_NUMBER_OF_AGGREGATION_BITS<a class="headerlink" href="#wrong_number_of_aggregation_bits" title="Permanent link">¶</a></h3>
 <p>• <strong>WRONG_NUMBER_OF_AGGREGATION_BITS</strong>: = "ATTESTATION_ERROR_WRONG_NUMBER_OF_AGGREGATION_BITS"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0e47cd3/packages/lodestar/src/chain/errors/attestationError.ts#L103">packages/lodestar/src/chain/errors/attestationError.ts:103</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d78c82d/packages/lodestar/src/chain/errors/attestationError.ts#L103">packages/lodestar/src/chain/errors/attestationError.ts:103</a></em></p>
 <p>Number of aggregation bits does not match committee size</p>
 </article>
 </div>
