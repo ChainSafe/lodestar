@@ -40,6 +40,9 @@ export interface IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 
+  /** The initial slot that the chain is started with */
+  readonly anchorSlot: Slot;
+
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;

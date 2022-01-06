@@ -72,7 +72,14 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   // BeaconNode setup
   try {
-    const anchorState = await initBeaconState(options, args, config, db, logger, abortController.signal);
+    const {anchorState, wsCheckpoint} = await initBeaconState(
+      options,
+      args,
+      config,
+      db,
+      logger,
+      abortController.signal
+    );
     const beaconConfig = createIBeaconConfig(config, anchorState.genesisValidatorsRoot);
     const node = await BeaconNode.init({
       opts: options,
@@ -81,6 +88,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
       logger,
       libp2p: await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir}),
       anchorState,
+      wsCheckpoint,
       metricsRegistries,
     });
 

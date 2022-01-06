@@ -1,5 +1,5 @@
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {allForks, RootHex, Slot} from "@chainsafe/lodestar-types";
+import {allForks, RootHex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {routes} from "@chainsafe/lodestar-api";
 import {INetwork} from "../network";
@@ -55,6 +55,7 @@ export interface ISyncModules {
   metrics: IMetrics | null;
   logger: ILogger;
   chain: IBeaconChain;
+  wsCheckpoint?: phase0.Checkpoint;
 }
 
 export type PendingBlock = {

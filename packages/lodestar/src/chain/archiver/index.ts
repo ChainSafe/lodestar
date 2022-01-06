@@ -71,7 +71,7 @@ export class Archiver {
       await archiveBlocks(this.db, this.chain.forkChoice, this.chain.lightClientServer, this.logger, finalized);
 
       // should be after ArchiveBlocksTask to handle restart cleanly
-      await this.statesArchiver.maybeArchiveState(finalized);
+      await this.statesArchiver.maybeArchiveState(finalized, this.chain.anchorSlot);
 
       await Promise.all([
         this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch),

@@ -431,6 +431,30 @@ export function createLodestarMetrics(
       }),
     },
 
+    backfillSync: {
+      backfilledTillSlot: register.gauge({
+        name: "lodestar_backfill_till_slot",
+        help: "Current lowest backfilled slot",
+      }),
+      prevFinOrWsSlot: register.gauge({
+        name: "lodestar_backfill_prev_fin_or_ws_slot",
+        help: "Slot of previous finalized or wsCheckpoint block to be validated",
+      }),
+      totalBlocks: register.gauge<"method">({
+        name: "lodestar_backfill_sync_blocks_total",
+        help: "Total amount of backfilled blocks",
+        labelNames: ["method"],
+      }),
+      errors: register.gauge({
+        name: "lodestar_backfill_sync_errors_total",
+        help: "Total number of errors while backfilling",
+      }),
+      status: register.gauge({
+        name: "lodestar_backfill_sync_status",
+        help: "Current backfill syncing status: [Aborted, Pending, Syncing, Completed]",
+      }),
+    },
+
     // Validator monitoring
 
     validatorMonitor: {

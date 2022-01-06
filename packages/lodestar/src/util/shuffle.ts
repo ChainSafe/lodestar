@@ -10,3 +10,12 @@ export function shuffle<T>(arr: T[]): T[] {
   }
   return _arr;
 }
+
+/**
+ * Return one random item from array
+ */
+export function shuffleOne<T>(arr: T[]): T | undefined {
+  if (arr.length === 0) return undefined;
+
+  return arr[Math.floor(Math.random() * arr.length)];
+}
