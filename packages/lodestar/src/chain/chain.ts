@@ -133,6 +133,7 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       db,
       metrics,
+      emitter,
       signal,
     });
 

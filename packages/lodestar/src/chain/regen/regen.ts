@@ -16,6 +16,7 @@ import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {IStateRegenerator, RegenCaller} from "./interface";
 import {RegenError, RegenErrorCode} from "./errors";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 
 export type RegenModules = {
   db: IBeaconDb;
@@ -23,6 +24,7 @@ export type RegenModules = {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   config: IChainForkConfig;
+  emitter: ChainEventEmitter;
   metrics: IMetrics | null;
 };
 
@@ -227,7 +229,7 @@ export class StateRegenerator implements IStateRegenerator {
  * emitting "checkpoint" events after every epoch processed.
  */
 async function processSlotsByCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null},
+  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -246,7 +248,7 @@ async function processSlotsByCheckpoint(
  * Stops processing after no more full epochs can be processed.
  */
 async function processSlotsToNearestCheckpoint(
-  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null},
+  modules: {checkpointStateCache: CheckpointStateCache; metrics: IMetrics | null; emitter: ChainEventEmitter},
   preState: CachedBeaconState<allForks.BeaconState>,
   slot: Slot
 ): Promise<CachedBeaconState<allForks.BeaconState>> {
@@ -254,17 +256,20 @@ async function processSlotsToNearestCheckpoint(
   const postSlot = slot;
   const preEpoch = computeEpochAtSlot(preSlot);
   let postState = preState.clone();
+  const {checkpointStateCache, emitter, metrics} = modules;
+
   for (
     let nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     nextEpochSlot <= postSlot;
     nextEpochSlot += SLOTS_PER_EPOCH
   ) {
-    postState = allForks.processSlots(postState, nextEpochSlot, modules.metrics);
+    postState = allForks.processSlots(postState, nextEpochSlot, metrics);
 
     // Cache state to preserve epoch transition work
     const checkpointState = postState.clone();
     const cp = getCheckpointFromState(checkpointState);
-    modules.checkpointStateCache.add(cp, checkpointState);
+    checkpointStateCache.add(cp, checkpointState);
+    emitter.emit(ChainEvent.checkpoint, cp, checkpointState);
 
     // this avoids keeping our node busy processing blocks
     await sleep(0);
