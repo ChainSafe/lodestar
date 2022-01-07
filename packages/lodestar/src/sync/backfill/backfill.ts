@@ -247,10 +247,22 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // in backfilledRanges
     const backfillRangeWrittenSlot = await db.backfilledRanges.get(backfillStartFromSlot);
 
-    // wsCheckpointHeader is where the checkpoint can actually be validated
-    const wsCheckpointHeader: BackfillBlockHeader | null = wsCheckpoint
-      ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
-      : null;
+    // wsCheckpointHeader is where the checkpoint can actually be validated,
+    // 1. Only validate checkpoint which we can backfill. Else this checkpoint would
+    //    be validated in the normal forward sync
+    // 2. If the anchor epoch and wscheckpoint epoch are same, then wsCheckpoint root should
+    //    match anchorBlockRoot i.e. anchorCp.root
+    if (wsCheckpoint?.epoch === anchorCp.epoch && !byteArrayEquals(wsCheckpoint.root, anchorCp.root)) {
+      throw Error(
+        `Invalid wsCheckpoint root at anchor epoch=${anchorCp.epoch}, expected=${toHexString(
+          wsCheckpoint.root
+        )}, actual=${toHexString(anchorCp.root)}`
+      );
+    }
+    const wsCheckpointHeader: BackfillBlockHeader | null =
+      wsCheckpoint && wsCheckpoint.epoch <= anchorCp.epoch
+        ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
+        : null;
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorState.slot, logger);
 
@@ -508,8 +520,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpointHeader.root);
       if (
         !wsDbCheckpointBlock ||
-        Math.floor(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !==
-          this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
+        Math.ceil(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !== this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
       )
         // TODO: explode and stop the entire node
         throw new Error(
@@ -524,6 +535,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       this.logger.info("BackfillSync - wsCheckpoint validated!", {
         root: toHexString(this.wsCheckpointHeader.root),
         epoch: this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH,
+        slot: wsDbCheckpointBlock.message.slot,
       });
       this.wsValidated = true;
     }

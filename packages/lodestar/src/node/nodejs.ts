@@ -138,6 +138,7 @@ export class BeaconNode {
       db,
       logger: logger.child(opts.logger.chain),
       metrics,
+      wsCheckpoint,
       anchorState,
       eth1: initializeEth1ForBlockProduction(
         opts.eth1,
@@ -234,7 +235,7 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
-      this.backfillSync?.close();
+      this.backfillSync.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();

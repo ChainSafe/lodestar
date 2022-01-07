@@ -105,7 +105,17 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+  const prevFinalizedWsValidated = chain.forkChoice.wsCheckpointFoundAndValidated();
+
   chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
+
+  const currFinalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
+  if (!prevFinalizedWsValidated && chain.forkChoice.wsCheckpointFoundAndValidated()) {
+    chain.logger.info("wsCheckpoint found and validated as finalized", {
+      root: currFinalizedCheckpoint.rootHex,
+      epoch: currFinalizedCheckpoint.epoch,
+    });
+  }
 
   // - Register state and block to the validator monitor
   // TODO
@@ -162,8 +172,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
   // Notify execution layer of head and finalized updates
-  const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
+  if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedCheckpoint.epoch !== prevFinalizedEpoch) {
     /**
      * On post MERGE_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
      * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.

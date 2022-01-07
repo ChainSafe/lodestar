@@ -3,7 +3,7 @@
  */
 
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {getEffectiveBalances, CachedBeaconState, merge} from "@chainsafe/lodestar-beacon-state-transition";
@@ -26,6 +26,7 @@ export function initializeForkChoice(
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconState<allForks.BeaconState>,
+  wsCheckpoint?: phase0.Checkpoint | null,
   metrics?: IMetrics | null
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
@@ -69,6 +70,7 @@ export function initializeForkChoice(
     }),
 
     justifiedBalances,
+    wsCheckpoint,
     metrics
   );
 }

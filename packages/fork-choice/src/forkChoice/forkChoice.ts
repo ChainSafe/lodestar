@@ -65,6 +65,11 @@ export class ForkChoice implements IForkChoice {
   /** Cached head */
   private head: IProtoBlock;
 
+  /** Is the provided wsCheckpoint found and validated */
+  private wsCheckpointFC:
+    | (phase0.Checkpoint & {validatedJustified: boolean; validatedFinalized: boolean})
+    | null = null;
+
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -82,8 +87,27 @@ export class ForkChoice implements IForkChoice {
      * This should be the balances of the state at fcStore.justifiedCheckpoint
      */
     private justifiedBalances: number[],
+    /** A weak subjectivty checkpoint that would need to be validated on forward sync */
+    wsCheckpoint?: phase0.Checkpoint | null,
     private readonly metrics?: IForkChoiceMetrics | null
   ) {
+    // If wsCheckpoint is provided and its in past, then we assume that is valid here
+    // as backfillSync will take of its validation in past.
+    if (wsCheckpoint != null && wsCheckpoint.epoch >= fcStore.finalizedCheckpoint.epoch) {
+      if (wsCheckpoint.epoch === fcStore.finalizedCheckpoint.epoch) {
+        if (!byteArrayEquals(wsCheckpoint.root, fcStore.finalizedCheckpoint.root)) {
+          throw Error(
+            `Invalid wsCheckpoint root at epoch=${wsCheckpoint.epoch}, expected=${toHexString(
+              wsCheckpoint.root
+            )} actual=${fcStore.finalizedCheckpoint.rootHex}`
+          );
+        }
+        this.wsCheckpointFC = {...wsCheckpoint, validatedJustified: true, validatedFinalized: true};
+      } else {
+        // We need to validate wsCheckpoint in future
+        this.wsCheckpointFC = {...wsCheckpoint, validatedJustified: false, validatedFinalized: false};
+      }
+    }
     this.bestJustifiedBalances = justifiedBalances;
     this.head = this.updateHead();
   }
@@ -140,6 +164,13 @@ export class ForkChoice implements IForkChoice {
    */
   getHead(): IProtoBlock {
     return this.head;
+  }
+
+  /**
+   * Is the wsCheckpoint found and validated, if provided
+   */
+  wsCheckpointFoundAndValidated(): boolean {
+    return this.wsCheckpointFC?.validatedFinalized ?? true;
   }
 
   /**
@@ -308,6 +339,24 @@ export class ForkChoice implements IForkChoice {
 
     // Update justified checkpoint.
     if (stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) {
+      // Validate against wsCheckpointFC
+      if (this.wsCheckpointFC !== null && !this.wsCheckpointFC.validatedJustified) {
+        if (currentJustifiedCheckpoint.epoch > this.wsCheckpointFC.epoch) {
+          throw Error(
+            `Missed wsCheckpoint at epoch=${this.wsCheckpointFC.epoch}, currentJustifiedCheckpoint epoch=${currentJustifiedCheckpoint.epoch}`
+          );
+        } else if (currentJustifiedCheckpoint.epoch === this.wsCheckpointFC.epoch) {
+          if (!byteArrayEquals(currentJustifiedCheckpoint.root, this.wsCheckpointFC.root)) {
+            throw Error(
+              `Invalid wsCheckpoint at epoch=${this.wsCheckpointFC.epoch}, expected=${toHexString(
+                currentJustifiedCheckpoint.root
+              )}`
+            );
+          }
+          this.wsCheckpointFC.validatedJustified = true;
+        }
+      }
+
       const {justifiedBalances} = preCachedData || {};
       if (!justifiedBalances) {
         throw new ForkChoiceError({
@@ -326,6 +375,24 @@ export class ForkChoice implements IForkChoice {
 
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
+      // Validate against wsCheckpointFC
+      if (this.wsCheckpointFC !== null && !this.wsCheckpointFC.validatedFinalized) {
+        if (finalizedCheckpoint.epoch > this.wsCheckpointFC.epoch) {
+          throw Error(
+            `Missed wsCheckpoint at epoch=${this.wsCheckpointFC.epoch}, finalizedCheckpoint epoch=${finalizedCheckpoint.epoch}`
+          );
+        } else if (finalizedCheckpoint.epoch === this.wsCheckpointFC.epoch) {
+          if (!byteArrayEquals(finalizedCheckpoint.root, this.wsCheckpointFC.root)) {
+            throw Error(
+              `Invalid wsCheckpoint at epoch=${this.wsCheckpointFC.epoch}, expected=${toHexString(
+                finalizedCheckpoint.root
+              )}`
+            );
+          }
+          this.wsCheckpointFC.validatedFinalized = true;
+        }
+      }
+
       this.fcStore.finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
       this.synced = false;
 
@@ -972,4 +1039,14 @@ function assertValidTerminalPowBlock(
         `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
       );
   }
+}
+
+function byteArrayEquals(a: Uint8Array | Root, b: Uint8Array | Root): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
 }

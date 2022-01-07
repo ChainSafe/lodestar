@@ -30,6 +30,7 @@ export interface IForkChoice {
    */
   getHeadRoot(): RootHex;
   getHead(): IProtoBlock;
+  wsCheckpointFoundAndValidated(): boolean;
   updateHead(): IProtoBlock;
   /**
    * Retrieves all possible chain heads (leaves of fork choice tree).

@@ -91,6 +91,7 @@ export class BeaconChain implements IBeaconChain {
       db,
       logger,
       metrics,
+      wsCheckpoint,
       anchorState,
       eth1,
       executionEngine,
@@ -99,6 +100,7 @@ export class BeaconChain implements IBeaconChain {
       db: IBeaconDb;
       logger: ILogger;
       metrics: IMetrics | null;
+      wsCheckpoint?: phase0.Checkpoint | null;
       anchorState: TreeBacked<allForks.BeaconState>;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
@@ -125,7 +127,7 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
+    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, wsCheckpoint, metrics);
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,

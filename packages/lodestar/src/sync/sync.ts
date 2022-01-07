@@ -104,6 +104,8 @@ export class BeaconSync implements IBeaconSync {
       (currentSlot < 0 ||
         // head is behind clock but close enough with some tolerance
         (headSlot <= currentSlot && headSlot >= currentSlot - this.slotImportTolerance)) &&
+      // If a checkpoint was set, it should have been found
+      this.chain.forkChoice.wsCheckpointFoundAndValidated() &&
       // Ensure there at least one connected peer to not claim synced if has no peers
       // Allow to bypass this conditions for local networks with a single node
       (this.opts.isSingleNode || this.network.hasSomeConnectedPeer())
