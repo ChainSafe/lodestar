@@ -9,7 +9,13 @@ import {
   altair,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice, OnBlockPrecachedData, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {
+  IForkChoice,
+  OnBlockPrecachedData,
+  ExecutionStatus,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
@@ -24,6 +30,7 @@ import {LightClientServer} from "../lightClient";
 import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
+// import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
@@ -119,6 +126,8 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
     const rootCache = new altair.RootCache(postState);
     const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
+    const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
+
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
@@ -128,8 +137,28 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         }
         pendingEvents.push(ChainEvent.attestation, attestation);
       } catch (e) {
-        chain.logger.error("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+        // a block has a lot of attestations and it may has same error, we don't want to log all of them
+        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+          let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
+          if (errWithCount === undefined) {
+            errWithCount = {error: e as Error, count: 1};
+            invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
+          } else {
+            errWithCount.count++;
+          }
+        } else {
+          // always log other errors
+          chain.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+        }
       }
+    }
+
+    for (const {error, count} of invalidAttestationErrorsByCode.values()) {
+      chain.logger.warn(
+        "Error processing attestations from block",
+        {slot: block.message.slot, erroredAttestations: count},
+        error
+      );
     }
   }
 
