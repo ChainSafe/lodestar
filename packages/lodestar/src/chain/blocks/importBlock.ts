@@ -139,15 +139,13 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
-          let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code) as
-            | {error: Error; count: number}
-            | undefined;
+          let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
           if (errWithCount === undefined) {
             errWithCount = {error: e as Error, count: 1};
+            invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
           } else {
             errWithCount.count++;
           }
-          invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
         } else {
           // always log other errors
           chain.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
