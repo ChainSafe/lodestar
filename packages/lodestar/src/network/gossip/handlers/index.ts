@@ -152,6 +152,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
           indexedAttestation.attestingIndices as ValidatorIndex[],
           committeeIndices
         );
+
+        chain.forkChoice.onAttestation(indexedAttestation);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -184,6 +186,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
 
       // Handler
+      chain.forkChoice.onAttestation(indexedAttestation);
 
       // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
       // but don't import them, to save CPU and RAM
