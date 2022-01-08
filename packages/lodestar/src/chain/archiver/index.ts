@@ -53,15 +53,13 @@ export class Archiver {
     return this.jobQueue.push(finalized);
   };
 
-  private onCheckpoint = async (): Promise<void> => {
+  private onCheckpoint = (): void => {
     const headStateRoot = this.chain.forkChoice.getHead().stateRoot;
-    await Promise.all([
-      this.chain.checkpointStateCache.prune(
-        this.chain.forkChoice.getFinalizedCheckpoint().epoch,
-        this.chain.forkChoice.getJustifiedCheckpoint().epoch
-      ),
-      this.chain.stateCache.prune(headStateRoot),
-    ]);
+    this.chain.checkpointStateCache.prune(
+      this.chain.forkChoice.getFinalizedCheckpoint().epoch,
+      this.chain.forkChoice.getJustifiedCheckpoint().epoch
+    );
+    this.chain.stateCache.prune(headStateRoot);
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
