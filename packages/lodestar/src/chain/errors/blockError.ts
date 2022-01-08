@@ -1,6 +1,7 @@
 import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {toHexString} from "@chainsafe/ssz";
+import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipActionError} from "./gossipValidation";
 
 export enum BlockErrorCode {
@@ -77,8 +78,10 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
-      preState: CachedBeaconStateAllForks;
-      postState: CachedBeaconStateAllForks;
+      root: Uint8Array;
+      expectedRoot: Uint8Array;
+      preState: CachedBeaconState<allForks.BeaconState>;
+      postState: CachedBeaconState<allForks.BeaconState>;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}
@@ -100,6 +103,10 @@ export class BlockError extends LodestarError<BlockErrorType> {
   constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
     super(type);
   }
+
+  getMetadata(): Record<string, string | number | null> {
+    return renderBlockErrorType(this.type);
+  }
 }
 
 export class ChainSegmentError extends LodestarError<BlockErrorType> {
@@ -111,5 +118,53 @@ export class ChainSegmentError extends LodestarError<BlockErrorType> {
   constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType, importedBlocks: number) {
     super(type);
     this.importedBlocks = importedBlocks;
+  }
+
+  getMetadata(): Record<string, string | number | null> {
+    return renderBlockErrorType(this.type);
+  }
+}
+
+export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
+  switch (type.code) {
+    case BlockErrorCode.PARENT_UNKNOWN:
+    case BlockErrorCode.FUTURE_SLOT:
+    case BlockErrorCode.STATE_ROOT_MISMATCH:
+    case BlockErrorCode.GENESIS_BLOCK:
+    case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
+    case BlockErrorCode.ALREADY_KNOWN:
+    case BlockErrorCode.REPEAT_PROPOSAL:
+    case BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED:
+    case BlockErrorCode.INCORRECT_PROPOSER:
+    case BlockErrorCode.PROPOSAL_SIGNATURE_INVALID:
+    case BlockErrorCode.UNKNOWN_PROPOSER:
+    case BlockErrorCode.NOT_FINALIZED_DESCENDANT:
+    case BlockErrorCode.NOT_LATER_THAN_PARENT:
+    case BlockErrorCode.NON_LINEAR_PARENT_ROOTS:
+    case BlockErrorCode.NON_LINEAR_SLOTS:
+    case BlockErrorCode.KNOWN_BAD_BLOCK:
+    case BlockErrorCode.INCORRECT_TIMESTAMP:
+    case BlockErrorCode.TOO_MUCH_GAS_USED:
+    case BlockErrorCode.SAME_PARENT_HASH:
+    case BlockErrorCode.TRANSACTIONS_TOO_BIG:
+    case BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID:
+    case BlockErrorCode.EXECUTION_ENGINE_ERROR:
+      return type;
+
+    case BlockErrorCode.PRESTATE_MISSING:
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+    case BlockErrorCode.BEACON_CHAIN_ERROR:
+      return {
+        error: type.error.message,
+      };
+
+    case BlockErrorCode.INVALID_SIGNATURE:
+      return {};
+
+    case BlockErrorCode.INVALID_STATE_ROOT:
+      return {
+        root: toHexString(type.root),
+        expectedRoot: toHexString(type.expectedRoot),
+      };
   }
 }
