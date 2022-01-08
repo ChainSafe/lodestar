@@ -193,6 +193,7 @@ function mockForkChoice(): IForkChoice {
     getAncestor: () => rootHex,
     getHeadRoot: () => rootHex,
     getHead: () => block,
+    wsCheckpointFoundAndValidated: () => true,
     updateHead: () => block,
     getHeads: () => [block],
     getFinalizedCheckpoint: () => checkpoint,
