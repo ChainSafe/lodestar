@@ -111,6 +111,7 @@ export class MockBeaconChain implements IBeaconChain {
       checkpointStateCache: this.checkpointStateCache,
       db,
       metrics: null,
+      emitter: this.emitter,
     });
     this.lightClientServer = new LightClientServer(
       {config: this.config, emitter: this.emitter, logger, db: db},
