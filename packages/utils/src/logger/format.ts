@@ -1,5 +1,5 @@
 import {format} from "winston";
-import {toJson, toString} from "../json";
+import {logCtxToJson, logCtxToString} from "../json";
 import {Context, ILoggerOptions, TimestampFormatCode} from "./interface";
 import {formatEpochSlotTime} from "./util";
 
@@ -60,8 +60,8 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     format((_info) => {
       const info = _info as IWinstonInfoArg;
-      info.context = toJson(info.context) as Context;
-      info.error = (toJson(info.error) as unknown) as Error;
+      info.context = logCtxToJson(info.context);
+      info.error = (logCtxToJson(info.error) as unknown) as Error;
       return info;
     })(),
     format.json()
@@ -85,50 +85,10 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
     `[${infoString.toUpperCase()}]`,
     `${info.level.padStart(infoPad)}:`,
     info.message,
-    info.context !== undefined ? printStackTraceLast(info.context) : undefined,
-    info.error !== undefined ? printStackTraceLast(info.error) : undefined,
+    info.context !== undefined ? logCtxToString(info.context) : undefined,
+    info.error !== undefined ? logCtxToString(info.error) : undefined,
     info.durationMs && ` - duration=${info.durationMs}ms`,
   ];
 
   return logParts.filter((s) => s).join(" ");
-}
-
-/**
- * Extract stack property from context to allow appending at the end of the log
- */
-export function printStackTraceLast(context?: Context | Error): string {
-  if (context === undefined) {
-    return "";
-  }
-
-  const json = toJson(context);
-  const stackTraces = extractStackTraceFromJson(json);
-
-  if (stackTraces.length > 0) {
-    return [toString(json), ...stackTraces].join("\n");
-  } else {
-    return toString(json);
-  }
-}
-
-/**
- * Extract 'stack' from Json-ified error recursively.
- * Mutates the `json` argument deleting all 'stack' properties.
- * `json` argument must not contain circular properties, which should be guaranteed by `toJson()`
- */
-export function extractStackTraceFromJson(json: unknown, stackTraces: string[] = []): string[] {
-  if (typeof json === "object" && json !== null && !Array.isArray(json)) {
-    let stack: string | null = null;
-    for (const [key, value] of Object.entries(json)) {
-      if (key === "stack" && typeof value === "string") {
-        stack = value;
-        delete ((json as unknown) as Error)[key];
-      } else {
-        extractStackTraceFromJson(value, stackTraces);
-      }
-    }
-    // Push stack trace last so nested errors come first
-    if (stack) stackTraces.push(stack);
-  }
-  return stackTraces;
 }

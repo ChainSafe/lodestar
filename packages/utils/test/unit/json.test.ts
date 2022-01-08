@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {fromHexString, Json} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src";
+import {LodestarError, logCtxToJson, logCtxToString} from "../../src";
 
 describe("Json helper", () => {
   const circularReference = {};
@@ -41,15 +41,12 @@ describe("Json helper", () => {
           [1, 2],
           [3, 4],
         ],
-        json: [
-          [1, 2],
-          [3, 4],
-        ],
+        json: ["[object]", "[object]"],
       },
 
       // Objects
       {id: "object of basic types", arg: {a: 1, b: 2}, json: {a: 1, b: 2}},
-      {id: "object of objects", arg: {a: {b: 1}}, json: {a: {b: 1}}},
+      {id: "object of objects", arg: {a: {b: 1}}, json: {a: "[object]"}},
       () => {
         const rootHex = "0x11111111111111111111111111111111";
         return {
@@ -124,7 +121,7 @@ describe("Json helper", () => {
         return {
           id: "circular reference",
           arg: circularReference,
-          json: {myself: CIRCULAR_REFERENCE_TAG},
+          json: {myself: "[object]"},
         };
       },
     ];
@@ -132,15 +129,18 @@ describe("Json helper", () => {
     for (const testCase of testCases) {
       const {id, arg, json} = typeof testCase === "function" ? testCase() : testCase;
       it(id, () => {
-        expect(toJson(arg)).to.deep.equal(json);
+        expect(logCtxToJson(arg)).to.deep.equal(json);
       });
     }
   });
 
   describe("toString", () => {
+    const root = new Uint8Array(32);
+    const rootHex = toHexString(root);
+
     interface ITestCase {
       id: string;
-      json: Json;
+      json: unknown;
       output: string;
     }
     const testCases: (ITestCase | (() => ITestCase))[] = [
@@ -149,6 +149,7 @@ describe("Json helper", () => {
       {id: "boolean", json: true, output: "true"},
       {id: "number", json: 123, output: "123"},
       {id: "string", json: "hello", output: "hello"},
+      {id: "root", json: root, output: rootHex},
 
       // Arrays
       {id: "array of basic types", json: [1, 2, 3], output: "1, 2, 3"},
@@ -158,13 +159,13 @@ describe("Json helper", () => {
           [1, 2],
           [3, 4],
         ],
-        output: "[1,2], [3,4]",
+        output: "[object], [object]",
       },
 
       // Objects
-      {id: "object of basic types", json: {a: 1, b: 2}, output: "a=1, b=2"},
+      {id: "object of basic types", json: {a: 1, b: "a", c: root}, output: `a=1, b=a, c=${rootHex}`},
       // eslint-disable-next-line quotes
-      {id: "object of objects", json: {a: {b: 1}}, output: `a={"b":1}`},
+      {id: "object of objects", json: {a: {b: 1}}, output: `a=[object]`},
       {
         id: "error metadata",
         json: {
@@ -181,7 +182,7 @@ describe("Json helper", () => {
         return {
           id: "circular reference",
           json: circularReference,
-          output: `myself=${CIRCULAR_REFERENCE_TAG}`,
+          output: "myself=[object]",
         };
       },
     ];
@@ -189,7 +190,7 @@ describe("Json helper", () => {
     for (const testCase of testCases) {
       const {id, json, output} = typeof testCase === "function" ? testCase() : testCase;
       it(id, () => {
-        expect(toString(json)).to.equal(output);
+        expect(logCtxToString(json)).to.equal(output);
       });
     }
   });
