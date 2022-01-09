@@ -63,24 +63,52 @@ export class Archiver {
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
+    const logError = (e: Error): void => {
+      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
+    };
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
       await archiveBlocks(this.db, this.chain.forkChoice, this.chain.lightClientServer, this.logger, finalized);
 
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      await this.statesArchiver.maybeArchiveState(finalized, this.chain.anchorSlot);
-
-      await Promise.all([
-        this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch),
-        this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch),
-      ]);
-
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
+
+      // The following tasks need not be awaited and can run independently
+      // should be after ArchiveBlocksTask to handle restart cleanly
+      this.statesArchiver.maybeArchiveState(finalized).catch(logError);
+      this.updateBackfillRange(finalized).catch(logError);
+      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch).catch(logError);
+      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch).catch(logError);
+
       this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
-      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
+      logError(e as Error);
+    }
+  };
+
+  /**
+   * Backfill sync relies on verified connected ranges (which are represented as key,value
+   * with a verified jump from a key back to value). Since the node could have progressed
+   * ahead from, we need to save the forward progress of this node as another backfill
+   * range entry, that backfill sync will use to jump back if this node is restarted
+   * for any reason.
+   * The current backfill has its own backfill entry from anchor slot to last backfilled
+   * slot. And this would create the entry from the current finalized slot to the anchor
+   * slot.
+   */
+  private updateBackfillRange = async (finalized: CheckpointWithHex): Promise<void> => {
+    // Mark the sequence in backfill db from finalized block's slot till anchor slot as
+    // filled.
+    const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
+    if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorSlot) {
+      await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorSlot);
+
+      // Clear previously marked sequence till anchorSlot, without touching backfill sync
+      // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
+      const filteredSeqs = await this.db.backfilledRanges.keys({gt: this.chain.anchorSlot, lt: finalizedBlockFC.slot});
+      await this.db.backfilledRanges.batchDelete(filteredSeqs);
+      this.logger.debug("Updated backfilledRanges", {key: finalizedBlockFC.slot, value: this.chain.anchorSlot});
     }
   };
 }

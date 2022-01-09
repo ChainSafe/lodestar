@@ -3,7 +3,6 @@
  */
 
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {Slot} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache} from "../stateCache";
@@ -43,20 +42,9 @@ export class StatesArchiver {
    * epoch - 1024*2    epoch - 1024    epoch - 32    epoch
    * ```
    */
-  async maybeArchiveState(finalized: CheckpointWithHex, anchorSlot: Slot): Promise<void> {
+  async maybeArchiveState(finalized: CheckpointWithHex): Promise<void> {
     const lastStoredSlot = await this.db.stateArchive.lastKey();
     const lastStoredEpoch = computeEpochAtSlot(lastStoredSlot ?? 0);
-
-    // Mark the sequence in backfill db from finalized slot till anchor slot as filled
-    const finalizedState = this.checkpointStateCache.get(finalized);
-    if (finalizedState) {
-      await this.db.backfilledRanges.put(finalizedState.slot, anchorSlot);
-
-      // Clear previously marked sequence till anchorSlot, without touching backfill sync
-      // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
-      const filteredSeqs = await this.db.backfilledRanges.keys({gt: anchorSlot, lt: finalizedState.slot});
-      await this.db.backfilledRanges.batchDelete(filteredSeqs);
-    }
 
     if (finalized.epoch - lastStoredEpoch > PERSIST_TEMP_STATE_EVERY_EPOCHS) {
       await this.archiveState(finalized);

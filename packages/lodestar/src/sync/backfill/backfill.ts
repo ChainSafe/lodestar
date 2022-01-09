@@ -231,16 +231,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
     const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+    const anchorSlot = anchorState.latestBlockHeader.slot;
     const syncAnchor = {
       anchorBlock: null,
       anchorBlockRoot: anchorCp.root,
-      anchorSlot: anchorState.slot,
+      anchorSlot,
       lastBackSyncedBlock: null,
     };
     const backfillStartFromSlot = anchorState.slot;
     modules.logger.info("BackfillSync - initializing from Checkpoint", {
       root: toHexString(anchorCp.root),
       epoch: anchorCp.epoch,
+      slot: anchorSlot,
     });
 
     // Load the previous written to slot for the key  backfillStartFromSlot
@@ -252,7 +254,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
       : null;
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
-    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorState.slot, logger);
+    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
     return new this(
       {
