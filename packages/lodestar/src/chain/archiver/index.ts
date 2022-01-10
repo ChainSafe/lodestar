@@ -75,7 +75,7 @@ export class Archiver {
       this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
-      void this.updateBackfillRange(finalized);
+      await this.updateBackfillRange(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
