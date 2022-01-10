@@ -41,7 +41,7 @@ export interface IBeaconChain {
   readonly config: IBeaconConfig;
 
   /** The initial slot that the chain is started with */
-  readonly anchorSlot: Slot;
+  readonly anchorStateLatestBlockSlot: Slot;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;

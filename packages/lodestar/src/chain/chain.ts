@@ -51,7 +51,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
-  readonly anchorSlot: Slot;
+  readonly anchorStateLatestBlockSlot: Slot;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -110,7 +110,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
-    this.anchorSlot = anchorState.latestBlockHeader.slot;
+    this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;

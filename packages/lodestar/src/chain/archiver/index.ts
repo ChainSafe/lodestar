@@ -98,17 +98,22 @@ export class Archiver {
       // Mark the sequence in backfill db from finalized block's slot till anchor slot as
       // filled.
       const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
-      if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorSlot) {
-        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorSlot);
+      if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorStateLatestBlockSlot) {
+        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorStateLatestBlockSlot);
 
-        // Clear previously marked sequence till anchorSlot, without touching backfill sync
-        // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
+        // Clear previously marked sequence till anchorStateLatestBlockSlot, without
+        // touching backfill sync process sequence which are at
+        // <=anchorStateLatestBlockSlot i.e. clear >anchorStateLatestBlockSlot
+        // and < currentSlot
         const filteredSeqs = await this.db.backfilledRanges.keys({
-          gt: this.chain.anchorSlot,
+          gt: this.chain.anchorStateLatestBlockSlot,
           lt: finalizedBlockFC.slot,
         });
         await this.db.backfilledRanges.batchDelete(filteredSeqs);
-        this.logger.debug("Updated backfilledRanges", {key: finalizedBlockFC.slot, value: this.chain.anchorSlot});
+        this.logger.debug("Updated backfilledRanges", {
+          key: finalizedBlockFC.slot,
+          value: this.chain.anchorStateLatestBlockSlot,
+        });
       }
     } catch (e) {
       this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
