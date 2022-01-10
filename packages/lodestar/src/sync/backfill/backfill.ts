@@ -542,7 +542,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     const filteredSeqs = await this.db.backfilledRanges.entries({
       gte: lastBackSyncedSlot,
-      lte: this.backfillStartFromSlot,
     });
 
     if (filteredSeqs.length > 0) {
@@ -627,7 +626,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     if (filteredSeqs.length > 0) {
       await this.db.backfilledRanges.batchDelete(
-        filteredSeqs.filter((entry) => entry.key !== this.backfillStartFromSlot).map((entry) => entry.key)
+        // Only delete < backfillStartFromSlot, the keys greater than this would be cleaned
+        // up by the archival process of forward sync
+        filteredSeqs.filter((entry) => entry.key < this.backfillStartFromSlot).map((entry) => entry.key)
       );
     }
 
