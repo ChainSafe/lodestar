@@ -83,7 +83,7 @@ export class CheckpointStateCache {
     return previousHits;
   }
 
-  async pruneFinalized(finalizedEpoch: Epoch): Promise<void> {
+  pruneFinalized(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);

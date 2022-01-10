@@ -63,27 +63,23 @@ export class Archiver {
   };
 
   private processFinalizedCheckpoint = async (finalized: CheckpointWithHex): Promise<void> => {
-    const logError = (e: Error): void => {
-      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e);
-    };
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
       await archiveBlocks(this.db, this.chain.forkChoice, this.chain.lightClientServer, this.logger, finalized);
 
+      // should be after ArchiveBlocksTask to handle restart cleanly
+      await this.statesArchiver.maybeArchiveState(finalized);
+
+      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch);
+      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch);
       // tasks rely on extended fork choice
       this.chain.forkChoice.prune(finalized.rootHex);
-
-      // The following tasks need not be awaited and can run independently
-      // should be after ArchiveBlocksTask to handle restart cleanly
-      this.statesArchiver.maybeArchiveState(finalized).catch(logError);
-      this.updateBackfillRange(finalized).catch(logError);
-      this.chain.stateCache.deleteAllBeforeEpoch(finalizedEpoch).catch(logError);
-      this.chain.checkpointStateCache.pruneFinalized(finalizedEpoch).catch(logError);
+      void this.updateBackfillRange(finalized);
 
       this.logger.verbose("Finish processing finalized checkpoint", {epoch: finalizedEpoch});
     } catch (e) {
-      logError(e as Error);
+      this.logger.error("Error processing finalized checkpoint", {epoch: finalized.epoch}, e as Error);
     }
   };
 
@@ -98,17 +94,24 @@ export class Archiver {
    * slot.
    */
   private updateBackfillRange = async (finalized: CheckpointWithHex): Promise<void> => {
-    // Mark the sequence in backfill db from finalized block's slot till anchor slot as
-    // filled.
-    const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
-    if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorSlot) {
-      await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorSlot);
+    try {
+      // Mark the sequence in backfill db from finalized block's slot till anchor slot as
+      // filled.
+      const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
+      if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorSlot) {
+        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorSlot);
 
-      // Clear previously marked sequence till anchorSlot, without touching backfill sync
-      // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
-      const filteredSeqs = await this.db.backfilledRanges.keys({gt: this.chain.anchorSlot, lt: finalizedBlockFC.slot});
-      await this.db.backfilledRanges.batchDelete(filteredSeqs);
-      this.logger.debug("Updated backfilledRanges", {key: finalizedBlockFC.slot, value: this.chain.anchorSlot});
+        // Clear previously marked sequence till anchorSlot, without touching backfill sync
+        // process sequence which are at <=anchorSlot i.e. clear >anchorSlot and < currentSlot
+        const filteredSeqs = await this.db.backfilledRanges.keys({
+          gt: this.chain.anchorSlot,
+          lt: finalizedBlockFC.slot,
+        });
+        await this.db.backfilledRanges.batchDelete(filteredSeqs);
+        this.logger.debug("Updated backfilledRanges", {key: finalizedBlockFC.slot, value: this.chain.anchorSlot});
+      }
+    } catch (e) {
+      this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
     }
   };
 }
