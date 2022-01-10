@@ -506,12 +506,19 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (this.wsValidated) return;
 
     if (this.wsCheckpointHeader.slot >= this.syncAnchor.lastBackSyncedBlock.slot) {
-      // Checkpoint root should be in db now!
+      // Checkpoint root should be in db now , in case there are string of orphaned/missed
+      // slots before/leading up to checkpoint, the block just backsynced before the
+      // wsCheckpointHeader.slot will have the checkpoint root
       const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpointHeader.root);
       if (
         !wsDbCheckpointBlock ||
-        Math.floor(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !==
-          this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
+        // The only validation we can do here is that wsDbCheckpointBlock is found at/before
+        // wsCheckpoint's epoch as there could be orphaned/missed slots all the way
+        // from wsDbCheckpointBlock's slot to the wsCheckpoint's epoch
+
+        // TODO: one can verify the child of wsDbCheckpointBlock is at
+        // slot > wsCheckpointHeader
+        wsDbCheckpointBlock.message.slot > this.wsCheckpointHeader.slot
       )
         // TODO: explode and stop the entire node
         throw new Error(
