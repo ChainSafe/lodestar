@@ -153,7 +153,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
           committeeIndices
         );
 
-        chain.forkChoice.onAttestation(indexedAttestation);
+        try {
+          chain.forkChoice.onAttestation(indexedAttestation);
+        } catch (e) {
+          logger.error(
+            "Error adding aggregated attestation to forkchoice",
+            {slot: aggregatedAttestation.data.slot},
+            e as Error
+          );
+        }
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -186,7 +194,6 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
 
       // Handler
-      chain.forkChoice.onAttestation(indexedAttestation);
 
       // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
       // but don't import them, to save CPU and RAM
@@ -197,7 +204,13 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.attestationPool.add(attestation);
       } catch (e) {
-        logger.error("Error adding attestation to pool", {subnet}, e as Error);
+        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+      }
+
+      try {
+        chain.forkChoice.onAttestation(indexedAttestation);
+      } catch (e) {
+        logger.error("Error adding unaggregated attestation to forkchoice", {subnet}, e as Error);
       }
     },
 
