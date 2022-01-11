@@ -1,6 +1,6 @@
 # Lodestar Release Guidelines
 
-![lodestar-release](https://user-images.githubusercontent.com/58080811/148576989-0e6924f5-8b5a-48c8-baa5-8a833cc364b0.png)
+![lodestar-release](https://github.com/ChainSafe/lodestar/blob/master/docs/images/lodestar-releases.png)
 
 ## Release Process Rules
 
@@ -27,9 +27,12 @@ The following observations must be taken into consideration before promoting the
     - Example: Block processing times, validator miss ratios, etc.
 
 ### Bug fixes to Pre-Releases
-We commit bug fixes exclusively to the specific pre-release candidate and preserve separation from `master` such that we can keep merging unstable PRs to`master`. If a fix is committed, we publish and promote the candidate to `beta.x+1`.
+If there is a bug discovered during the pre-release testing period which significantly impacts performance, security or stability, and it is determined that it is no longer prudent to release the `beta.x` candidate as `stable`, then it will await a bug fix by the team. The fix will be committed, back-ported to `master` and we publish and promote the new commit to `beta.x+1`. The 3 day testing period minimums will reset.
 
-## Stable Release
-When pre-release candidates have met the testing requirements, we execute `release.yml`.
+## Stable Releases
+When the pre-release candidate (Example: `v0.33.0-beta.0`) has met the testing requirements, we execute `release.yml`. This script will promote & tag the candidate to the `stable` release track and remove `beta.x`, publishing the version as `v0.33.0`. 
 
 The CI will check and tag the new stable release, publish to the NPM Registry and to Docker Hub.
+
+## Minor/Patch Releases
+The `minor` is increased as soon as new smaller features do get introduced. A minor release will not affect any depending project. Such a release only introduces smaller enhancements and features. A `patch` release only contains required bug fixes with a low risk to impact depending project.
