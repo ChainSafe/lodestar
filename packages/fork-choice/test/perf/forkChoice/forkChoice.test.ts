@@ -75,7 +75,7 @@ describe("ForkChoice", () => {
    * Validator index: | 0 1 2 ... committeeLength-1 | ... | (i*committeeLengh + ) 0 1 2 ... committeeLengh-1| (63*committeeLengh +) 0 1 2 ... committeeLength - 1 |
    */
   itBench({
-    id: "total onAttestation() calls per slot",
+    id: "pass gossip attestations to forkchoice per slot",
     beforeEach: () => {
       initializeForkChoice();
       // at slot 64, forkchoice receives attestations of slot 63
@@ -121,15 +121,17 @@ describe("ForkChoice", () => {
       const aggregatedAttestations: IndexedAttestation[] = [];
       const averageAggregatorsPerSlot = 11;
       for (let committeeIndex = 0; committeeIndex < ATTESTATION_SUBNET_COUNT; committeeIndex++) {
-        const attestationData: AttestationData = {
+        const tbAttestationData = ssz.phase0.AttestationData.createTreeBackedFromStruct({
           ...attestationDataOmitIndex,
           index: committeeIndex,
-        };
+        });
+        // cache the root
+        tbAttestationData.hashTreeRoot();
         for (let aggregator = 0; aggregator < averageAggregatorsPerSlot; aggregator++) {
           // same data, different signatures
           aggregatedAttestations.push({
             attestingIndices: Array.from({length: committeeLength}, (_, i) => committeeIndex * committeeLength + i),
-            data: ssz.phase0.AttestationData.createTreeBackedFromStruct(attestationData),
+            data: tbAttestationData,
             signature: Buffer.alloc(96, aggregator),
           });
         }
