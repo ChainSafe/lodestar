@@ -50,6 +50,7 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountTotalLimit": 1000,
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
+      "network.passGossipAttestationsToForkchoice": true,
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
     } as IBeaconNodeArgs;
@@ -109,6 +110,7 @@ describe("options / beaconNodeOptions", () => {
         blockCountTotalLimit: 1000,
         blockCountPeerLimit: 500,
         rateTrackerTimeoutMs: 60000,
+        passGossipAttestationsToForkchoice: true,
       },
       sync: {
         isSingleNode: true,
