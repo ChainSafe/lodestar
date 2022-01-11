@@ -231,16 +231,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
     const {checkpoint: anchorCp} = computeAnchorCheckpoint(config, anchorState);
+    const anchorSlot = anchorState.latestBlockHeader.slot;
     const syncAnchor = {
       anchorBlock: null,
       anchorBlockRoot: anchorCp.root,
-      anchorSlot: anchorState.slot,
+      anchorSlot,
       lastBackSyncedBlock: null,
     };
     const backfillStartFromSlot = anchorState.slot;
     modules.logger.info("BackfillSync - initializing from Checkpoint", {
       root: toHexString(anchorCp.root),
       epoch: anchorCp.epoch,
+      slot: anchorSlot,
     });
 
     // Load the previous written to slot for the key  backfillStartFromSlot
@@ -252,7 +254,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       ? {root: wsCheckpoint.root, slot: wsCheckpoint.epoch * SLOTS_PER_EPOCH}
       : null;
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
-    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorState.slot, logger);
+    const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
     return new this(
       {
@@ -504,12 +506,19 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     if (this.wsValidated) return;
 
     if (this.wsCheckpointHeader.slot >= this.syncAnchor.lastBackSyncedBlock.slot) {
-      // Checkpoint root should be in db now!
+      // Checkpoint root should be in db now , in case there are string of orphaned/missed
+      // slots before/leading up to checkpoint, the block just backsynced before the
+      // wsCheckpointHeader.slot will have the checkpoint root
       const wsDbCheckpointBlock = await this.db.blockArchive.getByRoot(this.wsCheckpointHeader.root);
       if (
         !wsDbCheckpointBlock ||
-        Math.floor(wsDbCheckpointBlock.message.slot / SLOTS_PER_EPOCH) !==
-          this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
+        // The only validation we can do here is that wsDbCheckpointBlock is found at/before
+        // wsCheckpoint's epoch as there could be orphaned/missed slots all the way
+        // from wsDbCheckpointBlock's slot to the wsCheckpoint's epoch
+
+        // TODO: one can verify the child of wsDbCheckpointBlock is at
+        // slot > wsCheckpointHeader
+        wsDbCheckpointBlock.message.slot > this.wsCheckpointHeader.slot
       )
         // TODO: explode and stop the entire node
         throw new Error(
@@ -540,7 +549,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     const filteredSeqs = await this.db.backfilledRanges.entries({
       gte: lastBackSyncedSlot,
-      lte: this.backfillStartFromSlot,
     });
 
     if (filteredSeqs.length > 0) {
@@ -625,7 +633,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     if (filteredSeqs.length > 0) {
       await this.db.backfilledRanges.batchDelete(
-        filteredSeqs.filter((entry) => entry.key !== this.backfillStartFromSlot).map((entry) => entry.key)
+        // Only delete < backfillStartFromSlot, the keys greater than this would be cleaned
+        // up by the archival process of forward sync
+        filteredSeqs.filter((entry) => entry.key < this.backfillStartFromSlot).map((entry) => entry.key)
       );
     }
 
