@@ -126,3 +126,62 @@ describe("getCurrentAndNextFork", function () {
     expect(forks.nextFork).to.be.undefined;
   });
 });
+
+describe("createNodeJsLibp2p", () => {
+  it("should extract bootMultiaddrs from enr with tcp", async function () {
+    this.timeout(0);
+    const peerId = await createPeerId();
+    const enrWithTcp = [
+      "enr:-LK4QDiPGwNomqUqNDaM3iHYvtdX7M5qngson6Qb2xGIg1LwC8-Nic0aQwO0rVbJt5xp32sRE3S1YqvVrWO7OgVNv0kBh2F0dG5ldHOIAAAAAAAAAACEZXRoMpA7CIeVAAAgCf__________gmlkgnY0gmlwhBKNA4qJc2VjcDI1NmsxoQKbBS4ROQ_sldJm5tMgi36qm5I5exKJFb4C8dDVS_otAoN0Y3CCIyiDdWRwgiMo",
+    ];
+    const bootMultiaddrs: string[] = [];
+    await createNodeJsLibp2p(
+      peerId,
+      {
+        connectToDiscv5Bootnodes: true,
+        discv5: {
+          enabled: false,
+          enr: createEnr(peerId),
+          bindAddr: "/ip4/127.0.0.1/udp/0",
+          bootEnrs: enrWithTcp,
+        },
+        bootMultiaddrs,
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+        targetPeers: defaultNetworkOptions.targetPeers,
+        maxPeers: defaultNetworkOptions.maxPeers,
+      },
+      {disablePeerDiscovery: true}
+    );
+    expect(bootMultiaddrs.length).to.be.equal(1);
+    expect(bootMultiaddrs[0]).to.be.equal(
+      "/ip4/18.141.3.138/tcp/9000/p2p/16Uiu2HAm5rokhpCBU7yBJHhMKXZ1xSVWwUcPMrzGKvU5Y7iBkmuK"
+    );
+  });
+
+  it("should not extract bootMultiaddrs from enr without tcp", async function () {
+    this.timeout(0);
+    const peerId = await createPeerId();
+    const enrWithoutTcp = [
+      "enr:-Ku4QCFQW96tEDYPjtaueW3WIh1CB0cJnvw_ibx5qIFZGqfLLj-QajMX6XwVs2d4offuspwgH3NkIMpWtCjCytVdlywGh2F0dG5ldHOIEAIAAgABAUyEZXRoMpCi7FS9AQAAAAAiAQAAAAAAgmlkgnY0gmlwhFA4VK6Jc2VjcDI1NmsxoQNGH1sJJS86-0x9T7qQewz9Wn9zlp6bYxqqrR38JQ49yIN1ZHCCIyg",
+    ];
+    const bootMultiaddrs: string[] = [];
+    await createNodeJsLibp2p(
+      peerId,
+      {
+        connectToDiscv5Bootnodes: true,
+        discv5: {
+          enabled: false,
+          enr: createEnr(peerId),
+          bindAddr: "/ip4/127.0.0.1/udp/0",
+          bootEnrs: enrWithoutTcp,
+        },
+        bootMultiaddrs,
+        localMultiaddrs: ["/ip4/127.0.0.1/tcp/0"],
+        targetPeers: defaultNetworkOptions.targetPeers,
+        maxPeers: defaultNetworkOptions.maxPeers,
+      },
+      {disablePeerDiscovery: true}
+    );
+    expect(bootMultiaddrs.length).to.be.equal(0);
+  });
+});
