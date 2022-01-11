@@ -1,6 +1,6 @@
 # Lodestar Release Guidelines
 
-![lodestar-release](https://github.com/ChainSafe/lodestar/blob/master/docs/images/lodestar-releases.png)
+![lodestar-release](docs/images/lodestar-releases.png)
 
 ## Release Process Rules
 
