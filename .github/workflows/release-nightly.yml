@@ -50,7 +50,7 @@ jobs:
         # --force-publish: lerna doesn't want to publish anything otherwise - "lerna success No changed packages to publish"
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish --yes --no-verify-access \
+          node_modules/.bin/lerna publish from-package --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset --force-publish \
           --preid dev
         env:
