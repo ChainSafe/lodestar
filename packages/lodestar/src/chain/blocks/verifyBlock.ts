@@ -4,7 +4,7 @@ import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
   allForks,
-  merge,
+  bellatrix,
   getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
@@ -149,9 +149,9 @@ export async function verifyBlockStateTransition(
   // TODO: Review mergeBlock conditions
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
-    merge.isMergeStateType(postState) &&
-    merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isExecutionEnabled(postState, block.message.body)
+    bellatrix.isBellatrixStateType(postState) &&
+    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
+    bellatrix.isExecutionEnabled(postState, block.message.body)
       ? block.message.body.executionPayload
       : null;
 

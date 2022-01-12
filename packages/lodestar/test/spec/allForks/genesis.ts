@@ -1,6 +1,6 @@
 import {join} from "path";
 import {expect} from "chai";
-import {phase0, Uint64, Root, ssz, allForks, merge} from "@chainsafe/lodestar-types";
+import {phase0, Uint64, Root, ssz, allForks, bellatrix} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,9 +21,9 @@ export function genesis(fork: ForkName): void {
       for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
         deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
       }
-      let executionPayloadHeader: TreeBacked<merge.ExecutionPayloadHeader> | undefined = undefined;
+      let executionPayloadHeader: TreeBacked<bellatrix.ExecutionPayloadHeader> | undefined = undefined;
       if (testcase["execution_payload_header"]) {
-        executionPayloadHeader = ssz.merge.ExecutionPayloadHeader.createTreeBackedFromStruct(
+        executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.createTreeBackedFromStruct(
           testcase["execution_payload_header"]
         );
       }
@@ -42,7 +42,7 @@ export function genesis(fork: ForkName): void {
         eth1_block_hash: ssz.Root,
         state: ssz[fork].BeaconState,
         // for merge genesis, no affect on other phases
-        execution_payload_header: ssz["merge"].ExecutionPayloadHeader,
+        execution_payload_header: ssz["bellatrix"].ExecutionPayloadHeader,
         ...generateDepositSSZTypeMapping(192),
       },
       timeout: 60000,
@@ -92,7 +92,7 @@ interface IGenesisInitSpecTest {
   meta: {
     depositsCount: Uint64;
   };
-  execution_payload_header?: merge.ExecutionPayloadHeader;
+  execution_payload_header?: bellatrix.ExecutionPayloadHeader;
   state: phase0.BeaconState;
 }
 

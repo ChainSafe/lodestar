@@ -57,8 +57,8 @@ export function operations<BeaconState extends allForks.BeaconState>(
           voluntary_exit: ssz.phase0.SignedVoluntaryExit,
           // Altair
           sync_aggregate: ssz.altair.SyncAggregate,
-          // Merge
-          execution_payload: ssz.merge.ExecutionPayload,
+          // Bellatrix
+          execution_payload: ssz.bellatrix.ExecutionPayload,
           // Provide types for new objects
           ...sszTypes,
         },

@@ -16,16 +16,16 @@ const forksToIgnore = new Set<string>([]);
 // │   │   └── phase0
 // │   ├── mainnet
 // │   │   ├── altair
-// │   │   ├── merge
+// │   │   ├── bellatrix
 // │   │   └── phase0
 // │   └── minimal
 // │       ├── altair
-// │       ├── merge
+// │       ├── bellatrix
 // │       └── phase0
 //
 // Each fork has the same structure but adding extra tests for added functionality
 //
-// | phase0           | altair           | merge            |
+// | phase0           | altair           | bellatrix            |
 // | ---------------- | ---------------- | ---------------- |
 // | epoch_processing | epoch_processing | epoch_processing |
 // | finality         | finality         | finality
@@ -45,7 +45,7 @@ const forksToIgnore = new Set<string>([]);
 // Tests are then organized by fork and follow the same naming structure as the spec tests.
 
 const knownPresets = ["mainnet", "minimal"];
-const knownForks = ["altair", "merge", "phase0"];
+const knownForks = ["altair", "bellatrix", "phase0"];
 const lodestarTests = path.join(__dirname, "../spec");
 
 const missingTests = new Set<string>();

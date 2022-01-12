@@ -21,7 +21,7 @@ import {
   computeTimeAtSlot,
   getRandaoMix,
   getCurrentEpoch,
-  merge,
+  bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconChain} from "../../interface";
@@ -85,7 +85,7 @@ export async function assembleBody(
     );
   }
 
-  if (blockEpoch >= chain.config.MERGE_FORK_EPOCH) {
+  if (blockEpoch >= chain.config.BELLATRIX_FORK_EPOCH) {
     // TODO: Optimize this flow
     // - Call prepareExecutionPayload as early as possible
     // - Call prepareExecutionPayload again if parameters change
@@ -97,15 +97,15 @@ export async function assembleBody(
     const payloadId = await prepareExecutionPayload(
       chain,
       finalizedBlockHash ?? ZERO_HASH_HEX,
-      currentState as CachedBeaconState<merge.BeaconState>,
+      currentState as CachedBeaconState<bellatrix.BeaconState>,
       feeRecipient
     );
 
     if (payloadId === null) {
       // Pre-merge, propose a pre-merge block with empty execution and keep the chain going
-      (blockBody as merge.BeaconBlockBody).executionPayload = ssz.merge.ExecutionPayload.defaultValue();
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
     } else {
-      (blockBody as merge.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     }
   }
 
@@ -122,13 +122,13 @@ export async function assembleBody(
 async function prepareExecutionPayload(
   chain: IBeaconChain,
   finalizedBlockHash: RootHex,
-  state: CachedBeaconState<merge.BeaconState>,
+  state: CachedBeaconState<bellatrix.BeaconState>,
   suggestedFeeRecipient: ExecutionAddress
 ): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
-  if (!merge.isMergeTransitionComplete(state)) {
+  if (!bellatrix.isMergeTransitionComplete(state)) {
     if (
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH

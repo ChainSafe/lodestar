@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeStartSlotAtEpoch, computeTimeAtSlot, merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeStartSlotAtEpoch, computeTimeAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
@@ -103,10 +103,10 @@ export async function validateGossipBlock(
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
-  if (fork === ForkName.merge) {
-    if (!merge.isMergeBlockBodyType(block.body)) throw Error("Not merge block type");
+  if (fork === ForkName.bellatrix) {
+    if (!bellatrix.isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
     const executionPayload = block.body.executionPayload;
-    if (merge.isMergeStateType(blockState) && merge.isExecutionEnabled(blockState, block.body)) {
+    if (bellatrix.isBellatrixStateType(blockState) && bellatrix.isExecutionEnabled(blockState, block.body)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {

@@ -85,7 +85,7 @@ export function processDeposit(
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
     state.currentEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
 
-    // Forks: altair, merge, and future
+    // Forks: altair, bellatrix, and future
     if (fork !== ForkName.phase0) {
       (state as CachedBeaconState<altair.BeaconState>).inactivityScores.push(0);
     }

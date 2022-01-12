@@ -94,7 +94,7 @@ describe("Lightclient sync", () => {
     // Test fetching a proof
     // First create a state with some known data
     const executionStateRoot = Buffer.alloc(32, 0xee);
-    const state = ssz.merge.BeaconState.defaultTreeBacked();
+    const state = ssz.bellatrix.BeaconState.defaultTreeBacked();
     state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
 
     // Track head + reference states with some known data
@@ -140,7 +140,7 @@ describe("Lightclient sync", () => {
 
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
     const {proof, header} = await lightclient.getHeadStateProof([["latestExecutionPayloadHeader", "stateRoot"]]);
-    const recoveredState = ssz.merge.BeaconState.createTreeBackedFromProof(header.stateRoot as Uint8Array, proof);
+    const recoveredState = ssz.bellatrix.BeaconState.createTreeBackedFromProof(header.stateRoot as Uint8Array, proof);
     expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
       toHexString(executionStateRoot),
       "Recovered executionStateRoot from getHeadStateProof() not correct"

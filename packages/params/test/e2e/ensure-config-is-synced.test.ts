@@ -12,7 +12,7 @@ async function downloadRemoteConfig(preset: "mainnet" | "minimal", commit: strin
   const urlByFork: Record<ForkName, string> = {
     [ForkName.phase0]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/phase0.yaml`,
     [ForkName.altair]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/altair.yaml`,
-    [ForkName.merge]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/merge.yaml`,
+    [ForkName.bellatrix]: `https://raw.githubusercontent.com/ethereum/eth2.0-specs/${commit}/presets/${preset}/bellatrix.yaml`,
   };
 
   const downloadedParams = await Promise.all(
