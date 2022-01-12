@@ -7,6 +7,7 @@ import {Api as LodestarApi} from "./routes/lodestar";
 import {Api as NodeApi} from "./routes/node";
 import {Api as ValidatorApi} from "./routes/validator";
 
+// TODO [DA] Think of the keys as the first path/namespace
 export type Api = {
   beacon: BeaconApi;
   config: ConfigApi;

@@ -7,21 +7,23 @@ import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import { ServerRoutes } from "@chainsafe/lodestar-api/src/server/utils";
+import { ReqTypes } from "@chainsafe/lodestar-api/src/keymanager/routes";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
-export type RestApiOptions = {
+export type RestApiOptionsKm = {
   host: string;
   cors: string;
   port: number;
 };
 
-export const restApiOptionsDefault: RestApiOptions = {
+export const restApiOptionsDefault: RestApiOptionsKm = {
   host: "127.0.0.1",
   port: 9596,
   cors: "*",
 };
 
-export interface IRestApiModules {
+export interface IRestApiModulesKm {
   config: IChainForkConfig;
   logger: ILogger;
   api: Api;
@@ -31,15 +33,16 @@ export interface IRestApiModules {
  * REST API powered by `fastify` server.
  */
 export class KeymanagerRestApi {
-  private readonly opts: RestApiOptions;
+  private readonly opts: RestApiOptionsKm;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
   private readonly activeRequests = new Set<IncomingMessage>();
 
-  constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
+  constructor(optsArg: Partial<RestApiOptionsKm>, modules: IRestApiModulesKm) {
     // Apply opts defaults
     const opts = {...restApiOptionsDefault, ...optsArg};
-
+    // TODO [DA] - note to self - set the properly
+    opts.port = 9597;
     const server = fastify({
       logger: false,
       ajv: {customOptions: {coerceTypes: "array"}},
@@ -47,7 +50,7 @@ export class KeymanagerRestApi {
     });
 
     // Instantiate and register the keymanager routes
-    const routes = getRoutes(modules.config, modules.api);
+    const routes: ServerRoutes<Api, ReqTypes> = getRoutes(modules.config, modules.api);
     registerRoutesGroup(server, routes);
 
     // To parse our ApiError -> statusCode

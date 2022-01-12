@@ -1,5 +1,6 @@
 import {Options, Argv} from "yargs";
-
+// TODO [DA] - note to self - these are basically types definition. Why not have in a central place?
+//  Does such file exist already?
 export type ICliCommandOptions<OwnArgs> = Required<{[key in keyof OwnArgs]: Options}>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

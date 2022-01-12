@@ -104,6 +104,7 @@ export const routesData: RoutesData<Api> = {
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
+  // TODO [DA] - note to self - should this not be named /eth/v1/lodestar/discv5-kad-values or moved to debug?
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
 };
 

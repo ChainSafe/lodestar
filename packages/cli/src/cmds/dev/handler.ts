@@ -64,6 +64,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
 
   // BeaconNode setup
+  // TODO [DA] - note to self - this functions has the side effect of also mutates options.network.
+  //  That can make it hard to reason about the code. Can this be improved?
   const libp2p = await createNodeJsLibp2p(peerId, options.network);
   const logger = getCliLogger(args, beaconPaths, config);
   logger.info("Lodestar", {version: getVersion(), network: args.network});

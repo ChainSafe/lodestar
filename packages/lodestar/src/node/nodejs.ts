@@ -13,15 +13,24 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
 import {IBeaconDb} from "../db";
-import {INetwork, Network, getReqRespHandlers} from "../network";
+import {getReqRespHandlers, INetwork, Network} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
-import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
+import {createMetrics, HttpMetricsServer, IMetrics} from "../metrics";
 import {getApi, RestApi} from "../api";
 import {initializeExecutionEngine} from "../executionEngine";
 import {initializeEth1ForBlockProduction} from "../eth1";
 import {IBeaconNodeOptions} from "./options";
 import {runNodeNotifier} from "./notifier";
+import {
+  DeletionStatus,
+  ImportStatus,
+  KeystoreStr,
+  ListKeysResponse,
+  SlashingProtectionData,
+  Statuses,
+} from "@chainsafe/lodestar-api/lib/keymanager/routes";
+import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 
 export * from "./options";
 
@@ -161,7 +170,11 @@ export class BeaconNode {
       logger: logger.child(opts.logger.sync),
     });
 
-    const api = getApi(opts.api, {
+    // This is the glue
+    // The API interface states the endpoints and their details
+    // This functions create a concrete version of it
+    // The concrete implementations are in /packages/lodestar/src/api/impl/*
+    const api: Api = getApi(opts.api, {
       config,
       logger: logger.child(opts.logger.api),
       db,
@@ -187,7 +200,52 @@ export class BeaconNode {
     if (opts.api.rest.enabled) {
       await restApi.listen();
     }
+    // TODO [DA] manually proving the API now. fix
+    const kmApi = {
+      listKeys(): Promise<{data: ListKeysResponse[]}> {
+        return Promise.resolve({data: []});
+      },
+      importKeystores(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        keystoresStr: KeystoreStr[],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        passwords: string[],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        slashingProtectionStr: SlashingProtectionData
+      ): Promise<{data: Statuses<ImportStatus>}> {
+        return Promise.resolve({
+          data: [
+            {
+              status: ImportStatus.imported,
+            },
+          ],
+        });
+      },
+      deleteKeystores(
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        pubkeysHex: string[]
+      ): Promise<{
+        data: Statuses<DeletionStatus>;
+        slashingProtection: SlashingProtectionData;
+      }> {
+        return Promise.resolve({
+          data: [
+            {
+              status: DeletionStatus.deleted,
+            },
+          ],
+          slashingProtection: "",
+        });
+      },
+    };
 
+    const keymanagerRestApi = new KeymanagerRestApi(opts.api.rest, {
+      config,
+      logger: logger.child(opts.logger.api),
+      api: kmApi,
+    });
+    // TODO [DA] - note to self - put starting the keymanager rest api behind a flag
+    await keymanagerRestApi.listen();
     await network.start();
 
     void runNodeNotifier({network, chain, sync, config, logger, signal});
