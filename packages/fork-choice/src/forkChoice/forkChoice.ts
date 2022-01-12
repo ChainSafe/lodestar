@@ -296,8 +296,10 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (
-      preCachedData?.isMergeBlock ||
-      (merge.isMergeStateType(state) && merge.isMergeBlockBodyType(block.body) && merge.isMergeBlock(state, block.body))
+      preCachedData?.isMergeTransitionBlock ||
+      (merge.isMergeStateType(state) &&
+        merge.isMergeBlockBodyType(block.body) &&
+        merge.isMergeTransitionBlock(state, block.body))
     )
       assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
 

@@ -3,7 +3,7 @@ import {byteArrayEquals, List, toHexString} from "@chainsafe/ssz";
 import {CachedBeaconState} from "../../allForks";
 import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
-import {isMergeComplete} from "../utils";
+import {isMergeTransitionComplete} from "../utils";
 
 export function processExecutionPayload(
   state: CachedBeaconState<merge.BeaconState>,
@@ -12,7 +12,7 @@ export function processExecutionPayload(
 ): void {
   // Verify consistency of the parent hash, block number, base fee per gas and gas limit
   // with respect to the previous execution payload header
-  if (isMergeComplete(state)) {
+  if (isMergeTransitionComplete(state)) {
     const {latestExecutionPayloadHeader} = state;
     if (!byteArrayEquals(payload.parentHash as Uint8Array, latestExecutionPayloadHeader.blockHash as Uint8Array)) {
       throw Error(

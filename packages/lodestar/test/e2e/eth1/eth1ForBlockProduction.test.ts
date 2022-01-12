@@ -76,7 +76,7 @@ describe("eth1 / Eth1Provider", function () {
       signal: controller.signal,
       eth1Provider,
       clockEpoch: 0,
-      isMergeComplete: false,
+      isMergeTransitionComplete: false,
     });
 
     // Resolves when Eth1ForBlockProduction has fetched both blocks and deposits

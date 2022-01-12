@@ -365,8 +365,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // By this slot, ttd should be reached and merge complete
           case Number(ttd) + 3: {
             const headState = bn.chain.getHeadState();
-            const isMergeComplete = merge.isMergeStateType(headState) && merge.isMergeComplete(headState);
-            if (!isMergeComplete) reject("Merge not completed");
+            const isMergeTransitionComplete =
+              merge.isMergeStateType(headState) && merge.isMergeTransitionComplete(headState);
+            if (!isMergeTransitionComplete) reject("Merge not completed");
 
             // Send another tx post-merge, total amount in destination account should be double after this is included in chain
             if (TX_SCENARIOS.includes("simple")) {

@@ -60,8 +60,8 @@ export async function runNodeNotifier({
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
-      const isMergeComplete = merge.isMergeStateType(headState) && merge.isMergeComplete(headState);
-      const mergeInfo = isMergeComplete
+      const isMergeTransitionComplete = merge.isMergeStateType(headState) && merge.isMergeTransitionComplete(headState);
+      const mergeInfo = isMergeTransitionComplete
         ? [
             `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
               headInfo.executionPayloadBlockHash ?? "empty"

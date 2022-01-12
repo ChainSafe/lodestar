@@ -53,7 +53,7 @@ export function initializeEth1ForBlockProduction(
       logger: modules.logger,
       signal: modules.signal,
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
-      isMergeComplete: merge.isMergeStateType(anchorState) && merge.isMergeComplete(anchorState),
+      isMergeTransitionComplete: merge.isMergeStateType(anchorState) && merge.isMergeTransitionComplete(anchorState),
     });
   } else {
     return new Eth1ForBlockProductionDisabled();
