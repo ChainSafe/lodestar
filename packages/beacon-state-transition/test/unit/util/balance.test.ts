@@ -46,10 +46,13 @@ describe("increaseBalance", () => {
 
     state.validators.push(generateValidators(1)[0]);
     state.balanceList.push(0);
+    expect(state.balanceList.get(0)).to.be.equal(0);
+    expect(state.balances[0]).to.be.equal(0);
     const delta = 5;
     for (let i = 1; i < 10; i++) {
       increaseBalance(state, 0, delta);
       expect(state.balanceList.get(0)).to.be.equal(delta * i);
+      expect(state.balances[0]).to.be.equal(delta * i);
     }
   });
 });
@@ -64,6 +67,7 @@ describe("decreaseBalance", () => {
     for (let i = 1; i < 10; i++) {
       decreaseBalance(state, 0, delta);
       expect(state.balanceList.get(0)).to.be.equal(initial - delta * i);
+      expect(state.balances[0]).to.be.equal(initial - delta * i);
     }
   });
   it("should not make a validators balance < 0", () => {
@@ -74,6 +78,7 @@ describe("decreaseBalance", () => {
     const delta = 11;
     decreaseBalance(state, 0, delta);
     expect(state.balanceList.get(0)).to.be.equal(0);
+    expect(state.balances[0]).to.be.equal(0);
   });
 });
 
