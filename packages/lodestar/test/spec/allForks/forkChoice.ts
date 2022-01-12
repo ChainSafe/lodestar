@@ -157,6 +157,11 @@ export function forkChoiceTest(fork: ForkName): void {
         timeout: 10000,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
+        shouldSkip: (_testCase, name, _index) => {
+          const ignoreTestsWithKeywords = ["proposer_boost"];
+          const ignoreTest = ignoreTestsWithKeywords.reduce((acc, kword) => acc || name.includes(kword), false);
+          return ignoreTest;
+        },
       }
     );
   }
