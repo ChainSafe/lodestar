@@ -17,7 +17,7 @@ import {ProtoArray} from "../protoArray/protoArray";
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
 
@@ -329,19 +329,8 @@ export class ForkChoice implements IForkChoice {
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
+      shouldUpdateJustified = true;
       this.synced = false;
-
-      if (
-        // If checkpoints are not equal
-        (!equalCheckpointWithHex(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
-          stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
-        this.getAncestor(
-          this.fcStore.justifiedCheckpoint.rootHex,
-          computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch)
-        ) !== this.fcStore.finalizedCheckpoint.rootHex
-      ) {
-        shouldUpdateJustified = true;
-      }
     }
 
     // This needs to be performed after finalized checkpoint has been updated

@@ -157,13 +157,11 @@ export const PowBlock = new ContainerType<merge.PowBlock>({
     blockHash: Root,
     parentHash: Root,
     totalDifficulty: Uint256,
-    difficulty: Uint256,
   },
   casingMap: {
     blockHash: "block_hash",
     parentHash: "parent_hash",
     totalDifficulty: "total_difficulty",
-    difficulty: "difficulty",
   },
 });
 

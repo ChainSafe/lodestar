@@ -49,5 +49,4 @@ export type PowBlock = {
   blockHash: Root;
   parentHash: Root;
   totalDifficulty: bigint;
-  difficulty: bigint;
 };
