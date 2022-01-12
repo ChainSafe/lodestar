@@ -128,7 +128,7 @@ async function prepareExecutionPayload(
   // Use different POW block hash parent for block production based on merge status.
   // Returned value of null == using an empty ExecutionPayload value
   let parentHash: Root;
-  if (!merge.isMergeComplete(state)) {
+  if (!merge.isMergeTransitionComplete(state)) {
     if (
       !ssz.Root.equals(chain.config.TERMINAL_BLOCK_HASH, ZERO_HASH) &&
       getCurrentEpoch(state) < chain.config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH

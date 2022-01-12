@@ -60,7 +60,7 @@ export function initializeForkChoice(
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(merge.isMergeStateType(state) && merge.isMergeComplete(state)
+      ...(merge.isMergeStateType(state) && merge.isMergeTransitionComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
             executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,

@@ -57,7 +57,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
         logger,
         signal: controller.signal,
         clockEpoch: 0,
-        isMergeComplete: false,
+        isMergeTransitionComplete: false,
       },
       eth1Provider as IEth1Provider
     );
@@ -94,7 +94,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
         logger,
         signal: controller.signal,
         clockEpoch: 0,
-        isMergeComplete: false,
+        isMergeTransitionComplete: false,
       },
       eth1Provider as IEth1Provider
     );
@@ -131,7 +131,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
         logger,
         signal: controller.signal,
         clockEpoch: 0,
-        isMergeComplete: false,
+        isMergeTransitionComplete: false,
       },
       eth1Provider as IEth1Provider
     );

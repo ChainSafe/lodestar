@@ -165,7 +165,7 @@ export type OnBlockPrecachedData = {
   /**
    * Optimistic sync fields
    */
-  isMergeBlock?: boolean;
+  isMergeTransitionBlock?: boolean;
   executionStatus?: ExecutionStatus;
 };
 

@@ -95,7 +95,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   if (
     merge.isMergeStateType(postState) &&
     merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isMergeBlock(postState, block.message.body)
+    merge.isMergeTransitionBlock(postState, block.message.body)
   ) {
     // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
@@ -108,7 +108,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
     onBlockPrecachedData.powBlock = powBlock;
     onBlockPrecachedData.powBlockParent = powBlockParent;
-    onBlockPrecachedData.isMergeBlock = true;
+    onBlockPrecachedData.isMergeTransitionBlock = true;
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
