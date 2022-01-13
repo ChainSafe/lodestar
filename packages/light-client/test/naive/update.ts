@@ -94,7 +94,7 @@ export function processLightClientUpdate(
  */
 export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
   const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(update.finalizedHeader.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }
@@ -102,7 +102,7 @@ export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update
     snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
     snapshot.nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
   }
-  snapshot.header = update.finalizedHeader;
+  snapshot.header = update.attestedHeader;
 }
 
 /**
