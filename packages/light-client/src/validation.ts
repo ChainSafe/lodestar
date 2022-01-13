@@ -99,7 +99,7 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
       Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      update.finalizedHeader.stateRoot.valueOf() as Uint8Array
+      update.attestedHeader.stateRoot.valueOf() as Uint8Array
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
