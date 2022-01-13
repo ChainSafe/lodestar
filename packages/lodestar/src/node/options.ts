@@ -14,7 +14,6 @@ import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngin
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index";
 
-// TODO [DA] note to self: Why is interface for cli defined here?
 export interface IBeaconNodeOptions {
   api: IApiOptions;
   chain: IChainOptions;

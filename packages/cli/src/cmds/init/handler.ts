@@ -21,8 +21,6 @@ export async function initHandler(args: IBeaconArgs & IGlobalArgs): Promise<Retu
   return {beaconNodeOptions, config};
 }
 
-// TODO [DA] - note to self - this function is used in init handler and also that have dev.
-// Maybeb it would be clearer if it was somewhere else the two handler can then import from?
 export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<ReturnType> {
   const beaconPaths = getBeaconPaths(args);
   const beaconNodeOptions = new BeaconNodeOptions({

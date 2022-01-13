@@ -44,7 +44,7 @@ export type SlashingProtectionData = string;
  */
 export type PubkeyHex = string;
 
-export type Statuses<Status> = {
+type Statuses<Status> = {
   status: Status;
   message?: string;
 }[];
@@ -55,7 +55,7 @@ type ImportKeystoresReq = {
   slashingProtection: SlashingProtectionData;
 };
 
-export type ListKeysResponse = {
+type ListKeysResponse = {
   validatingPubkey: PubkeyHex;
   /** The derivation path (if present in the imported keystore) */
   derivationPath?: string;

@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {FastifyInstance} from "fastify";
-import {Api, ApiNamespace} from "../interface";
+import {Api} from "../interface";
 import {ServerRoute} from "./utils";
 
 import * as beacon from "./beacon";
@@ -21,7 +21,7 @@ export function registerRoutes(
   server: FastifyInstance,
   config: IChainForkConfig,
   api: Api,
-  enabledNamespaces: (keyof Api)[] // TODO [DA] - note to self - check if you can use ApiNamespace directly
+  enabledNamespaces: (keyof Api)[]
 ): void {
   const routesByNamespace: {
     // Enforces that we are declaring routes for every routeId in `Api`
