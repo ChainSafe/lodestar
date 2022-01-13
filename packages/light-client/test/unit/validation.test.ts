@@ -76,13 +76,12 @@ describe("validateLightClientUpdate", () => {
     };
 
     update = {
-      header,
+      attestedHeader: header,
       nextSyncCommittee: nextSyncCommittee,
       nextSyncCommitteeBranch: nextSyncCommitteeBranch,
-      finalityHeader: syncAttestedBlockHeader,
+      finalizedHeader: syncAttestedBlockHeader,
       finalityBranch: finalityBranch,
-      syncCommitteeBits: syncAggregate.syncCommitteeBits,
-      syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+      syncCommitteeAggregate: syncAggregate,
       forkVersion,
     };
 

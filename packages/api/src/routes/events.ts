@@ -6,7 +6,7 @@ import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
 export type LightclientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
-  header: phase0.BeaconBlockHeader;
+  attestedHeader: phase0.BeaconBlockHeader;
 };
 
 export enum EventType {

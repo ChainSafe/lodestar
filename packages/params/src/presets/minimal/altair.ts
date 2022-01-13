@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-
 import {IAltairPreset} from "../../preset";
 
 export const altair: IAltairPreset = {
@@ -8,4 +7,6 @@ export const altair: IAltairPreset = {
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR: 50331648,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: 64,
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: 2,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS: 1,
+  UPDATE_TIMEOUT: 64,
 };

@@ -36,21 +36,23 @@ export type SyncCommitteeWitness = {
 
 export type PartialLightClientUpdateFinalized = {
   isFinalized: true;
-  header: phase0.BeaconBlockHeader;
+  attestedHeader: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
   // Finalized data
   finalityBranch: Uint8Array[];
   finalizedCheckpoint: phase0.Checkpoint;
   finalizedHeader: phase0.BeaconBlockHeader;
-} & altair.SyncAggregate;
+  syncCommitteeAggregate: altair.SyncAggregate;
+};
 
 export type PartialLightClientUpdateNonFinalized = {
   isFinalized: false;
-  header: phase0.BeaconBlockHeader;
+  attestedHeader: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
   // Finalized data
-} & altair.SyncAggregate;
+  syncCommitteeAggregate: altair.SyncAggregate;
+};
 
 export type PartialLightClientUpdate = PartialLightClientUpdateFinalized | PartialLightClientUpdateNonFinalized;

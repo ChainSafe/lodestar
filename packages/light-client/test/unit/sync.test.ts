@@ -126,7 +126,7 @@ describe("Lightclient sync", () => {
         };
 
         const headUpdate: routes.lightclient.LightclientHeaderUpdate = {
-          header,
+          attestedHeader: header,
           syncAggregate: syncCommittee.signHeader(config, header),
         };
 
