@@ -1446,11 +1446,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers_utils.irrelevantpeererror/</loc>
-         <lastmod>2022-01-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers_utils.subnetmap/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
@@ -1806,7 +1801,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers_utils.irrelevantpeererrorcode/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers_utils.irrelevantpeercode/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
