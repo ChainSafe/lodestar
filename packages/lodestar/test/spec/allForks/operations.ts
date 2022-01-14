@@ -29,7 +29,12 @@ export function operations<BeaconState extends allForks.BeaconState>(
   sszTypes?: Record<string, Type<any>>
 ): void {
   const rootDir = join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/operations`);
-  for (const testDir of fs.readdirSync(rootDir)) {
+  const testDirs = fs
+    .readdirSync(rootDir, {withFileTypes: true})
+    // Ignore the .DS_Store and ._.DS_Store artificat files by filtering directories
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+  for (const testDir of testDirs) {
     const operationFn = operationFns[testDir];
     if (operationFn === undefined) {
       throw Error(`No operationFn for ${testDir}`);

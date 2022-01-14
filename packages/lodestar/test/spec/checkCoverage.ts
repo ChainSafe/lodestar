@@ -56,7 +56,11 @@ expect(specTestsTestLs).to.deep.equal(["general", ...knownPresets], "New dir in 
 
 for (const preset of knownPresets) {
   const presetDirPath = path.join(specTestsTestPath, preset);
-  const presetDirLs = fs.readdirSync(presetDirPath);
+  const presetDirLs = fs
+    .readdirSync(presetDirPath, {withFileTypes: true})
+    // Ignore the .DS_Store and ._.DS_Store artificat files by filtering directories
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
   expect(presetDirLs).to.deep.equal(knownForks, `New fork in spec-tests/tests/${preset}`);
 
   for (const fork of knownForks) {
@@ -85,7 +89,12 @@ function ensureDirTestCoverage(rootTestDir: string, testRelDir: string): void {
   // ├── sanity
   // ├── shuffling
   // └── ssz_static
-  for (const testGroup of fs.readdirSync(path.join(rootTestDir, testRelDir))) {
+  const testGroups = fs
+    .readdirSync(path.join(rootTestDir, testRelDir), {withFileTypes: true})
+    // Ignore the .DS_Store and ._.DS_Store artificat files by filtering directories
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+  for (const testGroup of testGroups) {
     const testDir = path.join(lodestarTests, testRelDir, testGroup);
     const testFile = testDir + ".test.ts";
     if (existsDir(testDir)) {
