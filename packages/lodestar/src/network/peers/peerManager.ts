@@ -19,7 +19,7 @@ import {
   hasSomeConnectedPeer,
   assertPeerRelevance,
   prioritizePeers,
-  IrrelevantPeerError,
+  renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
 
@@ -280,15 +280,24 @@ export class PeerManager {
     const peerData = this.connectedPeers.get(peer.toB58String());
     if (peerData) peerData.lastStatusUnixTsMs = Date.now();
 
+    let isIrrelevant: boolean;
     try {
-      assertPeerRelevance(status, this.chain);
-    } catch (e) {
-      if (e instanceof IrrelevantPeerError) {
-        this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});
+      const irrelevantReasonType = assertPeerRelevance(status, this.chain);
+      if (irrelevantReasonType === null) {
+        isIrrelevant = false;
       } else {
-        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e as Error);
+        isIrrelevant = true;
+        this.logger.debug("Irrelevant peer", {
+          peer: prettyPrintPeerId(peer),
+          reason: renderIrrelevantPeerType(irrelevantReasonType),
+        });
       }
+    } catch (e) {
+      this.logger.error("Irrelevant peer - unexpected error", {peer: prettyPrintPeerId(peer)}, e as Error);
+      isIrrelevant = true;
+    }
 
+    if (isIrrelevant) {
       if (peerData) peerData.relevantStatus = RelevantPeerStatus.irrelevant;
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
