@@ -16,7 +16,7 @@ export interface INetworkArgs {
   "network.blockCountTotalLimit": number;
   "network.blockCountPeerLimit": number;
   "network.rateTrackerTimeoutMs": number;
-  "network.passGossipAttestationsToForkchoice": boolean;
+  "network.dontSendGossipAttestationsToForkchoice": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -39,7 +39,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     blockCountTotalLimit: args["network.blockCountTotalLimit"],
     blockCountPeerLimit: args["network.blockCountPeerLimit"],
     rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
-    passGossipAttestationsToForkchoice: args["network.passGossipAttestationsToForkchoice"],
+    dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
   };
 }
 
@@ -147,7 +147,7 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     group: "network",
   },
 
-  "network.passGossipAttestationsToForkchoice": {
+  "network.dontSendGossipAttestationsToForkchoice": {
     hidden: true,
     type: "boolean",
     description: "Pass gossip attestations to forkchoice or not",

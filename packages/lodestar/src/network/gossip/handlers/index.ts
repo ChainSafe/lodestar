@@ -33,7 +33,7 @@ import {PeerAction} from "../../peers";
  * Gossip handler options as part of network options
  */
 export type GossipHandlerOpts = {
-  passGossipAttestationsToForkchoice: boolean;
+  dontSendGossipAttestationsToForkchoice: boolean;
 };
 
 /**
@@ -41,7 +41,7 @@ export type GossipHandlerOpts = {
  * + pass gossip attestations to forkchoice
  */
 export const defaultGossipHandlerOpts = {
-  passGossipAttestationsToForkchoice: true,
+  dontSendGossipAttestationsToForkchoice: false,
 };
 
 type ValidatorFnsModules = {
@@ -168,7 +168,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           committeeIndices
         );
 
-        if (options.passGossipAttestationsToForkchoice) {
+        if (!options.dontSendGossipAttestationsToForkchoice) {
           try {
             chain.forkChoice.onAttestation(indexedAttestation);
           } catch (e) {
@@ -224,7 +224,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
       }
 
-      if (options.passGossipAttestationsToForkchoice) {
+      if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
           chain.forkChoice.onAttestation(indexedAttestation);
         } catch (e) {
