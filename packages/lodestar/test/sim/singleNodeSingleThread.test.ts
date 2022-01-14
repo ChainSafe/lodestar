@@ -31,20 +31,20 @@ describe("Run single node single thread interop validators (no eth1) until check
   const testCases: {
     event: ChainEvent.justified | ChainEvent.finalized;
     altairEpoch: number;
-    mergeEpoch: number;
+    bellatrixEpoch: number;
   }[] = [
     // phase0 fork only
-    {event: ChainEvent.finalized, altairEpoch: Infinity, mergeEpoch: Infinity},
+    {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
     // altair fork only
-    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: Infinity},
+    {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: Infinity},
     // altair fork at epoch 2
-    {event: ChainEvent.finalized, altairEpoch: 2, mergeEpoch: Infinity},
-    // merge fork at epoch 0
-    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: 0},
+    {event: ChainEvent.finalized, altairEpoch: 2, bellatrixEpoch: Infinity},
+    // bellatrix fork at epoch 0
+    {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: 0},
   ];
 
-  for (const {event, altairEpoch, mergeEpoch} of testCases) {
-    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} merge ${mergeEpoch}`, async function () {
+  for (const {event, altairEpoch, bellatrixEpoch} of testCases) {
+    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} bellatrix ${bellatrixEpoch}`, async function () {
       // Should reach justification in 3 epochs max, and finalization in 4 epochs max
       const expectedEpochsToFinish = event === ChainEvent.justified ? 3 : 4;
       // 1 epoch of margin of error
@@ -65,7 +65,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const testLoggerOpts: TestLoggerOpts = {
         logLevel: LogLevel.info,
-        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_merge-${mergeEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
+        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_bellatrix-${bellatrixEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
@@ -76,7 +76,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
-        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, MERGE_FORK_EPOCH: mergeEpoch},
+        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, BELLATRIX_FORK_EPOCH: bellatrixEpoch},
         options: {
           api: {rest: {enabled: true} as RestApiOptions},
           sync: {isSingleNode: true},

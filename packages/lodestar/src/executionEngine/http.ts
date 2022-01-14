@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
+import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
@@ -65,7 +65,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_executePayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
     const {status, latestValidHash, validationError} = await this.rpc
@@ -179,7 +179,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
+  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const method = "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
@@ -261,7 +261,7 @@ type ExecutionPayloadRpc = {
   transactions: DATA[];
 };
 
-export function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): ExecutionPayloadRpc {
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -280,7 +280,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
   };
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
+export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.ExecutionPayload {
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),

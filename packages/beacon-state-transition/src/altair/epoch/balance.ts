@@ -2,7 +2,7 @@ import {allForks, altair} from "@chainsafe/lodestar-types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
-  INACTIVITY_PENALTY_QUOTIENT_MERGE,
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
   PARTICIPATION_FLAG_WEIGHTS,
   TIMELY_HEAD_FLAG_INDEX,
   TIMELY_SOURCE_FLAG_INDEX,
@@ -61,7 +61,7 @@ export function getRewardsPenaltiesDeltas(
   const fork = config.getForkName(state.slot);
 
   const inactivityPenalityMultiplier =
-    fork === ForkName.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_MERGE;
+    fork === ForkName.altair ? INACTIVITY_PENALTY_QUOTIENT_ALTAIR : INACTIVITY_PENALTY_QUOTIENT_BELLATRIX;
   const penaltyDenominator = config.INACTIVITY_SCORE_BIAS * inactivityPenalityMultiplier;
 
   const {statuses} = process;

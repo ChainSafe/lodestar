@@ -71,11 +71,11 @@ export class Eth1MergeBlockTracker {
     }
 
     // If merge is still not programed, skip
-    if (config.MERGE_FORK_EPOCH >= Infinity) {
+    if (config.BELLATRIX_FORK_EPOCH >= Infinity) {
       return;
     }
 
-    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
+    const startEpoch = this.config.BELLATRIX_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
     if (startEpoch <= clockEpoch) {
       // Start now
       void this.startFinding();

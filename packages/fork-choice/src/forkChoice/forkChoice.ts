@@ -6,7 +6,7 @@ import {
   computeStartSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
-  merge,
+  bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -300,11 +300,11 @@ export class ForkChoice implements IForkChoice {
 
     if (
       preCachedData?.isMergeTransitionBlock ||
-      (merge.isMergeStateType(state) &&
-        merge.isMergeBlockBodyType(block.body) &&
-        merge.isMergeTransitionBlock(state, block.body))
+      (bellatrix.isBellatrixStateType(state) &&
+        bellatrix.isBellatrixBlockBodyType(block.body) &&
+        bellatrix.isMergeTransitionBlock(state, block.body))
     )
-      assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
+      assertValidTerminalPowBlock(this.config, (block as unknown) as bellatrix.BeaconBlock, preCachedData);
 
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
@@ -367,9 +367,9 @@ export class ForkChoice implements IForkChoice {
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
 
-      ...(merge.isMergeBlockBodyType(block.body) &&
-      merge.isMergeStateType(state) &&
-      merge.isExecutionEnabled(state, block.body)
+      ...(bellatrix.isBellatrixBlockBodyType(block.body) &&
+      bellatrix.isBellatrixStateType(state) &&
+      bellatrix.isExecutionEnabled(state, block.body)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),
@@ -964,7 +964,7 @@ export class ForkChoice implements IForkChoice {
 
 function assertValidTerminalPowBlock(
   config: IChainConfig,
-  block: merge.BeaconBlock,
+  block: bellatrix.BeaconBlock,
   preCachedData?: OnBlockPrecachedData
 ): void {
   if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {

@@ -5,7 +5,7 @@ import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
   getEffectiveBalances,
-  merge,
+  bellatrix,
   altair,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -93,9 +93,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   }
 
   if (
-    merge.isMergeStateType(postState) &&
-    merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isMergeTransitionBlock(postState, block.message.body)
+    bellatrix.isBellatrixStateType(postState) &&
+    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
+    bellatrix.isMergeTransitionBlock(postState, block.message.body)
   ) {
     // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
@@ -194,15 +194,15 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
     /**
-     * On post MERGE_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
      * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
      * So we must check that:
-     * - `headBlockHash !== null` -> Pre MERGE_EPOCH
+     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
     const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash;
     /**
-     * After MERGE_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
