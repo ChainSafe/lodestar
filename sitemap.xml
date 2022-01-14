@@ -2801,11 +2801,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientsnapshot/</loc>
-         <lastmod>2022-01-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientstore/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
