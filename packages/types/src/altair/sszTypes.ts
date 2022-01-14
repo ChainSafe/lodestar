@@ -7,11 +7,9 @@ import {
   SYNC_COMMITTEE_SIZE,
   SLOTS_PER_HISTORICAL_ROOT,
   HISTORICAL_ROOTS_LIMIT,
-  SLOTS_PER_EPOCH,
   VALIDATOR_REGISTRY_LIMIT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
-  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
 } from "@chainsafe/lodestar-params";
 import {Root} from "../primitive/types";
 import {ssz as phase0Ssz, ts as phase0Types} from "../phase0";
@@ -246,56 +244,27 @@ export const BeaconState = new ContainerType<altair.BeaconState>({
   },
 });
 
-export const LightClientSnapshot = new ContainerType<altair.LightClientSnapshot>({
-  fields: {
-    header: phase0Ssz.BeaconBlockHeader,
-    nextSyncCommittee: SyncCommittee,
-    currentSyncCommittee: SyncCommittee,
-  },
-  casingMap: {
-    header: "header",
-    nextSyncCommittee: "next_sync_committee",
-    currentSyncCommittee: "current_sync_committee",
-  },
-});
-
 export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
   fields: {
-    header: phase0Ssz.BeaconBlockHeader,
+    attestedHeader: phase0Ssz.BeaconBlockHeader,
     nextSyncCommittee: SyncCommittee,
     nextSyncCommitteeBranch: new VectorType({
       elementType: Bytes32,
       length: NEXT_SYNC_COMMITTEE_DEPTH,
     }),
-    finalityHeader: phase0Ssz.BeaconBlockHeader,
+    finalizedHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorType({elementType: Bytes32, length: FINALIZED_ROOT_DEPTH}),
-    syncCommitteeBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE}),
-    syncCommitteeSignature: BLSSignature,
+    syncCommitteeAggregate: SyncAggregate,
     forkVersion: Version,
   },
   casingMap: {
-    header: "header",
+    attestedHeader: "attested_header",
     nextSyncCommittee: "next_sync_committee",
     nextSyncCommitteeBranch: "next_sync_committee_branch",
-    finalityHeader: "finality_header",
+    finalizedHeader: "finalized_header",
     finalityBranch: "finality_branch",
-    syncCommitteeBits: "sync_committee_bits",
-    syncCommitteeSignature: "sync_committee_signature",
+    syncCommitteeAggregate: "sync_committee_aggregate",
     forkVersion: "fork_version",
-  },
-});
-
-export const LightClientStore = new ContainerType<altair.LightClientStore>({
-  fields: {
-    snapshot: LightClientSnapshot,
-    validUpdates: new ListType({
-      elementType: LightClientUpdate,
-      limit: EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
-    }),
-  },
-  casingMap: {
-    snapshot: "snapshot",
-    validUpdates: "valid_updates",
   },
 });
 

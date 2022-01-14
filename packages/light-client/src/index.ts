@@ -246,7 +246,7 @@ export class Lightclient {
       const {data: updates} = await this.api.lightclient.getCommitteeUpdates(fromPeriodRng, toPeriodRng);
       for (const update of updates) {
         this.processSyncCommitteeUpdate(update);
-        const headPeriod = computeSyncPeriodAtSlot(update.header.slot);
+        const headPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
         this.logger.debug(`processed sync update for period ${headPeriod}`);
         // Yield to the macro queue, verifying updates is somewhat expensive and we want responsiveness
         await new Promise((r) => setTimeout(r, 0));
@@ -353,7 +353,7 @@ export class Lightclient {
    * This headerUpdate may update the head if there's enough participation.
    */
   private processHeaderUpdate(headerUpdate: routes.events.LightclientHeaderUpdate): void {
-    const {header, syncAggregate} = headerUpdate;
+    const {attestedHeader: header, syncAggregate} = headerUpdate;
 
     // Prevent registering updates for slots to far ahead
     if (header.slot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
@@ -438,8 +438,8 @@ export class Lightclient {
    */
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
     // Prevent registering updates for slots too far in the future
-    const isFinalized = !isEmptyHeader(update.finalityHeader);
-    const updateSlot = isFinalized ? update.finalityHeader.slot : update.header.slot;
+    const isFinalized = !isEmptyHeader(update.finalizedHeader);
+    const updateSlot = isFinalized ? update.finalizedHeader.slot : update.attestedHeader.slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }
@@ -465,7 +465,7 @@ export class Lightclient {
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
       isFinalized,
-      participation: sumBits(update.syncCommitteeBits),
+      participation: sumBits(update.syncCommitteeAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
 

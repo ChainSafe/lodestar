@@ -102,13 +102,12 @@ export async function prepareUpdateNaive(
   const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
-    header: finalizedCheckpointBlockHeader,
+    attestedHeader: finalizedCheckpointBlockHeader,
     nextSyncCommittee: finalizedCheckpointState.nextSyncCommittee,
     nextSyncCommitteeBranch: nextSyncCommitteeBranch,
-    finalityHeader: syncAttestedBlockHeader,
+    finalizedHeader: syncAttestedBlockHeader,
     finalityBranch: finalityBranch,
-    syncCommitteeBits: syncAggregate.syncCommitteeBits,
-    syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+    syncCommitteeAggregate: syncAggregate,
     forkVersion: syncAttestedForkVersion,
   };
 }

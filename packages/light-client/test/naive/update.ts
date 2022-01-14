@@ -58,7 +58,7 @@ export function processLightClientUpdate(
   const syncCommittee = store.snapshot.nextSyncCommittee;
   assertValidLightClientUpdate(config, syncCommittee, update);
 
-  const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
+  const syncPeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
   if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
     store.bestUpdates.set(syncPeriod, update);
@@ -70,8 +70,9 @@ export function processLightClientUpdate(
   // Note that (2) means that the current light client design needs finality.
   // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
   if (
-    sumBits(update.syncCommitteeBits) * 3 >= update.syncCommitteeBits.length * 2 &&
-    !isEmptyHeader(update.finalityHeader)
+    sumBits(update.syncCommitteeAggregate.syncCommitteeBits) * 3 >=
+      update.syncCommitteeAggregate.syncCommitteeBits.length * 2 &&
+    !isEmptyHeader(update.finalizedHeader)
   ) {
     applyLightClientUpdate(store.snapshot, update);
     store.bestUpdates.delete(syncPeriod);
@@ -93,7 +94,7 @@ export function processLightClientUpdate(
  */
 export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
   const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
-  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.attestedHeader.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }
@@ -101,7 +102,7 @@ export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update
     snapshot.currentSyncCommittee = snapshot.nextSyncCommittee;
     snapshot.nextSyncCommittee = deserializeSyncCommittee(update.nextSyncCommittee);
   }
-  snapshot.header = update.header;
+  snapshot.header = update.attestedHeader;
 }
 
 /**
@@ -113,5 +114,8 @@ export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update
  * ```
  */
 export function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
-  return sumBits(newUpdate.syncCommitteeBits) >= sumBits(prevUpdate.syncCommitteeBits);
+  return (
+    sumBits(newUpdate.syncCommitteeAggregate.syncCommitteeBits) >=
+    sumBits(prevUpdate.syncCommitteeAggregate.syncCommitteeBits)
+  );
 }
