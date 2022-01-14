@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconstate/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconblockbody/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
-<title>Merge.beaconstate - Lodestar documentation</title>
+<title>Bellatrix.beaconblockbody - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-beaconstate">
+<a class="md-skip" href="#interface-beaconblockbody">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Merge.beaconstate
+              Bellatrix.beaconblockbody
             
           </span>
 </div>
@@ -270,33 +270,53 @@
 <nav aria-label="Properties" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#currentepochparticipation">
-    currentEpochParticipation
+<a class="md-nav__link" href="#attestations">
+    attestations
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#currentsynccommittee">
-    currentSyncCommittee
+<a class="md-nav__link" href="#attesterslashings">
+    attesterSlashings
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#inactivityscores">
-    inactivityScores
+<a class="md-nav__link" href="#deposits">
+    deposits
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#latestexecutionpayloadheader">
-    latestExecutionPayloadHeader
+<a class="md-nav__link" href="#eth1data">
+    eth1Data
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#nextsynccommittee">
-    nextSyncCommittee
+<a class="md-nav__link" href="#executionpayload">
+    executionPayload
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#previousepochparticipation">
-    previousEpochParticipation
+<a class="md-nav__link" href="#graffiti">
+    graffiti
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#proposerslashings">
+    proposerSlashings
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#randaoreveal">
+    randaoReveal
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#syncaggregate">
+    syncAggregate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#voluntaryexits">
+    voluntaryExits
   </a>
 </li>
 </ul>
@@ -309,53 +329,77 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/merge.beaconstate.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/bellatrix.beaconblockbody.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/merge/">merge</a> › <a href="./">BeaconState</a></p>
-<h1 id="interface-beaconstate">Interface: BeaconState<a class="headerlink" href="#interface-beaconstate" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/bellatrix/">bellatrix</a> › <a href="./">BeaconBlockBody</a></p>
+<h1 id="interface-beaconblockbody">Interface: BeaconBlockBody<a class="headerlink" href="#interface-beaconblockbody" title="Permanent link">¶</a></h1>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<p>↳ <a href="../altair.beaconstate/">BeaconState</a></p>
-<p>↳ <strong>BeaconState</strong></p>
+<p>↳ <a href="../altair.beaconblockbody/">BeaconBlockBody</a></p>
+<p>↳ <strong>BeaconBlockBody</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#currentepochparticipation">currentEpochParticipation</a></li>
-<li><a href="./#currentsynccommittee">currentSyncCommittee</a></li>
-<li><a href="./#inactivityscores">inactivityScores</a></li>
-<li><a href="./#latestexecutionpayloadheader">latestExecutionPayloadHeader</a></li>
-<li><a href="./#nextsynccommittee">nextSyncCommittee</a></li>
-<li><a href="./#previousepochparticipation">previousEpochParticipation</a></li>
+<li><a href="./#attestations">attestations</a></li>
+<li><a href="./#attesterslashings">attesterSlashings</a></li>
+<li><a href="./#deposits">deposits</a></li>
+<li><a href="./#eth1data">eth1Data</a></li>
+<li><a href="./#executionpayload">executionPayload</a></li>
+<li><a href="./#graffiti">graffiti</a></li>
+<li><a href="./#proposerslashings">proposerSlashings</a></li>
+<li><a href="./#randaoreveal">randaoReveal</a></li>
+<li><a href="./#syncaggregate">syncAggregate</a></li>
+<li><a href="./#voluntaryexits">voluntaryExits</a></li>
 </ul>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="currentepochparticipation">currentEpochParticipation<a class="headerlink" href="#currentepochparticipation" title="Permanent link">¶</a></h3>
-<p>• <strong>currentEpochParticipation</strong>: <em>List‹<a href="../../modules/primitive/#participationflags">ParticipationFlags</a>›</em></p>
-<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#currentepochparticipation">currentEpochParticipation</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L82">packages/types/src/altair/types.ts:82</a></em></p>
+<h3 id="attestations">attestations<a class="headerlink" href="#attestations" title="Permanent link">¶</a></h3>
+<p>• <strong>attestations</strong>: <em>List‹<a href="../phase0.attestation/">Attestation</a>›</em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#attestations">attestations</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L230">packages/types/src/phase0/types.ts:230</a></em></p>
 <hr/>
-<h3 id="currentsynccommittee">currentSyncCommittee<a class="headerlink" href="#currentsynccommittee" title="Permanent link">¶</a></h3>
-<p>• <strong>currentSyncCommittee</strong>: <em><a href="../altair.synccommittee/">SyncCommittee</a></em></p>
-<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#currentsynccommittee">currentSyncCommittee</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L86">packages/types/src/altair/types.ts:86</a></em></p>
+<h3 id="attesterslashings">attesterSlashings<a class="headerlink" href="#attesterslashings" title="Permanent link">¶</a></h3>
+<p>• <strong>attesterSlashings</strong>: <em>List‹<a href="../phase0.attesterslashing/">AttesterSlashing</a>›</em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#attesterslashings">attesterSlashings</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L229">packages/types/src/phase0/types.ts:229</a></em></p>
 <hr/>
-<h3 id="inactivityscores">inactivityScores<a class="headerlink" href="#inactivityscores" title="Permanent link">¶</a></h3>
-<p>• <strong>inactivityScores</strong>: <em>List‹<a href="../../modules/merge/#number64">Number64</a>›</em></p>
-<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#inactivityscores">inactivityScores</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L84">packages/types/src/altair/types.ts:84</a></em></p>
+<h3 id="deposits">deposits<a class="headerlink" href="#deposits" title="Permanent link">¶</a></h3>
+<p>• <strong>deposits</strong>: <em>List‹<a href="../phase0.deposit/">Deposit</a>›</em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#deposits">deposits</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L231">packages/types/src/phase0/types.ts:231</a></em></p>
 <hr/>
-<h3 id="latestexecutionpayloadheader">latestExecutionPayloadHeader<a class="headerlink" href="#latestexecutionpayloadheader" title="Permanent link">¶</a></h3>
-<p>• <strong>latestExecutionPayloadHeader</strong>: <em><a href="../../modules/merge/#executionpayloadheader">ExecutionPayloadHeader</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/merge/types.ts#L45">packages/types/src/merge/types.ts:45</a></em></p>
+<h3 id="eth1data">eth1Data<a class="headerlink" href="#eth1data" title="Permanent link">¶</a></h3>
+<p>• <strong>eth1Data</strong>: <em><a href="../phase0.eth1data/">Eth1Data</a></em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#eth1data">eth1Data</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L226">packages/types/src/phase0/types.ts:226</a></em></p>
 <hr/>
-<h3 id="nextsynccommittee">nextSyncCommittee<a class="headerlink" href="#nextsynccommittee" title="Permanent link">¶</a></h3>
-<p>• <strong>nextSyncCommittee</strong>: <em><a href="../altair.synccommittee/">SyncCommittee</a></em></p>
-<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#nextsynccommittee">nextSyncCommittee</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L87">packages/types/src/altair/types.ts:87</a></em></p>
+<h3 id="executionpayload">executionPayload<a class="headerlink" href="#executionpayload" title="Permanent link">¶</a></h3>
+<p>• <strong>executionPayload</strong>: <em><a href="../../modules/bellatrix/#executionpayload">ExecutionPayload</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/bellatrix/types.ts#L33">packages/types/src/bellatrix/types.ts:33</a></em></p>
 <hr/>
-<h3 id="previousepochparticipation">previousEpochParticipation<a class="headerlink" href="#previousepochparticipation" title="Permanent link">¶</a></h3>
-<p>• <strong>previousEpochParticipation</strong>: <em>List‹<a href="../../modules/primitive/#participationflags">ParticipationFlags</a>›</em></p>
-<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#previousepochparticipation">previousEpochParticipation</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L81">packages/types/src/altair/types.ts:81</a></em></p>
+<h3 id="graffiti">graffiti<a class="headerlink" href="#graffiti" title="Permanent link">¶</a></h3>
+<p>• <strong>graffiti</strong>: <em><a href="../../modules/bellatrix/#bytes32">Bytes32</a></em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#graffiti">graffiti</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L227">packages/types/src/phase0/types.ts:227</a></em></p>
+<hr/>
+<h3 id="proposerslashings">proposerSlashings<a class="headerlink" href="#proposerslashings" title="Permanent link">¶</a></h3>
+<p>• <strong>proposerSlashings</strong>: <em>List‹<a href="../phase0.proposerslashing/">ProposerSlashing</a>›</em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#proposerslashings">proposerSlashings</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L228">packages/types/src/phase0/types.ts:228</a></em></p>
+<hr/>
+<h3 id="randaoreveal">randaoReveal<a class="headerlink" href="#randaoreveal" title="Permanent link">¶</a></h3>
+<p>• <strong>randaoReveal</strong>: <em><a href="../../modules/bellatrix/#blssignature">BLSSignature</a></em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#randaoreveal">randaoReveal</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L225">packages/types/src/phase0/types.ts:225</a></em></p>
+<hr/>
+<h3 id="syncaggregate">syncAggregate<a class="headerlink" href="#syncaggregate" title="Permanent link">¶</a></h3>
+<p>• <strong>syncAggregate</strong>: <em><a href="../altair.syncaggregate/">SyncAggregate</a></em></p>
+<p><em>Inherited from <a href="../altair.beaconblockbody/">BeaconBlockBody</a>.<a href="../altair.beaconblockbody/#syncaggregate">syncAggregate</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L67">packages/types/src/altair/types.ts:67</a></em></p>
+<hr/>
+<h3 id="voluntaryexits">voluntaryExits<a class="headerlink" href="#voluntaryexits" title="Permanent link">¶</a></h3>
+<p>• <strong>voluntaryExits</strong>: <em>List‹<a href="../phase0.signedvoluntaryexit/">SignedVoluntaryExit</a>›</em></p>
+<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#voluntaryexits">voluntaryExits</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/phase0/types.ts#L232">packages/types/src/phase0/types.ts:232</a></em></p>
 </article>
 </div>
 </div>

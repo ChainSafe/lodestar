@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconblock/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_block/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
-<title>Merge.beaconblock - Lodestar documentation</title>
+<title>Bellatrix block - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-beaconblock">
+<a class="md-skip" href="#module-bellatrixblock">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Merge.beaconblock
+              Bellatrix block
             
           </span>
 </div>
@@ -245,53 +245,48 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#functions">
+    Functions
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#functions_1">
+    Functions
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="Functions" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#body">
-    body
+<a class="md-nav__link" href="#processattesterslashing">
+    processAttesterSlashing
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#parentroot">
-    parentRoot
+<a class="md-nav__link" href="#processblock">
+    processBlock
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#proposerindex">
-    proposerIndex
+<a class="md-nav__link" href="#processexecutionpayload">
+    processExecutionPayload
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#slot">
-    slot
+<a class="md-nav__link" href="#processoperations">
+    processOperations
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#stateroot">
-    stateRoot
+<a class="md-nav__link" href="#processproposerslashing">
+    processProposerSlashing
   </a>
 </li>
 </ul>
@@ -304,48 +299,181 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/merge.beaconblock.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/beacon-state-transition/modules/bellatrix_block.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/merge/">merge</a> › <a href="./">BeaconBlock</a></p>
-<h1 id="interface-beaconblock">Interface: BeaconBlock<a class="headerlink" href="#interface-beaconblock" title="Permanent link">¶</a></h1>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<p>↳ <a href="../altair.beaconblock/">BeaconBlock</a></p>
-<p>↳ <strong>BeaconBlock</strong></p>
+<p><a href="../../">@chainsafe/lodestar-beacon-state-transition</a> › <a href="../../globals/">Globals</a> › <a href="./">bellatrix/block</a></p>
+<h1 id="module-bellatrixblock">Module: bellatrix/block<a class="headerlink" href="#module-bellatrixblock" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#body">body</a></li>
-<li><a href="./#parentroot">parentRoot</a></li>
-<li><a href="./#proposerindex">proposerIndex</a></li>
-<li><a href="./#slot">slot</a></li>
-<li><a href="./#stateroot">stateRoot</a></li>
+<li><a href="./#processattesterslashing">processAttesterSlashing</a></li>
+<li><a href="./#processblock">processBlock</a></li>
+<li><a href="./#processexecutionpayload">processExecutionPayload</a></li>
+<li><a href="./#processoperations">processOperations</a></li>
+<li><a href="./#processproposerslashing">processProposerSlashing</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="body">body<a class="headerlink" href="#body" title="Permanent link">¶</a></h3>
-<p>• <strong>body</strong>: <em><a href="../merge.beaconblockbody/">BeaconBlockBody</a></em></p>
-<p><em>Overrides <a href="../altair.beaconblock/">BeaconBlock</a>.<a href="../altair.beaconblock/#body">body</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/merge/types.ts#L37">packages/types/src/merge/types.ts:37</a></em></p>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
+<h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>attesterSlashing</code>: AttesterSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts:6</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>attesterSlashing</code></td>
+<td>AttesterSlashing</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>verifySignatures</code></td>
+<td>boolean</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="parentroot">parentRoot<a class="headerlink" href="#parentroot" title="Permanent link">¶</a></h3>
-<p>• <strong>parentRoot</strong>: <em><a href="../../modules/merge/#root">Root</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblock/">BeaconBlock</a>.<a href="../phase0.beaconblock/#parentroot">parentRoot</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L239">packages/types/src/phase0/types.ts:239</a></em></p>
+<h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/block/index.ts#L15">packages/beacon-state-transition/src/bellatrix/block/index.ts:15</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>block</code></td>
+<td>BeaconBlock</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>verifySignatures</code></td>
+<td>boolean</td>
+<td>true</td>
+</tr>
+<tr>
+<td><code>executionEngine</code></td>
+<td><a href="../bellatrix/#executionengine">ExecutionEngine</a> | null</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="proposerindex">proposerIndex<a class="headerlink" href="#proposerindex" title="Permanent link">¶</a></h3>
-<p>• <strong>proposerIndex</strong>: <em><a href="../../modules/merge/#validatorindex">ValidatorIndex</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblock/">BeaconBlock</a>.<a href="../phase0.beaconblock/#proposerindex">proposerIndex</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L238">packages/types/src/phase0/types.ts:238</a></em></p>
+<h3 id="processexecutionpayload">processExecutionPayload<a class="headerlink" href="#processexecutionpayload" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processExecutionPayload</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>payload</code>: <a href="../bellatrix/#executionpayload">ExecutionPayload</a>, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts#L8">packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts:8</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+</tr>
+<tr>
+<td><code>payload</code></td>
+<td><a href="../bellatrix/#executionpayload">ExecutionPayload</a></td>
+</tr>
+<tr>
+<td><code>executionEngine</code></td>
+<td><a href="../bellatrix/#executionengine">ExecutionEngine</a> | null</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="slot">slot<a class="headerlink" href="#slot" title="Permanent link">¶</a></h3>
-<p>• <strong>slot</strong>: <em><a href="../../modules/merge/#slot">Slot</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblock/">BeaconBlock</a>.<a href="../phase0.beaconblock/#slot">slot</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L237">packages/types/src/phase0/types.ts:237</a></em></p>
+<h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>body</code>: BeaconBlockBody, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/block/processOperations.ts#L12">packages/beacon-state-transition/src/bellatrix/block/processOperations.ts:12</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td>BeaconBlockBody</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>verifySignatures</code></td>
+<td>boolean</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="stateroot">stateRoot<a class="headerlink" href="#stateroot" title="Permanent link">¶</a></h3>
-<p>• <strong>stateRoot</strong>: <em><a href="../../modules/merge/#root">Root</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblock/">BeaconBlock</a>.<a href="../phase0.beaconblock/#stateroot">stateRoot</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L240">packages/types/src/phase0/types.ts:240</a></em></p>
+<h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>proposerSlashing</code>: ProposerSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts:6</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>proposerSlashing</code></td>
+<td>ProposerSlashing</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>verifySignatures</code></td>
+<td>boolean</td>
+<td>true</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 </article>
 </div>
 </div>

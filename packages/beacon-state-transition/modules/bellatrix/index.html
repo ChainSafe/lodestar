@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconblockbody/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
-<title>Merge.beaconblockbody - Lodestar documentation</title>
+<title>Bellatrix - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-beaconblockbody">
+<a class="md-skip" href="#module-bellatrix">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Merge.beaconblockbody
+              Bellatrix
             
           </span>
 </div>
@@ -245,78 +245,195 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#references">
+    References
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions">
+    Functions
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#references_1">
+    References
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="References" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#attestations">
-    attestations
+<a class="md-nav__link" href="#beaconblock">
+    BeaconBlock
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#attesterslashings">
-    attesterSlashings
+<a class="md-nav__link" href="#beaconblockbody">
+    BeaconBlockBody
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#deposits">
-    deposits
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#eth1data">
-    eth1Data
+<a class="md-nav__link" href="#beaconstate">
+    BeaconState
   </a>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#executionpayload">
-    executionPayload
+    ExecutionPayload
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#graffiti">
-    graffiti
+<a class="md-nav__link" href="#executionpayloadheader">
+    ExecutionPayloadHeader
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#proposerslashings">
-    proposerSlashings
+<a class="md-nav__link" href="#powblock">
+    PowBlock
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#randaoreveal">
-    randaoReveal
+<a class="md-nav__link" href="#signedbeaconblock">
+    SignedBeaconBlock
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#syncaggregate">
-    syncAggregate
+<a class="md-nav__link" href="#transaction">
+    Transaction
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#voluntaryexits">
-    voluntaryExits
+<a class="md-nav__link" href="#isbellatrixblockbodytype">
+    isBellatrixBlockBodyType
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isbellatrixstatetype">
+    isBellatrixStateType
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isexecutionenabled">
+    isExecutionEnabled
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ismergetransitionblock">
+    isMergeTransitionBlock
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ismergetransitioncomplete">
+    isMergeTransitionComplete
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processattesterslashing">
+    processAttesterSlashing
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processblock">
+    processBlock
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processoperations">
+    processOperations
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processproposerslashing">
+    processProposerSlashing
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processslashings">
+    processSlashings
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#upgradestate">
+    upgradeState
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
+  </a>
+<nav aria-label="Type aliases" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#executionengine">
+    ExecutionEngine
+  </a>
+<nav aria-label="ExecutionEngine" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions_1">
+    Functions
+  </a>
+<nav aria-label="Functions" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isbellatrixblockbodytype_1">
+    isBellatrixBlockBodyType
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isbellatrixstatetype_1">
+    isBellatrixStateType
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#isexecutionenabled_1">
+    isExecutionEnabled
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ismergetransitionblock_1">
+    isMergeTransitionBlock
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ismergetransitioncomplete_1">
+    isMergeTransitionComplete
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#upgradestate_1">
+    upgradeState
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#upgradetreebackedstate">
+    upgradeTreeBackedState
   </a>
 </li>
 </ul>
@@ -329,77 +446,274 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/merge.beaconblockbody.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/beacon-state-transition/modules/bellatrix.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/merge/">merge</a> › <a href="./">BeaconBlockBody</a></p>
-<h1 id="interface-beaconblockbody">Interface: BeaconBlockBody<a class="headerlink" href="#interface-beaconblockbody" title="Permanent link">¶</a></h1>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<p>↳ <a href="../altair.beaconblockbody/">BeaconBlockBody</a></p>
-<p>↳ <strong>BeaconBlockBody</strong></p>
+<p><a href="../../">@chainsafe/lodestar-beacon-state-transition</a> › <a href="../../globals/">Globals</a> › <a href="./">bellatrix</a></p>
+<h1 id="module-bellatrix">Module: bellatrix<a class="headerlink" href="#module-bellatrix" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#attestations">attestations</a></li>
-<li><a href="./#attesterslashings">attesterSlashings</a></li>
-<li><a href="./#deposits">deposits</a></li>
-<li><a href="./#eth1data">eth1Data</a></li>
-<li><a href="./#executionpayload">executionPayload</a></li>
-<li><a href="./#graffiti">graffiti</a></li>
-<li><a href="./#proposerslashings">proposerSlashings</a></li>
-<li><a href="./#randaoreveal">randaoReveal</a></li>
-<li><a href="./#syncaggregate">syncAggregate</a></li>
-<li><a href="./#voluntaryexits">voluntaryExits</a></li>
+<li><a href="./#beaconblock">BeaconBlock</a></li>
+<li><a href="./#beaconblockbody">BeaconBlockBody</a></li>
+<li><a href="./#beaconstate">BeaconState</a></li>
+<li><a href="./#executionpayload">ExecutionPayload</a></li>
+<li><a href="./#executionpayloadheader">ExecutionPayloadHeader</a></li>
+<li><a href="./#powblock">PowBlock</a></li>
+<li><a href="./#signedbeaconblock">SignedBeaconBlock</a></li>
+<li><a href="./#transaction">Transaction</a></li>
+<li><a href="./#isbellatrixblockbodytype">isBellatrixBlockBodyType</a></li>
+<li><a href="./#isbellatrixstatetype">isBellatrixStateType</a></li>
+<li><a href="./#isexecutionenabled">isExecutionEnabled</a></li>
+<li><a href="./#ismergetransitionblock">isMergeTransitionBlock</a></li>
+<li><a href="./#ismergetransitioncomplete">isMergeTransitionComplete</a></li>
+<li><a href="./#processattesterslashing">processAttesterSlashing</a></li>
+<li><a href="./#processblock">processBlock</a></li>
+<li><a href="./#processoperations">processOperations</a></li>
+<li><a href="./#processproposerslashing">processProposerSlashing</a></li>
+<li><a href="./#processslashings">processSlashings</a></li>
+<li><a href="./#upgradestate">upgradeState</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="attestations">attestations<a class="headerlink" href="#attestations" title="Permanent link">¶</a></h3>
-<p>• <strong>attestations</strong>: <em>List‹<a href="../phase0.attestation/">Attestation</a>›</em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#attestations">attestations</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L230">packages/types/src/phase0/types.ts:230</a></em></p>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#executionengine">ExecutionEngine</a></li>
+</ul>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#isbellatrixblockbodytype">isBellatrixBlockBodyType</a></li>
+<li><a href="./#isbellatrixstatetype">isBellatrixStateType</a></li>
+<li><a href="./#isexecutionenabled">isExecutionEnabled</a></li>
+<li><a href="./#ismergetransitionblock">isMergeTransitionBlock</a></li>
+<li><a href="./#ismergetransitioncomplete">isMergeTransitionComplete</a></li>
+<li><a href="./#upgradestate">upgradeState</a></li>
+<li><a href="./#upgradetreebackedstate">upgradeTreeBackedState</a></li>
+</ul>
+<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
+<h3 id="beaconblock">BeaconBlock<a class="headerlink" href="#beaconblock" title="Permanent link">¶</a></h3>
+<p>• <strong>BeaconBlock</strong>:</p>
 <hr/>
-<h3 id="attesterslashings">attesterSlashings<a class="headerlink" href="#attesterslashings" title="Permanent link">¶</a></h3>
-<p>• <strong>attesterSlashings</strong>: <em>List‹<a href="../phase0.attesterslashing/">AttesterSlashing</a>›</em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#attesterslashings">attesterSlashings</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L229">packages/types/src/phase0/types.ts:229</a></em></p>
+<h3 id="beaconblockbody">BeaconBlockBody<a class="headerlink" href="#beaconblockbody" title="Permanent link">¶</a></h3>
+<p>• <strong>BeaconBlockBody</strong>:</p>
 <hr/>
-<h3 id="deposits">deposits<a class="headerlink" href="#deposits" title="Permanent link">¶</a></h3>
-<p>• <strong>deposits</strong>: <em>List‹<a href="../phase0.deposit/">Deposit</a>›</em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#deposits">deposits</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L231">packages/types/src/phase0/types.ts:231</a></em></p>
+<h3 id="beaconstate">BeaconState<a class="headerlink" href="#beaconstate" title="Permanent link">¶</a></h3>
+<p>• <strong>BeaconState</strong>:</p>
 <hr/>
-<h3 id="eth1data">eth1Data<a class="headerlink" href="#eth1data" title="Permanent link">¶</a></h3>
-<p>• <strong>eth1Data</strong>: <em><a href="../phase0.eth1data/">Eth1Data</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#eth1data">eth1Data</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L226">packages/types/src/phase0/types.ts:226</a></em></p>
+<h3 id="executionpayload">ExecutionPayload<a class="headerlink" href="#executionpayload" title="Permanent link">¶</a></h3>
+<p>• <strong>ExecutionPayload</strong>:</p>
 <hr/>
-<h3 id="executionpayload">executionPayload<a class="headerlink" href="#executionpayload" title="Permanent link">¶</a></h3>
-<p>• <strong>executionPayload</strong>: <em><a href="../../modules/merge/#executionpayload">ExecutionPayload</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/merge/types.ts#L33">packages/types/src/merge/types.ts:33</a></em></p>
+<h3 id="executionpayloadheader">ExecutionPayloadHeader<a class="headerlink" href="#executionpayloadheader" title="Permanent link">¶</a></h3>
+<p>• <strong>ExecutionPayloadHeader</strong>:</p>
 <hr/>
-<h3 id="graffiti">graffiti<a class="headerlink" href="#graffiti" title="Permanent link">¶</a></h3>
-<p>• <strong>graffiti</strong>: <em><a href="../../modules/merge/#bytes32">Bytes32</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#graffiti">graffiti</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L227">packages/types/src/phase0/types.ts:227</a></em></p>
+<h3 id="powblock">PowBlock<a class="headerlink" href="#powblock" title="Permanent link">¶</a></h3>
+<p>• <strong>PowBlock</strong>:</p>
 <hr/>
-<h3 id="proposerslashings">proposerSlashings<a class="headerlink" href="#proposerslashings" title="Permanent link">¶</a></h3>
-<p>• <strong>proposerSlashings</strong>: <em>List‹<a href="../phase0.proposerslashing/">ProposerSlashing</a>›</em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#proposerslashings">proposerSlashings</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L228">packages/types/src/phase0/types.ts:228</a></em></p>
+<h3 id="signedbeaconblock">SignedBeaconBlock<a class="headerlink" href="#signedbeaconblock" title="Permanent link">¶</a></h3>
+<p>• <strong>SignedBeaconBlock</strong>:</p>
 <hr/>
-<h3 id="randaoreveal">randaoReveal<a class="headerlink" href="#randaoreveal" title="Permanent link">¶</a></h3>
-<p>• <strong>randaoReveal</strong>: <em><a href="../../modules/merge/#blssignature">BLSSignature</a></em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#randaoreveal">randaoReveal</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L225">packages/types/src/phase0/types.ts:225</a></em></p>
+<h3 id="transaction">Transaction<a class="headerlink" href="#transaction" title="Permanent link">¶</a></h3>
+<p>• <strong>Transaction</strong>:</p>
 <hr/>
-<h3 id="syncaggregate">syncAggregate<a class="headerlink" href="#syncaggregate" title="Permanent link">¶</a></h3>
-<p>• <strong>syncAggregate</strong>: <em><a href="../altair.syncaggregate/">SyncAggregate</a></em></p>
-<p><em>Inherited from <a href="../altair.beaconblockbody/">BeaconBlockBody</a>.<a href="../altair.beaconblockbody/#syncaggregate">syncAggregate</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/altair/types.ts#L67">packages/types/src/altair/types.ts:67</a></em></p>
+<h3 id="isbellatrixblockbodytype">isBellatrixBlockBodyType<a class="headerlink" href="#isbellatrixblockbodytype" title="Permanent link">¶</a></h3>
+<p>• <strong>isBellatrixBlockBodyType</strong>:</p>
 <hr/>
-<h3 id="voluntaryexits">voluntaryExits<a class="headerlink" href="#voluntaryexits" title="Permanent link">¶</a></h3>
-<p>• <strong>voluntaryExits</strong>: <em>List‹<a href="../phase0.signedvoluntaryexit/">SignedVoluntaryExit</a>›</em></p>
-<p><em>Inherited from <a href="../phase0.beaconblockbody/">BeaconBlockBody</a>.<a href="../phase0.beaconblockbody/#voluntaryexits">voluntaryExits</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L232">packages/types/src/phase0/types.ts:232</a></em></p>
+<h3 id="isbellatrixstatetype">isBellatrixStateType<a class="headerlink" href="#isbellatrixstatetype" title="Permanent link">¶</a></h3>
+<p>• <strong>isBellatrixStateType</strong>:</p>
+<hr/>
+<h3 id="isexecutionenabled">isExecutionEnabled<a class="headerlink" href="#isexecutionenabled" title="Permanent link">¶</a></h3>
+<p>• <strong>isExecutionEnabled</strong>:</p>
+<hr/>
+<h3 id="ismergetransitionblock">isMergeTransitionBlock<a class="headerlink" href="#ismergetransitionblock" title="Permanent link">¶</a></h3>
+<p>• <strong>isMergeTransitionBlock</strong>:</p>
+<hr/>
+<h3 id="ismergetransitioncomplete">isMergeTransitionComplete<a class="headerlink" href="#ismergetransitioncomplete" title="Permanent link">¶</a></h3>
+<p>• <strong>isMergeTransitionComplete</strong>:</p>
+<hr/>
+<h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
+<p>• <strong>processAttesterSlashing</strong>:</p>
+<hr/>
+<h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
+<p>• <strong>processBlock</strong>:</p>
+<hr/>
+<h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
+<p>• <strong>processOperations</strong>:</p>
+<hr/>
+<h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
+<p>• <strong>processProposerSlashing</strong>:</p>
+<hr/>
+<h3 id="processslashings">processSlashings<a class="headerlink" href="#processslashings" title="Permanent link">¶</a></h3>
+<p>• <strong>processSlashings</strong>:</p>
+<hr/>
+<h3 id="upgradestate">upgradeState<a class="headerlink" href="#upgradestate" title="Permanent link">¶</a></h3>
+<p>• <strong>upgradeState</strong>:</p>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="executionengine">ExecutionEngine<a class="headerlink" href="#executionengine" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>ExecutionEngine</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/executionEngine.ts#L3">packages/beacon-state-transition/src/bellatrix/executionEngine.ts:3</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li><strong>executePayload</strong>(<code>executionPayload</code>: <a href="./#executionpayload">ExecutionPayload</a>): <em>boolean</em></li>
+</ul>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
+<h3 id="isbellatrixblockbodytype_1">isBellatrixBlockBodyType<a class="headerlink" href="#isbellatrixblockbodytype_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isBellatrixBlockBodyType</strong>(<code>blockBody</code>: <a href="../allforks/#beaconblockbody">BeaconBlockBody</a>): <em>blockBody is BeaconBlockBody</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/utils.ts#L42">packages/beacon-state-transition/src/bellatrix/utils.ts:42</a></em></p>
+<p>Type guard for bellatrix.BeaconBlockBody</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>blockBody</code></td>
+<td><a href="../allforks/#beaconblockbody">BeaconBlockBody</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>blockBody is BeaconBlockBody</em></p>
+<hr/>
+<h3 id="isbellatrixstatetype_1">isBellatrixStateType<a class="headerlink" href="#isbellatrixstatetype_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isBellatrixStateType</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>): <em>state is BeaconState</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/utils.ts#L37">packages/beacon-state-transition/src/bellatrix/utils.ts:37</a></em></p>
+<p>Type guard for bellatrix.BeaconState</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#beaconstate">BeaconState</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>state is BeaconState</em></p>
+<hr/>
+<h3 id="isexecutionenabled_1">isExecutionEnabled<a class="headerlink" href="#isexecutionenabled_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isExecutionEnabled</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/utils.ts#L7">packages/beacon-state-transition/src/bellatrix/utils.ts:7</a></em></p>
+<p>Execution enabled = merge is done.
+When (A) state has execution data OR (B) block has execution data</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>BeaconState</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td>BeaconBlockBody</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="ismergetransitionblock_1">isMergeTransitionBlock<a class="headerlink" href="#ismergetransitionblock_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isMergeTransitionBlock</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/utils.ts#L18">packages/beacon-state-transition/src/bellatrix/utils.ts:18</a></em></p>
+<p>Merge block is the SINGLE block that transitions from POW to POS.
+state has no execution data AND this block has execution data</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>BeaconState</td>
+</tr>
+<tr>
+<td><code>body</code></td>
+<td>BeaconBlockBody</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="ismergetransitioncomplete_1">isMergeTransitionComplete<a class="headerlink" href="#ismergetransitioncomplete_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isMergeTransitionComplete</strong>(<code>state</code>: BeaconState): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/utils.ts#L29">packages/beacon-state-transition/src/bellatrix/utils.ts:29</a></em></p>
+<p>Merge is complete when the state includes execution layer data:
+state.latestExecutionPayloadHeader NOT EMPTY</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td>BeaconState</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>boolean</em></p>
+<hr/>
+<h3 id="upgradestate_1">upgradeState<a class="headerlink" href="#upgradestate_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>upgradeState</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›): <em><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/upgradeState.ts#L9">packages/beacon-state-transition/src/bellatrix/upgradeState.ts:9</a></em></p>
+<p>Upgrade a state from altair to bellatrix.</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</em></p>
+<hr/>
+<h3 id="upgradetreebackedstate">upgradeTreeBackedState<a class="headerlink" href="#upgradetreebackedstate" title="Permanent link">¶</a></h3>
+<p>▸ <strong>upgradeTreeBackedState</strong>(<code>config</code>: IBeaconConfig, <code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›): <em>TreeBacked‹BeaconState›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/upgradeState.ts#L16">packages/beacon-state-transition/src/bellatrix/upgradeState.ts:16</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config</code></td>
+<td>IBeaconConfig</td>
+</tr>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>TreeBacked‹BeaconState›</em></p>
 </article>
 </div>
 </div>

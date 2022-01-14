@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.signedbeaconblock/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_epoch/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
-<title>Merge.signedbeaconblock - Lodestar documentation</title>
+<title>Bellatrix epoch - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-signedbeaconblock">
+<a class="md-skip" href="#module-bellatrixepoch">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Merge.signedbeaconblock
+              Bellatrix epoch
             
           </span>
 </div>
@@ -245,38 +245,47 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#references">
+    References
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions">
+    Functions
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#references_1">
+    References
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="References" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#message">
-    message
+<a class="md-nav__link" href="#processslashings">
+    processSlashings
   </a>
 </li>
+</ul>
+</nav>
+</li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#signature">
-    signature
+<a class="md-nav__link" href="#functions_1">
+    Functions
+  </a>
+<nav aria-label="Functions" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#processslashings_1">
+    processSlashings
   </a>
 </li>
 </ul>
@@ -289,30 +298,47 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/merge.signedbeaconblock.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/beacon-state-transition/modules/bellatrix_epoch.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/merge/">merge</a> › <a href="./">SignedBeaconBlock</a></p>
-<h1 id="interface-signedbeaconblock">Interface: SignedBeaconBlock<a class="headerlink" href="#interface-signedbeaconblock" title="Permanent link">¶</a></h1>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<p>↳ <a href="../altair.signedbeaconblock/">SignedBeaconBlock</a></p>
-<p>↳ <strong>SignedBeaconBlock</strong></p>
+<p><a href="../../">@chainsafe/lodestar-beacon-state-transition</a> › <a href="../../globals/">Globals</a> › <a href="./">bellatrix/epoch</a></p>
+<h1 id="module-bellatrixepoch">Module: bellatrix/epoch<a class="headerlink" href="#module-bellatrixepoch" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#message">message</a></li>
-<li><a href="./#signature">signature</a></li>
+<li><a href="./#processslashings">processSlashings</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="message">message<a class="headerlink" href="#message" title="Permanent link">¶</a></h3>
-<p>• <strong>message</strong>: <em><a href="../merge.beaconblock/">BeaconBlock</a></em></p>
-<p><em>Overrides <a href="../altair.signedbeaconblock/">SignedBeaconBlock</a>.<a href="../altair.signedbeaconblock/#message">message</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/merge/types.ts#L41">packages/types/src/merge/types.ts:41</a></em></p>
-<hr/>
-<h3 id="signature">signature<a class="headerlink" href="#signature" title="Permanent link">¶</a></h3>
-<p>• <strong>signature</strong>: <em><a href="../../modules/merge/#blssignature">BLSSignature</a></em></p>
-<p><em>Inherited from <a href="../phase0.signedbeaconblock/">SignedBeaconBlock</a>.<a href="../phase0.signedbeaconblock/#signature">signature</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/types/src/phase0/types.ts#L246">packages/types/src/phase0/types.ts:246</a></em></p>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#processslashings">processSlashings</a></li>
+</ul>
+<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
+<h3 id="processslashings">processSlashings<a class="headerlink" href="#processslashings" title="Permanent link">¶</a></h3>
+<p>• <strong>processSlashings</strong>:</p>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
+<h3 id="processslashings_1">processSlashings<a class="headerlink" href="#processslashings_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>processSlashings</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>epochProcess</code>: <a href="../../interfaces/allforks_util.iepochprocess/">IEpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/beacon-state-transition/src/bellatrix/epoch/processSlashings.ts#L6">packages/beacon-state-transition/src/bellatrix/epoch/processSlashings.ts:6</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
+</tr>
+<tr>
+<td><code>epochProcess</code></td>
+<td><a href="../../interfaces/allforks_util.iepochprocess/">IEpochProcess</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 </article>
 </div>
 </div>

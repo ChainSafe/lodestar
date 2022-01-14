@@ -311,22 +311,22 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix/</loc>
+         <lastmod>2022-01-14</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_block/</loc>
+         <lastmod>2022-01-14</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_epoch/</loc>
+         <lastmod>2022-01-14</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/constants/</loc>
-         <lastmod>2022-01-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/merge/</loc>
-         <lastmod>2022-01-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/merge_block/</loc>
-         <lastmod>2022-01-14</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/merge_epoch/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2656,7 +2656,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_merge.imergepreset/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_bellatrix.ibellatrixpreset/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2676,7 +2676,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_merge/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_bellatrix/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2851,22 +2851,22 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconblock/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconblockbody/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconblockbody/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.beaconstate/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconstate/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/merge.signedbeaconblock/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.signedbeaconblock/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -3056,7 +3056,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/types/modules/merge/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/types/modules/bellatrix/</loc>
          <lastmod>2022-01-14</lastmod>
          <changefreq>daily</changefreq>
     </url>

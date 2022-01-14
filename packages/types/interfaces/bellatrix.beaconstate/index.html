@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/params/modules/preset_merge/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconstate/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
-<title>Preset merge - Lodestar documentation</title>
+<title>Bellatrix.beaconstate - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#module-presetmerge">
+<a class="md-skip" href="#interface-beaconstate">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Preset merge
+              Bellatrix.beaconstate
             
           </span>
 </div>
@@ -245,62 +245,58 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#hierarchy">
+    Hierarchy
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references">
-    References
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#interfaces">
-    Interfaces
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables">
-    Variables
+<a class="md-nav__link" href="#properties">
+    Properties
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references_1">
-    References
+<a class="md-nav__link" href="#properties_1">
+    Properties
   </a>
-<nav aria-label="References" class="md-nav">
+<nav aria-label="Properties" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#imergepreset">
-    IMergePreset
+<a class="md-nav__link" href="#currentepochparticipation">
+    currentEpochParticipation
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#mergepreset">
-    MergePreset
-  </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables_1">
-    Variables
-  </a>
-<nav aria-label="Variables" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-mergepreset">
-    Const MergePreset
+<a class="md-nav__link" href="#currentsynccommittee">
+    currentSyncCommittee
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#const-number64">
-    Const Number64
+<a class="md-nav__link" href="#inactivityscores">
+    inactivityScores
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#latestexecutionpayloadheader">
+    latestExecutionPayloadHeader
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#nextsynccommittee">
+    nextSyncCommittee
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#previousepochparticipation">
+    previousEpochParticipation
   </a>
 </li>
 </ul>
@@ -313,52 +309,53 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/params/modules/preset_merge.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/types/interfaces/bellatrix.beaconstate.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-params</a> › <a href="../../globals/">Globals</a> › <a href="./">preset/merge</a></p>
-<h1 id="module-presetmerge">Module: preset/merge<a class="headerlink" href="#module-presetmerge" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-types</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/bellatrix/">bellatrix</a> › <a href="./">BeaconState</a></p>
+<h1 id="interface-beaconstate">Interface: BeaconState<a class="headerlink" href="#interface-beaconstate" title="Permanent link">¶</a></h1>
+<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
+<p>↳ <a href="../altair.beaconstate/">BeaconState</a></p>
+<p>↳ <strong>BeaconState</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
+<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#imergepreset">IMergePreset</a></li>
-<li><a href="./#mergepreset">MergePreset</a></li>
+<li><a href="./#currentepochparticipation">currentEpochParticipation</a></li>
+<li><a href="./#currentsynccommittee">currentSyncCommittee</a></li>
+<li><a href="./#inactivityscores">inactivityScores</a></li>
+<li><a href="./#latestexecutionpayloadheader">latestExecutionPayloadHeader</a></li>
+<li><a href="./#nextsynccommittee">nextSyncCommittee</a></li>
+<li><a href="./#previousepochparticipation">previousEpochParticipation</a></li>
 </ul>
-<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="../../interfaces/preset_merge.imergepreset/">IMergePreset</a></li>
-</ul>
-<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#const-mergepreset">MergePreset</a></li>
-<li><a href="./#const-number64">Number64</a></li>
-</ul>
-<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="imergepreset">IMergePreset<a class="headerlink" href="#imergepreset" title="Permanent link">¶</a></h3>
-<p>• <strong>IMergePreset</strong>:</p>
+<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
+<h3 id="currentepochparticipation">currentEpochParticipation<a class="headerlink" href="#currentepochparticipation" title="Permanent link">¶</a></h3>
+<p>• <strong>currentEpochParticipation</strong>: <em>List‹<a href="../../modules/primitive/#participationflags">ParticipationFlags</a>›</em></p>
+<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#currentepochparticipation">currentEpochParticipation</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L82">packages/types/src/altair/types.ts:82</a></em></p>
 <hr/>
-<h3 id="mergepreset">MergePreset<a class="headerlink" href="#mergepreset" title="Permanent link">¶</a></h3>
-<p>• <strong>MergePreset</strong>:</p>
-<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
-<h3 id="const-mergepreset"><code>Const</code> MergePreset<a class="headerlink" href="#const-mergepreset" title="Permanent link">¶</a></h3>
-<p>• <strong>MergePreset</strong>: <em>ContainerType‹<a href="../../interfaces/preset_merge.imergepreset/">IMergePreset</a>›</em> = new ContainerType<imergepreset>({
-  fields: {
-    INACTIVITY_PENALTY_QUOTIENT_MERGE: Number64,
-    MIN_SLASHING_PENALTY_QUOTIENT_MERGE: Number64,
-    PROPORTIONAL_SLASHING_MULTIPLIER_MERGE: Number64,
-    MAX_BYTES_PER_TRANSACTION: Number64,
-    MAX_TRANSACTIONS_PER_PAYLOAD: Number64,
-    BYTES_PER_LOGS_BLOOM: Number64,
-    MAX_EXTRA_DATA_BYTES: Number64,
-  },
-  // Expected and container fields are the same here
-  expectedCase: "notransform",
-})</imergepreset></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/params/src/preset/merge/ssz.ts#L9">preset/merge/ssz.ts:9</a></em></p>
+<h3 id="currentsynccommittee">currentSyncCommittee<a class="headerlink" href="#currentsynccommittee" title="Permanent link">¶</a></h3>
+<p>• <strong>currentSyncCommittee</strong>: <em><a href="../altair.synccommittee/">SyncCommittee</a></em></p>
+<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#currentsynccommittee">currentSyncCommittee</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L86">packages/types/src/altair/types.ts:86</a></em></p>
 <hr/>
-<h3 id="const-number64"><code>Const</code> Number64<a class="headerlink" href="#const-number64" title="Permanent link">¶</a></h3>
-<p>• <strong>Number64</strong>: <em>NumberUintType‹›</em> = new NumberUintType({byteLength: 8})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b4facd3/packages/params/src/preset/merge/ssz.ts#L7">preset/merge/ssz.ts:7</a></em></p>
+<h3 id="inactivityscores">inactivityScores<a class="headerlink" href="#inactivityscores" title="Permanent link">¶</a></h3>
+<p>• <strong>inactivityScores</strong>: <em>List‹<a href="../../modules/bellatrix/#number64">Number64</a>›</em></p>
+<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#inactivityscores">inactivityScores</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L84">packages/types/src/altair/types.ts:84</a></em></p>
+<hr/>
+<h3 id="latestexecutionpayloadheader">latestExecutionPayloadHeader<a class="headerlink" href="#latestexecutionpayloadheader" title="Permanent link">¶</a></h3>
+<p>• <strong>latestExecutionPayloadHeader</strong>: <em><a href="../../modules/bellatrix/#executionpayloadheader">ExecutionPayloadHeader</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/bellatrix/types.ts#L45">packages/types/src/bellatrix/types.ts:45</a></em></p>
+<hr/>
+<h3 id="nextsynccommittee">nextSyncCommittee<a class="headerlink" href="#nextsynccommittee" title="Permanent link">¶</a></h3>
+<p>• <strong>nextSyncCommittee</strong>: <em><a href="../altair.synccommittee/">SyncCommittee</a></em></p>
+<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#nextsynccommittee">nextSyncCommittee</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L87">packages/types/src/altair/types.ts:87</a></em></p>
+<hr/>
+<h3 id="previousepochparticipation">previousEpochParticipation<a class="headerlink" href="#previousepochparticipation" title="Permanent link">¶</a></h3>
+<p>• <strong>previousEpochParticipation</strong>: <em>List‹<a href="../../modules/primitive/#participationflags">ParticipationFlags</a>›</em></p>
+<p><em>Inherited from <a href="../altair.beaconstate/">BeaconState</a>.<a href="../altair.beaconstate/#previousepochparticipation">previousEpochParticipation</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1180ca7/packages/types/src/altair/types.ts#L81">packages/types/src/altair/types.ts:81</a></em></p>
 </article>
 </div>
 </div>
