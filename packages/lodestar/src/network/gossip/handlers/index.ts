@@ -29,6 +29,21 @@ import {INetwork} from "../../interface";
 import {NetworkEvent} from "../../events";
 import {PeerAction} from "../../peers";
 
+/**
+ * Gossip handler options as part of network options
+ */
+export type GossipHandlerOpts = {
+  dontSendGossipAttestationsToForkchoice: boolean;
+};
+
+/**
+ * By default:
+ * + pass gossip attestations to forkchoice
+ */
+export const defaultGossipHandlerOpts = {
+  dontSendGossipAttestationsToForkchoice: false,
+};
+
 type ValidatorFnsModules = {
   chain: IBeaconChain;
   config: IBeaconConfig;
@@ -51,7 +66,7 @@ type ValidatorFnsModules = {
  *   the handler function scope is hard to achieve without very hacky strategies
  * - Eth2.0 gossipsub protocol strictly defined a single topic for message
  */
-export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers {
+export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;
 
   return {
@@ -152,6 +167,18 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
           indexedAttestation.attestingIndices as ValidatorIndex[],
           committeeIndices
         );
+
+        if (!options.dontSendGossipAttestationsToForkchoice) {
+          try {
+            chain.forkChoice.onAttestation(indexedAttestation);
+          } catch (e) {
+            logger.error(
+              "Error adding aggregated attestation to forkchoice",
+              {slot: aggregatedAttestation.data.slot},
+              e as Error
+            );
+          }
+        }
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -194,7 +221,15 @@ export function getGossipHandlers(modules: ValidatorFnsModules): GossipHandlers 
       try {
         chain.attestationPool.add(attestation);
       } catch (e) {
-        logger.error("Error adding attestation to pool", {subnet}, e as Error);
+        logger.error("Error adding unaggregated attestation to pool", {subnet}, e as Error);
+      }
+
+      if (!options.dontSendGossipAttestationsToForkchoice) {
+        try {
+          chain.forkChoice.onAttestation(indexedAttestation);
+        } catch (e) {
+          logger.error("Error adding unaggregated attestation to forkchoice", {subnet}, e as Error);
+        }
       }
     },
 
