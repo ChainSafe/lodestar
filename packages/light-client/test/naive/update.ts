@@ -3,7 +3,7 @@ import {altair, Slot} from "@chainsafe/lodestar-types";
 import {LightClientSnapshotFast, LightClientStoreFast} from "../../src/types";
 import {assertValidLightClientUpdate} from "../../src/validation";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../src/utils/utils";
-import {computeSyncPeriodAtSlot, computeAbsoluteSyncPeriodAtSlot} from "../../src/utils/clock";
+import {computeSyncPeriodAtSlot} from "../../src/utils/clock";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 //
@@ -58,7 +58,7 @@ export function processLightClientUpdate(
   const syncCommittee = store.snapshot.nextSyncCommittee;
   assertValidLightClientUpdate(config, syncCommittee, update);
 
-  const syncPeriod = computeSyncPeriodAtSlot(config, update.header.slot);
+  const syncPeriod = computeSyncPeriodAtSlot(update.header.slot);
   const prevBestUpdate = store.bestUpdates.get(syncPeriod);
   if (!prevBestUpdate || isBetterUpdate(prevBestUpdate, update)) {
     store.bestUpdates.set(syncPeriod, update);
@@ -79,7 +79,7 @@ export function processLightClientUpdate(
 
   // Forced best update when the update timeout has elapsed
   else if (currentSlot > store.snapshot.header.slot + updateTimeout) {
-    const prevSyncPeriod = computeSyncPeriodAtSlot(config, store.snapshot.header.slot);
+    const prevSyncPeriod = computeSyncPeriodAtSlot(store.snapshot.header.slot);
     const bestUpdate = store.bestUpdates.get(prevSyncPeriod);
     if (bestUpdate) {
       applyLightClientUpdate(store.snapshot, bestUpdate);
@@ -92,8 +92,8 @@ export function processLightClientUpdate(
  * Spec v1.0.1
  */
 export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update: altair.LightClientUpdate): void {
-  const snapshotPeriod = computeAbsoluteSyncPeriodAtSlot(snapshot.header.slot);
-  const updatePeriod = computeAbsoluteSyncPeriodAtSlot(update.header.slot);
+  const snapshotPeriod = computeSyncPeriodAtSlot(snapshot.header.slot);
+  const updatePeriod = computeSyncPeriodAtSlot(update.header.slot);
   if (updatePeriod < snapshotPeriod) {
     throw Error("Cannot rollback sync period");
   }
