@@ -5,7 +5,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {defaultNetwork, IGlobalArgs} from "../../options";
-import {parseRange, stripOffNewlines, YargsError} from "../../util";
+import {parseRange, stripOffNewlines, warnLogger, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
@@ -60,12 +60,24 @@ export async function getSecretKeys(
       lockFile.lockSync(lockFilePath);
     }
 
-    const secretKeys = await Promise.all(
-      keystorePaths.map(async (keystorePath) =>
-        SecretKey.fromBytes(await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase))
-      )
-    );
+    const secretKeysPromise = keystorePaths.map(async (keystorePath) => {
+      try {
+        const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
+        return SecretKey.fromBytes(await keystore.decrypt(passphrase));
+      } catch (e) {
+        return Promise.reject(`Failed to parse keystore file: ${keystorePath} with error ${(e as Error).toString()}`);
+      }
+    });
 
+    const results = await Promise.allSettled(secretKeysPromise);
+    const secretKeys: SecretKey[] = [];
+    for (const result of results) {
+      if (result.status !== "rejected") {
+        secretKeys.push(result.value);
+      } else {
+        warnLogger().warn(result.reason);
+      }
+    }
     return {
       secretKeys,
       unlockSecretKeys: () => {
@@ -86,10 +98,9 @@ export async function getSecretKeys(
 
 function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
-    return fs
-      .readdirSync(fileOrDirPath)
-      .map((file) => path.join(fileOrDirPath, file))
-      .filter((filepath) => filepath.endsWith(".json"));
+    const strings = fs.readdirSync(fileOrDirPath);
+    const strings1 = strings.map((file) => path.join(fileOrDirPath, file));
+    return strings1.filter((filepath) => filepath.endsWith(".json"));
   } else {
     return [fileOrDirPath];
   }
