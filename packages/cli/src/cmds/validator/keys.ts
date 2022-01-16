@@ -98,9 +98,10 @@ export async function getSecretKeys(
 
 function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
-    const strings = fs.readdirSync(fileOrDirPath);
-    const strings1 = strings.map((file) => path.join(fileOrDirPath, file));
-    return strings1.filter((filepath) => filepath.endsWith(".json"));
+    return fs
+      .readdirSync(fileOrDirPath)
+      .map((file) => path.join(fileOrDirPath, file))
+      .filter((filepath) => filepath.endsWith(".json"));
   } else {
     return [fileOrDirPath];
   }
