@@ -71,12 +71,14 @@ export class ProtoArray {
    */
   applyScoreChanges({
     deltas,
+    boosts,
     justifiedEpoch,
     justifiedRoot,
     finalizedEpoch,
     finalizedRoot,
   }: {
     deltas: number[];
+    boosts: number[];
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
@@ -120,6 +122,7 @@ export class ProtoArray {
       }
 
       const nodeDelta = deltas[nodeIndex];
+      const nodeBoost = boosts[nodeIndex];
       if (nodeDelta === undefined) {
         throw new ProtoArrayError({
           code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
@@ -128,7 +131,8 @@ export class ProtoArray {
       }
 
       // Apply the delta to the node
-      node.weight += nodeDelta;
+      node.balanceWeight += nodeDelta;
+      node.weight = node.balanceWeight + (nodeBoost ?? 0);
 
       // Update the parent delta (if any)
       const parentIndex = node.parent;
@@ -143,6 +147,7 @@ export class ProtoArray {
 
         // back-propagate the nodes delta to its parent
         deltas[parentIndex] += nodeDelta;
+        if (nodeBoost) boosts[parentIndex] = nodeBoost;
       }
     }
 
@@ -182,6 +187,7 @@ export class ProtoArray {
     const node: IProtoNode = {
       ...block,
       parent: this.indices.get(block.parentRoot),
+      balanceWeight: 0,
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,

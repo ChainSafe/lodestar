@@ -42,6 +42,7 @@ export interface IChainConfig {
   EJECTION_BALANCE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
+  PROPOSER_SCORE_BOOST: number;
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: number;

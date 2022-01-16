@@ -86,9 +86,15 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-  const onBlockPrecachedData: OnBlockPrecachedData = {executionStatus};
+  const state = getStateForJustifiedBalances(chain, postState, block);
+
+  const onBlockPrecachedData: OnBlockPrecachedData = {
+    executionStatus,
+    justifiedActiveValidators: state.totalActiveValidators,
+    justifiedTotalActiveBalanceByIncrement: state.totalActiveBalanceByIncrement,
+    blockReceptionTime: Math.floor(Date.now() / 1000),
+  };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
-    const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
   }
 

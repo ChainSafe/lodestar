@@ -1,7 +1,8 @@
 import {isTreeBacked, readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
-import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
 import {
+  getCurrentInterval,
   computeSlotsSinceEpochStart,
   computeStartSlotAtEpoch,
   computeEpochAtSlot,
@@ -68,6 +69,8 @@ export class ForkChoice implements IForkChoice {
    * Only cache attestation data root hex if it's tree backed since it's available.
    **/
   private validatedAttestationDatas = new Set<string>();
+  /** Boost the entire branch with this proposer root as the leaf */
+  private proposerBoost?: {root: RootHex; score: number} | null;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -146,6 +149,13 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * Get the proposer boost root
+   */
+  getProposerBoostRoot(): RootHex {
+    return this.proposerBoost?.root ?? HEX_ZERO_HASH;
+  }
+
+  /**
    * Run the fork choice rule to determine the head.
    * Update the head cache.
    *
@@ -162,18 +172,27 @@ export class ForkChoice implements IForkChoice {
 
     let timer;
     this.metrics?.forkChoiceRequests.inc();
-
     try {
+      let deltas: number[];
+
+      // Check if scores need to be calculated/updated
       if (!this.synced) {
         timer = this.metrics?.forkChoiceFindHead.startTimer();
-        const deltas = computeDeltas(
-          this.protoArray.indices,
-          this.votes,
-          this.justifiedBalances,
-          this.justifiedBalances
-        );
+        deltas = computeDeltas(this.protoArray.indices, this.votes, this.justifiedBalances, this.justifiedBalances);
+        /**
+         * The structure in line with deltas to propogate boost up the branch
+         * starting from the proposerIndex
+         */
+        const boosts: number[] = [];
+        if (this.proposerBoost) {
+          const proposerIndex = this.protoArray.indices.get(this.proposerBoost.root);
+          if (proposerIndex == undefined) throw Error("InvalidProposerIndex");
+          boosts[proposerIndex] = this.proposerBoost.score;
+        }
+
         this.protoArray.applyScoreChanges({
           deltas,
+          boosts,
           justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
           justifiedRoot: this.fcStore.justifiedCheckpoint.rootHex,
           finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
@@ -181,6 +200,7 @@ export class ForkChoice implements IForkChoice {
         });
         this.synced = true;
       }
+
       const headRoot = this.protoArray.findHead(this.fcStore.justifiedCheckpoint.rootHex);
       const headIndex = this.protoArray.indices.get(headRoot);
       if (headIndex === undefined) {
@@ -349,15 +369,47 @@ export class ForkChoice implements IForkChoice {
       this.updateJustified(currentJustifiedCheckpoint, justifiedBalances);
     }
 
-    const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
+    const blockRootHex = toHexString(blockRoot);
+
+    if (slot === this.fcStore.currentSlot) {
+      let secondsIntoSlot;
+      if (preCachedData?.blockReceptionTime !== undefined) {
+        secondsIntoSlot = (preCachedData.blockReceptionTime - state.genesisTime) % this.config.SECONDS_PER_SLOT;
+
+        // This will only update fork-choice time into slot
+        this.updateTime(this.fcStore.currentSlot, secondsIntoSlot);
+      } else {
+        secondsIntoSlot = this.fcStore.secondsIntoSlot;
+      }
+
+      // Add proposer score boost if the block is timely
+      let proposerScore;
+      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, secondsIntoSlot);
+      if (
+        proposerInterval < 1 &&
+        preCachedData?.justifiedActiveValidators !== undefined &&
+        preCachedData?.justifiedTotalActiveBalanceByIncrement !== undefined
+      ) {
+        const avgBalanceByIncrement = Math.floor(
+          preCachedData.justifiedTotalActiveBalanceByIncrement / preCachedData.justifiedActiveValidators
+        );
+        const committeeSize = Math.floor(preCachedData.justifiedActiveValidators / SLOTS_PER_EPOCH);
+        const committeeWeight = committeeSize * avgBalanceByIncrement;
+        proposerScore = Math.floor((committeeWeight * this.config.PROPOSER_SCORE_BOOST) / 100);
+        this.proposerBoost = {root: blockRootHex, score: proposerScore};
+        this.synced = false;
+      }
+    }
+
+    const targetSlot = computeStartSlotAtEpoch(computeEpochAtSlot(slot));
     const targetRoot = slot === targetSlot ? blockRoot : state.blockRoots[targetSlot % SLOTS_PER_HISTORICAL_ROOT];
 
     // This does not apply a vote to the block, it just makes fork choice aware of the block so
     // it can still be identified as the head even if it doesn't have any votes.
     this.protoArray.onBlock({
       slot: slot,
-      blockRoot: toHexString(blockRoot),
+      blockRoot: blockRootHex,
       parentRoot: parentRootHex,
       targetRoot: toHexString(targetRoot),
       stateRoot: toHexString(block.stateRoot),
@@ -454,12 +506,14 @@ export class ForkChoice implements IForkChoice {
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
-  updateTime(currentSlot: Slot): void {
+  updateTime(currentSlot: Slot, secondsIntoSlot?: number): void {
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       this.onTick(previousSlot + 1);
     }
+    if (secondsIntoSlot !== undefined && secondsIntoSlot > this.fcStore.secondsIntoSlot)
+      this.fcStore.secondsIntoSlot = secondsIntoSlot;
 
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
@@ -468,6 +522,10 @@ export class ForkChoice implements IForkChoice {
 
   getTime(): Slot {
     return this.fcStore.currentSlot;
+  }
+
+  getSecondsIntoSlot(): number {
+    return this.fcStore.secondsIntoSlot;
   }
 
   /** Returns `true` if the block is known **and** a descendant of the finalized root. */
@@ -945,6 +1003,14 @@ export class ForkChoice implements IForkChoice {
 
     // Update store time
     this.fcStore.currentSlot = time;
+    if (this.proposerBoost) {
+      // Since previous weight was boosted, we need would now need to recalculate the
+      // scores but without the boost
+      this.proposerBoost = null;
+      this.synced = false;
+    }
+    this.fcStore.secondsIntoSlot = 0;
+
     const currentSlot = time;
     if (computeSlotsSinceEpochStart(currentSlot) !== 0) {
       return;

@@ -46,6 +46,7 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     EJECTION_BALANCE: ssz.Number64,
     MIN_PER_EPOCH_CHURN_LIMIT: ssz.Number64,
     CHURN_LIMIT_QUOTIENT: ssz.Number64,
+    PROPOSER_SCORE_BOOST: ssz.Number64,
 
     // Deposit contract
     DEPOSIT_CHAIN_ID: ssz.Number64,

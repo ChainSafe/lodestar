@@ -63,6 +63,7 @@ export type IProtoBlock = BlockExecution & {
 export type IProtoNode = IProtoBlock & {
   parent?: number;
   weight: number;
+  balanceWeight: number;
   bestChild?: number;
   bestDescendant?: number;
 };

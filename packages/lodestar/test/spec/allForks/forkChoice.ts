@@ -22,7 +22,7 @@ import {
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
@@ -54,7 +54,8 @@ export function forkChoiceTest(fork: ForkName): void {
 
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
-            forkchoice.updateTime(Number(step.tick) / config.SECONDS_PER_SLOT);
+            const tickTime = Number(step.tick);
+            forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT), tickTime % config.SECONDS_PER_SLOT);
           }
 
           // attestation step
@@ -85,17 +86,26 @@ export function forkChoiceTest(fork: ForkName): void {
               justifiedCheckpoint,
               finalizedCheckpoint,
               bestJustifiedCheckpoint,
+              proposerBoostRoot: expectedProposerBoostRoot,
             } = step.checks;
 
             // Forkchoice head is computed lazily only on request
             const head = forkchoice.updateHead();
+            const proposerBootRoot = forkchoice.getProposerBoostRoot();
 
-            expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-            expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
-
+            if (expectedHead !== undefined) {
+              expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
+              expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+            }
+            if (expectedProposerBoostRoot !== undefined) {
+              expect(proposerBootRoot).to.be.equal(
+                expectedProposerBoostRoot,
+                `Invalid proposer boost root at step ${i}`
+              );
+            }
             // time in spec mapped to Slot in our forkchoice implementation
             if (expectedTime !== undefined && expectedTime > 0)
-              expect(forkchoice.getTime() * config.SECONDS_PER_SLOT).to.be.equal(
+              expect(forkchoice.getTime() * config.SECONDS_PER_SLOT + forkchoice.getSecondsIntoSlot()).to.be.equal(
                 Number(expectedTime),
                 `Invalid forkchoice time at step ${i}`
               );
@@ -157,12 +167,6 @@ export function forkChoiceTest(fork: ForkName): void {
         timeout: 10000,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
-        shouldSkip: (_testCase, name, _index) => {
-          // Proposer boost test cases
-          const ignoreTestsWithKeywords = ["proposer_boost", "shorter_chain_but_heavier_weight"];
-          const ignoreTest = ignoreTestsWithKeywords.reduce((acc, kword) => acc || name.includes(kword), false);
-          return ignoreTest;
-        },
       }
     );
   }
@@ -198,8 +202,11 @@ function runStateTranstion(
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
   let justifiedBalances: number[] = [];
+  const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
+  const justifiedActiveValidators = justifiedState?.totalActiveValidators ?? preState?.totalActiveValidators;
+  const justifiedTotalActiveBalanceByIncrement =
+    justifiedState?.totalActiveBalanceByIncrement ?? preState?.totalActiveBalanceByIncrement;
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
@@ -208,7 +215,11 @@ function runStateTranstion(
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   try {
-    forkchoice.onBlock(signedBlock.message, postState, {justifiedBalances});
+    forkchoice.onBlock(signedBlock.message, postState, {
+      justifiedBalances,
+      justifiedActiveValidators,
+      justifiedTotalActiveBalanceByIncrement,
+    });
     for (const attestation of signedBlock.message.body.attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
@@ -294,6 +305,7 @@ type Checks = {
     justifiedCheckpoint?: SpecTestCheckpoint;
     finalizedCheckpoint?: SpecTestCheckpoint;
     bestJustifiedCheckpoint?: SpecTestCheckpoint;
+    proposerBoostRoot?: RootHex;
   };
 };
 
