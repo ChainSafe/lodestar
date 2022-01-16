@@ -8,6 +8,7 @@ import {OpSource} from "../../../metrics/validatorMonitor";
 import {IBeaconChain} from "../../../chain";
 import {
   AttestationError,
+  AttestationErrorCode,
   BlockError,
   BlockErrorCode,
   BlockGossipError,
@@ -51,6 +52,8 @@ type ValidatorFnsModules = {
   network: INetwork;
   metrics: IMetrics | null;
 };
+
+const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
 
 /**
  * Gossip handlers perform validation + handling in a single function.
@@ -135,50 +138,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.beacon_aggregate_and_proof]: async (signedAggregateAndProof, _topic, _peer, seenTimestampSec) => {
+      let validationResult: {indexedAttestation: phase0.IndexedAttestation; committeeIndices: number[]};
       try {
-        const {indexedAttestation, committeeIndices} = await validateGossipAggregateAndProof(
-          chain,
-          signedAggregateAndProof
-        );
-
-        metrics?.registerAggregatedAttestation(
-          OpSource.gossip,
-          seenTimestampSec,
-          signedAggregateAndProof,
-          indexedAttestation
-        );
-
-        // TODO: Add DoS resistant pending attestation pool
-        // switch (e.type.code) {
-        //   case AttestationErrorCode.FUTURE_SLOT:
-        //     chain.pendingAttestations.putBySlot(e.type.attestationSlot, attestation);
-        //     break;
-        //   case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
-        //   case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-        //     chain.pendingAttestations.putByBlock(e.type.root, attestation);
-        //     break;
-        // }
-
-        // Handler
-        const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
-
-        chain.aggregatedAttestationPool.add(
-          aggregatedAttestation,
-          indexedAttestation.attestingIndices as ValidatorIndex[],
-          committeeIndices
-        );
-
-        if (!options.dontSendGossipAttestationsToForkchoice) {
-          try {
-            chain.forkChoice.onAttestation(indexedAttestation);
-          } catch (e) {
-            logger.error(
-              "Error adding aggregated attestation to forkchoice",
-              {slot: aggregatedAttestation.data.slot},
-              e as Error
-            );
-          }
-        }
+        validationResult = await validateGossipAggregateAndProofRetryUnknownRoot(chain, signedAggregateAndProof);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -190,12 +152,39 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         }
         throw e;
       }
+
+      // Handler
+      metrics?.registerAggregatedAttestation(
+        OpSource.gossip,
+        seenTimestampSec,
+        signedAggregateAndProof,
+        validationResult.indexedAttestation
+      );
+      const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
+
+      chain.aggregatedAttestationPool.add(
+        aggregatedAttestation,
+        validationResult.indexedAttestation.attestingIndices as ValidatorIndex[],
+        validationResult.committeeIndices
+      );
+
+      if (!options.dontSendGossipAttestationsToForkchoice) {
+        try {
+          chain.forkChoice.onAttestation(indexedAttestation);
+        } catch (e) {
+          logger.error(
+            "Error adding aggregated attestation to forkchoice",
+            {slot: aggregatedAttestation.data.slot},
+            e as Error
+          );
+        }
+      }
     },
 
     [GossipType.beacon_attestation]: async (attestation, {subnet}, _peer, seenTimestampSec) => {
-      let indexedAttestation: phase0.IndexedAttestation | undefined = undefined;
+      let validationResult: {indexedAttestation: phase0.IndexedAttestation; subnet: number};
       try {
-        indexedAttestation = (await validateGossipAttestation(chain, attestation, subnet)).indexedAttestation;
+        validationResult = await validateGossipAttestationRetryUnknownRoot(chain, attestation, subnet);
       } catch (e) {
         if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -208,7 +197,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         throw e;
       }
 
-      metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
+      metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, validationResult.indexedAttestation);
 
       // Handler
 
@@ -318,4 +307,80 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       }
     },
   };
+}
+
+/**
+ * If an attestation refers to a block root that's not known, it will wait for 1 slot max
+ * See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
+ * Waiting here requires minimal code and automatically affects attestation, and aggregate validation
+ * both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
+ */
+async function validateGossipAggregateAndProofRetryUnknownRoot(
+  chain: IBeaconChain,
+  signedAggregateAndProof: phase0.SignedAggregateAndProof
+): Promise<ReturnType<typeof validateGossipAggregateAndProof>> {
+  let unknownBlockRootRetries = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      return await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
+    } catch (e) {
+      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
+          // Trigger unknown block root search here
+
+          const attestation = signedAggregateAndProof.message.aggregate;
+          const foundBlock = await chain.waitForBlockOfAttestation(
+            attestation.data.slot,
+            toHexString(attestation.data.beaconBlockRoot)
+          );
+          // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
+          // Otherwise, throw the error below.
+          if (foundBlock) {
+            continue;
+          }
+        }
+      }
+
+      throw e;
+    }
+  }
+}
+
+/**
+ * If an attestation refers to a block root that's not known, it will wait for 1 slot max
+ * See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
+ * Waiting here requires minimal code and automatically affects attestation, and aggregate validation
+ * both from gossip and the API. I also prevents having to catch and re-throw in multiple places.
+ */
+async function validateGossipAttestationRetryUnknownRoot(
+  chain: IBeaconChain,
+  attestation: phase0.Attestation,
+  subnet: number | null
+): Promise<ReturnType<typeof validateGossipAttestation>> {
+  let unknownBlockRootRetries = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      return await validateGossipAttestation(chain, attestation, subnet);
+    } catch (e) {
+      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+        if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
+          // Trigger unknown block root search here
+
+          const foundBlock = await chain.waitForBlockOfAttestation(
+            attestation.data.slot,
+            toHexString(attestation.data.beaconBlockRoot)
+          );
+          // Returns true if the block was found on time. In that case, try to get it from the fork-choice again.
+          // Otherwise, throw the error below.
+          if (foundBlock) {
+            continue;
+          }
+        }
+      }
+
+      throw e;
+    }
+  }
 }

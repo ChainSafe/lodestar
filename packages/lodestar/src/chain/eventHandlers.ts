@@ -7,6 +7,7 @@ import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-be
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
+import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -86,6 +87,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
   this.aggregatedAttestationPool.prune(slot);
   this.syncCommitteeMessagePool.prune(slot);
   this.seenSyncCommitteeMessages.prune(slot);
+  this.reprocessController.onSlot(slot);
 }
 
 export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
@@ -181,10 +183,14 @@ export async function onBlock(
   block: allForks.SignedBeaconBlock,
   _postState: CachedBeaconState<allForks.BeaconState>
 ): Promise<void> {
-  const blockRoot = this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+  const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
+  const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
+
+  this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
-    root: toHexString(blockRoot),
+    root: blockRoot,
   });
 }
 

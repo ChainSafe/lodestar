@@ -231,7 +231,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IPr
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      root: beaconBlockRoot.valueOf() as Uint8Array,
+      root: toHexString(beaconBlockRoot.valueOf() as typeof beaconBlockRoot),
     });
   }
 
