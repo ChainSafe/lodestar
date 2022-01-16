@@ -88,6 +88,7 @@ export class ForkChoice implements IForkChoice {
      * This should be the balances of the state at fcStore.justifiedCheckpoint
      */
     private justifiedBalances: number[],
+    private readonly proposerBoostEnabled: boolean,
     private readonly metrics?: IForkChoiceMetrics | null
   ) {
     this.bestJustifiedBalances = justifiedBalances;
@@ -372,11 +373,10 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
 
-    if (slot === this.fcStore.currentSlot) {
+    if (this.proposerBoostEnabled && slot === this.fcStore.currentSlot) {
       let secondsIntoSlot;
       if (preCachedData?.blockReceptionTime !== undefined) {
         secondsIntoSlot = (preCachedData.blockReceptionTime - state.genesisTime) % this.config.SECONDS_PER_SLOT;
-
         // This will only update fork-choice time into slot
         this.updateTime(this.fcStore.currentSlot, secondsIntoSlot);
       } else {
@@ -386,11 +386,13 @@ export class ForkChoice implements IForkChoice {
       // Add proposer score boost if the block is timely
       let proposerScore;
       const proposerInterval = getCurrentInterval(this.config, state.genesisTime, secondsIntoSlot);
-      if (
-        proposerInterval < 1 &&
-        preCachedData?.justifiedActiveValidators !== undefined &&
-        preCachedData?.justifiedTotalActiveBalanceByIncrement !== undefined
-      ) {
+      if (proposerInterval < 1) {
+        if (
+          preCachedData?.justifiedActiveValidators === undefined ||
+          preCachedData?.justifiedTotalActiveBalanceByIncrement === undefined
+        ) {
+          throw Error("Justified active validators and balances are required for proposerBoost score calculation");
+        }
         const avgBalanceByIncrement = Math.floor(
           preCachedData.justifiedTotalActiveBalanceByIncrement / preCachedData.justifiedActiveValidators
         );

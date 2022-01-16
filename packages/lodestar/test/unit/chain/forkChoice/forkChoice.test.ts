@@ -46,7 +46,7 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    forkChoice = initializeForkChoice(config, emitter, currentSlot, state);
+    forkChoice = initializeForkChoice(config, emitter, currentSlot, state, false);
   });
 
   describe("forkchoice", function () {

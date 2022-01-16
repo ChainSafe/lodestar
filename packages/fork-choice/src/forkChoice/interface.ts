@@ -154,10 +154,7 @@ export type OnBlockPrecachedData = {
   justifiedBalances?: number[];
   justifiedActiveValidators?: number;
   justifiedTotalActiveBalanceByIncrement?: number;
-
-  /**
-   * Time in seconds when the block was received
-   */
+  /** Time in seconds when the block was received */
   blockReceptionTime?: number;
   /**
    * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint

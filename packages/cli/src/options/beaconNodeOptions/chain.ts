@@ -5,6 +5,7 @@ export interface IChainArgs {
   "chain.useSingleThreadVerifier": boolean;
   "chain.disableBlsBatchVerify": boolean;
   "chain.persistInvalidSszObjects": boolean;
+  "chain.proposerBoostEnabled": boolean;
   // this is defined as part of IBeaconPaths
   // "chain.persistInvalidSszObjectsDir": string;
 }
@@ -16,6 +17,7 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     persistInvalidSszObjectsDir: undefined as any,
+    proposerBoostEnabled: args["chain.proposerBoostEnabled"],
   };
 }
 
@@ -42,6 +44,14 @@ Will double processing times. Use only for debugging purposes.",
     hidden: true,
     type: "boolean",
     description: "Persist invalid ssz objects or not for debugging purpose",
+    group: "chain",
+  },
+
+  "chain.proposerBoostEnabled": {
+    hidden: true,
+    type: "boolean",
+    description: "Enable proposer boost to reward a timely block",
+    defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
     group: "chain",
   },
 };
