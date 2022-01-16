@@ -44,7 +44,7 @@ describe("ForkChoice", () => {
       bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     };
 
-    forkchoice = new ForkChoice(config, fcStore, protoArr, []);
+    forkchoice = new ForkChoice(config, fcStore, protoArr, [], false);
 
     let parentBlockRoot = finalizedRoot;
     // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance
