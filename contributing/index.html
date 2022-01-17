@@ -295,6 +295,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#github-style-guide">
+    Github style guide
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#lodestar-monorepo">
     Lodestar Monorepo
   </a>
@@ -425,6 +430,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#github-style-guide">
+    Github style guide
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#lodestar-monorepo">
     Lodestar Monorepo
   </a>
@@ -550,12 +560,22 @@
 <li>Make a pull request! We review PRs on a regular basis.</li>
 <li>You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.</li>
 </ol>
+<h2 id="github-style-guide">Github style guide<a class="headerlink" href="#github-style-guide" title="Permanent link">¶</a></h2>
+<p><strong>Branch naming</strong></p>
+<p>If you are contributing from this repo prefix the branch name with your Github username (i.e. <code>myusername/short-description</code>)</p>
+<p><strong>Pull request naming</strong></p>
+<p>Pull request titles must be:
+- Short and descriptive summary
+- Should be capitalized and written in imperative present tense
+- Not end with period</p>
+<p>For example:</p>
+<blockquote>
+<p>Add Edit on Github button to all the pages</p>
+</blockquote>
 <h2 id="lodestar-monorepo">Lodestar Monorepo<a class="headerlink" href="#lodestar-monorepo" title="Permanent link">¶</a></h2>
 <p>We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a <a href="https://en.wikipedia.org/wiki/Monorepo">monorepo</a>. We're using <a href="https://lerna.js.org/">Lerna</a> to manage the packages. See <a href="https://github.com/ChainSafe/lodestar/tree/master/packages">packages/</a> for a list of packages hosted in this repo.</p>
 <h2 id="style-guide">Style Guide<a class="headerlink" href="#style-guide" title="Permanent link">¶</a></h2>
 <ul>
-<li>Pull requests should usually only update a single package (in our monorepo) at a time</li>
-<li>prefix your PR title with the module you are working on, e.g.: <code>validator: foo bar buz</code></li>
 <li>Many module class constructors have the following signature: <code>(options, dependencies)</code></li>
 <li>e.g.: <code>public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)</code></li>
 <li>Modules should be designed to <em>"do one thing and do it well!"</em></li>

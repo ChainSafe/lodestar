@@ -377,7 +377,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Eth1DepositsCache</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>): <em><a href="./">Eth1DepositsCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L12">packages/lodestar/src/eth1/eth1DepositsCache.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L12">packages/lodestar/src/eth1/eth1DepositsCache.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -401,15 +401,15 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="config">config<a class="headerlink" href="#config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L12">packages/lodestar/src/eth1/eth1DepositsCache.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L12">packages/lodestar/src/eth1/eth1DepositsCache.ts:12</a></em></p>
 <hr/>
 <h3 id="db">db<a class="headerlink" href="#db" title="Permanent link">¶</a></h3>
 <p>• <strong>db</strong>: <em><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L11">packages/lodestar/src/eth1/eth1DepositsCache.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L11">packages/lodestar/src/eth1/eth1DepositsCache.ts:11</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>depositEvents</code>: DepositEvent[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L36">packages/lodestar/src/eth1/eth1DepositsCache.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L36">packages/lodestar/src/eth1/eth1DepositsCache.ts:36</a></em></p>
 <p>Add log to cache
 This function enforces that <code>logs</code> are imported one-by-one with consecutive indexes</p>
 <p><strong>Parameters:</strong></p>
@@ -431,7 +431,7 @@ This function enforces that <code>logs</code> are imported one-by-one with conse
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
 <p>▸ <strong>get</strong>(<code>indexRange</code>: IFilterOptions‹number›, <code>eth1Data</code>: Eth1Data): <em>Promise‹Deposit[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L26">packages/lodestar/src/eth1/eth1DepositsCache.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L26">packages/lodestar/src/eth1/eth1DepositsCache.ts:26</a></em></p>
 <p>Returns a list of <code>Deposit</code> objects, within the given deposit index <code>range</code>.</p>
 <p>The <code>depositCount</code> is used to generate the proofs for the <code>Deposits</code>. For example, if we
 have 100 proofs, but the eth2 chain only acknowledges 50 of them, we must produce our
@@ -459,7 +459,7 @@ proofs with respect to a tree size of 50.</p>
 <hr/>
 <h3 id="geteth1dataforblocks">getEth1DataForBlocks<a class="headerlink" href="#geteth1dataforblocks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getEth1DataForBlocks</strong>(<code>blocks</code>: Eth1Block[], <code>lastProcessedDepositBlockNumber</code>: number | null): <em>Promise‹Eth1Data &amp; Eth1Block[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L69">packages/lodestar/src/eth1/eth1DepositsCache.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L69">packages/lodestar/src/eth1/eth1DepositsCache.ts:69</a></em></p>
 <p>Appends partial eth1 data (depositRoot, depositCount) in a block range (inclusive)
 Returned array is sequential and ascending in blockNumber</p>
 <p><strong>Parameters:</strong></p>
@@ -485,13 +485,13 @@ Returned array is sequential and ascending in blockNumber</p>
 <hr/>
 <h3 id="gethighestdepositeventblocknumber">getHighestDepositEventBlockNumber<a class="headerlink" href="#gethighestdepositeventblocknumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getHighestDepositEventBlockNumber</strong>(): <em>Promise‹number | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L85">packages/lodestar/src/eth1/eth1DepositsCache.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L85">packages/lodestar/src/eth1/eth1DepositsCache.ts:85</a></em></p>
 <p>Returns the highest blockNumber stored in DB if any</p>
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 <hr/>
 <h3 id="getlowestdepositeventblocknumber">getLowestDepositEventBlockNumber<a class="headerlink" href="#getlowestdepositeventblocknumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getLowestDepositEventBlockNumber</strong>(): <em>Promise‹number | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c581c18/packages/lodestar/src/eth1/eth1DepositsCache.ts#L93">packages/lodestar/src/eth1/eth1DepositsCache.ts:93</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8c3a418/packages/lodestar/src/eth1/eth1DepositsCache.ts#L93">packages/lodestar/src/eth1/eth1DepositsCache.ts:93</a></em></p>
 <p>Returns the lowest blockNumber stored in DB if any</p>
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 </article>
