@@ -12,6 +12,7 @@ import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 
 const LOCK_FILE_EXT = ".lock";
+const logger = warnLogger();
 
 export async function getSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
@@ -75,7 +76,7 @@ export async function getSecretKeys(
       if (result.status !== "rejected") {
         secretKeys.push(result.value);
       } else {
-        warnLogger().warn(result.reason);
+        logger.warn(result.reason);
       }
     }
     return {
