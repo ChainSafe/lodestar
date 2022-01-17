@@ -6,11 +6,12 @@
 
 1. The team selects a commit from `master` as a "stable target" for a new version release.
 2. The selected commit is branched into a separate release branch (Example: `v0.33.x`) 
-3. The commit on the separate release branch is tagged with `beta.x`. (Example: `v0.33.0-beta.0`) and published for testing as a pre-release.
-4. The team bumps `master` to the next version and continues releasing nightly builds. (Example: `v0.34.0`)
+3. Bump version on `package.json` and `lerna.json` 
+4. The commit is released and published for testing as a Pre-Release.
+5. The team bumps `master` to the next version and continues releasing nightly builds. (Example: `v0.34.0`)
 
 ## Pre-Releases
-A `beta.x` release gets published and tagged when the team selects a commit as a "stable target" candidate.
+A `v.beta.x` release is published and tagged (Example: `v0.33.0-beta.0`) when the team selects a commit as a "stable target" candidate. 
 
 ### Pre-Release Testing Checklist
 We test the pre-release candidate on multiple servers with a variance of connected validators on a stable testnet for a minimum of three (3) days. 
