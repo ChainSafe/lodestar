@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.eth1datarepository/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.6" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.7" name="generator"/>
 <title>Db repositories.eth1datarepository - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
@@ -577,7 +577,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Eth1DataRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: Db, <code>metrics?</code>: IDbMetrics): <em><a href="./">Eth1DataRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bd730a/packages/lodestar/src/db/repositories/eth1Data.ts#L6">packages/lodestar/src/db/repositories/eth1Data.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/752d2e6/packages/lodestar/src/db/repositories/eth1Data.ts#L6">packages/lodestar/src/db/repositories/eth1Data.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -740,7 +740,7 @@
 <hr/>
 <h3 id="batchputvalues">batchPutValues<a class="headerlink" href="#batchputvalues" title="Permanent link">¶</a></h3>
 <p>▸ <strong>batchPutValues</strong>(<code>eth1Datas</code>: Eth1DataOrdered &amp; object[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bd730a/packages/lodestar/src/db/repositories/eth1Data.ts#L20">packages/lodestar/src/db/repositories/eth1Data.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/752d2e6/packages/lodestar/src/db/repositories/eth1Data.ts#L20">packages/lodestar/src/db/repositories/eth1Data.ts:20</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -825,7 +825,7 @@
 <h3 id="decodekey">decodeKey<a class="headerlink" href="#decodekey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decodeKey</strong>(<code>data</code>: Buffer): <em>number</em></p>
 <p><em>Overrides <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#decodekey">decodeKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bd730a/packages/lodestar/src/db/repositories/eth1Data.ts#L11">packages/lodestar/src/db/repositories/eth1Data.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/752d2e6/packages/lodestar/src/db/repositories/eth1Data.ts#L11">packages/lodestar/src/db/repositories/eth1Data.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -887,7 +887,7 @@
 <hr/>
 <h3 id="deleteold">deleteOld<a class="headerlink" href="#deleteold" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deleteOld</strong>(<code>timestamp</code>: number): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bd730a/packages/lodestar/src/db/repositories/eth1Data.ts#L29">packages/lodestar/src/db/repositories/eth1Data.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/752d2e6/packages/lodestar/src/db/repositories/eth1Data.ts#L29">packages/lodestar/src/db/repositories/eth1Data.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1052,7 +1052,7 @@
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getId</strong>(<code>value</code>: Eth1Data): <em>number</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1bd730a/packages/lodestar/src/db/repositories/eth1Data.ts#L16">packages/lodestar/src/db/repositories/eth1Data.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/752d2e6/packages/lodestar/src/db/repositories/eth1Data.ts#L16">packages/lodestar/src/db/repositories/eth1Data.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1300,6 +1300,6 @@
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.22074ed6.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.1514a9a0.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.01de222e.min.js"></script>
 </body>
 </html>
