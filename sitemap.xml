@@ -1011,6 +1011,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.reprocesscontroller/</loc>
+         <lastmod>2022-01-17</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_archiver.archiver/</loc>
          <lastmod>2022-01-17</lastmod>
          <changefreq>daily</changefreq>
@@ -1632,6 +1637,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain.chainevent/</loc>
+         <lastmod>2022-01-17</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain.reprocessstatus/</loc>
          <lastmod>2022-01-17</lastmod>
          <changefreq>daily</changefreq>
     </url>
