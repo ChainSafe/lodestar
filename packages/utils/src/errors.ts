@@ -1,5 +1,3 @@
-import {Json} from "@chainsafe/ssz";
-
 /**
  * Generic Lodestar error with attached metadata
  */
@@ -10,14 +8,14 @@ export class LodestarError<T extends {code: string}> extends Error {
     this.type = type;
   }
 
-  getMetadata(): {[key: string]: Json} {
+  getMetadata(): Record<string, unknown> {
     return this.type;
   }
 
   /**
    * Get the metadata and the stacktrace for the error.
    */
-  toObject(): {[key: string]: Json} {
+  toObject(): Record<string, unknown> {
     return {
       // Ignore message since it's just type.code
       ...this.getMetadata(),

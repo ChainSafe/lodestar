@@ -53,7 +53,7 @@ export async function runNodeNotifier({
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-      const finalizedRoot = headState.finalizedCheckpoint.root;
+      const finalizedRoot = headState.finalizedCheckpoint.root.valueOf() as Uint8Array;
       const headSlot = headInfo.slot;
       timeSeries.addPoint(headSlot, Date.now());
 

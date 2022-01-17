@@ -1,4 +1,3 @@
-import {Json} from "@chainsafe/ssz";
 import {format} from "winston";
 import {toJson, toString} from "../json";
 import {Context, ILoggerOptions, TimestampFormatCode} from "./interface";
@@ -61,7 +60,7 @@ function jsonLogFormat(opts: ILoggerOptions): Format {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     format((_info) => {
       const info = _info as IWinstonInfoArg;
-      info.context = toJson(info.context);
+      info.context = toJson(info.context) as Context;
       info.error = (toJson(info.error) as unknown) as Error;
       return info;
     })(),
@@ -117,7 +116,7 @@ export function printStackTraceLast(context?: Context | Error): string {
  * Mutates the `json` argument deleting all 'stack' properties.
  * `json` argument must not contain circular properties, which should be guaranteed by `toJson()`
  */
-export function extractStackTraceFromJson(json: Json, stackTraces: string[] = []): string[] {
+export function extractStackTraceFromJson(json: unknown, stackTraces: string[] = []): string[] {
   if (typeof json === "object" && json !== null && !Array.isArray(json)) {
     let stack: string | null = null;
     for (const [key, value] of Object.entries(json)) {
@@ -125,7 +124,7 @@ export function extractStackTraceFromJson(json: Json, stackTraces: string[] = []
         stack = value;
         delete ((json as unknown) as Error)[key];
       } else {
-        extractStackTraceFromJson(value as Json, stackTraces);
+        extractStackTraceFromJson(value, stackTraces);
       }
     }
     // Push stack trace last so nested errors come first
