@@ -185,22 +185,17 @@ export class SyncCommitteeDutiesService {
     const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
-    const dependentRoot = syncDuties.dependentRoot;
-    const period = computeSyncPeriodAtEpoch(epoch);
 
+    const dependentRoot = syncDuties.dependentRoot;
+    const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
     for (const duty of syncDuties.data) {
-      if (!this.indicesService.hasValidatorIndex(duty.validatorIndex)) {
+      const {validatorIndex} = duty;
+      if (!this.indicesService.hasValidatorIndex(validatorIndex)) {
         continue;
       }
       count++;
-
-      let dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
-      if (!dutiesByIndex) {
-        dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
-        this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
-      }
 
       // TODO: Enable dependentRoot functionality
       // Meanwhile just overwrite them, since the latest duty will be older and less likely to re-org
@@ -211,10 +206,20 @@ export class SyncCommitteeDutiesService {
       // - The dependent root has changed, signalling a re-org.
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
-      dutiesByIndex.set(duty.validatorIndex, {dependentRoot, duty});
+      dutiesByIndex.set(validatorIndex, {dependentRoot, duty});
     }
 
-    this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot: toHexString(dependentRoot), count});
+    // these could be redundant duties due to the state of next period query reorged
+    // see https://github.com/ChainSafe/lodestar/issues/3572
+    // so we always overwrite duties
+    const period = computeSyncPeriodAtEpoch(epoch);
+    this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
+
+    this.logger.debug("Downloaded SyncDuties", {
+      epoch,
+      dependentRoot: toHexString(dependentRoot),
+      count,
+    });
   }
 
   private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
