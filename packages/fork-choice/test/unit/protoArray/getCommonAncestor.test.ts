@@ -62,4 +62,26 @@ describe("getCommonAncestor", () => {
       expect(ancestorNode && ancestorNode.blockRoot).to.equal(ancestor);
     });
   }
+
+  // assign some random boost to the last block
+  const boosts = [];
+  boosts[fc.nodes.length - 1] = 34;
+  const deltas = Array.from({length: fc.nodes.length}, () => 0);
+  fc.applyScoreChanges({deltas, boosts, justifiedEpoch: 0, justifiedRoot: "-", finalizedEpoch: 0, finalizedRoot: "-"});
+  const weightsAfterCall1 = fc.nodes.map((nrow) => nrow.weight);
+
+  const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
+  fc.applyScoreChanges({
+    deltas: deltasNew,
+    boosts,
+    justifiedEpoch: 0,
+    justifiedRoot: "-",
+    finalizedEpoch: 0,
+    finalizedRoot: "-",
+  });
+  const weightsAfterCall2 = fc.nodes.map((nrow) => nrow.weight);
+
+  // multiple calls to applyScoreChanges don't keep on adding boosts to weight over
+  // and over again, and applyScoreChanges can be safely called after onAttestations
+  expect(weightsAfterCall1).to.deep.equal(weightsAfterCall2);
 });
