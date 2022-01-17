@@ -185,15 +185,9 @@ export class SyncCommitteeDutiesService {
     const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
-    const dependentRoot = syncDuties.dependentRoot;
-    const period = computeSyncPeriodAtEpoch(epoch);
-    let dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
-    if (!dutiesByIndex) {
-      dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
-      this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
-    }
-    const redundantDutiedValidatorIndices = new Set(dutiesByIndex.keys());
 
+    const dependentRoot = syncDuties.dependentRoot;
+    const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
     for (const duty of syncDuties.data) {
@@ -213,20 +207,18 @@ export class SyncCommitteeDutiesService {
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
       dutiesByIndex.set(validatorIndex, {dependentRoot, duty});
-      redundantDutiedValidatorIndices.delete(validatorIndex);
     }
 
     // these could be redundant duties due to the state of next period query reorged
     // see https://github.com/ChainSafe/lodestar/issues/3572
-    for (const validatorIndex of redundantDutiedValidatorIndices) {
-      dutiesByIndex.delete(validatorIndex);
-    }
+    // so we always overwrite duties
+    const period = computeSyncPeriodAtEpoch(epoch);
+    this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
 
     this.logger.debug("Downloaded SyncDuties", {
       epoch,
       dependentRoot: toHexString(dependentRoot),
       count,
-      deletedIndices: Array.from(redundantDutiedValidatorIndices).join(","),
     });
   }
 
