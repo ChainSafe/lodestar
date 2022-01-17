@@ -10,9 +10,10 @@ import {GossipJobQueues, GossipTopic, GossipType, ProcessRpcMessageFn} from "../
  */
 const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "type" | "maxConcurrency">} = {
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
-  // this is different from lighthouse's, there are more gossip aggregate_and_proof than gossip block
-  [GossipType.beacon_aggregate_and_proof]: {maxLength: 4096, type: QueueType.LIFO, maxConcurrency: 16},
-  [GossipType.beacon_attestation]: {maxLength: 16384, type: QueueType.LIFO, maxConcurrency: 64},
+  // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
+  [GossipType.beacon_aggregate_and_proof]: {maxLength: 5120, type: QueueType.LIFO, maxConcurrency: 16},
+  // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
+  [GossipType.beacon_attestation]: {maxLength: 24576, type: QueueType.LIFO, maxConcurrency: 64},
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},

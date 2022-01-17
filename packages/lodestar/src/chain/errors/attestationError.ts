@@ -141,7 +141,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; validatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN; targetEpoch: Epoch; aggregatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
-  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; root: Uint8Array}
+  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; root: RootHex}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}

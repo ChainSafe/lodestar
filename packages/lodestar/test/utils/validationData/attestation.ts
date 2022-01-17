@@ -72,6 +72,10 @@ export function getAttestationValidData(
       if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
       return headBlock;
     },
+    getBlockHex: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
+      return headBlock;
+    },
   } as Partial<IForkChoice>) as IForkChoice;
 
   const committeeIndices = state.getBeaconCommittee(attSlot, attIndex);
@@ -117,6 +121,7 @@ export function getAttestationValidData(
     regen,
     seenAttesters: new SeenAttesters(),
     bls: new BlsSingleThreadVerifier(),
+    waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};
