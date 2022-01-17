@@ -70,7 +70,12 @@ export class ForkChoice implements IForkChoice {
    **/
   private validatedAttestationDatas = new Set<string>();
   /** Boost the entire branch with this proposer root as the leaf */
-  private proposerBoost?: {root: RootHex; score: number} | null;
+  private proposerBoost?: {
+    root: RootHex;
+    score?: number;
+    justifiedActiveValidators: number;
+    justifiedTotalActiveBalanceByIncrement: number;
+  } | null;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -185,10 +190,12 @@ export class ForkChoice implements IForkChoice {
          * starting from the proposerIndex
          */
         const boosts: number[] = [];
-        if (this.proposerBoost) {
+        if (this.proposerBoostEnabled && this.proposerBoost) {
           const proposerIndex = this.protoArray.indices.get(this.proposerBoost.root);
           if (proposerIndex == undefined) throw Error("InvalidProposerIndex");
-          boosts[proposerIndex] = this.proposerBoost.score;
+          const proposerBoostScore = this.proposerBoost.score ?? this.calculateProposerBoostScore();
+          boosts[proposerIndex] = proposerBoostScore;
+          this.proposerBoost.score = proposerBoostScore;
         }
 
         this.protoArray.applyScoreChanges({
@@ -373,6 +380,7 @@ export class ForkChoice implements IForkChoice {
     const blockRoot = this.config.getForkTypes(slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
 
+    // Add proposer score boost if the block is timely
     if (this.proposerBoostEnabled && slot === this.fcStore.currentSlot) {
       const {blockDelay, justifiedActiveValidators, justifiedTotalActiveBalanceByIncrement} = preCachedData || {};
       if (
@@ -383,15 +391,9 @@ export class ForkChoice implements IForkChoice {
         throw Error("Justified active validators and balances are required for proposerBoost score calculation");
       }
 
-      // Add proposer score boost if the block is timely
-      let proposerScore;
       const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelay);
       if (proposerInterval < 1) {
-        const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
-        const committeeSize = Math.floor(justifiedActiveValidators / SLOTS_PER_EPOCH);
-        const committeeWeight = committeeSize * avgBalanceByIncrement;
-        proposerScore = Math.floor((committeeWeight * this.config.PROPOSER_SCORE_BOOST) / 100);
-        this.proposerBoost = {root: blockRootHex, score: proposerScore};
+        this.proposerBoost = {root: blockRootHex, justifiedActiveValidators, justifiedTotalActiveBalanceByIncrement};
         this.synced = false;
       }
     }
@@ -685,6 +687,18 @@ export class ForkChoice implements IForkChoice {
   validateLatestHash(_latestValidHash: RootHex, _invalidateTillHash: RootHex | null): void {
     // Silently ignore for now if all calls were valid
     return;
+  }
+
+  private calculateProposerBoostScore(): number {
+    if (!this.proposerBoost) {
+      throw Error("Invalid proposerBoost to calculate the boost score");
+    }
+    const {justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators} = this.proposerBoost;
+    const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
+    const committeeSize = Math.floor(justifiedActiveValidators / SLOTS_PER_EPOCH);
+    const committeeWeight = committeeSize * avgBalanceByIncrement;
+    const proposerScore = Math.floor((committeeWeight * this.config.PROPOSER_SCORE_BOOST) / 100);
+    return proposerScore;
   }
 
   private getPreMergeExecStatus(preCachedData?: OnBlockPrecachedData): ExecutionStatus.PreMerge {
