@@ -193,7 +193,12 @@ export class ForkChoice implements IForkChoice {
         if (this.proposerBoostEnabled && this.proposerBoost) {
           const proposerIndex = this.protoArray.indices.get(this.proposerBoost.root);
           if (proposerIndex == undefined) throw Error("InvalidProposerIndex");
-          const proposerBoostScore = this.proposerBoost.score ?? this.calculateProposerBoostScore();
+          const proposerBoostScore =
+            this.proposerBoost.score ??
+            computeProposerBoostScoreFromBalances(this.justifiedBalances, {
+              slotsPerEpoch: SLOTS_PER_EPOCH,
+              proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
+            });
           boosts[proposerIndex] = proposerBoostScore;
           this.proposerBoost.score = proposerBoostScore;
         }
@@ -689,18 +694,6 @@ export class ForkChoice implements IForkChoice {
     return;
   }
 
-  private calculateProposerBoostScore(): number {
-    if (!this.proposerBoost) {
-      throw Error("Invalid proposerBoost to calculate the boost score");
-    }
-    const {justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators} = this.proposerBoost;
-    const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
-    const committeeSize = Math.floor(justifiedActiveValidators / SLOTS_PER_EPOCH);
-    const committeeWeight = committeeSize * avgBalanceByIncrement;
-    const proposerScore = Math.floor((committeeWeight * this.config.PROPOSER_SCORE_BOOST) / 100);
-    return proposerScore;
-  }
-
   private getPreMergeExecStatus(preCachedData?: OnBlockPrecachedData): ExecutionStatus.PreMerge {
     const executionStatus = preCachedData?.executionStatus || ExecutionStatus.PreMerge;
     if (executionStatus !== ExecutionStatus.PreMerge)
@@ -1062,4 +1055,34 @@ function assertValidTerminalPowBlock(
         `Invalid terminal POW block: total difficulty not reached ${powBlockParent.totalDifficulty} < ${powBlock.totalDifficulty}`
       );
   }
+}
+
+function computeProposerBoostScore(
+  {
+    justifiedTotalActiveBalanceByIncrement,
+    justifiedActiveValidators,
+  }: {justifiedTotalActiveBalanceByIncrement: number; justifiedActiveValidators: number},
+  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+): number {
+  const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
+  const committeeSize = Math.floor(justifiedActiveValidators / config.slotsPerEpoch);
+  const committeeWeight = committeeSize * avgBalanceByIncrement;
+  const proposerScore = Math.floor((committeeWeight * config.proposerScoreBoost) / 100);
+  return proposerScore;
+}
+
+export function computeProposerBoostScoreFromBalances(
+  justifiedBalances: number[],
+  config: {slotsPerEpoch: number; proposerScoreBoost: number}
+): number {
+  let justifiedTotalActiveBalanceByIncrement = 0,
+    justifiedActiveValidators = 0;
+  for (let i = 0; i < justifiedBalances.length; i++) {
+    if (justifiedBalances[i] > 0) {
+      justifiedActiveValidators += 1;
+      // justified balances here are by increment
+      justifiedTotalActiveBalanceByIncrement += justifiedBalances[i];
+    }
+  }
+  return computeProposerBoostScore({justifiedTotalActiveBalanceByIncrement, justifiedActiveValidators}, config);
 }

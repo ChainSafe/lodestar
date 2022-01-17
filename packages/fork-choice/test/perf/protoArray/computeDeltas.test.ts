@@ -4,6 +4,7 @@ import {allForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-stat
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {IVoteTracker} from "../../../src/protoArray/interface";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas";
+import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice";
 
 describe("computeDeltas", () => {
   let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
@@ -69,6 +70,13 @@ describe("computeDeltas", () => {
     },
     fn: (votes) => {
       computeDeltas(indices, votes, oldBalances, newBalances);
+    },
+  });
+
+  itBench({
+    id: "computeProposerBoostScoreFromBalances",
+    fn: () => {
+      computeProposerBoostScoreFromBalances(newBalances, {slotsPerEpoch: 32, proposerScoreBoost: 70});
     },
   });
 });
