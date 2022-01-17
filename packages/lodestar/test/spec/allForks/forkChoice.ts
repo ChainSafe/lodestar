@@ -210,9 +210,6 @@ function runStateTranstion(
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
   let justifiedBalances: number[] = [];
   const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
-  const justifiedActiveValidators = justifiedState?.totalActiveValidators ?? preState?.totalActiveValidators;
-  const justifiedTotalActiveBalanceByIncrement =
-    justifiedState?.totalActiveBalanceByIncrement ?? preState?.totalActiveBalanceByIncrement;
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
@@ -225,8 +222,6 @@ function runStateTranstion(
     forkchoice.onBlock(signedBlock.message, postState, {
       blockDelay,
       justifiedBalances,
-      justifiedActiveValidators,
-      justifiedTotalActiveBalanceByIncrement,
     });
     for (const attestation of signedBlock.message.body.attestations) {
       try {

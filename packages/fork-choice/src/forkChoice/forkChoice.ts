@@ -73,8 +73,6 @@ export class ForkChoice implements IForkChoice {
   private proposerBoost?: {
     root: RootHex;
     score?: number;
-    justifiedActiveValidators: number;
-    justifiedTotalActiveBalanceByIncrement: number;
   } | null;
   /**
    * Instantiates a Fork Choice from some existing components
@@ -387,18 +385,14 @@ export class ForkChoice implements IForkChoice {
 
     // Add proposer score boost if the block is timely
     if (this.proposerBoostEnabled && slot === this.fcStore.currentSlot) {
-      const {blockDelay, justifiedActiveValidators, justifiedTotalActiveBalanceByIncrement} = preCachedData || {};
-      if (
-        blockDelay === undefined ||
-        justifiedActiveValidators === undefined ||
-        justifiedTotalActiveBalanceByIncrement === undefined
-      ) {
-        throw Error("Justified active validators and balances are required for proposerBoost score calculation");
+      const {blockDelay} = preCachedData || {};
+      if (blockDelay === undefined) {
+        throw Error("Missing blockDelay info for proposerBoost");
       }
 
       const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelay);
       if (proposerInterval < 1) {
-        this.proposerBoost = {root: blockRootHex, justifiedActiveValidators, justifiedTotalActiveBalanceByIncrement};
+        this.proposerBoost = {root: blockRootHex};
         this.synced = false;
       }
     }

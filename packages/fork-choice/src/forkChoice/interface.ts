@@ -148,8 +148,6 @@ export type PowBlockHex = {
 export type OnBlockPrecachedData = {
   /** `justifiedBalances` balances of justified state which is updated synchronously. */
   justifiedBalances?: number[];
-  justifiedActiveValidators?: number;
-  justifiedTotalActiveBalanceByIncrement?: number;
   /** Time in seconds when the block was received */
   blockDelay: number;
   /**

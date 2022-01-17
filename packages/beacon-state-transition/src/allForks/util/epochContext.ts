@@ -128,7 +128,6 @@ export function createEpochContext(
   const nextEpoch = currentEpoch + 1;
 
   let totalActiveBalanceByIncrement = 0;
-  let totalActiveValidators = 0;
   let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
   let exitQueueChurn = 0;
 
@@ -148,7 +147,6 @@ export function createEpochContext(
     }
     if (isActiveValidator(validator, currentEpoch)) {
       currentActiveIndices.push(i);
-      totalActiveValidators += 1;
       // We track totalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       totalActiveBalanceByIncrement += Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
     }
@@ -234,7 +232,6 @@ export function createEpochContext(
     syncProposerReward,
     baseRewardPerIncrement,
     totalActiveBalanceByIncrement,
-    totalActiveValidators,
     churnLimit,
     exitQueueEpoch,
     exitQueueChurn,
@@ -378,7 +375,6 @@ interface IEpochContextData {
   syncProposerReward: number;
   baseRewardPerIncrement: number;
   totalActiveBalanceByIncrement: number;
-  totalActiveValidators: number;
   churnLimit: number;
   exitQueueEpoch: Epoch;
   exitQueueChurn: number;
@@ -443,7 +439,6 @@ export class EpochContext {
    * Total active balance for current epoch, to be used instead of getTotalBalance()
    */
   totalActiveBalanceByIncrement: number;
-  totalActiveValidators: number;
 
   /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
@@ -478,7 +473,6 @@ export class EpochContext {
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
     this.totalActiveBalanceByIncrement = data.totalActiveBalanceByIncrement;
-    this.totalActiveValidators = data.totalActiveValidators;
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
@@ -508,7 +502,6 @@ export class EpochContext {
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
       totalActiveBalanceByIncrement: this.totalActiveBalanceByIncrement,
-      totalActiveValidators: this.totalActiveValidators,
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
