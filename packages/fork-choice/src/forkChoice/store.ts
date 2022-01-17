@@ -22,7 +22,6 @@ export type CheckpointWithHex = phase0.Checkpoint & {rootHex: RootHex};
  */
 export interface IForkChoiceStore {
   currentSlot: Slot;
-  secondsIntoSlot: number;
   justifiedCheckpoint: CheckpointWithHex;
   finalizedCheckpoint: CheckpointWithHex;
   bestJustifiedCheckpoint: CheckpointWithHex;
@@ -40,7 +39,6 @@ export class ForkChoiceStore implements IForkChoiceStore {
 
   constructor(
     public currentSlot: Slot,
-    public secondsIntoSlot: number,
     justifiedCheckpoint: phase0.Checkpoint,
     finalizedCheckpoint: phase0.Checkpoint,
     private readonly events?: {

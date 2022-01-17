@@ -52,10 +52,13 @@ export function forkChoiceTest(fork: ForkName): void {
         const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
         cacheState(state, stateCache);
 
+        /** This is to track test's tickTime to be used in proposer boost */
+        let tickTime = 0;
+
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
-            const tickTime = Number(step.tick);
-            forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT), tickTime % config.SECONDS_PER_SLOT);
+            tickTime = Number(step.tick);
+            forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT));
           }
 
           // attestation step
@@ -74,7 +77,8 @@ export function forkChoiceTest(fork: ForkName): void {
               continue;
               // should not throw error, on_block_bad_parent_root test wants this
             }
-            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache);
+            const blockDelay = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
+            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelay);
             cacheState(state, stateCache);
           }
 
@@ -103,10 +107,12 @@ export function forkChoiceTest(fork: ForkName): void {
                 `Invalid proposer boost root at step ${i}`
               );
             }
-            // time in spec mapped to Slot in our forkchoice implementation
+            // time in spec mapped to Slot in our forkchoice implementation.
+            // Compare in slots because proposer boost steps doesn't always come on
+            // slot boundary.
             if (expectedTime !== undefined && expectedTime > 0)
-              expect(forkchoice.getTime() * config.SECONDS_PER_SLOT + forkchoice.getSecondsIntoSlot()).to.be.equal(
-                Number(expectedTime),
+              expect(forkchoice.getTime()).to.be.equal(
+                Math.floor(Number(expectedTime) / config.SECONDS_PER_SLOT),
                 `Invalid forkchoice time at step ${i}`
               );
             if (justifiedCheckpoint) {
@@ -176,7 +182,8 @@ function runStateTranstion(
   preState: CachedBeaconState<allForks.BeaconState>,
   signedBlock: allForks.SignedBeaconBlock,
   forkchoice: IForkChoice,
-  checkpointCache: CheckpointStateCache
+  checkpointCache: CheckpointStateCache,
+  blockDelay: number
 ): CachedBeaconState<allForks.BeaconState> {
   const preSlot = preState.slot;
   const postSlot = signedBlock.message.slot - 1;
@@ -216,6 +223,7 @@ function runStateTranstion(
   }
   try {
     forkchoice.onBlock(signedBlock.message, postState, {
+      blockDelay,
       justifiedBalances,
       justifiedActiveValidators,
       justifiedTotalActiveBalanceByIncrement,

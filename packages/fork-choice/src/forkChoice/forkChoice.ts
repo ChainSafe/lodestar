@@ -374,29 +374,21 @@ export class ForkChoice implements IForkChoice {
     const blockRootHex = toHexString(blockRoot);
 
     if (this.proposerBoostEnabled && slot === this.fcStore.currentSlot) {
-      let secondsIntoSlot;
-      if (preCachedData?.blockReceptionTime !== undefined) {
-        secondsIntoSlot = (preCachedData.blockReceptionTime - state.genesisTime) % this.config.SECONDS_PER_SLOT;
-        // This will only update fork-choice time into slot
-        this.updateTime(this.fcStore.currentSlot, secondsIntoSlot);
-      } else {
-        secondsIntoSlot = this.fcStore.secondsIntoSlot;
+      const {blockDelay, justifiedActiveValidators, justifiedTotalActiveBalanceByIncrement} = preCachedData || {};
+      if (
+        blockDelay === undefined ||
+        justifiedActiveValidators === undefined ||
+        justifiedTotalActiveBalanceByIncrement === undefined
+      ) {
+        throw Error("Justified active validators and balances are required for proposerBoost score calculation");
       }
 
       // Add proposer score boost if the block is timely
       let proposerScore;
-      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, secondsIntoSlot);
+      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelay);
       if (proposerInterval < 1) {
-        if (
-          preCachedData?.justifiedActiveValidators === undefined ||
-          preCachedData?.justifiedTotalActiveBalanceByIncrement === undefined
-        ) {
-          throw Error("Justified active validators and balances are required for proposerBoost score calculation");
-        }
-        const avgBalanceByIncrement = Math.floor(
-          preCachedData.justifiedTotalActiveBalanceByIncrement / preCachedData.justifiedActiveValidators
-        );
-        const committeeSize = Math.floor(preCachedData.justifiedActiveValidators / SLOTS_PER_EPOCH);
+        const avgBalanceByIncrement = Math.floor(justifiedTotalActiveBalanceByIncrement / justifiedActiveValidators);
+        const committeeSize = Math.floor(justifiedActiveValidators / SLOTS_PER_EPOCH);
         const committeeWeight = committeeSize * avgBalanceByIncrement;
         proposerScore = Math.floor((committeeWeight * this.config.PROPOSER_SCORE_BOOST) / 100);
         this.proposerBoost = {root: blockRootHex, score: proposerScore};
@@ -508,14 +500,12 @@ export class ForkChoice implements IForkChoice {
   /**
    * Call `onTick` for all slots between `fcStore.getCurrentSlot()` and the provided `currentSlot`.
    */
-  updateTime(currentSlot: Slot, secondsIntoSlot?: number): void {
+  updateTime(currentSlot: Slot): void {
     while (this.fcStore.currentSlot < currentSlot) {
       const previousSlot = this.fcStore.currentSlot;
       // Note: we are relying upon `onTick` to update `fcStore.time` to ensure we don't get stuck in a loop.
       this.onTick(previousSlot + 1);
     }
-    if (secondsIntoSlot !== undefined && secondsIntoSlot > this.fcStore.secondsIntoSlot)
-      this.fcStore.secondsIntoSlot = secondsIntoSlot;
 
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
@@ -524,10 +514,6 @@ export class ForkChoice implements IForkChoice {
 
   getTime(): Slot {
     return this.fcStore.currentSlot;
-  }
-
-  getSecondsIntoSlot(): number {
-    return this.fcStore.secondsIntoSlot;
   }
 
   /** Returns `true` if the block is known **and** a descendant of the finalized root. */
@@ -1011,7 +997,6 @@ export class ForkChoice implements IForkChoice {
       this.proposerBoost = null;
       this.synced = false;
     }
-    this.fcStore.secondsIntoSlot = 0;
 
     const currentSlot = time;
     if (computeSlotsSinceEpochStart(currentSlot) !== 0) {

@@ -203,7 +203,6 @@ function mockForkChoice(): IForkChoice {
     getLatestMessage: () => undefined,
     updateTime: () => {},
     getTime: () => 0,
-    getSecondsIntoSlot: () => 0,
     hasBlock: () => true,
     hasBlockHex: () => true,
     getBlock: () => block,

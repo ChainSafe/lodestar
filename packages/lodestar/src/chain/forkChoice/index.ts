@@ -46,7 +46,7 @@ export function initializeForkChoice(
   return new ForkChoice(
     config,
 
-    new ForkChoiceStore(currentSlot, 0, justifiedCheckpoint, finalizedCheckpoint, {
+    new ForkChoiceStore(currentSlot, justifiedCheckpoint, finalizedCheckpoint, {
       onJustified: (cp) => emitter.emit(ChainEvent.forkChoiceJustified, cp),
       onFinalized: (cp) => emitter.emit(ChainEvent.forkChoiceFinalized, cp),
     }),

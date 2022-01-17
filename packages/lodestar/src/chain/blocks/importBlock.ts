@@ -92,7 +92,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     executionStatus,
     justifiedActiveValidators: state.totalActiveValidators,
     justifiedTotalActiveBalanceByIncrement: state.totalActiveBalanceByIncrement,
-    blockReceptionTime: Math.floor(Date.now() / 1000),
+    blockDelay: (Math.floor(Date.now() / 1000) - state.genesisTime) % chain.config.SECONDS_PER_SLOT,
   };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);

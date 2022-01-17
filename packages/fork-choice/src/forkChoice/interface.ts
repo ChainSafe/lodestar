@@ -87,10 +87,6 @@ export interface IForkChoice {
    */
   getTime(): Slot;
   /**
-   * Returns seconds into slot.
-   */
-  getSecondsIntoSlot(): number;
-  /**
    * Returns `true` if the block is known **and** a descendant of the finalized root.
    */
   hasBlock(blockRoot: Root): boolean;
@@ -155,7 +151,7 @@ export type OnBlockPrecachedData = {
   justifiedActiveValidators?: number;
   justifiedTotalActiveBalanceByIncrement?: number;
   /** Time in seconds when the block was received */
-  blockReceptionTime?: number;
+  blockDelay: number;
   /**
    * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts

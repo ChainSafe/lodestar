@@ -47,7 +47,6 @@ describe("Forkchoice", function () {
 
   const fcStore: IForkChoiceStore = {
     currentSlot: block.slot,
-    secondsIntoSlot: 0,
     justifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     finalizedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
