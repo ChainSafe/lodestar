@@ -12,6 +12,7 @@ import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 
 const LOCK_FILE_EXT = ".lock";
+const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
 export async function getSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
@@ -84,12 +85,12 @@ export async function getSecretKeys(
   }
 }
 
-function resolveKeystorePaths(fileOrDirPath: string): string[] {
+export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
     return fs
       .readdirSync(fileOrDirPath)
-      .map((file) => path.join(fileOrDirPath, file))
-      .filter((filepath) => filepath.endsWith(".json"));
+      .filter((file) => !depositDataPattern.test(file))
+      .map((file) => path.join(fileOrDirPath, file));
   } else {
     return [fileOrDirPath];
   }
