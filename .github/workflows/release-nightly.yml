@@ -42,15 +42,32 @@ jobs:
       # </common-build>
 
       - name: Publish to npm registry
-        # from-package: Base the latest nightly ref count from NPM registry
-        # --no-git-reset: Do not delete code version artifacts so the next step can pick the version
-        # --canary: Format version with commit (1.1.0-alpha.0+81e3b443)
-        # --dist-tag next: Make this nightly version installable with `@next`
-        # --preid dev: Tag version with `dev` instead of `alpha`
-        # --force-publish: lerna doesn't want to publish anything otherwise - "lerna success No changed packages to publish"
+        # Just use lerna publish with --canary option. Using 'from-package' ignore other options 
+        # and only compares against the verison in package.json, and skips release if already 
+        # published.
+        #
+        # --no-git-reset: 
+        #   Do not delete code version artifacts so the next step can pick the version
+        #
+        # --canary: 
+        #   Format version with commit (1.1.0-alpha.0+81e3b443). Make sure the previous
+        #   released tags are not lightweight("commit" type), but proper annotated ("tag" type)
+        #   Otherwise the version canary will generate will be from last annotated tag type
+        #   Best way to create such a tag is by using 'git tag -a' or using lerna publish!
+        #
+        # --dist-tag next: 
+        #   Make this nightly version installable with `@next`
+        #
+        # --preid dev: 
+        #   Tag version with `dev` instead of `alpha`
+        #
+        # --force-publish: 
+        #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages 
+        #   to publish"
+        #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish from-package --yes --no-verify-access \
+          node_modules/.bin/lerna publish --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset --force-publish \
           --preid dev
         env:
