@@ -89,7 +89,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
 
   const onBlockPrecachedData: OnBlockPrecachedData = {
     executionStatus,
-    blockDelay: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
+    blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
   };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);

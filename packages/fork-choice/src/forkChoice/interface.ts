@@ -149,7 +149,7 @@ export type OnBlockPrecachedData = {
   /** `justifiedBalances` balances of justified state which is updated synchronously. */
   justifiedBalances?: number[];
   /** Time in seconds when the block was received */
-  blockDelay: number;
+  blockDelaySec: number;
   /**
    * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts

@@ -385,12 +385,12 @@ export class ForkChoice implements IForkChoice {
 
     // Add proposer score boost if the block is timely
     if (this.proposerBoostEnabled && slot === this.fcStore.currentSlot) {
-      const {blockDelay} = preCachedData || {};
-      if (blockDelay === undefined) {
-        throw Error("Missing blockDelay info for proposerBoost");
+      const {blockDelaySec} = preCachedData || {};
+      if (blockDelaySec === undefined) {
+        throw Error("Missing blockDelaySec info for proposerBoost");
       }
 
-      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelay);
+      const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelaySec);
       if (proposerInterval < 1) {
         this.proposerBoost = {root: blockRootHex};
         this.synced = false;

@@ -77,8 +77,8 @@ export function forkChoiceTest(fork: ForkName): void {
               continue;
               // should not throw error, on_block_bad_parent_root test wants this
             }
-            const blockDelay = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
-            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelay);
+            const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
+            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
             cacheState(state, stateCache);
           }
 
@@ -183,7 +183,7 @@ function runStateTranstion(
   signedBlock: allForks.SignedBeaconBlock,
   forkchoice: IForkChoice,
   checkpointCache: CheckpointStateCache,
-  blockDelay: number
+  blockDelaySec: number
 ): CachedBeaconState<allForks.BeaconState> {
   const preSlot = preState.slot;
   const postSlot = signedBlock.message.slot - 1;
@@ -220,7 +220,7 @@ function runStateTranstion(
   }
   try {
     forkchoice.onBlock(signedBlock.message, postState, {
-      blockDelay,
+      blockDelaySec,
       justifiedBalances,
     });
     for (const attestation of signedBlock.message.body.attestations) {
