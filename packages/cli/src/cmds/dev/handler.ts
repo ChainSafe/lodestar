@@ -21,6 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
+import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Run a beacon node with validator
@@ -151,6 +152,19 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       logger: logger.child({module: "vali"}),
       secretKeys,
     });
+
+    // Start keymanager API backend
+    if (args.keymanagerEnabled) {
+      const keymanagerRestApi = new KeymanagerRestApi(
+        {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
+        {config, logger, api: validator.keymanager}
+      );
+      await keymanagerRestApi.listen();
+      onGracefulShutdownCbs.push(() => keymanagerRestApi.close());
+    }
+
+    onGracefulShutdownCbs.push(() => validator.stop());
+    await validator.start();
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();
