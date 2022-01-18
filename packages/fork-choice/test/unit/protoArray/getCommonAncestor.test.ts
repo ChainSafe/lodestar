@@ -63,17 +63,21 @@ describe("getCommonAncestor", () => {
     });
   }
 
-  // assign some random boost to the last block
-  const boosts = [];
-  boosts[fc.nodes.length - 1] = 34;
   const deltas = Array.from({length: fc.nodes.length}, () => 0);
-  fc.applyScoreChanges({deltas, boosts, justifiedEpoch: 0, justifiedRoot: "-", finalizedEpoch: 0, finalizedRoot: "-"});
+  fc.applyScoreChanges({
+    deltas,
+    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    justifiedEpoch: 0,
+    justifiedRoot: "-",
+    finalizedEpoch: 0,
+    finalizedRoot: "-",
+  });
   const weightsAfterCall1 = fc.nodes.map((nrow) => nrow.weight);
 
   const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
   fc.applyScoreChanges({
     deltas: deltasNew,
-    boosts,
+    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
     justifiedEpoch: 0,
     justifiedRoot: "-",
     finalizedEpoch: 0,

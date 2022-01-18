@@ -4,6 +4,7 @@ import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
+type ProposerBoost = {root: RootHex; score: number};
 
 export class ProtoArray {
   // Do not attempt to prune the tree unless it has at least this many nodes.
@@ -15,6 +16,8 @@ export class ProtoArray {
   finalizedRoot: RootHex;
   nodes: IProtoNode[];
   indices: Map<RootHex, number>;
+
+  private previousProposerBoost?: ProposerBoost | null = null;
 
   constructor({
     pruneThreshold,
@@ -71,14 +74,14 @@ export class ProtoArray {
    */
   applyScoreChanges({
     deltas,
-    boosts,
+    proposerBoost,
     justifiedEpoch,
     justifiedRoot,
     finalizedEpoch,
     finalizedRoot,
   }: {
     deltas: number[];
-    boosts: number[];
+    proposerBoost: ProposerBoost | null;
     justifiedEpoch: Epoch;
     justifiedRoot: RootHex;
     finalizedEpoch: Epoch;
@@ -121,18 +124,21 @@ export class ProtoArray {
         continue;
       }
 
-      const nodeDelta = deltas[nodeIndex];
-      const nodeBoost = boosts[nodeIndex];
+      const currentBoost = proposerBoost && proposerBoost.root === node.blockRoot ? proposerBoost.score : 0;
+      const previousBoost =
+        this.previousProposerBoost && this.previousProposerBoost.root === node.blockRoot
+          ? this.previousProposerBoost.score
+          : 0;
+      const nodeDelta = deltas[nodeIndex] + currentBoost - previousBoost;
+
       if (nodeDelta === undefined) {
         throw new ProtoArrayError({
           code: ProtoArrayErrorCode.INVALID_NODE_DELTA,
           index: nodeIndex,
         });
       }
-
       // Apply the delta to the node
-      node.balanceWeight += nodeDelta;
-      node.weight = node.balanceWeight + (nodeBoost ?? 0);
+      node.weight += nodeDelta;
 
       // Update the parent delta (if any)
       const parentIndex = node.parent;
@@ -147,7 +153,6 @@ export class ProtoArray {
 
         // back-propagate the nodes delta to its parent
         deltas[parentIndex] += nodeDelta;
-        if (nodeBoost) boosts[parentIndex] = nodeBoost;
       }
     }
 
@@ -171,6 +176,8 @@ export class ProtoArray {
         this.maybeUpdateBestChildAndDescendant(parentIndex, nodeIndex);
       }
     }
+    // Update the previous proposer boost
+    this.previousProposerBoost = proposerBoost;
   }
 
   /**
@@ -187,7 +194,6 @@ export class ProtoArray {
     const node: IProtoNode = {
       ...block,
       parent: this.indices.get(block.parentRoot),
-      balanceWeight: 0,
       weight: 0,
       bestChild: undefined,
       bestDescendant: undefined,

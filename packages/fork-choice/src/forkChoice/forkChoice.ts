@@ -187,23 +187,21 @@ export class ForkChoice implements IForkChoice {
          * The structure in line with deltas to propogate boost up the branch
          * starting from the proposerIndex
          */
-        const boosts: number[] = [];
+        let proposerBoost: {root: RootHex; score: number} | null = null;
         if (this.proposerBoostEnabled && this.proposerBoost) {
-          const proposerIndex = this.protoArray.indices.get(this.proposerBoost.root);
-          if (proposerIndex == undefined) throw Error("InvalidProposerIndex");
           const proposerBoostScore =
             this.proposerBoost.score ??
             computeProposerBoostScoreFromBalances(this.justifiedBalances, {
               slotsPerEpoch: SLOTS_PER_EPOCH,
               proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
             });
-          boosts[proposerIndex] = proposerBoostScore;
+          proposerBoost = {root: this.proposerBoost.root, score: proposerBoostScore};
           this.proposerBoost.score = proposerBoostScore;
         }
 
         this.protoArray.applyScoreChanges({
           deltas,
-          boosts,
+          proposerBoost,
           justifiedEpoch: this.fcStore.justifiedCheckpoint.epoch,
           justifiedRoot: this.fcStore.justifiedCheckpoint.rootHex,
           finalizedEpoch: this.fcStore.finalizedCheckpoint.epoch,
