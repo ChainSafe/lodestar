@@ -17,7 +17,7 @@ export type RestApiOptions = {
 
 export const restApiOptionsDefault: RestApiOptions = {
   host: "127.0.0.1",
-  port: 9596,
+  port: 9597,
   cors: "*",
 };
 
@@ -38,7 +38,10 @@ export class KeymanagerRestApi {
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
-    const opts = {...restApiOptionsDefault, ...optsArg};
+    const opts = {
+      ...restApiOptionsDefault,
+      ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
+    };
 
     const server = fastify({
       logger: false,
