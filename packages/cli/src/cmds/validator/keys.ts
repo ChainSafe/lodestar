@@ -85,7 +85,7 @@ export async function getSecretKeys(
   }
 }
 
-function resolveKeystorePaths(fileOrDirPath: string): string[] {
+export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
     return fs
       .readdirSync(fileOrDirPath)
