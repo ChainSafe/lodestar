@@ -70,10 +70,9 @@ export class ForkChoice implements IForkChoice {
    **/
   private validatedAttestationDatas = new Set<string>();
   /** Boost the entire branch with this proposer root as the leaf */
-  private proposerBoost?: {
-    root: RootHex;
-    score?: number;
-  } | null;
+  private proposerBoostRoot: RootHex | null = null;
+  /** Score to use in proposer boost, evaluated lazily from justified balances */
+  private justifiedProposerBoostScore: number | null = null;
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -156,7 +155,7 @@ export class ForkChoice implements IForkChoice {
    * Get the proposer boost root
    */
   getProposerBoostRoot(): RootHex {
-    return this.proposerBoost?.root ?? HEX_ZERO_HASH;
+    return this.proposerBoostRoot ?? HEX_ZERO_HASH;
   }
 
   /**
@@ -188,15 +187,15 @@ export class ForkChoice implements IForkChoice {
          * starting from the proposerIndex
          */
         let proposerBoost: {root: RootHex; score: number} | null = null;
-        if (this.proposerBoostEnabled && this.proposerBoost) {
+        if (this.proposerBoostEnabled && this.proposerBoostRoot) {
           const proposerBoostScore =
-            this.proposerBoost.score ??
+            this.justifiedProposerBoostScore ??
             computeProposerBoostScoreFromBalances(this.justifiedBalances, {
               slotsPerEpoch: SLOTS_PER_EPOCH,
               proposerScoreBoost: this.config.PROPOSER_SCORE_BOOST,
             });
-          proposerBoost = {root: this.proposerBoost.root, score: proposerBoostScore};
-          this.proposerBoost.score = proposerBoostScore;
+          proposerBoost = {root: this.proposerBoostRoot, score: proposerBoostScore};
+          this.justifiedProposerBoostScore = proposerBoostScore;
         }
 
         this.protoArray.applyScoreChanges({
@@ -390,7 +389,7 @@ export class ForkChoice implements IForkChoice {
 
       const proposerInterval = getCurrentInterval(this.config, state.genesisTime, blockDelaySec);
       if (proposerInterval < 1) {
-        this.proposerBoost = {root: blockRootHex};
+        this.proposerBoostRoot = blockRootHex;
         this.synced = false;
       }
     }
@@ -707,6 +706,7 @@ export class ForkChoice implements IForkChoice {
   private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: number[]): void {
     this.synced = false;
     this.justifiedBalances = justifiedBalances;
+    this.justifiedProposerBoostScore = null;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
 
@@ -990,10 +990,10 @@ export class ForkChoice implements IForkChoice {
 
     // Update store time
     this.fcStore.currentSlot = time;
-    if (this.proposerBoost) {
+    if (this.proposerBoostRoot) {
       // Since previous weight was boosted, we need would now need to recalculate the
       // scores but without the boost
-      this.proposerBoost = null;
+      this.proposerBoostRoot = null;
       this.synced = false;
     }
 
