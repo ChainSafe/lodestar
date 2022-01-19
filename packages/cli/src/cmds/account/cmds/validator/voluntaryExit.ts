@@ -108,7 +108,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       slashingProtection,
       dbOps,
       api: args.server,
-      secretKeys: [secretKey],
+      secretKeys: [{secretKey}],
       logger: errorLogger(),
       graffiti: args.graffiti,
     });

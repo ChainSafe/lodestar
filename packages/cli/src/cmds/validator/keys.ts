@@ -10,13 +10,12 @@ import {getLockFile} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
+import {SecretKeyInfo} from "@chainsafe/lodestar-validator/src/keymanager/impl";
 
 const LOCK_FILE_EXT = ".lock";
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
-export async function getSecretKeys(
-  args: IValidatorCliArgs & IGlobalArgs
-): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
+export async function getSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<{secretKeys: SecretKeyInfo[]}> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
   if (args.fromMnemonic) {
     if (args.network === defaultNetwork) {
@@ -28,18 +27,28 @@ export async function getSecretKeys(
 
     const masterSK = deriveKeyFromMnemonic(args.fromMnemonic);
     const indexes = parseRange(args.mnemonicIndexes);
-    return {
-      secretKeys: indexes.map((index) => {
-        const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-        return SecretKey.fromBytes(signing);
-      }),
-    };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const secretKeys: SecretKeyInfo[] = indexes.map((index) => {
+      const {signing} = deriveEth2ValidatorKeys(masterSK, index);
+      return {
+        secretKey: SecretKey.fromBytes(signing),
+      };
+    });
+
+    return {secretKeys};
   }
 
   // Derive interop keys
   else if (args.interopIndexes) {
     const indexes = parseRange(args.interopIndexes);
-    return {secretKeys: indexes.map((index) => interopSecretKey(index))};
+
+    const secretKeys: SecretKeyInfo[] = indexes.map((index) => {
+      return {
+        secretKey: interopSecretKey(index),
+      };
+    });
+
+    return {secretKeys};
   }
 
   // Import JSON keystores and run
@@ -61,19 +70,23 @@ export async function getSecretKeys(
       lockFile.lockSync(lockFilePath);
     }
 
-    const secretKeys = await Promise.all(
-      keystorePaths.map(async (keystorePath) =>
-        SecretKey.fromBytes(await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase))
-      )
+    const secretKeys: SecretKeyInfo[] = await Promise.all(
+      keystorePaths.map(async (keystorePath) => {
+        const secretKey: SecretKey = SecretKey.fromBytes(
+          await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase)
+        );
+        return {
+          secretKey,
+          keystorePath,
+          unlockSecretKeys: () => {
+            lockFile.unlockSync(keystorePath + LOCK_FILE_EXT);
+          },
+        };
+      })
     );
 
     return {
       secretKeys,
-      unlockSecretKeys: () => {
-        for (const lockFilePath of lockFilePaths) {
-          lockFile.unlockSync(lockFilePath);
-        }
-      },
     };
   }
 
@@ -81,7 +94,12 @@ export async function getSecretKeys(
   else {
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
-    return {secretKeys: await validatorDirManager.decryptAllValidators({force: args.force})};
+    const secretKeys = (await validatorDirManager.decryptAllValidators({force: args.force})).map((key) => {
+      return {
+        secretKey: key,
+      };
+    });
+    return {secretKeys};
   }
 }
 

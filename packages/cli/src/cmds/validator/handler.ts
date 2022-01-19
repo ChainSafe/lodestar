@@ -12,6 +12,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getSecretKeys} from "./keys";
 import {getVersion} from "../../util/version";
+import {SecretKey} from "@chainsafe/bls";
 
 /**
  * Runs a validator client.
@@ -30,14 +31,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
+  const {secretKeys} = await getSecretKeys(args);
   if (secretKeys.length === 0) {
     throw new YargsError("No validator keystores found");
   }
 
+  const keys: SecretKey[] = secretKeys.map((key) => key.secretKey);
   // Log pubkeys for auditing
   logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-  for (const secretKey of secretKeys) {
+  for (const secretKey of keys) {
     logger.info(secretKey.toPublicKey().toHex());
   }
 
@@ -47,7 +49,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
   onGracefulShutdown(async () => {
     await Promise.all(onGracefulShutdownCbs.map((cb) => cb()));
-    unlockSecretKeys?.();
+    secretKeys.forEach((secretKeyInfo) => {
+      secretKeyInfo.unlockSecretKeys?.();
+    });
   }, logger.info.bind(logger));
 
   // This AbortController interrupts the sleep() calls when waiting for genesis

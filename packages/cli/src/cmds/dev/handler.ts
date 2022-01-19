@@ -22,6 +22,7 @@ import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
 import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
+import { SecretKeyInfo } from "@chainsafe/lodestar-validator/lib/keymanager/impl";
 
 /**
  * Run a beacon node with validator
@@ -116,7 +117,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   }, logger.info.bind(logger));
 
   if (args.startValidators) {
-    const secretKeys: SecretKey[] = [];
+    const secretKeys: SecretKeyInfo[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
     const valCount = anchorState.validators.length;
     const maxIndex = fromIndex + valCount - 1;
@@ -130,7 +131,9 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     }
 
     for (let i = fromIndex; i <= toIndex; i++) {
-      secretKeys.push(interopSecretKey(i));
+      secretKeys.push({
+        secretKey: interopSecretKey(i),
+      });
     }
 
     const dbPath = path.join(validatorsDbDir, "validators");

@@ -34,6 +34,7 @@ import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
 import {ISigner, getSignerLocal} from "../signer/local";
+import { SecretKeyInfo } from "../keymanager/impl";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -44,10 +45,10 @@ export class ValidatorStore {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
-    secretKeys: SecretKey[]
+    secretKeys: SecretKeyInfo[]
   ) {
     for (const secretKey of secretKeys) {
-      this.addKey(secretKey);
+      this.addKey(secretKey.secretKey);
     }
     this.slashingProtection = slashingProtection;
   }

@@ -12,12 +12,23 @@ import {ISlashingProtection, Interchange} from "../slashingProtection";
 import {ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
 import {Root} from "@chainsafe/lodestar-types";
+import fs from "fs";
+import path from "path";
+
+// TODO [DA] move to a better location
+// Improve the modelling of the type to prevent secretKey.secretKey usage
+export type SecretKeyInfo = {
+  secretKey: SecretKey;
+  keystorePath?: string;
+  unlockSecretKeys?: () => void;
+};
 
 export class KeymanagerApi implements Api {
   constructor(
     private readonly validatorStore: ValidatorStore,
     private readonly slashingProtection: ISlashingProtection,
-    private readonly genesisValidatorRoot: Uint8Array | Root
+    private readonly genesisValidatorRoot: Uint8Array | Root,
+    private readonly secretKeys: SecretKeyInfo[]
   ) {}
 
   /**
@@ -145,7 +156,14 @@ export class KeymanagerApi implements Api {
       deletedKey[i] = deleted;
 
       // Remove key from persistent storage
-      // TODO
+      this.secretKeys.forEach((secretKey) => {
+        if (secretKey.secretKey.toPublicKey().toHex() === pubkeyHex) {
+          secretKey?.unlockSecretKeys?.();
+          if (secretKey?.keystorePath) {
+            fs.unlinkSync(secretKey?.keystorePath);
+          }
+        }
+      });
     }
 
     const pubkeysBytes = pubkeysHex.map((pubkeyHex) => fromHexString(pubkeyHex));

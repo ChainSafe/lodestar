@@ -19,13 +19,15 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
-import {KeymanagerApi} from "./keymanager/impl";
+import {KeymanagerApi, SecretKeyInfo} from "./keymanager/impl";
 
+// TODO [DA] is this the best place to put the keystores key?
+// Combined the two new keys
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
-  secretKeys: SecretKey[];
+  secretKeys: SecretKeyInfo[];
   logger: ILogger;
   graffiti?: string;
 };
@@ -56,6 +58,7 @@ export class Validator {
 
   constructor(opts: ValidatorOptions, genesis: Genesis) {
     const {dbOps, logger, slashingProtection, secretKeys, graffiti} = opts;
+
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -77,7 +80,7 @@ export class Validator {
     new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
-    this.keymanager = new KeymanagerApi(validatorStore, slashingProtection, genesis.genesisValidatorsRoot);
+    this.keymanager = new KeymanagerApi(validatorStore, slashingProtection, genesis.genesisValidatorsRoot, secretKeys);
 
     this.api = api;
     this.clock = clock;
