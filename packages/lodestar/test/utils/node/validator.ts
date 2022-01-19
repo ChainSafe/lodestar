@@ -1,12 +1,10 @@
 import tmp from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {SlashingProtection, Validator, Signers, SignerType} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 import {SecretKey} from "@chainsafe/bls";
-import {createServer} from "@chainsafe/lodestar-validator/test/unit/remoteSigner/utils";
-import {remoteUrl} from "@chainsafe/lodestar-validator/test/unit/remoteSigner/constants";
 
 export async function getAndInitDevValidators({
   node,
@@ -15,7 +13,7 @@ export async function getAndInitDevValidators({
   startIndex = 0,
   useRestApi,
   testLoggerOpts,
-  signingMode,
+  remoteSignerUrl,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -23,10 +21,11 @@ export async function getAndInitDevValidators({
   startIndex: number;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
-  signingMode: string;
-}): Promise<Validator[]> {
-  const vcs: Promise<Validator>[] = [];
-  if (signingMode === "remote") await createServer(validatorsPerClient);
+  remoteSignerUrl?: string;
+}): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
+  const validators: Promise<Validator>[] = [];
+  const secretKeys: SecretKey[] = [];
+
   for (let i = 0; i < validatorClientCount; i++) {
     const startIndexVc = startIndex + i * validatorClientCount;
     const endIndex = startIndexVc + validatorsPerClient - 1;
@@ -37,22 +36,26 @@ export async function getAndInitDevValidators({
       controller: new LevelDbController({name: tmpDir.name}, {logger}),
     };
     const slashingProtection = new SlashingProtection(dbOps);
-    const secretKeys = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
-    let signers: Signers;
-    if (signingMode === "local") {
-      signers = {
-        type: SignerType.Local,
-        secretKeys: secretKeys,
-      };
-    } else {
-      signers = {
-        type: SignerType.Remote,
-        url: remoteUrl,
-        pubkeys: secretKeys.map((sk) => sk.toPublicKey()),
-        secretKey: new SecretKey(),
-      };
-    }
-    vcs.push(
+
+    const secretKeysValidator = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
+    secretKeys.push(...secretKeysValidator);
+
+    const signers = remoteSignerUrl
+      ? secretKeysValidator.map(
+          (secretKey): Signer => ({
+            type: SignerType.Remote,
+            remoteSignerUrl,
+            pubkeyHex: secretKey.toPublicKey().toHex(),
+          })
+        )
+      : secretKeysValidator.map(
+          (secretKey): Signer => ({
+            type: SignerType.Local,
+            secretKey,
+          })
+        );
+
+    validators.push(
       Validator.initializeFromBeaconNode({
         dbOps,
         api: useRestApi ? getNodeApiUrl(node) : node.api,
@@ -63,7 +66,11 @@ export async function getAndInitDevValidators({
     );
   }
 
-  return await Promise.all(vcs);
+  return {
+    validators: await Promise.all(validators),
+    // Return secretKeys to start the remoteSigner
+    secretKeys,
+  };
 }
 
 function getNodeApiUrl(node: BeaconNode): string {

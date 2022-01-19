@@ -90,14 +90,12 @@ async function runWorker(): Promise<void> {
     } as Message);
   });
 
-  const validators = await getAndInitDevValidators({
+  const {validators} = await getAndInitDevValidators({
     node,
     validatorClientCount: 1,
     validatorsPerClient: validatorsPerNode,
     startIndex,
     testLoggerOpts,
-    // TODO test multiNode with remote;
-    signingMode: "local",
   });
   await Promise.all(validators.map((validator) => validator.start()));
 }

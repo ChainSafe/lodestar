@@ -322,7 +322,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
 
-    const validators = await getAndInitDevValidators({
+    const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient,
       validatorClientCount,
@@ -331,7 +331,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       useRestApi: true,
       testLoggerOpts,
       // TODO test merge-interop with remote;
-      signingMode: "local",
     });
 
     afterEachCallbacks.push(async function () {

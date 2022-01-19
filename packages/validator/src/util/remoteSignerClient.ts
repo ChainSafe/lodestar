@@ -52,5 +52,5 @@ async function handlerRemoteSignerResponse<T>(res: Response): Promise<T> {
     throw Error(`${errBody}`);
   }
 
-  return <T>await res.json();
+  return JSON.parse(await res.text()) as T;
 }

@@ -265,9 +265,9 @@ export class ValidatorStore {
 
       case SignerType.Remote: {
         const signatureHex = await remoteSignerPostSignature(
+          signer.remoteSignerUrl,
           pubkeyHex,
-          toHexString(signingRoot),
-          signer.remoteSignerUrl
+          toHexString(signingRoot)
         );
         return fromHexString(signatureHex);
       }
