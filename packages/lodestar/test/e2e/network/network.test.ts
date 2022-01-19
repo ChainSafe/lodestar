@@ -10,7 +10,7 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
 
 import {Network, NetworkEvent, ReqRespMethod, getReqRespHandlers} from "../../../src/network";
-import {INetworkOptions} from "../../../src/network/options";
+import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
 import {GoodByeReasonCode} from "../../../src/constants";
 
 import {generateEmptySignedBlock} from "../../utils/block";
@@ -51,6 +51,7 @@ describe("network", function () {
     enr.setLocationMultiaddr(new Multiaddr(bindAddrUdp));
 
     return {
+      ...defaultNetworkOptions,
       maxPeers: 1,
       targetPeers: 1,
       bootMultiaddrs: [],

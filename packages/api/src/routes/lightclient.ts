@@ -113,11 +113,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const lightclientHeaderUpdate = new ContainerType<LightclientHeaderUpdate>({
     fields: {
       syncAggregate: ssz.altair.SyncAggregate,
-      header: ssz.phase0.BeaconBlockHeader,
+      attestedHeader: ssz.phase0.BeaconBlockHeader,
     },
     casingMap: {
       syncAggregate: "sync_aggregate",
-      header: "header",
+      attestedHeader: "attested_header",
     },
   });
 

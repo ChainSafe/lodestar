@@ -155,8 +155,11 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 }
 
 function parseRpcResponse<R, P>(res: IRpcResponse<R>, payload: IRpcPayload<P>): R {
-  if (res.result !== undefined) return res.result;
-  throw new ErrorJsonRpcResponse(res, payload);
+  if (res.result !== undefined) {
+    return res.result;
+  } else {
+    throw new ErrorJsonRpcResponse(res, payload);
+  }
 }
 
 /**
@@ -178,6 +181,7 @@ export class ErrorParseJson extends Error {
   }
 }
 
+/** JSON RPC endpoint returned status code == 200, but with error property set */
 export class ErrorJsonRpcResponse<P> extends Error {
   response: IRpcResponseError;
   payload: IRpcPayload<P>;
@@ -197,6 +201,7 @@ export class ErrorJsonRpcResponse<P> extends Error {
   }
 }
 
+/** JSON RPC endpoint returned status code != 200 */
 export class HttpRpcError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);

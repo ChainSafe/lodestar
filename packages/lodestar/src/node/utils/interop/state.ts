@@ -23,7 +23,7 @@ export function getInteropState(
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): TreeBacked<allForks.BeaconState> {
-  const latestPayloadHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked();
+  const latestPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultTreeBacked();
   // TODO: when having different test options, consider modifying these values
   latestPayloadHeader.blockHash = eth1BlockHash;
   latestPayloadHeader.timestamp = eth1Timestamp;

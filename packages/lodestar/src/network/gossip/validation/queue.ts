@@ -3,16 +3,17 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipJobQueues, GossipTopic, GossipType, ValidatorFnsByType} from "../interface";
+import {GossipJobQueues, GossipTopic, GossipType, ProcessRpcMessageFn} from "../interface";
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
  */
 const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "type" | "maxConcurrency">} = {
   [GossipType.beacon_block]: {maxLength: 1024, type: QueueType.FIFO},
-  // this is different from lighthouse's, there are more gossip aggregate_and_proof than gossip block
-  [GossipType.beacon_aggregate_and_proof]: {maxLength: 4096, type: QueueType.LIFO, maxConcurrency: 16},
-  [GossipType.beacon_attestation]: {maxLength: 16384, type: QueueType.LIFO, maxConcurrency: 64},
+  // lighthoue has aggregate_queue 4096 and unknown_block_aggregate_queue 1024, we use single queue
+  [GossipType.beacon_aggregate_and_proof]: {maxLength: 5120, type: QueueType.LIFO, maxConcurrency: 16},
+  // lighthouse has attestation_queue 16384 and unknown_block_attestation_queue 8192, we use single queue
+  [GossipType.beacon_attestation]: {maxLength: 24576, type: QueueType.LIFO, maxConcurrency: 64},
   [GossipType.voluntary_exit]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.proposer_slashing]: {maxLength: 4096, type: QueueType.FIFO},
   [GossipType.attester_slashing]: {maxLength: 4096, type: QueueType.FIFO},
@@ -21,10 +22,10 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
 };
 
 /**
- * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
+ * Wraps a _processRpcMessage() function with a queue, to limit the processing of gossip objects by type.
  *
  * A queue here is essential to protect against DOS attacks, where a peer may send many messages at once.
- * Queues also protect the node against overloading. If the node gets bussy with an expensive epoch transition,
+ * Queues also protect the node against overloading. If the node gets busy with an expensive epoch transition,
  * it may buffer too many gossip objects causing an Out of memory (OOM) error. With a queue the node will reject
  * new objects to fit its current throughput.
  *
@@ -36,15 +37,14 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createValidationQueues(
-  gossipValidatorFns: ValidatorFnsByType,
+export function createProcessRpcMessageQueues(
+  processRpcMsgFn: ProcessRpcMessageFn,
   signal: AbortSignal,
   metrics: IMetrics | null
 ): GossipJobQueues {
   return mapValues(gossipQueueOpts, (opts, type) => {
-    const gossipValidatorFn = gossipValidatorFns[type];
-    return new JobItemQueue<[GossipTopic, InMessage, number], void>(
-      (topic, message, seenTimestampsMs) => gossipValidatorFn(topic, message, seenTimestampsMs),
+    return new JobItemQueue<[GossipTopic, InMessage], void>(
+      (topic, message) => processRpcMsgFn(message),
       {signal, ...opts},
       metrics
         ? {

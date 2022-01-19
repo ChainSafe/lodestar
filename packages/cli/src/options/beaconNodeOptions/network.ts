@@ -12,6 +12,11 @@ export interface INetworkArgs {
   "network.subscribeAllSubnets": boolean;
   "network.connectToDiscv5Bootnodes": boolean;
   "network.discv5FirstQueryDelayMs": number;
+  "network.requestCountPeerLimit": number;
+  "network.blockCountTotalLimit": number;
+  "network.blockCountPeerLimit": number;
+  "network.rateTrackerTimeoutMs": number;
+  "network.dontSendGossipAttestationsToForkchoice": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -30,6 +35,11 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     subscribeAllSubnets: args["network.subscribeAllSubnets"],
     connectToDiscv5Bootnodes: args["network.connectToDiscv5Bootnodes"],
     discv5FirstQueryDelayMs: args["network.discv5FirstQueryDelayMs"],
+    requestCountPeerLimit: args["network.requestCountPeerLimit"],
+    blockCountTotalLimit: args["network.blockCountTotalLimit"],
+    blockCountPeerLimit: args["network.blockCountPeerLimit"],
+    rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
+    dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
   };
 }
 
@@ -102,6 +112,45 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     type: "number",
     description: "Delay the 1st heart beat of Peer Manager after starting Discv5",
     defaultDescription: String(defaultOptions.network.discv5FirstQueryDelayMs),
+    group: "network",
+  },
+
+  "network.requestCountPeerLimit": {
+    type: "number",
+    description: "Max block req/resp requests per peer per rateTrackerTimeoutMs",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.requestCountPeerLimit),
+    group: "network",
+  },
+
+  "network.blockCountTotalLimit": {
+    type: "number",
+    description: "Max block count requested per rateTrackerTimeoutMs",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.blockCountTotalLimit),
+    group: "network",
+  },
+
+  "network.blockCountPeerLimit": {
+    type: "number",
+    description: "Max block count requested per peer per rateTrackerTimeoutMs",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.blockCountPeerLimit),
+    group: "network",
+  },
+
+  "network.rateTrackerTimeoutMs": {
+    type: "number",
+    description: "Time window to track rate limit in milli seconds",
+    hidden: true,
+    defaultDescription: String(defaultOptions.network.rateTrackerTimeoutMs),
+    group: "network",
+  },
+
+  "network.dontSendGossipAttestationsToForkchoice": {
+    hidden: true,
+    type: "boolean",
+    description: "Pass gossip attestations to forkchoice or not",
     group: "network",
   },
 };

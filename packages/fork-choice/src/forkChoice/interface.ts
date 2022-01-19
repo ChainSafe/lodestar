@@ -1,5 +1,5 @@
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {IProtoBlock} from "../protoArray/interface";
+import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
 
 export type CheckpointHex = {
@@ -132,6 +132,10 @@ export interface IForkChoice {
   getBlockSummariesAtSlot(slot: Slot): IProtoBlock[];
   /** Returns the distance of common ancestor of nodes to newNode. Returns null if newNode is descendant of prevNode */
   getCommonAncestorDistance(prevBlock: IProtoBlock, newBlock: IProtoBlock): number | null;
+  /**
+   * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
+   */
+  validateLatestHash(latestValidHash: RootHex, invalidateTillHash: RootHex | null): void;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
@@ -147,17 +151,22 @@ export type OnBlockPrecachedData = {
   /**
    * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts
-   * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
+   * powBlock = getPowBlock((block as bellatrix.BeaconBlock).body.executionPayload.parentHash)
    * ```
    */
-  powBlock?: PowBlockHex;
+  powBlock?: PowBlockHex | null;
   /**
    * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts
    * const powParent = getPowBlock(powBlock.parentHash);
    * ```
    */
-  powBlockParent?: PowBlockHex;
+  powBlockParent?: PowBlockHex | null;
+  /**
+   * Optimistic sync fields
+   */
+  isMergeTransitionBlock?: boolean;
+  executionStatus?: ExecutionStatus;
 };
 
 export interface ILatestMessage {

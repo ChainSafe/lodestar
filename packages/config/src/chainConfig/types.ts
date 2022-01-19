@@ -22,9 +22,9 @@ export interface IChainConfig {
   // Altair
   ALTAIR_FORK_VERSION: Uint8Array;
   ALTAIR_FORK_EPOCH: number;
-  // Merge
-  MERGE_FORK_VERSION: Uint8Array;
-  MERGE_FORK_EPOCH: number;
+  // Bellatrix
+  BELLATRIX_FORK_VERSION: Uint8Array;
+  BELLATRIX_FORK_EPOCH: number;
   // Sharding
   SHARDING_FORK_VERSION: Uint8Array;
   SHARDING_FORK_EPOCH: number;

@@ -6,6 +6,7 @@ import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {BATCH_SLOT_OFFSET, MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants";
 import {hashBlocks} from "./utils";
+import {ChainSegmentError, BlockErrorCode} from "../../chain/errors";
 
 export type BatchOpts = {
   epochsPerBatch: Epoch;
@@ -70,6 +71,8 @@ export class Batch {
   readonly request: phase0.BeaconBlocksByRangeRequest;
   /** The `Attempts` that have been made and failed to send us this batch. */
   readonly failedProcessingAttempts: Attempt[] = [];
+  /** The `Attempts` that have been made and failed because of execution malfunction. */
+  readonly executionErrorAttempts: Attempt[] = [];
   /** The number of download retries this batch has undergone due to a failed request. */
   private readonly failedDownloadAttempts: PeerId[] = [];
   private readonly config: IChainForkConfig;
@@ -164,23 +167,31 @@ export class Batch {
   /**
    * Processing -> AwaitingDownload
    */
-  processingError(): void {
+  processingError(err: Error): void {
     if (this.state.status !== BatchStatus.Processing) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.Processing));
     }
 
-    this.onProcessingError(this.state.attempt);
+    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+      this.onExecutionEngineError(this.state.attempt);
+    } else {
+      this.onProcessingError(this.state.attempt);
+    }
   }
 
   /**
    * AwaitingValidation -> AwaitingDownload
    */
-  validationError(): void {
+  validationError(err: Error): void {
     if (this.state.status !== BatchStatus.AwaitingValidation) {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
 
-    this.onProcessingError(this.state.attempt);
+    if (err instanceof ChainSegmentError && err.type.code === BlockErrorCode.EXECUTION_ENGINE_ERROR) {
+      this.onExecutionEngineError(this.state.attempt);
+    } else {
+      this.onProcessingError(this.state.attempt);
+    }
   }
 
   /**
@@ -191,6 +202,15 @@ export class Batch {
       throw new BatchError(this.wrongStatusErrorType(BatchStatus.AwaitingValidation));
     }
     return this.state.attempt;
+  }
+
+  private onExecutionEngineError(attempt: Attempt): void {
+    this.executionErrorAttempts.push(attempt);
+    if (this.executionErrorAttempts.length > MAX_BATCH_PROCESSING_ATTEMPTS) {
+      throw new BatchError(this.errorType({code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS}));
+    }
+
+    this.state = {status: BatchStatus.AwaitingDownload};
   }
 
   private onProcessingError(attempt: Attempt): void {
@@ -216,12 +236,14 @@ export enum BatchErrorCode {
   WRONG_STATUS = "BATCH_ERROR_WRONG_STATUS",
   MAX_DOWNLOAD_ATTEMPTS = "BATCH_ERROR_MAX_DOWNLOAD_ATTEMPTS",
   MAX_PROCESSING_ATTEMPTS = "BATCH_ERROR_MAX_PROCESSING_ATTEMPTS",
+  MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS = "MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS",
 }
 
 type BatchErrorType =
   | {code: BatchErrorCode.WRONG_STATUS; expectedStatus: BatchStatus}
   | {code: BatchErrorCode.MAX_DOWNLOAD_ATTEMPTS}
-  | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS};
+  | {code: BatchErrorCode.MAX_PROCESSING_ATTEMPTS}
+  | {code: BatchErrorCode.MAX_EXECUTION_ENGINE_ERROR_ATTEMPTS};
 
 type BatchErrorMetadata = {
   startEpoch: number;

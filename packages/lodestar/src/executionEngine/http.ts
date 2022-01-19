@@ -1,6 +1,8 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
-import {JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
+import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
+import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+
+import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
   numToQuantity,
@@ -13,13 +15,13 @@ import {
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   ExecutePayloadStatus,
+  ExecutePayloadResponse,
   ForkChoiceUpdateStatus,
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
 } from "./interface";
-import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];
@@ -63,23 +65,67 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
+  async executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     const method = "engine_executePayloadV1";
-    const {status} = await this.rpc.fetch<
-      EngineApiRpcReturnTypes[typeof method],
-      EngineApiRpcParamTypes[typeof method]
-    >({
-      method,
-      params: [serializeExecutionPayload(executionPayload)],
-    });
+    const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
+    const {status, latestValidHash, validationError} = await this.rpc
+      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+        method,
+        params: [serializedExecutionPayload],
+      })
+      // If there are errors by EL like connection refused, internal error, they need to be
+      // treated seperate from being INVALID. For now, just pass the error upstream.
+      .catch((e: Error): EngineApiRpcReturnTypes[typeof method] => {
+        if (e instanceof HttpRpcError || e instanceof ErrorJsonRpcResponse) {
+          return {status: ExecutePayloadStatus.ELERROR, latestValidHash: null, validationError: e.message};
+        } else {
+          return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
+        }
+      });
 
     // Validate status is known
-    const statusEnum = ExecutePayloadStatus[status];
-    if (statusEnum === undefined) {
-      throw Error(`Unknown status ${status}`);
+    if (!ExecutePayloadStatus[status]) {
+      return {
+        status: ExecutePayloadStatus.ELERROR,
+        latestValidHash: null,
+        validationError: `Invalid EL status on executePayload: ${status}`,
+      };
     }
 
-    return statusEnum;
+    switch (status) {
+      case ExecutePayloadStatus.VALID:
+        if (latestValidHash == null) {
+          return {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          return {status, latestValidHash, validationError: null};
+        }
+
+      case ExecutePayloadStatus.INVALID:
+        if (latestValidHash == null) {
+          return {
+            status: ExecutePayloadStatus.ELERROR,
+            latestValidHash: null,
+            validationError: `Invalid null latestValidHash for status=${status}`,
+          };
+        } else {
+          return {status, latestValidHash, validationError};
+        }
+
+      case ExecutePayloadStatus.SYNCING:
+        return {status, latestValidHash, validationError: null};
+
+      case ExecutePayloadStatus.UNAVAILABLE:
+      case ExecutePayloadStatus.ELERROR:
+        return {
+          status,
+          latestValidHash: null,
+          validationError: validationError ?? "Unknown ELERROR",
+        };
+    }
   }
 
   /**
@@ -133,7 +179,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
+  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const method = "engine_getPayloadV1";
     const executionPayloadRpc = await this.rpc.fetch<
       EngineApiRpcReturnTypes[typeof method],
@@ -180,7 +226,16 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayloadV1: {status: ExecutePayloadStatus};
+  engine_executePayloadV1: {
+    status:
+      | ExecutePayloadStatus.VALID
+      | ExecutePayloadStatus.INVALID
+      | ExecutePayloadStatus.SYNCING
+      | ExecutePayloadStatus.ELERROR
+      | ExecutePayloadStatus.UNAVAILABLE;
+    latestValidHash: DATA | null;
+    validationError: string | null;
+  };
   engine_consensusValidated: void;
   engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
   /**
@@ -206,7 +261,7 @@ type ExecutionPayloadRpc = {
   transactions: DATA[];
 };
 
-export function serializeExecutionPayload(data: merge.ExecutionPayload): ExecutionPayloadRpc {
+export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): ExecutionPayloadRpc {
   return {
     parentHash: bytesToData(data.parentHash),
     feeRecipient: bytesToData(data.feeRecipient),
@@ -225,7 +280,7 @@ export function serializeExecutionPayload(data: merge.ExecutionPayload): Executi
   };
 }
 
-export function parseExecutionPayload(data: ExecutionPayloadRpc): merge.ExecutionPayload {
+export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.ExecutionPayload {
   return {
     parentHash: dataToBytes(data.parentHash, 32),
     feeRecipient: dataToBytes(data.feeRecipient, 20),

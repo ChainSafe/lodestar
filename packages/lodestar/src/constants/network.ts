@@ -32,6 +32,10 @@ export enum RespStatus {
    * The responder does not have requested resource.  The response payload adheres to the ErrorMessage schema (described below). Note: This response code is only valid as a response to BlocksByRange
    */
   RESOURCE_UNAVAILABLE = 3,
+  /**
+   * Our node does not have bandwidth to serve requests due to either per-peer quota or total quota.
+   */
+  RATE_LIMITED = 139,
 }
 
 export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;
@@ -40,7 +44,6 @@ export type RpcResponseStatusError = Exclude<RespStatus, RespStatus.SUCCESS>;
 export const GOSSIP_MAX_SIZE = 2 ** 20;
 /** The maximum allowed size of uncompressed req/resp chunked responses. */
 export const MAX_CHUNK_SIZE = 2 ** 20;
-
 /** The maximum time to wait for first byte of request response (time-to-first-byte). */
 export const TTFB_TIMEOUT = 5 * 1000; // 5 sec
 /** The maximum time for complete response transfer. */

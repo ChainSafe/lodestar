@@ -1,7 +1,33 @@
-// eslint-disable-next-line no-restricted-imports
-import {toExpectedCase} from "@chainsafe/ssz/lib/util/json";
+import Case from "case";
 
 /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
+
+export type KeyCase =
+  | "snake"
+  | "constant"
+  | "camel"
+  | "param"
+  | "header"
+  | "pascal" //Same as squish
+  | "dot"
+  | "notransform";
+
+export function toExpectedCase(
+  value: string,
+  expectedCase: KeyCase = "camel",
+  customCasingMap?: Record<string, string>
+): string {
+  if (expectedCase === "notransform") return value;
+  if (customCasingMap && customCasingMap[value]) return customCasingMap[value];
+  switch (expectedCase) {
+    case "param":
+      return Case.kebab(value);
+    case "dot":
+      return Case.lower(value, ".", true);
+    default:
+      return Case[expectedCase](value);
+  }
+}
 
 function isObjectObject(val: unknown): boolean {
   return val != null && typeof val === "object" && Array.isArray(val) === false;

@@ -5,13 +5,14 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ForkChoice, ProtoArray, ForkChoiceStore} from "@chainsafe/lodestar-fork-choice";
-import {getEffectiveBalances, CachedBeaconState, merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {getEffectiveBalances, CachedBeaconState, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {ChainEvent} from "../emitter";
+import {GENESIS_SLOT} from "../../constants";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
@@ -53,14 +54,18 @@ export function initializeForkChoice(
       parentRoot: toHexString(blockHeader.parentRoot),
       stateRoot: toHexString(blockHeader.stateRoot),
       blockRoot: toHexString(checkpoint.root),
-      // TODO: Review if correct after merge interop
-      executionPayloadBlockHash: merge.isMergeStateType(state)
-        ? toHexString(state.latestExecutionPayloadHeader.blockHash)
-        : null,
+
       justifiedEpoch: justifiedCheckpoint.epoch,
       justifiedRoot: toHexString(justifiedCheckpoint.root),
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
+
+      ...(bellatrix.isBellatrixStateType(state) && bellatrix.isMergeTransitionComplete(state)
+        ? {
+            executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
+            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+          }
+        : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
     }),
 
     justifiedBalances,

@@ -72,7 +72,7 @@ export async function validateGossipAttestation(
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
   // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
@@ -85,11 +85,11 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  const attestationTargetState = await chain.regen
-    .getCheckpointState(attTarget, RegenCaller.validateGossipAttestation)
+  const attHeadState = await chain.regen
+    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE,
+        code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
         error: e as Error,
       });
     });
@@ -97,7 +97,7 @@ export async function validateGossipAttestation(
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const attIndex = attData.index;
-  const committeeIndices = getCommitteeIndices(attestationTargetState, attSlot, attIndex);
+  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
@@ -116,7 +116,7 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  const expectedSubnet = computeSubnetForSlot(attestationTargetState, attSlot, attIndex);
+  const expectedSubnet = computeSubnetForSlot(attHeadState, attSlot, attIndex);
   if (subnet !== null && subnet !== expectedSubnet) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -141,7 +141,7 @@ export async function validateGossipAttestation(
     data: attData,
     signature: attestation.signature,
   };
-  const signatureSet = getIndexedAttestationSignatureSet(attestationTargetState, indexedAttestation);
+  const signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
@@ -206,9 +206,10 @@ export function verifyHeadBlockAndTargetRoot(
   beaconBlockRoot: Root,
   targetRoot: Root,
   attestationEpoch: Epoch
-): void {
+): IProtoBlock {
   const headBlock = verifyHeadBlockIsKnown(chain, beaconBlockRoot);
   verifyAttestationTargetRoot(headBlock, targetRoot, attestationEpoch);
+  return headBlock;
 }
 
 /**
@@ -230,7 +231,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IPr
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      root: beaconBlockRoot.valueOf() as Uint8Array,
+      root: toHexString(beaconBlockRoot.valueOf() as typeof beaconBlockRoot),
     });
   }
 

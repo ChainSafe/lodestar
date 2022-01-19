@@ -66,22 +66,7 @@ jobs:
       # </common-build>
 
       - name: Generate changelog
-        id: changelog
-        uses: heinrichreimer/github-changelog-generator-action@v2.2
-        with:
-          token: ${{ secrets.GH_PAGES_TOKEN }}
-          issues: "false"
-          pullRequests: "true"
-          prWoLabels: "true"
-          author: "true"
-          usernamesAsGithubLogins: "true"
-          compareLink: "true"
-          filterByMilestone: "false"
-          unreleased: "false"
-          sinceTag: "${{ needs.tag.outputs.prev_tag }}"
-          maxIssues: "0"
-          stripGeneratorNotice: "true"
-          excludeLabels: "meta-excludefromchangelog"
+        run: node scripts/generate_changelog_simple.js ${{ needs.tag.outputs.prev_tag }} ${{ needs.tag.outputs.tag }} CHANGELOG.md
 
       - name: Create Release
         id: create_release

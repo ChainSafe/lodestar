@@ -1,6 +1,6 @@
 import {CachedBeaconState, computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, Root} from "@chainsafe/lodestar-types";
-import {merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface";
 import {Eth1DepositDataTracker, Eth1DepositDataTrackerModules} from "./eth1DepositDataTracker";
@@ -24,15 +24,15 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 // - Fetch ALL deposit events from the deposit contract to build the deposit tree and validate future merkle proofs.
 //   Then it must follow deposit events at a distance roughly similar to the `ETH1_FOLLOW_DISTANCE` parameter above.
 //
-// - [New merge]: After MERGE_FORK_EPOCH, it must fetch the block with hash
+// - [New bellatrix]: After BELLATRIX_FORK_EPOCH, it must fetch the block with hash
 //   `state.eth1_data.block_hash` to compute `terminal_total_difficulty`. Note this may change with
 //   https://github.com/ethereum/consensus-specs/issues/2603.
 //
-// - [New merge]: On block production post MERGE_FORK_EPOCH, pre merge, the beacon node must find the merge block
+// - [New bellatrix]: On block production post BELLATRIX_FORK_EPOCH, pre merge, the beacon node must find the merge block
 //   crossing the `terminal_total_difficulty` boundary and include it in the block. After the merge block production
 //   will just use `execution_engine.assemble_block` without fetching individual blocks.
 //
-// - [New merge]: Fork-choice must validate the merge block ensuring it crossed the `terminal_total_difficulty`
+// - [New bellatrix]: Fork-choice must validate the merge block ensuring it crossed the `terminal_total_difficulty`
 //   boundary, so it must fetch the POW block referenced in the merge block + its POW parent block.
 //
 // With the merge the beacon node has to follow the eth1 chain at two distances:
@@ -53,7 +53,8 @@ export function initializeEth1ForBlockProduction(
       logger: modules.logger,
       signal: modules.signal,
       clockEpoch: computeEpochAtSlot(getCurrentSlot(modules.config, anchorState.genesisTime)),
-      isMergeComplete: merge.isMergeStateType(anchorState) && merge.isMergeComplete(anchorState),
+      isMergeTransitionComplete:
+        bellatrix.isBellatrixStateType(anchorState) && bellatrix.isMergeTransitionComplete(anchorState),
     });
   } else {
     return new Eth1ForBlockProductionDisabled();

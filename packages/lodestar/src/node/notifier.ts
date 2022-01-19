@@ -2,7 +2,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, sleep, prettyBytes} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "../chain";
 import {INetwork} from "../network";
 import {IBeaconSync, SyncState} from "../sync";
@@ -53,13 +53,23 @@ export async function runNodeNotifier({
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-      const finalizedRoot = headState.finalizedCheckpoint.root;
+      const finalizedRoot = headState.finalizedCheckpoint.root.valueOf() as Uint8Array;
       const headSlot = headInfo.slot;
       timeSeries.addPoint(headSlot, Date.now());
 
       const peersRow = `peers: ${connectedPeerCount}`;
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
+      const isMergeTransitionComplete =
+        bellatrix.isBellatrixStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
+      const executionInfo = isMergeTransitionComplete
+        ? [
+            `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
+              headInfo.executionPayloadBlockHash ?? "empty"
+            )})`,
+          ]
+        : [];
+
       // Give info about empty slots if head < clock
       const skippedSlots = clockSlot - headInfo.slot;
       const clockSlotRow = `slot: ${clockSlot}` + (skippedSlots > 0 ? ` (skipped ${skippedSlots})` : "");
@@ -79,6 +89,7 @@ export async function runNodeNotifier({
             `${slotsPerSecond.toPrecision(3)} slots/s`,
             clockSlotRow,
             headRow,
+            ...executionInfo,
             finalizedCheckpointRow,
             peersRow,
           ];
@@ -87,13 +98,13 @@ export async function runNodeNotifier({
 
         case SyncState.Synced: {
           // Synced - clock - head - finalized - peers
-          nodeState = ["Synced", clockSlotRow, headRow, finalizedCheckpointRow, peersRow];
+          nodeState = ["Synced", clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow, peersRow];
           break;
         }
 
         case SyncState.Stalled: {
           // Searching peers - peers - head - finalized - clock
-          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, finalizedCheckpointRow];
+          nodeState = ["Searching peers", peersRow, clockSlotRow, headRow, ...executionInfo, finalizedCheckpointRow];
         }
       }
       logger.info(nodeState.join(" - "));

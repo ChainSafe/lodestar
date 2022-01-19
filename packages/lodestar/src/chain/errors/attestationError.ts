@@ -118,9 +118,9 @@ export enum AttestationErrorCode {
    */
   COMMITTEE_INDEX_OUT_OF_RANGE = "ATTESTATION_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",
   /**
-   * Missing attestation pre-state.
+   * Missing attestation head state
    */
-  MISSING_ATTESTATION_TARGET_STATE = "ATTESTATION_ERROR_MISSING_ATTESTATION_TARGET_STATE",
+  MISSING_ATTESTATION_HEAD_STATE = "ATTESTATION_ERROR_MISSING_ATTESTATION_HEAD_STATE",
   /**
    * Invalid aggregator.
    */
@@ -141,7 +141,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; validatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN; targetEpoch: Epoch; aggregatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
-  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; root: Uint8Array}
+  | {code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT; root: RootHex}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
   | {code: AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT}
   | {code: AttestationErrorCode.UNKNOWN_TARGET_ROOT; root: Uint8Array}
@@ -160,7 +160,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: RootHex; expected: string | null}
   | {code: AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK}
   | {code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE; index: number}
-  | {code: AttestationErrorCode.MISSING_ATTESTATION_TARGET_STATE; error: Error}
+  | {code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE; error: Error}
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
 

@@ -1,7 +1,9 @@
 import {ENR, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {defaultGossipHandlerOpts, GossipHandlerOpts} from "./gossip/handlers";
 import {PeerManagerOpts} from "./peers";
+import {defaultRateLimiterOpts, RateLimiterOpts} from "./reqresp/response/rateLimiter";
 
-export interface INetworkOptions extends PeerManagerOpts {
+export interface INetworkOptions extends PeerManagerOpts, RateLimiterOpts, GossipHandlerOpts {
   localMultiaddrs: string[];
   bootMultiaddrs?: string[];
   subscribeAllSubnets?: boolean;
@@ -23,4 +25,6 @@ export const defaultNetworkOptions: INetworkOptions = {
   localMultiaddrs: ["/ip4/0.0.0.0/tcp/9000"],
   bootMultiaddrs: [],
   discv5: defaultDiscv5Options,
+  ...defaultRateLimiterOpts,
+  ...defaultGossipHandlerOpts,
 };

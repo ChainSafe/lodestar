@@ -5,7 +5,7 @@ import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IProtoBlock, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../src/chain";
@@ -59,15 +59,21 @@ export function getAttestationValidData(
     parentRoot: ZERO_HASH_HEX,
     stateRoot: ZERO_HASH_HEX,
     targetRoot: toHexString(targetRoot),
-    executionPayloadBlockHash: null,
+
     justifiedEpoch: 0,
     justifiedRoot: ZERO_HASH_HEX,
     finalizedEpoch: 0,
     finalizedRoot: ZERO_HASH_HEX,
+
+    ...{executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge},
   };
   const forkChoice = ({
     getBlock: (root) => {
       if (!ssz.Root.equals(root, beaconBlockRoot)) return null;
+      return headBlock;
+    },
+    getBlockHex: (rootHex) => {
+      if (rootHex !== toHexString(beaconBlockRoot)) return null;
       return headBlock;
     },
   } as Partial<IForkChoice>) as IForkChoice;
@@ -105,7 +111,7 @@ export function getAttestationValidData(
 
   // Add state to regen
   const regen = ({
-    getCheckpointState: async () => (state as unknown) as CachedBeaconState<allForks.BeaconState>,
+    getState: async () => (state as unknown) as CachedBeaconState<allForks.BeaconState>,
   } as Partial<IStateRegenerator>) as IStateRegenerator;
 
   const chain = ({
@@ -115,6 +121,7 @@ export function getAttestationValidData(
     regen,
     seenAttesters: new SeenAttesters(),
     bls: new BlsSingleThreadVerifier(),
+    waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;
 
   return {chain, attestation, subnet, validatorIndex};

@@ -55,10 +55,11 @@ export async function createNodeJsLibp2p(
 
     for (const enrOrStr of networkOpts.discv5.bootEnrs) {
       const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
-      const multiaddrTCP = enr.getLocationMultiaddr("tcp");
-      const peerId = await enr.peerId();
-      const multiaddrWithPeerId = `${multiaddrTCP}/p2p/${peerId.toB58String()}`;
-      networkOpts.bootMultiaddrs.push(multiaddrWithPeerId);
+      const fullMultiAddr = await enr.getFullMultiaddr("tcp");
+      const multiaddrWithPeerId = fullMultiAddr?.toString();
+      if (multiaddrWithPeerId) {
+        networkOpts.bootMultiaddrs.push(multiaddrWithPeerId);
+      }
     }
   }
 

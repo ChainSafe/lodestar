@@ -1,8 +1,14 @@
 import crypto from "crypto";
-import {merge, RootHex, Root} from "@chainsafe/lodestar-types";
+import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
-import {ExecutePayloadStatus, IExecutionEngine, PayloadId, PayloadAttributes} from "./interface";
+import {
+  ExecutePayloadStatus,
+  ExecutePayloadResponse,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+} from "./interface";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 const INTEROP_GAS_LIMIT = 30e6;
 
@@ -18,8 +24,8 @@ export class ExecutionEngineMock implements IExecutionEngine {
   headBlockRoot = ZERO_HASH_HEX;
   finalizedBlockRoot = ZERO_HASH_HEX;
 
-  private knownBlocks = new Map<RootHex, merge.ExecutionPayload>();
-  private preparingPayloads = new Map<number, merge.ExecutionPayload>();
+  private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
+  private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
   private payloadId = 0;
 
   constructor(opts: ExecutionEngineMockOpts) {
@@ -52,14 +58,18 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadStatus> {
+  async executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     // Only validate that parent is known
     if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
-      return ExecutePayloadStatus.INVALID;
+      return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot, validationError: null};
     }
 
     this.knownBlocks.set(toHexString(executionPayload.blockHash), executionPayload);
-    return ExecutePayloadStatus.VALID;
+    return {
+      status: ExecutePayloadStatus.VALID,
+      latestValidHash: toHexString(executionPayload.blockHash),
+      validationError: null,
+    };
   }
 
   /**
@@ -93,7 +103,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
     if (!payloadAttributes) throw Error("InvalidPayloadAttributes");
 
     const payloadId = this.payloadId++;
-    const payload: merge.ExecutionPayload = {
+    const payload: bellatrix.ExecutionPayload = {
       parentHash: headBlockHash,
       feeRecipient: payloadAttributes.suggestedFeeRecipient,
       stateRoot: crypto.randomBytes(32),
@@ -121,7 +131,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 2. The call MUST be responded with 5: Unavailable payload error if the building process identified by the payloadId doesn't exist.
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
-  async getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload> {
+  async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
     const payloadIdNbr = Number(payloadId);
     const payload = this.preparingPayloads.get(payloadIdNbr);
     if (!payload) {

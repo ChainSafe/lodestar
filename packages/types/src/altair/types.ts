@@ -90,29 +90,17 @@ export interface BeaconState
 /**
  * Spec v1.0.1
  */
-export interface LightClientSnapshot {
-  /** Beacon block header */
-  header: phase0.BeaconBlockHeader;
-  /** Sync committees corresponding to the header */
-  currentSyncCommittee: SyncCommittee;
-  nextSyncCommittee: SyncCommittee;
-}
-
-/**
- * Spec v1.0.1
- */
 export interface LightClientUpdate {
-  /** Update beacon block header */
-  header: phase0.BeaconBlockHeader;
+  /** The beacon block header that is attested to by the sync committee */
+  attestedHeader: phase0.BeaconBlockHeader;
   /** Next sync committee corresponding to the header */
   nextSyncCommittee: SyncCommittee;
   nextSyncCommitteeBranch: Vector<Bytes32>;
-  /** Finality proof for the update header */
-  finalityHeader: phase0.BeaconBlockHeader;
+  /** The finalized beacon block header attested to by Merkle branch */
+  finalizedHeader: phase0.BeaconBlockHeader;
   finalityBranch: Vector<Bytes32>;
   /** Sync committee aggregate signature */
-  syncCommitteeBits: BitVector;
-  syncCommitteeSignature: BLSSignature;
+  syncCommitteeAggregate: SyncAggregate;
   /** Fork version for the aggregate signature */
   forkVersion: Version;
 }
@@ -121,6 +109,18 @@ export interface LightClientUpdate {
  * Spec v1.0.1
  */
 export interface LightClientStore {
-  snapshot: LightClientSnapshot;
-  validUpdates: List<LightClientUpdate>;
+  /** Beacon block header that is finalized */
+  finalizedHeader: phase0.BeaconBlockHeader;
+  /** Sync committees corresponding to the header */
+  currentSyncCommittee: SyncCommittee;
+  nextSyncCommittee: SyncCommittee;
+  /** Best available header to switch finalized head to if we see nothing else */
+  bestValidUpdate?: LightClientUpdate;
+  /** Most recent available reasonably-safe header */
+  optimisticHeader: phase0.BeaconBlockHeader;
+  /** Max number of active participants in a sync committee (used to calculate
+   * safety threshold)
+   */
+  previousMaxActiveParticipants: Uint64;
+  currentMaxActiveParticipants: Uint64;
 }

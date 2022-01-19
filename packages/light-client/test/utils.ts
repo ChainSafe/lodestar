@@ -152,13 +152,12 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
   const syncAggregate = committee.signHeader(config, finalityHeader);
 
   return {
-    header,
+    attestedHeader: header,
     nextSyncCommittee,
     nextSyncCommitteeBranch,
-    finalityHeader,
+    finalizedHeader: finalityHeader,
     finalityBranch,
-    syncCommitteeBits: syncAggregate.syncCommitteeBits,
-    syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+    syncCommitteeAggregate: syncAggregate,
     forkVersion,
   };
 }
@@ -255,10 +254,10 @@ export function committeeUpdateToHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
 ): routes.lightclient.LightclientHeaderUpdate {
   return {
-    header: committeeUpdate.finalityHeader,
+    attestedHeader: committeeUpdate.finalizedHeader,
     syncAggregate: {
-      syncCommitteeBits: committeeUpdate.syncCommitteeBits,
-      syncCommitteeSignature: committeeUpdate.syncCommitteeSignature,
+      syncCommitteeBits: committeeUpdate.syncCommitteeAggregate.syncCommitteeBits,
+      syncCommitteeSignature: committeeUpdate.syncCommitteeAggregate.syncCommitteeSignature,
     },
   };
 }

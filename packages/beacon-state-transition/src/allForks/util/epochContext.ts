@@ -1,4 +1,4 @@
-import {ByteVector, hash, toHexString, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
+import {ByteVector, hash, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
   BLSSignature,
@@ -67,8 +67,23 @@ export type EpochContextOpts = {
 
 type PubkeyHex = string;
 
-function toHexStringMaybe(hex: ByteVector | string): string {
-  return typeof hex === "string" ? hex : toHexString(hex);
+/**
+ * toHexString() creates hex strings via string concatenation, which are very memory inneficient.
+ * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
+ *
+ * Does not prefix to save memory, thus the prefix is removed from an already string representation.
+ *
+ * See https://github.com/ChainSafe/lodestar/issues/3446
+ */
+function toMemoryEfficientHexStr(hex: ByteVector | Uint8Array | string): string {
+  if (typeof hex === "string") {
+    if (hex.startsWith("0x")) {
+      hex = hex.slice(2);
+    }
+    return hex;
+  }
+
+  return Buffer.from(hex as Uint8Array).toString("hex");
 }
 
 export class PubkeyIndexMap {
@@ -79,12 +94,15 @@ export class PubkeyIndexMap {
     return this.map.size;
   }
 
-  get(key: ByteVector | PubkeyHex): ValidatorIndex | undefined {
-    return this.map.get(toHexStringMaybe(key));
+  /**
+   * Must support reading with string for API support where pubkeys are already strings
+   */
+  get(key: ByteVector | Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+    return this.map.get(toMemoryEfficientHexStr(key));
   }
 
-  set(key: ByteVector | PubkeyHex, value: ValidatorIndex): void {
-    this.map.set(toHexStringMaybe(key), value);
+  set(key: ByteVector | Uint8Array, value: ValidatorIndex): void {
+    this.map.set(toMemoryEfficientHexStr(key), value);
   }
 }
 

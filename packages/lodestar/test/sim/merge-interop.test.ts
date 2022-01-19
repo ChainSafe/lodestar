@@ -8,8 +8,9 @@ import {LogLevel, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
+import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
@@ -35,7 +36,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
-// MERGE_EPOCH will happen at 2 sec * 8 slots = 16 sec
+// BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
 const terminalTotalDifficultyPreMerge = 20;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
@@ -191,7 +192,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
      **/
 
     const payloadResult = await executionEngine.executePayload(payload);
-    if (!payloadResult) {
+    if (payloadResult.status !== ExecutePayloadStatus.VALID) {
       throw Error("getPayload returned payload that executePayload deems invalid");
     }
 
@@ -234,7 +235,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash} = await runEL("post-merge.sh", 0);
     await runNodeWithEL.bind(this)({
       genesisBlockHash,
-      mergeEpoch: 0,
+      bellatrixEpoch: 0,
       ttd: BigInt(0),
       testName: "post-merge",
     });
@@ -245,7 +246,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const {genesisBlockHash} = await runEL("pre-merge.sh", terminalTotalDifficultyPreMerge);
     await runNodeWithEL.bind(this)({
       genesisBlockHash,
-      mergeEpoch: 1,
+      bellatrixEpoch: 1,
       ttd: BigInt(terminalTotalDifficultyPreMerge),
       testName: "pre-merge",
     });
@@ -255,10 +256,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     this: Context,
     {
       genesisBlockHash,
-      mergeEpoch,
+      bellatrixEpoch,
       ttd,
       testName,
-    }: {genesisBlockHash: string; mergeEpoch: Epoch; ttd: bigint; testName: string}
+    }: {genesisBlockHash: string; bellatrixEpoch: Epoch; ttd: bigint; testName: string}
   ): Promise<void> {
     const validatorClientCount = 1;
     const validatorsPerClient = 32;
@@ -300,7 +301,12 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
     const bn = await getDevBeaconNode({
-      params: {...testParams, ALTAIR_FORK_EPOCH: 0, MERGE_FORK_EPOCH: mergeEpoch, TERMINAL_TOTAL_DIFFICULTY: ttd},
+      params: {
+        ...testParams,
+        ALTAIR_FORK_EPOCH: 0,
+        BELLATRIX_FORK_EPOCH: bellatrixEpoch,
+        TERMINAL_TOTAL_DIFFICULTY: ttd,
+      },
       options: {
         api: {rest: {enabled: true} as RestApiOptions},
         sync: {isSingleNode: true},
@@ -338,7 +344,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await Promise.all(validators.map((v) => v.start()));
 
     if (TX_SCENARIOS.includes("simple")) {
-      // If mergeEpoch > 0, this is the case of pre-merge transaction submission on EL pow
+      // If bellatrixEpoch > 0, this is the case of pre-merge transaction submission on EL pow
       await sendTransaction(jsonRpcUrl, {
         from: "0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b",
         to: "0xafa3f8684e54059998bc3a7b0d2b0da075154d66",
@@ -353,7 +359,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       bn.chain.emitter.on(ChainEvent.clockSlot, async (slot) => {
         if (slot < 2) return;
         switch (slot) {
-          // If mergeEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow
+          // If bellatrixEpoch > 0, this is the case of pre-merge transaction confirmation on EL pow
           case 2:
             if (TX_SCENARIOS.includes("simple")) {
               const balance = await getBalance(jsonRpcUrl, "0xafa3f8684e54059998bc3a7b0d2b0da075154d66");
@@ -364,8 +370,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
           // By this slot, ttd should be reached and merge complete
           case Number(ttd) + 3: {
             const headState = bn.chain.getHeadState();
-            const isMergeComplete = merge.isMergeStateType(headState) && merge.isMergeComplete(headState);
-            if (!isMergeComplete) reject("Merge not completed");
+            const isMergeTransitionComplete =
+              bellatrix.isBellatrixStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
+            if (!isMergeTransitionComplete) reject("Merge not completed");
 
             // Send another tx post-merge, total amount in destination account should be double after this is included in chain
             if (TX_SCENARIOS.includes("simple")) {

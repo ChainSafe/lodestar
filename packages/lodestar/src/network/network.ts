@@ -22,7 +22,7 @@ import {MetadataController} from "./metadata";
 import {getActiveForks, getCurrentAndNextFork, FORK_EPOCH_LOOKAHEAD} from "./forks";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
-import {IPeerRpcScoreStore, PeerRpcScoreStore} from "./peers";
+import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
 
@@ -93,7 +93,7 @@ export class Network implements INetwork {
       logger,
       metrics,
       signal,
-      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}),
+      gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
       eth2Context: {
         activeValidatorCount: chain.getHeadState().currentShuffling.activeIndices.length,
         currentSlot: this.clock.currentSlot,
@@ -203,6 +203,10 @@ export class Network implements INetwork {
    */
   reStatusPeers(peers: PeerId[]): void {
     this.peerManager.reStatusPeers(peers);
+  }
+
+  reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void {
+    this.peerRpcScores.applyAction(peer, action, actionName);
   }
 
   /**

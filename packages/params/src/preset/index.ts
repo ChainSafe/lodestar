@@ -4,4 +4,4 @@ export * from "./ssz";
 
 export * from "./phase0";
 export * from "./altair";
-export * from "./merge";
+export * from "./bellatrix";

@@ -27,7 +27,7 @@ type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;
 
 type SyncAttestedData = {
-  header: phase0.BeaconBlockHeader;
+  attestedHeader: phase0.BeaconBlockHeader;
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
 } & (
@@ -171,7 +171,7 @@ export class LightClientServer {
   private checkpointHeaders = new Map<BlockRooHex, phase0.BeaconBlockHeader>();
   private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
-  private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalityHeader">;
+  private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
 
   constructor(modules: ILightClientIniterModules, private readonly genesisData: GenesisData) {
     this.config = modules.config;
@@ -180,7 +180,7 @@ export class LightClientServer {
     this.logger = modules.logger;
 
     this.zero = {
-      finalityHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
       finalityBranch: ssz.altair.LightClientUpdate.getPropertyType(
         "finalityBranch"
       ).defaultValue() as altair.LightClientUpdate["finalityBranch"],
@@ -278,25 +278,23 @@ export class LightClientServer {
 
     if (partialUpdate.isFinalized) {
       return {
-        header: partialUpdate.finalizedHeader,
+        attestedHeader: partialUpdate.finalizedHeader,
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalityHeader: partialUpdate.header,
+        finalizedHeader: partialUpdate.attestedHeader,
         finalityBranch: partialUpdate.finalityBranch,
-        syncCommitteeBits: partialUpdate.syncCommitteeBits,
-        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
-        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
+        syncCommitteeAggregate: partialUpdate.syncCommitteeAggregate,
+        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     } else {
       return {
-        header: partialUpdate.header,
+        attestedHeader: partialUpdate.attestedHeader,
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalityHeader: this.zero.finalityHeader,
+        finalizedHeader: this.zero.finalizedHeader,
         finalityBranch: this.zero.finalityBranch,
-        syncCommitteeBits: partialUpdate.syncCommitteeBits,
-        syncCommitteeSignature: partialUpdate.syncCommitteeSignature,
-        forkVersion: this.config.getForkVersion(partialUpdate.header.slot),
+        syncCommitteeAggregate: partialUpdate.syncCommitteeAggregate,
+        forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     }
   }
@@ -354,8 +352,8 @@ export class LightClientServer {
     }
 
     // Only store next sync committee once per dependant root
-    const parentBlockPeriod = computeSyncPeriodAtSlot(this.config, parentBlock.slot);
-    const period = computeSyncPeriodAtSlot(this.config, blockSlot);
+    const parentBlockPeriod = computeSyncPeriodAtSlot(parentBlock.slot);
+    const period = computeSyncPeriodAtSlot(blockSlot);
     if (parentBlockPeriod < period) {
       // If the parentBlock is in a previous epoch it must be the dependantRoot of this epoch transition
       const dependantRoot = parentBlock.blockRoot;
@@ -375,7 +373,7 @@ export class LightClientServer {
 
     // Store finalized checkpoint data
     const finalizedCheckpoint = postState.finalizedCheckpoint;
-    const finalizedCheckpointPeriod = computeSyncPeriodAtEpoch(this.config, finalizedCheckpoint.epoch);
+    const finalizedCheckpointPeriod = computeSyncPeriodAtEpoch(finalizedCheckpoint.epoch);
     const isFinalized =
       finalizedCheckpointPeriod === period &&
       // Consider the edge case of genesis: Genesis state's finalizedCheckpoint is zero'ed.
@@ -389,14 +387,14 @@ export class LightClientServer {
       isFinalized
         ? {
             isFinalized: true,
-            header,
+            attestedHeader: header,
             blockRoot,
             finalityBranch: getFinalizedRootProof(postState),
             finalizedCheckpoint,
           }
         : {
             isFinalized: false,
-            header,
+            attestedHeader: header,
             blockRoot,
           }
     );
@@ -436,7 +434,10 @@ export class LightClientServer {
       }
     }
 
-    const headerUpdate: routes.lightclient.LightclientHeaderUpdate = {header: attestedData.header, syncAggregate};
+    const headerUpdate: routes.lightclient.LightclientHeaderUpdate = {
+      attestedHeader: attestedData.attestedHeader,
+      syncAggregate,
+    };
 
     // Emit update
     // - At the earliest: 6 second after the slot start
@@ -445,7 +446,7 @@ export class LightClientServer {
 
     // Persist latest best update for getHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
-    if (!this.latestHeadUpdate || attestedData.header.slot > this.latestHeadUpdate.header.slot) {
+    if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;
     }
 
@@ -461,7 +462,7 @@ export class LightClientServer {
     syncAggregate: altair.SyncAggregate,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const period = computeSyncPeriodAtSlot(this.config, attestedData.header.slot);
+    const period = computeSyncPeriodAtSlot(attestedData.attestedHeader.slot);
     const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten
@@ -472,13 +473,11 @@ export class LightClientServer {
       ? {
           ...attestedData,
           finalizedHeader: await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array),
-          syncCommitteeBits: syncAggregate.syncCommitteeBits,
-          syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+          syncCommitteeAggregate: syncAggregate,
         }
       : {
           ...attestedData,
-          syncCommitteeBits: syncAggregate.syncCommitteeBits,
-          syncCommitteeSignature: syncAggregate.syncCommitteeSignature,
+          syncCommitteeAggregate: syncAggregate,
         };
 
     await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
@@ -539,12 +538,12 @@ export function isBetterUpdate(
   }
 
   // Higher bit count
-  const prevBitCount = sumBits(prevUpdate.syncCommitteeBits);
+  const prevBitCount = sumBits(prevUpdate.syncCommitteeAggregate.syncCommitteeBits);
   if (prevBitCount > nextBitCount) return false;
   if (prevBitCount < nextBitCount) return true;
 
   // else keep the oldest, lowest chance or re-org and requires less updating
-  return prevUpdate.header.slot > nextSyncAttestedData.header.slot;
+  return prevUpdate.attestedHeader.slot > nextSyncAttestedData.attestedHeader.slot;
 }
 
 export function sumBits(bits: BitVector): number {

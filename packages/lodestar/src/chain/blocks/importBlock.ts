@@ -5,11 +5,17 @@ import {
   CachedBeaconState,
   computeStartSlotAtEpoch,
   getEffectiveBalances,
-  merge,
+  bellatrix,
   altair,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {IForkChoice, OnBlockPrecachedData} from "@chainsafe/lodestar-fork-choice";
+import {
+  IForkChoice,
+  OnBlockPrecachedData,
+  ExecutionStatus,
+  ForkChoiceError,
+  ForkChoiceErrorCode,
+} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
@@ -24,6 +30,7 @@ import {LightClientServer} from "../lightClient";
 import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
+// import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 export type ImportBlockModules = {
   db: IBeaconDb;
@@ -59,8 +66,7 @@ export type ImportBlockModules = {
  * - Send events after everything is done
  */
 export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
-  const {block, postState, parentBlock, skipImportingAttestations} = fullyVerifiedBlock;
-
+  const {block, postState, parentBlock, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
   const pendingEvents = new PendingEvents(chain.emitter);
 
   // - Observe attestations
@@ -80,26 +86,29 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-  const onBlockPrecachedData: OnBlockPrecachedData = {};
+  const onBlockPrecachedData: OnBlockPrecachedData = {executionStatus};
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
   }
 
   if (
-    merge.isMergeStateType(postState) &&
-    merge.isMergeBlockBodyType(block.message.body) &&
-    merge.isMergeBlock(postState, block.message.body)
+    bellatrix.isBellatrixStateType(postState) &&
+    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
+    bellatrix.isMergeTransitionBlock(postState, block.message.body)
   ) {
     // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
     const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
-    if (!powBlock) throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
+    if (!powBlock && executionStatus !== ExecutionStatus.Syncing)
+      throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
     // pow_parent = get_pow_block(pow_block.parent_hash)
-    const powBlockParent = await chain.eth1.getPowBlock(powBlock.parentHash);
-    if (!powBlockParent) throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
+    const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+    if (powBlock && !powBlockParent)
+      throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
     onBlockPrecachedData.powBlock = powBlock;
     onBlockPrecachedData.powBlockParent = powBlockParent;
+    onBlockPrecachedData.isMergeTransitionBlock = true;
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
@@ -117,6 +126,8 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
     const rootCache = new altair.RootCache(postState);
     const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
+    const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
+
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
@@ -126,8 +137,28 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         }
         pendingEvents.push(ChainEvent.attestation, attestation);
       } catch (e) {
-        chain.logger.error("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+        // a block has a lot of attestations and it may has same error, we don't want to log all of them
+        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+          let errWithCount = invalidAttestationErrorsByCode.get(e.type.err.code);
+          if (errWithCount === undefined) {
+            errWithCount = {error: e as Error, count: 1};
+            invalidAttestationErrorsByCode.set(e.type.err.code, errWithCount);
+          } else {
+            errWithCount.count++;
+          }
+        } else {
+          // always log other errors
+          chain.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+        }
       }
+    }
+
+    for (const {error, count} of invalidAttestationErrorsByCode.values()) {
+      chain.logger.warn(
+        "Error processing attestations from block",
+        {slot: block.message.slot, erroredAttestations: count},
+        error
+      );
     }
   }
 
@@ -163,15 +194,15 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
     /**
-     * On post MERGE_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
+     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
      * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
      * So we must check that:
-     * - `headBlockHash !== null` -> Pre MERGE_EPOCH
+     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
     const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash;
     /**
-     * After MERGE_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
+     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */

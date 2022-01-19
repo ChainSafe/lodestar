@@ -25,6 +25,7 @@ presetStatus.frozen = true;
  */
 export const ACTIVE_PRESET: PresetName =
   userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
+export const activePreset = presets[ACTIVE_PRESET];
 
 // These variables must be exported individually and explicitly
 // in order to be accessible as top-level exports
@@ -62,15 +63,18 @@ export const {
   MAX_ATTESTATIONS,
   MAX_DEPOSITS,
   MAX_VOLUNTARY_EXITS,
+
   SYNC_COMMITTEE_SIZE,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
   PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR,
+  MIN_SYNC_COMMITTEE_PARTICIPANTS,
+  UPDATE_TIMEOUT,
 
-  INACTIVITY_PENALTY_QUOTIENT_MERGE,
-  MIN_SLASHING_PENALTY_QUOTIENT_MERGE,
-  PROPORTIONAL_SLASHING_MULTIPLIER_MERGE,
+  INACTIVITY_PENALTY_QUOTIENT_BELLATRIX,
+  MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
+  PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX,
   MAX_BYTES_PER_TRANSACTION,
   MAX_TRANSACTIONS_PER_PAYLOAD,
   BYTES_PER_LOGS_BLOOM,
@@ -144,15 +148,11 @@ export const SYNC_COMMITTEE_SUBNET_COUNT = 4;
 
 export const MAX_REQUEST_BLOCKS = 2 ** 10; // 1024
 
-// Merge constants - Spec v1.0.1
+// Bellatrix constants - Spec v1.0.1
 // Genesis testing settings
 // Note: These configuration settings do not apply to the mainnet and are utilized only by pure Merge testing.
 export const GENESIS_GAS_LIMIT = 30000000;
 export const GENESIS_BASE_FEE_PER_GAS = BigInt(1000000000);
-
-//
-
-export const MIN_SYNC_COMMITTEE_PARTICIPANTS = 1;
 
 // Lightclient pre-computed
 /**
@@ -181,3 +181,8 @@ export const NEXT_SYNC_COMMITTEE_GINDEX = 55;
  */
 export const NEXT_SYNC_COMMITTEE_DEPTH = 5;
 export const NEXT_SYNC_COMMITTEE_INDEX = 23;
+
+/**
+ * Optimistic sync
+ */
+export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;

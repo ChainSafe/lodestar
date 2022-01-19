@@ -3,7 +3,7 @@ import {allForks, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
-import * as merge from "../merge";
+import * as bellatrix from "../bellatrix";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
 import {beforeProcessEpoch, CachedBeaconState, IEpochProcess, afterProcessEpoch} from "./util";
@@ -21,13 +21,13 @@ type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => voi
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
   [ForkName.altair]: altair.processBlock as ProcessBlockFn,
-  [ForkName.merge]: merge.processBlock as ProcessBlockFn,
+  [ForkName.bellatrix]: bellatrix.processBlock as ProcessBlockFn,
 };
 
 const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.phase0]: phase0.processEpoch as ProcessEpochFn,
   [ForkName.altair]: altair.processEpoch as ProcessEpochFn,
-  [ForkName.merge]: altair.processEpoch as ProcessEpochFn,
+  [ForkName.bellatrix]: altair.processEpoch as ProcessEpochFn,
 };
 
 // Multifork capable state transition
@@ -165,8 +165,8 @@ function processSlotsWithTransientCache(
       if (stateSlot === config.ALTAIR_FORK_EPOCH) {
         postState = altair.upgradeState(postState as StatePhase0) as StateAllForks;
       }
-      if (stateSlot === config.MERGE_FORK_EPOCH) {
-        postState = merge.upgradeState(postState as StateAltair) as StateAllForks;
+      if (stateSlot === config.BELLATRIX_FORK_EPOCH) {
+        postState = bellatrix.upgradeState(postState as StateAltair) as StateAllForks;
       }
     } else {
       postState.slot++;

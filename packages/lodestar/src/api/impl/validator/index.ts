@@ -15,6 +15,8 @@ import {
   SYNC_COMMITTEE_SUBNET_COUNT,
 } from "@chainsafe/lodestar-params";
 import {allForks, Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
+import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
@@ -133,6 +135,38 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     }
   }
 
+  /**
+   * Post merge, the CL and EL could be out of step in the sync, and could result in
+   * Syncing status of the chain head. To be precise:
+   * 1. CL could be ahead of the EL, with the validity of head payload not yet verified
+   * 2. CL could be on an invalid chain of execution blocks with a non-existent
+   *    or non-available parent that never syncs up
+   *
+   * Both the above scenarios could be problematic and hence validator shouldn't participate
+   * or weigh its vote on a head till it resolves to a Valid execution status.
+   * Following activities should be skipped on an Optimistic head (with Syncing status):
+   * 1. Attestation if targetRoot is optimistic
+   * 2. SyncCommitteeContribution if if the root for which to produce contribution is Optimistic.
+   * 3. ProduceBlock if the parentRoot (chain's current head is optimistic). However this doesn't
+   *    need to be checked/aborted here as assembleBody would call EL's api for the latest
+   *    executionStatus of the parentRoot. If still not validated, produceBlock will throw error.
+   *
+   * TODO/PENDING: SyncCommitteeSignatures should also be aborted, the best way to address this
+   *   is still in flux and will be updated as and when other CL's figure this out.
+   */
+
+  function notOnOptimisticBlockRoot(beaconBlockRoot: Root): void {
+    const protoBeaconBlock = chain.forkChoice.getBlock(beaconBlockRoot);
+    if (!protoBeaconBlock) {
+      throw new ApiError(400, "Block not in forkChoice");
+    }
+
+    if (protoBeaconBlock.executionStatus === ExecutionStatus.Syncing)
+      throw new NodeIsSyncing(
+        `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
+      );
+  }
+
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
     slot,
     randaoReveal,
@@ -146,7 +180,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       timer = metrics?.blockProductionTime.startTimer();
       const block = await assembleBlock(
-        {chain, metrics, logger},
+        {chain, metrics},
         {
           slot,
           randaoReveal,
@@ -195,6 +229,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             headBlockRoot
           : getBlockRootAtSlot(headState, targetSlot);
 
+      // Check the execution status as validator shouldn't vote on an optimistic head
+      // Check on target is sufficient as a valid target would imply a valid source
+      notOnOptimisticBlockRoot(targetRoot);
+
       // To get the correct source we must get a state in the same epoch as the attestation's epoch.
       // An epoch transition may change state.currentJustifiedCheckpoint
       const attEpochState =
@@ -226,6 +264,9 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      * @param beaconBlockRoot The block root for which to produce the contribution.
      */
     async produceSyncCommitteeContribution(slot, subcommitteeIndex, beaconBlockRoot) {
+      // Check the execution status as validator shouldn't contribute on an optimistic head
+      notOnOptimisticBlockRoot(beaconBlockRoot);
+
       const contribution = chain.syncCommitteeMessagePool.getContribution(subcommitteeIndex, slot, beaconBlockRoot);
       if (!contribution) throw new ApiError(500, "No contribution available");
       return {data: contribution};
@@ -348,7 +389,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(config, state, epoch);
+      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = validatorIndices.length; i < len; i++) {

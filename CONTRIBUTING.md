@@ -72,14 +72,29 @@ Unsure where to begin contributing to Lodestar? Here are some ideas!
 5. Make a pull request! We review PRs on a regular basis.
 6. You may be asked to sign a Contributor License Agreement (CLA). We make it relatively painless with CLA-bot.
 
+## Github style guide
+
+**Branch naming**
+
+If you are contributing from this repo prefix the branch name with your Github username (i.e. `myusername/short-description`)
+
+**Pull request naming**
+
+Pull request titles must be:
+- Short and descriptive summary
+- Should be capitalized and written in imperative present tense
+- Not end with period
+
+For example:
+
+> Add Edit on Github button to all the pages
+
 ## Lodestar Monorepo
 
 We're currently experimenting with hosting the majority of lodestar packages and support packages in this repository as a [monorepo](https://en.wikipedia.org/wiki/Monorepo). We're using [Lerna](https://lerna.js.org/) to manage the packages. See [packages/](https://github.com/ChainSafe/lodestar/tree/master/packages) for a list of packages hosted in this repo.
 
 ## Style Guide
 
-- Pull requests should usually only update a single package (in our monorepo) at a time
-  - prefix your PR title with the module you are working on, e.g.: `validator: foo bar buz`
 - Many module class constructors have the following signature: `(options, dependencies)`
   - e.g.: `public constructor(opts: IExampleOptions, {db, logger}: IExampleModules)`
 - Modules should be designed to _"do one thing and do it well!"_

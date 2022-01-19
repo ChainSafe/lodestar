@@ -1,5 +1,8 @@
-import {intDiv} from "./math";
-import {hash} from "@chainsafe/ssz";
+import SHA256 from "@chainsafe/as-sha256";
+
+export function hash(...inputs: Uint8Array[]): Uint8Array {
+  return SHA256.digest(Buffer.concat(inputs));
+}
 
 /**
  * Verify that the given ``leaf`` is on the merkle branch ``proof``
@@ -14,10 +17,10 @@ export function verifyMerkleBranch(
 ): boolean {
   let value = leaf;
   for (let i = 0; i < depth; i++) {
-    if (intDiv(index, 2 ** i) % 2) {
-      value = hash(Buffer.concat([proof[i], value]));
+    if (Math.floor(index / 2 ** i) % 2) {
+      value = SHA256.digest64(Buffer.concat([proof[i], value]));
     } else {
-      value = hash(Buffer.concat([value, proof[i]]));
+      value = SHA256.digest64(Buffer.concat([value, proof[i]]));
     }
   }
   return Buffer.from(value).equals(root);

@@ -4,7 +4,7 @@ import {
   ForkName,
   MIN_SLASHING_PENALTY_QUOTIENT,
   MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR,
-  MIN_SLASHING_PENALTY_QUOTIENT_MERGE,
+  MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX,
   PROPOSER_REWARD_QUOTIENT,
   PROPOSER_WEIGHT,
   WEIGHT_DENOMINATOR,
@@ -25,7 +25,7 @@ export function slashValidatorAllForks(
   const epoch = epochCtx.currentShuffling.epoch;
   const validator = state.validators[slashedIndex];
 
-  // TODO: Merge initiateValidatorExit validators.update() with the one below
+  // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
   initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, validator);
 
   validator.slashed = true;
@@ -40,7 +40,7 @@ export function slashValidatorAllForks(
       ? MIN_SLASHING_PENALTY_QUOTIENT
       : fork === ForkName.altair
       ? MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR
-      : MIN_SLASHING_PENALTY_QUOTIENT_MERGE;
+      : MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX;
   decreaseBalance(state, slashedIndex, Math.floor(effectiveBalance / minSlashingPenaltyQuotient));
 
   // apply proposer and whistleblower rewards
