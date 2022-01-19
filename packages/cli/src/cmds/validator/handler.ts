@@ -1,8 +1,7 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection, Signers} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {PublicKey} from "@chainsafe/bls";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
@@ -10,7 +9,7 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getSecretKeys, getPublicKeys, getSignersObject} from "./keys";
+import {getLocalSecretKeys, getRemoteSigners, groupRemoteSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
 
 /**
@@ -33,32 +32,56 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
-  const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
+  const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
+  onGracefulShutdown(async () => {
+    for (const cb of onGracefulShutdownCbs) await cb();
+  }, logger.info.bind(logger));
 
-  let signers: Signers;
+  const signers: Signer[] = [];
 
-  if (args.signingMode == "local") {
-    const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
-    if (secretKeys.length === 0) {
-      throw new YargsError("No validator keystores found");
+  // Read remote keys
+  const remoteSigners = await getRemoteSigners(args);
+  if (remoteSigners.length > 0) {
+    logger.info(`Using ${remoteSigners.length} remote keys`);
+    for (const {remoteSignerUrl, pubkeyHex} of remoteSigners) {
+      signers.push({
+        type: SignerType.Remote,
+        pubkeyHex: pubkeyHex,
+        remoteSignerUrl,
+      });
     }
 
-    // Log pubkeys for auditing
-    logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-    for (const secretKey of secretKeys) {
-      logger.info(secretKey.toPublicKey().toHex());
+    // Log pubkeys for auditing, grouped by signer URL
+    for (const {remoteSignerUrl, pubkeysHex} of groupRemoteSignersByUrl(remoteSigners)) {
+      logger.info(`Remote signer URL: ${remoteSignerUrl}`);
+      for (const pubkeyHex of pubkeysHex) {
+        logger.info(pubkeyHex);
+      }
     }
+  }
 
-    onGracefulShutdown(async () => {
-      for (const cb of onGracefulShutdownCbs) await cb();
-      unlockSecretKeys?.();
-    }, logger.info.bind(logger));
-    signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, []);
-  } else if (args.signingMode == "remote") {
-    const pubkeys: PublicKey[] = await getPublicKeys(args);
-    signers = getSignersObject(args.signingMode, args.signingUrl, [], pubkeys);
-  } else {
-    throw new YargsError("Invalid signing mode. Only local and remote are supported");
+  // Read local keys
+  else {
+    const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
+    if (secretKeys.length > 0) {
+      // Log pubkeys for auditing
+      logger.info(`Decrypted ${secretKeys.length} local keystores`);
+      for (const secretKey of secretKeys) {
+        logger.info(secretKey.toPublicKey().toHex());
+        signers.push({
+          type: SignerType.Local,
+          secretKey,
+        });
+      }
+
+      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
+    }
+  }
+
+  // Ensure the validator has at least one key
+
+  if (signers.length === 0) {
+    throw new YargsError("No signers found with current args");
   }
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
@@ -76,8 +99,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
-
-  logger.info(`Starting validators in ${args.signingMode.toLowerCase()} signing mode`);
 
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();

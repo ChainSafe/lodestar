@@ -6,9 +6,9 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator, Signers} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
+import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
@@ -21,7 +21,6 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import {getSignersObject, getPublicKeysFromSecretKeys} from "../validator/keys";
 
 /**
  * Run a beacon node with validator
@@ -144,16 +143,16 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     const controller = new AbortController();
     onGracefulShutdownCbs.push(async () => controller.abort());
 
-    const pubkeys: PublicKey[] = getPublicKeysFromSecretKeys(secretKeys);
-    const signers: Signers = getSignersObject(args.signingMode, args.signingUrl, secretKeys, pubkeys);
-
     // Initailize genesis once for all validators
     const validator = await Validator.initializeFromBeaconNode({
       dbOps,
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
-      signers,
+      signers: secretKeys.map((secretKey) => ({
+        type: SignerType.Local,
+        secretKey,
+      })),
     });
 
     logger.info(`Starting validators in ${args.signingMode.toLowerCase()} signing mode`);

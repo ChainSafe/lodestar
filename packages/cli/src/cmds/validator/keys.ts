@@ -1,20 +1,21 @@
 import fs from "fs";
 import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
+import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {Signers, SignerType, requestKeys} from "@chainsafe/lodestar-validator";
+import {remoteSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
+import {fromHexString} from "@chainsafe/ssz";
 
 const LOCK_FILE_EXT = ".lock";
 
-export async function getSecretKeys(
+export async function getLocalSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
 ): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
@@ -85,74 +86,91 @@ export async function getSecretKeys(
   }
 }
 
-export async function getPublicKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<PublicKey[]> {
-  const pubkeys: PublicKey[] = [];
-  let publicKeys: string[] = [];
+export type SignerRemote = {
+  remoteSignerUrl: string;
+  pubkeyHex: string;
+};
 
-  if (!args.publicKeys) {
-    throw new YargsError("No public keys found.");
+/**
+ * Gets SignerRemote objects from CLI args
+ */
+export async function getRemoteSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<SignerRemote[]> {
+  // Remote keys declared manually with --remoteSignerPublicKeys
+  if (args.remoteSignerPublicKeys) {
+    if (args.remoteSignerPublicKeys.length === 0) {
+      throw new YargsError("remoteSignerPublicKeys is set to an empty list");
+    }
+
+    const remoteSignerUrl = args.remoteSignerUrl;
+    if (!remoteSignerUrl) {
+      throw new YargsError("Must set remoteSignerUrl with remoteSignerPublicKeys");
+    }
+
+    assertValidPubkeysHex(args.remoteSignerPublicKeys);
+    assertValidRemoteSignerUrl(remoteSignerUrl);
+    return args.remoteSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, remoteSignerUrl}));
   }
 
-  if (isValidHttpUrl(args.publicKeys)) {
-    // TODO: Make a reuqest to return publicKeys
-    publicKeys = await requestKeys(args.signingUrl);
-  } else {
-    publicKeys = args.publicKeys?.split(",");
+  if (args.remoteSignerFetchPubkeys) {
+    const remoteSignerUrl = args.remoteSignerUrl;
+    if (!remoteSignerUrl) {
+      throw new YargsError("Must set remoteSignerUrl with remoteSignerFetchPubkeys");
+    }
+
+    const fetchedPubkeys = await remoteSignerGetKeys(remoteSignerUrl);
+
+    assertValidPubkeysHex(fetchedPubkeys);
+    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, remoteSignerUrl}));
   }
 
-  for (const pubkeyHex of publicKeys) {
-    pubkeys.push(PublicKey.fromHex(pubkeyHex));
-  }
-  return pubkeys;
+  return [];
 }
 
-export function isValidHttpUrl(input: string): boolean {
+/**
+ * Only used for logging remote signers grouped by URL
+ */
+export function groupRemoteSignersByUrl(
+  remoteSigners: SignerRemote[]
+): {remoteSignerUrl: string; pubkeysHex: string[]}[] {
+  const byUrl = new Map<string, {remoteSignerUrl: string; pubkeysHex: string[]}>();
+
+  for (const remoteSigner of remoteSigners) {
+    let x = byUrl.get(remoteSigner.remoteSignerUrl);
+    if (!x) {
+      x = {remoteSignerUrl: remoteSigner.remoteSignerUrl, pubkeysHex: []};
+      byUrl.set(remoteSigner.remoteSignerUrl, x);
+    }
+    x.pubkeysHex.push(remoteSigner.pubkeyHex);
+  }
+
+  return Array.from(byUrl.values());
+}
+
+/**
+ * Ensure pubkeysHex are valid BLS pubkey (validate hex encoding and point)
+ */
+function assertValidPubkeysHex(pubkeysHex: string[]): void {
+  for (const pubkeyHex of pubkeysHex) {
+    const pubkeyBytes = fromHexString(pubkeyHex);
+    PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+  }
+}
+
+function assertValidRemoteSignerUrl(urlStr: string): void {
+  if (!isValidHttpUrl(urlStr)) {
+    throw new YargsError(`Invalid remote signer URL ${urlStr}`);
+  }
+}
+
+function isValidHttpUrl(urlStr: string): boolean {
   let url;
   try {
-    url = new URL(input);
+    url = new URL(urlStr);
   } catch (_) {
     return false;
   }
 
   return url.protocol === "http:" || url.protocol === "https:";
-}
-
-export function getPublicKeysFromSecretKeys(secretKeys: SecretKey[]): PublicKey[] {
-  const pubkeys: PublicKey[] = [];
-  for (let i = 0; i < secretKeys.length; i++) {
-    pubkeys.push(secretKeys[i].toPublicKey());
-  }
-  return pubkeys;
-}
-
-export function getSignersObject(
-  signingMode: string,
-  signingUrl: string | undefined,
-  secretKeys: SecretKey[],
-  pubkeys: PublicKey[]
-): Signers {
-  let signers: Signers;
-  /** True is for remote mode, False is local mode */
-  if (signingMode.toLowerCase() === "remote") {
-    /** If remote mode chosen but no url provided */
-    if (!signingUrl) {
-      throw new YargsError("Remote mode requires --signingUrl argument");
-    }
-    signers = {
-      type: SignerType.Remote,
-      url: signingUrl,
-      pubkeys: pubkeys,
-      secretKey: new SecretKey(),
-    };
-  } else if (signingMode.toLowerCase() === "local") {
-    signers = {
-      type: SignerType.Local,
-      secretKeys: secretKeys,
-    };
-  } else {
-    throw new YargsError("Invalid mode. Only local and remote are supported");
-  }
-  return signers;
 }
 
 function resolveKeystorePaths(fileOrDirPath: string): string[] {

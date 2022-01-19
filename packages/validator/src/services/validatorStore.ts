@@ -28,32 +28,35 @@ import {
   ValidatorIndex,
   ssz,
 } from "@chainsafe/lodestar-types";
-import {List, toHexString} from "@chainsafe/ssz";
+import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
-import {getAggregationBits, requestSignature} from "./utils";
+import {getAggregationBits} from "./utils";
+import {remoteSignerPostSignature} from "../util/remoteSignerClient";
 
 export enum SignerType {
   Local,
   Remote,
 }
 
+export type SignerLocal = {
+  type: SignerType.Local;
+  secretKey: SecretKey;
+};
+
+export type SignerRemote = {
+  type: SignerType.Remote;
+  remoteSignerUrl: string;
+  pubkeyHex: PubkeyHex;
+};
+
 /**
  * Validator entity capable of producing signatures. Either:
  * - local: With BLS secret key
  * - remote: With data to contact a remote signer
  */
-export type Signer =
-  | {
-      type: SignerType.Local;
-      secretKey: SecretKey;
-    }
-  | {
-      type: SignerType.Remote;
-      remoteSignerUrl: string;
-      pubkey: PubkeyHex;
-    };
+export type Signer = SignerLocal | SignerRemote;
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -260,8 +263,14 @@ export class ValidatorStore {
       case SignerType.Local:
         return signer.secretKey.sign(signingRoot).toBytes();
 
-      case SignerType.Remote:
-        return await requestSignature(pubkey, signingRoot, signer.remoteSignerUrl);
+      case SignerType.Remote: {
+        const signatureHex = await remoteSignerPostSignature(
+          pubkeyHex,
+          toHexString(signingRoot),
+          signer.remoteSignerUrl
+        );
+        return fromHexString(signatureHex);
+      }
     }
   }
 
@@ -284,6 +293,6 @@ function getSignerPubkeyHex(signer: Signer): PubkeyHex {
       return toHexString(signer.secretKey.toPublicKey().toBytes());
 
     case SignerType.Remote:
-      return signer.pubkey;
+      return signer.pubkeyHex;
   }
 }

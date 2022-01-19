@@ -6,19 +6,19 @@ import {IBeaconPaths} from "../beacon/paths";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
+    logFile: IBeaconPaths["logFile"];
     validatorsDbDir?: string;
     server: string;
     force: boolean;
     graffiti: string;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
+    remoteSignerUrl?: string;
+    remoteSignerPublicKeys?: string[];
+    remoteSignerFetchPubkeys?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
-    logFile: IBeaconPaths["logFile"];
-    signingMode: "local" | "remote";
-    signingUrl?: string;
-    publicKeys: string;
   };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -61,6 +61,32 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
+  // Remote signer
+
+  remoteSignerUrl: {
+    description: "URL to connect to remote signing server",
+    type: "string",
+    group: "Remote signer",
+  },
+
+  remoteSignerPublicKeys: {
+    description:
+      "List of validator public keys used by a remote signer. May also provide a single string a comma separated public keys",
+    type: "array",
+    coerce: (pubkeys: string[]): string[] =>
+      // Parse ["0x11,0x22"] to ["0x11", "0x22"]
+      pubkeys.map((item) => item.split(",")).flat(1),
+    group: "Remote signer",
+  },
+
+  remoteSignerFetchPubkeys: {
+    description: "Fetch then list of pubkeys to validate from the remote signer",
+    type: "boolean",
+    group: "Remote signer",
+  },
+
+  // For testing only
+
   interopIndexes: {
     hidden: true,
     description: "Range (inclusive) of interop key indexes to validate with: 0..16",
@@ -77,23 +103,5 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16",
     type: "string",
-  },
-
-  signingMode: {
-    description: "Signing mode. local for local signing, remote for remote signing",
-    type: "string",
-    default: "local",
-  },
-
-  signingUrl: {
-    description: "URL to connect to remote signing server",
-    type: "string",
-    default: undefined,
-  },
-
-  publicKeys: {
-    description: "Comma seperated public keys to use for remote API.",
-    type: "string",
-    default: undefined,
   },
 };
