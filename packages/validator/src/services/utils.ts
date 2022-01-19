@@ -1,10 +1,8 @@
 import fetch from "cross-fetch";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {routes} from "@chainsafe/lodestar-api";
 import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
 import {toHexString, fromHexString} from "@chainsafe/ssz";
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import {PubkeyHex, BLSKeypair} from "../types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 
@@ -25,29 +23,6 @@ export type PublicKeysObject = {
 export type UpcheckObject = {
   status: string;
 };
-
-export function mapSecretKeysToValidators(secretKeys: SecretKey[]): Map<PubkeyHex, BLSKeypair> {
-  const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
-  for (const secretKey of secretKeys) {
-    const publicKey = secretKey.toPublicKey().toBytes();
-    validators.set(toHexString(publicKey), {publicKey, secretKey});
-  }
-  return validators;
-}
-
-/**
- * Function used when remote signer being used.
- * For consistency with mapSecretKeysToValidators returns a mapping of the same data type,
- * but secret key for each BLSKeypair is undefined.
- */
-export function mapPublicKeysToValidators(publicKeys: PublicKey[], secretKey: SecretKey): Map<PubkeyHex, BLSKeypair> {
-  const validators: Map<PubkeyHex, BLSKeypair> = new Map<PubkeyHex, BLSKeypair>();
-  for (const pub of publicKeys) {
-    const publicKey = pub.toBytes();
-    validators.set(toHexString(publicKey), {publicKey, secretKey});
-  }
-  return validators;
-}
 
 export function getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
   return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);

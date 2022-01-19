@@ -1,13 +1,11 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
-import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
 import {Clock, IClock} from "./util/clock";
-import {signAndSubmitVoluntaryExit} from "./voluntaryExit";
 import {waitForGenesis} from "./genesis";
 import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
@@ -19,30 +17,14 @@ import {ChainHeaderTracker} from "./services/chainHeaderTracker";
 import {MetaDataRepository} from ".";
 import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
-import {ValidatorStore} from "./services/validatorStore";
-
-export enum SignerType {
-  Local,
-  Remote,
-}
-
-export type Signers =
-  | {
-      type: SignerType.Local;
-      secretKeys: SecretKey[];
-    }
-  | {
-      type: SignerType.Remote;
-      url: string;
-      pubkeys: PublicKey[];
-      secretKey: SecretKey;
-    };
+import {ValidatorStore, Signer} from "./services/validatorStore";
+import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
-  signers: Signers;
+  signers: Signer[];
   logger: ILogger;
   graffiti?: string;
 };
@@ -64,10 +46,10 @@ type State = {status: Status.running; controller: AbortController} | {status: St
 export class Validator {
   private readonly config: IBeaconConfig;
   private readonly api: Api;
-  private readonly signers: Signers;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
+  private readonly validatorStore: ValidatorStore;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
@@ -98,8 +80,7 @@ export class Validator {
     this.logger = logger;
     this.api = api;
     this.clock = clock;
-    // this.secretKeys = secretKeys;
-    this.signers = signers;
+    this.validatorStore = validatorStore;
   }
 
   /** Waits for genesis and genesis time */
@@ -145,18 +126,20 @@ export class Validator {
   /**
    * Perform a voluntary exit for the given validator by its key.
    */
-  async voluntaryExit(publicKey: string, exitEpoch: number): Promise<void> {
-    let remoteSignerUrl = "";
-    let secretKey: SecretKey | undefined = undefined;
-    if (this.signers.type == SignerType.Local) {
-      secretKey = this.signers.secretKeys.find((sk) =>
-        ssz.BLSPubkey.equals(sk.toPublicKey().toBytes(), fromHex(publicKey))
-      );
-      if (!secretKey) throw new Error(`No matching secret key found for public key ${publicKey}`);
-    } else {
-      remoteSignerUrl = this.signers.url;
+  async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
+    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {indices: [publicKey]});
+    const stateValidator = stateValidators[0];
+    if (stateValidator === undefined) {
+      throw new Error(`Validator pubkey ${publicKey} not found in state`);
     }
-    await signAndSubmitVoluntaryExit(publicKey, exitEpoch, secretKey, remoteSignerUrl, this.api, this.config);
+
+    if (exitEpoch === undefined) {
+      const currentSlot = getCurrentSlot(this.config, this.clock.genesisTime);
+      exitEpoch = computeEpochAtSlot(currentSlot);
+    }
+
+    const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
+    await this.api.beacon.submitPoolVoluntaryExit(signedVoluntaryExit);
 
     this.logger.info(`Submitted voluntary exit for ${publicKey} to the network`);
   }

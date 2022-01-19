@@ -56,17 +56,14 @@ export class IndicesService {
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
   private async pollValidatorIndicesInternal(): Promise<ValidatorIndex[]> {
-    const pubkeysToPoll = this.validatorStore
-      .votingPubkeys()
-      .filter((pubkey) => !this.pubkey2index.has(toHexString(pubkey)));
+    const pubkeysHex = this.validatorStore.votingPubkeys().filter((pubkey) => !this.pubkey2index.has(pubkey));
 
-    if (pubkeysToPoll.length === 0) {
+    if (pubkeysHex.length === 0) {
       return [];
     }
 
     // Query the remote BN to resolve a pubkey to a validator index.
     // support up to 1000 pubkeys per poll
-    const pubkeysHex = pubkeysToPoll.map((pubkey) => toHexString(pubkey));
     const pubkeysHexBatches = batchItems(pubkeysHex, {batchSize: PUBKEYS_PER_REQUEST});
 
     const newIndices: number[] = [];

@@ -8,6 +8,7 @@ import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-sta
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 
 export interface IClock {
+  readonly genesisTime: number;
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
