@@ -58,7 +58,16 @@ describe("Run single node single thread interop validators (no eth1) until check
   });
 
   for (const {event, altairEpoch, mergeEpoch, withRemoteSigner} of testCases) {
-    it(`singleNode ${validatorClientCount} vc / ${validatorsPerClient} validator > until ${event}, altair ${altairEpoch} merge ${mergeEpoch}`, async function () {
+    const testIdStr = [
+      `altair-${altairEpoch}`,
+      `merge-${mergeEpoch}`,
+      `vc-${validatorClientCount}`,
+      `vPc-${validatorsPerClient}`,
+      withRemoteSigner ? "remote_signer" : "local_signer",
+      `event-${event}`,
+    ].join("_");
+
+    it(`singleNode ${testIdStr}`, async function () {
       // Should reach justification in 3 epochs max, and finalization in 4 epochs max
       const expectedEpochsToFinish = event === ChainEvent.justified ? 3 : 4;
       // 1 epoch of margin of error
@@ -79,7 +88,7 @@ describe("Run single node single thread interop validators (no eth1) until check
 
       const testLoggerOpts: TestLoggerOpts = {
         logLevel: LogLevel.info,
-        logFile: `${logFilesDir}/singlethread_singlenode_altair-${altairEpoch}_merge-${mergeEpoch}_vc-${validatorClientCount}_vs-${validatorsPerClient}_event-${event}.log`,
+        logFile: `${logFilesDir}/singlethread_singlenode_${testIdStr}.log`,
         timestampFormat: {
           format: TimestampFormatCode.EpochSlot,
           genesisTime,
