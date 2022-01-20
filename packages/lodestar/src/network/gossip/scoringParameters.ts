@@ -5,7 +5,7 @@ import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMIT
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
-import {FORK_EPOCH_LOOKAHEAD, getCurrentAndNextFork} from "../forks";
+import {getActiveForks} from "../forks";
 import {IGossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
 import {stringifyGossipTopic} from "./topic";
@@ -111,11 +111,10 @@ function getAllTopicsScoreParams(
 ): Record<string, TopicScoreParams> {
   const {epochDurationMs, slotDurationMs} = precomputedParams;
   const epoch = eth2Context.currentEpoch;
-  const {currentFork, nextFork} = getCurrentAndNextFork(config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
   const topicsParams: Record<string, TopicScoreParams> = {};
-  const forks = nextFork ? [currentFork, nextFork] : [currentFork];
+  const forks = getActiveForks(config, epoch);
   const beaconAttestationSubnetWeight = 1 / ATTESTATION_SUBNET_COUNT;
-  for (const fork of forks.map((fork) => fork.name)) {
+  for (const fork of forks) {
     //first all fixed topics
     topicsParams[
       stringifyGossipTopic(config, {
