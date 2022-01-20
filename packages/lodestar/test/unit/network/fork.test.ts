@@ -3,281 +3,115 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig, IForkInfo} from "@chainsafe/lodestar-config";
 import {getCurrentAndNextFork, getActiveForks} from "../../../src/network/forks";
 
-describe("network / fork: phase0: 0, altair: 0, bellatrix: Infinity", () => {
+function getForkConfig({
+  phase0,
+  altair,
+  bellatrix,
+}: {
+  phase0: number;
+  altair: number;
+  bellatrix: number;
+}): IBeaconConfig {
   const forks: Record<ForkName, IForkInfo> = {
     phase0: {
       name: ForkName.phase0,
-      epoch: 0,
+      epoch: phase0,
       version: Buffer.from([0, 0, 0, 0]),
     },
     altair: {
       name: ForkName.altair,
-      epoch: 0,
+      epoch: altair,
       version: Buffer.from([0, 0, 0, 1]),
     },
     bellatrix: {
       name: ForkName.bellatrix,
-      epoch: Infinity,
+      epoch: bellatrix,
       version: Buffer.from([0, 0, 0, 2]),
     },
   };
-  const forkConfig = {forks} as IBeaconConfig;
-  it("should return altair on epoch -1, getActiveForks: altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, -1)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["altair"]);
-  });
-  it("should return altair on epoch 0, getActiveForks: altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, 0)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["altair"]);
-  });
-  it("should return altair on epoch 1, getActiveForks: altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, 1)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["altair"]);
-  });
-});
+  return {forks} as IBeaconConfig;
+}
 
-describe("network / fork: phase0: 0, altair: 0, bellatrix: 0", () => {
-  const forks: Record<ForkName, IForkInfo> = {
-    phase0: {
-      name: ForkName.phase0,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 0]),
-    },
-    altair: {
-      name: ForkName.altair,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 1]),
-    },
-    bellatrix: {
-      name: ForkName.bellatrix,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 2]),
-    },
-  };
-  const forkConfig = {forks} as IBeaconConfig;
-  it("should return bellatrix on epoch -1, getActiveForks: bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, -1)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["bellatrix"]);
-  });
-  it("should return bellatrix on epoch 0, getActiveForks: bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 0)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 0)).to.deep.equal(["bellatrix"]);
-  });
-});
+const testScenarios = [
+  {
+    phase0: 0,
+    altair: 0,
+    bellatrix: Infinity,
+    testCases: [
+      {epoch: -1, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
+      {epoch: 0, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
+      {epoch: 1, currentFork: "altair", nextFork: undefined, activeForks: ["altair"]},
+    ],
+  },
+  {
+    phase0: 0,
+    altair: 0,
+    bellatrix: 0,
+    testCases: [
+      {epoch: -1, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+      {epoch: 0, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+      {epoch: 1, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+    ],
+  },
+  {
+    phase0: 0,
+    altair: 1,
+    bellatrix: 1,
+    testCases: [
+      {epoch: -1, currentFork: "phase0", nextFork: "bellatrix", activeForks: ["phase0", "bellatrix"]},
+      {epoch: 2, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "bellatrix"]},
+      {epoch: 3, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "bellatrix"]},
+      {epoch: 4, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+    ],
+  },
+  {
+    phase0: 0,
+    altair: 1,
+    bellatrix: 2,
+    testCases: [
+      {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
+      {epoch: 0, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair", "bellatrix"]},
+      {epoch: 1, currentFork: "altair", nextFork: "bellatrix", activeForks: ["phase0", "altair", "bellatrix"]},
+      {epoch: 2, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "altair", "bellatrix"]},
+      {epoch: 3, currentFork: "bellatrix", nextFork: undefined, activeForks: ["phase0", "altair", "bellatrix"]},
+      {epoch: 4, currentFork: "bellatrix", nextFork: undefined, activeForks: ["altair", "bellatrix"]},
+      {epoch: 5, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+    ],
+  },
+  {
+    phase0: 0,
+    altair: 5,
+    bellatrix: 10,
+    testCases: [
+      {epoch: -1, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0"]},
+      {epoch: 3, currentFork: "phase0", nextFork: "altair", activeForks: ["phase0", "altair"]},
+      {epoch: 7, currentFork: "altair", nextFork: "bellatrix", activeForks: ["phase0", "altair"]},
+      {epoch: 8, currentFork: "altair", nextFork: "bellatrix", activeForks: ["altair", "bellatrix"]},
+      {epoch: 11, currentFork: "bellatrix", nextFork: undefined, activeForks: ["altair", "bellatrix"]},
+      {epoch: 12, currentFork: "bellatrix", nextFork: undefined, activeForks: ["altair", "bellatrix"]},
+      {epoch: 13, currentFork: "bellatrix", nextFork: undefined, activeForks: ["bellatrix"]},
+    ],
+  },
+];
 
-describe("network / fork: phase0: 0, altair: 1, bellatrix: 1", () => {
-  const forks: Record<ForkName, IForkInfo> = {
-    phase0: {
-      name: ForkName.phase0,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 0]),
-    },
-    altair: {
-      name: ForkName.altair,
-      epoch: 1,
-      version: Buffer.from([0, 0, 0, 1]),
-    },
-    bellatrix: {
-      name: ForkName.bellatrix,
-      epoch: 1,
-      version: Buffer.from([0, 0, 0, 2]),
-    },
-  };
-  const forkConfig = {forks} as IBeaconConfig;
-  it("should return phase0,bellatrix  on epoch -1, getActiveForks: phase0, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, -1)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.bellatrix],
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["phase0", "bellatrix"]);
-  });
-  it("should return phase0,bellatrix  on epoch 0, getActiveForks: phase0, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 0)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.bellatrix],
-    });
-    expect(getActiveForks(forkConfig, 0)).to.deep.equal(["phase0", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 2, getActiveForks: phase0, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 2)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 2)).to.deep.equal(["phase0", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 3, getActiveForks: phase0,bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 3)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 3)).to.deep.equal(["phase0", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 4, getActiveForks: bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 4)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 4)).to.deep.equal(["bellatrix"]);
-  });
-});
+for (const testScenario of testScenarios) {
+  const {phase0, altair, bellatrix, testCases} = testScenario;
 
-describe("network / fork: phase0: 0, altair: 1, bellatrix: 2", () => {
-  const forks: Record<ForkName, IForkInfo> = {
-    phase0: {
-      name: ForkName.phase0,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 0]),
-    },
-    altair: {
-      name: ForkName.altair,
-      epoch: 1,
-      version: Buffer.from([0, 0, 0, 1]),
-    },
-    bellatrix: {
-      name: ForkName.bellatrix,
-      epoch: 2,
-      version: Buffer.from([0, 0, 0, 2]),
-    },
-  };
-  const forkConfig = {forks} as IBeaconConfig;
-  it("should return phase0,altair  on epoch -1, getActiveForks: phase0, altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, -1)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.altair],
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["phase0", "altair"]);
+  describe(`network / fork: phase0: ${phase0}, altair: ${altair}, bellatrix: ${bellatrix}`, () => {
+    const forkConfig = getForkConfig({phase0, altair, bellatrix});
+    const forks = forkConfig.forks;
+    for (const testCase of testCases) {
+      const {epoch, currentFork, nextFork, activeForks} = testCase;
+      it(` on epoch ${epoch} should return ${JSON.stringify({
+        currentFork,
+        nextFork,
+      })}, getActiveForks: ${activeForks}`, () => {
+        expect(getCurrentAndNextFork(forkConfig, epoch)).to.deep.equal({
+          currentFork: forks[currentFork as ForkName],
+          nextFork: (nextFork && forks[nextFork as ForkName]) ?? undefined,
+        });
+        expect(getActiveForks(forkConfig, epoch)).to.deep.equal(activeForks);
+      });
+    }
   });
-  it("should return phase0,altair  on epoch 0, getActiveForks: phase0, altair, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 0)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.altair],
-    });
-    expect(getActiveForks(forkConfig, 0)).to.deep.equal(["phase0", "altair", "bellatrix"]);
-  });
-  it("should return altair,bellatrix on epoch 1, getActiveForks: phase0, altair, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 1)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: forks[ForkName.bellatrix],
-    });
-    expect(getActiveForks(forkConfig, 1)).to.deep.equal(["phase0", "altair", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 2, getActiveForks: phase0, altair, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 2)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 2)).to.deep.equal(["phase0", "altair", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 3, getActiveForks: phase0, altair, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 3)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 3)).to.deep.equal(["phase0", "altair", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 4, getActiveForks: altair, bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 4)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 4)).to.deep.equal(["altair", "bellatrix"]);
-  });
-  it("should return bellatrix on epoch 5, getActiveForks: bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 5)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 5)).to.deep.equal(["bellatrix"]);
-  });
-});
-
-describe("network / fork: phase0: 0, altair: 5, bellatrix: 10", () => {
-  const forks: Record<ForkName, IForkInfo> = {
-    phase0: {
-      name: ForkName.phase0,
-      epoch: 0,
-      version: Buffer.from([0, 0, 0, 0]),
-    },
-    altair: {
-      name: ForkName.altair,
-      epoch: 5,
-      version: Buffer.from([0, 0, 0, 1]),
-    },
-    bellatrix: {
-      name: ForkName.bellatrix,
-      epoch: 10,
-      version: Buffer.from([0, 0, 0, 2]),
-    },
-  };
-  const forkConfig = {forks} as IBeaconConfig;
-  it("should return phase0,altair  on epoch -1, getActiveForks: phase0", () => {
-    expect(getCurrentAndNextFork(forkConfig, -1)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.altair],
-    });
-    expect(getActiveForks(forkConfig, -1)).to.deep.equal(["phase0"]);
-  });
-
-  it("should return phase0,altair  on epoch 3, getActiveForks: phase0,altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, 3)).to.deep.equal({
-      currentFork: forks[ForkName.phase0],
-      nextFork: forks[ForkName.altair],
-    });
-    expect(getActiveForks(forkConfig, 3)).to.deep.equal(["phase0", "altair"]);
-  });
-
-  it("should return altair,bellatrix  on epoch 7, getActiveForks: phase0,altair", () => {
-    expect(getCurrentAndNextFork(forkConfig, 7)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: forks[ForkName.bellatrix],
-    });
-    expect(getActiveForks(forkConfig, 7)).to.deep.equal(["phase0", "altair"]);
-  });
-
-  it("should return altair,bellatrix  on epoch 8, getActiveForks: altair,bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 8)).to.deep.equal({
-      currentFork: forks[ForkName.altair],
-      nextFork: forks[ForkName.bellatrix],
-    });
-    expect(getActiveForks(forkConfig, 8)).to.deep.equal(["altair", "bellatrix"]);
-  });
-
-  it("should return bellatrix  on epoch 11, getActiveForks: altair,bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 11)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 11)).to.deep.equal(["altair", "bellatrix"]);
-  });
-
-  it("should return bellatrix  on epoch 12, getActiveForks: altair,bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 12)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 12)).to.deep.equal(["altair", "bellatrix"]);
-  });
-
-  it("should return bellatrix  on epoch 13, getActiveForks: bellatrix", () => {
-    expect(getCurrentAndNextFork(forkConfig, 13)).to.deep.equal({
-      currentFork: forks[ForkName.bellatrix],
-      nextFork: undefined,
-    });
-    expect(getActiveForks(forkConfig, 13)).to.deep.equal(["bellatrix"]);
-  });
-});
+}
