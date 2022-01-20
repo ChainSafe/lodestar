@@ -12,7 +12,7 @@ import {ISlashingProtection, Interchange} from "../slashingProtection";
 import {ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
 import {Root} from "@chainsafe/lodestar-types";
-import fs from "fs";
+import {unlink} from "fs/promises";
 
 // TODO [DA] move to a better location
 // Improve the modelling of the type to prevent secretKey.secretKey usage
@@ -156,14 +156,18 @@ export class KeymanagerApi implements Api {
       deletedKey[i] = deleted;
 
       // Remove key from persistent storage
-      this.secretKeys.forEach((secretKey) => {
+      for (const secretKey of this.secretKeys) {
         if (secretKey.secretKey.toPublicKey().toHex() === pubkeyHex) {
           secretKey?.unlockSecretKeys?.();
           if (secretKey?.keystorePath) {
-            fs.unlinkSync(secretKey?.keystorePath);
+            try {
+              await unlink(secretKey?.keystorePath);
+            } catch (e) {
+              // TODO [DA] log some info
+            }
           }
         }
-      });
+      }
     }
 
     const pubkeysBytes = pubkeysHex.map((pubkeyHex) => fromHexString(pubkeyHex));
