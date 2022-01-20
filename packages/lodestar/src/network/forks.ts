@@ -13,45 +13,43 @@ import {Epoch} from "@chainsafe/lodestar-types";
  * |----------|----------|----------|----------|
  * 0        fork-2      fork      fork+2       oo
  * ```
+ *
+ * It the fork epochs are very close to each other there may more than two active at once
+ *
+ * ```
+ *   f0    f0   f0    f0   f0    -
+ *   -     fa   fa    fa   fa    fa   -
+ *   -     -    fb    fb   fb    fb   fb
+ *
+ *     forka-2    forka      forka+2
+ * |     |          |          |
+ * |----------|----------|----------|----------|
+ * 0        forkb-2    forkb      forkb+2      oo
+ * ```
  */
 export const FORK_EPOCH_LOOKAHEAD = 2;
 
 /**
  * Return the list of `ForkName`s meant to be active at `epoch`
+ * @see FORK_EPOCH_LOOKAHEAD for details on when forks are considered 'active'
  */
 export function getActiveForks(config: IChainForkConfig, epoch: Epoch): ForkName[] {
-  // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
   const activeForks: ForkName[] = [];
-  // A sliding point to evaluate active forks with FORK_EPOCH_LOOKAHEAD windows
-  let evalAtEpoch: Epoch | null = epoch - FORK_EPOCH_LOOKAHEAD - 1;
-  do {
-    const forks = getCurrentAndNextFork(config, evalAtEpoch);
-    if (!forks.nextFork) {
-      activeForks.push(forks.currentFork.name);
-      evalAtEpoch = null;
-    } else {
-      const prevFork = forks.currentFork.name;
-      const forkEpoch = forks.nextFork.epoch;
+  const forks = config.forksAscendingEpochOrder;
 
-      // way before fork
-      if (epoch < forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-        activeForks.push(prevFork);
-        // No more need to slide and check, just exit
-        evalAtEpoch = null;
-      } else {
-        if (epoch <= forkEpoch + FORK_EPOCH_LOOKAHEAD) {
-          // The previous fork is relevant
-          activeForks.push(prevFork);
-        }
+  for (let i = 0; i < forks.length; i++) {
+    const currForkEpoch = forks[i].epoch;
+    const nextForkEpoch = i >= forks.length - 1 ? Infinity : forks[i + 1].epoch;
 
-        if (epoch >= forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-          evalAtEpoch = forkEpoch;
-        } else {
-          evalAtEpoch = null;
-        }
-      }
+    // Edge case: If multiple forks start at the same epoch, only consider the latest one
+    if (currForkEpoch === nextForkEpoch) {
+      continue;
     }
-  } while (evalAtEpoch !== null);
+
+    if (epoch >= currForkEpoch - FORK_EPOCH_LOOKAHEAD && epoch <= nextForkEpoch + FORK_EPOCH_LOOKAHEAD) {
+      activeForks.push(forks[i].name);
+    }
+  }
 
   return activeForks;
 }
@@ -63,14 +61,18 @@ export function getCurrentAndNextFork(
   config: IChainForkConfig,
   epoch: Epoch
 ): {currentFork: IForkInfo; nextFork: IForkInfo | undefined} {
-  if (epoch < 0) epoch = 0;
+  if (epoch < 0) {
+    epoch = 0;
+  }
+
   // NOTE: forks are sorted by ascending epoch, phase0 first
-  const forks = Object.values(config.forks);
+  const forks = config.forksAscendingEpochOrder;
   let currentForkIdx = -1;
   // findLastIndex
   for (let i = 0; i < forks.length; i++) {
     if (epoch >= forks[i].epoch) currentForkIdx = i;
   }
+
   let nextForkIdx = currentForkIdx + 1;
   const hasNextFork = forks[nextForkIdx] !== undefined && forks[nextForkIdx].epoch !== Infinity;
   // Keep moving the needle of nextForkIdx if there the higher fork also exists on same epoch
@@ -82,6 +84,7 @@ export function getCurrentAndNextFork(
       if (forks[i].epoch === forks[nextForkIdx].epoch) nextForkIdx = i;
     }
   }
+
   return {
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     currentFork: forks[currentForkIdx] || forks[0],
