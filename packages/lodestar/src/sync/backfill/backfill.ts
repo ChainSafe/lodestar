@@ -518,15 +518,18 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         // TODO: one can verify the child of wsDbCheckpointBlock is at
         // slot > wsCheckpointHeader
-        wsDbCheckpointBlock.message.slot > this.wsCheckpointHeader.slot
+        wsDbCheckpointBlock.message.slot >= this.wsCheckpointHeader.slot + SLOTS_PER_EPOCH
       )
         // TODO: explode and stop the entire node
         throw new Error(
-          `InvalidWsCheckpoint root=${this.wsCheckpointHeader.root}, epoch=${
+          `InvalidWsCheckpoint root=${toHexString(this.wsCheckpointHeader.root)}, epoch=${
             this.wsCheckpointHeader.slot / SLOTS_PER_EPOCH
           }, ${
             wsDbCheckpointBlock
-              ? "found at epoch=" + Math.floor(wsDbCheckpointBlock?.message.slot / SLOTS_PER_EPOCH)
+              ? "found at epoch=" +
+                Math.floor(wsDbCheckpointBlock?.message.slot / SLOTS_PER_EPOCH) +
+                ", slot=" +
+                wsDbCheckpointBlock.message.slot
               : "not found"
           }`
         );
@@ -584,9 +587,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
             } else {
               validSequence = false;
               this.logger.warn(
-                `Invalid backfill sequence: previous finalized or checkpoint block root=${
+                `Invalid backfill sequence: previous finalized or checkpoint block root=${toHexString(
                   this.prevFinalizedCheckpointBlock.root
-                }, slot=${this.prevFinalizedCheckpointBlock.slot} ${
+                )}, slot=${this.prevFinalizedCheckpointBlock.slot} ${
                   prevBackfillCpBlock ? "found at slot=" + prevBackfillCpBlock.message.slot : "not found"
                 }, ignoring the sequence`
               );
@@ -658,7 +661,9 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     if (expectedSlot !== null && anchorBlock.message.slot !== expectedSlot)
       throw Error(
-        `Invalid slot of anchorBlock read from DB with root=${anchorBlockRoot}, expected=${expectedSlot}, actual=${anchorBlock.message.slot}`
+        `Invalid slot of anchorBlock read from DB with root=${toHexString(
+          anchorBlockRoot
+        )}, expected=${expectedSlot}, actual=${anchorBlock.message.slot}`
       );
 
     // If possible, read back till anchorBlock > this.prevFinalizedCheckpointBlock
@@ -686,7 +691,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
           throw Error(
             `Invalid root for prevFinalizedCheckpointBlock at slot=${
               this.prevFinalizedCheckpointBlock.slot
-            }, expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, found=${anchorBlockRoot}`
+            }, expected=${toHexString(this.prevFinalizedCheckpointBlock.root)}, found=${toHexString(anchorBlockRoot)}`
           );
         }
 
