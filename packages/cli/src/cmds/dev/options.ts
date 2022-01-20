@@ -10,8 +10,6 @@ interface IDevOwnArgs {
   genesisTime?: number;
   reset?: boolean;
   server: string;
-  signingMode: "local" | "remote";
-  signingUrl?: string;
 }
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
@@ -52,20 +50,6 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
-  },
-
-  signingMode: {
-    description: "Signing mode. local for local signing, remote for remote signing",
-    type: "string",
-    default: "local",
-    group: "validator",
-  },
-
-  signingUrl: {
-    description: "URL to connect to remote signing server",
-    type: "string",
-    default: undefined,
-    group: "validator",
   },
 };
 
