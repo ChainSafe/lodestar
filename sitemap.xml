@@ -3321,6 +3321,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/services.signertype/</loc>
+         <lastmod>2022-01-20</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/services.validatorevent/</loc>
          <lastmod>2022-01-20</lastmod>
          <changefreq>daily</changefreq>
