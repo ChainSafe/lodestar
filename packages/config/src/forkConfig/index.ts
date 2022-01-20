@@ -19,10 +19,13 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
   const forks = {phase0, altair, bellatrix};
 
   // Prevents allocating an array on every getForkInfo() call
+  const forksAscendingEpochOrder = Object.values(forks);
   const forksDescendingEpochOrder = Object.values(forks).reverse();
 
   return {
     forks,
+    forksAscendingEpochOrder,
+    forksDescendingEpochOrder,
 
     // Fork convenience methods
     getForkInfo(slot: Slot): IForkInfo {

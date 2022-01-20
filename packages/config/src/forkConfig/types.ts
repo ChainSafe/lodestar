@@ -14,6 +14,9 @@ export interface IForkInfo {
 export interface IForkConfig {
   /** Forks in order order of occurence, `phase0` first */
   forks: {[K in ForkName]: IForkInfo};
+  forksAscendingEpochOrder: IForkInfo[];
+  forksDescendingEpochOrder: IForkInfo[];
+
   /** Get the hard-fork info for the active fork at `slot` */
   getForkInfo(slot: Slot): IForkInfo;
 
