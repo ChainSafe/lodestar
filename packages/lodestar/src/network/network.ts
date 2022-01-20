@@ -19,7 +19,7 @@ import {INetwork} from "./interface";
 import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
 import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip";
 import {MetadataController} from "./metadata";
-import {getActiveForks, getCurrentAndNextFork, FORK_EPOCH_LOOKAHEAD} from "./forks";
+import {getActiveForks, FORK_EPOCH_LOOKAHEAD} from "./forks";
 import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
@@ -258,35 +258,36 @@ export class Network implements INetwork {
   private onEpoch = (epoch: Epoch): void => {
     try {
       // Compute prev and next fork shifted, so next fork is still next at forkEpoch + FORK_EPOCH_LOOKAHEAD
-      const forks = getCurrentAndNextFork(this.config, epoch - FORK_EPOCH_LOOKAHEAD - 1);
+      const activeForks = getActiveForks(this.config, epoch);
+      for (let i = 0; i < activeForks.length; i++) {
+        // Only when a new fork is scheduled post this one
+        if (activeForks[i + 1]) {
+          const prevFork = activeForks[i];
+          const nextFork = activeForks[i + 1];
+          const forkEpoch = this.config.forks[nextFork].epoch;
 
-      // Only when a new fork is scheduled
-      if (forks.nextFork) {
-        const prevFork = forks.currentFork.name;
-        const nextFork = forks.nextFork.name;
-        const forkEpoch = forks.nextFork.epoch;
+          // Before fork transition
+          if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
+            this.logger.info("Subscribing gossip topics to next fork", {nextFork});
+            // Don't subscribe to new fork if the node is not subscribed to any topic
+            if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
+            this.attnetsService.subscribeSubnetsToNextFork(nextFork);
+            this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
+          }
 
-        // Before fork transition
-        if (epoch === forkEpoch - FORK_EPOCH_LOOKAHEAD) {
-          this.logger.info("Suscribing gossip topics to next fork", {nextFork});
-          // Don't subscribe to new fork if the node is not subscribed to any topic
-          if (this.isSubscribedToGossipCoreTopics()) this.subscribeCoreTopicsAtFork(nextFork);
-          this.attnetsService.subscribeSubnetsToNextFork(nextFork);
-          this.syncnetsService.subscribeSubnetsToNextFork(nextFork);
-        }
+          // On fork transition
+          if (epoch === forkEpoch) {
+            // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
+            this.metadata.updateEth2Field(epoch);
+          }
 
-        // On fork transition
-        if (epoch === forkEpoch) {
-          // updateEth2Field() MUST be called with clock epoch, onEpoch event is emitted in response to clock events
-          this.metadata.updateEth2Field(epoch);
-        }
-
-        // After fork transition
-        if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
-          this.logger.info("Unsuscribing gossip topics from prev fork", {prevFork});
-          this.unsubscribeCoreTopicsAtFork(prevFork);
-          this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
-          this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+          // After fork transition
+          if (epoch === forkEpoch + FORK_EPOCH_LOOKAHEAD) {
+            this.logger.info("Unsubscribing gossip topics from prev fork", {prevFork});
+            this.unsubscribeCoreTopicsAtFork(prevFork);
+            this.attnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+            this.syncnetsService.unsubscribeSubnetsFromPrevFork(prevFork);
+          }
         }
       }
     } catch (e) {
