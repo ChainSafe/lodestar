@@ -13,7 +13,6 @@ import {ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
 import {Root} from "@chainsafe/lodestar-types";
 import fs from "fs";
-import path from "path";
 
 // TODO [DA] move to a better location
 // Improve the modelling of the type to prevent secretKey.secretKey usage
@@ -78,7 +77,7 @@ export class KeymanagerApi implements Api {
       message?: string;
     }[];
   }> {
-    const interchange = JSON.parse(slashingProtectionStr) as Interchange;
+    const interchange = (slashingProtectionStr as unknown) as Interchange;
     await this.slashingProtection.importInterchange(interchange, this.genesisValidatorRoot);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
