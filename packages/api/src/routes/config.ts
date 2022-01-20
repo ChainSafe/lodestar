@@ -1,4 +1,4 @@
-import {IBeaconPreset, BeaconPreset} from "@chainsafe/lodestar-params";
+import {IBeaconPreset, BeaconPreset, activePreset} from "@chainsafe/lodestar-params";
 import {IChainConfig, ChainConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Number64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
@@ -87,6 +87,6 @@ export function getReturnTypes(config: IChainConfig): ReturnTypes<Api> {
   return {
     getDepositContract: ContainerData(DepositContract),
     getForkSchedule: ContainerData(ArrayOf(ssz.phase0.Fork)),
-    getSpec: withJsonFilled(Spec, ChainConfig.toJson(config)),
+    getSpec: withJsonFilled(Spec, Spec.toJson({...config, ...activePreset})),
   };
 }

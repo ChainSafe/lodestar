@@ -1,4 +1,4 @@
-import {merge, Root, RootHex} from "@chainsafe/lodestar-types";
+import {bellatrix, Root, RootHex} from "@chainsafe/lodestar-types";
 import {ByteVector} from "@chainsafe/ssz";
 
 import {DATA, QUANTITY} from "../eth1/provider/utils";
@@ -13,11 +13,21 @@ export enum ExecutePayloadStatus {
   INVALID = "INVALID",
   /** sync process is in progress */
   SYNCING = "SYNCING",
+  /** EL error */
+  ELERROR = "ELERROR",
+  /** EL unavailable */
+  UNAVAILABLE = "UNAVAILABLE",
 }
 
 export type ExecutePayloadResponse =
-  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null}
-  | {status: ExecutePayloadStatus.VALID | ExecutePayloadStatus.INVALID; latestValidHash: RootHex};
+  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null; validationError: null}
+  | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
+  | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex; validationError: string | null}
+  | {
+      status: ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
+      latestValidHash: null;
+      validationError: string;
+    };
 
 export enum ForkChoiceUpdateStatus {
   /** given payload is valid */
@@ -56,7 +66,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  executePayload(executionPayload: merge.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates
@@ -83,5 +93,5 @@ export interface IExecutionEngine {
    * Required for block producing
    * https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#get_payload
    */
-  getPayload(payloadId: PayloadId): Promise<merge.ExecutionPayload>;
+  getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload>;
 }

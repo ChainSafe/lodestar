@@ -35,7 +35,7 @@ export type Eth1MergeBlockTrackerModules = {
   logger: ILogger;
   signal: AbortSignal;
   clockEpoch: Epoch;
-  isMergeComplete: boolean;
+  isMergeTransitionComplete: boolean;
 };
 
 /**
@@ -57,7 +57,7 @@ export class Eth1MergeBlockTracker {
   private readonly intervals: NodeJS.Timeout[] = [];
 
   constructor(
-    {config, logger, signal, clockEpoch, isMergeComplete}: Eth1MergeBlockTrackerModules,
+    {config, logger, signal, clockEpoch, isMergeTransitionComplete}: Eth1MergeBlockTrackerModules,
     private readonly eth1Provider: IEth1Provider
   ) {
     this.config = config;
@@ -65,17 +65,17 @@ export class Eth1MergeBlockTracker {
     this.signal = signal;
 
     // If merge has already happened, disable
-    if (isMergeComplete) {
+    if (isMergeTransitionComplete) {
       this.status = StatusCode.POST_MERGE;
       return;
     }
 
     // If merge is still not programed, skip
-    if (config.MERGE_FORK_EPOCH >= Infinity) {
+    if (config.BELLATRIX_FORK_EPOCH >= Infinity) {
       return;
     }
 
-    const startEpoch = this.config.MERGE_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
+    const startEpoch = this.config.BELLATRIX_FORK_EPOCH - START_EPOCHS_IN_ADVANCE;
     if (startEpoch <= clockEpoch) {
       // Start now
       void this.startFinding();

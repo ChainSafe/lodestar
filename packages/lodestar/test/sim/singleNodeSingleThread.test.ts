@@ -28,20 +28,20 @@ describe("Run single node single thread interop validators (no eth1) until check
   const testCases: {
     event: ChainEvent.justified | ChainEvent.finalized;
     altairEpoch: number;
-    mergeEpoch: number;
+    bellatrixEpoch: number;
     withRemoteSigner?: boolean;
   }[] = [
     // phase0 fork only
-    {event: ChainEvent.finalized, altairEpoch: Infinity, mergeEpoch: Infinity},
+    {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
     // altair fork only
-    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: Infinity},
+    {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: Infinity},
     // altair fork at epoch 2
-    {event: ChainEvent.finalized, altairEpoch: 2, mergeEpoch: Infinity},
-    // merge fork at epoch 0
-    {event: ChainEvent.finalized, altairEpoch: 0, mergeEpoch: 0},
+    {event: ChainEvent.finalized, altairEpoch: 2, bellatrixEpoch: Infinity},
+    // bellatrix fork at epoch 0
+    {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: 0},
 
     // Remote signer with altair
-    {event: ChainEvent.justified, altairEpoch: 0, mergeEpoch: Infinity, withRemoteSigner: true},
+    {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withRemoteSigner: true},
   ];
 
   before(async function () {
@@ -57,10 +57,10 @@ describe("Run single node single thread interop validators (no eth1) until check
     afterEachCallbacks.length = 0;
   });
 
-  for (const {event, altairEpoch, mergeEpoch, withRemoteSigner} of testCases) {
+  for (const {event, altairEpoch, bellatrixEpoch, withRemoteSigner} of testCases) {
     const testIdStr = [
       `altair-${altairEpoch}`,
-      `merge-${mergeEpoch}`,
+      `bellatrix-${bellatrixEpoch}`,
       `vc-${validatorClientCount}`,
       `vPc-${validatorsPerClient}`,
       withRemoteSigner ? "remote_signer" : "local_signer",
@@ -99,7 +99,7 @@ describe("Run single node single thread interop validators (no eth1) until check
       const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
       const bn = await getDevBeaconNode({
-        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, MERGE_FORK_EPOCH: mergeEpoch},
+        params: {...testParams, ALTAIR_FORK_EPOCH: altairEpoch, BELLATRIX_FORK_EPOCH: bellatrixEpoch},
         options: {
           api: {rest: {enabled: true} as RestApiOptions},
           sync: {isSingleNode: true},

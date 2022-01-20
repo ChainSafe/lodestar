@@ -1,7 +1,6 @@
 import {computeStartSlotAtEpoch, getBlockRootAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Epoch, ForkDigest, Root, phase0, ssz} from "@chainsafe/lodestar-types";
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../chain";
 import {GENESIS_EPOCH} from "../../../constants";
@@ -9,35 +8,33 @@ import {GENESIS_EPOCH} from "../../../constants";
 // TODO: Why this value? (From Lighthouse)
 const FUTURE_SLOT_TOLERANCE = 1;
 
-export enum IrrelevantPeerErrorCode {
+export enum IrrelevantPeerCode {
   INCOMPATIBLE_FORKS = "IRRELEVANT_PEER_INCOMPATIBLE_FORKS",
   DIFFERENT_CLOCKS = "IRRELEVANT_PEER_DIFFERENT_CLOCKS",
   GENESIS_NONZERO = "IRRELEVANT_PEER_GENESIS_NONZERO",
   DIFFERENT_FINALIZED = "IRRELEVANT_PEER_DIFFERENT_FINALIZED",
 }
 
-type IrrelevantPeerErrorType =
-  | {code: IrrelevantPeerErrorCode.INCOMPATIBLE_FORKS; ours: ForkDigest; theirs: ForkDigest}
-  | {code: IrrelevantPeerErrorCode.DIFFERENT_CLOCKS; slotDiff: number}
-  | {code: IrrelevantPeerErrorCode.GENESIS_NONZERO; root: string}
-  | {code: IrrelevantPeerErrorCode.DIFFERENT_FINALIZED; expectedRoot: string; remoteRoot: string};
-
-export class IrrelevantPeerError extends LodestarError<IrrelevantPeerErrorType> {}
+type IrrelevantPeerType =
+  | {code: IrrelevantPeerCode.INCOMPATIBLE_FORKS; ours: ForkDigest; theirs: ForkDigest}
+  | {code: IrrelevantPeerCode.DIFFERENT_CLOCKS; slotDiff: number}
+  | {code: IrrelevantPeerCode.GENESIS_NONZERO; root: Root}
+  | {code: IrrelevantPeerCode.DIFFERENT_FINALIZED; expectedRoot: Root; remoteRoot: Root};
 
 /**
  * Process a `Status` message to determine if a peer is relevant to us. If the peer is
  * irrelevant the reason is returned.
  */
-export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain): void {
+export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain): IrrelevantPeerType | null {
   const local = chain.getStatus();
 
   // The node is on a different network/fork
   if (!ssz.ForkDigest.equals(local.forkDigest, remote.forkDigest)) {
-    throw new IrrelevantPeerError({
-      code: IrrelevantPeerErrorCode.INCOMPATIBLE_FORKS,
+    return {
+      code: IrrelevantPeerCode.INCOMPATIBLE_FORKS,
       ours: local.forkDigest,
       theirs: remote.forkDigest,
-    });
+    };
   }
 
   // The remote's head is on a slot that is significantly ahead of what we consider the
@@ -45,15 +42,15 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
   // their or our system's clock is incorrect.
   const slotDiff = remote.headSlot - Math.max(chain.clock.currentSlot, 0);
   if (slotDiff > FUTURE_SLOT_TOLERANCE) {
-    throw new IrrelevantPeerError({code: IrrelevantPeerErrorCode.DIFFERENT_CLOCKS, slotDiff});
+    return {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff};
   }
 
   // TODO: Is this check necessary?
   if (remote.finalizedEpoch === GENESIS_EPOCH && !isZeroRoot(remote.finalizedRoot)) {
-    throw new IrrelevantPeerError({
-      code: IrrelevantPeerErrorCode.GENESIS_NONZERO,
-      root: toHexString(remote.finalizedRoot),
-    });
+    return {
+      code: IrrelevantPeerCode.GENESIS_NONZERO,
+      root: remote.finalizedRoot,
+    };
   }
 
   // The remote's finalized epoch is less than or equal to ours, but the block root is
@@ -73,15 +70,16 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
           getRootAtHistoricalEpoch(chain, remote.finalizedEpoch);
 
     if (expectedRoot !== null && !ssz.Root.equals(remoteRoot, expectedRoot)) {
-      throw new IrrelevantPeerError({
-        code: IrrelevantPeerErrorCode.DIFFERENT_FINALIZED,
-        expectedRoot: toHexString(expectedRoot), // forkChoice returns Tree BranchNode which the logger prints as {}
-        remoteRoot: toHexString(remoteRoot),
-      });
+      return {
+        code: IrrelevantPeerCode.DIFFERENT_FINALIZED,
+        expectedRoot: expectedRoot, // forkChoice returns Tree BranchNode which the logger prints as {}
+        remoteRoot: remoteRoot,
+      };
     }
   }
 
   // Note: Accept request status finalized checkpoint in the future, we do not know if it is a true finalized root
+  return null;
 }
 
 export function isZeroRoot(root: Root): boolean {
@@ -113,4 +111,17 @@ function getRootAtHistoricalEpoch(chain: IBeaconChain, epoch: Epoch): Root | nul
   // The epoch in the checkpoint is there to checkpoint the tail end of skip slots, even if there is no block.
   // TODO: accepted for now. Need to maintain either a list of finalized block roots,
   // or inefficiently loop from finalized slot backwards, until we find the block we need to check against.
+}
+
+export function renderIrrelevantPeerType(type: IrrelevantPeerType): string {
+  switch (type.code) {
+    case IrrelevantPeerCode.INCOMPATIBLE_FORKS:
+      return `INCOMPATIBLE_FORKS ours: ${toHexString(type.ours)} theirs: ${toHexString(type.theirs)}`;
+    case IrrelevantPeerCode.DIFFERENT_CLOCKS:
+      return `DIFFERENT_CLOCKS slotDiff: ${type.slotDiff}`;
+    case IrrelevantPeerCode.GENESIS_NONZERO:
+      return `GENESIS_NONZERO: ${toHexString(type.root)}`;
+    case IrrelevantPeerCode.DIFFERENT_FINALIZED:
+      return `DIFFERENT_FINALIZED root: ${toHexString(type.remoteRoot)} expected: ${toHexString(type.expectedRoot)}`;
+  }
 }

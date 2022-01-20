@@ -68,7 +68,7 @@ export class SyncCommitteeDutiesService {
    * https://github.com/ethereum/eth2.0-specs/pull/2400
    */
   async getDutiesAtSlot(slot: Slot): Promise<SyncDutyAndProofs[]> {
-    const period = computeSyncPeriodAtSlot(this.config, slot + 1); // See note above for the +1 offset
+    const period = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
     const duties: SyncDutyAndProofs[] = [];
 
     const dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
@@ -134,7 +134,7 @@ export class SyncCommitteeDutiesService {
       });
     }
 
-    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
     const syncCommitteeSubscriptions: routes.validator.SyncCommitteeSubscription[] = [];
 
     // For this and the next period, produce any beacon committee subscriptions.
@@ -185,22 +185,17 @@ export class SyncCommitteeDutiesService {
     const syncDuties = await this.api.validator.getSyncCommitteeDuties(epoch, indexArr).catch((e: Error) => {
       throw extendError(e, "Failed to obtain SyncDuties");
     });
-    const dependentRoot = syncDuties.dependentRoot;
-    const period = computeSyncPeriodAtEpoch(this.config, epoch);
 
+    const dependentRoot = syncDuties.dependentRoot;
+    const dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
     let count = 0;
 
     for (const duty of syncDuties.data) {
-      if (!this.indicesService.hasValidatorIndex(duty.validatorIndex)) {
+      const {validatorIndex} = duty;
+      if (!this.indicesService.hasValidatorIndex(validatorIndex)) {
         continue;
       }
       count++;
-
-      let dutiesByIndex = this.dutiesByIndexByPeriod.get(period);
-      if (!dutiesByIndex) {
-        dutiesByIndex = new Map<ValidatorIndex, DutyAtPeriod>();
-        this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
-      }
 
       // TODO: Enable dependentRoot functionality
       // Meanwhile just overwrite them, since the latest duty will be older and less likely to re-org
@@ -211,10 +206,20 @@ export class SyncCommitteeDutiesService {
       // - The dependent root has changed, signalling a re-org.
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
-      dutiesByIndex.set(duty.validatorIndex, {dependentRoot, duty});
+      dutiesByIndex.set(validatorIndex, {dependentRoot, duty});
     }
 
-    this.logger.debug("Downloaded SyncDuties", {epoch, dependentRoot: toHexString(dependentRoot), count});
+    // these could be redundant duties due to the state of next period query reorged
+    // see https://github.com/ChainSafe/lodestar/issues/3572
+    // so we always overwrite duties
+    const period = computeSyncPeriodAtEpoch(epoch);
+    this.dutiesByIndexByPeriod.set(period, dutiesByIndex);
+
+    this.logger.debug("Downloaded SyncDuties", {
+      epoch,
+      dependentRoot: toHexString(dependentRoot),
+      count,
+    });
   }
 
   private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
@@ -238,7 +243,7 @@ export class SyncCommitteeDutiesService {
 
   /** Run at least once per period to prune duties map */
   private pruneOldDuties(currentEpoch: Epoch): void {
-    const currentPeriod = computeSyncPeriodAtEpoch(this.config, currentEpoch);
+    const currentPeriod = computeSyncPeriodAtEpoch(currentEpoch);
     for (const period of this.dutiesByIndexByPeriod.keys()) {
       if (period + HISTORICAL_DUTIES_PERIODS < currentPeriod) {
         this.dutiesByIndexByPeriod.delete(period);

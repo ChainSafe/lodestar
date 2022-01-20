@@ -151,7 +151,7 @@ export type OnBlockPrecachedData = {
   /**
    * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
    * ```ts
-   * powBlock = getPowBlock((block as merge.BeaconBlock).body.executionPayload.parentHash)
+   * powBlock = getPowBlock((block as bellatrix.BeaconBlock).body.executionPayload.parentHash)
    * ```
    */
   powBlock?: PowBlockHex | null;
@@ -165,7 +165,7 @@ export type OnBlockPrecachedData = {
   /**
    * Optimistic sync fields
    */
-  isMergeBlock?: boolean;
+  isMergeTransitionBlock?: boolean;
   executionStatus?: ExecutionStatus;
 };
 

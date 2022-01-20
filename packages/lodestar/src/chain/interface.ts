@@ -1,4 +1,4 @@
-import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -21,6 +21,7 @@ import {AttestationPool, OpPool, SyncCommitteeMessagePool, SyncContributionAndPr
 import {LightClientServer} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
+import {ReprocessController} from "./reprocess";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -40,6 +41,9 @@ export interface IBeaconChain {
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
 
+  /** The initial slot that the chain is started with */
+  readonly anchorStateLatestBlockSlot: Slot;
+
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
   clock: IBeaconClock;
@@ -48,6 +52,7 @@ export interface IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
+  readonly reprocessController: ReprocessController;
 
   // Ops pool
   readonly attestationPool: AttestationPool;
@@ -88,6 +93,8 @@ export interface IBeaconChain {
   processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
 
   getStatus(): phase0.Status;
+
+  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean>;
 
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;

@@ -35,6 +35,7 @@ import {Eth1ForBlockProductionDisabled} from "../../../../src/eth1";
 import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 import {testLogger} from "../../logger";
+import {ReprocessController} from "../../../../src/chain/reprocess";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -52,6 +53,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
+  readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -63,6 +65,7 @@ export class MockBeaconChain implements IBeaconChain {
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
   lightClientServer: LightClientServer;
+  reprocessController: ReprocessController;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -89,6 +92,7 @@ export class MockBeaconChain implements IBeaconChain {
     this.chainId = chainId || 0;
     this.networkId = networkId || BigInt(0);
     this.state = state;
+    this.anchorStateLatestBlockSlot = state.latestBlockHeader.slot;
     this.config = config;
     this.emitter = new ChainEventEmitter();
     this.abortController = new AbortController();
@@ -109,11 +113,13 @@ export class MockBeaconChain implements IBeaconChain {
       checkpointStateCache: this.checkpointStateCache,
       db,
       metrics: null,
+      emitter: this.emitter,
     });
     this.lightClientServer = new LightClientServer(
       {config: this.config, emitter: this.emitter, logger, db: db},
       {genesisTime: this.genesisTime, genesisValidatorsRoot: this.genesisValidatorsRoot as Uint8Array}
     );
+    this.reprocessController = new ReprocessController(null);
   }
 
   getHeadState(): CachedBeaconState<allForks.BeaconState> {
@@ -161,6 +167,10 @@ export class MockBeaconChain implements IBeaconChain {
       headRoot: Buffer.alloc(32),
       headSlot: 0,
     };
+  }
+
+  async waitForBlockOfAttestation(): Promise<boolean> {
+    return false;
   }
 
   persistInvalidSszObject(): string | null {

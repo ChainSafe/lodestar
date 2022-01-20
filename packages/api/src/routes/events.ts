@@ -6,7 +6,7 @@ import {jsonOpts, RouteDef, TypeJson} from "../utils";
 
 export type LightclientHeaderUpdate = {
   syncAggregate: altair.SyncAggregate;
-  header: phase0.BeaconBlockHeader;
+  attestedHeader: phase0.BeaconBlockHeader;
 };
 
 export enum EventType {
@@ -154,11 +154,11 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
     [EventType.lightclientHeaderUpdate]: new ContainerType<EventData[EventType.lightclientHeaderUpdate]>({
       fields: {
         syncAggregate: ssz.altair.SyncAggregate,
-        header: ssz.phase0.BeaconBlockHeader,
+        attestedHeader: ssz.phase0.BeaconBlockHeader,
       },
       casingMap: {
         syncAggregate: "sync_aggregate",
-        header: "header",
+        attestedHeader: "attested_header",
       },
     }),
   };

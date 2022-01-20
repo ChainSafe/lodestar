@@ -26,9 +26,9 @@ export const ChainConfig = new ContainerType<IChainConfig>({
     // Altair
     ALTAIR_FORK_VERSION: ssz.Version,
     ALTAIR_FORK_EPOCH: ssz.Number64,
-    // Merge
-    MERGE_FORK_VERSION: ssz.Version,
-    MERGE_FORK_EPOCH: ssz.Number64,
+    // Bellatrix
+    BELLATRIX_FORK_VERSION: ssz.Version,
+    BELLATRIX_FORK_EPOCH: ssz.Number64,
     // Sharding
     SHARDING_FORK_VERSION: ssz.Version,
     SHARDING_FORK_EPOCH: ssz.Number64,

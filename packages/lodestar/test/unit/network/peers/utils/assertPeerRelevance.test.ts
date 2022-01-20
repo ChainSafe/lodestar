@@ -1,13 +1,8 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {MockBeaconChain} from "../../../../utils/mocks/chain/chain";
-import {
-  assertPeerRelevance,
-  IrrelevantPeerError,
-  IrrelevantPeerErrorCode,
-} from "../../../../../src/network/peers/utils/assertPeerRelevance";
+import {assertPeerRelevance, IrrelevantPeerCode} from "../../../../../src/network/peers/utils/assertPeerRelevance";
 import {IBeaconClock} from "../../../../../src/chain/clock";
-import {expectThrowsLodestarError} from "../../../../utils/errors";
-import {toHexString} from "@chainsafe/ssz";
+import {expect} from "chai";
 
 describe("network / peers / utils / assertPeerRelevance", () => {
   const correctForkDigest = Buffer.alloc(4, 0);
@@ -15,7 +10,12 @@ describe("network / peers / utils / assertPeerRelevance", () => {
   const ZERO_HASH = Buffer.alloc(32, 0);
   const differedRoot = Buffer.alloc(32, 1);
 
-  const testCases: {id: string; remote: phase0.Status; currentSlot?: number; error?: IrrelevantPeerError}[] = [
+  const testCases: {
+    id: string;
+    remote: phase0.Status;
+    currentSlot?: number;
+    irrelevantType: ReturnType<typeof assertPeerRelevance>;
+  }[] = [
     {
       id: "Reject incompatible forks",
       remote: {
@@ -25,11 +25,11 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headRoot: ZERO_HASH,
         headSlot: 0,
       },
-      error: new IrrelevantPeerError({
-        code: IrrelevantPeerErrorCode.INCOMPATIBLE_FORKS,
+      irrelevantType: {
+        code: IrrelevantPeerCode.INCOMPATIBLE_FORKS,
         ours: correctForkDigest,
         theirs: differentForkDigest,
-      }),
+      },
     },
     {
       id: "Head is too far away from our clock",
@@ -40,7 +40,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headRoot: ZERO_HASH,
         headSlot: 100, // Too far from current slot (= 0)
       },
-      error: new IrrelevantPeerError({code: IrrelevantPeerErrorCode.DIFFERENT_CLOCKS, slotDiff: 100}),
+      irrelevantType: {code: IrrelevantPeerCode.DIFFERENT_CLOCKS, slotDiff: 100},
     },
     {
       id: "Reject non zeroed genesis",
@@ -51,7 +51,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headRoot: ZERO_HASH,
         headSlot: 0,
       },
-      error: new IrrelevantPeerError({code: IrrelevantPeerErrorCode.GENESIS_NONZERO, root: toHexString(differedRoot)}),
+      irrelevantType: {code: IrrelevantPeerCode.GENESIS_NONZERO, root: differedRoot},
     },
     {
       id: "Accept a finalized epoch equal to ours, with same root",
@@ -62,6 +62,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headRoot: ZERO_HASH,
         headSlot: 0,
       },
+      irrelevantType: null,
     },
     {
       id: "Accept finalized epoch greater than ours",
@@ -72,6 +73,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         headRoot: ZERO_HASH,
         headSlot: 0,
       },
+      irrelevantType: null,
     },
     {
       id: "Accept during pre-genesis clock",
@@ -84,10 +86,11 @@ describe("network / peers / utils / assertPeerRelevance", () => {
       },
       // clock slot pre-genesis (< 0) by a good margin
       currentSlot: -50,
+      irrelevantType: null,
     },
   ];
 
-  for (const {id, remote, currentSlot, error} of testCases) {
+  for (const {id, remote, currentSlot, irrelevantType} of testCases) {
     it(id, async () => {
       // Partial instance with only the methods needed for the test
       const chain = ({
@@ -103,11 +106,7 @@ describe("network / peers / utils / assertPeerRelevance", () => {
         } as Partial<IBeaconClock>,
       } as Partial<MockBeaconChain>) as MockBeaconChain;
 
-      if (error) {
-        expectThrowsLodestarError(() => assertPeerRelevance(remote, chain), error);
-      } else {
-        assertPeerRelevance(remote, chain);
-      }
+      expect(assertPeerRelevance(remote, chain)).to.deep.equal(irrelevantType);
     });
   }
 });

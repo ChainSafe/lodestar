@@ -1,4 +1,4 @@
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {isTreeBacked, readonlyValues, toHexString, TreeBacked} from "@chainsafe/ssz";
 import {SAFE_SLOTS_TO_UPDATE_JUSTIFIED, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {Slot, ValidatorIndex, phase0, allForks, ssz, RootHex, Epoch, Root} from "@chainsafe/lodestar-types";
 import {
@@ -6,7 +6,7 @@ import {
   computeStartSlotAtEpoch,
   computeEpochAtSlot,
   ZERO_HASH,
-  merge,
+  bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -17,7 +17,7 @@ import {ProtoArray} from "../protoArray/protoArray";
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
 import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex, equalCheckpointWithHex} from "./store";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
 
@@ -64,7 +64,10 @@ export class ForkChoice implements IForkChoice {
   private synced = false;
   /** Cached head */
   private head: IProtoBlock;
-
+  /**
+   * Only cache attestation data root hex if it's tree backed since it's available.
+   **/
+  private validatedAttestationDatas = new Set<string>();
   /**
    * Instantiates a Fork Choice from some existing components
    *
@@ -296,10 +299,12 @@ export class ForkChoice implements IForkChoice {
     }
 
     if (
-      preCachedData?.isMergeBlock ||
-      (merge.isMergeStateType(state) && merge.isMergeBlockBodyType(block.body) && merge.isMergeBlock(state, block.body))
+      preCachedData?.isMergeTransitionBlock ||
+      (bellatrix.isBellatrixStateType(state) &&
+        bellatrix.isBellatrixBlockBodyType(block.body) &&
+        bellatrix.isMergeTransitionBlock(state, block.body))
     )
-      assertValidTerminalPowBlock(this.config, (block as unknown) as merge.BeaconBlock, preCachedData);
+      assertValidTerminalPowBlock(this.config, (block as unknown) as bellatrix.BeaconBlock, preCachedData);
 
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
@@ -327,19 +332,8 @@ export class ForkChoice implements IForkChoice {
     // Update finalized checkpoint.
     if (finalizedCheckpoint.epoch > this.fcStore.finalizedCheckpoint.epoch) {
       this.fcStore.finalizedCheckpoint = toCheckpointWithHex(finalizedCheckpoint);
+      shouldUpdateJustified = true;
       this.synced = false;
-
-      if (
-        // If checkpoints are not equal
-        (!equalCheckpointWithHex(this.fcStore.justifiedCheckpoint, currentJustifiedCheckpoint) &&
-          stateJustifiedEpoch > this.fcStore.justifiedCheckpoint.epoch) ||
-        this.getAncestor(
-          this.fcStore.justifiedCheckpoint.rootHex,
-          computeStartSlotAtEpoch(this.fcStore.finalizedCheckpoint.epoch)
-        ) !== this.fcStore.finalizedCheckpoint.rootHex
-      ) {
-        shouldUpdateJustified = true;
-      }
     }
 
     // This needs to be performed after finalized checkpoint has been updated
@@ -373,9 +367,9 @@ export class ForkChoice implements IForkChoice {
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
 
-      ...(merge.isMergeBlockBodyType(block.body) &&
-      merge.isMergeStateType(state) &&
-      merge.isExecutionEnabled(state, block.body)
+      ...(bellatrix.isBellatrixBlockBodyType(block.body) &&
+      bellatrix.isBellatrixStateType(state) &&
+      bellatrix.isExecutionEnabled(state, block.body)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),
@@ -419,16 +413,16 @@ export class ForkChoice implements IForkChoice {
     const attestationData = attestation.data;
     const {slot, beaconBlockRoot} = attestationData;
     const blockRootHex = toHexString(beaconBlockRoot);
-    const epoch = attestationData.target.epoch;
+    const targetEpoch = attestationData.target.epoch;
     if (ssz.Root.equals(beaconBlockRoot, ZERO_HASH)) {
       return;
     }
 
-    this.validateOnAttestation(attestation);
+    this.validateOnAttestation(attestation, slot, blockRootHex, targetEpoch);
 
     if (slot < this.fcStore.currentSlot) {
       for (const validatorIndex of readonlyValues(attestation.attestingIndices)) {
-        this.addLatestMessage(validatorIndex, epoch, blockRootHex);
+        this.addLatestMessage(validatorIndex, targetEpoch, blockRootHex);
       }
     } else {
       // The spec declares:
@@ -441,7 +435,7 @@ export class ForkChoice implements IForkChoice {
         slot: slot,
         attestingIndices: Array.from(readonlyValues(attestation.attestingIndices)),
         blockRoot: blockRootHex,
-        targetEpoch: epoch,
+        targetEpoch,
       });
     }
   }
@@ -469,6 +463,7 @@ export class ForkChoice implements IForkChoice {
 
     // Process any attestations that might now be eligible.
     this.processAttestationQueue();
+    this.validatedAttestationDatas = new Set();
   }
 
   getTime(): Slot {
@@ -734,7 +729,12 @@ export class ForkChoice implements IForkChoice {
    *
    * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#validate_on_attestation
    */
-  private validateOnAttestation(indexedAttestation: phase0.IndexedAttestation): void {
+  private validateOnAttestation(
+    indexedAttestation: phase0.IndexedAttestation,
+    slot: Slot,
+    blockRootHex: string,
+    targetEpoch: Epoch
+  ): void {
     // There is no point in processing an attestation with an empty bitfield. Reject
     // it immediately.
     //
@@ -749,12 +749,28 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
     const attestationData = indexedAttestation.data;
-    const {target, slot, beaconBlockRoot} = attestationData;
-    const beaconBlockRootHex = toHexString(beaconBlockRoot);
-    const {epoch: targetEpoch, root: targetRoot} = target;
-    const targetRootHex = toHexString(targetRoot);
+    // Only cache attestation data root hex if it's tree backed since it's available.
+    if (
+      isTreeBacked(attestationData) &&
+      this.validatedAttestationDatas.has(
+        toHexString(((attestationData as unknown) as TreeBacked<phase0.AttestationData>).tree.root)
+      )
+    ) {
+      return;
+    }
+
+    this.validateAttestationData(indexedAttestation.data, slot, blockRootHex, targetEpoch);
+  }
+
+  private validateAttestationData(
+    attestationData: phase0.AttestationData,
+    slot: Slot,
+    beaconBlockRootHex: string,
+    targetEpoch: Epoch
+  ): void {
+    const epochNow = computeEpochAtSlot(this.fcStore.currentSlot);
+    const targetRootHex = toHexString(attestationData.target.root);
 
     // Attestation must be from the current of previous epoch.
     if (targetEpoch > epochNow) {
@@ -788,17 +804,6 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    if (this.fcStore.currentSlot < slot + 1) {
-      throw new ForkChoiceError({
-        code: ForkChoiceErrorCode.INVALID_ATTESTATION,
-        err: {
-          code: InvalidAttestationCode.FUTURE_SLOT,
-          attestationSlot: slot,
-          latestPermissibleSlot: this.fcStore.currentSlot - 1,
-        },
-      });
-    }
-
     // Attestation target must be for a known block.
     //
     // We do not delay the block for later processing to reduce complexity and DoS attack
@@ -808,7 +813,7 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_TARGET_ROOT,
-          root: toHexString(targetRoot),
+          root: targetRootHex,
         },
       });
     }
@@ -827,7 +832,7 @@ export class ForkChoice implements IForkChoice {
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.UNKNOWN_HEAD_BLOCK,
-          beaconBlockRoot: toHexString(beaconBlockRoot),
+          beaconBlockRoot: beaconBlockRootHex,
         },
       });
     }
@@ -836,14 +841,14 @@ export class ForkChoice implements IForkChoice {
     // then all slots between the block and attestation must be skipped. Therefore if the block
     // is from a prior epoch to the attestation, then the target root must be equal to the root
     // of the block that is being attested to.
-    const expectedTargetHex = target.epoch > computeEpochAtSlot(block.slot) ? beaconBlockRootHex : block.targetRoot;
+    const expectedTargetHex = targetEpoch > computeEpochAtSlot(block.slot) ? beaconBlockRootHex : block.targetRoot;
 
     if (expectedTargetHex !== targetRootHex) {
       throw new ForkChoiceError({
         code: ForkChoiceErrorCode.INVALID_ATTESTATION,
         err: {
           code: InvalidAttestationCode.INVALID_TARGET,
-          attestation: toHexString(targetRoot),
+          attestation: targetRootHex,
           local: expectedTargetHex,
         },
       });
@@ -860,6 +865,13 @@ export class ForkChoice implements IForkChoice {
           attestation: slot,
         },
       });
+    }
+
+    // Only cache attestation data root hex if it's tree backed since it's available.
+    if (isTreeBacked(attestationData)) {
+      this.validatedAttestationDatas.add(
+        toHexString(((attestationData as unknown) as TreeBacked<phase0.AttestationData>).tree.root)
+      );
     }
   }
 
@@ -941,7 +953,7 @@ export class ForkChoice implements IForkChoice {
 
 function assertValidTerminalPowBlock(
   config: IChainConfig,
-  block: merge.BeaconBlock,
+  block: bellatrix.BeaconBlock,
   preCachedData?: OnBlockPrecachedData
 ): void {
   if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {

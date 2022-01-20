@@ -45,7 +45,7 @@ describe("lightclient", () => {
     },
     getHeadUpdate: {
       args: [],
-      res: {data: {syncAggregate, header}},
+      res: {data: {syncAggregate, attestedHeader: header}},
     },
     getSnapshot: {
       args: [toHexString(root)],

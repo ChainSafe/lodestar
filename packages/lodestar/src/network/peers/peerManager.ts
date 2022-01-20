@@ -9,7 +9,7 @@ import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constan
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId} from "../util";
+import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
 import {ISubnetsService} from "../subnets";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
@@ -19,7 +19,7 @@ import {
   hasSomeConnectedPeer,
   assertPeerRelevance,
   prioritizePeers,
-  IrrelevantPeerError,
+  renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
 
@@ -115,8 +115,6 @@ export class PeerManager {
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
-
-  private seenPeers = new Set<string>();
 
   constructor(modules: PeerManagerModules, opts: PeerManagerOpts) {
     this.libp2p = modules.libp2p;
@@ -282,15 +280,24 @@ export class PeerManager {
     const peerData = this.connectedPeers.get(peer.toB58String());
     if (peerData) peerData.lastStatusUnixTsMs = Date.now();
 
+    let isIrrelevant: boolean;
     try {
-      assertPeerRelevance(status, this.chain);
-    } catch (e) {
-      if (e instanceof IrrelevantPeerError) {
-        this.logger.debug("Irrelevant peer", {peer: prettyPrintPeerId(peer), reason: e.getMetadata()});
+      const irrelevantReasonType = assertPeerRelevance(status, this.chain);
+      if (irrelevantReasonType === null) {
+        isIrrelevant = false;
       } else {
-        this.logger.error("Unexpected error in assertPeerRelevance", {peer: prettyPrintPeerId(peer)}, e as Error);
+        isIrrelevant = true;
+        this.logger.debug("Irrelevant peer", {
+          peer: prettyPrintPeerId(peer),
+          reason: renderIrrelevantPeerType(irrelevantReasonType),
+        });
       }
+    } catch (e) {
+      this.logger.error("Irrelevant peer - unexpected error", {peer: prettyPrintPeerId(peer)}, e as Error);
+      isIrrelevant = true;
+    }
 
+    if (isIrrelevant) {
       if (peerData) peerData.relevantStatus = RelevantPeerStatus.irrelevant;
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.IRRELEVANT_NETWORK);
       return;
@@ -477,7 +484,6 @@ export class PeerManager {
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
     // NOTE: The peerConnect event is not emitted here here, but after asserting peer relevance
     this.metrics?.peerConnectedEvent.inc({direction});
-    this.seenPeers.add(peer.toB58String());
   };
 
   /**
@@ -519,17 +525,24 @@ export class PeerManager {
   private runPeerCountMetrics(metrics: IMetrics): void {
     let total = 0;
     const peersByDirection = new Map<string, number>();
+    const peersByClient = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
+        const client = getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+        peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
         total++;
       }
     }
 
     for (const [direction, peers] of peersByDirection.entries()) {
       metrics.peersByDirection.set({direction}, peers);
+    }
+
+    for (const [client, peers] of peersByClient.entries()) {
+      metrics.peersByClient.set({client}, peers);
     }
 
     let syncPeers = 0;
@@ -540,7 +553,6 @@ export class PeerManager {
     }
 
     metrics.peers.set(total);
-    metrics.peersTotalUniqueConnected.set(this.seenPeers.size);
     metrics.peersSync.set(syncPeers);
   }
 }

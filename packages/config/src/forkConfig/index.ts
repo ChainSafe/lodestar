@@ -8,11 +8,15 @@ export * from "./types";
 export function createIForkConfig(config: IChainConfig): IForkConfig {
   const phase0 = {name: ForkName.phase0, epoch: GENESIS_EPOCH, version: config.GENESIS_FORK_VERSION};
   const altair = {name: ForkName.altair, epoch: config.ALTAIR_FORK_EPOCH, version: config.ALTAIR_FORK_VERSION};
-  const merge = {name: ForkName.merge, epoch: config.MERGE_FORK_EPOCH, version: config.MERGE_FORK_VERSION};
+  const bellatrix = {
+    name: ForkName.bellatrix,
+    epoch: config.BELLATRIX_FORK_EPOCH,
+    version: config.BELLATRIX_FORK_VERSION,
+  };
 
   /** Forks in order order of occurence, `phase0` first */
   // Note: Downstream code relies on proper ordering.
-  const forks = {phase0, altair, merge};
+  const forks = {phase0, altair, bellatrix};
 
   // Prevents allocating an array on every getForkInfo() call
   const forksDescendingEpochOrder = Object.values(forks).reverse();

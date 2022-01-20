@@ -10,7 +10,7 @@ import retry from "async-retry";
 
 export type TestToDownload = "general" | "mainnet" | "minimal";
 export const defaultTestsToDownload: TestToDownload[] = ["general", "mainnet", "minimal"];
-export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/eth2.0-spec-tests";
+export const defaultSpecTestsRepoUrl = "https://github.com/ethereum/consensus-spec-tests";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 const logEmpty = (): void => {};

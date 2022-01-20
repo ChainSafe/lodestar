@@ -44,6 +44,11 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by direction",
       labelNames: ["direction"],
     }),
+    peersByClient: register.gauge<"client">({
+      name: "lodestar_peers_by_client_count",
+      help: "number of peers, labeled by client",
+      labelNames: ["client"],
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
@@ -67,10 +72,6 @@ export function createLodestarMetrics(
       name: "lodestar_peer_goodbye_sent_total",
       help: "Total number of goodbye sent, labeled by reason",
       labelNames: ["reason"],
-    }),
-    peersTotalUniqueConnected: register.gauge({
-      name: "lodestar_peers_total_unique_connected",
-      help: "Total number of unique peers that have had a connection with",
     }),
     peersRequestedToConnect: register.gauge({
       name: "lodestar_peers_requested_total_to_connect",
@@ -160,6 +161,17 @@ export function createLodestarMetrics(
       }),
     },
 
+    gossipPeer: {
+      scoreByThreshold: register.gauge<"threshold">({
+        name: "lodestar_gossip_peer_score_by_threshold_count",
+        help: "Gossip peer score by threashold",
+        labelNames: ["threshold"],
+      }),
+      score: register.avgMinMax({
+        name: "lodestar_gossip_score_avg_min_max",
+        help: "Avg min max of all gossip peer scores",
+      }),
+    },
     gossipMesh: {
       peersByType: register.gauge<"type" | "fork">({
         name: "lodestar_gossip_mesh_peers_by_type_count",
@@ -412,6 +424,30 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_block_elappsed_time_till_processed",
         help: "Time elappsed between block slot time and the time block processed",
         buckets: [0.1, 1, 10],
+      }),
+    },
+
+    backfillSync: {
+      backfilledTillSlot: register.gauge({
+        name: "lodestar_backfill_till_slot",
+        help: "Current lowest backfilled slot",
+      }),
+      prevFinOrWsSlot: register.gauge({
+        name: "lodestar_backfill_prev_fin_or_ws_slot",
+        help: "Slot of previous finalized or wsCheckpoint block to be validated",
+      }),
+      totalBlocks: register.gauge<"method">({
+        name: "lodestar_backfill_sync_blocks_total",
+        help: "Total amount of backfilled blocks",
+        labelNames: ["method"],
+      }),
+      errors: register.gauge({
+        name: "lodestar_backfill_sync_errors_total",
+        help: "Total number of errors while backfilling",
+      }),
+      status: register.gauge({
+        name: "lodestar_backfill_sync_status",
+        help: "Current backfill syncing status: [Aborted, Pending, Syncing, Completed]",
       }),
     },
 
@@ -672,6 +708,31 @@ export function createLodestarMetrics(
       waste: register.counter({
         name: "lodestar_precompute_next_epoch_transition_waste_total",
         help: "Total number of precomputing next epoch transition wasted",
+      }),
+    },
+
+    // reprocess attestations
+    reprocessAttestations: {
+      total: register.gauge({
+        name: "lodestar_reprocess_attestations_total",
+        help: "Total number of attestations waiting to reprocess",
+      }),
+      resolve: register.gauge({
+        name: "lodestar_reprocess_attestations_resolve_total",
+        help: "Total number of attestations are reprocessed",
+      }),
+      waitTimeBeforeResolve: register.gauge({
+        name: "lodestar_reprocess_attestations_wait_time_resolve_seconds",
+        help: "Time to wait for unknown block in seconds",
+      }),
+      reject: register.gauge<"reason">({
+        name: "lodestar_reprocess_attestations_reject_total",
+        help: "Total number of attestations are rejected to reprocess",
+        labelNames: ["reason"],
+      }),
+      waitTimeBeforeReject: register.gauge<"reason">({
+        name: "lodestar_reprocess_attestations_wait_time_reject_seconds",
+        help: "Time to wait for unknown block before being rejected",
       }),
     },
   };

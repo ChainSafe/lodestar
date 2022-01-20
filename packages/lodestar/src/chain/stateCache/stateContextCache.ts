@@ -102,7 +102,7 @@ export class StateContextCache {
   /**
    * Prune per finalized epoch.
    */
-  async deleteAllBeforeEpoch(finalizedEpoch: Epoch): Promise<void> {
+  deleteAllBeforeEpoch(finalizedEpoch: Epoch): void {
     for (const epoch of this.epochIndex.keys()) {
       if (epoch < finalizedEpoch) {
         this.deleteAllEpochItems(epoch);

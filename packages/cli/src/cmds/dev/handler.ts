@@ -13,8 +13,8 @@ import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {onGracefulShutdown} from "../../util/process";
-import {createEnr, createPeerId} from "../../config";
-import {IGlobalArgs} from "../../options";
+import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config";
+import {IGlobalArgs, parseEnrArgs} from "../../options";
 import {IDevArgs} from "./options";
 import {initializeOptionsAndConfig} from "../init/handler";
 import {mkdir, initBLS, getCliLogger} from "../../util";
@@ -34,6 +34,8 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   const peerId = await createPeerId();
   const enr = createEnr(peerId);
   beaconNodeOptions.set({network: {discv5: {enr}}});
+  const enrArgs = parseEnrArgs(args);
+  overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());
 
   // Custom paths different than regular beacon, validator paths
   // network="dev" will store all data in separate dir than other networks

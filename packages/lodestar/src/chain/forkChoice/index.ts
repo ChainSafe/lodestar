@@ -6,7 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {getEffectiveBalances, CachedBeaconState, merge} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEffectiveBalances, CachedBeaconState, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
@@ -60,7 +60,7 @@ export function initializeForkChoice(
       finalizedEpoch: finalizedCheckpoint.epoch,
       finalizedRoot: toHexString(finalizedCheckpoint.root),
 
-      ...(merge.isMergeStateType(state) && merge.isMergeComplete(state)
+      ...(bellatrix.isBellatrixStateType(state) && bellatrix.isMergeTransitionComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
             executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,

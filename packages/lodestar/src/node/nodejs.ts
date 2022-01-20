@@ -8,13 +8,14 @@ import {Registry} from "prom-client";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
+import {BackfillSync} from "../sync/backfill";
 import {BeaconChain, IBeaconChain, initBeaconMetrics} from "../chain";
 import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
@@ -34,6 +35,7 @@ export interface IBeaconNodeModules {
   chain: IBeaconChain;
   api: Api;
   sync: IBeaconSync;
+  backfillSync: BackfillSync;
   metricsServer?: HttpMetricsServer;
   restApi?: RestApi;
   controller?: AbortController;
@@ -46,6 +48,7 @@ export interface IBeaconNodeInitModules {
   logger: ILogger;
   libp2p: LibP2p;
   anchorState: TreeBacked<allForks.BeaconState>;
+  wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 }
 
@@ -70,6 +73,7 @@ export class BeaconNode {
   api: Api;
   restApi?: RestApi;
   sync: IBeaconSync;
+  backfillSync: BackfillSync;
 
   status: BeaconNodeStatus;
   private controller?: AbortController;
@@ -85,6 +89,7 @@ export class BeaconNode {
     api,
     restApi,
     sync,
+    backfillSync,
     controller,
   }: IBeaconNodeModules) {
     this.opts = opts;
@@ -97,6 +102,7 @@ export class BeaconNode {
     this.restApi = restApi;
     this.network = network;
     this.sync = sync;
+    this.backfillSync = backfillSync;
     this.controller = controller;
 
     this.status = BeaconNodeStatus.started;
@@ -113,6 +119,7 @@ export class BeaconNode {
     logger,
     libp2p,
     anchorState,
+    wsCheckpoint,
     metricsRegistries = [],
   }: IBeaconNodeInitModules): Promise<T> {
     const controller = new AbortController();
@@ -158,6 +165,18 @@ export class BeaconNode {
       chain,
       metrics,
       network,
+      wsCheckpoint,
+      logger: logger.child(opts.logger.sync),
+    });
+
+    const backfillSync = await BackfillSync.init({
+      config,
+      db,
+      chain,
+      metrics,
+      network,
+      wsCheckpoint,
+      anchorState,
       logger: logger.child(opts.logger.sync),
     });
 
@@ -203,6 +222,7 @@ export class BeaconNode {
       api,
       restApi,
       sync,
+      backfillSync,
       controller,
     }) as T;
   }
@@ -214,6 +234,7 @@ export class BeaconNode {
     if (this.status === BeaconNodeStatus.started) {
       this.status = BeaconNodeStatus.closing;
       this.sync.close();
+      this.backfillSync?.close();
       await this.network.stop();
       if (this.metricsServer) await this.metricsServer.stop();
       if (this.restApi) await this.restApi.close();

@@ -16,16 +16,16 @@ const forksToIgnore = new Set<string>([]);
 // │   │   └── phase0
 // │   ├── mainnet
 // │   │   ├── altair
-// │   │   ├── merge
+// │   │   ├── bellatrix
 // │   │   └── phase0
 // │   └── minimal
 // │       ├── altair
-// │       ├── merge
+// │       ├── bellatrix
 // │       └── phase0
 //
 // Each fork has the same structure but adding extra tests for added functionality
 //
-// | phase0           | altair           | merge            |
+// | phase0           | altair           | bellatrix            |
 // | ---------------- | ---------------- | ---------------- |
 // | epoch_processing | epoch_processing | epoch_processing |
 // | finality         | finality         | finality
@@ -45,7 +45,7 @@ const forksToIgnore = new Set<string>([]);
 // Tests are then organized by fork and follow the same naming structure as the spec tests.
 
 const knownPresets = ["mainnet", "minimal"];
-const knownForks = ["altair", "merge", "phase0"];
+const knownForks = ["altair", "bellatrix", "phase0"];
 const lodestarTests = path.join(__dirname, "../spec");
 
 const missingTests = new Set<string>();
@@ -56,7 +56,11 @@ expect(specTestsTestLs).to.deep.equal(["general", ...knownPresets], "New dir in 
 
 for (const preset of knownPresets) {
   const presetDirPath = path.join(specTestsTestPath, preset);
-  const presetDirLs = fs.readdirSync(presetDirPath);
+  const presetDirLs = fs
+    .readdirSync(presetDirPath, {withFileTypes: true})
+    // Ignore the .DS_Store and ._.DS_Store artificat files by filtering directories
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
   expect(presetDirLs).to.deep.equal(knownForks, `New fork in spec-tests/tests/${preset}`);
 
   for (const fork of knownForks) {
@@ -85,7 +89,12 @@ function ensureDirTestCoverage(rootTestDir: string, testRelDir: string): void {
   // ├── sanity
   // ├── shuffling
   // └── ssz_static
-  for (const testGroup of fs.readdirSync(path.join(rootTestDir, testRelDir))) {
+  const testGroups = fs
+    .readdirSync(path.join(rootTestDir, testRelDir), {withFileTypes: true})
+    // Ignore the .DS_Store and ._.DS_Store artificat files by filtering directories
+    .filter((dirent) => dirent.isDirectory())
+    .map((dirent) => dirent.name);
+  for (const testGroup of testGroups) {
     const testDir = path.join(lodestarTests, testRelDir, testGroup);
     const testFile = testDir + ".test.ts";
     if (existsDir(testDir)) {

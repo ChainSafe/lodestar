@@ -50,7 +50,7 @@ describe("sync / range / batch", () => {
     expect(blocksToProcess).to.equal(blocksDownloaded, "Blocks to process should be the same downloaded");
 
     // processingError: Processing -> AwaitingDownload
-    batch.processingError();
+    batch.processingError(new Error());
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on processingError");
 
     // retry download + processing: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing
@@ -62,7 +62,7 @@ describe("sync / range / batch", () => {
     expect(batch.state.status).to.equal(BatchStatus.AwaitingValidation, "Wrong status on processingSuccess");
 
     // validationError: AwaitingValidation -> AwaitingDownload
-    batch.validationError();
+    batch.validationError(new Error());
     expect(batch.state.status).to.equal(BatchStatus.AwaitingDownload, "Wrong status on validationError");
 
     // retry download + processing + validation: AwaitingDownload -> Downloading -> AwaitingProcessing -> Processing -> AwaitingValidation

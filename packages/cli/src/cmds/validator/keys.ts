@@ -14,6 +14,7 @@ import {IValidatorCliArgs} from "./options";
 import {fromHexString} from "@chainsafe/ssz";
 
 const LOCK_FILE_EXT = ".lock";
+const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
 export async function getLocalSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
@@ -173,12 +174,12 @@ function isValidHttpUrl(urlStr: string): boolean {
   return url.protocol === "http:" || url.protocol === "https:";
 }
 
-function resolveKeystorePaths(fileOrDirPath: string): string[] {
+export function resolveKeystorePaths(fileOrDirPath: string): string[] {
   if (fs.lstatSync(fileOrDirPath).isDirectory()) {
     return fs
       .readdirSync(fileOrDirPath)
-      .map((file) => path.join(fileOrDirPath, file))
-      .filter((filepath) => filepath.endsWith(".json"));
+      .filter((file) => !depositDataPattern.test(file))
+      .map((file) => path.join(fileOrDirPath, file));
   } else {
     return [fileOrDirPath];
   }

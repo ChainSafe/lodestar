@@ -1,10 +1,10 @@
-import {Json, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "./bytes";
 import {LodestarError} from "./errors";
 import {mapValues} from "./objects";
 
 export const CIRCULAR_REFERENCE_TAG = "CIRCULAR_REFERENCE";
 
-export function toJson(arg: unknown, refs = new WeakMap()): Json {
+export function toJson(arg: unknown, refs = new WeakMap()): unknown {
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -32,11 +32,11 @@ export function toJson(arg: unknown, refs = new WeakMap()): Json {
     case "undefined":
     case "boolean":
     default:
-      return arg as Json;
+      return arg;
   }
 }
 
-export function toString(json: Json, nested = false): string {
+export function toString(json: unknown, nested = false): string {
   switch (typeof json) {
     case "object": {
       if (nested) return JSONStringifyCircular(json);
@@ -55,7 +55,7 @@ export function toString(json: Json, nested = false): string {
   }
 }
 
-function errorToObject(err: Error): Json {
+function errorToObject(err: Error): Record<string, unknown> {
   return {
     message: err.message,
     ...(err.stack ? {stack: err.stack} : {}),

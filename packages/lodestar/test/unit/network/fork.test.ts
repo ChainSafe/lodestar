@@ -15,8 +15,8 @@ describe("network / fork", () => {
       epoch: 0,
       version: Buffer.from([0, 0, 0, 1]),
     },
-    merge: {
-      name: ForkName.merge,
+    bellatrix: {
+      name: ForkName.bellatrix,
       epoch: Infinity,
       version: Buffer.from([0, 0, 0, 2]),
     },

@@ -6,7 +6,7 @@ import fs from "fs";
 import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, Number64, Root, phase0, Slot} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
@@ -43,6 +43,7 @@ import {Archiver} from "./archiver";
 import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
+import {ReprocessController} from "./reprocess";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
@@ -51,6 +52,7 @@ export class BeaconChain implements IBeaconChain {
   readonly executionEngine: IExecutionEngine;
   // Expose config for convenience in modularized functions
   readonly config: IBeaconConfig;
+  readonly anchorStateLatestBlockSlot: Slot;
 
   bls: IBlsVerifier;
   forkChoice: IForkChoice;
@@ -60,6 +62,7 @@ export class BeaconChain implements IBeaconChain {
   checkpointStateCache: CheckpointStateCache;
   regen: IStateRegenerator;
   readonly lightClientServer: LightClientServer;
+  readonly reprocessController: ReprocessController;
 
   // Ops pool
   readonly attestationPool = new AttestationPool();
@@ -109,6 +112,7 @@ export class BeaconChain implements IBeaconChain {
     this.logger = logger;
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
+    this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
     this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
@@ -131,6 +135,7 @@ export class BeaconChain implements IBeaconChain {
       checkpointStateCache,
       db,
       metrics,
+      emitter,
       signal,
     });
 
@@ -138,6 +143,8 @@ export class BeaconChain implements IBeaconChain {
       {config, db, emitter, logger},
       {genesisTime: this.genesisTime, genesisValidatorsRoot: this.genesisValidatorsRoot as Uint8Array}
     );
+
+    this.reprocessController = new ReprocessController(this.metrics);
 
     this.blockProcessor = new BlockProcessor(
       {
@@ -247,6 +254,15 @@ export class BeaconChain implements IBeaconChain {
       headRoot: fromHexString(head.blockRoot),
       headSlot: head.slot,
     };
+  }
+
+  /**
+   * Returns Promise that resolves either on block found or once 1 slot passes.
+   * Used to handle unknown block root for both unaggregated and aggregated attestations.
+   * @returns true if blockFound
+   */
+  waitForBlockOfAttestation(slot: Slot, root: RootHex): Promise<boolean> {
+    return this.reprocessController.waitForBlockOfAttestation(slot, root);
   }
 
   persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix = ""): string | null {

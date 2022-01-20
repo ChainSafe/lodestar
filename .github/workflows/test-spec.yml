@@ -65,9 +65,9 @@ jobs:
       - name: Spec tests altair-mainnet
         run: yarn test:spec-altair-mainnet
         working-directory: packages/lodestar
-      - name: Spec tests merge-minimal
-        run: yarn test:spec-merge-minimal
+      - name: Spec tests bellatrix-minimal
+        run: yarn test:spec-bellatrix-minimal
         working-directory: packages/lodestar
-      - name: Spec tests merge-mainnet
-        run: yarn test:spec-merge-mainnet
+      - name: Spec tests bellatrix-mainnet
+        run: yarn test:spec-bellatrix-mainnet
         working-directory: packages/lodestar

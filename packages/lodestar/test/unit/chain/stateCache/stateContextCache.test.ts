@@ -43,8 +43,8 @@ describe("StateContextCache", function () {
     expect(cache.get(toHexString(key2)), "must have key2").to.be.not.undefined;
   });
 
-  it("should deleteAllBeforeEpoch", async function () {
-    await cache.deleteAllBeforeEpoch(2);
+  it("should deleteAllBeforeEpoch", function () {
+    cache.deleteAllBeforeEpoch(2);
     expect(cache.size).to.be.equal(0, "size must be 0 after delete all");
   });
 });

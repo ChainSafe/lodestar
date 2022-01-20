@@ -13,6 +13,8 @@ export const AltairPreset = new ContainerType<IAltairPreset>({
     INACTIVITY_PENALTY_QUOTIENT_ALTAIR: Number64,
     MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR: Number64,
     PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR: Number64,
+    MIN_SYNC_COMMITTEE_PARTICIPANTS: Number64,
+    UPDATE_TIMEOUT: Number64,
   },
   // Expected and container fields are the same here
   expectedCase: "notransform",

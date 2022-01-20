@@ -8,7 +8,17 @@ import {
   GENESIS_SLOT,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, Bytes32, merge, Number64, phase0, Root, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  allForks,
+  altair,
+  Bytes32,
+  bellatrix,
+  Number64,
+  phase0,
+  Root,
+  ssz,
+  ValidatorIndex,
+} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
@@ -197,7 +207,7 @@ export function initializeBeaconStateFromEth1(
   eth1Timestamp: Number64,
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>,
-  executionPayloadHeader = ssz.merge.ExecutionPayloadHeader.defaultTreeBacked()
+  executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultTreeBacked()
 ): TreeBacked<allForks.BeaconState> {
   const state = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return TreeBacked<allForks.BeaconState> anyway
@@ -222,11 +232,11 @@ export function initializeBeaconStateFromEth1(
     stateAltair.nextSyncCommittee = syncCommittees;
   }
 
-  if (GENESIS_SLOT >= config.MERGE_FORK_EPOCH) {
-    const stateMerge = state as TreeBacked<merge.BeaconState>;
-    stateMerge.fork.previousVersion = config.MERGE_FORK_VERSION;
-    stateMerge.fork.currentVersion = config.MERGE_FORK_VERSION;
-    stateMerge.latestExecutionPayloadHeader = executionPayloadHeader;
+  if (GENESIS_SLOT >= config.BELLATRIX_FORK_EPOCH) {
+    const stateBellatrix = state as TreeBacked<bellatrix.BeaconState>;
+    stateBellatrix.fork.previousVersion = config.BELLATRIX_FORK_VERSION;
+    stateBellatrix.fork.currentVersion = config.BELLATRIX_FORK_VERSION;
+    stateBellatrix.latestExecutionPayloadHeader = executionPayloadHeader;
   }
 
   return state;
