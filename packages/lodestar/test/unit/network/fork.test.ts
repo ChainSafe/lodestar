@@ -29,7 +29,9 @@ function getForkConfig({
       version: Buffer.from([0, 0, 0, 2]),
     },
   };
-  return {forks} as IBeaconConfig;
+  const forksAscendingEpochOrder = Object.values(forks);
+  const forksDescendingEpochOrder = Object.values(forks).reverse();
+  return {forks, forksAscendingEpochOrder, forksDescendingEpochOrder} as IBeaconConfig;
 }
 
 const testScenarios = [
