@@ -7,7 +7,7 @@ import {PubkeyHex} from "../../src/types";
  * Creates a fastify server with registered remote signer routes.
  * Must call .listen() on the server to start
  */
-export function createRemoteSignerServer(secretKeys: SecretKey[]): ReturnType<typeof fastify> {
+export function createExternalSignerServer(secretKeys: SecretKey[]): ReturnType<typeof fastify> {
   const secretKeyMap = new Map<PubkeyHex, SecretKey>();
   for (const secretKey of secretKeys) {
     const pubkeyHex = toHexString(secretKey.toPublicKey().toBytes());

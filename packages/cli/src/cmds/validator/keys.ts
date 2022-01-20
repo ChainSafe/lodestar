@@ -4,7 +4,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {remoteSignerGetKeys} from "@chainsafe/lodestar-validator";
+import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
@@ -88,40 +88,40 @@ export async function getLocalSecretKeys(
 }
 
 export type SignerRemote = {
-  remoteSignerUrl: string;
+  externalSignerUrl: string;
   pubkeyHex: string;
 };
 
 /**
  * Gets SignerRemote objects from CLI args
  */
-export async function getRemoteSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<SignerRemote[]> {
-  // Remote keys declared manually with --remoteSignerPublicKeys
-  if (args.remoteSignerPublicKeys) {
-    if (args.remoteSignerPublicKeys.length === 0) {
-      throw new YargsError("remoteSignerPublicKeys is set to an empty list");
+export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<SignerRemote[]> {
+  // Remote keys declared manually with --externalSignerPublicKeys
+  if (args.externalSignerPublicKeys) {
+    if (args.externalSignerPublicKeys.length === 0) {
+      throw new YargsError("externalSignerPublicKeys is set to an empty list");
     }
 
-    const remoteSignerUrl = args.remoteSignerUrl;
-    if (!remoteSignerUrl) {
-      throw new YargsError("Must set remoteSignerUrl with remoteSignerPublicKeys");
+    const externalSignerUrl = args.externalSignerUrl;
+    if (!externalSignerUrl) {
+      throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
     }
 
-    assertValidPubkeysHex(args.remoteSignerPublicKeys);
-    assertValidRemoteSignerUrl(remoteSignerUrl);
-    return args.remoteSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, remoteSignerUrl}));
+    assertValidPubkeysHex(args.externalSignerPublicKeys);
+    assertValidExternalSignerUrl(externalSignerUrl);
+    return args.externalSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
   }
 
-  if (args.remoteSignerFetchPubkeys) {
-    const remoteSignerUrl = args.remoteSignerUrl;
-    if (!remoteSignerUrl) {
-      throw new YargsError("Must set remoteSignerUrl with remoteSignerFetchPubkeys");
+  if (args.externalSignerFetchPubkeys) {
+    const externalSignerUrl = args.externalSignerUrl;
+    if (!externalSignerUrl) {
+      throw new YargsError("Must set externalSignerUrl with externalSignerFetchPubkeys");
     }
 
-    const fetchedPubkeys = await remoteSignerGetKeys(remoteSignerUrl);
+    const fetchedPubkeys = await externalSignerGetKeys(externalSignerUrl);
 
     assertValidPubkeysHex(fetchedPubkeys);
-    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, remoteSignerUrl}));
+    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
   }
 
   return [];
@@ -130,18 +130,18 @@ export async function getRemoteSigners(args: IValidatorCliArgs & IGlobalArgs): P
 /**
  * Only used for logging remote signers grouped by URL
  */
-export function groupRemoteSignersByUrl(
-  remoteSigners: SignerRemote[]
-): {remoteSignerUrl: string; pubkeysHex: string[]}[] {
-  const byUrl = new Map<string, {remoteSignerUrl: string; pubkeysHex: string[]}>();
+export function groupExternalSignersByUrl(
+  externalSigners: SignerRemote[]
+): {externalSignerUrl: string; pubkeysHex: string[]}[] {
+  const byUrl = new Map<string, {externalSignerUrl: string; pubkeysHex: string[]}>();
 
-  for (const remoteSigner of remoteSigners) {
-    let x = byUrl.get(remoteSigner.remoteSignerUrl);
+  for (const externalSigner of externalSigners) {
+    let x = byUrl.get(externalSigner.externalSignerUrl);
     if (!x) {
-      x = {remoteSignerUrl: remoteSigner.remoteSignerUrl, pubkeysHex: []};
-      byUrl.set(remoteSigner.remoteSignerUrl, x);
+      x = {externalSignerUrl: externalSigner.externalSignerUrl, pubkeysHex: []};
+      byUrl.set(externalSigner.externalSignerUrl, x);
     }
-    x.pubkeysHex.push(remoteSigner.pubkeyHex);
+    x.pubkeysHex.push(externalSigner.pubkeyHex);
   }
 
   return Array.from(byUrl.values());
@@ -157,9 +157,9 @@ function assertValidPubkeysHex(pubkeysHex: string[]): void {
   }
 }
 
-function assertValidRemoteSignerUrl(urlStr: string): void {
+function assertValidExternalSignerUrl(urlStr: string): void {
   if (!isValidHttpUrl(urlStr)) {
-    throw new YargsError(`Invalid remote signer URL ${urlStr}`);
+    throw new YargsError(`Invalid external signer URL ${urlStr}`);
   }
 }
 

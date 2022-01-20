@@ -13,7 +13,7 @@ export async function getAndInitDevValidators({
   startIndex = 0,
   useRestApi,
   testLoggerOpts,
-  remoteSignerUrl,
+  externalSignerUrl,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -21,7 +21,7 @@ export async function getAndInitDevValidators({
   startIndex: number;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
-  remoteSignerUrl?: string;
+  externalSignerUrl?: string;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -40,11 +40,11 @@ export async function getAndInitDevValidators({
     const secretKeysValidator = Array.from({length: validatorsPerClient}, (_, i) => interopSecretKey(i + startIndexVc));
     secretKeys.push(...secretKeysValidator);
 
-    const signers = remoteSignerUrl
+    const signers = externalSignerUrl
       ? secretKeysValidator.map(
           (secretKey): Signer => ({
             type: SignerType.Remote,
-            remoteSignerUrl,
+            externalSignerUrl,
             pubkeyHex: secretKey.toPublicKey().toHex(),
           })
         )
@@ -68,7 +68,7 @@ export async function getAndInitDevValidators({
 
   return {
     validators: await Promise.all(validators),
-    // Return secretKeys to start the remoteSigner
+    // Return secretKeys to start the externalSigner
     secretKeys,
   };
 }

@@ -33,7 +33,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
-import {remoteSignerPostSignature} from "../util/remoteSignerClient";
+import {externalSignerPostSignature} from "../util/externalSignerClient";
 
 export enum SignerType {
   Local,
@@ -47,7 +47,7 @@ export type SignerLocal = {
 
 export type SignerRemote = {
   type: SignerType.Remote;
-  remoteSignerUrl: string;
+  externalSignerUrl: string;
   pubkeyHex: PubkeyHex;
 };
 
@@ -264,8 +264,8 @@ export class ValidatorStore {
         return signer.secretKey.sign(signingRoot).toBytes();
 
       case SignerType.Remote: {
-        const signatureHex = await remoteSignerPostSignature(
-          signer.remoteSignerUrl,
+        const signatureHex = await externalSignerPostSignature(
+          signer.externalSignerUrl,
           pubkeyHex,
           toHexString(signingRoot)
         );

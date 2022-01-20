@@ -4,24 +4,24 @@ import {interopSecretKeys} from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
-  remoteSignerGetKeys,
-  remoteSignerPostSignature,
-  remoteSignerUpCheck,
-} from "../../../src/util/remoteSignerClient";
-import {createRemoteSignerServer} from "../../utils/createRemoteSignerServer";
+  externalSignerGetKeys,
+  externalSignerPostSignature,
+  externalSignerUpCheck,
+} from "../../../src/util/externalSignerClient";
+import {createExternalSignerServer} from "../../utils/createExternalSignerServer";
 
 chai.use(chaiAsPromised);
 
-describe("Remote Signer server", () => {
+describe("External signer server", () => {
   const port = 38012;
-  const remoteSignerUrl = `http://localhost:${port}`;
-  let server: ReturnType<typeof createRemoteSignerServer>;
+  const externalSignerUrl = `http://localhost:${port}`;
+  let server: ReturnType<typeof createExternalSignerServer>;
   let pubkeys: PublicKey[];
 
   before(async () => {
     const secretKeys = interopSecretKeys(8);
     pubkeys = secretKeys.map((secretKey) => secretKey.toPublicKey());
-    server = createRemoteSignerServer(secretKeys);
+    server = createExternalSignerServer(secretKeys);
     await server.listen(port);
   });
 
@@ -30,12 +30,12 @@ describe("Remote Signer server", () => {
   });
 
   it("should GET /upcheck successfully", async () => {
-    const response = await remoteSignerUpCheck(remoteSignerUrl);
+    const response = await externalSignerUpCheck(externalSignerUrl);
     expect(response).to.deep.equal(true);
   });
 
   it("should GET /keys successfully", async () => {
-    const pubkeysResponse = await remoteSignerGetKeys(remoteSignerUrl);
+    const pubkeysResponse = await externalSignerGetKeys(externalSignerUrl);
     expect(pubkeysResponse).to.deep.equal(pubkeys.map((pubkey) => pubkey.toHex()));
   });
 
@@ -45,7 +45,7 @@ describe("Remote Signer server", () => {
 
     for (let i = 0; i < pubkeys.length; i++) {
       const pubkey = pubkeys[i];
-      const sigHex = await remoteSignerPostSignature(remoteSignerUrl, pubkey.toHex(), signingRootHex);
+      const sigHex = await externalSignerPostSignature(externalSignerUrl, pubkey.toHex(), signingRootHex);
       const isValid = Signature.fromHex(sigHex).verify(pubkey, signingRoot);
       expect(isValid).to.equal(true, `Invalid signature for pubkey[${i}]`);
     }
@@ -56,7 +56,7 @@ describe("Remote Signer server", () => {
     const unknownPubkey =
       "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-    await expect(remoteSignerPostSignature(remoteSignerUrl, unknownPubkey, signingRoot)).to.be.rejectedWith(
+    await expect(externalSignerPostSignature(externalSignerUrl, unknownPubkey, signingRoot)).to.be.rejectedWith(
       `pubkey not known ${unknownPubkey}`
     );
   });

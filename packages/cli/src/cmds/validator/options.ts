@@ -13,9 +13,9 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     graffiti: string;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
-    remoteSignerUrl?: string;
-    remoteSignerPublicKeys?: string[];
-    remoteSignerFetchPubkeys?: boolean;
+    externalSignerUrl?: string;
+    externalSignerPublicKeys?: string[];
+    externalSignerFetchPubkeys?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -63,26 +63,26 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   // Remote signer
 
-  remoteSignerUrl: {
-    description: "URL to connect to remote signing server",
+  externalSignerUrl: {
+    description: "URL to connect to an external signing server",
     type: "string",
-    group: "Remote signer",
+    group: "External signer",
   },
 
-  remoteSignerPublicKeys: {
+  externalSignerPublicKeys: {
     description:
-      "List of validator public keys used by a remote signer. May also provide a single string a comma separated public keys",
+      "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
     type: "array",
     coerce: (pubkeys: string[]): string[] =>
       // Parse ["0x11,0x22"] to ["0x11", "0x22"]
       pubkeys.map((item) => item.split(",")).flat(1),
-    group: "Remote signer",
+    group: "External signer",
   },
 
-  remoteSignerFetchPubkeys: {
-    description: "Fetch then list of pubkeys to validate from the remote signer",
+  externalSignerFetchPubkeys: {
+    description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
-    group: "Remote signer",
+    group: "External signer",
   },
 
   // For testing only

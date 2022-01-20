@@ -7,7 +7,7 @@ export {waitForGenesis} from "./genesis";
 export {SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 
 // Remote signer client
-export {remoteSignerGetKeys, remoteSignerPostSignature, remoteSignerUpCheck} from "./util/remoteSignerClient";
+export {externalSignerGetKeys, externalSignerPostSignature, externalSignerUpCheck} from "./util/externalSignerClient";
 
 export * from "./slashingProtection";
 export * from "./repositories";

@@ -13,7 +13,7 @@ import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
-import {createRemoteSignerServer} from "@chainsafe/lodestar-validator/test/utils/createRemoteSignerServer";
+import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
@@ -29,7 +29,7 @@ describe("Run single node single thread interop validators (no eth1) until check
     event: ChainEvent.justified | ChainEvent.finalized;
     altairEpoch: number;
     bellatrixEpoch: number;
-    withRemoteSigner?: boolean;
+    withExternalSigner?: boolean;
   }[] = [
     // phase0 fork only
     {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
@@ -41,7 +41,7 @@ describe("Run single node single thread interop validators (no eth1) until check
     {event: ChainEvent.finalized, altairEpoch: 0, bellatrixEpoch: 0},
 
     // Remote signer with altair
-    {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withRemoteSigner: true},
+    {event: ChainEvent.justified, altairEpoch: 0, bellatrixEpoch: Infinity, withExternalSigner: true},
   ];
 
   before(async function () {
@@ -57,13 +57,13 @@ describe("Run single node single thread interop validators (no eth1) until check
     afterEachCallbacks.length = 0;
   });
 
-  for (const {event, altairEpoch, bellatrixEpoch, withRemoteSigner} of testCases) {
+  for (const {event, altairEpoch, bellatrixEpoch, withExternalSigner} of testCases) {
     const testIdStr = [
       `altair-${altairEpoch}`,
       `bellatrix-${bellatrixEpoch}`,
       `vc-${validatorClientCount}`,
       `vPc-${validatorsPerClient}`,
-      withRemoteSigner ? "remote_signer" : "local_signer",
+      withExternalSigner ? "external_signer" : "local_signer",
       `event-${event}`,
     ].join("_");
 
@@ -114,8 +114,8 @@ describe("Run single node single thread interop validators (no eth1) until check
       const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
       afterEachCallbacks[2] = () => stopInfoTracker();
 
-      const remoteSignerPort = 38000;
-      const remoteSignerUrl = `http://localhost:${remoteSignerPort}`;
+      const externalSignerPort = 38000;
+      const externalSignerUrl = `http://localhost:${externalSignerPort}`;
 
       const {validators, secretKeys} = await getAndInitDevValidators({
         node: bn,
@@ -125,13 +125,13 @@ describe("Run single node single thread interop validators (no eth1) until check
         // At least one sim test must use the REST API for beacon <-> validator comms
         useRestApi: true,
         testLoggerOpts,
-        remoteSignerUrl: withRemoteSigner ? remoteSignerUrl : undefined,
+        externalSignerUrl: withExternalSigner ? externalSignerUrl : undefined,
       });
 
-      if (withRemoteSigner) {
-        const server = createRemoteSignerServer(secretKeys);
+      if (withExternalSigner) {
+        const server = createExternalSignerServer(secretKeys);
         afterEachCallbacks[0] = () => server.close();
-        await server.listen(remoteSignerPort);
+        await server.listen(externalSignerPort);
       }
 
       // TODO: Previous code waited for 1 slot between stopping the validators and stopInfoTracker()

@@ -9,7 +9,7 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getLocalSecretKeys, getRemoteSigners, groupRemoteSignersByUrl} from "./keys";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
 
 /**
@@ -40,20 +40,20 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const signers: Signer[] = [];
 
   // Read remote keys
-  const remoteSigners = await getRemoteSigners(args);
-  if (remoteSigners.length > 0) {
-    logger.info(`Using ${remoteSigners.length} remote keys`);
-    for (const {remoteSignerUrl, pubkeyHex} of remoteSigners) {
+  const externalSigners = await getExternalSigners(args);
+  if (externalSigners.length > 0) {
+    logger.info(`Using ${externalSigners.length} external keys`);
+    for (const {externalSignerUrl, pubkeyHex} of externalSigners) {
       signers.push({
         type: SignerType.Remote,
         pubkeyHex: pubkeyHex,
-        remoteSignerUrl,
+        externalSignerUrl,
       });
     }
 
     // Log pubkeys for auditing, grouped by signer URL
-    for (const {remoteSignerUrl, pubkeysHex} of groupRemoteSignersByUrl(remoteSigners)) {
-      logger.info(`Remote signer URL: ${remoteSignerUrl}`);
+    for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(externalSigners)) {
+      logger.info(`External signer URL: ${externalSignerUrl}`);
       for (const pubkeyHex of pubkeysHex) {
         logger.info(pubkeyHex);
       }
