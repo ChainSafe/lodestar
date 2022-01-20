@@ -48,7 +48,6 @@ Will double processing times. Use only for debugging purposes.",
   },
 
   "chain.proposerBoostEnabled": {
-    hidden: true,
     type: "boolean",
     description: "Enable proposer boost to reward a timely block",
     defaultDescription: String(defaultOptions.chain.proposerBoostEnabled),
