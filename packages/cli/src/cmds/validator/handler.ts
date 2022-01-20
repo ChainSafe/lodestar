@@ -64,8 +64,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
+  const importKeystoresPath = args.importKeystoresPath;
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, secretKeys, graffiti},
+    {dbOps, slashingProtection, api, logger, secretKeys, importKeystoresPath, graffiti},
     controller.signal
   );
 

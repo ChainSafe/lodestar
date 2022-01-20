@@ -28,6 +28,7 @@ export type ValidatorOptions = {
   dbOps: IDatabaseApiOptions;
   api: Api | string;
   secretKeys: SecretKeyInfo[];
+  importKeystoresPath?: string[];
   logger: ILogger;
   graffiti?: string;
 };
@@ -80,7 +81,13 @@ export class Validator {
     new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
     new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
 
-    this.keymanager = new KeymanagerApi(validatorStore, slashingProtection, genesis.genesisValidatorsRoot, secretKeys);
+    this.keymanager = new KeymanagerApi(
+      validatorStore,
+      slashingProtection,
+      genesis.genesisValidatorsRoot,
+      secretKeys,
+      opts.importKeystoresPath
+    );
 
     this.api = api;
     this.clock = clock;

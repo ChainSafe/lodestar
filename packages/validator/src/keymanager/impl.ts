@@ -12,7 +12,7 @@ import {ISlashingProtection, Interchange} from "../slashingProtection";
 import {ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
 import {Root} from "@chainsafe/lodestar-types";
-import {unlink} from "fs/promises";
+import {unlink, writeFile} from "fs/promises";
 
 // TODO [DA] move to a better location
 // Improve the modelling of the type to prevent secretKey.secretKey usage
@@ -27,7 +27,8 @@ export class KeymanagerApi implements Api {
     private readonly validatorStore: ValidatorStore,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
-    private readonly secretKeys: SecretKeyInfo[]
+    private readonly secretKeys: SecretKeyInfo[],
+    private readonly importKeystoresPath?: string[]
   ) {}
 
   /**
@@ -105,7 +106,11 @@ export class KeymanagerApi implements Api {
         this.validatorStore.addKey(secretKey);
 
         // Persist keys for latter restarts
-        // TODO
+        if (this.importKeystoresPath) {
+          // TODO [DA] switch file name to the keystore format
+          const fileName = `${this.importKeystoresPath.pop()}/key_${Date.now()}.json`;
+          await writeFile(fileName, keystoreStr, {encoding: "utf8"});
+        }
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
