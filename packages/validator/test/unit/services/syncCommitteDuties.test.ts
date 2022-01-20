@@ -3,9 +3,9 @@ import {toBufferBE} from "bigint-buffer";
 import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
+import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
-import {toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {SyncCommitteeDutiesService} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
@@ -47,7 +47,7 @@ describe("SyncCommitteeDutiesService", function () {
       bls.SecretKey.fromBytes(toBufferBE(BigInt(99), 32)),
     ];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys);
+    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
     validatorStore.signSyncCommitteeSelectionProof.resolves(ZERO_HASH);

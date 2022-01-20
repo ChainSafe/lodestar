@@ -1,6 +1,6 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
@@ -9,7 +9,7 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getSecretKeys} from "./keys";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
 
 /**
@@ -29,25 +29,60 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const {secretKeys, unlockSecretKeys: unlockSecretKeys} = await getSecretKeys(args);
-  if (secretKeys.length === 0) {
-    throw new YargsError("No validator keystores found");
-  }
-
-  // Log pubkeys for auditing
-  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-  for (const secretKey of secretKeys) {
-    logger.info(secretKey.toPublicKey().toHex());
-  }
-
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
-  const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
+  const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
-    unlockSecretKeys?.();
   }, logger.info.bind(logger));
+
+  const signers: Signer[] = [];
+
+  // Read remote keys
+  const externalSigners = await getExternalSigners(args);
+  if (externalSigners.length > 0) {
+    logger.info(`Using ${externalSigners.length} external keys`);
+    for (const {externalSignerUrl, pubkeyHex} of externalSigners) {
+      signers.push({
+        type: SignerType.Remote,
+        pubkeyHex: pubkeyHex,
+        externalSignerUrl,
+      });
+    }
+
+    // Log pubkeys for auditing, grouped by signer URL
+    for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(externalSigners)) {
+      logger.info(`External signer URL: ${externalSignerUrl}`);
+      for (const pubkeyHex of pubkeysHex) {
+        logger.info(pubkeyHex);
+      }
+    }
+  }
+
+  // Read local keys
+  else {
+    const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
+    if (secretKeys.length > 0) {
+      // Log pubkeys for auditing
+      logger.info(`Decrypted ${secretKeys.length} local keystores`);
+      for (const secretKey of secretKeys) {
+        logger.info(secretKey.toPublicKey().toHex());
+        signers.push({
+          type: SignerType.Local,
+          secretKey,
+        });
+      }
+
+      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
+    }
+  }
+
+  // Ensure the validator has at least one key
+
+  if (signers.length === 0) {
+    throw new YargsError("No signers found with current args");
+  }
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
   const controller = new AbortController();
@@ -59,10 +94,12 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
+
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, secretKeys, graffiti},
+    {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
+
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
 }

@@ -1,4 +1,5 @@
 import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SignerType} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
@@ -108,7 +109,7 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
       slashingProtection,
       dbOps,
       api: args.server,
-      secretKeys: [secretKey],
+      signers: [{type: SignerType.Local, secretKey}],
       logger: errorLogger(),
       graffiti: args.graffiti,
     });

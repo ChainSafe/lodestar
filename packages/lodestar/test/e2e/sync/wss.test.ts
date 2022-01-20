@@ -80,7 +80,7 @@ describe("Start from WSS", function () {
     afterEachCallbacks.push(() => bn.close());
 
     const finalizedEventistener = waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, timeout);
-    const validators = await getAndInitDevValidators({
+    const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: 32,
       validatorClientCount: 1,

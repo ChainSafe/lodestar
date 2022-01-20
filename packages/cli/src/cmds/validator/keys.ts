@@ -1,20 +1,22 @@
 import fs from "fs";
 import path from "path";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {SecretKey} from "@chainsafe/bls";
+import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
+import {fromHexString} from "@chainsafe/ssz";
 
 const LOCK_FILE_EXT = ".lock";
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
-export async function getSecretKeys(
+export async function getLocalSecretKeys(
   args: IValidatorCliArgs & IGlobalArgs
 ): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
@@ -83,6 +85,93 @@ export async function getSecretKeys(
     const validatorDirManager = new ValidatorDirManager(accountPaths);
     return {secretKeys: await validatorDirManager.decryptAllValidators({force: args.force})};
   }
+}
+
+export type SignerRemote = {
+  externalSignerUrl: string;
+  pubkeyHex: string;
+};
+
+/**
+ * Gets SignerRemote objects from CLI args
+ */
+export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<SignerRemote[]> {
+  // Remote keys declared manually with --externalSignerPublicKeys
+  if (args.externalSignerPublicKeys) {
+    if (args.externalSignerPublicKeys.length === 0) {
+      throw new YargsError("externalSignerPublicKeys is set to an empty list");
+    }
+
+    const externalSignerUrl = args.externalSignerUrl;
+    if (!externalSignerUrl) {
+      throw new YargsError("Must set externalSignerUrl with externalSignerPublicKeys");
+    }
+
+    assertValidPubkeysHex(args.externalSignerPublicKeys);
+    assertValidExternalSignerUrl(externalSignerUrl);
+    return args.externalSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
+  }
+
+  if (args.externalSignerFetchPubkeys) {
+    const externalSignerUrl = args.externalSignerUrl;
+    if (!externalSignerUrl) {
+      throw new YargsError("Must set externalSignerUrl with externalSignerFetchPubkeys");
+    }
+
+    const fetchedPubkeys = await externalSignerGetKeys(externalSignerUrl);
+
+    assertValidPubkeysHex(fetchedPubkeys);
+    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
+  }
+
+  return [];
+}
+
+/**
+ * Only used for logging remote signers grouped by URL
+ */
+export function groupExternalSignersByUrl(
+  externalSigners: SignerRemote[]
+): {externalSignerUrl: string; pubkeysHex: string[]}[] {
+  const byUrl = new Map<string, {externalSignerUrl: string; pubkeysHex: string[]}>();
+
+  for (const externalSigner of externalSigners) {
+    let x = byUrl.get(externalSigner.externalSignerUrl);
+    if (!x) {
+      x = {externalSignerUrl: externalSigner.externalSignerUrl, pubkeysHex: []};
+      byUrl.set(externalSigner.externalSignerUrl, x);
+    }
+    x.pubkeysHex.push(externalSigner.pubkeyHex);
+  }
+
+  return Array.from(byUrl.values());
+}
+
+/**
+ * Ensure pubkeysHex are valid BLS pubkey (validate hex encoding and point)
+ */
+function assertValidPubkeysHex(pubkeysHex: string[]): void {
+  for (const pubkeyHex of pubkeysHex) {
+    const pubkeyBytes = fromHexString(pubkeyHex);
+    PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+  }
+}
+
+function assertValidExternalSignerUrl(urlStr: string): void {
+  if (!isValidHttpUrl(urlStr)) {
+    throw new YargsError(`Invalid external signer URL ${urlStr}`);
+  }
+}
+
+function isValidHttpUrl(urlStr: string): boolean {
+  let url;
+  try {
+    url = new URL(urlStr);
+  } catch (_) {
+    return false;
+  }
+
+  return url.protocol === "http:" || url.protocol === "https:";
 }
 
 export function resolveKeystorePaths(fileOrDirPath: string): string[] {

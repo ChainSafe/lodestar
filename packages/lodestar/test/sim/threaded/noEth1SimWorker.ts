@@ -90,7 +90,7 @@ async function runWorker(): Promise<void> {
     } as Message);
   });
 
-  const validators = await getAndInitDevValidators({
+  const {validators} = await getAndInitDevValidators({
     node,
     validatorClientCount: 1,
     validatorsPerClient: validatorsPerNode,

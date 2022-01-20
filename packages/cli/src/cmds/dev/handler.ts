@@ -6,7 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -151,7 +151,10 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
-      secretKeys,
+      signers: secretKeys.map((secretKey) => ({
+        type: SignerType.Local,
+        secretKey,
+      })),
     });
 
     onGracefulShutdownCbs.push(() => validator.stop());

@@ -327,7 +327,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     const stopInfoTracker = simTestInfoTracker(bn, loggerNodeA);
 
-    const validators = await getAndInitDevValidators({
+    const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient,
       validatorClientCount,
@@ -335,6 +335,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       // At least one sim test must use the REST API for beacon <-> validator comms
       useRestApi: true,
       testLoggerOpts,
+      // TODO test merge-interop with remote;
     });
 
     afterEachCallbacks.push(async function () {

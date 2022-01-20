@@ -1,4 +1,3 @@
-import {SecretKey} from "@chainsafe/bls";
 import {
   computeEpochAtSlot,
   computeSigningRoot,
@@ -14,7 +13,9 @@ import {
   DOMAIN_SELECTION_PROOF,
   DOMAIN_SYNC_COMMITTEE,
   DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF,
+  DOMAIN_VOLUNTARY_EXIT,
 } from "@chainsafe/lodestar-params";
+import {SecretKey} from "@chainsafe/bls";
 import {
   allForks,
   altair,
@@ -27,26 +28,53 @@ import {
   ValidatorIndex,
   ssz,
 } from "@chainsafe/lodestar-types";
-import {List, toHexString} from "@chainsafe/ssz";
+import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {ISlashingProtection} from "../slashingProtection";
-import {BLSKeypair, PubkeyHex} from "../types";
-import {getAggregationBits, mapSecretKeysToValidators} from "./utils";
+import {PubkeyHex} from "../types";
+import {getAggregationBits} from "./utils";
+import {externalSignerPostSignature} from "../util/externalSignerClient";
+
+export enum SignerType {
+  Local,
+  Remote,
+}
+
+export type SignerLocal = {
+  type: SignerType.Local;
+  secretKey: SecretKey;
+};
+
+export type SignerRemote = {
+  type: SignerType.Remote;
+  externalSignerUrl: string;
+  pubkeyHex: PubkeyHex;
+};
+
+/**
+ * Validator entity capable of producing signatures. Either:
+ * - local: With BLS secret key
+ * - remote: With data to contact a remote signer
+ */
+export type Signer = SignerLocal | SignerRemote;
 
 /**
  * Service that sets up and handles validator attester duties.
  */
 export class ValidatorStore {
-  private readonly validators: Map<PubkeyHex, BLSKeypair>;
+  private readonly validators = new Map<PubkeyHex, Signer>();
   private readonly genesisValidatorsRoot: Root;
 
   constructor(
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
-    secretKeys: SecretKey[],
+    signers: Signer[],
     genesis: phase0.Genesis
   ) {
-    this.validators = mapSecretKeysToValidators(secretKeys);
+    for (const signer of signers) {
+      this.validators.set(getSignerPubkeyHex(signer), signer);
+    }
+
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
   }
@@ -56,8 +84,8 @@ export class ValidatorStore {
     return this.validators.size > 0;
   }
 
-  votingPubkeys(): BLSPubkey[] {
-    return Array.from(this.validators.values()).map((keypair) => keypair.publicKey);
+  votingPubkeys(): PubkeyHex[] {
+    return Array.from(this.validators.keys());
   }
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
@@ -78,12 +106,11 @@ export class ValidatorStore {
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-    const secretKey = this.getSecretKey(pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
 
     return {
       message: block,
-      signature: secretKey.sign(signingRoot).toBytes(),
+      signature: await this.getSignature(pubkey, signingRoot),
     };
   }
 
@@ -92,7 +119,7 @@ export class ValidatorStore {
     const randaoDomain = this.config.getDomain(DOMAIN_RANDAO, slot);
     const randaoSigningRoot = computeSigningRoot(ssz.Epoch, epoch, randaoDomain);
 
-    return this.getSecretKey(pubkey).sign(randaoSigningRoot).toBytes();
+    return await this.getSignature(pubkey, randaoSigningRoot);
   }
 
   async signAttestation(
@@ -112,7 +139,6 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-    const secretKey = this.getSecretKey(duty.pubkey); // Get before writing to slashingProtection
     await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
       sourceEpoch: attestationData.source.epoch,
       targetEpoch: attestationData.target.epoch,
@@ -122,7 +148,7 @@ export class ValidatorStore {
     return {
       aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
       data: attestationData,
-      signature: secretKey.sign(signingRoot).toBytes(),
+      signature: await this.getSignature(duty.pubkey, signingRoot),
     };
   }
 
@@ -144,7 +170,7 @@ export class ValidatorStore {
 
     return {
       message: aggregateAndProof,
-      signature: this.getSecretKey(duty.pubkey).sign(signingRoot).toBytes(),
+      signature: await this.getSignature(duty.pubkey, signingRoot),
     };
   }
 
@@ -161,7 +187,7 @@ export class ValidatorStore {
       slot,
       validatorIndex,
       beaconBlockRoot,
-      signature: this.getSecretKey(pubkey).sign(signingRoot).toBytes(),
+      signature: await this.getSignature(pubkey, signingRoot),
     };
   }
 
@@ -181,14 +207,15 @@ export class ValidatorStore {
 
     return {
       message: contributionAndProof,
-      signature: this.getSecretKey(duty.pubkey).sign(signingRoot).toBytes(),
+      signature: await this.getSignature(duty.pubkey, signingRoot),
     };
   }
 
   async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
     const domain = this.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
-    return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
+
+    return await this.getSignature(pubkey, signingRoot);
   }
 
   async signSyncCommitteeSelectionProof(
@@ -203,19 +230,48 @@ export class ValidatorStore {
     };
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
-    return this.getSecretKey(pubkey).sign(signingRoot).toBytes();
+
+    return await this.getSignature(pubkey, signingRoot);
   }
 
-  private getSecretKey(pubkey: BLSPubkey | string): SecretKey {
+  async signVoluntaryExit(
+    pubkey: PubkeyHex,
+    validatorIndex: number,
+    exitEpoch: Epoch
+  ): Promise<phase0.SignedVoluntaryExit> {
+    const domain = this.config.getDomain(DOMAIN_VOLUNTARY_EXIT, computeStartSlotAtEpoch(exitEpoch));
+
+    const voluntaryExit: phase0.VoluntaryExit = {epoch: exitEpoch, validatorIndex};
+    const signingRoot = computeSigningRoot(ssz.phase0.VoluntaryExit, voluntaryExit, domain);
+
+    return {
+      message: voluntaryExit,
+      signature: await this.getSignature(pubkey, signingRoot),
+    };
+  }
+
+  private async getSignature(pubkey: BLSPubkey | string, signingRoot: Uint8Array): Promise<BLSSignature> {
     // TODO: Refactor indexing to not have to run toHexString() on the pubkey every time
     const pubkeyHex = typeof pubkey === "string" ? pubkey : toHexString(pubkey);
-    const validator = this.validators.get(pubkeyHex);
 
-    if (!validator) {
-      throw Error(`Validator ${pubkeyHex} not in local validators map`);
+    const signer = this.validators.get(pubkeyHex);
+    if (!signer) {
+      throw Error(`Validator pubkey ${pubkeyHex} not known`);
     }
 
-    return validator.secretKey;
+    switch (signer.type) {
+      case SignerType.Local:
+        return signer.secretKey.sign(signingRoot).toBytes();
+
+      case SignerType.Remote: {
+        const signatureHex = await externalSignerPostSignature(
+          signer.externalSignerUrl,
+          pubkeyHex,
+          toHexString(signingRoot)
+        );
+        return fromHexString(signatureHex);
+      }
+    }
   }
 
   /** Prevent signing bad data sent by the Beacon node */
@@ -228,5 +284,15 @@ export class ValidatorStore {
         `Inconsistent duties during signing: duty.committeeIndex ${duty.committeeIndex} != att.committeeIndex ${data.index}`
       );
     }
+  }
+}
+
+function getSignerPubkeyHex(signer: Signer): PubkeyHex {
+  switch (signer.type) {
+    case SignerType.Local:
+      return toHexString(signer.secretKey.toPublicKey().toBytes());
+
+    case SignerType.Remote:
+      return signer.pubkeyHex;
   }
 }
