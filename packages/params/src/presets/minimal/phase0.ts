@@ -1,9 +1,7 @@
+import {Phase0Preset} from "../../interface/phase0";
+
 /* eslint-disable @typescript-eslint/naming-convention */
-// Minimal preset
-
-import {IPhase0Preset} from "../../preset";
-
-export const phase0: IPhase0Preset = {
+export const phase0: Phase0Preset = {
   // Misc
   // ---------------------------------------------------------------
   // [customized] Just 4 committees for slot for testing purposes
@@ -29,7 +27,7 @@ export const phase0: IPhase0Preset = {
   // Gwei values
   // ---------------------------------------------------------------
   // 2**0 * 10**9 (= 1,000,000,000) Gwei
-  MIN_DEPOSIT_AMOUNT: BigInt(1000000000),
+  MIN_DEPOSIT_AMOUNT: 1000000000,
   // 2**5 * 10**9 (= 32,000,000,000) Gwei
   MAX_EFFECTIVE_BALANCE: 32000000000,
   // 2**0 * 10**9 (= 1,000,000,000) Gwei

@@ -1,12 +1,11 @@
-import {IBeaconPreset} from "../../preset";
-
 import {phase0} from "./phase0";
 import {altair} from "./altair";
 import {bellatrix} from "./bellatrix";
+import {BeaconPreset} from "../../interface";
 
 export const commit = "v1.1.8";
 
-export const preset: IBeaconPreset = {
+export const preset: BeaconPreset = {
   ...phase0,
   ...altair,
   ...bellatrix,

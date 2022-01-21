@@ -1,17 +1,27 @@
 import {routes} from "@chainsafe/lodestar-api";
-import {ChainConfig} from "@chainsafe/lodestar-config";
-import * as params from "@chainsafe/lodestar-params";
+import {chainConfigToJson} from "@chainsafe/lodestar-config";
+import {activePreset, presetToJson} from "@chainsafe/lodestar-params";
 import {ApiModules} from "../types";
 
 export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
-  const specWithExtraKeys = {...params, ...config};
-  const spec = {} as routes.config.ISpec;
-  ([
-    ...Object.keys(ChainConfig.fields),
-    ...Object.keys(params.BeaconPreset.fields),
-  ] as (keyof routes.config.ISpec)[]).forEach((fieldName) => {
-    ((spec as unknown) as Record<string, unknown>)[fieldName] = specWithExtraKeys[fieldName];
-  });
+  // Retrieve specification configuration used on this node.  The configuration should include:
+  //  - Constants for all hard forks known by the beacon node, for example the
+  //    [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#constants) and
+  //    [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#constants) values
+  //  - Presets for all hard forks supplied to the beacon node, for example the
+  //    [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/phase0.yaml) and
+  //    [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/altair.yaml) values
+  //  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/eth2.0-specs/blob/dev/configs/mainnet.yaml) values
+
+  let jsonSpec: Record<string, string> | null = null;
+  function getJsonSpec(): Record<string, string> {
+    // TODO: Include static constants exported in @chainsafe/lodestar-params (i.e. DOMAIN_BEACON_PROPOSER)
+    const configJson = chainConfigToJson(config);
+    const presetJson = presetToJson(activePreset);
+    jsonSpec = {...configJson, ...presetJson};
+    return jsonSpec;
+  }
+
   return {
     async getForkSchedule() {
       const forkInfos = Object.values(config.forks);
@@ -34,7 +44,7 @@ export function getConfigApi({config}: Pick<ApiModules, "config">): routes.confi
 
     async getSpec() {
       return {
-        data: spec,
+        data: getJsonSpec(),
       };
     },
   };

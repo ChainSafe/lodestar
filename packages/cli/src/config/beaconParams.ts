@@ -1,12 +1,11 @@
 import {
-  ChainConfig,
+  IChainConfig,
   createIChainForkConfig,
   createIChainConfig,
   IChainForkConfig,
-  IChainConfig,
-  parsePartialIChainConfigJson,
+  chainConfigFromJson,
 } from "@chainsafe/lodestar-config";
-import {writeFile, readFile} from "../util";
+import {readFile} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
 import {IBeaconParamsUnparsed} from "./types";
@@ -77,10 +76,10 @@ export function getBeaconParams({network, paramsFile, additionalParamsCli}: IBea
   });
 }
 
-export function writeBeaconParams(filepath: string, params: IChainConfig): void {
-  writeFile(filepath, ChainConfig.toJson(params));
-}
-
 function readBeaconParams(filepath: string): IBeaconParamsUnparsed {
   return readFile(filepath) ?? {};
+}
+
+export function parsePartialIChainConfigJson(input: Record<string, unknown>): Partial<IChainConfig> {
+  return chainConfigFromJson(input);
 }
