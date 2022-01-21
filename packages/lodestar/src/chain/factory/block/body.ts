@@ -2,7 +2,6 @@
  * @module chain/blockAssembly
  */
 
-import {List} from "@chainsafe/ssz";
 import {
   Bytes96,
   Bytes32,
@@ -68,11 +67,11 @@ export async function assembleBody(
     randaoReveal,
     graffiti,
     eth1Data,
-    proposerSlashings: proposerSlashings as List<phase0.ProposerSlashing>,
-    attesterSlashings: attesterSlashings as List<phase0.AttesterSlashing>,
-    attestations: attestations as List<phase0.Attestation>,
-    deposits: deposits as List<phase0.Deposit>,
-    voluntaryExits: voluntaryExits as List<phase0.SignedVoluntaryExit>,
+    proposerSlashings: proposerSlashings,
+    attesterSlashings: attesterSlashings,
+    attestations: attestations,
+    deposits: deposits,
+    voluntaryExits: voluntaryExits,
   };
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
@@ -102,7 +101,7 @@ export async function assembleBody(
 
     if (payloadId === null) {
       // Pre-merge, propose a pre-merge block with empty execution and keep the chain going
-      (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue;
     } else {
       (blockBody as bellatrix.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     }
@@ -151,7 +150,7 @@ async function prepareExecutionPayload(
   }
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const random = getRandaoMix(state, state.currentShuffling.epoch);
+  const random = getRandaoMix(state, state.epochCtx.currentShuffling.epoch);
   const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
     random,

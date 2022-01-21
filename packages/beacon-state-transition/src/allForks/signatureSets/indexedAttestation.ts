@@ -1,6 +1,5 @@
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {readonlyValues} from "@chainsafe/ssz";
 import {
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -31,7 +30,7 @@ export function getAttestationWithIndicesSignatureSet(
     type: SignatureSetType.aggregate,
     pubkeys: indices.map((i) => epochCtx.index2pubkey[i]),
     signingRoot: computeSigningRoot(ssz.phase0.AttestationData, attestation.data, domain),
-    signature: attestation.signature.valueOf() as Uint8Array,
+    signature: attestation.signature,
   };
 }
 
@@ -43,7 +42,7 @@ export function getIndexedAttestationSignatureSet(
   return getAttestationWithIndicesSignatureSet(
     state,
     indexedAttestation,
-    indices ?? Array.from(readonlyValues(indexedAttestation.attestingIndices))
+    indices ?? indexedAttestation.attestingIndices
   );
 }
 
@@ -51,7 +50,11 @@ export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return Array.from(readonlyValues(signedBlock.message.body.attestations), (attestation) =>
-    getIndexedAttestationSignatureSet(state, state.getIndexedAttestation(attestation))
-  );
+  const signatureSets: ISignatureSet[] = [];
+
+  for (const attestation of signedBlock.message.body.attestations) {
+    signatureSets.push(getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation)));
+  }
+
+  return signatureSets;
 }

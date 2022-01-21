@@ -19,7 +19,7 @@ async function getGenesisData(): Promise<void> {
     const api = getClient(config, {baseUrl});
     const {data: genesis} = await api.beacon.getGenesis();
     console.log(network, {
-      genesisTime: Number(genesis.genesisTime),
+      genesisTime: genesis.genesisTime,
       genesisValidatorsRoot: "0x" + Buffer.from(genesis.genesisValidatorsRoot as Uint8Array).toString("hex"),
     });
   }

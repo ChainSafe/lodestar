@@ -1,7 +1,7 @@
 /**
  * @module util/objects
  */
-import {hash} from "@chainsafe/ssz";
+import SHA256 from "@chainsafe/as-sha256";
 import {SHUFFLE_ROUND_COUNT} from "@chainsafe/lodestar-params";
 import {ValidatorIndex, Bytes32} from "@chainsafe/lodestar-types";
 import {assert, bytesToBigInt} from "@chainsafe/lodestar-utils";
@@ -97,7 +97,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
   }
 
   // Seed is always the first 32 bytes of the hash input, we never have to change this part of the buffer.
-  const _seed = seed.valueOf() as Uint8Array;
+  const _seed = seed;
   Buffer.from(_seed).copy(buf, 0, 0, _SHUFFLE_H_SEED_SIZE);
 
   // initial values here are not used: overwritten first within the inner for loop.
@@ -111,7 +111,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
     buf[_SHUFFLE_H_SEED_SIZE] = r;
     // Seed is already in place, now just hash the correct part of the buffer, and take a uint64 from it,
     //  and modulo it to get a pivot within range.
-    const h = hash(buf.slice(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
+    const h = SHA256.digest(buf.slice(0, _SHUFFLE_H_PIVOT_VIEW_SIZE));
     const pivot = Number(bytesToBigInt(h.slice(0, 8)) % BigInt(listSize)) >>> 0;
 
     // Split up the for-loop in two:
@@ -134,7 +134,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
     // We start from the pivot position, and work back to the mirror position (of the part left to the pivot).
     // This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
     setPositionUint32(pivot >> 8, buf); // already using first pivot byte below.
-    source = hash(buf);
+    source = SHA256.digest(buf);
     byteV = source[(pivot & 0xff) >> 3];
 
     for (let i = 0, j; i < mirror; i++) {
@@ -145,7 +145,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
       if ((j & 0xff) == 0xff) {
         // just overwrite the last part of the buffer, reuse the start (seed, round)
         setPositionUint32(j >> 8, buf);
-        source = hash(buf);
+        source = SHA256.digest(buf);
       }
 
       // Same trick with byte retrieval. Only every 8th.
@@ -171,7 +171,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
     // We start at the end, and work back to the mirror point.
     // This makes us process each pear exactly once (instead of unnecessarily twice, like in the spec)
     setPositionUint32(end >> 8, buf);
-    source = hash(buf);
+    source = SHA256.digest(buf);
     byteV = source[(end & 0xff) >> 3];
     for (let i = pivot + 1, j; i < mirror; i++) {
       j = end - i + pivot + 1;
@@ -181,7 +181,7 @@ function innerShuffleList(input: ValidatorIndex[], seed: Bytes32, dir: boolean):
       if ((j & 0xff) == 0xff) {
         // just overwrite the last part of the buffer, reuse the start (seed, round)
         setPositionUint32(j >> 8, buf);
-        source = hash(buf);
+        source = SHA256.digest(buf);
       }
 
       // Same trick with byte retrieval. Only every 8th.

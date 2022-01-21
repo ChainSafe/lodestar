@@ -1,8 +1,14 @@
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
-import {CachedBeaconStateAllForks, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  createCachedBeaconState,
+  phase0,
+  PubkeyIndexMap,
+} from "@chainsafe/lodestar-beacon-state-transition";
+import {BitArray} from "@chainsafe/ssz";
 import {allForks, altair, Root, ssz} from "@chainsafe/lodestar-types";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
@@ -23,13 +29,10 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
  */
 type TestBeaconState = Partial<allForks.BeaconState>;
 
-const phase0States = new Map<IChainForkConfig, TreeBacked<allForks.BeaconState>>();
-const altairStates = new Map<IChainForkConfig, TreeBacked<altair.BeaconState>>();
-
 /**
  * Generate beaconState, by default it will generate a mostly empty state with "just enough" to be valid-ish
  * NOTE: All fields can be overridden through `opts`.
- *  should allow 1st test calling generateState more time since TreeBacked<BeaconState>.createValue api is expensive.
+ *  should allow 1st test calling generateState more time since creating a new instance is expensive.
  *
  * @param {TestBeaconState} opts
  * @param config
@@ -40,7 +43,7 @@ export function generateState(
   config = minimalConfig,
   isAltair = false,
   withPubkey = false
-): TreeBacked<allForks.BeaconState> {
+): BeaconStateAllForks {
   const validatorOpts = {
     activationEpoch: 0,
     effectiveBalance: MAX_EFFECTIVE_BALANCE,
@@ -75,21 +78,21 @@ export function generateState(
     },
     blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    historicalRoots: ([] as Root[]) as List<Root>,
+    historicalRoots: [] as Root[],
     eth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
       depositCount: 0,
     },
-    eth1DataVotes: ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>,
+    eth1DataVotes: [] as phase0.Eth1Data[],
     eth1DepositIndex: 0,
-    validators: validators as List<phase0.Validator>,
-    balances: Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE) as List<number>,
+    validators: validators,
+    balances: Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE),
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
-    previousEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
-    currentEpochAttestations: ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>,
-    justificationBits: Array.from({length: 4}, () => false),
+    previousEpochAttestations: [] as phase0.PendingAttestation[],
+    currentEpochAttestations: [] as phase0.PendingAttestation[],
+    justificationBits: BitArray.fromBitLen(4),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,
       root: ZERO_HASH,
@@ -102,46 +105,29 @@ export function generateState(
       epoch: GENESIS_EPOCH,
       root: ZERO_HASH,
     },
+    ...opts,
   };
+
   if (isAltair) {
     const defaultAltairState: altair.BeaconState = {
-      ...ssz.altair.BeaconState.struct_defaultValue(),
+      ...ssz.altair.BeaconState.defaultValue,
       ...defaultState,
-      previousEpochParticipation: [
-        ...[0xff, 0xff],
-        ...Array.from({length: numValidators - 2}, () => 0),
-      ] as List<number>,
-      currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)] as List<number>,
+      previousEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
+      currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
       currentSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
+        aggregatePubkey: ssz.BLSPubkey.defaultValue,
       },
       nextSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
+        aggregatePubkey: ssz.BLSPubkey.defaultValue,
       },
     };
 
-    const state =
-      altairStates.get(config) ??
-      (ssz.altair.BeaconState.createTreeBackedFromStruct(defaultAltairState) as TreeBacked<altair.BeaconState>);
-    altairStates.set(config, state);
+    return ssz.altair.BeaconState.toViewDU(defaultAltairState);
   } else {
-    const state =
-      phase0States.get(config) ??
-      (ssz.phase0.BeaconState.createTreeBackedFromStruct(defaultState) as TreeBacked<allForks.BeaconState>);
-    phase0States.set(config, state);
+    return ssz.phase0.BeaconState.toViewDU(defaultState);
   }
-  const resultState = (isAltair
-    ? altairStates.get(config)?.clone()
-    : phase0States.get(config)?.clone()) as TreeBacked<allForks.BeaconState>;
-
-  for (const key in opts) {
-    const newValue = opts[key as keyof TestBeaconState];
-    // eslint-disable-next-line
-    resultState[key as keyof TestBeaconState] = (newValue as unknown) as any;
-  }
-  return resultState;
 }
 
 /**
@@ -153,7 +139,12 @@ export function generateCachedState(
   isAltair = false
 ): CachedBeaconStateAllForks {
   const state = generateState(opts, config, isAltair);
-  return createCachedBeaconState(config, state);
+  return createCachedBeaconState(state, {
+    config: createIBeaconConfig(config, state.genesisValidatorsRoot),
+    // This is a performance test, there's no need to have a global shared cache of keys
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  }) as CachedBeaconStateAllForks;
 }
 
 /**
@@ -166,6 +157,5 @@ export async function generateCachedStateWithPubkeys(
 ): Promise<CachedBeaconStateAllForks> {
   // somehow this is called in the test but BLS isn't init
   await initBLS();
-  const state = generateState(opts, config, isAltair, true);
-  return createCachedBeaconState(config, state);
+  return generateCachedState(opts, config, isAltair);
 }

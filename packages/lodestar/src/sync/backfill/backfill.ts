@@ -2,11 +2,11 @@ import {IMetrics} from "../../metrics/metrics";
 import {EventEmitter} from "events";
 import PeerId from "peer-id";
 import {StrictEventEmitter} from "strict-event-emitter-types";
-import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
-import {List, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../chain";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
@@ -18,7 +18,6 @@ import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "../../util/bytes";
-import {TreeBacked} from "@chainsafe/ssz";
 import {computeAnchorCheckpoint} from "../../chain/initState";
 
 /** Default batch size. Same as range sync (2 epochs) */
@@ -31,7 +30,7 @@ export type BackfillSyncModules = {
   config: IBeaconConfig;
   logger: ILogger;
   metrics: IMetrics | null;
-  anchorState: TreeBacked<allForks.BeaconState>;
+  anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
 };
 
@@ -727,7 +726,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
-    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot] as List<Root>);
+    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot]);
     if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
 
     // GENESIS_SLOT doesn't has valid signature

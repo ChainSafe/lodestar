@@ -217,54 +217,49 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const FinalityCheckpoints = new ContainerType<FinalityCheckpoints>({
-    fields: {
+  const FinalityCheckpoints = new ContainerType(
+    {
       previousJustified: ssz.phase0.Checkpoint,
       currentJustified: ssz.phase0.Checkpoint,
       finalized: ssz.phase0.Checkpoint,
     },
-    // From beacon apis
-    casingMap: {
-      previousJustified: "previous_justified",
-      currentJustified: "current_justified",
-      finalized: "finalized",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const ValidatorResponse = new ContainerType<ValidatorResponse>({
-    fields: {
+  const ValidatorResponse = new ContainerType(
+    {
       index: ssz.ValidatorIndex,
-      balance: ssz.Number64,
+      balance: ssz.UintNum64,
       status: new StringType<ValidatorStatus>(),
       validator: ssz.phase0.Validator,
     },
-    // From beacon apis
-    expectedCase: "notransform",
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const ValidatorBalance = new ContainerType<ValidatorBalance>({
-    fields: {
+  const ValidatorBalance = new ContainerType(
+    {
       index: ssz.ValidatorIndex,
-      balance: ssz.Number64,
+      balance: ssz.UintNum64,
     },
-    // From beacon apis
-    expectedCase: "notransform",
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const EpochCommitteeResponse = new ContainerType<EpochCommitteeResponse>({
-    fields: {
+  const EpochCommitteeResponse = new ContainerType(
+    {
       index: ssz.CommitteeIndex,
       slot: ssz.Slot,
       validators: ssz.phase0.CommitteeIndices,
     },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const EpochSyncCommitteesResponse = new ContainerType<EpochSyncCommitteeResponse>({
-    fields: {
+  const EpochSyncCommitteesResponse = new ContainerType(
+    {
       validators: ArrayOf(ssz.ValidatorIndex),
       validatorAggregates: ArrayOf(ssz.ValidatorIndex),
     },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getStateRoot: ContainerData(ssz.Root),

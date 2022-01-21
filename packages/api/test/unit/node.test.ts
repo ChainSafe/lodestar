@@ -24,7 +24,7 @@ describe("node", () => {
           enr: "enr",
           p2pAddresses: ["p2pAddresses"],
           discoveryAddresses: ["discoveryAddresses"],
-          metadata: ssz.altair.Metadata.defaultValue(),
+          metadata: ssz.altair.Metadata.defaultValue,
         },
       },
     },

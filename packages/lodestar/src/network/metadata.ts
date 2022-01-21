@@ -1,5 +1,5 @@
 import {ENR} from "@chainsafe/discv5";
-import {BitVector, toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {altair, Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -45,7 +45,7 @@ export class MetadataController {
     this.config = modules.config;
     this.chain = modules.chain;
     this.logger = modules.logger;
-    this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue();
+    this._metadata = opts.metadata || ssz.altair.Metadata.defaultValue;
   }
 
   start(enr: ENR | undefined, currentFork: ForkName): void {
@@ -69,22 +69,22 @@ export class MetadataController {
     return this._metadata.seqNumber;
   }
 
-  get syncnets(): BitVector {
+  get syncnets(): BitArray {
     return this._metadata.syncnets;
   }
 
-  set syncnets(syncnets: BitVector) {
+  set syncnets(syncnets: BitArray) {
     if (this.enr) {
       this.enr.set(ENRKey.syncnets, ssz.altair.SyncSubnets.serialize(syncnets));
     }
     this._metadata.syncnets = syncnets;
   }
 
-  get attnets(): BitVector {
+  get attnets(): BitArray {
     return this._metadata.attnets;
   }
 
-  set attnets(attnets: BitVector) {
+  set attnets(attnets: BitArray) {
     if (this.enr) {
       this.enr.set(ENRKey.attnets, ssz.phase0.AttestationSubnets.serialize(attnets));
     }

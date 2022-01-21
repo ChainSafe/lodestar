@@ -1,4 +1,4 @@
-import {ContainerType, fromHexString, Json, toHexString, Type} from "@chainsafe/ssz";
+import {ContainerType, fromHexString, toHexString, Type} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {
   allForks,
@@ -7,11 +7,11 @@ import {
   BLSSignature,
   CommitteeIndex,
   Epoch,
-  Number64,
   phase0,
   Root,
   Slot,
   ssz,
+  UintNum64,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {
@@ -57,11 +57,11 @@ export type AttesterDuty = {
   validatorIndex: ValidatorIndex;
   committeeIndex: CommitteeIndex;
   // Number of validators in committee
-  committeeLength: Number64;
+  committeeLength: UintNum64;
   // Number of committees at the provided slot
-  committeesAtSlot: Number64;
+  committeesAtSlot: UintNum64;
   // Index of validator in committee
-  validatorCommitteeIndex: Number64;
+  validatorCommitteeIndex: UintNum64;
   // The slot at which the validator must attest.
   slot: Slot;
 };
@@ -227,44 +227,32 @@ export type ReqTypes = {
   produceAttestationData: {query: {slot: number; committee_index: number}};
   produceSyncCommitteeContribution: {query: {slot: number; subcommittee_index: number; beacon_block_root: string}};
   getAggregatedAttestation: {query: {attestation_data_root: string; slot: number}};
-  publishAggregateAndProofs: {body: Json};
-  publishContributionAndProofs: {body: Json};
-  prepareBeaconCommitteeSubnet: {body: Json};
-  prepareSyncCommitteeSubnets: {body: Json};
+  publishAggregateAndProofs: {body: unknown};
+  publishContributionAndProofs: {body: unknown};
+  prepareBeaconCommitteeSubnet: {body: unknown};
+  prepareSyncCommitteeSubnets: {body: unknown};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
-  const BeaconCommitteeSubscription = new ContainerType<BeaconCommitteeSubscription>({
-    fields: {
+  const BeaconCommitteeSubscription = new ContainerType(
+    {
       validatorIndex: ssz.ValidatorIndex,
       committeeIndex: ssz.CommitteeIndex,
       committeesAtSlot: ssz.Slot,
       slot: ssz.Slot,
       isAggregator: ssz.Boolean,
     },
-    // From beacon apis
-    casingMap: {
-      validatorIndex: "validator_index",
-      committeeIndex: "committee_index",
-      committeesAtSlot: "committees_at_slot",
-      slot: "slot",
-      isAggregator: "is_aggregator",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const SyncCommitteeSubscription = new ContainerType<SyncCommitteeSubscription>({
-    fields: {
+  const SyncCommitteeSubscription = new ContainerType(
+    {
       validatorIndex: ssz.ValidatorIndex,
       syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
       untilEpoch: ssz.Epoch,
     },
-    // From beacon apis
-    casingMap: {
-      validatorIndex: "validator_index",
-      syncCommitteeIndices: "sync_committee_indices",
-      untilEpoch: "until_epoch",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   const produceBlock: ReqSerializers<Api, ReqTypes>["produceBlock"] = {
     writeReq: (slot, randaoReveal, grafitti) => ({
@@ -346,58 +334,39 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const WithDependentRoot = <T>(dataType: Type<T>): ContainerType<{data: T; dependentRoot: Root}> =>
-    new ContainerType({fields: {data: dataType, dependentRoot: ssz.Root}});
+  // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+  const WithDependentRoot = <T>(dataType: Type<T>) => new ContainerType({data: dataType, dependentRoot: ssz.Root});
 
-  const AttesterDuty = new ContainerType<AttesterDuty>({
-    fields: {
+  const AttesterDuty = new ContainerType(
+    {
       pubkey: ssz.BLSPubkey,
       validatorIndex: ssz.ValidatorIndex,
       committeeIndex: ssz.CommitteeIndex,
-      committeeLength: ssz.Number64,
-      committeesAtSlot: ssz.Number64,
-      validatorCommitteeIndex: ssz.Number64,
+      committeeLength: ssz.UintNum64,
+      committeesAtSlot: ssz.UintNum64,
+      validatorCommitteeIndex: ssz.UintNum64,
       slot: ssz.Slot,
     },
-    // From beacon apis
-    casingMap: {
-      pubkey: "pubkey",
-      validatorIndex: "validator_index",
-      committeeIndex: "committee_index",
-      committeeLength: "committee_length",
-      committeesAtSlot: "committees_at_slot",
-      validatorCommitteeIndex: "validator_committee_index",
-      slot: "slot",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const ProposerDuty = new ContainerType<ProposerDuty>({
-    fields: {
+  const ProposerDuty = new ContainerType(
+    {
       slot: ssz.Slot,
       validatorIndex: ssz.ValidatorIndex,
       pubkey: ssz.BLSPubkey,
     },
-    // From beacon apis
-    casingMap: {
-      slot: "slot",
-      validatorIndex: "validator_index",
-      pubkey: "pubkey",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const SyncDuty = new ContainerType<SyncDuty>({
-    fields: {
+  const SyncDuty = new ContainerType(
+    {
       pubkey: ssz.BLSPubkey,
       validatorIndex: ssz.ValidatorIndex,
-      validatorSyncCommitteeIndices: ArrayOf(ssz.Number64),
+      validatorSyncCommitteeIndices: ArrayOf(ssz.UintNum64),
     },
-    // From beacon apis
-    casingMap: {
-      pubkey: "pubkey",
-      validatorIndex: "validator_index",
-      validatorSyncCommitteeIndices: "validator_sync_committee_indices",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getAttesterDuties: WithDependentRoot(ArrayOf(AttesterDuty)),

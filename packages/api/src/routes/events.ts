@@ -1,6 +1,6 @@
-import {Epoch, Number64, phase0, Slot, ssz, StringType, RootHex, altair} from "@chainsafe/lodestar-types";
-import {ContainerType, Json, Type} from "@chainsafe/ssz";
-import {jsonOpts, RouteDef, TypeJson} from "../utils";
+import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@chainsafe/lodestar-types";
+import {ContainerType, Type} from "@chainsafe/ssz";
+import {RouteDef, TypeJson} from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -46,7 +46,7 @@ export type EventData = {
   [EventType.finalizedCheckpoint]: {block: RootHex; state: RootHex; epoch: Epoch};
   [EventType.chainReorg]: {
     slot: Slot;
-    depth: Number64;
+    depth: UintNum64;
     oldHeadBlock: RootHex;
     newHeadBlock: RootHex;
     oldHeadState: RootHex;
@@ -87,8 +87,8 @@ export type ReqTypes = {
 export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
   const stringType = new StringType();
   return {
-    [EventType.head]: new ContainerType<EventData[EventType.head]>({
-      fields: {
+    [EventType.head]: new ContainerType(
+      {
         slot: ssz.Slot,
         block: stringType,
         state: stringType,
@@ -96,71 +96,49 @@ export function getTypeByEvent(): {[K in EventType]: Type<EventData[K]>} {
         previousDutyDependentRoot: stringType,
         currentDutyDependentRoot: stringType,
       },
-      // From beacon apis eventstream
-      casingMap: {
-        slot: "slot",
-        block: "block",
-        state: "state",
-        epochTransition: "epoch_transition",
-        previousDutyDependentRoot: "previous_duty_dependent_root",
-        currentDutyDependentRoot: "current_duty_dependent_root",
-      },
-    }),
+      {jsonCase: "eth2"}
+    ),
 
-    [EventType.block]: new ContainerType<EventData[EventType.block]>({
-      fields: {
+    [EventType.block]: new ContainerType(
+      {
         slot: ssz.Slot,
         block: stringType,
       },
-      // From beacon apis eventstream
-      expectedCase: "notransform",
-    }),
+      {jsonCase: "eth2"}
+    ),
 
     [EventType.attestation]: ssz.phase0.Attestation,
     [EventType.voluntaryExit]: ssz.phase0.SignedVoluntaryExit,
 
-    [EventType.finalizedCheckpoint]: new ContainerType<EventData[EventType.finalizedCheckpoint]>({
-      fields: {
+    [EventType.finalizedCheckpoint]: new ContainerType(
+      {
         block: stringType,
         state: stringType,
         epoch: ssz.Epoch,
       },
-      // From beacon apis eventstream
-      expectedCase: "notransform",
-    }),
+      {jsonCase: "eth2"}
+    ),
 
-    [EventType.chainReorg]: new ContainerType<EventData[EventType.chainReorg]>({
-      fields: {
+    [EventType.chainReorg]: new ContainerType(
+      {
         slot: ssz.Slot,
-        depth: ssz.Number64,
+        depth: ssz.UintNum64,
         oldHeadBlock: stringType,
         newHeadBlock: stringType,
         oldHeadState: stringType,
         newHeadState: stringType,
         epoch: ssz.Epoch,
       },
-      // From beacon apis eventstream
-      casingMap: {
-        slot: "slot",
-        depth: "depth",
-        oldHeadBlock: "old_head_block",
-        newHeadBlock: "new_head_block",
-        oldHeadState: "old_head_state",
-        newHeadState: "new_head_state",
-        epoch: "epoch",
-      },
-    }),
+      {jsonCase: "eth2"}
+    ),
 
-    [EventType.lightclientHeaderUpdate]: new ContainerType<EventData[EventType.lightclientHeaderUpdate]>({
-      fields: {
+    [EventType.lightclientHeaderUpdate]: new ContainerType(
+      {
         syncAggregate: ssz.altair.SyncAggregate,
         attestedHeader: ssz.phase0.BeaconBlockHeader,
       },
-      casingMap: {
-        syncAggregate: "sync_aggregate",
-        attestedHeader: "attested_header",
-      },
-    }),
+      {jsonCase: "eth2"}
+    ),
   };
 }
 
@@ -169,13 +147,13 @@ export function getEventSerdes() {
   const typeByEvent = getTypeByEvent();
 
   return {
-    toJson: (event: BeaconEvent): Json => {
+    toJson: (event: BeaconEvent): unknown => {
       const eventType = typeByEvent[event.type] as TypeJson<BeaconEvent["message"]>;
-      return eventType.toJson(event.message, jsonOpts);
+      return eventType.toJson(event.message);
     },
-    fromJson: (type: EventType, data: Json): BeaconEvent["message"] => {
+    fromJson: (type: EventType, data: unknown): BeaconEvent["message"] => {
       const eventType = typeByEvent[type] as TypeJson<BeaconEvent["message"]>;
-      return eventType.fromJson(data, jsonOpts);
+      return eventType.fromJson(data);
     },
   };
 }

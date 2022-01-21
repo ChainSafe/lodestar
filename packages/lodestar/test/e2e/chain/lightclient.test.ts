@@ -121,10 +121,7 @@ describe("chain / lightclient", function () {
               throw Error(`LC head state not in cache ${stateRootHex}`);
             }
 
-            const stateLcFromProof = ssz.altair.BeaconState.createTreeBackedFromProof(
-              header.stateRoot as Uint8Array,
-              proof
-            );
+            const stateLcFromProof = ssz.altair.BeaconState.createFromProof(proof, header.stateRoot as Uint8Array);
             expect(toHexString(stateLcFromProof.latestBlockHeader.bodyRoot)).to.equal(
               toHexString(lcHeadState.latestBlockHeader.bodyRoot),
               `Recovered 'latestBlockHeader.bodyRoot' from state ${stateRootHex} not correct`

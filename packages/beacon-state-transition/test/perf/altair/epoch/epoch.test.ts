@@ -34,6 +34,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
       altair.processEpoch(state as CachedBeaconStateAltair, epochProcess);
       state.epochCtx.afterProcessEpoch(state, epochProcess);
       // Simulate root computation through the next block to account for changes
+      // 74184 hash64 ops - 92.730 ms
       state.hashTreeRoot();
     },
   });

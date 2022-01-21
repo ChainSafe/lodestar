@@ -2,17 +2,17 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {pick} from "lodash";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {toHex} from "@chainsafe/lodestar-utils";
 import {iteratorFromArray} from "../../../utils/interator";
-import {mapToObj} from "../../../utils/map";
 import {
   getEth1DataForBlocks,
   getDepositsByBlockNumber,
   getDepositRootByDepositCount,
 } from "../../../../src/eth1/utils/eth1Data";
+import {Eth1Block} from "../../../../src/eth1/interface";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors";
-import {Eth1Block} from "../../../../src/eth1/interface";
+import {DepositTree} from "../../../../src/db/repositories/depositDataRoot";
 
 chai.use(chaiAsPromised);
 
@@ -21,7 +21,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
     id: string;
     blocks: Eth1Block[];
     deposits: phase0.DepositEvent[];
-    depositRootTree: TreeBacked<List<Root>>;
+    depositRootTree: DepositTree;
     lastProcessedDepositBlockNumber: number;
     expectedEth1Data?: Partial<phase0.Eth1Data & Eth1Block>[];
     error?: Eth1ErrorCode;
@@ -48,8 +48,8 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
       const lastProcessedDepositBlockNumber = expectedEth1Data[expectedEth1Data.length - 1].blockNumber;
 
       // Pre-fill the depositTree with roots for all deposits
-      const depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(
-        Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i)) as List<Root>
+      const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(
+        Array.from({length: deposits[deposits.length - 1].index + 1}, (_, i) => Buffer.alloc(32, i))
       );
 
       return {
@@ -67,7 +67,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "No deposits yet, should throw with NoDepositsForBlockRange",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultTreeBacked(),
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
         lastProcessedDepositBlockNumber: 0,
         error: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE,
       };
@@ -78,7 +78,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "With deposits and no deposit roots, should throw with NotEnoughDepositRoots",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [getMockDeposit({blockNumber: 0, index: 0})],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultTreeBacked(),
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
         lastProcessedDepositBlockNumber: 0,
         error: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS,
       };
@@ -89,7 +89,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "Empty case",
         blocks: [],
         deposits: [],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultTreeBacked(),
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
         lastProcessedDepositBlockNumber: 0,
         expectedEth1Data: [],
       };
@@ -207,12 +207,12 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   interface ITestCase {
     id: string;
     depositCounts: number[];
-    depositRootTree: TreeBacked<List<Root>>;
+    depositRootTree: DepositTree;
     expectedMap: Map<number, Root>;
   }
 
   const fullRootMap = new Map<number, Root>();
-  const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
+  const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU;
   for (let i = 0; i < 10; i++) {
     fullDepositRootTree.push(Buffer.alloc(32, i));
     fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
@@ -242,7 +242,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
       };
     },
     () => {
-      const emptyTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
+      const emptyTree = ssz.phase0.DepositDataRootList.defaultViewDU;
       return {
         id: "Empty case",
         depositCounts: [],
@@ -256,10 +256,18 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
     const {id, depositCounts, depositRootTree, expectedMap} = testCase();
     it(id, function () {
       const map = getDepositRootByDepositCount(depositCounts, depositRootTree);
-      expect(mapToObj(map)).to.deep.equal(mapToObj(expectedMap));
+      expect(renderDepositRootByDepositCount(map)).to.deep.equal(renderDepositRootByDepositCount(expectedMap));
     });
   }
 });
+
+function renderDepositRootByDepositCount(map: Map<number, Uint8Array>): Record<string, string> {
+  const data: Record<string, string> = {};
+  for (const [key, root] of Object.entries(map)) {
+    data[key] = toHex(root);
+  }
+  return data;
+}
 
 function getMockBlock({blockNumber}: {blockNumber: number}): Eth1Block {
   return {

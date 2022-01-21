@@ -14,7 +14,7 @@ describe("CheckpointStateCache perf tests", function () {
   before(() => {
     checkpointStateCache = new CheckpointStateCache({});
     state = generateCachedState();
-    checkpoint = ssz.phase0.Checkpoint.defaultValue();
+    checkpoint = ssz.phase0.Checkpoint.defaultValue;
   });
 
   itBench("CheckpointStateCache - add get delete", () => {

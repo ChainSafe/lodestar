@@ -6,6 +6,8 @@ import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {phase0} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconNode} from "../../../src/node";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
@@ -16,8 +18,6 @@ import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
-import {TreeBacked} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export async function getDevBeaconNode(
   opts: {
@@ -27,7 +27,7 @@ export async function getDevBeaconNode(
     logger?: ILogger;
     peerId?: PeerId;
     peerStoreDir?: string;
-    anchorState?: TreeBacked<allForks.BeaconState>;
+    anchorState?: BeaconStateAllForks;
     wsCheckpoint?: phase0.Checkpoint;
   } & InteropStateOpts
 ): Promise<BeaconNode> {

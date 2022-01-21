@@ -1,6 +1,8 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {phase0, altair} from "@chainsafe/lodestar-types";
+import {BitArray} from "@chainsafe/ssz";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {prioritizePeers} from "../../../../src/network/peers/utils/prioritizePeers";
 import {getAttnets} from "../../../utils/network";
 import {RequestedSubnet} from "../../../../src/network/peers/utils";
@@ -14,6 +16,7 @@ describe("network / peers / priorization", () => {
     peer.toB58String = () => `peer-${i}`;
     peers.push(peer);
   }
+  const none = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
 
   const testCases: {
     id: string;
@@ -38,7 +41,7 @@ describe("network / peers / priorization", () => {
     },
     {
       id: "Don't request a subnet query when enough peers are connected to it",
-      connectedPeers: [{id: peers[0], syncnets: [], attnets: getAttnets([3]), score: 0}],
+      connectedPeers: [{id: peers[0], syncnets: none, attnets: getAttnets([3]), score: 0}],
       activeAttnets: [3],
       activeSyncnets: [],
       opts: {targetPeers: 1, maxPeers: 1},
@@ -52,10 +55,10 @@ describe("network / peers / priorization", () => {
     {
       id: "Disconnect worst peers without duty",
       connectedPeers: [
-        {id: peers[0], syncnets: [], attnets: getAttnets([3]), score: 0},
-        {id: peers[1], syncnets: [], attnets: [], score: 0},
-        {id: peers[2], syncnets: [], attnets: [], score: -20},
-        {id: peers[3], syncnets: [], attnets: [], score: -40},
+        {id: peers[0], syncnets: none, attnets: getAttnets([3]), score: 0},
+        {id: peers[1], syncnets: none, attnets: none, score: 0},
+        {id: peers[2], syncnets: none, attnets: none, score: -20},
+        {id: peers[3], syncnets: none, attnets: none, score: -40},
       ],
       activeAttnets: [3],
       activeSyncnets: [],
@@ -71,14 +74,14 @@ describe("network / peers / priorization", () => {
     {
       id: "Complete example: Disconnect peers and request a subnet query",
       connectedPeers: [
-        {id: peers[0], syncnets: [], attnets: getAttnets([0, 1, 2]), score: 0},
-        {id: peers[1], syncnets: [], attnets: getAttnets([0, 1, 2]), score: -10},
-        {id: peers[2], syncnets: [], attnets: getAttnets([0, 1]), score: 0},
-        {id: peers[3], syncnets: [], attnets: getAttnets([0]), score: -10},
-        {id: peers[4], syncnets: [], attnets: getAttnets([2]), score: 0},
-        {id: peers[5], syncnets: [], attnets: getAttnets([0, 2]), score: -20},
-        {id: peers[6], syncnets: [], attnets: getAttnets([1, 2, 3]), score: 0},
-        {id: peers[7], syncnets: [], attnets: getAttnets([1, 2]), score: -10},
+        {id: peers[0], syncnets: none, attnets: getAttnets([0, 1, 2]), score: 0},
+        {id: peers[1], syncnets: none, attnets: getAttnets([0, 1, 2]), score: -10},
+        {id: peers[2], syncnets: none, attnets: getAttnets([0, 1]), score: 0},
+        {id: peers[3], syncnets: none, attnets: getAttnets([0]), score: -10},
+        {id: peers[4], syncnets: none, attnets: getAttnets([2]), score: 0},
+        {id: peers[5], syncnets: none, attnets: getAttnets([0, 2]), score: -20},
+        {id: peers[6], syncnets: none, attnets: getAttnets([1, 2, 3]), score: 0},
+        {id: peers[7], syncnets: none, attnets: getAttnets([1, 2]), score: -10},
       ],
       activeAttnets: [1, 3],
       activeSyncnets: [],

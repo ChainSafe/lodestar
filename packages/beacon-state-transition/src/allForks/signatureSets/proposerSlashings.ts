@@ -1,5 +1,4 @@
 import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
-import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
@@ -23,7 +22,7 @@ export function getProposerSlashingSignatureSets(
         type: SignatureSetType.single,
         pubkey,
         signingRoot: computeSigningRoot(beaconBlockHeaderType, signedHeader.message, domain),
-        signature: signedHeader.signature.valueOf() as Uint8Array,
+        signature: signedHeader.signature,
       };
     }
   );
@@ -33,7 +32,15 @@ export function getProposerSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return Array.from(readonlyValues(signedBlock.message.body.proposerSlashings), (proposerSlashing) =>
-    getProposerSlashingSignatureSets(state, proposerSlashing)
-  ).flat(1);
+  const signatureSets: ISignatureSet[] = [];
+
+  for (const proposerSlashing of signedBlock.message.body.proposerSlashings) {
+    const proposerSlashingSigSets = getProposerSlashingSignatureSets(state, proposerSlashing);
+
+    for (const signatureSet of proposerSlashingSigSets) {
+      signatureSets.push(signatureSet);
+    }
+  }
+
+  return signatureSets;
 }

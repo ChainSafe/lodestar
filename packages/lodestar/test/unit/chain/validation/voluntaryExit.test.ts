@@ -3,7 +3,6 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {
   phase0,
-  createCachedBeaconState,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeDomain,
@@ -22,6 +21,7 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {PointFormat, SecretKey} from "@chainsafe/bls";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState";
 
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
@@ -33,13 +33,13 @@ describe("validate voluntary exit", () => {
   before(() => {
     const sk = SecretKey.fromKeygen();
 
-    const stateEmpty = ssz.phase0.BeaconState.defaultTreeBacked();
+    const stateEmpty = ssz.phase0.BeaconState.defaultValue;
 
     // Validator has to be active for long enough
     stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;
 
     // Add a validator that's active since genesis and ready to exit
-    stateEmpty.validators[0] = {
+    const validator = ssz.phase0.Validator.toViewDU({
       pubkey: sk.toPublicKey().toBytes(PointFormat.compressed),
       withdrawalCredentials: Buffer.alloc(32, 0),
       effectiveBalance: 32e9,
@@ -48,7 +48,8 @@ describe("validate voluntary exit", () => {
       activationEpoch: 0,
       exitEpoch: FAR_FUTURE_EPOCH,
       withdrawableEpoch: FAR_FUTURE_EPOCH,
-    };
+    });
+    stateEmpty.validators[0] = validator;
 
     const voluntaryExit = {
       epoch: 0,
@@ -63,7 +64,7 @@ describe("validate voluntary exit", () => {
     signedVoluntaryExit = {message: voluntaryExit, signature: sk.sign(signingRoot).toBytes()};
     const _state = generateState(stateEmpty, config);
 
-    state = createCachedBeaconState(createIBeaconConfig(config, _state.genesisValidatorsRoot), _state);
+    state = createCachedBeaconStateTest(_state, createIBeaconConfig(config, _state.genesisValidatorsRoot));
   });
 
   beforeEach(() => {

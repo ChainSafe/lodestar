@@ -13,7 +13,7 @@ import {processSlashings} from "./processSlashings";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 
-export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
+export {processRewardsAndPenalties, processSlashings, getAttestationDeltas, processParticipationRecordUpdates};
 
 export function processEpoch(state: CachedBeaconStatePhase0, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state as CachedBeaconStateAllForks, epochProcess);

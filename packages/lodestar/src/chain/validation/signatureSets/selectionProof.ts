@@ -20,6 +20,6 @@ export function getSelectionProofSignatureSet(
     type: SignatureSetType.single,
     pubkey: aggregator,
     signingRoot: computeSigningRoot(ssz.Slot, slot, selectionProofDomain),
-    signature: aggregateAndProof.message.selectionProof.valueOf() as Uint8Array,
+    signature: aggregateAndProof.message.selectionProof,
   };
 }

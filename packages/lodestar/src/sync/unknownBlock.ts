@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {fromHexString, List, toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {INetwork, NetworkEvent, PeerAction} from "../network";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
@@ -231,7 +231,7 @@ export class UnknownBlockSync {
     for (let i = 0; i < MAX_ATTEMPTS_PER_BLOCK; i++) {
       const peer = shuffledPeers[i % shuffledPeers.length];
       try {
-        const [signedBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot] as List<Root>);
+        const [signedBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [blockRoot]);
 
         // Peer does not have the block, try with next peer
         if (signedBlock === undefined) {

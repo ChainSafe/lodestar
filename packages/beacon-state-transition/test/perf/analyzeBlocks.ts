@@ -59,8 +59,9 @@ async function run(): Promise<void> {
       voluntaryExits += block.message.body.voluntaryExits.length;
 
       for (const attestation of block.message.body.attestations) {
+        const indexes = Array.from({length: attestation.aggregationBits.bitLen}, () => 0);
+        aggregationBits += attestation.aggregationBits.intersectValues(indexes).length;
         inclusionDistance += block.message.slot - attestation.data.slot;
-        aggregationBits += Array.from(attestation.aggregationBits).filter((bit) => bit === true).length;
       }
     }
 

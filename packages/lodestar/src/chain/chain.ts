@@ -3,12 +3,19 @@
  */
 
 import fs from "node:fs";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  computeStartSlotAtEpoch,
+  createCachedBeaconState,
+  Index2PubkeyCache,
+  PubkeyIndexMap,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {fromHexString, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
@@ -22,7 +29,7 @@ import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
-import {restoreStateCaches} from "./initState";
+import {computeAnchorCheckpoint} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
   SeenAttesters,
@@ -46,7 +53,7 @@ import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTrans
 import {ReprocessController} from "./reprocess";
 
 export class BeaconChain implements IBeaconChain {
-  readonly genesisTime: Number64;
+  readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
@@ -78,6 +85,10 @@ export class BeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
+  // Global state caches
+  readonly pubkey2index: PubkeyIndexMap;
+  readonly index2pubkey: Index2PubkeyCache;
+
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
@@ -101,7 +112,7 @@ export class BeaconChain implements IBeaconChain {
       db: IBeaconDb;
       logger: ILogger;
       metrics: IMetrics | null;
-      anchorState: TreeBacked<allForks.BeaconState>;
+      anchorState: BeaconStateAllForks;
       eth1: IEth1ForBlockProduction;
       executionEngine: IExecutionEngine;
     }
@@ -113,7 +124,7 @@ export class BeaconChain implements IBeaconChain {
     this.metrics = metrics;
     this.genesisTime = anchorState.genesisTime;
     this.anchorStateLatestBlockSlot = anchorState.latestBlockHeader.slot;
-    this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot.valueOf() as Uint8Array;
+    this.genesisValidatorsRoot = anchorState.genesisValidatorsRoot;
     this.eth1 = eth1;
     this.executionEngine = executionEngine;
 
@@ -126,7 +137,21 @@ export class BeaconChain implements IBeaconChain {
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
-    const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
+
+    // Initialize single global instance of state caches
+    this.pubkey2index = new PubkeyIndexMap();
+    this.index2pubkey = [];
+
+    // Restore state caches
+    const cachedState = createCachedBeaconState(anchorState, {
+      config,
+      pubkey2index: this.pubkey2index,
+      index2pubkey: this.index2pubkey,
+    });
+    const {checkpoint} = computeAnchorCheckpoint(config, anchorState);
+    stateCache.add(cachedState);
+    checkpointStateCache.add(checkpoint, cachedState);
+
     const forkChoice = initializeForkChoice(
       config,
       emitter,
@@ -204,10 +229,6 @@ export class BeaconChain implements IBeaconChain {
   async persistToDisk(): Promise<void> {
     await this.archiver.persistToDisk();
     await this.opPool.toPersisted(this.db);
-  }
-
-  getGenesisTime(): Number64 {
-    return this.genesisTime;
   }
 
   getHeadState(): CachedBeaconStateAllForks {

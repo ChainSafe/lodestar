@@ -3,6 +3,6 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {createMetrics, IMetrics} from "../../../src/metrics";
 
 export function createMetricsTest(): IMetrics {
-  const state = ssz.phase0.BeaconState.defaultValue();
+  const state = ssz.phase0.BeaconState.defaultViewDU;
   return createMetrics({enabled: true, timeout: 12000}, config, state);
 }

@@ -27,7 +27,7 @@ describe("config", () => {
     },
     getForkSchedule: {
       args: [],
-      res: {data: [ssz.phase0.Fork.defaultValue()]},
+      res: {data: [ssz.phase0.Fork.defaultValue]},
     },
     getSpec: {
       args: [],

@@ -1,4 +1,5 @@
 import {aggregatePublicKeys, PublicKey, SecretKey} from "@chainsafe/bls";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
@@ -44,29 +45,31 @@ describe("validateLightClientUpdate", () => {
     };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
-    const finalizedCheckpointState = ssz.altair.BeaconState.defaultTreeBacked();
-    finalizedCheckpointState.nextSyncCommittee = nextSyncCommittee;
+    const finalizedCheckpointState = ssz.altair.BeaconState.defaultViewDU;
+    finalizedCheckpointState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
     // Prove it
-    const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
+    const nextSyncCommitteeBranch = new Tree(finalizedCheckpointState.node).getSingleProof(
+      BigInt(NEXT_SYNC_COMMITTEE_GINDEX)
+    );
 
     // update.header must have stateRoot to finalizedCheckpointState
     const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
-    finalizedHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedCheckpointState);
+    finalizedHeader.stateRoot = finalizedCheckpointState.hashTreeRoot();
 
     // syncAttestedState must have `header` as finalizedCheckpoint
-    const syncAttestedState = ssz.altair.BeaconState.defaultTreeBacked();
-    syncAttestedState.finalizedCheckpoint = {
+    const syncAttestedState = ssz.altair.BeaconState.defaultViewDU;
+    syncAttestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: 0,
       root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
-    };
+    });
     // Prove it
-    const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+    const finalityBranch = new Tree(syncAttestedState.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
     // finalityHeader must have stateRoot to syncAttestedState
     const syncAttestedBlockHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
-    syncAttestedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
+    syncAttestedBlockHeader.stateRoot = syncAttestedState.hashTreeRoot();
 
-    const forkVersion = ssz.Bytes4.defaultValue();
+    const forkVersion = ssz.Bytes4.defaultValue;
     const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 

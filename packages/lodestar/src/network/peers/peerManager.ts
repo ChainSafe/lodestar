@@ -22,6 +22,8 @@ import {
   renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
+import {BitArray} from "@chainsafe/ssz";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -260,7 +262,7 @@ export class PeerManager {
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     this.peerMetadata.metadata.set(peer, {
       ...metadata,
-      syncnets: (metadata as Partial<altair.Metadata>).syncnets || [],
+      syncnets: (metadata as Partial<altair.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
     });
   }
 
@@ -376,8 +378,8 @@ export class PeerManager {
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
       connectedHealthyPeers.map((peer) => ({
         id: peer,
-        attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
-        syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? [],
+        attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? null,
+        syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? null,
         score: this.peerRpcScores.getScore(peer),
       })),
       // Collect subnets which we need peers for in the current slot

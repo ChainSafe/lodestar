@@ -1,8 +1,7 @@
-import {Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
-import {List, readonlyValues} from "@chainsafe/ssz";
+import {Epoch, phase0} from "@chainsafe/lodestar-types";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStatePhase0} from "../../types";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} from "../../util";
-import {IAttesterStatus} from "../../util/attesterStatus";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, IAttesterStatus} from "../../util";
 
 /**
  * Mutates `statuses` from all pending attestations.
@@ -18,33 +17,39 @@ import {IAttesterStatus} from "../../util/attesterStatus";
 export function statusProcessEpoch(
   state: CachedBeaconStatePhase0,
   statuses: IAttesterStatus[],
-  attestations: List<phase0.PendingAttestation>,
+  attestations: phase0.PendingAttestation[],
   epoch: Epoch,
   sourceFlag: number,
   targetFlag: number,
   headFlag: number
 ): void {
   const {epochCtx, slot: stateSlot} = state;
-  const rootType = ssz.Root;
   const prevEpoch = epochCtx.previousShuffling.epoch;
   if (attestations.length === 0) {
     return;
   }
+
+  // Prevent frequent object get of external CommonJS dependencies
+  const byteArrayEqualsFn = byteArrayEquals;
+
   const actualTargetBlockRoot = getBlockRootAtSlot(state, computeStartSlotAtEpoch(epoch));
-  for (const att of readonlyValues(attestations)) {
-    const aggregationBits = att.aggregationBits;
+
+  for (const att of attestations) {
+    // Ignore empty BitArray, from spec test minimal/phase0/epoch_processing/participation_record_updates updated_participation_record
+    // See https://github.com/ethereum/consensus-specs/issues/2825
+    if (att.aggregationBits.bitLen === 0) {
+      continue;
+    }
+
     const attData = att.data;
     const inclusionDelay = att.inclusionDelay;
     const proposerIndex = att.proposerIndex;
     const attSlot = attData.slot;
-    const committeeIndex = attData.index;
-    const attBeaconBlockRoot = attData.beaconBlockRoot;
-    const attTarget = attData.target;
-    const attVotedTargetRoot = rootType.equals(attTarget.root, actualTargetBlockRoot);
+    const attVotedTargetRoot = byteArrayEqualsFn(attData.target.root, actualTargetBlockRoot);
     const attVotedHeadRoot =
-      attSlot < stateSlot && rootType.equals(attBeaconBlockRoot, getBlockRootAtSlot(state, attSlot));
-    const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    const participants = zipIndexesCommitteeBits(committee, aggregationBits);
+      attSlot < stateSlot && byteArrayEqualsFn(attData.beaconBlockRoot, getBlockRootAtSlot(state, attSlot));
+    const committee = epochCtx.getBeaconCommittee(attSlot, attData.index);
+    const participants = att.aggregationBits.intersectValues(committee);
 
     if (epoch === prevEpoch) {
       for (const p of participants) {

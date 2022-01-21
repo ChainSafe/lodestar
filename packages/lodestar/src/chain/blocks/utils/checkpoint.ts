@@ -7,7 +7,6 @@ import {ZERO_HASH} from "../../../constants";
  * Compute a Checkpoint type from `state.latestBlockHeader`
  */
 export function getCheckpointFromState(checkpointState: CachedBeaconStateAllForks): phase0.Checkpoint {
-  const config = checkpointState.config;
   const slot = checkpointState.slot;
 
   if (slot % SLOTS_PER_EPOCH !== 0) {
@@ -16,7 +15,7 @@ export function getCheckpointFromState(checkpointState: CachedBeaconStateAllFork
 
   const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = config.getForkTypes(slot).BeaconState.hashTreeRoot(checkpointState);
+    blockHeader.stateRoot = checkpointState.hashTreeRoot();
   }
 
   return {

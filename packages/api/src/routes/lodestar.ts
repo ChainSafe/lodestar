@@ -1,5 +1,5 @@
 import {Epoch, RootHex, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
-import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
+import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {
   jsonType,
   ReqEmpty,
@@ -34,7 +34,7 @@ export type GossipQueueItem = {
 
 export type RegenQueueItem = {
   key: string;
-  args: Json;
+  args: unknown;
   addedTimeMs: number;
 };
 
@@ -161,32 +161,26 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
-  const GossipQueueItem = new ContainerType<GossipQueueItem>({
-    fields: {
+  const GossipQueueItem = new ContainerType(
+    {
       topic: stringType,
       receivedFrom: stringType,
-      data: new ByteVectorType({length: 256}),
+      data: new ByteVectorType(256),
       addedTimeMs: ssz.Slot,
     },
-    // Custom type, not in the consensus specs
-    casingMap: {
-      topic: "topic",
-      receivedFrom: "received_from",
-      data: "data",
-      addedTimeMs: "added_time_ms",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
-    getSyncChainsDebugState: jsonType(),
+    getSyncChainsDebugState: jsonType("camel"),
     getGossipQueueItems: ArrayOf(GossipQueueItem),
-    getRegenQueueItems: jsonType(),
-    getBlockProcessorQueueItems: jsonType(),
-    getStateCacheItems: jsonType(),
-    getCheckpointStateCacheItems: jsonType(),
-    discv5GetKadValues: jsonType(),
+    getRegenQueueItems: jsonType("camel"),
+    getBlockProcessorQueueItems: jsonType("camel"),
+    getStateCacheItems: jsonType("camel"),
+    getCheckpointStateCacheItems: jsonType("camel"),
+    discv5GetKadValues: jsonType("camel"),
   };
 }

@@ -24,7 +24,7 @@ export function processAttestation(
 
   validateAttestation(state as CachedBeaconStateAllForks, attestation);
 
-  const pendingAttestation = ssz.phase0.PendingAttestation.createTreeBackedFromStruct({
+  const pendingAttestation = ssz.phase0.PendingAttestation.toViewDU({
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: slot - data.slot,
@@ -96,10 +96,10 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
   }
 
   const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.length !== committee.length) {
+  if (attestation.aggregationBits.bitLen !== committee.length) {
     throw new Error(
       "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.length} committeeLength=${committee.length}`
+        `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
     );
   }
 }

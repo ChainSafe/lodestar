@@ -1,9 +1,10 @@
 import {
+  BeaconStateAllForks,
   CachedBeaconStateAllForks,
   computeEpochAtSlot,
   getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks, Root} from "@chainsafe/lodestar-types";
+import {Root} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {fromHexString} from "@chainsafe/ssz";
 import {IEth1ForBlockProduction, Eth1DataAndDeposits, IEth1Provider, PowMergeBlock} from "./interface";
@@ -48,7 +49,7 @@ export {IEth1ForBlockProduction, IEth1Provider, Eth1Provider};
 export function initializeEth1ForBlockProduction(
   opts: Eth1Options,
   modules: Pick<Eth1DepositDataTrackerModules, "db" | "config" | "logger" | "signal">,
-  anchorState: allForks.BeaconState
+  anchorState: BeaconStateAllForks
 ): IEth1ForBlockProduction {
   if (opts.enabled) {
     return new Eth1ForBlockProduction(opts, {

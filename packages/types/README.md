@@ -45,7 +45,7 @@ import {ssz, Epoch} from "@chainsafe/lodestar-types";
 
 const EpochType: Type<Epoch> = ssz.Epoch;
 
-const e = EpochType.defaultValue();
+const e = EpochType.defaultValue;
 ```
 
 ### By fork
@@ -55,8 +55,8 @@ Lodestar types support multiple different consensus forks. In order to easily di
 ```typescript
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 
-const phase0State: phase0.BeaconState = ssz.phase0.BeaconState.defaultValue();
-const altairState: altair.BeaconState = ssz.altair.BeaconState.defaultValue();
+const phase0State: phase0.BeaconState = ssz.phase0.BeaconState.defaultValue;
+const altairState: altair.BeaconState = ssz.altair.BeaconState.defaultValue;
 ```
 
 Primitive types are directly available without a namespace.
@@ -64,7 +64,7 @@ Primitive types are directly available without a namespace.
 ```typescript
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 
-const epoch: Epoch = ssz.Epoch.defaultValue();
+const epoch: Epoch = ssz.Epoch.defaultValue;
 ```
 
 In some cases, we need interfaces that accept types across all forks, eg: when the fork is not known ahead of time. Typescript interfaces for this purpose are exported under the `allForks` namespace. SSZ Types typed to these interfaces are also provided under an `allForks` namespace, but keyed by `ForkName`.
@@ -73,7 +73,7 @@ In some cases, we need interfaces that accept types across all forks, eg: when t
 import {ForkName} from "@chainsafe/lodestar-params";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 
-const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue();
+const state: allForks.BeaconState = ssz.allForks[ForkName.phase0].BeaconState.defaultValue;
 ```
 
 ## License

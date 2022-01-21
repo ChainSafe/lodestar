@@ -1,4 +1,4 @@
-import {toHexString} from "@chainsafe/ssz";
+import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "../../types";
 import {ZERO_HASH} from "../../constants";
@@ -22,7 +22,7 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
     );
   }
   // verify that proposer index is the correct index
-  const proposerIndex = state.getBeaconProposer(slot);
+  const proposerIndex = state.epochCtx.getBeaconProposer(slot);
   if (block.proposerIndex !== proposerIndex) {
     throw new Error(
       `Block proposer index does not match state proposer index blockProposerIndex=${block.proposerIndex} stateProposerIndex=${proposerIndex}`
@@ -31,22 +31,23 @@ export function processBlockHeader(state: CachedBeaconStateAllForks, block: allF
 
   const types = state.config.getForkTypes(slot);
   // verify that the parent matches
-  if (!ssz.Root.equals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
+  if (!byteArrayEquals(block.parentRoot, ssz.phase0.BeaconBlockHeader.hashTreeRoot(state.latestBlockHeader))) {
     throw new Error(
       `Block parent root ${toHexString(block.parentRoot)} does not match state latest block, block slot=${slot}`
     );
   }
+
   // cache current block as the new latest block
-  state.latestBlockHeader = {
+  state.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU({
     slot: slot,
     proposerIndex: block.proposerIndex,
     parentRoot: block.parentRoot,
     stateRoot: ZERO_HASH,
     bodyRoot: types.BeaconBlockBody.hashTreeRoot(block.body),
-  };
+  });
 
   // verify proposer is not slashed. Only once per block, may use the slower read from tree
-  if (state.validators[proposerIndex].slashed) {
+  if (state.validators.get(proposerIndex).slashed) {
     throw new Error("Block proposer is slashed");
   }
 }

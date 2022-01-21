@@ -1,7 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {
-  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
   getEffectiveBalanceIncrementsZeroed,
@@ -19,7 +19,7 @@ function flagIsTimelySource(flag: number): boolean {
 }
 
 describe("computeDeltas", () => {
-  let originalState: CachedBeaconStateAllForks;
+  let originalState: CachedBeaconStateAltair;
   const indices: Map<string, number> = new Map<string, number>();
   let oldBalances: EffectiveBalanceIncrements;
   let newBalances: EffectiveBalanceIncrements;
@@ -32,13 +32,13 @@ describe("computeDeltas", () => {
 
     originalState = (generatePerfTestCachedStateAltair({
       goBackOneSlot: true,
-    }) as unknown) as CachedBeaconStateAllForks;
-    const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
-      .toArray()
-      .filter((flags) => flagIsTimelySource(flags)).length;
-    const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
-      .toArray()
-      .filter((flags) => flagIsTimelySource(flags)).length;
+    }) as unknown) as CachedBeaconStateAltair;
+
+    const previousEpochParticipationArr = originalState.previousEpochParticipation.getAll();
+    const currentEpochParticipationArr = originalState.currentEpochParticipation.getAll();
+
+    const numPreviousEpochParticipation = previousEpochParticipationArr.filter(flagIsTimelySource).length;
+    const numCurrentEpochParticipation = currentEpochParticipationArr.filter(flagIsTimelySource).length;
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
@@ -66,8 +66,8 @@ describe("computeDeltas", () => {
     id: "computeDeltas",
     beforeEach: () => {
       const votes: IVoteTracker[] = [];
-      const epoch = originalState.currentShuffling.epoch;
-      const committee = originalState.getBeaconCommittee(computeStartSlotAtEpoch(epoch), 0);
+      const epoch = originalState.epochCtx.currentShuffling.epoch;
+      const committee = originalState.epochCtx.getBeaconCommittee(computeStartSlotAtEpoch(epoch), 0);
       for (let i = 0; i < 250000; i++) {
         if (committee.includes(i)) {
           votes.push({

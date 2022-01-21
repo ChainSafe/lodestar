@@ -1,8 +1,7 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Json} from "@chainsafe/ssz";
-import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {Context, ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
 import {
@@ -86,11 +85,7 @@ function getGossipValidatorFn<K extends GossipType>(
       try {
         const sszType = getGossipSSZType(topic);
         const messageData = decodeMessageData(encoding, gossipMsg.data, uncompressCache);
-        gossipObject =
-          // TODO: Review if it's really necessary to deserialize this as TreeBacked
-          topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
-            ? sszType.createTreeBackedFromBytes(messageData)
-            : sszType.deserialize(messageData);
+        gossipObject = sszType.deserialize(messageData);
       } catch (e) {
         // TODO: Log the error or do something better with it
         throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
@@ -109,7 +104,7 @@ function getGossipValidatorFn<K extends GossipType>(
 
       // If the gossipObject was deserialized include its short metadata with the error data
       const metadata = gossipObject && getGossipObjectAcceptMetadata(config, gossipObject, topic);
-      const errorData = (typeof e.type === "object" && metadata ? {...metadata, ...e.type} : e.type) as Json;
+      const errorData = (typeof e.type === "object" && metadata ? {...metadata, ...e.type} : e.type) as Context;
 
       switch (e.action) {
         case GossipAction.IGNORE:

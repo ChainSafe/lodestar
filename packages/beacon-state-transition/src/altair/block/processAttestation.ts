@@ -1,8 +1,9 @@
-import {Epoch, ParticipationFlags, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochContext} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
@@ -17,7 +18,6 @@ import {
 } from "@chainsafe/lodestar-params";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
-import {CachedEpochParticipation} from "../../cache/cachedEpochParticipation";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
@@ -34,19 +34,18 @@ export function processAttestations(
   const {epochCtx} = state;
   const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state as CachedBeaconStateAllForks);
+  const rootCache = new RootCache(state);
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
-  const previousEpochStatuses = new Map<number, ParticipationFlags>();
-  const currentEpochStatuses = new Map<number, ParticipationFlags>();
   for (const attestation of attestations) {
     const data = attestation.data;
 
     validateAttestation(state as CachedBeaconStateAllForks, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
-    const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
+    const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
+    const attestingIndices = attestation.aggregationBits.intersectValues(committeeIndices);
 
     // this check is done last because its the most expensive (if signature verification is toggled on)
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
@@ -66,23 +65,21 @@ export function processAttestations(
       data.target.epoch === epochCtx.currentShuffling.epoch
         ? state.currentEpochParticipation
         : state.previousEpochParticipation;
-    const epochStatuses =
-      data.target.epoch === epochCtx.currentShuffling.epoch ? currentEpochStatuses : previousEpochStatuses;
 
-    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, rootCache, epochCtx);
+    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, epochCtx.epoch, rootCache);
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalanceIncrementsWithWeight = 0;
     for (const index of attestingIndices) {
-      const flags = epochStatuses.get(index) ?? (epochParticipation.get(index) as ParticipationFlags);
-      // Merge (OR) `flagsAttestation` (new flags) with `flags` (current flags)
-      const newFlags = flagsAttestation | flags;
+      const flags = epochParticipation.get(index);
 
       // For normal block, > 90% of attestations belong to current epoch
       // At epoch boundary, 100% of attestations belong to previous epoch
       // so we want to update the participation flag tree in batch
-      epochStatuses.set(index, newFlags);
+
+      // Note ParticipationFlags type uses option {setBitwiseOR: true}, .set() does a |= operation
+      epochParticipation.set(index, flagsAttestation);
       // epochParticipation.setStatus(index, newStatus);
 
       // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
@@ -103,19 +100,9 @@ export function processAttestations(
 
     // Do the discrete math inside the loop to ensure a deterministic result
     const totalIncrements = totalBalanceIncrementsWithWeight;
-    const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
+    const proposerRewardNumerator = totalIncrements * state.epochCtx.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }
-  updateEpochParticipants(
-    previousEpochStatuses,
-    state.previousEpochParticipation,
-    epochCtx.previousShuffling.activeIndices.length
-  );
-  updateEpochParticipants(
-    currentEpochStatuses,
-    state.currentEpochParticipation,
-    epochCtx.currentShuffling.activeIndices.length
-  );
 
   increaseBalance(state, epochCtx.getBeaconProposer(state.slot), proposerReward);
 }
@@ -126,13 +113,11 @@ export function processAttestations(
 export function getAttestationParticipationStatus(
   data: phase0.AttestationData,
   inclusionDelay: number,
-  rootCache: RootCache,
-  epochCtx: EpochContext
-): ParticipationFlags {
+  currentEpoch: Epoch,
+  rootCache: RootCache
+): number {
   const justifiedCheckpoint =
-    data.target.epoch === epochCtx.currentShuffling.epoch
-      ? rootCache.currentJustifiedCheckpoint
-      : rootCache.previousJustifiedCheckpoint;
+    data.target.epoch === currentEpoch ? rootCache.currentJustifiedCheckpoint : rootCache.previousJustifiedCheckpoint;
 
   // The source and target votes are part of the FFG vote, the head vote is part of the fork choice vote
   // Both are tracked to properly incentivise validators
@@ -140,7 +125,7 @@ export function getAttestationParticipationStatus(
   // The source vote always matches the justified checkpoint (else its invalid)
   // The target vote should match the most recent checkpoint (eg: the first root of the epoch)
   // The head vote should match the root at the attestation slot (eg: the root at data.slot)
-  const isMatchingSource = ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+  const isMatchingSource = checkpointValueEquals(data.source, justifiedCheckpoint);
   if (!isMatchingSource) {
     throw new Error(
       `Attestation source does not equal justified checkpoint: source=${checkpointToStr(
@@ -149,11 +134,11 @@ export function getAttestationParticipationStatus(
     );
   }
 
-  const isMatchingTarget = ssz.Root.equals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
+  const isMatchingTarget = byteArrayEquals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
 
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
-    isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
+    isMatchingTarget && byteArrayEquals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
 
   let flags = 0;
   if (isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH)) flags |= TIMELY_SOURCE;
@@ -161,6 +146,10 @@ export function getAttestationParticipationStatus(
   if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
 
   return flags;
+}
+
+export function checkpointValueEquals(cp1: phase0.Checkpoint, cp2: phase0.Checkpoint): boolean {
+  return cp1.epoch === cp2.epoch && byteArrayEquals(cp1.root, cp2.root);
 }
 
 /**
@@ -194,25 +183,5 @@ export class RootCache {
       this.blockRootSlotCache.set(slot, root);
     }
     return root;
-  }
-}
-
-export function updateEpochParticipants(
-  epochStatuses: Map<number, ParticipationFlags>,
-  epochParticipation: CachedEpochParticipation,
-  numActiveValidators: number
-): void {
-  // all active validators are attesters, there are 32 slots per epoch
-  // if 1/2 of that or more are updated flags, do that in batch, see the benchmark for more details
-  if (epochStatuses.size >= numActiveValidators / (2 * SLOTS_PER_EPOCH)) {
-    const transientVector = epochParticipation.persistent.asTransient();
-    for (const [index, flags] of epochStatuses.entries()) {
-      transientVector.set(index, flags);
-    }
-    epochParticipation.updateAllStatus(transientVector.vector);
-  } else {
-    for (const [index, flags] of epochStatuses.entries()) {
-      epochParticipation.set(index, flags);
-    }
   }
 }

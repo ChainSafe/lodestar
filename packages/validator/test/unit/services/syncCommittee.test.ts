@@ -62,9 +62,9 @@ describe("SyncCommitteeService", function () {
     );
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);
-    const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue();
-    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue();
-    const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue();
+    const syncCommitteeSignature = ssz.altair.SyncCommitteeMessage.defaultValue;
+    const contribution = ssz.altair.SyncCommitteeContribution.defaultValue;
+    const contributionAndProof = ssz.altair.SignedContributionAndProof.defaultValue;
     const duties: SyncDutyAndProofs[] = [
       {
         duty: {

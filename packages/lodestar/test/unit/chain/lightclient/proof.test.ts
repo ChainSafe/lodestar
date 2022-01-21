@@ -1,8 +1,7 @@
+import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, ssz} from "@chainsafe/lodestar-types";
-import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {hash} from "@chainsafe/persistent-merkle-tree";
-import {TreeBacked} from "@chainsafe/ssz";
+import {verifyMerkleBranch, hash} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs";
 
@@ -11,17 +10,18 @@ const nextSyncCommitteeGindex = 55;
 const syncCommitteesGindex = 27;
 
 describe("chain / lightclient / proof", () => {
-  let state: TreeBacked<altair.BeaconState>;
+  let state: BeaconStateAltair;
   let stateRoot: Uint8Array;
 
   const currentSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xbb));
   const nextSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xcc));
 
   before("random state", () => {
-    state = ssz.altair.BeaconState.defaultTreeBacked();
-    state.currentSyncCommittee = currentSyncCommittee;
-    state.nextSyncCommittee = nextSyncCommittee;
-    stateRoot = ssz.altair.BeaconState.hashTreeRoot(state);
+    state = ssz.altair.BeaconState.defaultViewDU;
+    state.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(currentSyncCommittee);
+    state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
+    // Note: .hashTreeRoot() automatically commits()
+    stateRoot = state.hashTreeRoot();
   });
 
   it("SyncCommittees proof", () => {

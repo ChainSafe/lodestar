@@ -38,7 +38,7 @@ describe("SyncCommitteeDutiesService", function () {
     index: indices[0],
     balance: 32e9,
     status: "active",
-    validator: ssz.phase0.Validator.defaultValue(),
+    validator: ssz.phase0.Validator.defaultValue,
   };
 
   before(() => {

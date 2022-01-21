@@ -1,6 +1,6 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
-import {ByteVector, fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {ErrorParseJson} from "./jsonRpcHttpClient";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -25,7 +25,7 @@ export function isJsonRpcTruncatedError(error: Error): boolean {
   );
 }
 
-export function bytesToHex(bytes: Uint8Array | ByteVector): string {
+export function bytesToHex(bytes: Uint8Array): string {
   // Handle special case in Ethereum hex formating where hex values may include a single letter
   // 0x0, 0x1 are valid values
   if (bytes.length === 1 && bytes[0] <= 0xf) {
@@ -82,7 +82,7 @@ export function quantityToBytes(hex: QUANTITY): Uint8Array {
  * QUANTITY as defined in ethereum execution layer JSON RPC https://eth.wiki/json-rpc/API.
  * Compress a 32 ByteVector into a QUANTITY
  */
-export function bytesToQuantity(bytes: Uint8Array | ByteVector): QUANTITY {
+export function bytesToQuantity(bytes: Uint8Array): QUANTITY {
   const bn = bytesToBigInt(bytes as Uint8Array, "le");
   return numToQuantity(bn);
 }
@@ -99,7 +99,7 @@ export function bytesToQuantity(bytes: Uint8Array | ByteVector): QUANTITY {
  * - WRONG: 0xf0f0f (must be even number of digits)
  * - WRONG: 004200 (must be prefixed 0x)
  */
-export function bytesToData(bytes: Uint8Array | ByteVector): DATA {
+export function bytesToData(bytes: Uint8Array): DATA {
   return toHexString(bytes);
 }
 

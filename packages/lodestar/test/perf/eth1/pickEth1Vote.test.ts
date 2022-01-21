@@ -1,7 +1,8 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote";
-import {ContainerType, ListType} from "@chainsafe/ssz";
+import {ContainerType, ListCompositeType} from "@chainsafe/ssz";
+import {newFilledArray, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("eth1 / pickEth1Vote", () => {
   const ETH1_FOLLOW_DISTANCE_MAINNET = 2048;
@@ -9,23 +10,23 @@ describe("eth1 / pickEth1Vote", () => {
   const SLOTS_PER_EPOCH_MAINNET = 32;
   const eth1DataVotesLimit = EPOCHS_PER_ETH1_VOTING_PERIOD_MAINNET * SLOTS_PER_EPOCH_MAINNET;
 
-  const stateMainnetType = new ContainerType<phase0.BeaconState>({
-    fields: {
-      eth1DataVotes: new ListType({elementType: ssz.phase0.Eth1Data, limit: eth1DataVotesLimit}),
-    },
+  const stateMainnetType = new ContainerType({
+    eth1DataVotes: new ListCompositeType(ssz.phase0.Eth1Data, eth1DataVotesLimit),
   });
 
-  const stateNoVotes = stateMainnetType.defaultTreeBacked();
-  const stateMaxVotes = stateMainnetType.defaultTreeBacked();
+  const stateNoVotes = stateMainnetType.defaultViewDU;
+  const stateMaxVotes = stateMainnetType.defaultViewDU;
 
-  stateMaxVotes.eth1DataVotes = Array.from({length: eth1DataVotesLimit}, () =>
-    ssz.phase0.Eth1Data.createTreeBackedFromStruct({
+  // Must convert all instances to create a cache
+  stateMaxVotes.eth1DataVotes = ssz.phase0.Eth1DataVotes.toViewDU(
+    newFilledArray(eth1DataVotesLimit, {
       depositRoot: Buffer.alloc(32, 0xdd),
       // All votes are the same
       depositCount: 1e6,
       blockHash: Buffer.alloc(32, 0xdd),
     })
   );
+  stateMaxVotes.commit();
 
   // votesToConsider range:
   // lte: periodStart - SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE,
@@ -38,11 +39,11 @@ describe("eth1 / pickEth1Vote", () => {
   }));
 
   itBench("pickEth1Vote - no votes", () => {
-    pickEth1Vote(stateNoVotes, votesToConsider);
+    pickEth1Vote((stateNoVotes as unknown) as BeaconStateAllForks, votesToConsider);
   });
 
   itBench("pickEth1Vote - max votes", () => {
-    pickEth1Vote(stateMaxVotes, votesToConsider);
+    pickEth1Vote((stateMaxVotes as unknown) as BeaconStateAllForks, votesToConsider);
   });
 });
 
@@ -63,7 +64,7 @@ describe("eth1 / pickEth1Vote serializers", () => {
     depositCount: 1e6,
     blockHash: Buffer.alloc(32, 0xdd),
   };
-  const eth1DataTree = ssz.phase0.Eth1Data.createTreeBackedFromStruct(eth1DataValue);
+  const eth1DataTree = ssz.phase0.Eth1Data.toViewDU(eth1DataValue);
 
   itBench(`pickEth1Vote - Eth1Data hashTreeRoot value x${ETH1_FOLLOW_DISTANCE_MAINNET}`, () => {
     for (let i = 0; i < ETH1_FOLLOW_DISTANCE_MAINNET; i++) {
@@ -75,9 +76,7 @@ describe("eth1 / pickEth1Vote serializers", () => {
   itBench({
     id: `pickEth1Vote - Eth1Data hashTreeRoot tree x${ETH1_FOLLOW_DISTANCE_MAINNET}`,
     beforeEach: () =>
-      Array.from({length: ETH1_FOLLOW_DISTANCE_MAINNET}, () =>
-        ssz.phase0.Eth1Data.createTreeBackedFromStruct(eth1DataValue)
-      ),
+      Array.from({length: ETH1_FOLLOW_DISTANCE_MAINNET}, () => ssz.phase0.Eth1Data.toViewDU(eth1DataValue)),
     fn: (eth1DataTrees) => {
       for (let i = 0; i < eth1DataTrees.length; i++) {
         ssz.phase0.Eth1Data.hashTreeRoot(eth1DataTrees[i]);

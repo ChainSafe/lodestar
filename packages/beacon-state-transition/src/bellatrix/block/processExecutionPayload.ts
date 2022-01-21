@@ -1,5 +1,5 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {byteArrayEquals, List, toHexString} from "@chainsafe/ssz";
+import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {CachedBeaconStateBellatrix} from "../../types";
 import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
@@ -24,7 +24,7 @@ export function processExecutionPayload(
   }
 
   // Verify random
-  const expectedRandom = getRandaoMix(state, state.currentShuffling.epoch);
+  const expectedRandom = getRandaoMix(state, state.epochCtx.epoch);
   if (!byteArrayEquals(payload.random as Uint8Array, expectedRandom as Uint8Array)) {
     throw Error(
       `Invalid execution payload random ${toHexString(payload.random)} expected=${toHexString(expectedRandom)}`
@@ -51,7 +51,7 @@ export function processExecutionPayload(
   }
 
   // Cache execution payload header
-  state.latestExecutionPayloadHeader = {
+  state.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU({
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
@@ -65,6 +65,6 @@ export function processExecutionPayload(
     extraData: payload.extraData,
     baseFeePerGas: payload.baseFeePerGas,
     blockHash: payload.blockHash,
-    transactionsRoot: ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions as List<bellatrix.Transaction>),
-  };
+    transactionsRoot: ssz.bellatrix.Transactions.hashTreeRoot(payload.transactions),
+  });
 }

@@ -3,7 +3,6 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {List} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {
@@ -14,7 +13,9 @@ import {
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
+import {renderBitArray} from "../../../utils/render";
 import sinon from "sinon";
+import {BitArray} from "@chainsafe/ssz";
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;
@@ -71,7 +72,14 @@ describe("MatchingDataAttestationGroup", function () {
   const attestationSeed = generateEmptyAttestation();
   const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
   let sk1: SecretKey;
-  const attestation1 = {...attestationSeed, ...{aggregationBits: [true, true, false] as List<boolean>}};
+  const attestation1: phase0.Attestation = {
+    ...attestationSeed,
+    ...{aggregationBits: BitArray.fromBoolArray([true, true, false])},
+  };
+
+  function attestationFromBits(bitsBoolArr: boolean[]): phase0.Attestation {
+    return {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray(bitsBoolArr)}};
+  }
 
   before(async () => {
     await initBLS();
@@ -88,7 +96,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("add - new data, getAttestations() return 2", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const attestation2 = attestationFromBits([true, false, true]);
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
@@ -96,7 +104,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("add - new data, remove existing attestation, getAttestations() return 1", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, true, true] as List<boolean>}};
+    const attestation2 = attestationFromBits([true, true, true]);
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
@@ -104,7 +112,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("add - already known, getAttestations() return 1", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, false] as List<boolean>}};
+    const attestation2 = attestationFromBits([true, false, false]);
     // attestingIndices is subset of an existing one
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100])});
     expect(result).to.be.equal(InsertOutcome.AlreadyKnown, "incorrect InsertOutcome");
@@ -113,19 +121,18 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("add - aggregate into existing attestation, getAttestations() return 1", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [false, false, true] as List<boolean>}};
+    const attestation2 = attestationFromBits([false, false, true]);
     const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([300])});
     expect(result).to.be.equal(InsertOutcome.Aggregated, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations.length).to.be.equal(1, "expect exactly 1 aggregated attestation");
-    expect(attestations[0].aggregationBits).to.be.deep.equal([true, true, true], "incorrect aggregationBits");
-    const aggregatedSignature = bls.Signature.fromBytes(
-      attestations[0].signature.valueOf() as Uint8Array,
-      undefined,
-      true
+    expect(renderBitArray(attestations[0].aggregationBits)).to.be.deep.equal(
+      renderBitArray(BitArray.fromBoolArray([true, true, true])),
+      "incorrect aggregationBits"
     );
+    const aggregatedSignature = bls.Signature.fromBytes(attestations[0].signature, undefined, true);
     expect(
       aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
     ).to.be.equal(true, "invalid aggregated signature");
@@ -152,7 +159,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("getAttestationsForBlock - return 2", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const attestation2 = attestationFromBits([true, false, true]);
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestationsForBlock(new Set([200]));
@@ -174,7 +181,7 @@ describe("MatchingDataAttestationGroup", function () {
   });
 
   it("getAttestations", () => {
-    const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false, true] as List<boolean>}};
+    const attestation2 = attestationFromBits([true, false, true]);
     const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
@@ -184,8 +191,9 @@ describe("MatchingDataAttestationGroup", function () {
 
 describe("aggregateInto", function () {
   const attestationSeed = generateEmptyAttestation();
-  const attestation1 = {...attestationSeed, ...{aggregationBits: [false, true] as List<boolean>}};
-  const attestation2 = {...attestationSeed, ...{aggregationBits: [true, false] as List<boolean>}};
+  const attestation1 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([false, true])}};
+  const attestation2 = {...attestationSeed, ...{aggregationBits: BitArray.fromBoolArray([true, false])}};
+  const mergedBitArray = BitArray.fromBoolArray([true, true]); // = [false, true] + [true, false]
   const attestationDataRoot = ssz.phase0.AttestationData.serialize(attestationSeed.data);
   let sk1: SecretKey;
   let sk2: SecretKey;
@@ -201,15 +209,21 @@ describe("aggregateInto", function () {
     const attWithIndex1 = {attestation: attestation1, attestingIndices: new Set([100])};
     const attWithIndex2 = {attestation: attestation2, attestingIndices: new Set([200])};
     aggregateInto(attWithIndex1, attWithIndex2);
-    expect(attWithIndex1.attestingIndices).to.be.deep.equal(new Set([100, 200]), "invalid aggregated attestingIndices");
-    expect(attWithIndex1.attestation.aggregationBits).to.be.deep.equal([true, true], "invalid aggregationBits");
-    const aggregatedSignature = bls.Signature.fromBytes(
-      attWithIndex1.attestation.signature.valueOf() as Uint8Array,
-      undefined,
-      true
+    expect(setToArr(attWithIndex1.attestingIndices)).to.be.deep.equal(
+      [100, 200],
+      "invalid aggregated attestingIndices"
     );
+    expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
+      renderBitArray(mergedBitArray),
+      "invalid aggregationBits"
+    );
+    const aggregatedSignature = bls.Signature.fromBytes(attWithIndex1.attestation.signature, undefined, true);
     expect(
       aggregatedSignature.verifyAggregate([sk1.toPublicKey(), sk2.toPublicKey()], attestationDataRoot)
     ).to.be.equal(true, "invalid aggregated signature");
   });
 });
+
+function setToArr<T>(set: Set<T>): T[] {
+  return Array.from(set.values());
+}

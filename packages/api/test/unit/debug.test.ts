@@ -23,11 +23,11 @@ describe("debug", function () {
     },
     getState: {
       args: ["head", "json"],
-      res: {data: ssz.phase0.BeaconState.defaultValue()},
+      res: {data: ssz.phase0.BeaconState.defaultValue},
     },
     getStateV2: {
       args: ["head", "json"],
-      res: {data: ssz.altair.BeaconState.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.BeaconState.defaultValue, version: ForkName.altair},
     },
     connectToPeer: {
       args: ["peerId", ["multiaddr1", "multiaddr2"]],
@@ -49,7 +49,7 @@ describe("debug", function () {
 
     for (const method of ["getState" as const, "getStateV2" as const]) {
       it(method, async () => {
-        const state = ssz.phase0.BeaconState.defaultValue();
+        const state = ssz.phase0.BeaconState.defaultValue;
         const stateSerialized = ssz.phase0.BeaconState.serialize(state);
         mockApi[method].resolves(stateSerialized);
 

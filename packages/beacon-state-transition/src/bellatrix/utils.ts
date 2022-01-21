@@ -1,13 +1,19 @@
 import {allForks, bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {
+  BeaconStateBellatrix,
+  BeaconStateAllForks,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateAllForks,
+} from "../types";
 
 /**
  * Execution enabled = merge is done.
  * When (A) state has execution data OR (B) block has execution data
  */
-export function isExecutionEnabled(state: bellatrix.BeaconState, body: bellatrix.BeaconBlockBody): boolean {
+export function isExecutionEnabled(state: BeaconStateBellatrix, body: bellatrix.BeaconBlockBody): boolean {
   return (
     isMergeTransitionComplete(state) ||
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
+    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue)
   );
 }
 
@@ -15,10 +21,10 @@ export function isExecutionEnabled(state: bellatrix.BeaconState, body: bellatrix
  * Merge block is the SINGLE block that transitions from POW to POS.
  * state has no execution data AND this block has execution data
  */
-export function isMergeTransitionBlock(state: bellatrix.BeaconState, body: bellatrix.BeaconBlockBody): boolean {
+export function isMergeTransitionBlock(state: BeaconStateBellatrix, body: bellatrix.BeaconBlockBody): boolean {
   return (
     !isMergeTransitionComplete(state) &&
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
+    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue)
   );
 }
 
@@ -26,16 +32,22 @@ export function isMergeTransitionBlock(state: bellatrix.BeaconState, body: bella
  * Merge is complete when the state includes execution layer data:
  * state.latestExecutionPayloadHeader NOT EMPTY
  */
-export function isMergeTransitionComplete(state: bellatrix.BeaconState): boolean {
+export function isMergeTransitionComplete(state: BeaconStateBellatrix): boolean {
   return !ssz.bellatrix.ExecutionPayloadHeader.equals(
     state.latestExecutionPayloadHeader,
-    ssz.bellatrix.ExecutionPayloadHeader.defaultTreeBacked()
+    // TODO: Performance
+    ssz.bellatrix.ExecutionPayloadHeader.defaultValue
   );
 }
 
 /** Type guard for bellatrix.BeaconState */
-export function isBellatrixStateType(state: allForks.BeaconState): state is bellatrix.BeaconState {
-  return (state as bellatrix.BeaconState).latestExecutionPayloadHeader !== undefined;
+export function isBellatrixStateType(state: BeaconStateAllForks): state is BeaconStateBellatrix {
+  return (state as BeaconStateBellatrix).latestExecutionPayloadHeader !== undefined;
+}
+
+/** Type guard for bellatrix.CachedBeaconState */
+export function isBellatrixCachedStateType(state: CachedBeaconStateAllForks): state is CachedBeaconStateBellatrix {
+  return (state as CachedBeaconStateBellatrix).latestExecutionPayloadHeader !== undefined;
 }
 
 /** Type guard for bellatrix.BeaconBlockBody */

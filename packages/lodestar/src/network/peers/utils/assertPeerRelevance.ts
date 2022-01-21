@@ -83,7 +83,7 @@ export function assertPeerRelevance(remote: phase0.Status, chain: IBeaconChain):
 }
 
 export function isZeroRoot(root: Root): boolean {
-  const ZERO_ROOT = ssz.Root.defaultValue();
+  const ZERO_ROOT = ssz.Root.defaultValue;
   return ssz.Root.equals(root, ZERO_ROOT);
 }
 

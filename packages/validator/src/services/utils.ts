@@ -9,10 +9,6 @@ export type SubcommitteeDuty = {
   selectionProof: SyncSelectionProof["selectionProof"];
 };
 
-export function getAggregationBits(committeeLength: number, validatorIndexInCommittee: number): boolean[] {
-  return Array.from({length: committeeLength}, (_, i) => i === validatorIndexInCommittee);
-}
-
 export function groupAttDutiesByCommitteeIndex(duties: AttDutyAndProof[]): Map<CommitteeIndex, AttDutyAndProof[]> {
   const dutiesByCommitteeIndex = new Map<CommitteeIndex, AttDutyAndProof[]>();
 

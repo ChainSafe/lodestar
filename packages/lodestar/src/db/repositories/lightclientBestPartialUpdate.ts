@@ -2,12 +2,8 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
 import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {booleanType, ContainerType, VectorType} from "@chainsafe/ssz";
-import {
-  PartialLightClientUpdate,
-  PartialLightClientUpdateFinalized,
-  PartialLightClientUpdateNonFinalized,
-} from "../../chain/lightClient/types";
+import {BooleanType, ContainerType, VectorCompositeType} from "@chainsafe/ssz";
+import {PartialLightClientUpdate} from "../../chain/lightClient/types";
 
 /**
  * Best PartialLightClientUpdate in each SyncPeriod
@@ -15,42 +11,23 @@ import {
  * Used to prepare light client updates
  */
 export class BestPartialLightClientUpdateRepository extends Repository<SyncPeriod, PartialLightClientUpdate> {
-  typeFinalized = new ContainerType<PartialLightClientUpdateFinalized>({
-    fields: {
-      // isFinalized: true
-      isFinalized: booleanType,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      blockRoot: ssz.Root,
-      finalityBranch: new VectorType<Uint8Array[]>({length: FINALIZED_ROOT_DEPTH, elementType: ssz.Root}),
-      finalizedCheckpoint: ssz.phase0.Checkpoint,
-      finalizedHeader: ssz.phase0.BeaconBlockHeader,
-      syncCommitteeAggregate: ssz.altair.SyncAggregate,
-    },
-    casingMap: {
-      isFinalized: "is_finalized",
-      attestedHeader: "attested_header",
-      blockRoot: "block_root",
-      finalityBranch: "finality_branch",
-      finalizedCheckpoint: "finalized_checkpoint",
-      finalizedHeader: "finalized_header",
-      syncCommitteeAggregate: "sync_committee_aggregate",
-    },
+  typeFinalized = new ContainerType({
+    // isFinalized: true
+    isFinalized: new BooleanType(),
+    attestedHeader: ssz.phase0.BeaconBlockHeader,
+    blockRoot: ssz.Root,
+    finalityBranch: new VectorCompositeType(ssz.Root, FINALIZED_ROOT_DEPTH),
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedHeader: ssz.phase0.BeaconBlockHeader,
+    syncCommitteeAggregate: ssz.altair.SyncAggregate,
   });
 
-  typeNonFinalized = new ContainerType<PartialLightClientUpdateNonFinalized>({
-    fields: {
-      // isFinalized: false
-      isFinalized: booleanType,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      blockRoot: ssz.Root,
-      syncCommitteeAggregate: ssz.altair.SyncAggregate,
-    },
-    casingMap: {
-      isFinalized: "is_finalized",
-      attestedHeader: "attested_header",
-      blockRoot: "block_root",
-      syncCommitteeAggregate: "sync_committee_aggregate",
-    },
+  typeNonFinalized = new ContainerType({
+    // isFinalized: false
+    isFinalized: new BooleanType(),
+    attestedHeader: ssz.phase0.BeaconBlockHeader,
+    blockRoot: ssz.Root,
+    syncCommitteeAggregate: ssz.altair.SyncAggregate,
   });
 
   constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {
@@ -72,7 +49,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
     if (firstByte === 1) {
       return this.typeFinalized.deserialize(data);
     } else {
-      return this.typeNonFinalized.deserialize(data);
+      return this.typeNonFinalized.deserialize(data) as PartialLightClientUpdate;
     }
   }
 }

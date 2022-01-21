@@ -50,7 +50,7 @@ describe("block assembly", function () {
     const state = generateCachedState({slot: 1});
     sinon.stub(state.epochCtx, "getBeaconProposer").returns(2);
     regenStub.getBlockSlotState.resolves(state);
-    beaconDB.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
+    beaconDB.depositDataRoot.getDepositRootTreeAtIndex.resolves(ssz.phase0.DepositDataRootList.defaultViewDU);
     assembleBodyStub.resolves(generateEmptyBlock().body);
 
     const eth1 = sandbox.createStubInstance(Eth1ForBlockProduction);

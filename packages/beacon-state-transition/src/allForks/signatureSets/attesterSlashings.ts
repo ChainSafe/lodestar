@@ -1,4 +1,3 @@
-import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
@@ -19,7 +18,15 @@ export function getAttesterSlashingsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return Array.from(readonlyValues(signedBlock.message.body.attesterSlashings), (attesterSlashing) =>
-    getAttesterSlashingSignatureSets(state, attesterSlashing)
-  ).flat(1);
+  const signatureSets: ISignatureSet[] = [];
+
+  for (const attesterSlashing of signedBlock.message.body.attesterSlashings) {
+    const attesterSlashingSigSets = getAttesterSlashingSignatureSets(state, attesterSlashing);
+
+    for (const signatureSet of attesterSlashingSigSets) {
+      signatureSets.push(signatureSet);
+    }
+  }
+
+  return signatureSets;
 }

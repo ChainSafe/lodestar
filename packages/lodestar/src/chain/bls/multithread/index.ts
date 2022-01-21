@@ -144,7 +144,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
           opts,
           sets: setsWorker.map((s) => ({
             publicKey: getAggregatedPubkey(s).toBytes(this.format),
-            message: s.signingRoot.valueOf() as Uint8Array,
+            message: s.signingRoot,
             signature: s.signature,
           })),
         })

@@ -132,7 +132,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 3. Client software MAY stop the corresponding building process after serving this call.
    */
   async getPayload(payloadId: PayloadId): Promise<bellatrix.ExecutionPayload> {
-    const payloadIdNbr = Number(payloadId);
+    const payloadIdNbr = parseInt(payloadId, 10);
     const payload = this.preparingPayloads.get(payloadIdNbr);
     if (!payload) {
       throw Error(`Unknown payloadId ${payloadId}`);

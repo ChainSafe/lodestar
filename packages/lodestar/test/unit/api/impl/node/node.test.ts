@@ -3,6 +3,7 @@
 import {Connection} from "libp2p";
 import {getNodeApi} from "../../../../../src/api/impl/node";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {BitArray} from "@chainsafe/ssz";
 import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
@@ -58,8 +59,8 @@ describe("node api implementation", function () {
       networkStub.metadata = {
         get json(): altair.Metadata {
           return {
-            attnets: [true],
-            syncnets: [],
+            attnets: BitArray.fromBoolArray([true]),
+            syncnets: BitArray.fromBitLen(0),
             seqNumber: BigInt(1),
           };
         },

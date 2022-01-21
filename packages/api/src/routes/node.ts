@@ -162,23 +162,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
-  const NetworkIdentity = new ContainerType<NetworkIdentity>({
-    fields: {
+  const NetworkIdentity = new ContainerType(
+    {
       peerId: stringType,
       enr: stringType,
       p2pAddresses: ArrayOf(stringType),
       discoveryAddresses: ArrayOf(stringType),
       metadata: ssz.altair.Metadata,
     },
-    // From beacon apis
-    casingMap: {
-      peerId: "peer_id",
-      enr: "enr",
-      p2pAddresses: "p2p_addresses",
-      discoveryAddresses: "discovery_addresses",
-      metadata: "metadata",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     //
@@ -187,11 +180,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getNetworkIdentity: ContainerData(NetworkIdentity),
     // All these types don't contain any BigInt nor Buffer instances.
     // Use jsonType() to translate the casing in a generic way.
-    getPeers: jsonType(),
-    getPeer: jsonType(),
-    getPeerCount: jsonType(),
-    getNodeVersion: jsonType(),
-    getSyncingStatus: jsonType(),
+    getPeers: jsonType("camel"),
+    getPeer: jsonType("camel"),
+    getPeerCount: jsonType("camel"),
+    getNodeVersion: jsonType("camel"),
+    getSyncingStatus: jsonType("camel"),
     getHealth: sameType(),
   };
 }

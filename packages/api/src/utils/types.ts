@@ -1,4 +1,4 @@
-import {IJsonOptions, Json, ListType, Type} from "@chainsafe/ssz";
+import {isBasicType, ListBasicType, Type, isCompositeType, ListCompositeType, ArrayType} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
@@ -8,10 +8,8 @@ import {Schema, SchemaDefinition} from "./schema";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-explicit-any */
 
-/** All JSON must be sent in snake case */
-export const jsonOpts = {case: "snake" as const};
 /** All JSON inside the JS code must be camel case */
-export const codeCase = "camel" as const;
+const codeCase = "camel" as const;
 
 export type RouteGroupDefinition<
   Api extends Record<string, RouteGeneric>,
@@ -42,8 +40,8 @@ type ThenArg<T> = T extends PromiseLike<infer U> ? U : T;
 export type Resolves<T extends (...args: any) => any> = ThenArg<ReturnType<T>>;
 
 export type TypeJson<T> = {
-  toJson(val: T, opts?: IJsonOptions): Json;
-  fromJson(json: Json, opts?: IJsonOptions): T;
+  toJson(val: T): unknown;
+  fromJson(json: unknown): T;
 };
 
 //
@@ -94,15 +92,21 @@ export const reqEmpty: ReqSerializer<() => void, ReqEmpty> = {
 export const reqOnlyBody = <T>(
   type: TypeJson<T>,
   bodySchema: Schema
-): ReqGenArg<(arg: T) => Promise<void>, {body: Json}> => ({
-  writeReq: (items) => ({body: type.toJson(items, jsonOpts)}),
-  parseReq: ({body}) => [type.fromJson(body, jsonOpts)],
+): ReqGenArg<(arg: T) => Promise<void>, {body: unknown}> => ({
+  writeReq: (items) => ({body: type.toJson(items)}),
+  parseReq: ({body}) => [type.fromJson(body)],
   schema: {body: bodySchema},
 });
 
 /** SSZ factory helper + typed. limit = 1e6 as a big enough random number */
-export function ArrayOf<T>(elementType: Type<T>, limit = 1e6): ListType<T[]> {
-  return new ListType({elementType, limit});
+export function ArrayOf<T>(elementType: Type<T>): ArrayType<Type<T>, unknown, unknown> {
+  if (isCompositeType(elementType)) {
+    return (new ListCompositeType(elementType, Infinity) as unknown) as ArrayType<Type<T>, unknown, unknown>;
+  } else if (isBasicType(elementType)) {
+    return (new ListBasicType(elementType, Infinity) as unknown) as ArrayType<Type<T>, unknown, unknown>;
+  } else {
+    throw Error(`Unknown type ${elementType.typeName}`);
+  }
 }
 
 /**
@@ -113,12 +117,12 @@ export function ArrayOf<T>(elementType: Type<T>, limit = 1e6): ListType<T[]> {
  */
 export function ContainerData<T>(dataType: TypeJson<T>): TypeJson<{data: T}> {
   return {
-    toJson: ({data}, opts) => ({
-      data: dataType.toJson(data, opts),
+    toJson: ({data}) => ({
+      data: dataType.toJson(data),
     }),
-    fromJson: ({data}: {data: Json}, opts) => {
+    fromJson: ({data}: {data: unknown}) => {
       return {
-        data: dataType.fromJson(data, opts),
+        data: dataType.fromJson(data),
       };
     },
   };
@@ -133,26 +137,30 @@ export function ContainerData<T>(dataType: TypeJson<T>): TypeJson<{data: T}> {
  */
 export function WithVersion<T>(getType: (fork: ForkName) => TypeJson<T>): TypeJson<{data: T; version: ForkName}> {
   return {
-    toJson: ({data, version}, opts) => ({
-      data: getType(version || ForkName.phase0).toJson(data, opts),
+    toJson: ({data, version}) => ({
+      data: getType(version || ForkName.phase0).toJson(data),
       version,
     }),
-    fromJson: ({data, version}: {data: Json; version: string}, opts) => {
+    fromJson: ({data, version}: {data: unknown; version: string}) => {
       // Un-safe external data, validate version is known ForkName value
       if (!ForkName[version as ForkName]) throw Error(`Invalid version ${version}`);
 
       return {
-        data: getType(version as ForkName).fromJson(data, opts),
+        data: getType(version as ForkName).fromJson(data),
         version: version as ForkName,
       };
     },
   };
 }
 
+type JsonCase = "snake" | "constant" | "camel" | "param" | "header" | "pascal" | "dot" | "notransform";
+
 /** Helper to only translate casing */
-export function jsonType<T extends Record<string, unknown> | Record<string, unknown>[]>(): TypeJson<T> {
+export function jsonType<T extends Record<string, unknown> | Record<string, unknown>[]>(
+  jsonCase: JsonCase
+): TypeJson<T> {
   return {
-    toJson: (val, opts) => objectToExpectedCase(val, opts?.case) as Json,
+    toJson: (val) => objectToExpectedCase(val, jsonCase) as unknown,
     fromJson: (json) => objectToExpectedCase(json as Record<string, unknown>, codeCase) as T,
   };
 }
@@ -160,7 +168,7 @@ export function jsonType<T extends Record<string, unknown> | Record<string, unkn
 /** Helper to not do any transformation with the type */
 export function sameType<T>(): TypeJson<T> {
   return {
-    toJson: (val) => (val as unknown) as Json,
+    toJson: (val) => val as unknown,
     fromJson: (json) => (json as unknown) as T,
   };
 }

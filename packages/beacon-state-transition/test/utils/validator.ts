@@ -1,4 +1,4 @@
-import {fromHexString, List} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 
@@ -40,6 +40,6 @@ export function generateValidator(opts: IValidatorGeneratorOpts = {}): phase0.Va
  * @param {number} n
  * @returns {Validator[]}
  */
-export function generateValidators(n: number, opts?: IValidatorGeneratorOpts): List<phase0.Validator> {
-  return Array.from({length: n}, () => generateValidator(opts)) as List<phase0.Validator>;
+export function generateValidators(n: number, opts?: IValidatorGeneratorOpts): phase0.Validator[] {
+  return Array.from({length: n}, () => generateValidator(opts));
 }

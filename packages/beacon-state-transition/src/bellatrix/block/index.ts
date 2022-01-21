@@ -26,7 +26,7 @@ export function processBlock(
   }
 
   processRandao(state as CachedBeaconStateAllForks, block, verifySignatures);
-  processEth1Data(state as CachedBeaconStateAllForks, block.body);
+  processEth1Data(state as CachedBeaconStateAllForks, block.body.eth1Data);
   processOperations(state, block.body, verifySignatures);
   processSyncAggregate((state as unknown) as CachedBeaconStateAltair, block, verifySignatures);
 }

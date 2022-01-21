@@ -115,14 +115,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
-  const SlotRoot = new ContainerType<SlotRoot>({
-    fields: {
+  const SlotRoot = new ContainerType(
+    {
       slot: ssz.Slot,
       root: stringType,
     },
-    // From beacon apis
-    expectedCase: "notransform",
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getHeads: ContainerData(ArrayOf(SlotRoot)),

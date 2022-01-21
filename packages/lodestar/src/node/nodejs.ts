@@ -6,9 +6,8 @@ import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 
-import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
@@ -23,6 +22,7 @@ import {initializeExecutionEngine} from "../executionEngine";
 import {initializeEth1ForBlockProduction} from "../eth1";
 import {IBeaconNodeOptions} from "./options";
 import {runNodeNotifier} from "./notifier";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 export * from "./options";
 
@@ -47,7 +47,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   libp2p: LibP2p;
-  anchorState: TreeBacked<allForks.BeaconState>;
+  anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 }

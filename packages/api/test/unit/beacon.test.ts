@@ -15,14 +15,14 @@ describe("beacon", () => {
   const blockHeaderResponse: BlockHeaderResponse = {
     root,
     canonical: true,
-    header: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
+    header: ssz.phase0.SignedBeaconBlockHeader.defaultValue,
   };
 
   const validatorResponse: ValidatorResponse = {
     index: 1,
     balance,
     status: "active_ongoing",
-    validator: ssz.phase0.Validator.defaultValue(),
+    validator: ssz.phase0.Validator.defaultValue,
   };
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
@@ -30,15 +30,15 @@ describe("beacon", () => {
 
     getBlock: {
       args: ["head"],
-      res: {data: ssz.phase0.SignedBeaconBlock.defaultValue()},
+      res: {data: ssz.phase0.SignedBeaconBlock.defaultValue},
     },
     getBlockV2: {
       args: ["head"],
-      res: {data: ssz.altair.SignedBeaconBlock.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.SignedBeaconBlock.defaultValue, version: ForkName.altair},
     },
     getBlockAttestations: {
       args: ["head"],
-      res: {data: [ssz.phase0.Attestation.defaultValue()]},
+      res: {data: [ssz.phase0.Attestation.defaultValue]},
     },
     getBlockHeader: {
       args: ["head"],
@@ -53,7 +53,7 @@ describe("beacon", () => {
       res: {data: root},
     },
     publishBlock: {
-      args: [ssz.phase0.SignedBeaconBlock.defaultValue()],
+      args: [ssz.phase0.SignedBeaconBlock.defaultValue],
       res: undefined,
     },
 
@@ -61,38 +61,38 @@ describe("beacon", () => {
 
     getPoolAttestations: {
       args: [{slot: 1, committeeIndex: 2}],
-      res: {data: [ssz.phase0.Attestation.defaultValue()]},
+      res: {data: [ssz.phase0.Attestation.defaultValue]},
     },
     getPoolAttesterSlashings: {
       args: [],
-      res: {data: [ssz.phase0.AttesterSlashing.defaultValue()]},
+      res: {data: [ssz.phase0.AttesterSlashing.defaultValue]},
     },
     getPoolProposerSlashings: {
       args: [],
-      res: {data: [ssz.phase0.ProposerSlashing.defaultValue()]},
+      res: {data: [ssz.phase0.ProposerSlashing.defaultValue]},
     },
     getPoolVoluntaryExits: {
       args: [],
-      res: {data: [ssz.phase0.SignedVoluntaryExit.defaultValue()]},
+      res: {data: [ssz.phase0.SignedVoluntaryExit.defaultValue]},
     },
     submitPoolAttestations: {
-      args: [[ssz.phase0.Attestation.defaultValue()]],
+      args: [[ssz.phase0.Attestation.defaultValue]],
       res: undefined,
     },
     submitPoolAttesterSlashing: {
-      args: [ssz.phase0.AttesterSlashing.defaultValue()],
+      args: [ssz.phase0.AttesterSlashing.defaultValue],
       res: undefined,
     },
     submitPoolProposerSlashing: {
-      args: [ssz.phase0.ProposerSlashing.defaultValue()],
+      args: [ssz.phase0.ProposerSlashing.defaultValue],
       res: undefined,
     },
     submitPoolVoluntaryExit: {
-      args: [ssz.phase0.SignedVoluntaryExit.defaultValue()],
+      args: [ssz.phase0.SignedVoluntaryExit.defaultValue],
       res: undefined,
     },
     submitPoolSyncCommitteeSignatures: {
-      args: [[ssz.altair.SyncCommitteeMessage.defaultValue()]],
+      args: [[ssz.altair.SyncCommitteeMessage.defaultValue]],
       res: undefined,
     },
 
@@ -104,15 +104,15 @@ describe("beacon", () => {
     },
     getStateFork: {
       args: ["head"],
-      res: {data: ssz.phase0.Fork.defaultValue()},
+      res: {data: ssz.phase0.Fork.defaultValue},
     },
     getStateFinalityCheckpoints: {
       args: ["head"],
       res: {
         data: {
-          previousJustified: ssz.phase0.Checkpoint.defaultValue(),
-          currentJustified: ssz.phase0.Checkpoint.defaultValue(),
-          finalized: ssz.phase0.Checkpoint.defaultValue(),
+          previousJustified: ssz.phase0.Checkpoint.defaultValue,
+          currentJustified: ssz.phase0.Checkpoint.defaultValue,
+          finalized: ssz.phase0.Checkpoint.defaultValue,
         },
       },
     },
@@ -141,7 +141,7 @@ describe("beacon", () => {
 
     getGenesis: {
       args: [],
-      res: {data: ssz.phase0.Genesis.defaultValue()},
+      res: {data: ssz.phase0.Genesis.defaultValue},
     },
   });
 

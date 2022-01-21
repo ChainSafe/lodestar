@@ -1,5 +1,4 @@
 import {DOMAIN_VOLUNTARY_EXIT} from "@chainsafe/lodestar-params";
-import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {
   computeSigningRoot,
@@ -32,7 +31,7 @@ export function getVoluntaryExitSignatureSet(
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[signedVoluntaryExit.message.validatorIndex],
     signingRoot: computeSigningRoot(ssz.phase0.VoluntaryExit, signedVoluntaryExit.message, domain),
-    signature: signedVoluntaryExit.signature.valueOf() as Uint8Array,
+    signature: signedVoluntaryExit.signature,
   };
 }
 
@@ -40,7 +39,11 @@ export function getVoluntaryExitsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  return Array.from(readonlyValues(signedBlock.message.body.voluntaryExits), (voluntaryExit) =>
-    getVoluntaryExitSignatureSet(state, voluntaryExit)
-  );
+  const signatureSets: ISignatureSet[] = [];
+
+  for (const voluntaryExit of signedBlock.message.body.voluntaryExits) {
+    signatureSets.push(getVoluntaryExitSignatureSet(state, voluntaryExit));
+  }
+
+  return signatureSets;
 }

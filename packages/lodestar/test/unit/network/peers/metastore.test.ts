@@ -4,6 +4,8 @@ import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {BitArray} from "@chainsafe/ssz";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import ProtoBook from "libp2p/src/peer-store/proto-book";
 
@@ -47,10 +49,10 @@ describe("Libp2pPeerMetadataStore", function () {
   it("can store and retrieve metadata", function () {
     const store = new Libp2pPeerMetadataStore(metabookStub);
     const value: altair.Metadata = {
-      attnets: Array.from({length: 64}, () => true),
+      attnets: BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT),
       seqNumber: BigInt(20),
       // This will serialize fine, to 0x00
-      syncnets: [],
+      syncnets: BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
     };
     store.metadata.set(peerId, value);
     const result = store.metadata.get(peerId);
@@ -64,6 +66,6 @@ describe("Libp2pPeerMetadataStore", function () {
     store.rpcScore.set(peerId, value);
     const result = store.rpcScore.get(peerId);
 
-    expect(ssz.Number64.equals(result as number, value)).to.be.true;
+    expect(result).to.equal(value);
   });
 });

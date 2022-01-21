@@ -1,10 +1,10 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconStateAllForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
@@ -36,19 +36,20 @@ import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 import {testLogger} from "../../logger";
 import {ReprocessController} from "../../../../src/chain/reprocess";
+import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
 export interface IMockChainParams {
-  genesisTime?: Number64;
+  genesisTime?: UintNum64;
   chainId: Uint16;
-  networkId: Uint64;
-  state: TreeBacked<allForks.BeaconState>;
+  networkId: UintBn64;
+  state: BeaconStateAllForks;
   config: IBeaconConfig;
 }
 
 export class MockBeaconChain implements IBeaconChain {
-  readonly genesisTime: Number64;
+  readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
@@ -60,7 +61,7 @@ export class MockBeaconChain implements IBeaconChain {
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
   chainId: Uint16;
-  networkId: Uint64;
+  networkId: UintBn64;
   clock: IBeaconClock;
   regen: IStateRegenerator;
   emitter: ChainEventEmitter;
@@ -81,7 +82,7 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
 
-  private state: TreeBacked<allForks.BeaconState>;
+  private state: BeaconStateAllForks;
   private abortController: AbortController;
 
   constructor({genesisTime, chainId, networkId, state, config}: IMockChainParams) {
@@ -123,11 +124,11 @@ export class MockBeaconChain implements IBeaconChain {
   }
 
   getHeadState(): CachedBeaconStateAllForks {
-    return createCachedBeaconState(this.config, this.state);
+    return createCachedBeaconStateTest(this.state, this.config);
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
-    return createCachedBeaconState(this.config, this.state);
+    return createCachedBeaconStateTest(this.state, this.config);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock> {
@@ -142,10 +143,6 @@ export class MockBeaconChain implements IBeaconChain {
       slot: slots[i],
       bytes: Buffer.from(ssz.phase0.SignedBeaconBlock.serialize(block)),
     }));
-  }
-
-  getGenesisTime(): Number64 {
-    return Math.floor(Date.now() / 1000);
   }
 
   async receiveBlock(): Promise<void> {}
@@ -179,7 +176,7 @@ export class MockBeaconChain implements IBeaconChain {
 }
 
 function mockForkChoice(): IForkChoice {
-  const root = ssz.Root.defaultValue() as Uint8Array;
+  const root = ssz.Root.defaultValue as Uint8Array;
   const rootHex = toHexString(root);
   const block: IProtoBlock = {
     slot: 0,

@@ -1,5 +1,5 @@
 import xor from "buffer-xor";
-import {hash} from "@chainsafe/ssz";
+import SHA256 from "@chainsafe/as-sha256";
 import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {verifyRandaoSignature} from "../signatureSets";
@@ -18,18 +18,19 @@ export function processRandao(
 ): void {
   const {epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
-  const randaoReveal = block.body.randaoReveal.valueOf() as Uint8Array;
+  const randaoReveal = block.body.randaoReveal;
 
   // verify RANDAO reveal
   if (verifySignature) {
-    if (!verifyRandaoSignature(state as CachedBeaconStateAllForks, block)) {
+    if (!verifyRandaoSignature(state, block)) {
       throw new Error("RANDAO reveal is an invalid signature");
     }
   }
 
   // mix in RANDAO reveal
-  state.randaoMixes[epoch % EPOCHS_PER_HISTORICAL_VECTOR] = xor(
+  const randaoMix = xor(
     Buffer.from(getRandaoMix(state, epoch) as Uint8Array),
-    Buffer.from(hash(randaoReveal))
+    Buffer.from(SHA256.digest(randaoReveal))
   );
+  state.randaoMixes.set(epoch % EPOCHS_PER_HISTORICAL_VECTOR, randaoMix);
 }

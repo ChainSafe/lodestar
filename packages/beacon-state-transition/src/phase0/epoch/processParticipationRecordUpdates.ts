@@ -1,5 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconStatePhase0} from "../../types";
 
 /**
@@ -9,5 +8,7 @@ import {CachedBeaconStatePhase0} from "../../types";
 export function processParticipationRecordUpdates(state: CachedBeaconStatePhase0): void {
   // rotate current/previous epoch attestations
   state.previousEpochAttestations = state.currentEpochAttestations;
-  state.currentEpochAttestations = ([] as phase0.PendingAttestation[]) as List<phase0.PendingAttestation>;
+
+  // Reset list to empty
+  state.currentEpochAttestations = ssz.phase0.EpochAttestations.toViewDU([]);
 }

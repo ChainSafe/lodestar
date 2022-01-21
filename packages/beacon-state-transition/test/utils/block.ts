@@ -1,5 +1,4 @@
 import crypto from "node:crypto";
-import {List} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../src/constants";
 
@@ -17,11 +16,11 @@ export function generateEmptyBlock(): phase0.BeaconBlock {
         depositCount: 0,
       },
       graffiti: crypto.randomBytes(32),
-      proposerSlashings: ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>,
-      attesterSlashings: ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>,
-      attestations: ([] as phase0.Attestation[]) as List<phase0.Attestation>,
-      deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
-      voluntaryExits: ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>,
+      proposerSlashings: [] as phase0.ProposerSlashing[],
+      attesterSlashings: [] as phase0.AttesterSlashing[],
+      attestations: [] as phase0.Attestation[],
+      deposits: [] as phase0.Deposit[],
+      voluntaryExits: [] as phase0.SignedVoluntaryExit[],
     },
   };
 }

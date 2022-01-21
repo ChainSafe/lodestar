@@ -46,12 +46,12 @@ describe("blockAssembly - body", function () {
   it("should generate block body", async function () {
     const {chain, opPool, dbStub, aggregatedAttestationPool} = getStubs();
     opPool.getSlashingsAndExits.returns([
-      [ssz.phase0.AttesterSlashing.defaultValue()],
-      [ssz.phase0.ProposerSlashing.defaultValue()],
+      [ssz.phase0.AttesterSlashing.defaultValue],
+      [ssz.phase0.ProposerSlashing.defaultValue],
       [generateEmptySignedVoluntaryExit()],
     ]);
     aggregatedAttestationPool.getAttestationsForBlock.returns([generateEmptyAttestation()]);
-    dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
+    dbStub.depositDataRoot.getDepositRootTreeAtIndex.resolves(ssz.phase0.DepositDataRootList.defaultViewDU);
 
     const result = await assembleBody(chain, generateCachedState(), {
       randaoReveal: Buffer.alloc(96, 0),

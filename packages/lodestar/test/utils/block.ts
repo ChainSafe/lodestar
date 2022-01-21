@@ -2,7 +2,6 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {config as defaultConfig} from "@chainsafe/lodestar-config/default";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
 import {IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
@@ -24,11 +23,11 @@ export function generateEmptyBlock(): phase0.BeaconBlock {
         depositCount: 0,
       },
       graffiti: Buffer.alloc(32),
-      proposerSlashings: ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>,
-      attesterSlashings: ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>,
-      attestations: ([] as phase0.Attestation[]) as List<phase0.Attestation>,
-      deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
-      voluntaryExits: ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>,
+      proposerSlashings: [] as phase0.ProposerSlashing[],
+      attesterSlashings: [] as phase0.AttesterSlashing[],
+      attestations: [] as phase0.Attestation[],
+      deposits: [] as phase0.Deposit[],
+      voluntaryExits: [] as phase0.SignedVoluntaryExit[],
     },
   };
 }

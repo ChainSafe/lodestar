@@ -6,7 +6,7 @@ import {
   OutgoingSerializer,
 } from "../types";
 import {BufferedSource} from "../utils";
-import {readSszSnappyPayload, ISszSnappyOptions} from "./sszSnappy/decode";
+import {readSszSnappyPayload} from "./sszSnappy/decode";
 import {writeSszSnappyPayload} from "./sszSnappy/encode";
 
 // For more info about eth2 request/response encoding strategies, see:
@@ -23,12 +23,11 @@ import {writeSszSnappyPayload} from "./sszSnappy/encode";
 export async function readEncodedPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
   encoding: Encoding,
-  type: RequestOrResponseType,
-  options?: ISszSnappyOptions
+  type: RequestOrResponseType
 ): Promise<T> {
   switch (encoding) {
     case Encoding.SSZ_SNAPPY:
-      return await readSszSnappyPayload(bufferedSource, type, options);
+      return await readSszSnappyPayload(bufferedSource, type);
 
     default:
       throw Error("Unsupported encoding");

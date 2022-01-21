@@ -1,16 +1,15 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
-import {List, TreeBacked} from "@chainsafe/ssz";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {filterBy} from "../../../utils/db";
-import {getTreeAtIndex} from "../../../../src/util/tree";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors";
 import {generateDepositData, generateDepositEvent} from "../../../utils/deposit";
 import {generateState} from "../../../utils/state";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {getDeposits, getDepositsWithProofs, DepositGetter} from "../../../../src/eth1/utils/deposits";
+import {DepositTree} from "../../../../src/db/repositories/depositDataRoot";
 
 chai.use(chaiAsPromised);
 
@@ -102,8 +101,8 @@ describe("eth1 / util / deposits", function () {
 
   describe("getDepositsWithProofs", () => {
     it("return empty array if no pending deposits", function () {
-      const initialValues = [Buffer.alloc(32)] as List<Root>;
-      const depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(initialValues);
+      const initialValues = [Buffer.alloc(32)];
+      const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(initialValues);
       const depositCount = 0;
       const eth1Data = generateEth1Data(depositCount, depositRootTree);
 
@@ -121,7 +120,7 @@ describe("eth1 / util / deposits", function () {
         })
       );
 
-      const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
+      const depositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU;
       for (const depositEvent of depositEvents) {
         depositRootTree.push(ssz.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
       }
@@ -138,10 +137,10 @@ describe("eth1 / util / deposits", function () {
         expect(
           verifyMerkleBranch(
             ssz.phase0.DepositData.hashTreeRoot(deposit.data),
-            Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
+            Array.from(deposit.proof).map((p) => p),
             33,
             index,
-            eth1Data.depositRoot.valueOf() as Uint8Array
+            eth1Data.depositRoot
           ),
           `Wrong merkle proof on deposit ${index}`
         ).to.be.true;
@@ -150,10 +149,10 @@ describe("eth1 / util / deposits", function () {
   });
 });
 
-function generateEth1Data(depositCount: number, depositRootTree?: TreeBacked<List<Root>>): phase0.Eth1Data {
+function generateEth1Data(depositCount: number, depositRootTree?: DepositTree): phase0.Eth1Data {
   return {
     blockHash: Buffer.alloc(32),
-    depositRoot: depositRootTree ? getTreeAtIndex(depositRootTree, depositCount - 1).hashTreeRoot() : Buffer.alloc(32),
+    depositRoot: depositRootTree ? depositRootTree.sliceTo(depositCount - 1).hashTreeRoot() : Buffer.alloc(32),
     depositCount,
   };
 }

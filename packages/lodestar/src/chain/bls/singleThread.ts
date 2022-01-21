@@ -8,7 +8,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
     return verifySignatureSetsMaybeBatch(
       sets.map((set) => ({
         publicKey: getAggregatedPubkey(set),
-        message: set.signingRoot.valueOf() as Uint8Array,
+        message: set.signingRoot,
         signature: set.signature,
       }))
     );

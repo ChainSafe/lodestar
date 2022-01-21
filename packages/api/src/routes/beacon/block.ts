@@ -1,4 +1,4 @@
-import {ContainerType, Json} from "@chainsafe/ssz";
+import {ContainerType} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, allForks, Slot, Root, ssz} from "@chainsafe/lodestar-types";
@@ -114,7 +114,7 @@ export type ReqTypes = {
   getBlockHeader: BlockIdOnlyReq;
   getBlockHeaders: {query: {slot?: number; parent_root?: string}};
   getBlockRoot: BlockIdOnlyReq;
-  publishBlock: {body: Json};
+  publishBlock: {body: unknown};
 };
 
 export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api, ReqTypes> {
@@ -125,12 +125,12 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
   };
 
   // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
-  const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): ContainerType<allForks.SignedBeaconBlock> =>
+  const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): allForks.AllForksSSZTypes["SignedBeaconBlock"] =>
     config.getForkTypes(data.message.slot).SignedBeaconBlock;
+
   const AllForksSignedBeaconBlock: TypeJson<allForks.SignedBeaconBlock> = {
-    toJson: (data, opts) => getSignedBeaconBlockType(data).toJson(data, opts),
-    fromJson: (data, opts) =>
-      getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data, opts),
+    toJson: (data) => getSignedBeaconBlockType(data).toJson(data),
+    fromJson: (data) => getSignedBeaconBlockType((data as unknown) as allForks.SignedBeaconBlock).fromJson(data),
   };
 
   return {
@@ -149,14 +149,10 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const BeaconHeaderResType = new ContainerType<BlockHeaderResponse>({
-    fields: {
-      root: ssz.Root,
-      canonical: ssz.Boolean,
-      header: ssz.phase0.SignedBeaconBlockHeader,
-    },
-    //from beacon apis
-    expectedCase: "notransform",
+  const BeaconHeaderResType = new ContainerType({
+    root: ssz.Root,
+    canonical: ssz.Boolean,
+    header: ssz.phase0.SignedBeaconBlockHeader,
   });
 
   return {

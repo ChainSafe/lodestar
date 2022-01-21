@@ -1,5 +1,5 @@
-import {PersistentVector} from "@chainsafe/persistent-ts";
-import {newFilledArray} from "../../util/array";
+import {ssz} from "@chainsafe/lodestar-types";
+import {newZeroedArray} from "../../util";
 import {CachedBeaconStateAltair} from "../../types";
 
 /**
@@ -10,6 +10,11 @@ import {CachedBeaconStateAltair} from "../../types";
  * trees completely.
  */
 export function processParticipationFlagUpdates(state: CachedBeaconStateAltair): void {
-  state.previousEpochParticipation.updateAllStatus(state.currentEpochParticipation.persistent.vector);
-  state.currentEpochParticipation.updateAllStatus(PersistentVector.from(newFilledArray(state.validators.length, 0)));
+  // Set view and tree from currentEpochParticipation to previousEpochParticipation
+  state.previousEpochParticipation = state.currentEpochParticipation;
+
+  // Wipe currentEpochParticipation with an empty value
+  const currentEpochParticipationArr = newZeroedArray(state.currentEpochParticipation.length);
+  // TODO: Benchmark the cost of transforming to .toViewDU()
+  state.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentEpochParticipationArr);
 }

@@ -2,10 +2,10 @@
  * @module chain/stateTransition/util
  */
 
-import {readonlyValues} from "@chainsafe/ssz";
-import {Epoch, phase0, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {BeaconStateAllForks} from "../types";
 
 /**
  * Check if [[validator]] is active
@@ -26,15 +26,16 @@ export function isSlashableValidator(validator: phase0.Validator, epoch: Epoch):
  *
  * NAIVE - SLOW CODE 🐢
  */
-export function getActiveValidatorIndices(state: allForks.BeaconState, epoch: Epoch): ValidatorIndex[] {
+export function getActiveValidatorIndices(state: BeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
   const indices: ValidatorIndex[] = [];
-  let index = 0;
-  for (const validator of readonlyValues(state.validators)) {
-    if (isActiveValidator(validator, epoch)) {
-      indices.push(index);
+
+  const validatorsArr = state.validators.getAllReadonlyValues();
+  for (let i = 0; i < validatorsArr.length; i++) {
+    if (isActiveValidator(validatorsArr[i], epoch)) {
+      indices.push(i);
     }
-    index++;
   }
+
   return indices;
 }
 

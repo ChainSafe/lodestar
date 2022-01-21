@@ -2,7 +2,6 @@ import sinon, {SinonStubbedInstance} from "sinon";
 import {use, expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {config} from "@chainsafe/lodestar-config/default";
-import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
 import {IBeaconChain} from "../../../../../../src/chain";
@@ -10,13 +9,13 @@ import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
 import {getValidatorApi} from "../../../../../../src/api/impl/validator";
 import {ApiModules} from "../../../../../../src/api/impl/types";
-import {generateInitialMaxBalances} from "../../../../../utils/balances";
 import {generateState} from "../../../../../utils/state";
 import {IBeaconSync} from "../../../../../../src/sync";
 import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {testLogger} from "../../../../../utils/logger";
+import {createCachedBeaconStateTest} from "../../../../../utils/cachedBeaconState";
 import {ssz} from "@chainsafe/lodestar-types";
 import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
@@ -39,7 +38,7 @@ describe("get proposers api impl", function () {
     syncStub = server.syncStub;
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
-    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue);
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,
@@ -66,11 +65,11 @@ describe("get proposers api impl", function () {
           activationEpoch: 0,
           exitEpoch: FAR_FUTURE_EPOCH,
         }),
-        balances: generateInitialMaxBalances(config, 25),
+        balances: Array.from({length: 25}, () => MAX_EFFECTIVE_BALANCE),
       },
       config
     );
-    const cachedState = createCachedBeaconState(config, state);
+    const cachedState = createCachedBeaconStateTest(state, config);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
     sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
     const {data: result} = await api.getProposerDuties(0);

@@ -6,7 +6,7 @@ import {Interchange, parseInterchange, serializeInterchange} from "../../../../s
 
 describe("interchange", () => {
   it("Should parseInterchange and serializeInterchange", () => {
-    const expectedGenesisValidatorsRoot: Root = ssz.Root.defaultValue();
+    const expectedGenesisValidatorsRoot: Root = ssz.Root.defaultValue;
     const interchange: Interchange = {
       metadata: {
         interchange_format: "complete",

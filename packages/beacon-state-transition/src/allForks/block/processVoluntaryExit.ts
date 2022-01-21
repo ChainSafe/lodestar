@@ -15,12 +15,12 @@ export function processVoluntaryExitAllForks(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(state as CachedBeaconStateAllForks, signedVoluntaryExit, verifySignature)) {
+  if (!isValidVoluntaryExit(state, signedVoluntaryExit, verifySignature)) {
     throw Error("Invalid voluntary exit");
   }
 
-  const validator = state.validators[signedVoluntaryExit.message.validatorIndex];
-  initiateValidatorExit(state as CachedBeaconStateAllForks, validator);
+  const validator = state.validators.get(signedVoluntaryExit.message.validatorIndex);
+  initiateValidatorExit(state, validator);
 }
 
 export function isValidVoluntaryExit(
@@ -30,7 +30,7 @@ export function isValidVoluntaryExit(
 ): boolean {
   const {config, epochCtx} = state;
   const voluntaryExit = signedVoluntaryExit.message;
-  const validator = state.validators[voluntaryExit.validatorIndex];
+  const validator = state.validators.get(voluntaryExit.validatorIndex);
   const currentEpoch = epochCtx.currentShuffling.epoch;
 
   return (
@@ -43,6 +43,6 @@ export function isValidVoluntaryExit(
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
     // verify signature
-    (!verifySignature || verifyVoluntaryExitSignature(state as CachedBeaconStateAllForks, signedVoluntaryExit))
+    (!verifySignature || verifyVoluntaryExitSignature(state, signedVoluntaryExit))
   );
 }

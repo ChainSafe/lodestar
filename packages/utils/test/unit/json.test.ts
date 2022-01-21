@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import {fromHexString, Json} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {LodestarError, toJson, toString, CIRCULAR_REFERENCE_TAG} from "../../src";
 
@@ -140,7 +140,7 @@ describe("Json helper", () => {
   describe("toString", () => {
     interface ITestCase {
       id: string;
-      json: Json;
+      json: unknown;
       output: string;
     }
     const testCases: (ITestCase | (() => ITestCase))[] = [

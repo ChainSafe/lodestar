@@ -1,5 +1,5 @@
 import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator";
-import {Json} from "@chainsafe/ssz";
+import {Context} from "@chainsafe/lodestar-utils";
 import {ICliCommand, writeFile} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
 import {IAccountValidatorArgs} from "../options";
@@ -41,7 +41,7 @@ export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & IAcco
     const pubkeys = await slashingProtection.listPubkeys();
 
     const interchange = await slashingProtection.exportInterchange(genesisValidatorsRoot, pubkeys, formatVersion);
-    writeFile(args.file, (interchange as unknown) as Json);
+    writeFile(args.file, (interchange as unknown) as Context);
 
     console.log("Export completed successfully");
   },

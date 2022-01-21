@@ -71,7 +71,7 @@ export function processLightClientUpdate(
   // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
   if (
     sumBits(update.syncCommitteeAggregate.syncCommitteeBits) * 3 >=
-      update.syncCommitteeAggregate.syncCommitteeBits.length * 2 &&
+      update.syncCommitteeAggregate.syncCommitteeBits.bitLen * 2 &&
     !isEmptyHeader(update.finalizedHeader)
   ) {
     applyLightClientUpdate(store.snapshot, update);

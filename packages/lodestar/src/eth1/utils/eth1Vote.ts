@@ -1,8 +1,8 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, RootHex} from "@chainsafe/lodestar-types";
-import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {phase0, RootHex} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {toHex} from "@chainsafe/lodestar-utils";
 
 export type Eth1DataGetter = ({
   timestampRange,
@@ -12,7 +12,7 @@ export type Eth1DataGetter = ({
 
 export async function getEth1VotesToConsider(
   config: IChainForkConfig,
-  state: allForks.BeaconState,
+  state: BeaconStateAllForks,
   eth1DataGetter: Eth1DataGetter
 ): Promise<phase0.Eth1Data[]> {
   const periodStart = votingPeriodStartTime(config, state);
@@ -33,7 +33,7 @@ export async function getEth1VotesToConsider(
   ).filter((eth1Data) => eth1Data.depositCount >= state.eth1Data.depositCount);
 }
 
-export function pickEth1Vote(state: allForks.BeaconState, votesToConsider: phase0.Eth1Data[]): phase0.Eth1Data {
+export function pickEth1Vote(state: BeaconStateAllForks, votesToConsider: phase0.Eth1Data[]): phase0.Eth1Data {
   const votesToConsiderKeys = new Set<string>();
   for (const eth1Data of votesToConsider) {
     votesToConsiderKeys.add(getEth1DataKey(eth1Data));
@@ -48,7 +48,7 @@ export function pickEth1Vote(state: allForks.BeaconState, votesToConsider: phase
   // However `votesToConsider` is an array of values since those are read from DB.
   // TODO: Optimize cache of known votes, to prevent re-hashing stored values.
   // Note: for low validator counts it's not very important, since this runs once per proposal
-  const eth1DataVotes = Array.from(readonlyValues(state.eth1DataVotes));
+  const eth1DataVotes = state.eth1DataVotes.getAllReadonly();
   for (const eth1DataVote of eth1DataVotes) {
     const rootHex = getEth1DataKey(eth1DataVote);
 
@@ -126,13 +126,13 @@ function getEth1DataKey(eth1Data: phase0.Eth1Data): string {
 }
 
 /**
- * Serialize eth1Data types to a unique string ID. It is only used for comparison.
+ * Returns the array of keys with max value. May return 0, 1 or more keys
  */
 export function fastSerializeEth1Data(eth1Data: phase0.Eth1Data): string {
-  return toHexString(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHexString(eth1Data.depositRoot);
+  return toHex(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHex(eth1Data.depositRoot);
 }
 
-export function votingPeriodStartTime(config: IChainForkConfig, state: allForks.BeaconState): number {
+export function votingPeriodStartTime(config: IChainForkConfig, state: BeaconStateAllForks): number {
   const eth1VotingPeriodStartSlot = state.slot - (state.slot % (EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH));
   return computeTimeAtSlot(config, eth1VotingPeriodStartSlot, state.genesisTime);
 }

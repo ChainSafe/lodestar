@@ -22,14 +22,15 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
  */
 export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
   const {config, validators, epochCtx} = state;
+
   // verify the merkle branch
   if (
     !verifyMerkleBranch(
       ssz.phase0.DepositData.hashTreeRoot(deposit.data),
-      Array.from(deposit.proof).map((p) => p.valueOf() as Uint8Array),
+      deposit.proof,
       DEPOSIT_CONTRACT_TREE_DEPTH + 1,
       state.eth1DepositIndex,
-      state.eth1Data.depositRoot.valueOf() as Uint8Array
+      state.eth1Data.depositRoot
     )
   ) {
     throw new Error("Deposit has invalid merkle proof");
@@ -38,7 +39,7 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
   // deposits must be processed in order
   state.eth1DepositIndex += 1;
 
-  const pubkey = deposit.data.pubkey.valueOf() as Uint8Array; // Drop tree
+  const pubkey = deposit.data.pubkey; // Drop tree
   const amount = deposit.data.amount;
   const cachedIndex = epochCtx.pubkey2index.get(pubkey);
   if (cachedIndex === undefined || !Number.isSafeInteger(cachedIndex) || cachedIndex >= validators.length) {
@@ -54,7 +55,7 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
     try {
       // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed
       const publicKey = bls.PublicKey.fromBytes(pubkey, CoordType.affine, true);
-      const signature = bls.Signature.fromBytes(deposit.data.signature.valueOf() as Uint8Array, CoordType.affine, true);
+      const signature = bls.Signature.fromBytes(deposit.data.signature, CoordType.affine, true);
       if (!signature.verify(publicKey, signingRoot)) {
         return;
       }
@@ -64,17 +65,19 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
 
     // add validator and balance entries
     const effectiveBalance = Math.min(amount - (amount % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
-    validators.push({
-      pubkey,
-      withdrawalCredentials: deposit.data.withdrawalCredentials.valueOf() as Uint8Array, // Drop tree
-      activationEligibilityEpoch: FAR_FUTURE_EPOCH,
-      activationEpoch: FAR_FUTURE_EPOCH,
-      exitEpoch: FAR_FUTURE_EPOCH,
-      withdrawableEpoch: FAR_FUTURE_EPOCH,
-      effectiveBalance,
-      slashed: false,
-    });
-    state.balanceList.push(Number(amount));
+    validators.push(
+      ssz.phase0.Validator.toViewDU({
+        pubkey,
+        withdrawalCredentials: deposit.data.withdrawalCredentials,
+        activationEligibilityEpoch: FAR_FUTURE_EPOCH,
+        activationEpoch: FAR_FUTURE_EPOCH,
+        exitEpoch: FAR_FUTURE_EPOCH,
+        withdrawableEpoch: FAR_FUTURE_EPOCH,
+        effectiveBalance,
+        slashed: false,
+      })
+    );
+    state.balances.push(amount);
 
     // Updating here is better than updating at once on epoch transition
     // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
@@ -82,19 +85,21 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
     // - Should have equal performance since it sets a value in a flat array
     epochCtx.effectiveBalanceIncrementsSet(validators.length, effectiveBalance);
 
-    // add participation caches
-    state.previousEpochParticipation.push(0);
-    state.currentEpochParticipation.push(0);
-
-    // Forks: altair, bellatrix, and future
+    // Only after altair:
     if (fork !== ForkName.phase0) {
-      (state as CachedBeaconStateAltair).inactivityScores.push(0);
+      const stateAltair = state as CachedBeaconStateAltair;
+
+      stateAltair.inactivityScores.push(0);
+
+      // add participation caches
+      stateAltair.previousEpochParticipation.push(0);
+      stateAltair.currentEpochParticipation.push(0);
     }
 
     // now that there is a new validator, update the epoch context with the new pubkey
     epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {
     // increase balance by deposit amount
-    increaseBalance(state, cachedIndex, Number(amount));
+    increaseBalance(state, cachedIndex, amount);
   }
 }

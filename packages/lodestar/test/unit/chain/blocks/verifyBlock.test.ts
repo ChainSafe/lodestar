@@ -17,7 +17,7 @@ describe("chain / blocks / verifyBlock", function () {
   const currentSlot = 1;
 
   beforeEach(function () {
-    block = ssz.phase0.SignedBeaconBlock.defaultValue();
+    block = ssz.phase0.SignedBeaconBlock.defaultValue;
     block.message.slot = currentSlot;
 
     forkChoice = sinon.createStubInstance(ForkChoice);

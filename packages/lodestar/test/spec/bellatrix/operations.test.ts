@@ -16,20 +16,20 @@ import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transiti
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // Define above to re-use in sync_aggregate and sync_aggregate_random
-const sync_aggregate: BlockProcessFn<bellatrix.BeaconState> = (
+const sync_aggregate: BlockProcessFn<CachedBeaconStateBellatrix> = (
   state,
   testCase: IBaseSpecTest & {sync_aggregate: altair.SyncAggregate}
 ) => {
-  const block = ssz.altair.BeaconBlock.defaultTreeBacked();
+  const block = ssz.altair.BeaconBlock.defaultValue;
 
   // processSyncAggregate() needs the full block to get the slot
   block.slot = state.slot;
-  block.body.syncAggregate = testCase["sync_aggregate"];
+  block.body.syncAggregate = ssz.altair.SyncAggregate.toViewDU(testCase["sync_aggregate"]);
 
   altair.processSyncAggregate((state as unknown) as CachedBeaconStateAltair, block);
 };
 
-operations<bellatrix.BeaconState>(ForkName.bellatrix, {
+operations<CachedBeaconStateBellatrix>(ForkName.bellatrix, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
     altair.processAttestations((state as unknown) as CachedBeaconStateAltair, [testCase.attestation]);
   },

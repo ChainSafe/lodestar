@@ -1,4 +1,4 @@
-import {fromHexString, List} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 
@@ -57,11 +57,11 @@ export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedB
           depositCount: 9,
         },
         graffiti: Buffer.alloc(32, 0xda),
-        proposerSlashings: ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>,
-        attesterSlashings: ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>,
-        attestations: ([] as phase0.Attestation[]) as List<phase0.Attestation>,
-        deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
-        voluntaryExits: ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>,
+        proposerSlashings: [] as phase0.ProposerSlashing[],
+        attesterSlashings: [] as phase0.AttesterSlashing[],
+        attestations: [] as phase0.Attestation[],
+        deposits: [] as phase0.Deposit[],
+        voluntaryExits: [] as phase0.SignedVoluntaryExit[],
       },
     },
     signature: Buffer.alloc(96, 0xda),
@@ -83,7 +83,7 @@ export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedB
       slot: 90009,
       body: {
         ...sszSnappySignedBeaconBlockPhase0.body.message.body,
-        syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
+        syncAggregate: ssz.altair.SyncAggregate.defaultValue,
       },
     },
   },

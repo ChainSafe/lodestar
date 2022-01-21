@@ -1,7 +1,7 @@
 import {BLSPubkey, ssz} from "@chainsafe/lodestar-types";
 import {IDistanceStore, IDistanceEntry} from "../../../../src/slashingProtection/minMaxSurround";
 
-export const emptyPubkey = ssz.BLSPubkey.defaultValue();
+export const emptyPubkey = ssz.BLSPubkey.defaultValue;
 export class DistanceMapStore {
   map: Map<number, number>;
   constructor() {

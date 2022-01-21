@@ -1,4 +1,4 @@
-import {allForks} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 import {IMetricsOptions} from "../options";
 
@@ -11,7 +11,7 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata: IMetricsOptions["metadata"],
-  anchorState?: allForks.BeaconState
+  anchorState?: BeaconStateAllForks
 ) {
   if (metadata) {
     register.static<"semver" | "branch" | "commit" | "version" | "network">({

@@ -1,4 +1,3 @@
-import {readonlyValues} from "@chainsafe/ssz";
 import {altair} from "@chainsafe/lodestar-types";
 
 import {CachedBeaconStateAltair} from "../../types";
@@ -22,19 +21,19 @@ export function processOperations(
     );
   }
 
-  for (const proposerSlashing of readonlyValues(body.proposerSlashings)) {
+  for (const proposerSlashing of body.proposerSlashings) {
     processProposerSlashing(state, proposerSlashing, verifySignatures);
   }
-  for (const attesterSlashing of readonlyValues(body.attesterSlashings)) {
+  for (const attesterSlashing of body.attesterSlashings) {
     processAttesterSlashing(state, attesterSlashing, verifySignatures);
   }
 
-  processAttestations(state, Array.from(readonlyValues(body.attestations)), verifySignatures);
+  processAttestations(state, body.attestations, verifySignatures);
 
-  for (const deposit of readonlyValues(body.deposits)) {
+  for (const deposit of body.deposits) {
     processDeposit(state, deposit);
   }
-  for (const voluntaryExit of readonlyValues(body.voluntaryExits)) {
+  for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(state, voluntaryExit, verifySignatures);
   }
 }

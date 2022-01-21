@@ -95,7 +95,7 @@ export class Network implements INetwork {
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
       eth2Context: {
-        activeValidatorCount: chain.getHeadState().currentShuffling.activeIndices.length,
+        activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: this.clock.currentSlot,
         currentEpoch: this.clock.currentEpoch,
       },

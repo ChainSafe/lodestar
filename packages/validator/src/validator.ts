@@ -67,7 +67,7 @@ export class Validator {
           })
         : opts.api;
 
-    const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
+    const clock = new Clock(config, logger, {genesisTime: genesis.genesisTime});
     const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
     this.emitter = new ValidatorEventEmitter();

@@ -1,9 +1,13 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
-import {ILogger} from "@chainsafe/lodestar-utils";
+import {Context, ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  BeaconStateAllForks,
+  CachedBeaconStateAllForks,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -96,13 +100,13 @@ export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
-  this.logger.verbose("New fork version", ssz.Version.toJson(version));
+  this.logger.verbose("New fork version", {version: ssz.Version.toJson(version) as string});
 }
 
 export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-  this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp) as Context);
 
-  this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
+  this.metrics?.currentValidators.set({status: "active"}, state.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = this.forkChoice.getBlock(state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {
@@ -122,13 +126,13 @@ export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: Ca
 }
 
 export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-  this.logger.verbose("Checkpoint justified", ssz.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint justified", ssz.phase0.Checkpoint.toJson(cp) as Context);
   this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
 export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
-  this.logger.verbose("Checkpoint finalized", ssz.phase0.Checkpoint.toJson(cp));
+  this.logger.verbose("Checkpoint finalized", ssz.phase0.Checkpoint.toJson(cp) as Context);
   this.metrics?.finalizedEpoch.set(cp.epoch);
 }
 
@@ -143,7 +147,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   // TODO: Improve using regen here
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
   if (headState) {
-    this.opPool.pruneAll(headState);
+    this.opPool.pruneAll(headState as BeaconStateAllForks);
   }
 }
 
@@ -167,7 +171,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
     index: attestation.data.index,
     targetRoot: toHexString(attestation.data.target.root),
     aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits),
-  });
+  } as Context);
 }
 
 export async function onBlock(

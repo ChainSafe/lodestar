@@ -10,9 +10,9 @@ import {toHexString} from "@chainsafe/ssz";
 const root = Uint8Array.from(Buffer.alloc(32, 1));
 
 describe("lightclient", () => {
-  const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue();
-  const syncAggregate = ssz.altair.SyncAggregate.defaultValue();
-  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
+  const lightClientUpdate = ssz.altair.LightClientUpdate.defaultValue;
+  const syncAggregate = ssz.altair.SyncAggregate.defaultValue;
+  const header = ssz.phase0.BeaconBlockHeader.defaultValue;
 
   runGenericServerTest<Api, ReqTypes>(config, getClient, getRoutes, {
     getStateProof: {

@@ -1,5 +1,4 @@
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
-import {getRandaoMix} from "../../util";
 import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
@@ -12,5 +11,8 @@ export function processRandaoMixesReset(state: CachedBeaconStateAllForks, epochP
   const nextEpoch = currentEpoch + 1;
 
   // set randao mix
-  state.randaoMixes[nextEpoch % EPOCHS_PER_HISTORICAL_VECTOR] = getRandaoMix(state, currentEpoch);
+  state.randaoMixes.set(
+    nextEpoch % EPOCHS_PER_HISTORICAL_VECTOR,
+    state.randaoMixes.get(currentEpoch % EPOCHS_PER_HISTORICAL_VECTOR)
+  );
 }

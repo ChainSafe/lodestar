@@ -40,30 +40,30 @@ describe("validator", () => {
     },
     produceBlock: {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
-      res: {data: ssz.phase0.BeaconBlock.defaultValue()},
+      res: {data: ssz.phase0.BeaconBlock.defaultValue},
     },
     produceBlockV2: {
       args: [32000, Buffer.alloc(96, 1), "graffiti"],
-      res: {data: ssz.altair.BeaconBlock.defaultValue(), version: ForkName.altair},
+      res: {data: ssz.altair.BeaconBlock.defaultValue, version: ForkName.altair},
     },
     produceAttestationData: {
       args: [2, 32000],
-      res: {data: ssz.phase0.AttestationData.defaultValue()},
+      res: {data: ssz.phase0.AttestationData.defaultValue},
     },
     produceSyncCommitteeContribution: {
       args: [32000, 2, ZERO_HASH],
-      res: {data: ssz.altair.SyncCommitteeContribution.defaultValue()},
+      res: {data: ssz.altair.SyncCommitteeContribution.defaultValue},
     },
     getAggregatedAttestation: {
       args: [ZERO_HASH, 32000],
-      res: {data: ssz.phase0.Attestation.defaultValue()},
+      res: {data: ssz.phase0.Attestation.defaultValue},
     },
     publishAggregateAndProofs: {
-      args: [[ssz.phase0.SignedAggregateAndProof.defaultValue()]],
+      args: [[ssz.phase0.SignedAggregateAndProof.defaultValue]],
       res: undefined,
     },
     publishContributionAndProofs: {
-      args: [[ssz.altair.SignedContributionAndProof.defaultValue()]],
+      args: [[ssz.altair.SignedContributionAndProof.defaultValue]],
       res: undefined,
     },
     prepareBeaconCommitteeSubnet: {

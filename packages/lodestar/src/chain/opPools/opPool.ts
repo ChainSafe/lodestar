@@ -3,6 +3,7 @@ import {
   computeEpochAtSlot,
   allForks,
   getAttesterSlashableIndices,
+  BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {Repository, Id} from "@chainsafe/lodestar-db";
 import {MAX_PROPOSER_SLASHINGS, MAX_VOLUNTARY_EXITS} from "@chainsafe/lodestar-params";
@@ -126,7 +127,7 @@ export class OpPool {
 
     for (const proposerSlashing of this.proposerSlashings.values()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      const validator = state.validators[index];
+      const validator = state.validators.get(index);
       if (!validator.slashed && validator.activationEpoch <= stateEpoch && stateEpoch < validator.withdrawableEpoch) {
         proposerSlashings.push(proposerSlashing);
         // Set of validators to be slashed, so we don't attempt to construct invalid attester slashings.
@@ -143,7 +144,7 @@ export class OpPool {
       const slashableIndices = new Set<ValidatorIndex>();
       for (let i = 0; i < attesterSlashing.intersectingIndices.length; i++) {
         const index = attesterSlashing.intersectingIndices[i];
-        const validator = state.validators[index];
+        const validator = state.validators.get(index);
 
         // If we already have a slashing for this index, we can continue on to the next slashing
         if (toBeSlashedIndices.has(index)) {
@@ -198,7 +199,7 @@ export class OpPool {
   /**
    * Prune all types of transactions given the latest head state
    */
-  pruneAll(headState: allForks.BeaconState): void {
+  pruneAll(headState: BeaconStateAllForks): void {
     this.pruneAttesterSlashings(headState);
     this.pruneProposerSlashings(headState);
     this.pruneVoluntaryExits(headState);
@@ -207,7 +208,7 @@ export class OpPool {
   /**
    * Prune attester slashings for all slashed or withdrawn validators.
    */
-  private pruneAttesterSlashings(headState: allForks.BeaconState): void {
+  private pruneAttesterSlashings(headState: BeaconStateAllForks): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     attesterSlashing: for (const [key, attesterSlashing] of this.attesterSlashings.entries()) {
       // Slashings that don't slash any validators can be dropped
@@ -219,7 +220,7 @@ export class OpPool {
         //
         // We cannot check the `slashed` field since the `head` is not finalized and
         // a fork could un-slash someone.
-        if (headState.validators[index].exitEpoch > finalizedEpoch) {
+        if (headState.validators.get(index).exitEpoch > finalizedEpoch) {
           continue attesterSlashing;
         }
       }
@@ -232,11 +233,11 @@ export class OpPool {
   /**
    * Prune proposer slashings for validators which are exited in the finalized epoch.
    */
-  private pruneProposerSlashings(headState: allForks.BeaconState): void {
+  private pruneProposerSlashings(headState: BeaconStateAllForks): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     for (const [key, proposerSlashing] of this.proposerSlashings.entries()) {
       const index = proposerSlashing.signedHeader1.message.proposerIndex;
-      if (headState.validators[index].exitEpoch <= finalizedEpoch) {
+      if (headState.validators.get(index).exitEpoch <= finalizedEpoch) {
         this.proposerSlashings.delete(key);
       }
     }
@@ -246,7 +247,7 @@ export class OpPool {
    * Call after finalizing
    * Prune if validator has already exited at or before the finalized checkpoint of the head.
    */
-  private pruneVoluntaryExits(headState: allForks.BeaconState): void {
+  private pruneVoluntaryExits(headState: BeaconStateAllForks): void {
     const finalizedEpoch = headState.finalizedCheckpoint.epoch;
     for (const [key, voluntaryExit] of this.voluntaryExits.entries()) {
       // TODO: Improve this simplistic condition

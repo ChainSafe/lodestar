@@ -24,7 +24,7 @@ export {
 export function processBlock(state: CachedBeaconStateAltair, block: altair.BeaconBlock, verifySignatures = true): void {
   processBlockHeader(state as CachedBeaconStateAllForks, block);
   processRandao(state as CachedBeaconStateAllForks, block, verifySignatures);
-  processEth1Data(state as CachedBeaconStateAllForks, block.body);
+  processEth1Data(state as CachedBeaconStateAllForks, block.body.eth1Data);
   processOperations(state, block.body, verifySignatures);
   processSyncAggregate(state, block, verifySignatures);
 }

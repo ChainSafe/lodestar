@@ -248,9 +248,9 @@ export class AttnetsService implements IAttnetsService {
 
   /** Update ENR */
   private updateMetadata(): void {
-    const subnets = ssz.phase0.AttestationSubnets.defaultValue();
+    const subnets = ssz.phase0.AttestationSubnets.defaultValue;
     for (const subnet of this.subscriptionsRandom.getAll()) {
-      subnets[subnet] = true;
+      subnets.set(subnet, true);
     }
 
     // Only update metadata if necessary, setting `metadata.[key]` triggers a write to disk

@@ -11,11 +11,12 @@ import {
   getTemporaryBlockHeader,
   phase0,
   CachedBeaconStateAllForks,
-  createCachedBeaconState,
   getEffectiveBalanceIncrementsZeroed,
+  BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
-import {List, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
+import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState";
 import {generateValidators} from "../../../utils/validator";
 
 describe("LodestarForkChoice", function () {
@@ -29,7 +30,7 @@ describe("LodestarForkChoice", function () {
         exitEpoch: FAR_FUTURE_EPOCH,
         withdrawableEpoch: FAR_FUTURE_EPOCH,
       }),
-      balances: Array.from({length: 3}, () => 0) as List<number>,
+      balances: Array.from({length: 3}, () => 0),
       // Jan 01 2020
       genesisTime: 1577836800,
     },
@@ -47,7 +48,7 @@ describe("LodestarForkChoice", function () {
   let state: CachedBeaconStateAllForks;
 
   before(() => {
-    state = createCachedBeaconState(config, anchorState);
+    state = createCachedBeaconStateTest(anchorState, config);
   });
 
   beforeEach(() => {
@@ -69,7 +70,7 @@ describe("LodestarForkChoice", function () {
       targetBlock.message.parentRoot = finalizedRoot;
       //
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.getForkTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = targetState.hashTreeRoot();
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 36);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 37);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 38);
@@ -115,28 +116,34 @@ describe("LodestarForkChoice", function () {
       const block08 = generateSignedBlock({message: {slot: 8}});
       block08.message.parentRoot = finalizedRoot;
       const state08 = runStateTransition(anchorState, block08);
-      block08.message.stateRoot = config.getForkTypes(state08.slot).BeaconState.hashTreeRoot(state08);
+      block08.message.stateRoot = state08.hashTreeRoot();
 
       const {block: block12, state: state12} = makeChild({block: block08, state: state08}, 12);
       const {block: block16, state: state16} = makeChild({block: block12, state: state12}, 16);
-      state16.currentJustifiedCheckpoint = {
+      state16.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block08.message),
         epoch: 1,
-      };
+      });
       const {block: block20, state: state20} = makeChild({block: block16, state: state16}, 20);
       const {block: block24, state: state24} = makeChild({block: block20, state: state20}, 24);
-      state24.finalizedCheckpoint = {root: ssz.phase0.BeaconBlock.hashTreeRoot(block08.message), epoch: 1};
-      state24.currentJustifiedCheckpoint = {
+      state24.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+        root: ssz.phase0.BeaconBlock.hashTreeRoot(block08.message),
+        epoch: 1,
+      });
+      state24.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block16.message),
         epoch: 2,
-      };
+      });
       const {block: block28, state: state28} = makeChild({block: block24, state: state24}, 28);
       const {block: block32, state: state32} = makeChild({block: block28, state: state28}, 32);
-      state32.finalizedCheckpoint = {root: ssz.phase0.BeaconBlock.hashTreeRoot(block16.message), epoch: 2};
-      state32.currentJustifiedCheckpoint = {
+      state32.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
+        root: ssz.phase0.BeaconBlock.hashTreeRoot(block16.message),
+        epoch: 2,
+      });
+      state32.currentJustifiedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
         root: ssz.phase0.BeaconBlock.hashTreeRoot(block24.message),
         epoch: 3,
-      };
+      });
       forkChoice.updateTime(128);
 
       forkChoice.onBlock(block08.message, state08, {justifiedBalances, blockDelaySec: 0});
@@ -184,7 +191,7 @@ describe("LodestarForkChoice", function () {
       const targetBlock = generateSignedBlock({message: {slot: 32}});
       targetBlock.message.parentRoot = finalizedRoot;
       const targetState = runStateTransition(anchorState, targetBlock);
-      targetBlock.message.stateRoot = config.getForkTypes(targetState.slot).BeaconState.hashTreeRoot(targetState);
+      targetBlock.message.stateRoot = targetState.hashTreeRoot();
       const {block: orphanedBlock, state: orphanedState} = makeChild({block: targetBlock, state: targetState}, 33);
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
@@ -209,24 +216,23 @@ describe("LodestarForkChoice", function () {
 });
 
 // lightweight state transtion function for this test
-function runStateTransition(
-  preState: TreeBacked<allForks.BeaconState>,
-  signedBlock: phase0.SignedBeaconBlock
-): TreeBacked<allForks.BeaconState> {
+function runStateTransition(preState: BeaconStateAllForks, signedBlock: phase0.SignedBeaconBlock): BeaconStateAllForks {
   // Clone state because process slots and block are not pure
   const postState = preState.clone();
   // Process slots (including those with no blocks) since block
-  allForks.processSlots(createCachedBeaconState(config, postState), signedBlock.message.slot);
+  allForks.processSlots(createCachedBeaconStateTest(postState, config), signedBlock.message.slot);
   // processBlock
-  postState.latestBlockHeader = getTemporaryBlockHeader(config, signedBlock.message);
+  postState.latestBlockHeader = ssz.phase0.BeaconBlockHeader.toViewDU(
+    getTemporaryBlockHeader(config, signedBlock.message)
+  );
   return postState;
 }
 
 // create a child block/state from a parent block/state and a provided slot
 function makeChild(
-  parent: {block: phase0.SignedBeaconBlock; state: TreeBacked<allForks.BeaconState>},
+  parent: {block: phase0.SignedBeaconBlock; state: BeaconStateAllForks},
   slot: Slot
-): {block: phase0.SignedBeaconBlock; state: TreeBacked<allForks.BeaconState>} {
+): {block: phase0.SignedBeaconBlock; state: BeaconStateAllForks} {
   const childBlock = generateSignedBlock({message: {slot}});
   const parentRoot = ssz.phase0.BeaconBlock.hashTreeRoot(parent.block.message);
   childBlock.message.parentRoot = parentRoot;
@@ -241,7 +247,7 @@ export function createIndexedAttestation(
   validatorIndex: ValidatorIndex
 ): phase0.IndexedAttestation {
   return {
-    attestingIndices: [validatorIndex] as List<number>,
+    attestingIndices: [validatorIndex],
     data: {
       slot: block.message.slot,
       index: 0,

@@ -1,4 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -6,14 +5,13 @@ import {
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 // eslint-disable-next-line no-restricted-imports
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
-import {TreeBacked} from "@chainsafe/ssz";
 import {testLogger} from "../../utils/logger";
 import {expect} from "chai";
 import {SinonStubFn} from "../../utils/types";
@@ -39,7 +37,7 @@ describe("AttnetsService", function () {
   let metadata: MetadataController;
 
   let chain: IBeaconChain;
-  let state: allForks.BeaconState;
+  let state: BeaconStateAllForks;
   const logger = testLogger();
   const subscription: CommitteeSubscription = {
     validatorIndex: 2021,
@@ -66,7 +64,7 @@ describe("AttnetsService", function () {
       genesisTime: Math.floor(Date.now() / 1000),
       chainId: 0,
       networkId: BigInt(0),
-      state: state as TreeBacked<allForks.BeaconState>,
+      state: state as BeaconStateAllForks,
       config,
     });
     // load getCurrentSlot first, vscode not able to debug without this

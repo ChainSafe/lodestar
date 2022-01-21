@@ -30,7 +30,7 @@ import {StateBlock} from "../../types";
 //
 // ### Verifying signatures
 // Signature verification is done in bulk using batch BLS verification. Performance is proportional to the amount of
-// sigs to verify and the cost to construct the signature sets from TreeBacked data.
+// sigs to verify and the cost to construct the signature sets from TreeView data.
 //
 // - Proposer sig:           1 single
 // - RandaoReveal sig:       1 single

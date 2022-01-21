@@ -13,7 +13,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {altair, phase0, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {hash} from "@chainsafe/persistent-merkle-tree";
-import {fromHexString, List} from "@chainsafe/ssz";
+import {BitArray, fromHexString} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../src/types";
 import {computeSigningRoot} from "../src/utils/domain";
 import {getLcLoggerConsole} from "../src/utils/logger";
@@ -38,7 +38,7 @@ export function signAndAggregate(message: Uint8Array, sks: SecretKey[]): altair.
   const sigs = sks.map((sk) => sk.sign(message));
   const aggSig = Signature.aggregate(sigs).toBytes();
   return {
-    syncCommitteeBits: sks.map(() => true),
+    syncCommitteeBits: BitArray.fromBoolArray(sks.map(() => true)),
     syncCommitteeSignature: aggSig,
   };
 }
@@ -52,7 +52,7 @@ export function getSyncAggregateSigningRoot(
 }
 
 export function defaultBeaconBlockHeader(slot: Slot): phase0.BeaconBlockHeader {
-  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
+  const header = ssz.phase0.BeaconBlockHeader.defaultValue;
   header.slot = slot;
   return header;
 }
@@ -85,7 +85,7 @@ export function getInteropSyncCommittee(period: SyncPeriod): SyncCommitteeKeys {
     const sigs = Array.from({length: SYNC_COMMITTEE_SIZE}, () => sig);
     const aggSig = Signature.aggregate(sigs).toBytes();
     return {
-      syncCommitteeBits: Array.from({length: SYNC_COMMITTEE_SIZE}, () => true),
+      syncCommitteeBits: BitArray.fromBoolArray(sigs.map(() => true)),
       syncCommitteeSignature: aggSig,
     };
   }
@@ -219,12 +219,12 @@ export function generateValidator(opts: Partial<phase0.Validator> = {}): phase0.
 /**
  * Generates n number of validators, for tests purposes only.
  */
-export function generateValidators(n: number, opts?: Partial<phase0.Validator>): List<phase0.Validator> {
-  return Array.from({length: n}, () => generateValidator(opts)) as List<phase0.Validator>;
+export function generateValidators(n: number, opts?: Partial<phase0.Validator>): phase0.Validator[] {
+  return Array.from({length: n}, () => generateValidator(opts));
 }
 
-export function generateBalances(n: number): List<number> {
-  return Array.from({length: n}, () => 32e9) as List<number>;
+export function generateBalances(n: number): number[] {
+  return Array.from({length: n}, () => 32e9);
 }
 
 /**

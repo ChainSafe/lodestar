@@ -7,7 +7,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
-import {BitVector, toHexString} from "@chainsafe/ssz";
+import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
@@ -179,10 +179,8 @@ export class LightClientServer {
     this.logger = modules.logger;
 
     this.zero = {
-      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.getPropertyType(
-        "finalityBranch"
-      ).defaultValue() as altair.LightClientUpdate["finalityBranch"],
+      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue,
+      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue,
     };
   }
 
@@ -487,10 +485,13 @@ export class LightClientServer {
     });
   }
 
-  private async storeSyncCommittee(syncCommittee: altair.SyncCommittee, syncCommitteeRoot: Uint8Array): Promise<void> {
+  private async storeSyncCommittee(
+    syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
+    syncCommitteeRoot: Uint8Array
+  ): Promise<void> {
     const isKnown = await this.db.syncCommittee.has(syncCommitteeRoot);
     if (!isKnown) {
-      await this.db.syncCommittee.put(syncCommitteeRoot, syncCommittee);
+      await this.db.syncCommittee.putBinary(syncCommitteeRoot, syncCommittee.serialize());
     }
   }
 
@@ -545,12 +546,6 @@ export function isBetterUpdate(
   return prevUpdate.attestedHeader.slot > nextSyncAttestedData.attestedHeader.slot;
 }
 
-export function sumBits(bits: BitVector): number {
-  let sum = 0;
-  for (const bit of bits) {
-    if (bit) {
-      sum++;
-    }
-  }
-  return sum;
+export function sumBits(bits: BitArray): number {
+  return bits.getTrueBitIndexes().length;
 }

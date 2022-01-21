@@ -1,8 +1,8 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {Node} from "@chainsafe/persistent-merkle-tree";
-import {readonlyValues, TreeBacked} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks} from "../../types";
+import {CompositeViewDU} from "@chainsafe/ssz";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Store vote counts for every eth1 block that has votes; if any eth1 block wins majority support within a 1024-slot
@@ -12,24 +12,24 @@ import {CachedBeaconStateAllForks} from "../../types";
  * - Best case: Vote is already decided, zero work. See becomesNewEth1Data conditions
  * - Worst case: 1023 votes and no majority vote yet.
  */
-export function processEth1Data(state: CachedBeaconStateAllForks, body: allForks.BeaconBlockBody): void {
+export function processEth1Data(state: CachedBeaconStateAllForks, eth1Data: phase0.Eth1Data): void {
   // Convert to view first to hash once and compare hashes
-  const eth1DataView = ssz.phase0.Eth1Data.createTreeBackedFromStruct(body.eth1Data);
+  const eth1DataView = ssz.phase0.Eth1Data.toViewDU(eth1Data);
 
   if (becomesNewEth1Data(state, eth1DataView)) {
     state.eth1Data = eth1DataView;
   }
 
-  state.eth1DataVotes.push(body.eth1Data);
+  state.eth1DataVotes.push(eth1DataView);
 }
 
 /**
- * Returns `newEth1Data` if adding the given `eth1Data` to `state.eth1DataVotes` would
+ * Returns true if adding the given `eth1Data` to `state.eth1DataVotes` would
  * result in a change to `state.eth1Data`.
  */
 export function becomesNewEth1Data(
-  state: CachedBeaconStateAllForks,
-  newEth1Data: TreeBacked<phase0.Eth1Data>
+  state: BeaconStateAllForks,
+  newEth1Data: CompositeViewDU<typeof ssz.phase0.Eth1Data>
 ): boolean {
   const SLOTS_PER_ETH1_VOTING_PERIOD = EPOCHS_PER_ETH1_VOTING_PERIOD * SLOTS_PER_EPOCH;
 
@@ -39,7 +39,7 @@ export function becomesNewEth1Data(
   }
 
   // Nothing to do if the state already has this as eth1data (happens a lot after majority vote is in)
-  if (ssz.phase0.Eth1Data.equals(state.eth1Data, newEth1Data)) {
+  if (isEqualEth1DataView(state.eth1Data, newEth1Data)) {
     return false;
   }
 
@@ -48,7 +48,7 @@ export function becomesNewEth1Data(
   // Then isEqualEth1DataView compares cached roots (HashObject as of Jan 2022) which is much cheaper
   // than doing structural equality, which requires tree -> value conversions
   let sameVotesCount = 0;
-  const eth1DataVotes = Array.from(readonlyValues(state.eth1DataVotes)) as TreeBacked<phase0.Eth1Data>[];
+  const eth1DataVotes = state.eth1DataVotes.getAllReadonly();
   for (let i = 0; i < eth1DataVotes.length; i++) {
     if (isEqualEth1DataView(eth1DataVotes[i], newEth1Data)) {
       sameVotesCount++;
@@ -63,8 +63,11 @@ export function becomesNewEth1Data(
   }
 }
 
-function isEqualEth1DataView(eth1DataA: TreeBacked<phase0.Eth1Data>, eth1DataB: TreeBacked<phase0.Eth1Data>): boolean {
-  return isEqualNode(eth1DataA.tree.rootNode, eth1DataB.tree.rootNode);
+function isEqualEth1DataView(
+  eth1DataA: CompositeViewDU<typeof ssz.phase0.Eth1Data>,
+  eth1DataB: CompositeViewDU<typeof ssz.phase0.Eth1Data>
+): boolean {
+  return isEqualNode(eth1DataA.node, eth1DataB.node);
 }
 
 // TODO: Upstream to persistent-merkle-tree

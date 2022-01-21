@@ -1,7 +1,3 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {ForkName} from "@chainsafe/lodestar-params";
-
-import {AllForksSSZTypes} from "./types";
 import {ssz as phase0} from "../phase0";
 import {ssz as altair} from "../altair";
 import {ssz as bellatrix} from "../bellatrix";
@@ -10,26 +6,26 @@ import {ssz as bellatrix} from "../bellatrix";
  * Index the ssz types that differ by fork
  * A record of AllForksSSZTypes indexed by fork
  */
-export const allForks: {[K in ForkName]: AllForksSSZTypes} = {
+export const allForks = {
   phase0: {
-    BeaconBlockBody: phase0.BeaconBlockBody as AllForksSSZTypes["BeaconBlockBody"],
-    BeaconBlock: phase0.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
-    SignedBeaconBlock: phase0.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
-    BeaconState: phase0.BeaconState as AllForksSSZTypes["BeaconState"],
+    BeaconBlockBody: phase0.BeaconBlockBody,
+    BeaconBlock: phase0.BeaconBlock,
+    SignedBeaconBlock: phase0.SignedBeaconBlock,
+    BeaconState: phase0.BeaconState,
     Metadata: phase0.Metadata,
   },
   altair: {
-    BeaconBlockBody: altair.BeaconBlockBody as AllForksSSZTypes["BeaconBlockBody"],
-    BeaconBlock: altair.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
-    SignedBeaconBlock: altair.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
-    BeaconState: altair.BeaconState as AllForksSSZTypes["BeaconState"],
-    Metadata: altair.Metadata as AllForksSSZTypes["Metadata"],
+    BeaconBlockBody: altair.BeaconBlockBody,
+    BeaconBlock: altair.BeaconBlock,
+    SignedBeaconBlock: altair.SignedBeaconBlock,
+    BeaconState: altair.BeaconState,
+    Metadata: altair.Metadata,
   },
   bellatrix: {
-    BeaconBlockBody: bellatrix.BeaconBlockBody as AllForksSSZTypes["BeaconBlockBody"],
-    BeaconBlock: bellatrix.BeaconBlock as AllForksSSZTypes["BeaconBlock"],
-    SignedBeaconBlock: bellatrix.SignedBeaconBlock as AllForksSSZTypes["SignedBeaconBlock"],
-    BeaconState: bellatrix.BeaconState as AllForksSSZTypes["BeaconState"],
-    Metadata: altair.Metadata as AllForksSSZTypes["Metadata"],
+    BeaconBlockBody: bellatrix.BeaconBlockBody,
+    BeaconBlock: bellatrix.BeaconBlock,
+    SignedBeaconBlock: bellatrix.SignedBeaconBlock,
+    BeaconState: bellatrix.BeaconState,
+    Metadata: altair.Metadata,
   },
 };

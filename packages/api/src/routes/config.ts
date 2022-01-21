@@ -1,6 +1,6 @@
 import {BeaconPreset} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {Bytes32, Number64, phase0, ssz} from "@chainsafe/lodestar-types";
+import {Bytes32, UintNum64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
 import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType} from "../utils";
@@ -8,7 +8,7 @@ import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers,
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 export type DepositContract = {
-  chainId: Number64;
+  chainId: UintNum64;
   address: Bytes32;
 };
 
@@ -57,17 +57,13 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const DepositContract = new ContainerType<DepositContract>({
-    fields: {
-      chainId: ssz.Number64,
-      address: new ByteVectorType({length: 20}),
+  const DepositContract = new ContainerType(
+    {
+      chainId: ssz.UintNum64,
+      address: new ByteVectorType(20),
     },
-    // From beacon apis
-    casingMap: {
-      chainId: "chain_id",
-      address: "address",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getDepositContract: ContainerData(DepositContract),

@@ -11,7 +11,6 @@ import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/a
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {List} from "@chainsafe/ssz";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
@@ -35,7 +34,7 @@ describe("GossipMessageValidator", () => {
 
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
-      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue;
       opPool.hasSeenAttesterSlashing.returns(true);
 
       await expectRejectedWithLodestarError(
@@ -45,7 +44,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return invalid attester slashing - invalid", async () => {
-      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue;
 
       await expectRejectedWithLodestarError(
         validateGossipAttesterSlashing(chainStub, attesterSlashing),
@@ -54,17 +53,17 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = ssz.phase0.AttestationData.defaultValue();
+      const attestationData = ssz.phase0.AttestationData.defaultValue;
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,
           signature: Buffer.alloc(96, 0),
-          attestingIndices: [0] as List<number>,
+          attestingIndices: [0],
         },
         attestation2: {
           data: {...attestationData, slot: 1}, // Make it different so it's slashable
           signature: Buffer.alloc(96, 0),
-          attestingIndices: [0] as List<number>,
+          attestingIndices: [0],
         },
       };
 

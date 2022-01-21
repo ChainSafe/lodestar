@@ -24,6 +24,6 @@ export {
 export function processBlock(state: CachedBeaconStatePhase0, block: phase0.BeaconBlock, verifySignatures = true): void {
   processBlockHeader(state as CachedBeaconStateAllForks, block);
   processRandao(state as CachedBeaconStateAllForks, block, verifySignatures);
-  processEth1Data(state as CachedBeaconStateAllForks, block.body);
+  processEth1Data(state as CachedBeaconStateAllForks, block.body.eth1Data);
   processOperations(state, block.body, verifySignatures);
 }

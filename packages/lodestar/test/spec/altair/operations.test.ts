@@ -1,4 +1,9 @@
-import {CachedBeaconStateAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  allForks,
+  altair,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest, shouldVerify} from "../type";
@@ -7,20 +12,20 @@ import {operations, BlockProcessFn} from "../allForks/operations";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // Define above to re-use in sync_aggregate and sync_aggregate_random
-const sync_aggregate: BlockProcessFn<altair.BeaconState> = (
+const sync_aggregate: BlockProcessFn<CachedBeaconStateAltair> = (
   state,
   testCase: IBaseSpecTest & {sync_aggregate: altair.SyncAggregate}
 ) => {
-  const block = ssz.altair.BeaconBlock.defaultTreeBacked();
+  const block = ssz.altair.BeaconBlock.defaultValue;
 
   // processSyncAggregate() needs the full block to get the slot
   block.slot = state.slot;
-  block.body.syncAggregate = testCase["sync_aggregate"];
+  block.body.syncAggregate = ssz.altair.SyncAggregate.toViewDU(testCase["sync_aggregate"]);
 
   altair.processSyncAggregate(state, block);
 };
 
-operations<altair.BeaconState>(ForkName.altair, {
+operations<CachedBeaconStateAltair>(ForkName.altair, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
     altair.processAttestations(state, [testCase.attestation]);
   },

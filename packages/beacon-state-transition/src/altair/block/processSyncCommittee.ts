@@ -1,17 +1,11 @@
-import {altair, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
+import {byteArrayEquals} from "@chainsafe/ssz";
 
-import {
-  computeSigningRoot,
-  getBlockRootAtSlot,
-  ISignatureSet,
-  SignatureSetType,
-  verifySignatureSet,
-  zipAllIndexesSyncCommitteeBits,
-  zipIndexesSyncCommitteeBits,
-} from "../../util";
+import {computeSigningRoot, getBlockRootAtSlot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
 import {CachedBeaconStateAltair} from "../../types";
 import {G2_POINT_AT_INFINITY} from "../../constants";
+import {getUnparticipantValues} from "../../util/array";
 
 export function processSyncAggregate(
   state: CachedBeaconStateAltair,
@@ -19,7 +13,9 @@ export function processSyncAggregate(
   verifySignatures = true
 ): void {
   const {syncParticipantReward, syncProposerReward} = state.epochCtx;
-  const [participantIndices, unparticipantIndices] = getParticipantInfo(state, block.body.syncAggregate);
+  const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+  const participantIndices = block.body.syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
+  const unparticipantIndices = getUnparticipantValues(participantIndices, committeeIndices);
 
   // different from the spec but not sure how to get through signature verification for default/empty SyncAggregate in the spec test
   if (verifySignatures) {
@@ -30,16 +26,22 @@ export function processSyncAggregate(
       throw Error("Sync committee signature invalid");
     }
   }
-  const deltaByIndex = new Map<ValidatorIndex, number>();
+
+  const balances = state.balances;
+
+  // Proposer reward
   const proposerIndex = state.epochCtx.getBeaconProposer(state.slot);
-  for (const participantIndex of participantIndices) {
-    accumulateDelta(deltaByIndex, participantIndex, syncParticipantReward);
+  balances.set(proposerIndex, balances.get(proposerIndex) + syncProposerReward * participantIndices.length);
+
+  // Positive rewards for participants
+  for (const index of participantIndices) {
+    balances.set(index, balances.get(index) + syncParticipantReward);
   }
-  accumulateDelta(deltaByIndex, proposerIndex, syncProposerReward * participantIndices.length);
-  for (const unparticipantIndex of unparticipantIndices) {
-    accumulateDelta(deltaByIndex, unparticipantIndex, -syncParticipantReward);
+
+  // Negative rewards for non participants
+  for (const index of unparticipantIndices) {
+    balances.set(index, balances.get(index) - syncParticipantReward);
   }
-  state.balanceList.applyDeltaInBatch(deltaByIndex);
 }
 
 export function getSyncCommitteeSignatureSet(
@@ -50,7 +52,7 @@ export function getSyncCommitteeSignatureSet(
 ): ISignatureSet | null {
   const {epochCtx} = state;
   const {syncAggregate} = block.body;
-  const signature = syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array;
+  const signature = syncAggregate.syncCommitteeSignature;
 
   // The spec uses the state to get the previous slot
   // ```python
@@ -67,14 +69,15 @@ export function getSyncCommitteeSignatureSet(
   const rootSigned = getBlockRootAtSlot(state, previousSlot);
 
   if (!participantIndices) {
-    participantIndices = getParticipantIndices(state, syncAggregate);
+    const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
+    participantIndices = syncAggregate.syncCommitteeBits.intersectValues(committeeIndices);
   }
 
   // When there's no participation we consider the signature valid and just ignore it
   if (participantIndices.length === 0) {
     // Must set signature as G2_POINT_AT_INFINITY when participating bits are empty
     // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
-    if (ssz.BLSSignature.equals(signature, G2_POINT_AT_INFINITY)) {
+    if (byteArrayEquals(signature, G2_POINT_AT_INFINITY)) {
       return null;
     } else {
       throw Error("Empty sync committee signature is not infinity");
@@ -89,25 +92,4 @@ export function getSyncCommitteeSignatureSet(
     signingRoot: computeSigningRoot(ssz.Root, rootSigned, domain),
     signature,
   };
-}
-
-/** Get participant indices for a sync committee. */
-function getParticipantIndices(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): number[] {
-  const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
-  return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
-}
-
-/** Return [0] as participant indices and [1] as unparticipant indices for a sync committee. */
-function getParticipantInfo(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): [number[], number[]] {
-  const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
-  return zipAllIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
-}
-
-function accumulateDelta(deltaByIndex: Map<ValidatorIndex, number>, index: ValidatorIndex, delta: number): void {
-  const existingDelta = deltaByIndex.get(index);
-  if (existingDelta === undefined) {
-    deltaByIndex.set(index, delta);
-  } else {
-    deltaByIndex.set(index, delta + existingDelta);
-  }
 }

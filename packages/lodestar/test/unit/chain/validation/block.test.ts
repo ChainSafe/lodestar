@@ -22,7 +22,7 @@ describe("gossip block validation", function () {
   let job: allForks.SignedBeaconBlock;
   const proposerIndex = 0;
   const clockSlot = 32;
-  const block = ssz.phase0.BeaconBlock.defaultValue();
+  const block = ssz.phase0.BeaconBlock.defaultValue;
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
 

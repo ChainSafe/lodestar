@@ -39,7 +39,7 @@ export class Libp2pPeerMetadataStore implements IPeerMetadataStore {
   constructor(metabook: MetadataBook) {
     this.metabook = metabook;
 
-    const number64Serdes = typeToSerdes(ssz.Number64);
+    const number64Serdes = typeToSerdes(ssz.UintNum64);
     const metadataV2Serdes = typeToSerdes(ssz.altair.Metadata);
     const stringSerdes: BucketSerdes<ReqRespEncoding> = {
       serialize: (v) => Buffer.from(v, "utf8"),

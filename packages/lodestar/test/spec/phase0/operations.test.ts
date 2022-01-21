@@ -1,4 +1,9 @@
-import {CachedBeaconStateAllForks, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  allForks,
+  phase0,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest, shouldVerify} from "../type";
 import {operations} from "../allForks/operations";
@@ -6,7 +11,7 @@ import {operations} from "../allForks/operations";
 /* eslint-disable @typescript-eslint/naming-convention */
 
 /** Describe with which function to run each directory of tests */
-operations<phase0.BeaconState>(ForkName.phase0, {
+operations<CachedBeaconStatePhase0>(ForkName.phase0, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
     phase0.processAttestation(state, testCase.attestation);
   },
