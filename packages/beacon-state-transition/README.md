@@ -14,7 +14,6 @@ The beacon state transition and state transition utilities
 
 ```typescript
 import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {allForks} from "@chainsafe/lodestar-types";
 import {generateEmptySignedBlock} from "../test/utils/block";
 import {generateState} from "../test/utils/state";
 
