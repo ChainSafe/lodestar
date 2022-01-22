@@ -72,11 +72,22 @@ export class ValidatorStore {
     genesis: phase0.Genesis
   ) {
     for (const signer of signers) {
-      this.validators.set(getSignerPubkeyHex(signer), signer);
+      this.addSigner(signer);
     }
 
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+  }
+
+  addSigner(signer: Signer): void {
+    this.validators.set(getSignerPubkeyHex(signer), signer);
+  }
+
+  // TODO [DA] revisit naming?
+  //  Maybe a name that makes it clear the signer is removed via its pubkey
+  removeSigner(signer: string | PubkeyHex): boolean {
+    const pubkeyHex = typeof signer === "string" ? signer : toHexString(signer);
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */

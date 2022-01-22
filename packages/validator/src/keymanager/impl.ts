@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
 import {ISlashingProtection, Interchange} from "../slashingProtection";
-import {ValidatorStore} from "../services/validatorStore";
+import {SignerType, ValidatorStore} from "../services/validatorStore";
 import {PubkeyHex} from "../types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
@@ -101,10 +101,12 @@ export class KeymanagerApi implements Api {
         }
 
         // TODO [DA]
-        // const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
+        const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
 
         // Import keys to live signer
-        // this.validatorStore.addKey(secretKey);
+        // TODO [DA] only supporting local signer now,
+        //  Confirm if remote should also be supported
+        this.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
         // Persist keys for latter restarts
         if (this.importKeystoresPath) {
@@ -158,8 +160,8 @@ export class KeymanagerApi implements Api {
       const pubkeyHex = pubkeysHex[i];
 
       // Remove key from live signer
-      // const deleted = this.validatorStore.removeKey(pubkeyHex);
-      //deletedKey[i] = deleted;
+      const deleted = this.validatorStore.removeSigner(pubkeyHex);
+      deletedKey[i] = deleted;
 
       // Remove key from persistent storage
       for (const secretKey of this.secretKeys) {
