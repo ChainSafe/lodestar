@@ -10,9 +10,9 @@ import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
-import {fetchWeakSubjectivityState, getGenesisFileUrl} from "../../networks";
+import {fetchWeakSubjectivityState, getGenesisFileUrl, fetchFinalizedCheckpoint} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 
 const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
 
@@ -112,26 +112,23 @@ export async function initBeaconState(
       throw Error(`Must set arg --weakSubjectivityServerUrl for network ${args.network}`);
     }
 
-    let stateId = "finalized";
-    let checkpoint: Checkpoint | undefined;
+    let checkpoint: Checkpoint;
     if (args.weakSubjectivityCheckpoint) {
       checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
-      stateId = (checkpoint.epoch * SLOTS_PER_EPOCH).toString();
+    } else {
+      const checkpointUrl = `${remoteBeaconUrl}/eth/v1/beacon/states/finalized/finality_checkpoints`;
+      logger.info("Fetching finalized checkpoint", {checkpointUrl});
+      checkpoint = await fetchFinalizedCheckpoint(checkpointUrl);
     }
-    const url = `${remoteBeaconUrl}/eth/v1/debug/beacon/states/${stateId}`;
-
+    const stateSlot = checkpoint.epoch * SLOTS_PER_EPOCH;
+    const apiVersion = chainForkConfig.getForkName(stateSlot) === ForkName.phase0 ? "v1" : "v2";
+    const url = `${remoteBeaconUrl}/eth/${apiVersion}/debug/beacon/states/${stateSlot}`;
     logger.info("Fetching weak subjectivity state from " + url);
+
     const wsState = await fetchWeakSubjectivityState(chainForkConfig, url);
     const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
     const store = lastDbState ?? wsState;
-    return initAndVerifyWeakSubjectivityState(
-      config,
-      db,
-      logger,
-      store,
-      wsState,
-      checkpoint || getCheckpointFromState(config, wsState)
-    );
+    return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
   } else if (lastDbState) {
     // start the chain from the latest stored state in the db
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);

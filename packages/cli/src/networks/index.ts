@@ -1,7 +1,7 @@
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
-import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -142,6 +142,25 @@ export async function fetchWeakSubjectivityState(
     const response = await got(url, {headers: {accept: "application/octet-stream"}});
     const stateBytes = response.rawBody;
     return getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+  } catch (e) {
+    throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
+  }
+}
+
+/**
+ * Fetch a checkpoint from a remote beacon node
+ */
+export async function fetchFinalizedCheckpoint(url: string): Promise<phase0.Checkpoint> {
+  try {
+    const {
+      data: {
+        finalized: {epoch, root},
+      },
+    } = (await got(url).json()) as {data: {finalized: {epoch: string; root: string}}};
+    if (epoch === undefined || root === undefined) {
+      throw Error(`Invalid fetch of finalized checkpoint from url=${url}`);
+    }
+    return {epoch: parseInt(epoch), root: fromHex(root)} as phase0.Checkpoint;
   } catch (e) {
     throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }
