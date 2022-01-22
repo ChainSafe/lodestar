@@ -278,10 +278,10 @@ export class LightClientServer {
 
     if (partialUpdate.isFinalized) {
       return {
-        attestedHeader: partialUpdate.finalizedHeader,
+        attestedHeader: partialUpdate.attestedHeader,
         nextSyncCommittee: nextSyncCommittee,
         nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
-        finalizedHeader: partialUpdate.attestedHeader,
+        finalizedHeader: partialUpdate.finalizedHeader,
         finalityBranch: partialUpdate.finalityBranch,
         syncCommitteeAggregate: partialUpdate.syncCommitteeAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
