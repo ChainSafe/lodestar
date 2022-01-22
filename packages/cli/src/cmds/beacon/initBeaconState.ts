@@ -2,7 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {fromHex, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
@@ -10,19 +10,13 @@ import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
-import {fetchWeakSubjectivityState, getGenesisFileUrl, fetchFinalizedCheckpoint} from "../../networks";
+import {
+  fetchWeakSubjectivityState,
+  getGenesisFileUrl,
+  getCheckpointFromArg,
+  WeakSubjectivityFetchOptions,
+} from "../../networks";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
-import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
-
-const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
-
-function getCheckpointFromArg(checkpointStr: string): Checkpoint {
-  const match = checkpointRegex.exec(checkpointStr.toLowerCase());
-  if (!match) {
-    throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
-  }
-  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
-}
 
 function getCheckpointFromState(config: IChainForkConfig, state: allForks.BeaconState): Checkpoint {
   return {
@@ -107,28 +101,18 @@ export async function initBeaconState(
     // weak subjectivity sync from a state that needs to be fetched:
     // if a weak subjectivity checkpoint has been provided, it is used to inform which state to download and used for additional verification
     // otherwise, the 'finalized' state is downloaded and the state itself is used for verification (all trust delegated to the remote beacon node)
-    const remoteBeaconUrl = args.weakSubjectivityServerUrl;
-    if (!remoteBeaconUrl) {
+    if (!args.weakSubjectivityServerUrl) {
       throw Error(`Must set arg --weakSubjectivityServerUrl for network ${args.network}`);
     }
+    logger.info("Fetching weak subjectivity state", {weakSubjectivityServerUrl: args.weakSubjectivityServerUrl});
 
-    let checkpoint: Checkpoint;
-    if (args.weakSubjectivityCheckpoint) {
-      checkpoint = getCheckpointFromArg(args.weakSubjectivityCheckpoint);
-    } else {
-      const checkpointUrl = `${remoteBeaconUrl}/eth/v1/beacon/states/finalized/finality_checkpoints`;
-      logger.info("Fetching finalized checkpoint", {checkpointUrl});
-      checkpoint = await fetchFinalizedCheckpoint(checkpointUrl);
-    }
-    const stateSlot = checkpoint.epoch * SLOTS_PER_EPOCH;
-    const apiVersion = chainForkConfig.getForkName(stateSlot) === ForkName.phase0 ? "v1" : "v2";
-    const url = `${remoteBeaconUrl}/eth/${apiVersion}/debug/beacon/states/${stateSlot}`;
-    logger.info("Fetching weak subjectivity state from " + url);
-
-    const wsState = await fetchWeakSubjectivityState(chainForkConfig, url);
+    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(
+      chainForkConfig,
+      args as WeakSubjectivityFetchOptions
+    );
     const config = createIBeaconConfig(chainForkConfig, wsState.genesisValidatorsRoot);
     const store = lastDbState ?? wsState;
-    return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
+    return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, wsCheckpoint);
   } else if (lastDbState) {
     // start the chain from the latest stored state in the db
     const config = createIBeaconConfig(chainForkConfig, lastDbState.genesisValidatorsRoot);
