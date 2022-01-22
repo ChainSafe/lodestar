@@ -43,6 +43,8 @@ export type IChainConfig = {
   EJECTION_BALANCE: number;
   MIN_PER_EPOCH_CHURN_LIMIT: number;
   CHURN_LIMIT_QUOTIENT: number;
+
+  // Proposer boost
   PROPOSER_SCORE_BOOST: number;
 
   // Deposit contract
@@ -89,6 +91,9 @@ export const chainConfigTypes: SpecTypes<IChainConfig> = {
   EJECTION_BALANCE: "number",
   MIN_PER_EPOCH_CHURN_LIMIT: "number",
   CHURN_LIMIT_QUOTIENT: "number",
+
+  // Proposer boost
+  PROPOSER_SCORE_BOOST: "number",
 
   // Deposit contract
   DEPOSIT_CHAIN_ID: "number",
