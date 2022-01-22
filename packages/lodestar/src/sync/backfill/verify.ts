@@ -1,4 +1,4 @@
-import {allForks, CachedBeaconState, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, BeaconStateCachedAllForks, ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
@@ -42,7 +42,7 @@ export function verifyBlockSequence(
 
 export async function verifyBlockProposerSignature(
   bls: IBlsVerifier,
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   blocks: allForkTypes.SignedBeaconBlock[]
 ): Promise<void> {
   if (blocks.length === 1 && blocks[0].message.slot === GENESIS_SLOT) return;

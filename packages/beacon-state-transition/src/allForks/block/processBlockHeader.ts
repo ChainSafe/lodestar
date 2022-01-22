@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../util";
+import {BeaconStateCachedAllForks} from "../util";
 import {ZERO_HASH} from "../../constants";
 
 /**
@@ -9,7 +9,7 @@ import {ZERO_HASH} from "../../constants";
  * PERF: Fixed work independent of block contents.
  * NOTE: `block` body root MUST be pre-cached.
  */
-export function processBlockHeader(state: CachedBeaconState<allForks.BeaconState>, block: allForks.BeaconBlock): void {
+export function processBlockHeader(state: BeaconStateCachedAllForks, block: allForks.BeaconBlock): void {
   const slot = state.slot;
   // verify that the slots match
   if (block.slot !== slot) {

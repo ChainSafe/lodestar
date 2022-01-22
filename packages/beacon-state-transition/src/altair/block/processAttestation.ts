@@ -1,8 +1,8 @@
-import {allForks, altair, Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {CachedBeaconState, EpochContext} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks, EpochContext} from "../../allForks/util";
 import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -20,14 +20,14 @@ import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
 export function processAttestations(
-  state: CachedBeaconState<altair.BeaconState>,
+  state: BeaconStateCachedAltair,
   attestations: phase0.Attestation[],
   verifySignature = true
 ): void {
   const {epochCtx} = state;
   const {effectiveBalances} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state as CachedBeaconState<allForks.BeaconState>);
+  const rootCache = new RootCache(state as BeaconStateCachedAllForks);
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
@@ -36,7 +36,7 @@ export function processAttestations(
   for (const attestation of attestations) {
     const data = attestation.data;
 
-    validateAttestation(state as CachedBeaconState<allForks.BeaconState>, attestation);
+    validateAttestation(state as BeaconStateCachedAllForks, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
     const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
@@ -46,7 +46,7 @@ export function processAttestations(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(
-        state as CachedBeaconState<allForks.BeaconState>,
+        state as BeaconStateCachedAllForks,
         attestation,
         attestingIndices
       );
@@ -168,7 +168,7 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
-  constructor(private readonly state: CachedBeaconState<allForks.BeaconState>) {
+  constructor(private readonly state: BeaconStateCachedAllForks) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   }

@@ -8,10 +8,10 @@ import {
   SignatureSetType,
   verifySignatureSet,
 } from "../../util";
-import {CachedBeaconState} from "../util";
+import {BeaconStateCachedAllForks} from "../util";
 
 export function verifyVoluntaryExitSignature(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): boolean {
   return verifySignatureSet(getVoluntaryExitSignatureSet(state, signedVoluntaryExit));
@@ -21,7 +21,7 @@ export function verifyVoluntaryExitSignature(
  * Extract signatures to allow validating all block signatures at once
  */
 export function getVoluntaryExitSignatureSet(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit
 ): ISignatureSet {
   const {epochCtx} = state;
@@ -37,7 +37,7 @@ export function getVoluntaryExitSignatureSet(
 }
 
 export function getVoluntaryExitsSignatureSets(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
   return Array.from(readonlyValues(signedBlock.message.body.voluntaryExits), (voluntaryExit) =>

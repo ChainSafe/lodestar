@@ -1,12 +1,12 @@
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../constants";
 
 /**
  * Compute a Checkpoint type from `state.latestBlockHeader`
  */
-export function getCheckpointFromState(checkpointState: CachedBeaconState<allForks.BeaconState>): phase0.Checkpoint {
+export function getCheckpointFromState(checkpointState: BeaconStateCachedAllForks): phase0.Checkpoint {
   const config = checkpointState.config;
   const slot = checkpointState.slot;
 

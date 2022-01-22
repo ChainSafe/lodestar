@@ -1,7 +1,7 @@
-import {phase0, altair} from "../../../../src";
 import {
   AttesterFlags,
-  CachedBeaconState,
+  BeaconStateCachedPhase0,
+  BeaconStateCachedAltair,
   IAttesterStatus,
   IEpochProcess,
   toAttesterFlags,
@@ -13,7 +13,7 @@ import {
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
 export function generateBalanceDeltasEpochProcess(
-  state: CachedBeaconState<phase0.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  state: BeaconStateCachedPhase0 | BeaconStateCachedAltair,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
 ): IEpochProcess {

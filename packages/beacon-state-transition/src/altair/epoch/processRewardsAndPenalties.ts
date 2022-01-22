@@ -1,5 +1,4 @@
-import {altair} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAltair, IEpochProcess} from "../../allForks/util";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {getRewardsPenaltiesDeltas} from "./balance";
 
@@ -9,10 +8,7 @@ import {getRewardsPenaltiesDeltas} from "./balance";
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags
  * are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*
  */
-export function processRewardsAndPenalties(
-  state: CachedBeaconState<altair.BeaconState>,
-  epochProcess: IEpochProcess
-): void {
+export function processRewardsAndPenalties(state: BeaconStateCachedAltair, epochProcess: IEpochProcess): void {
   if (state.currentShuffling.epoch == GENESIS_EPOCH) {
     return;
   }

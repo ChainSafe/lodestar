@@ -1,5 +1,5 @@
-import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../../allForks/util";
+import {phase0} from "@chainsafe/lodestar-types";
+import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../allForks/util";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestation, validateAttestation} from "./processAttestation";
@@ -21,13 +21,9 @@ export {
   processVoluntaryExit,
 };
 
-export function processBlock(
-  state: CachedBeaconState<phase0.BeaconState>,
-  block: phase0.BeaconBlock,
-  verifySignatures = true
-): void {
-  processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
-  processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
-  processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
+export function processBlock(state: BeaconStateCachedPhase0, block: phase0.BeaconBlock, verifySignatures = true): void {
+  processBlockHeader(state as BeaconStateCachedAllForks, block);
+  processRandao(state as BeaconStateCachedAllForks, block, verifySignatures);
+  processEth1Data(state as BeaconStateCachedAllForks, block.body);
   processOperations(state, block.body, verifySignatures);
 }

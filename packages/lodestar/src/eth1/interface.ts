@@ -3,8 +3,8 @@
  */
 
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, Root, RootHex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, Root, RootHex} from "@chainsafe/lodestar-types";
+import {BeaconStateCachedAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 export type EthJsonRpcBlockRaw = {
   /** the block number. null when its pending block. `"0x1b4"` */
@@ -41,7 +41,7 @@ export type Eth1DataAndDeposits = {
 };
 
 export interface IEth1ForBlockProduction {
-  getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits>;
+  getEth1DataAndDeposits(state: BeaconStateCachedAllForks): Promise<Eth1DataAndDeposits>;
 
   /** Returns the most recent POW block that satisfies the merge block condition */
   getTerminalPowBlock(): Root | null;

@@ -37,10 +37,7 @@ export function rewardsPhase0(fork: ForkName): void {
         const config = getConfig(fork);
         const wrappedState = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<allForks.BeaconState>);
         const epochProcess = allForks.beforeProcessEpoch(wrappedState);
-        return phase0.getAttestationDeltas(
-          wrappedState as allForks.CachedBeaconState<phase0.BeaconState>,
-          epochProcess
-        );
+        return phase0.getAttestationDeltas(wrappedState as allForks.BeaconStateCachedPhase0, epochProcess);
       },
       {
         inputTypes: inputTypeSszTreeBacked,

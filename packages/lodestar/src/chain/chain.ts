@@ -3,7 +3,7 @@
  */
 
 import fs from "fs";
-import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
@@ -210,7 +210,7 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconState<allForks.BeaconState> {
+  getHeadState(): BeaconStateCachedAllForks {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
@@ -219,7 +219,7 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getHeadStateAtCurrentEpoch(): Promise<BeaconStateCachedAllForks> {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;

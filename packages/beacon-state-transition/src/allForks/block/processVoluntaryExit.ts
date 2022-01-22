@@ -1,7 +1,7 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {isActiveValidator} from "../../util";
-import {CachedBeaconState} from "../../allForks/util";
+import {BeaconStateCachedAllForks} from "../../allForks/util";
 import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 
@@ -11,20 +11,20 @@ import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExitAllForks(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit, verifySignature)) {
+  if (!isValidVoluntaryExit(state as BeaconStateCachedAllForks, signedVoluntaryExit, verifySignature)) {
     throw Error("Invalid voluntary exit");
   }
 
   const validator = state.validators[signedVoluntaryExit.message.validatorIndex];
-  initiateValidatorExit(state as CachedBeaconState<allForks.BeaconState>, validator);
+  initiateValidatorExit(state as BeaconStateCachedAllForks, validator);
 }
 
 export function isValidVoluntaryExit(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
@@ -43,7 +43,6 @@ export function isValidVoluntaryExit(
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
     // verify signature
-    (!verifySignature ||
-      verifyVoluntaryExitSignature(state as CachedBeaconState<allForks.BeaconState>, signedVoluntaryExit))
+    (!verifySignature || verifyVoluntaryExitSignature(state as BeaconStateCachedAllForks, signedVoluntaryExit))
   );
 }

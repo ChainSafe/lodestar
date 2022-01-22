@@ -18,10 +18,7 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
     // testConfig is used here to load forkEpoch from meta.yaml
     // eslint-disable-next-line @typescript-eslint/naming-convention
     const testConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: Number(forkEpoch)});
-    let wrappedState = allForks.createCachedBeaconState<allForks.BeaconState>(
-      testConfig,
-      testcase.pre as TreeBacked<allForks.BeaconState>
-    );
+    let wrappedState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
     for (let i = 0; i < Number(blocksCount); i++) {
       let tbSignedBlock: allForks.SignedBeaconBlock;
       if (i <= forkBlock) {

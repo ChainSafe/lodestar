@@ -1,7 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {JobItemQueue} from "../../util/queue";
@@ -26,7 +26,7 @@ export type RegenRequest = RegenRequestByKey[RegenRequestKey];
  * All requests are queued so that only a single state at a time may be regenerated at a time
  */
 export class QueuedStateRegenerator implements IStateRegenerator {
-  readonly jobQueue: JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>;
+  readonly jobQueue: JobItemQueue<[RegenRequest], BeaconStateCachedAllForks>;
   private regen: StateRegenerator;
 
   private forkChoice: IForkChoice;
@@ -36,7 +36,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
 
   constructor(modules: QueuedStateRegeneratorModules) {
     this.regen = new StateRegenerator(modules);
-    this.jobQueue = new JobItemQueue<[RegenRequest], CachedBeaconState<allForks.BeaconState>>(
+    this.jobQueue = new JobItemQueue<[RegenRequest], BeaconStateCachedAllForks>(
       this.jobQueueProcessor,
       {maxLength: REGEN_QUEUE_MAX_LEN, signal: modules.signal},
       modules.metrics ? modules.metrics.regenQueue : undefined
@@ -51,10 +51,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
    * Get the state to run with `block`.
    * - State after `block.parentRoot` dialed forward to block.slot
    */
-  async getPreState(
-    block: allForks.BeaconBlock,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getPreState});
 
     // First attempt to fetch the state from caches before queueing
@@ -93,10 +90,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getPreState", args: [block, rCaller]});
   }
 
-  async getCheckpointState(
-    cp: phase0.Checkpoint,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getCheckpointState});
 
     // First attempt to fetch the state from cache before queueing
@@ -110,18 +104,14 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getCheckpointState", args: [cp, rCaller]});
   }
 
-  async getBlockSlotState(
-    blockRoot: RootHex,
-    slot: Slot,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getBlockSlotState(blockRoot: RootHex, slot: Slot, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
 
     // The state is not immediately available in the caches, enqueue the job
     return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
   }
 
-  async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks> {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getState});
 
     // First attempt to fetch the state from cache before queueing
@@ -135,7 +125,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     return this.jobQueue.push({key: "getState", args: [stateRoot, rCaller]});
   }
 
-  private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<CachedBeaconState<allForks.BeaconState>> => {
+  private jobQueueProcessor = async (regenRequest: RegenRequest): Promise<BeaconStateCachedAllForks> => {
     const metricsLabels = {
       caller: regenRequest.args[regenRequest.args.length - 1] as RegenCaller,
       entrypoint: regenRequest.key,

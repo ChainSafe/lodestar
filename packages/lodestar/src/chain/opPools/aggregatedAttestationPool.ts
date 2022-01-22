@@ -1,9 +1,11 @@
 import bls from "@chainsafe/bls";
 import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {altair, Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
-  CachedBeaconState,
+  BeaconStateCachedAllForks,
+  BeaconStateCachedPhase0,
+  BeaconStateCachedAltair,
   computeEpochAtSlot,
   phase0,
   zipIndexesCommitteeBits,
@@ -77,7 +79,7 @@ export class AggregatedAttestationPool {
   /**
    * Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items
    */
-  getAttestationsForBlock(state: CachedBeaconState<allForks.BeaconState>): phase0.Attestation[] {
+  getAttestationsForBlock(state: BeaconStateCachedAllForks): phase0.Attestation[] {
     const stateSlot = state.slot;
     const stateEpoch = state.currentShuffling.epoch;
     const statePrevEpoch = stateEpoch - 1;
@@ -180,9 +182,9 @@ export class AggregatedAttestationPool {
    * As we are close to altair, this is not really important, it's mainly for e2e.
    * The performance is not great due to the different BeaconState data structure to altair.
    */
-  private getParticipationPhase0(state: CachedBeaconState<allForks.BeaconState>): GetParticipationFn {
+  private getParticipationPhase0(state: BeaconStateCachedAllForks): GetParticipationFn {
     // check for phase0 block already
-    const phase0State = state as CachedBeaconState<phase0.BeaconState>;
+    const phase0State = state as BeaconStateCachedPhase0;
     const {epochCtx} = phase0State;
     const stateEpoch = computeEpochAtSlot(state.slot);
 
@@ -203,9 +205,9 @@ export class AggregatedAttestationPool {
    * Attestations are sorted by inclusion distance then number of attesters.
    * Attestations should pass the validation when processing attestations in beacon-state-transition.
    */
-  private getParticipationAltair(state: CachedBeaconState<allForks.BeaconState>): GetParticipationFn {
+  private getParticipationAltair(state: BeaconStateCachedAllForks): GetParticipationFn {
     // check for altair block already
-    const altairState = state as CachedBeaconState<altair.BeaconState>;
+    const altairState = state as BeaconStateCachedAltair;
     const stateEpoch = computeEpochAtSlot(state.slot);
     const previousParticipation = altairState.previousEpochParticipation.persistent.toArray();
     const currentParticipation = altairState.currentEpochParticipation.persistent.toArray();

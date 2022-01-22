@@ -3,7 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -99,11 +99,7 @@ export function onForkVersion(this: BeaconChain, version: Version): void {
   this.logger.verbose("New fork version", ssz.Version.toJson(version));
 }
 
-export function onCheckpoint(
-  this: BeaconChain,
-  cp: phase0.Checkpoint,
-  state: CachedBeaconState<allForks.BeaconState>
-): void {
+export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: BeaconStateCachedAllForks): void {
   this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp));
 
   this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
@@ -125,11 +121,7 @@ export function onCheckpoint(
   }
 }
 
-export function onJustified(
-  this: BeaconChain,
-  cp: phase0.Checkpoint,
-  state: CachedBeaconState<allForks.BeaconState>
-): void {
+export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, state: BeaconStateCachedAllForks): void {
   this.logger.verbose("Checkpoint justified", ssz.phase0.Checkpoint.toJson(cp));
   this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
@@ -181,7 +173,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 export async function onBlock(
   this: BeaconChain,
   block: allForks.SignedBeaconBlock,
-  _postState: CachedBeaconState<allForks.BeaconState>
+  _postState: BeaconStateCachedAllForks
 ): Promise<void> {
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);

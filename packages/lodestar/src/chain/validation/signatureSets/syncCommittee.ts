@@ -1,14 +1,14 @@
 import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {
-  CachedBeaconState,
+  BeaconStateCachedAllForks,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSyncCommitteeSignatureSet(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): ISignatureSet {
   const domain = state.config.getDomain(DOMAIN_SYNC_COMMITTEE, syncCommittee.slot);

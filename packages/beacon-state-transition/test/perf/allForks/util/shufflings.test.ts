@@ -1,17 +1,17 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {allForks, computeEpochAtSlot} from "../../../../src";
+import {computeEpochAtSlot, BeaconStateCachedAllForks} from "../../../../src";
 import {computeEpochShuffling, computeProposers} from "../../../../src/allForks";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {getNextSyncCommittee} from "../../../../src/altair/util/syncCommittee";
 
 describe("epoch shufflings", () => {
-  let state: allForks.CachedBeaconState<allForks.BeaconState>;
+  let state: BeaconStateCachedAllForks;
   let nextEpoch: Epoch;
 
   before(function () {
     this.timeout(60 * 1000);
-    state = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
+    state = generatePerfTestCachedStatePhase0() as BeaconStateCachedAllForks;
     nextEpoch = computeEpochAtSlot(state.slot) + 1;
 
     // Sanity check to ensure numValidators doesn't go stale

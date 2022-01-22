@@ -1,6 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks, phase0} from "../../../../src";
-import {beforeProcessEpoch} from "../../../../src/allForks";
+import {allForks, phase0, BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StateEpoch} from "../../types";
 
@@ -29,8 +28,7 @@ describe("phase0 processSlashings", () => {
       minRuns: 5, // Worst case is very slow
       before: () => getProcessSlashingsTestData(indicesToSlashLen),
       beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-      fn: ({state, epochProcess}) =>
-        phase0.processSlashings(state as allForks.CachedBeaconState<phase0.BeaconState>, epochProcess),
+      fn: ({state, epochProcess}) => phase0.processSlashings(state as BeaconStateCachedPhase0, epochProcess),
     });
   }
 });
@@ -41,16 +39,16 @@ describe("phase0 processSlashings", () => {
 function getProcessSlashingsTestData(
   indicesToSlashLen: number
 ): {
-  state: allForks.CachedBeaconState<allForks.BeaconState>;
+  state: BeaconStateCachedAllForks;
   epochProcess: allForks.IEpochProcess;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = beforeProcessEpoch(state);
+  const epochProcess = allForks.beforeProcessEpoch(state);
 
   epochProcess.indicesToSlash = linspace(indicesToSlashLen);
 
   return {
-    state: state as allForks.CachedBeaconState<allForks.BeaconState>,
+    state: state as BeaconStateCachedAllForks,
     epochProcess,
   };
 }

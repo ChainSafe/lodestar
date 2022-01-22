@@ -24,7 +24,7 @@ import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
 import {getNextSyncCommittee} from "../altair/util/syncCommittee";
-import {CachedBeaconState, createCachedBeaconState, processDeposit} from "../allForks";
+import {BeaconStateCachedAllForks, createCachedBeaconState, processDeposit} from "../allForks";
 
 // TODO: Refactor to work with non-phase0 genesis state
 
@@ -58,7 +58,7 @@ export function getGenesisBeaconState(
   config: IBeaconConfig,
   genesisEth1Data: phase0.Eth1Data,
   latestBlockHeader: phase0.BeaconBlockHeader
-): CachedBeaconState<allForks.BeaconState> {
+): BeaconStateCachedAllForks {
   // Seed RANDAO with Eth1 entropy
   const randaoMixes = Array<Bytes32>(EPOCHS_PER_HISTORICAL_VECTOR).fill(genesisEth1Data.blockHash);
 
@@ -131,7 +131,7 @@ export function applyTimestamp(
  */
 export function applyDeposits(
   config: IChainForkConfig,
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: BeaconStateCachedAllForks,
   newDeposits: phase0.Deposit[],
   fullDepositDataRootList?: TreeBacked<List<Root>>
 ): ValidatorIndex[] {

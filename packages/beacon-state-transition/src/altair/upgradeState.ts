@@ -1,5 +1,10 @@
-import {allForks, altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
+import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
+import {
+  BeaconStateCachedPhase0,
+  BeaconStateCachedAltair,
+  BeaconStateCachedAllForks,
+  createCachedBeaconState,
+} from "../allForks/util";
 import {newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -10,7 +15,7 @@ import {getNextSyncCommittee} from "./util/syncCommittee";
 /**
  * Upgrade a state from phase0 to altair.
  */
-export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): CachedBeaconState<altair.BeaconState> {
+export function upgradeState(state: BeaconStateCachedPhase0): BeaconStateCachedAltair {
   const {config} = state;
   const pendingAttesations = Array.from(state.previousEpochAttestations);
   const postTreeBackedState = upgradeTreeBackedState(config, state);
@@ -19,10 +24,7 @@ export function upgradeState(state: CachedBeaconState<phase0.BeaconState>): Cach
   return postState;
 }
 
-function upgradeTreeBackedState(
-  config: IBeaconConfig,
-  state: CachedBeaconState<phase0.BeaconState>
-): TreeBacked<altair.BeaconState> {
+function upgradeTreeBackedState(config: IBeaconConfig, state: BeaconStateCachedPhase0): TreeBacked<altair.BeaconState> {
   const nextEpochActiveIndices = state.nextShuffling.activeIndices;
   const stateTB = ssz.phase0.BeaconState.createTreeBacked(state.tree);
   const validatorCount = stateTB.validators.length;
@@ -46,12 +48,9 @@ function upgradeTreeBackedState(
 /**
  * Translate_participation in https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/fork.md
  */
-function translateParticipation(
-  state: CachedBeaconState<altair.BeaconState>,
-  pendingAttesations: phase0.PendingAttestation[]
-): void {
+function translateParticipation(state: BeaconStateCachedAltair, pendingAttesations: phase0.PendingAttestation[]): void {
   const {epochCtx} = state;
-  const rootCache = new RootCache(state as CachedBeaconState<allForks.BeaconState>);
+  const rootCache = new RootCache(state as BeaconStateCachedAllForks);
   const epochParticipation = state.previousEpochParticipation;
   for (const attestation of pendingAttesations) {
     const data = attestation.data;

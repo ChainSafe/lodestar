@@ -1,12 +1,12 @@
-import {altair, bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, createCachedBeaconState} from "../allForks/util";
+import {bellatrix, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, createCachedBeaconState} from "../allForks/util";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 /**
  * Upgrade a state from altair to bellatrix.
  */
-export function upgradeState(state: CachedBeaconState<altair.BeaconState>): CachedBeaconState<bellatrix.BeaconState> {
+export function upgradeState(state: BeaconStateCachedAltair): BeaconStateCachedBellatrix {
   const {config} = state;
   const postTreeBackedState = upgradeTreeBackedState(config, state);
   // TODO: This seems very sub-optimal, review
@@ -15,7 +15,7 @@ export function upgradeState(state: CachedBeaconState<altair.BeaconState>): Cach
 
 function upgradeTreeBackedState(
   config: IBeaconConfig,
-  state: CachedBeaconState<altair.BeaconState>
+  state: BeaconStateCachedAltair
 ): TreeBacked<bellatrix.BeaconState> {
   const stateTB = ssz.phase0.BeaconState.createTreeBacked(state.tree);
 

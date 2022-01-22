@@ -4,14 +4,14 @@ import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_SYNC_COMMITTEE, SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {readonlyValues} from "@chainsafe/ssz";
 import {
-  CachedBeaconState,
+  BeaconStateCachedAltair,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSyncCommitteeContributionSignatureSet(
-  state: CachedBeaconState<altair.BeaconState>,
+  state: BeaconStateCachedAltair,
   contribution: altair.SyncCommitteeContribution,
   pubkeys: PublicKey[]
 ): ISignatureSet {
@@ -30,7 +30,7 @@ export function getSyncCommitteeContributionSignatureSet(
  * - index2pubkey cache
  */
 export function getContributionPubkeys(
-  state: CachedBeaconState<altair.BeaconState>,
+  state: BeaconStateCachedAltair,
   contribution: altair.SyncCommitteeContribution
 ): PublicKey[] {
   const pubkeys: PublicKey[] = [];

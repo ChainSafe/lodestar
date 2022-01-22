@@ -1,5 +1,5 @@
 import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -76,8 +76,8 @@ export interface IBeaconChain {
   persistToDisk(): Promise<void>;
   getGenesisTime(): Number64;
 
-  getHeadState(): CachedBeaconState<allForks.BeaconState>;
-  getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getHeadState(): BeaconStateCachedAllForks;
+  getHeadStateAtCurrentEpoch(): Promise<BeaconStateCachedAllForks>;
 
   /**
    * Since we can have multiple parallel chains,

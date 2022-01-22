@@ -1,5 +1,5 @@
 import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
-import {CachedBeaconState, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, createCachedBeaconState, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -151,7 +151,7 @@ export function generateCachedState(
   opts: TestBeaconState = {},
   config = minimalConfig,
   isAltair = false
-): CachedBeaconState<allForks.BeaconState> {
+): BeaconStateCachedAllForks {
   const state = generateState(opts, config, isAltair);
   return createCachedBeaconState(config, state);
 }
@@ -163,7 +163,7 @@ export async function generateCachedStateWithPubkeys(
   opts: TestBeaconState = {},
   config = minimalConfig,
   isAltair = false
-): Promise<CachedBeaconState<allForks.BeaconState>> {
+): Promise<BeaconStateCachedAllForks> {
   // somehow this is called in the test but BLS isn't init
   await initBLS();
   const state = generateState(opts, config, isAltair, true);

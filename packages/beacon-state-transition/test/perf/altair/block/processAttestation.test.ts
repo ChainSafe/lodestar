@@ -10,7 +10,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair} from "../../../../src";
+import {allForks, altair, BeaconStateCachedAllForks} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateAltair, StateAttestations} from "../../types";
@@ -56,14 +56,14 @@ describe("altair processAttestation", () => {
     itBench<StateAttestations, StateAttestations>({
       id: `altair processAttestation - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStateAltair() as allForks.CachedBeaconState<allForks.BeaconState>;
+        const state = generatePerfTestCachedStateAltair() as BeaconStateCachedAllForks;
         const block = getBlockAltair(state, opts);
         state.hashTreeRoot();
         return {state, attestations: block.message.body.attestations as phase0.Attestation[]};
       },
       beforeEach: ({state, attestations}) => ({state: state.clone(), attestations}),
       fn: ({state, attestations}) => {
-        altair.processAttestations(state as allForks.CachedBeaconState<altair.BeaconState>, attestations, false);
+        altair.processAttestations(state as allForks.BeaconStateCachedAltair, attestations, false);
       },
     });
   }

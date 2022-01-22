@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {
-  allForks,
+  BeaconStateCachedAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -16,14 +16,14 @@ import {ssz} from "@chainsafe/lodestar-types";
 // getAttestationsForBlock
 //     ✓ getAttestationsForBlock                                             4.410948 ops/s    226.7086 ms/op        -         64 runs   51.8 s
 describe("getAttestationsForBlock", () => {
-  let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
+  let originalState: BeaconStateCachedAllForks;
 
   before(function () {
     this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
 
     originalState = (generatePerfTestCachedStateAltair({
       goBackOneSlot: true,
-    }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
+    }) as unknown) as BeaconStateCachedAllForks;
     const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
       .toArray()
       .filter((part) => part.timelySource).length;
@@ -45,9 +45,7 @@ describe("getAttestationsForBlock", () => {
   });
 });
 
-function getAggregatedAttestationPool(
-  state: allForks.CachedBeaconState<allForks.BeaconState>
-): AggregatedAttestationPool {
+function getAggregatedAttestationPool(state: BeaconStateCachedAllForks): AggregatedAttestationPool {
   const pool = new AggregatedAttestationPool();
   for (let epochSlot = 0; epochSlot < SLOTS_PER_EPOCH; epochSlot++) {
     const slot = state.slot - 1 - epochSlot;

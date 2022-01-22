@@ -8,7 +8,7 @@ import {
   computeEpochAtSlot,
   createCachedBeaconState,
   phase0,
-  CachedBeaconState,
+  BeaconStateCachedAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -183,7 +183,7 @@ export function restoreStateCaches(
   stateCache: StateContextCache,
   checkpointStateCache: CheckpointStateCache,
   state: TreeBacked<allForks.BeaconState>
-): CachedBeaconState<allForks.BeaconState> {
+): BeaconStateCachedAllForks {
   const {checkpoint} = computeAnchorCheckpoint(config, state);
 
   const cachedBeaconState = createCachedBeaconState(config, state);

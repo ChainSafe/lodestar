@@ -1,6 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks} from "../../../../src";
-import {beforeProcessEpoch} from "../../../../src/allForks";
+import {allForks, BeaconStateCachedAllForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StateEpoch} from "../../types";
 
@@ -80,18 +79,18 @@ function getRegistryUpdatesTestData(
   vc: number,
   lengths: IndicesLengths
 ): {
-  state: allForks.CachedBeaconState<allForks.BeaconState>;
+  state: BeaconStateCachedAllForks;
   epochProcess: allForks.IEpochProcess;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = beforeProcessEpoch(state);
+  const epochProcess = allForks.beforeProcessEpoch(state);
 
   epochProcess.indicesToEject = linspace(lengths.indicesToEject);
   epochProcess.indicesEligibleForActivationQueue = linspace(lengths.indicesEligibleForActivationQueue);
   epochProcess.indicesEligibleForActivation = linspace(lengths.indicesEligibleForActivation);
 
   return {
-    state: state as allForks.CachedBeaconState<allForks.BeaconState>,
+    state: state as BeaconStateCachedAllForks,
     epochProcess,
   };
 }

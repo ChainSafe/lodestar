@@ -10,7 +10,7 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {allForks, altair, bellatrix, Number64, ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
@@ -88,6 +88,16 @@ export type CachedBeaconState<T extends allForks.BeaconState> =
     ITreeBacked<T> &
     // Beacon State interface
     T;
+
+export type BeaconStateCachedPhase0 = CachedBeaconState<phase0.BeaconState>;
+export type BeaconStateCachedAltair = CachedBeaconState<altair.BeaconState>;
+export type BeaconStateCachedBellatrix = CachedBeaconState<bellatrix.BeaconState>;
+export type BeaconStateCachedAllForks = CachedBeaconState<allForks.BeaconState>;
+export type BeaconStateCachedAnyFork =
+  | BeaconStateCachedPhase0
+  | BeaconStateCachedAltair
+  | BeaconStateCachedBellatrix
+  | BeaconStateCachedAllForks;
 
 export function createCachedBeaconState<T extends allForks.BeaconState>(
   chainForkConfig: IChainForkConfig,
@@ -357,8 +367,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
 }
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
-export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allForks.BeaconState>> = {
-  get(target: CachedBeaconState<allForks.BeaconState>, key: string): unknown {
+export const CachedBeaconStateProxyHandler: ProxyHandler<BeaconStateCachedAllForks> = {
+  get(target: BeaconStateCachedAllForks, key: string): unknown {
     if (key === "balanceList") {
       return target.balanceList;
     } else if (key === "previousEpochParticipation") {
@@ -382,7 +392,7 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     } else if (key in target.epochCtx) {
       return target.epochCtx[key as keyof EpochContext];
     } else if (key in target) {
-      return target[key as keyof CachedBeaconState<allForks.BeaconState>];
+      return target[key as keyof BeaconStateCachedAllForks];
     } else {
       const treeBacked = target.type.createTreeBacked(target.tree);
       if (key in treeBacked) {
@@ -391,7 +401,7 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
     }
     return undefined;
   },
-  set(target: CachedBeaconState<allForks.BeaconState>, key: string, value: unknown): boolean {
+  set(target: BeaconStateCachedAllForks, key: string, value: unknown): boolean {
     if (key === "validators") {
       throw new Error("Cannot set validators");
     } else if (key === "balanceList" || key === "balances") {

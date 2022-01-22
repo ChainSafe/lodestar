@@ -1,5 +1,5 @@
 import {allForks, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 export enum RegenCaller {
   getDuties = "getDuties",
@@ -28,25 +28,21 @@ export interface IStateRegenerator {
    * Return a valid pre-state for a beacon block
    * This will always return a state in the latest viable epoch
    */
-  getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getPreState(block: allForks.BeaconBlock, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks>;
 
   /**
    * Return a valid checkpoint state
    * This will always return a state with `state.slot % SLOTS_PER_EPOCH === 0`
    */
-  getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getCheckpointState(cp: phase0.Checkpoint, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks>;
 
   /**
    * Return the state of `blockRoot` processed to slot `slot`
    */
-  getBlockSlotState(
-    blockRoot: RootHex,
-    slot: Slot,
-    rCaller: RegenCaller
-  ): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getBlockSlotState(blockRoot: RootHex, slot: Slot, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks>;
 
   /**
    * Return the exact state with `stateRoot`
    */
-  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconState<allForks.BeaconState>>;
+  getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<BeaconStateCachedAllForks>;
 }

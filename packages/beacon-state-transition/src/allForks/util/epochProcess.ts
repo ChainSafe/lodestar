@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, allForks} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -23,7 +23,7 @@ import {
   FLAG_CURR_HEAD_ATTESTER,
 } from "./attesterStatus";
 import {IEpochStakeSummary} from "./epochStakeSummary";
-import {CachedBeaconState} from "./cachedBeaconState";
+import {CachedBeaconState, BeaconStateCachedPhase0} from "./cachedBeaconState";
 import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
@@ -264,7 +264,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     statusProcessEpoch(
       state,
       statuses,
-      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
+      ((state as unknown) as BeaconStateCachedPhase0).previousEpochAttestations,
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
       FLAG_PREV_TARGET_ATTESTER,
@@ -273,7 +273,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     statusProcessEpoch(
       state,
       statuses,
-      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
+      ((state as unknown) as BeaconStateCachedPhase0).currentEpochAttestations,
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
       FLAG_CURR_TARGET_ATTESTER,

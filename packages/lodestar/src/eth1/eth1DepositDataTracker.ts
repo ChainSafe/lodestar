@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
@@ -72,7 +72,7 @@ export class Eth1DepositDataTracker {
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: CachedBeaconState<allForks.BeaconState>): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: BeaconStateCachedAllForks): Promise<Eth1DataAndDeposits> {
     const eth1Data = await this.getEth1Data(state);
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -96,7 +96,7 @@ export class Eth1DepositDataTracker {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getDeposits(
-    state: CachedBeaconState<allForks.BeaconState>,
+    state: BeaconStateCachedAllForks,
     eth1DataVote: phase0.Eth1Data
   ): Promise<phase0.Deposit[]> {
     // Eth1 data may change due to the vote included in this block

@@ -1,13 +1,13 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
-import {allForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateCachedAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {IVoteTracker} from "../../../src/protoArray/interface";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice";
 
 describe("computeDeltas", () => {
-  let originalState: allForks.CachedBeaconState<allForks.BeaconState>;
+  let originalState: BeaconStateCachedAllForks;
   const indices: Map<string, number> = new Map<string, number>();
   const oldBalances: number[] = [];
   const newBalances: number[] = [];
@@ -19,7 +19,7 @@ describe("computeDeltas", () => {
 
     originalState = (generatePerfTestCachedStateAltair({
       goBackOneSlot: true,
-    }) as unknown) as allForks.CachedBeaconState<allForks.BeaconState>;
+    }) as unknown) as BeaconStateCachedAllForks;
     const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
       .toArray()
       .filter((part) => part !== undefined && part.timelySource).length;
