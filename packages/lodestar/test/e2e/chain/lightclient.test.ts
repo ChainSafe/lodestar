@@ -67,7 +67,7 @@ describe("chain / lightclient", function () {
       genesisTime,
       logger: loggerNodeA,
     });
-    const validators = await getAndInitDevValidators({
+    const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,

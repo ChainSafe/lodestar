@@ -27,7 +27,7 @@ export class KeymanagerApi implements Api {
     private readonly validatorStore: ValidatorStore,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
-    private readonly secretKeys: SecretKeyInfo[],
+    private readonly secretKeys: SecretKeyInfo[] = [],
     private readonly importKeystoresPath?: string[]
   ) {}
 
@@ -100,10 +100,11 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
+        // TODO [DA]
+        // const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
 
         // Import keys to live signer
-        this.validatorStore.addKey(secretKey);
+        // this.validatorStore.addKey(secretKey);
 
         // Persist keys for latter restarts
         if (this.importKeystoresPath) {
@@ -157,8 +158,8 @@ export class KeymanagerApi implements Api {
       const pubkeyHex = pubkeysHex[i];
 
       // Remove key from live signer
-      const deleted = this.validatorStore.removeKey(pubkeyHex);
-      deletedKey[i] = deleted;
+      // const deleted = this.validatorStore.removeKey(pubkeyHex);
+      //deletedKey[i] = deleted;
 
       // Remove key from persistent storage
       for (const secretKey of this.secretKeys) {

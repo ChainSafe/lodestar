@@ -37,6 +37,8 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
 
   let onDoneHandlers: (() => Promise<void>)[] = [];
 
+  // TODO test multiNode with remote;
+
   for (const {nodeCount, validatorsPerNode, event, altairForkEpoch} of testCases) {
     it(`singleThread ${nodeCount} nodes / ${validatorsPerNode} vc / 1 validator > until ${event}, altairForkEpoch ${altairForkEpoch}`, async function () {
       this.timeout("10 min");
@@ -69,7 +71,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           logger,
         });
 
-        const nodeValidators = await getAndInitDevValidators({
+        const {validators: nodeValidators} = await getAndInitDevValidators({
           node,
           validatorsPerClient: validatorsPerNode,
           validatorClientCount: 1,

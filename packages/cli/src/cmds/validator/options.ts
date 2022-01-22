@@ -7,6 +7,7 @@ import {IBeaconPaths} from "../beacon/paths";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
+    logFile: IBeaconPaths["logFile"];
     validatorsDbDir?: string;
     server: string;
     force: boolean;
@@ -17,10 +18,12 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     keymanagerPort?: number;
     keymanagerHost?: string;
     keymanagerCors?: string;
+    externalSignerUrl?: string;
+    externalSignerPublicKeys?: string[];
+    externalSignerFetchPubkeys?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
-    logFile: IBeaconPaths["logFile"];
   };
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -89,6 +92,32 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   },
 
   // HIDDEN INTEROP OPTIONS
+
+  // Remote signer
+
+  externalSignerUrl: {
+    description: "URL to connect to an external signing server",
+    type: "string",
+    group: "External signer",
+  },
+
+  externalSignerPublicKeys: {
+    description:
+      "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys",
+    type: "array",
+    coerce: (pubkeys: string[]): string[] =>
+      // Parse ["0x11,0x22"] to ["0x11", "0x22"]
+      pubkeys.map((item) => item.split(",")).flat(1),
+    group: "External signer",
+  },
+
+  externalSignerFetchPubkeys: {
+    description: "Fetch then list of pubkeys to validate from an external signer",
+    type: "boolean",
+    group: "External signer",
+  },
+
+  // For testing only
 
   interopIndexes: {
     hidden: true,

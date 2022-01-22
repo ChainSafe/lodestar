@@ -6,7 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,8 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
-import { SecretKeyInfo } from "@chainsafe/lodestar-validator/lib/keymanager/impl";
+import { KeymanagerRestApi } from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Run a beacon node with validator
@@ -117,7 +116,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   }, logger.info.bind(logger));
 
   if (args.startValidators) {
-    const secretKeys: SecretKeyInfo[] = [];
+    const secretKeys: SecretKey[] = [];
     const [fromIndex, toIndex] = args.startValidators.split(":").map((s) => parseInt(s));
     const valCount = anchorState.validators.length;
     const maxIndex = fromIndex + valCount - 1;
@@ -131,9 +130,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     }
 
     for (let i = fromIndex; i <= toIndex; i++) {
-      secretKeys.push({
-        secretKey: interopSecretKey(i),
-      });
+      secretKeys.push(interopSecretKey(i));
     }
 
     const dbPath = path.join(validatorsDbDir, "validators");
@@ -155,7 +152,10 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
-      secretKeys,
+      signers: secretKeys.map((secretKey) => ({
+        type: SignerType.Local,
+        secretKey,
+      })),
     });
 
     // Start keymanager API backend

@@ -1,6 +1,6 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection} from "@chainsafe/lodestar-validator";
+import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 import {getBeaconConfigFromArgs} from "../../config";
@@ -10,9 +10,8 @@ import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
-import {getSecretKeys} from "./keys";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
-import {SecretKey} from "@chainsafe/bls";
 
 /**
  * Runs a validator client.
@@ -31,28 +30,60 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const version = getVersion();
   logger.info("Lodestar", {version: version, network: args.network});
 
-  const {secretKeys} = await getSecretKeys(args);
-  if (secretKeys.length === 0) {
-    throw new YargsError("No validator keystores found");
-  }
-
-  const keys: SecretKey[] = secretKeys.map((key) => key.secretKey);
-  // Log pubkeys for auditing
-  logger.info(`Decrypted ${secretKeys.length} validator keystores`);
-  for (const secretKey of keys) {
-    logger.info(secretKey.toPublicKey().toHex());
-  }
-
   const dbPath = validatorPaths.validatorsDbDir;
   mkdir(dbPath);
 
-  const onGracefulShutdownCbs: (() => Promise<void>)[] = [];
+  const onGracefulShutdownCbs: (() => Promise<void> | void)[] = [];
   onGracefulShutdown(async () => {
-    await Promise.all(onGracefulShutdownCbs.map((cb) => cb()));
-    secretKeys.forEach((secretKeyInfo) => {
-      secretKeyInfo.unlockSecretKeys?.();
-    });
+    for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
+
+  const signers: Signer[] = [];
+
+  // Read remote keys
+  const externalSigners = await getExternalSigners(args);
+  if (externalSigners.length > 0) {
+    logger.info(`Using ${externalSigners.length} external keys`);
+    for (const {externalSignerUrl, pubkeyHex} of externalSigners) {
+      signers.push({
+        type: SignerType.Remote,
+        pubkeyHex: pubkeyHex,
+        externalSignerUrl,
+      });
+    }
+
+    // Log pubkeys for auditing, grouped by signer URL
+    for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(externalSigners)) {
+      logger.info(`External signer URL: ${externalSignerUrl}`);
+      for (const pubkeyHex of pubkeysHex) {
+        logger.info(pubkeyHex);
+      }
+    }
+  }
+
+  // Read local keys
+  else {
+    const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
+    if (secretKeys.length > 0) {
+      // Log pubkeys for auditing
+      logger.info(`Decrypted ${secretKeys.length} local keystores`);
+      for (const secretKey of secretKeys) {
+        logger.info(secretKey.toPublicKey().toHex());
+        signers.push({
+          type: SignerType.Local,
+          secretKey,
+        });
+      }
+
+      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
+    }
+  }
+
+  // Ensure the validator has at least one key
+
+  if (signers.length === 0) {
+    throw new YargsError("No signers found with current args");
+  }
 
   // This AbortController interrupts the sleep() calls when waiting for genesis
   const controller = new AbortController();
@@ -64,9 +95,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
-  const importKeystoresPath = args.importKeystoresPath;
+
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, secretKeys, importKeystoresPath, graffiti},
+    {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
 

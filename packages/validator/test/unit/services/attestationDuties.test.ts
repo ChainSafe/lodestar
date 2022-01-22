@@ -40,7 +40,7 @@ describe("AttestationDutiesService", function () {
   before(() => {
     const secretKeys = [bls.SecretKey.fromBytes(toBufferBE(BigInt(98), 32))];
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
-    validatorStore.votingPubkeys.returns(pubkeys.map((pk) => toHexString(pk)));
+    validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
   });

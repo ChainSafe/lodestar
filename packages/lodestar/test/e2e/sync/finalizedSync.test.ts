@@ -26,16 +26,11 @@ describe("sync / finalized sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {
-        sync: {isSingleNode: true},
-        network: {
-          requestCountPeerLimit: 1000,
-        },
-      },
+      options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
     });
-    const validators = await getAndInitDevValidators({
+    const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
