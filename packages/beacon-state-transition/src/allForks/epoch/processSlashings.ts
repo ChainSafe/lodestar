@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance} from "../../util";
-import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -22,7 +22,7 @@ import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
  */
 export function processSlashingsAllForks(
   fork: ForkName,
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   process: IEpochProcess
 ): void {
   // No need to compute totalSlashings if there no index to slash

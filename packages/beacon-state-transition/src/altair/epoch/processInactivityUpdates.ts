@@ -1,6 +1,6 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {Number64} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 import * as attesterStatusUtil from "../../allForks/util/attesterStatus";
 import {isInInactivityLeak} from "../../util";
 
@@ -18,14 +18,14 @@ import {isInInactivityLeak} from "../../util";
  *
  * TODO: Compute from altair testnet inactivityScores updates on average
  */
-export function processInactivityUpdates(state: BeaconStateCachedAltair, epochProcess: IEpochProcess): void {
+export function processInactivityUpdates(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
   if (state.currentShuffling.epoch === GENESIS_EPOCH) {
     return;
   }
   const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
   const {statuses} = epochProcess;
-  const inActivityLeak = isInInactivityLeak(state as BeaconStateCachedAllForks);
+  const inActivityLeak = isInInactivityLeak(state as CachedBeaconStateAllForks);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
   const {FLAG_ELIGIBLE_ATTESTER, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED, hasMarkers} = attesterStatusUtil;

@@ -9,7 +9,7 @@ import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
@@ -28,7 +28,7 @@ const SAFETY_DECAY = BigInt(10);
  */
 export function getLatestWeakSubjectivityCheckpointEpoch(
   config: IChainForkConfig,
-  state: BeaconStateCachedAllForks
+  state: CachedBeaconStateAllForks
 ): Epoch {
   return state.epochCtx.currentShuffling.epoch - computeWeakSubjectivityPeriodCachedState(config, state);
 }
@@ -43,7 +43,7 @@ export function getLatestWeakSubjectivityCheckpointEpoch(
  */
 export function computeWeakSubjectivityPeriodCachedState(
   config: IChainForkConfig,
-  state: BeaconStateCachedAllForks
+  state: CachedBeaconStateAllForks
 ): number {
   const activeValidatorCount = state.currentShuffling.activeIndices.length;
   return computeWeakSubjectivityPeriodFromConstituents(

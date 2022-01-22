@@ -1,7 +1,7 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   allForks,
   bellatrix,
@@ -121,7 +121,7 @@ export async function verifyBlockStateTransition(
   chain: VerifyBlockModules,
   partiallyVerifiedBlock: PartiallyVerifiedBlock,
   opts: BlockProcessOpts
-): Promise<{postState: BeaconStateCachedAllForks; executionStatus: ExecutionStatus}> {
+): Promise<{postState: CachedBeaconStateAllForks; executionStatus: ExecutionStatus}> {
   const {block, validProposerSignature, validSignatures} = partiallyVerifiedBlock;
 
   // TODO: Skip in process chain segment
@@ -162,7 +162,7 @@ export async function verifyBlockStateTransition(
   if (useBlsBatchVerify && !validSignatures) {
     const signatureSets = validProposerSignature
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-      : allForks.getAllBlockSignatureSets(postState as BeaconStateCachedAllForks, block);
+      : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
 
     if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});

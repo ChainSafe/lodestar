@@ -1,7 +1,7 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {isActiveValidator} from "../../util";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 
@@ -11,20 +11,20 @@ import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
  * PERF: Work depends on number of VoluntaryExit per block. On regular networks the average is 0 / block.
  */
 export function processVoluntaryExitAllForks(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  if (!isValidVoluntaryExit(state as BeaconStateCachedAllForks, signedVoluntaryExit, verifySignature)) {
+  if (!isValidVoluntaryExit(state as CachedBeaconStateAllForks, signedVoluntaryExit, verifySignature)) {
     throw Error("Invalid voluntary exit");
   }
 
   const validator = state.validators[signedVoluntaryExit.message.validatorIndex];
-  initiateValidatorExit(state as BeaconStateCachedAllForks, validator);
+  initiateValidatorExit(state as CachedBeaconStateAllForks, validator);
 }
 
 export function isValidVoluntaryExit(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): boolean {
@@ -43,6 +43,6 @@ export function isValidVoluntaryExit(
     // verify the validator had been active long enough
     currentEpoch >= validator.activationEpoch + config.SHARD_COMMITTEE_PERIOD &&
     // verify signature
-    (!verifySignature || verifyVoluntaryExitSignature(state as BeaconStateCachedAllForks, signedVoluntaryExit))
+    (!verifySignature || verifyVoluntaryExitSignature(state as CachedBeaconStateAllForks, signedVoluntaryExit))
   );
 }

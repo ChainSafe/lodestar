@@ -7,14 +7,14 @@ import * as bellatrix from "../bellatrix";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
 import {beforeProcessEpoch, IEpochProcess, afterProcessEpoch} from "./util";
-import {BeaconStateCachedAllForks, BeaconStateCachedPhase0, BeaconStateCachedAltair} from "../types";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
 import {toHexString} from "@chainsafe/ssz";
 
-type StateAllForks = BeaconStateCachedAllForks;
-type StatePhase0 = BeaconStateCachedPhase0;
-type StateAltair = BeaconStateCachedAltair;
+type StateAllForks = CachedBeaconStateAllForks;
+type StatePhase0 = CachedBeaconStatePhase0;
+type StateAltair = CachedBeaconStateAltair;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
 type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
@@ -37,11 +37,11 @@ const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function stateTransition(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock,
   options?: {verifyStateRoot?: boolean; verifyProposer?: boolean; verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
-): BeaconStateCachedAllForks {
+): CachedBeaconStateAllForks {
   const {verifyStateRoot = true, verifyProposer = true} = options || {};
 
   const block = signedBlock.message;
@@ -89,7 +89,7 @@ export function stateTransition(
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function processBlock(
-  postState: BeaconStateCachedAllForks,
+  postState: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock,
   options?: {verifySignatures?: boolean},
   metrics?: IBeaconStateTransitionMetrics | null
@@ -111,10 +111,10 @@ export function processBlock(
  * Implementation Note: follows the optimizations in protolambda's eth2fastspec (https://github.com/protolambda/eth2fastspec)
  */
 export function processSlots(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   slot: Slot,
   metrics?: IBeaconStateTransitionMetrics | null
-): BeaconStateCachedAllForks {
+): CachedBeaconStateAllForks {
   let postState = state.clone();
 
   // Turn caches into a data-structure optimized for fast writes

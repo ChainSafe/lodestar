@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
-import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../../types";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
@@ -14,7 +14,7 @@ import {toHexString} from "@chainsafe/ssz";
  * true bits on average. See `packages/beacon-state-transition/test/perf/analyzeBlocks.ts`
  */
 export function processAttestation(
-  state: BeaconStateCachedPhase0,
+  state: CachedBeaconStatePhase0,
   attestation: phase0.Attestation,
   verifySignature = true
 ): void {
@@ -22,7 +22,7 @@ export function processAttestation(
   const slot = state.slot;
   const data = attestation.data;
 
-  validateAttestation(state as BeaconStateCachedAllForks, attestation);
+  validateAttestation(state as CachedBeaconStateAllForks, attestation);
 
   const pendingAttestation = ssz.phase0.PendingAttestation.createTreeBackedFromStruct({
     data: data,
@@ -53,7 +53,7 @@ export function processAttestation(
 
   if (
     !isValidIndexedAttestation(
-      state as BeaconStateCachedAllForks,
+      state as CachedBeaconStateAllForks,
       epochCtx.getIndexedAttestation(attestation),
       verifySignature
     )
@@ -62,7 +62,7 @@ export function processAttestation(
   }
 }
 
-export function validateAttestation(state: BeaconStateCachedAllForks, attestation: phase0.Attestation): void {
+export function validateAttestation(state: CachedBeaconStateAllForks, attestation: phase0.Attestation): void {
   const {epochCtx} = state;
   const slot = state.slot;
   const data = attestation.data;

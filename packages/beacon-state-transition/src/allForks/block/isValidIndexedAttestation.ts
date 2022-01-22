@@ -1,14 +1,14 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {verifyIndexedAttestationSignature} from "../signatureSets";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.
  */
 export function isValidIndexedAttestation(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   indexedAttestation: phase0.IndexedAttestation,
   verifySignature = true
 ): boolean {

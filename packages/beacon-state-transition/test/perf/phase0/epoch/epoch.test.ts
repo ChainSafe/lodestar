@@ -3,8 +3,8 @@ import {
   allForks,
   computeStartSlotAtEpoch,
   phase0,
-  BeaconStateCachedAllForks,
-  BeaconStateCachedPhase0,
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
 } from "../../../../src";
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
@@ -27,10 +27,10 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
 
   itBench({
     id: `phase0 processEpoch - ${stateId}`,
-    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAllForks,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAllForks,
     fn: (state) => {
       const epochProcess = allForks.beforeProcessEpoch(state);
-      phase0.processEpoch(state as BeaconStateCachedPhase0, epochProcess);
+      phase0.processEpoch(state as CachedBeaconStatePhase0, epochProcess);
       allForks.afterProcessEpoch(state, epochProcess);
       // Simulate root computation through the next block to account for changes
       state.hashTreeRoot();
@@ -45,7 +45,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
   });
 });
 
-function benchmarkPhase0EpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>, stateId: string): void {
+function benchmarkPhase0EpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>, stateId: string): void {
   const epochProcess = beforeValue(() => allForks.beforeProcessEpoch(stateOg.value));
 
   // Functions in same order as phase0.processEpoch()
@@ -82,7 +82,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
   // Very expensive 976.40 ms/op good target to optimize
   itBench({
     id: `${stateId} - phase0 processRewardsAndPenalties`,
-    beforeEach: () => stateOg.value.clone() as BeaconStateCachedPhase0,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => phase0.processRewardsAndPenalties(state, epochProcess.value),
   });
 
@@ -96,7 +96,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
   itBench({
     id: `${stateId} - phase0 processSlashings`,
-    beforeEach: () => stateOg.value.clone() as BeaconStateCachedPhase0,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => phase0.processSlashings(state, epochProcess.value),
   });
 
@@ -132,7 +132,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
 
   itBench({
     id: `${stateId} - phase0 processParticipationRecordUpdates`,
-    beforeEach: () => stateOg.value.clone() as BeaconStateCachedPhase0,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStatePhase0,
     fn: (state) => processParticipationRecordUpdates(state),
   });
 
@@ -142,7 +142,7 @@ function benchmarkPhase0EpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
     before: () => {
       const state = stateOg.value.clone();
       const epochProcessAfter = allForks.beforeProcessEpoch(state);
-      phase0.processEpoch(state as BeaconStateCachedPhase0, epochProcessAfter);
+      phase0.processEpoch(state as CachedBeaconStatePhase0, epochProcessAfter);
       return {state, epochProcess: epochProcessAfter};
     },
     beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),

@@ -1,12 +1,12 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {byteArrayEquals, List, toHexString} from "@chainsafe/ssz";
-import {BeaconStateCachedBellatrix} from "../../types";
+import {CachedBeaconStateBellatrix} from "../../types";
 import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
 import {isMergeTransitionComplete} from "../utils";
 
 export function processExecutionPayload(
-  state: BeaconStateCachedBellatrix,
+  state: CachedBeaconStateBellatrix,
   payload: bellatrix.ExecutionPayload,
   executionEngine: ExecutionEngine | null
 ): void {

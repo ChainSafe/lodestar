@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateBellatrix, CachedBeaconStateAllForks} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestations} from "../../altair/block/processAttestation";
@@ -10,7 +10,7 @@ import {processVoluntaryExit} from "../../altair/block/processVoluntaryExit";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
 export function processOperations(
-  state: BeaconStateCachedBellatrix,
+  state: CachedBeaconStateBellatrix,
   body: bellatrix.BeaconBlockBody,
   verifySignatures = true
 ): void {
@@ -30,17 +30,17 @@ export function processOperations(
   }
 
   processAttestations(
-    (state as BeaconStateCachedAllForks) as BeaconStateCachedAltair,
+    (state as CachedBeaconStateAllForks) as CachedBeaconStateAltair,
     Array.from(readonlyValues(body.attestations)),
     verifySignatures
   );
 
   for (const deposit of readonlyValues(body.deposits)) {
-    processDeposit((state as BeaconStateCachedAllForks) as BeaconStateCachedAltair, deposit);
+    processDeposit((state as CachedBeaconStateAllForks) as CachedBeaconStateAltair, deposit);
   }
   for (const voluntaryExit of readonlyValues(body.voluntaryExits)) {
     processVoluntaryExit(
-      (state as BeaconStateCachedAllForks) as BeaconStateCachedAltair,
+      (state as CachedBeaconStateAllForks) as CachedBeaconStateAltair,
       voluntaryExit,
       verifySignatures
     );

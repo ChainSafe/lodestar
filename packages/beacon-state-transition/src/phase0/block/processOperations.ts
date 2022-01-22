@@ -2,7 +2,7 @@ import {List, readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {BeaconStateCachedPhase0} from "../../types";
+import {CachedBeaconStatePhase0} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
@@ -15,10 +15,10 @@ type Operation =
   | phase0.Attestation
   | phase0.Deposit
   | phase0.VoluntaryExit;
-type OperationFunction = (state: BeaconStateCachedPhase0, op: Operation, verify: boolean) => void;
+type OperationFunction = (state: CachedBeaconStatePhase0, op: Operation, verify: boolean) => void;
 
 export function processOperations(
-  state: BeaconStateCachedPhase0,
+  state: CachedBeaconStatePhase0,
   body: phase0.BeaconBlockBody,
   verifySignatures = true
 ): void {

@@ -1,6 +1,6 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   proposerShufflingDecisionRoot,
   attesterShufflingDecisionRoot,
@@ -61,7 +61,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   let genesisBlockRoot: Root | null = null;
 
   /** Compute and cache the genesis block root */
-  async function getGenesisBlockRoot(state: BeaconStateCachedAllForks): Promise<Root> {
+  async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
     if (!genesisBlockRoot) {
       // Close to genesis the genesis block may not be available in the DB
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {

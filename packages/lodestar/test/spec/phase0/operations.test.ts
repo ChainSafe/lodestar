@@ -1,4 +1,4 @@
-import {BeaconStateCachedAllForks, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest} from "../type";
 import {operations} from "../allForks/operations";
@@ -17,7 +17,7 @@ operations<phase0.BeaconState>(ForkName.phase0, {
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: phase0.BeaconBlock}) => {
-    allForks.processBlockHeader(state as BeaconStateCachedAllForks, testCase.block);
+    allForks.processBlockHeader(state as CachedBeaconStateAllForks, testCase.block);
   },
 
   deposit: (state, testCase: IBaseSpecTest & {deposit: phase0.Deposit}) => {

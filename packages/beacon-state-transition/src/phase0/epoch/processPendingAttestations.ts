@@ -1,7 +1,7 @@
 import {Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
 import {IAttesterStatus} from "../../allForks";
-import {BeaconStateCachedPhase0} from "../../types";
+import {CachedBeaconStatePhase0} from "../../types";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} from "../../util";
 
 /**
@@ -16,7 +16,7 @@ import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} fr
  *   - currentEpochAttestationsBits:  85
  */
 export function statusProcessEpoch(
-  state: BeaconStateCachedPhase0,
+  state: CachedBeaconStatePhase0,
   statuses: IAttesterStatus[],
   attestations: List<phase0.PendingAttestation>,
   epoch: Epoch,

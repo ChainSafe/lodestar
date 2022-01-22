@@ -9,7 +9,7 @@ import {
   getSingleBitIndex,
   AggregationBitsError,
   AggregationBitsErrorCode,
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
@@ -288,7 +288,7 @@ function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, a
 }
 
 export function getCommitteeIndices(
-  attestationTargetState: BeaconStateCachedAllForks,
+  attestationTargetState: CachedBeaconStateAllForks,
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {

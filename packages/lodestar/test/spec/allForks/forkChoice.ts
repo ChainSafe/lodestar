@@ -5,7 +5,7 @@ import {
   phase0,
   allForks,
   computeEpochAtSlot,
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   ZERO_HASH,
   getEffectiveBalances,
   computeStartSlotAtEpoch,
@@ -49,7 +49,7 @@ export function forkChoiceTest(fork: ForkName): void {
         const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
 
         const checkpointStateCache = new CheckpointStateCache({});
-        const stateCache = new Map<string, BeaconStateCachedAllForks>();
+        const stateCache = new Map<string, CachedBeaconStateAllForks>();
         cacheState(state, stateCache);
 
         /** This is to track test's tickTime to be used in proposer boost */
@@ -179,12 +179,12 @@ export function forkChoiceTest(fork: ForkName): void {
 }
 
 function runStateTranstion(
-  preState: BeaconStateCachedAllForks,
+  preState: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock,
   forkchoice: IForkChoice,
   checkpointCache: CheckpointStateCache,
   blockDelaySec: number
-): BeaconStateCachedAllForks {
+): CachedBeaconStateAllForks {
   const preSlot = preState.slot;
   const postSlot = signedBlock.message.slot - 1;
   let preEpoch = computeEpochAtSlot(preSlot);
@@ -235,7 +235,7 @@ function runStateTranstion(
   return postState;
 }
 
-function cacheCheckpointState(checkpointState: BeaconStateCachedAllForks, checkpointCache: CheckpointStateCache): void {
+function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
   const config = checkpointState.config;
   const slot = checkpointState.slot;
   if (slot % SLOTS_PER_EPOCH !== 0) {
@@ -252,7 +252,7 @@ function cacheCheckpointState(checkpointState: BeaconStateCachedAllForks, checkp
   checkpointCache.add(cp, checkpointState);
 }
 
-function cacheState(wrappedState: BeaconStateCachedAllForks, stateCache: Map<string, BeaconStateCachedAllForks>): void {
+function cacheState(wrappedState: CachedBeaconStateAllForks, stateCache: Map<string, CachedBeaconStateAllForks>): void {
   const blockHeader = ssz.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = wrappedState.hashTreeRoot();

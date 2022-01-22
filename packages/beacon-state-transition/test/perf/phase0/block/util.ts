@@ -8,7 +8,7 @@ import {
   computeEpochAtSlot,
   computeSigningRoot,
   ZERO_HASH,
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
 } from "../../../../src";
 import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 import {getBlockRoot, getBlockRootAtSlot} from "../../../../src";
@@ -27,7 +27,7 @@ export type BlockAltairOpts = BlockOpts & {syncCommitteeBitsLen: number};
  * Generate a block that would pass stateTransition with a customizable count of operations
  */
 export function getBlockPhase0(
-  preState: BeaconStateCachedAllForks,
+  preState: CachedBeaconStateAllForks,
   {proposerSlashingLen, attesterSlashingLen, attestationLen, depositsLen, voluntaryExitLen, bitsLen}: BlockOpts
 ): phase0.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
@@ -159,9 +159,9 @@ export function getBlockPhase0(
  * Get an altair block.
  * This mutates the input preState as well to mark attestations not seen by the network.
  */
-export function getBlockAltair(preState: BeaconStateCachedAllForks, opts: BlockAltairOpts): altair.SignedBeaconBlock {
+export function getBlockAltair(preState: CachedBeaconStateAllForks, opts: BlockAltairOpts): altair.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
-  const phase0Block = getBlockPhase0(preState as BeaconStateCachedAllForks, opts);
+  const phase0Block = getBlockPhase0(preState as CachedBeaconStateAllForks, opts);
   const stateEpoch = computeEpochAtSlot(preState.slot);
   for (const attestation of phase0Block.message.body.attestations) {
     const attEpoch = computeEpochAtSlot(attestation.data.slot);
@@ -195,7 +195,7 @@ export function getBlockAltair(preState: BeaconStateCachedAllForks, opts: BlockA
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: BeaconStateCachedAllForks, count: number): List<phase0.Deposit> {
+function getDeposits(preState: CachedBeaconStateAllForks, count: number): List<phase0.Deposit> {
   const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
   const depositCount = preState.eth1Data.depositCount;
   const withdrawalCredentials = Buffer.alloc(32, 0xee);

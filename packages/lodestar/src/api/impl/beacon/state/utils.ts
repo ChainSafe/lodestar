@@ -2,8 +2,8 @@ import {routes} from "@chainsafe/lodestar-api";
 import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 // this will need async once we wan't to resolve archive slot
 import {
-  BeaconStateCachedAllForks,
-  BeaconStateCachedAltair,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
   createCachedBeaconState,
   computeSyncPeriodAtSlot,
   computeEpochAtSlot,
@@ -119,16 +119,16 @@ export function toValidatorResponse(
  * Returns committees mapped by index -> slot -> validator index
  */
 export function getEpochBeaconCommittees(
-  state: allForks.BeaconState | BeaconStateCachedAllForks,
+  state: allForks.BeaconState | CachedBeaconStateAllForks,
   epoch: Epoch
 ): ValidatorIndex[][][] {
-  if ((state as BeaconStateCachedAllForks).epochCtx !== undefined) {
+  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
     const stateEpoch = computeEpochAtSlot(state.slot);
     switch (epoch) {
       case stateEpoch:
-        return (state as BeaconStateCachedAllForks).currentShuffling.committees;
+        return (state as CachedBeaconStateAllForks).currentShuffling.committees;
       case stateEpoch - 1:
-        return (state as BeaconStateCachedAllForks).previousShuffling.committees;
+        return (state as CachedBeaconStateAllForks).previousShuffling.committees;
       // default: continue to manual computation below
     }
   }
@@ -147,18 +147,18 @@ export function getEpochBeaconCommittees(
  * Returns committees as an array of validator index
  */
 export function getSyncCommittees(
-  state: allForks.BeaconState | BeaconStateCachedAllForks,
+  state: allForks.BeaconState | CachedBeaconStateAllForks,
   epoch: Epoch
 ): ValidatorIndex[] {
   const statePeriod = computeSyncPeriodAtSlot(computeEpochAtSlot(state.slot));
   const requestPeriod = computeSyncPeriodAtSlot(epoch);
 
-  if ((state as BeaconStateCachedAllForks).epochCtx !== undefined) {
+  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
     switch (requestPeriod) {
       case statePeriod:
-        return (state as BeaconStateCachedAltair).currentSyncCommittee.validatorIndices;
+        return (state as CachedBeaconStateAltair).currentSyncCommittee.validatorIndices;
       case statePeriod + 1:
-        return (state as BeaconStateCachedAltair).nextSyncCommittee.validatorIndices;
+        return (state as CachedBeaconStateAltair).nextSyncCommittee.validatorIndices;
       default:
         throw new ApiError(400, "Epoch out of bounds");
     }
@@ -250,7 +250,7 @@ async function getNearestArchivedState(
   config: IChainForkConfig,
   db: IBeaconDb,
   slot: Slot
-): Promise<BeaconStateCachedAllForks> {
+): Promise<CachedBeaconStateAllForks> {
   const states = db.stateArchive.valuesStream({lte: slot, reverse: true});
   const state = (await states[Symbol.asyncIterator]().next()).value as TreeBacked<allForks.BeaconState>;
   return createCachedBeaconState(config, state);
@@ -261,7 +261,7 @@ async function getFinalizedState(
   db: IBeaconDb,
   forkChoice: IForkChoice,
   slot: Slot
-): Promise<BeaconStateCachedAllForks> {
+): Promise<CachedBeaconStateAllForks> {
   assert.lte(slot, forkChoice.getFinalizedCheckpoint().epoch * SLOTS_PER_EPOCH);
   let state = await getNearestArchivedState(config, db, slot);
 

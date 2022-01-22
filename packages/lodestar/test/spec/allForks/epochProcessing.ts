@@ -1,7 +1,7 @@
 import {join} from "path";
 import fs from "fs";
 
-import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -11,7 +11,7 @@ import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
 import {IBaseSpecTest} from "../type";
 
-export type EpochProcessFn = (state: BeaconStateCachedAllForks, epochProcess: allForks.IEpochProcess) => void;
+export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: allForks.IEpochProcess) => void;
 
 type EpochProcessingStateTestCase = IBaseSpecTest & {
   pre: allForks.BeaconState;

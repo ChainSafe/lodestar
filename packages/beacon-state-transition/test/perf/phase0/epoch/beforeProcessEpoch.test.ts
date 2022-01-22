@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks, BeaconStateCachedAllForks} from "../../../../src";
+import {allForks, CachedBeaconStateAllForks} from "../../../../src";
 import {State} from "../../types";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
@@ -12,7 +12,7 @@ describe("phase0 beforeProcessEpoch", () => {
   itBench<State, State>({
     id: `phase0 beforeProcessEpoch - ${perfStateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
-    before: () => generatePerfTestCachedStatePhase0({goBackOneSlot: true}) as BeaconStateCachedAllForks,
+    before: () => generatePerfTestCachedStatePhase0({goBackOneSlot: true}) as CachedBeaconStateAllForks,
     beforeEach: (state) => state.clone(),
     fn: (state) => {
       allForks.beforeProcessEpoch(state);

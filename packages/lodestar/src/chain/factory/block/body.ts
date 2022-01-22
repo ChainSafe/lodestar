@@ -16,8 +16,8 @@ import {
   ExecutionAddress,
 } from "@chainsafe/lodestar-types";
 import {
-  BeaconStateCachedAllForks,
-  BeaconStateCachedBellatrix,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateBellatrix,
   computeEpochAtSlot,
   computeTimeAtSlot,
   getRandaoMix,
@@ -31,7 +31,7 @@ import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants";
 
 export async function assembleBody(
   chain: IBeaconChain,
-  currentState: BeaconStateCachedAllForks,
+  currentState: CachedBeaconStateAllForks,
   {
     randaoReveal,
     graffiti,
@@ -62,7 +62,7 @@ export async function assembleBody(
 
   const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
   const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
-  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState as BeaconStateCachedAllForks);
+  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState as CachedBeaconStateAllForks);
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
@@ -96,7 +96,7 @@ export async function assembleBody(
     const payloadId = await prepareExecutionPayload(
       chain,
       finalizedBlockHash ?? ZERO_HASH_HEX,
-      currentState as BeaconStateCachedBellatrix,
+      currentState as CachedBeaconStateBellatrix,
       feeRecipient
     );
 
@@ -121,7 +121,7 @@ export async function assembleBody(
 async function prepareExecutionPayload(
   chain: IBeaconChain,
   finalizedBlockHash: RootHex,
-  state: BeaconStateCachedBellatrix,
+  state: CachedBeaconStateBellatrix,
   suggestedFeeRecipient: ExecutionAddress
 ): Promise<PayloadId | null> {
   // Use different POW block hash parent for block production based on merge status.

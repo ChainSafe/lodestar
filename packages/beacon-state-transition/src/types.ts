@@ -3,12 +3,12 @@ import {CachedBeaconState, EpochContext, IEpochProcess} from "./allForks/util";
 
 export {EpochContext, IEpochProcess};
 
-export type BeaconStateCachedPhase0 = CachedBeaconState<phase0.BeaconState>;
-export type BeaconStateCachedAltair = CachedBeaconState<altair.BeaconState>;
-export type BeaconStateCachedBellatrix = CachedBeaconState<bellatrix.BeaconState>;
-export type BeaconStateCachedAllForks = CachedBeaconState<allForks.BeaconState>;
-export type BeaconStateCachedAnyFork =
-  | BeaconStateCachedPhase0
-  | BeaconStateCachedAltair
-  | BeaconStateCachedBellatrix
-  | BeaconStateCachedAllForks;
+export type CachedBeaconStatePhase0 = CachedBeaconState<phase0.BeaconState>;
+export type CachedBeaconStateAltair = CachedBeaconState<altair.BeaconState>;
+export type CachedBeaconStateBellatrix = CachedBeaconState<bellatrix.BeaconState>;
+export type CachedBeaconStateAllForks = CachedBeaconState<allForks.BeaconState>;
+export type CachedBeaconStateAnyFork =
+  | CachedBeaconStatePhase0
+  | CachedBeaconStateAltair
+  | CachedBeaconStateBellatrix
+  | CachedBeaconStateAllForks;

@@ -6,7 +6,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {getEffectiveBalances, BeaconStateCachedAllForks, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
+import {getEffectiveBalances, CachedBeaconStateAllForks, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
@@ -26,7 +26,7 @@ export function initializeForkChoice(
   config: IChainForkConfig,
   emitter: ChainEventEmitter,
   currentSlot: Slot,
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   proposerBoostEnabled: boolean,
   metrics?: IMetrics | null
 ): ForkChoice {

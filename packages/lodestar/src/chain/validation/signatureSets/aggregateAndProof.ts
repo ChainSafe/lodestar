@@ -3,7 +3,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeSigningRoot,
   computeStartSlotAtEpoch,
   ISignatureSet,
@@ -11,7 +11,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getAggregateAndProofSignatureSet(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   epoch: Epoch,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof

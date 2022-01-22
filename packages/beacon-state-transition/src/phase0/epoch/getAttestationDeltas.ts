@@ -1,7 +1,7 @@
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
-import {IEpochProcess, BeaconStateCachedPhase0} from "../../types";
+import {IEpochProcess, CachedBeaconStatePhase0} from "../../types";
 import {hasMarkers} from "../../allForks";
 import {
   BASE_REWARD_FACTOR,
@@ -49,7 +49,7 @@ interface IRewardPenaltyItem {
  *   - eligibleAttester:   98%
  */
 export function getAttestationDeltas(
-  state: BeaconStateCachedPhase0,
+  state: CachedBeaconStatePhase0,
   epochProcess: IEpochProcess
 ): [number[], number[]] {
   const validatorCount = epochProcess.statuses.length;

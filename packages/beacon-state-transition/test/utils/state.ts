@@ -14,7 +14,7 @@ import {ZERO_HASH} from "../../src/constants";
 import {newZeroedBigIntArray} from "../../src/util";
 
 import {generateEmptyBlock} from "./block";
-import {BeaconStateCachedAllForks, createCachedBeaconState} from "../../src";
+import {CachedBeaconStateAllForks, createCachedBeaconState} from "../../src";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 /**
@@ -81,7 +81,7 @@ export function generateState(opts?: TestBeaconState): phase0.BeaconState {
 export function generateCachedState(
   config: IChainForkConfig = minimalConfig,
   opts: TestBeaconState = {}
-): BeaconStateCachedAllForks {
+): CachedBeaconStateAllForks {
   const state = generateState(opts);
   return createCachedBeaconState(config, config.getForkTypes(state.slot).BeaconState.createTreeBackedFromStruct(state));
 }

@@ -2,7 +2,7 @@ import {Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks, EpochContext} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochContext} from "../../types";
 import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -20,14 +20,14 @@ import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 
 export function processAttestations(
-  state: BeaconStateCachedAltair,
+  state: CachedBeaconStateAltair,
   attestations: phase0.Attestation[],
   verifySignature = true
 ): void {
   const {epochCtx} = state;
   const {effectiveBalances} = epochCtx;
   const stateSlot = state.slot;
-  const rootCache = new RootCache(state as BeaconStateCachedAllForks);
+  const rootCache = new RootCache(state as CachedBeaconStateAllForks);
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
@@ -36,7 +36,7 @@ export function processAttestations(
   for (const attestation of attestations) {
     const data = attestation.data;
 
-    validateAttestation(state as BeaconStateCachedAllForks, attestation);
+    validateAttestation(state as CachedBeaconStateAllForks, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
     const attestingIndices = epochCtx.getAttestingIndices(data, attestation.aggregationBits);
@@ -46,7 +46,7 @@ export function processAttestations(
     // we can verify only that and nothing else.
     if (verifySignature) {
       const sigSet = getAttestationWithIndicesSignatureSet(
-        state as BeaconStateCachedAllForks,
+        state as CachedBeaconStateAllForks,
         attestation,
         attestingIndices
       );
@@ -168,7 +168,7 @@ export class RootCache {
   private readonly blockRootEpochCache = new Map<Epoch, Root>();
   private readonly blockRootSlotCache = new Map<Slot, Root>();
 
-  constructor(private readonly state: BeaconStateCachedAllForks) {
+  constructor(private readonly state: CachedBeaconStateAllForks) {
     this.currentJustifiedCheckpoint = state.currentJustifiedCheckpoint;
     this.previousJustifiedCheckpoint = state.previousJustifiedCheckpoint;
   }

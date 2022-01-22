@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 
 import {getBlockRoot} from "../../util";
-import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 
 /**
  * Update justified and finalized checkpoints depending on network participation.
@@ -9,7 +9,7 @@ import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
  * PERF: Very low (constant) cost. Persist small objects to the tree.
  */
 export function processJustificationAndFinalization(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   epochProcess: IEpochProcess
 ): void {
   const previousEpoch = epochProcess.prevEpoch;

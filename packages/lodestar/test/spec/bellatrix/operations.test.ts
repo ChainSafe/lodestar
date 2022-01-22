@@ -1,7 +1,7 @@
 import {
-  BeaconStateCachedAllForks,
-  BeaconStateCachedAltair,
-  BeaconStateCachedBellatrix,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
   allForks,
   altair,
   bellatrix,
@@ -26,12 +26,12 @@ const sync_aggregate: BlockProcessFn<bellatrix.BeaconState> = (
   block.slot = state.slot;
   block.body.syncAggregate = testCase["sync_aggregate"];
 
-  altair.processSyncAggregate((state as unknown) as BeaconStateCachedAltair, block);
+  altair.processSyncAggregate((state as unknown) as CachedBeaconStateAltair, block);
 };
 
 operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
-    altair.processAttestations((state as unknown) as BeaconStateCachedAltair, [testCase.attestation]);
+    altair.processAttestations((state as unknown) as CachedBeaconStateAltair, [testCase.attestation]);
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
@@ -40,11 +40,11 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: altair.BeaconBlock}) => {
-    allForks.processBlockHeader(state as BeaconStateCachedAllForks, testCase.block);
+    allForks.processBlockHeader(state as CachedBeaconStateAllForks, testCase.block);
   },
 
   deposit: (state, testCase: IBaseSpecTest & {deposit: phase0.Deposit}) => {
-    altair.processDeposit((state as unknown) as BeaconStateCachedAltair, testCase.deposit);
+    altair.processDeposit((state as unknown) as CachedBeaconStateAltair, testCase.deposit);
   },
 
   proposer_slashing: (state, testCase: IBaseSpecTest & {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -55,14 +55,14 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   sync_aggregate_random: sync_aggregate,
 
   voluntary_exit: (state, testCase: IBaseSpecTest & {voluntary_exit: phase0.SignedVoluntaryExit}) => {
-    altair.processVoluntaryExit((state as unknown) as BeaconStateCachedAltair, testCase.voluntary_exit);
+    altair.processVoluntaryExit((state as unknown) as CachedBeaconStateAltair, testCase.voluntary_exit);
   },
 
   execution_payload: (
     state,
     testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {executionValid: boolean}}
   ) => {
-    processExecutionPayload((state as unknown) as BeaconStateCachedBellatrix, testCase.execution_payload, {
+    processExecutionPayload((state as unknown) as CachedBeaconStateBellatrix, testCase.execution_payload, {
       executePayload: () => testCase.execution.executionValid,
     });
   },

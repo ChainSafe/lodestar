@@ -1,6 +1,6 @@
 import {join} from "path";
 import {TreeBacked} from "@chainsafe/ssz";
-import {BeaconStateCachedAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {bellatrix, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -18,7 +18,7 @@ export function finality(fork: ForkName): void {
       let wrappedState = allForks.createCachedBeaconState(
         getConfig(fork),
         testcase.pre as TreeBacked<allForks.BeaconState>
-      ) as BeaconStateCachedAllForks;
+      ) as CachedBeaconStateAllForks;
       const verify = testcase.meta !== undefined && testcase.meta.blsSetting === BigInt(1);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;

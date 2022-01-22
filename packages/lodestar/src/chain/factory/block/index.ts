@@ -2,7 +2,7 @@
  * @module chain/blockAssembly
  */
 
-import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Bytes96, ExecutionAddress, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
@@ -63,7 +63,7 @@ export async function assembleBlock(
  */
 function computeNewStateRoot(
   {config, metrics}: {config: IChainForkConfig; metrics: IMetrics | null},
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock
 ): Root {
   const postState = state.clone();

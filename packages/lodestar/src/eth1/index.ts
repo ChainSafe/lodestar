@@ -1,5 +1,5 @@
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -81,7 +81,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
     this.eth1MergeBlockTracker = new Eth1MergeBlockTracker(modules, eth1Provider);
   }
 
-  async getEth1DataAndDeposits(state: BeaconStateCachedAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     if (this.eth1DepositDataTracker === null) {
       return {eth1Data: state.eth1Data, deposits: []};
     } else {
@@ -112,7 +112,7 @@ export class Eth1ForBlockProductionDisabled implements IEth1ForBlockProduction {
    * Returns same eth1Data as in state and no deposits
    * May produce invalid blocks if deposits have to be added
    */
-  async getEth1DataAndDeposits(state: BeaconStateCachedAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     return {eth1Data: state.eth1Data, deposits: []};
   }
 

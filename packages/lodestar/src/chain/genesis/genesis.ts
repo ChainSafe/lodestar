@@ -15,7 +15,7 @@ import {
   applyEth1BlockHash,
   isValidGenesisState,
   isValidGenesisValidators,
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -42,7 +42,7 @@ export interface IGenesisBuilderKwargs {
 
 export class GenesisBuilder implements IGenesisBuilder {
   // Expose state to persist on error
-  state: BeaconStateCachedAllForks;
+  state: CachedBeaconStateAllForks;
   depositTree: TreeBacked<List<Root>>;
   /** Is null if no block has been processed yet */
   lastProcessedBlockNumber: number | null = null;

@@ -7,7 +7,7 @@ import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeCommitteeCount, createCachedBeaconState, PubkeyIndexMap} from "../../src/allForks";
-import {BeaconStateCachedAllForks, BeaconStateCachedPhase0, BeaconStateCachedAltair} from "../../src/types";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/types";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
@@ -31,12 +31,12 @@ import {testCachePath} from "../cache";
 import {MutableVector} from "@chainsafe/persistent-ts";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
-let phase0CachedState23637: BeaconStateCachedPhase0 | null = null;
-let phase0CachedState23638: BeaconStateCachedPhase0 | null = null;
+let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
+let phase0CachedState23638: CachedBeaconStatePhase0 | null = null;
 let phase0SignedBlock: TreeBacked<phase0.SignedBeaconBlock> | null = null;
 let altairState: TreeBacked<altair.BeaconState> | null = null;
-let altairCachedState23637: BeaconStateCachedAltair | null = null;
-let altairCachedState23638: BeaconStateCachedAltair | null = null;
+let altairCachedState23637: CachedBeaconStateAltair | null = null;
+let altairCachedState23638: CachedBeaconStateAltair | null = null;
 const logger = profilerLogger();
 
 /**
@@ -81,7 +81,7 @@ export function getSecretKeyFromIndexCached(validatorIndex: number): SecretKey {
   return sk;
 }
 
-export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): BeaconStateCachedPhase0 {
+export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean}): CachedBeaconStatePhase0 {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
 
@@ -107,9 +107,9 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   }
   if (!phase0CachedState23638) {
     phase0CachedState23638 = allForks.processSlots(
-      phase0CachedState23637 as BeaconStateCachedAllForks,
+      phase0CachedState23637 as CachedBeaconStateAllForks,
       phase0CachedState23637.slot + 1
-    ) as BeaconStateCachedPhase0;
+    ) as CachedBeaconStatePhase0;
     phase0CachedState23638.slot += 1;
   }
   const resultingState = opts && opts.goBackOneSlot ? phase0CachedState23637 : phase0CachedState23638;
@@ -117,7 +117,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   return resultingState.clone();
 }
 
-export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean}): BeaconStateCachedAltair {
+export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean}): CachedBeaconStateAltair {
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys();
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const altairConfig = createIChainForkConfig({ALTAIR_FORK_EPOCH: 0});
@@ -144,9 +144,9 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
   }
   if (!altairCachedState23638) {
     altairCachedState23638 = allForks.processSlots(
-      altairCachedState23637 as BeaconStateCachedAllForks,
+      altairCachedState23637 as CachedBeaconStateAllForks,
       altairCachedState23637.slot + 1
-    ) as BeaconStateCachedAltair;
+    ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
   }
   const resultingState = opts && opts.goBackOneSlot ? altairCachedState23637 : altairCachedState23638;
@@ -349,7 +349,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
 }: {
   vc: number;
   slot: Slot;
-}): BeaconStateCachedAllForks {
+}): CachedBeaconStateAllForks {
   // Generate only some publicKeys
   const {pubkeys, pubkeysMod, pubkeysModObj} = getPubkeys(vc);
 
@@ -446,7 +446,7 @@ export async function getNetworkCachedState(
   network: NetworkName,
   slot: number,
   timeout?: number
-): Promise<BeaconStateCachedAllForks> {
+): Promise<CachedBeaconStateAllForks> {
   const config = getNetworkConfig(network);
 
   const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);

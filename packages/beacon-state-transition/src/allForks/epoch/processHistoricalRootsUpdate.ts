@@ -1,14 +1,14 @@
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
+import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Persist blockRoots and stateRoots to historicalRoots.
  *
  * PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.
  */
-export function processHistoricalRootsUpdate(state: BeaconStateCachedAllForks, epochProcess: IEpochProcess): void {
+export function processHistoricalRootsUpdate(state: CachedBeaconStateAllForks, epochProcess: IEpochProcess): void {
   const nextEpoch = epochProcess.currentEpoch + 1;
 
   // set historical root accumulator

@@ -1,14 +1,14 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
+import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Reset eth1DataVotes tree every `EPOCHS_PER_ETH1_VOTING_PERIOD`.
  *
  * PERF: Almost no (constant) cost
  */
-export function processEth1DataReset(state: BeaconStateCachedAllForks, epochProcess: IEpochProcess): void {
+export function processEth1DataReset(state: CachedBeaconStateAllForks, epochProcess: IEpochProcess): void {
   const nextEpoch = epochProcess.currentEpoch + 1;
 
   // reset eth1 data votes

@@ -1,6 +1,6 @@
 import {
-  BeaconStateCachedAllForks,
-  BeaconStateCachedAltair,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
   computeEpochAtSlot,
   computeSlotsSinceEpochStart,
   computeSyncPeriodAtEpoch,
@@ -11,18 +11,18 @@ import {BranchNodeStruct, TreeValue, List} from "@chainsafe/ssz";
 import {ApiError} from "../errors";
 
 export function getSyncComitteeValidatorIndexMap(
-  state: allForks.BeaconState | BeaconStateCachedAllForks,
+  state: allForks.BeaconState | CachedBeaconStateAllForks,
   requestedEpoch: Epoch
 ): Map<ValidatorIndex, number[]> {
   const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
   const requestPeriod = computeSyncPeriodAtEpoch(requestedEpoch);
 
-  if ((state as BeaconStateCachedAllForks).epochCtx !== undefined) {
+  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
     switch (requestPeriod) {
       case statePeriod:
-        return (state as BeaconStateCachedAltair).currentSyncCommittee.validatorIndexMap;
+        return (state as CachedBeaconStateAltair).currentSyncCommittee.validatorIndexMap;
       case statePeriod + 1:
-        return (state as BeaconStateCachedAltair).nextSyncCommittee.validatorIndexMap;
+        return (state as CachedBeaconStateAltair).nextSyncCommittee.validatorIndexMap;
       default:
         throw new ApiError(400, "Epoch out of bounds");
     }

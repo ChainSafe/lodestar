@@ -2,7 +2,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   getEffectiveBalances,
   bellatrix,
@@ -271,9 +271,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
  */
 function getStateForJustifiedBalances(
   chain: ImportBlockModules,
-  postState: BeaconStateCachedAllForks,
+  postState: CachedBeaconStateAllForks,
   block: allForks.SignedBeaconBlock
-): BeaconStateCachedAllForks {
+): CachedBeaconStateAllForks {
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
   const checkpointHex = toCheckpointHex(justifiedCheckpoint);
   const checkpointSlot = computeStartSlotAtEpoch(checkpointHex.epoch);

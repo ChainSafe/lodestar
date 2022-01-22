@@ -1,7 +1,7 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {BeaconStateCachedPhase0, BeaconStateCachedAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 import {processSlashingsAllForks} from "../../allForks/epoch/processSlashings";
 
-export function processSlashings(state: BeaconStateCachedPhase0, epochProcess: IEpochProcess): void {
-  processSlashingsAllForks(ForkName.phase0, state as BeaconStateCachedAllForks, epochProcess);
+export function processSlashings(state: CachedBeaconStatePhase0, epochProcess: IEpochProcess): void {
+  processSlashingsAllForks(ForkName.phase0, state as CachedBeaconStateAllForks, epochProcess);
 }

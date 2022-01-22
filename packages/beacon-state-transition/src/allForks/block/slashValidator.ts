@@ -12,12 +12,12 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance, increaseBalance} from "../../util";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function slashValidatorAllForks(
   fork: ForkName,
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   slashedIndex: ValidatorIndex,
   whistleblowerIndex?: ValidatorIndex
 ): void {
@@ -26,7 +26,7 @@ export function slashValidatorAllForks(
   const validator = state.validators[slashedIndex];
 
   // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
-  initiateValidatorExit(state as BeaconStateCachedAllForks, validator);
+  initiateValidatorExit(state as CachedBeaconStateAllForks, validator);
 
   validator.slashed = true;
   validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);

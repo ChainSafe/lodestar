@@ -10,7 +10,7 @@ import {
   computeEpochAtSlot,
   getTemporaryBlockHeader,
   phase0,
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
@@ -37,7 +37,7 @@ describe("LodestarForkChoice", function () {
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
-  let state: BeaconStateCachedAllForks;
+  let state: CachedBeaconStateAllForks;
 
   before(() => {
     state = createCachedBeaconState(config, anchorState);

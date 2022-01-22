@@ -13,9 +13,9 @@ export * as allForks from "./allForks";
 export {CachedBeaconState, createCachedBeaconState} from "./allForks/util/cachedBeaconState";
 
 export {
-  BeaconStateCachedPhase0,
-  BeaconStateCachedAltair,
-  BeaconStateCachedBellatrix,
-  BeaconStateCachedAllForks,
-  BeaconStateCachedAnyFork,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAnyFork,
 } from "./types";

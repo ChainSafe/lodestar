@@ -1,5 +1,5 @@
 import {AttesterFlags, IAttesterStatus, toAttesterFlags} from "../../../../src/allForks";
-import {BeaconStateCachedPhase0, BeaconStateCachedAltair, IEpochProcess} from "../../../../src/types";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, IEpochProcess} from "../../../../src/types";
 
 /**
  * Generate an incomplete IEpochProcess to simulate any network condition relevant to getAttestationDeltas
@@ -7,7 +7,7 @@ import {BeaconStateCachedPhase0, BeaconStateCachedAltair, IEpochProcess} from ".
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
 export function generateBalanceDeltasEpochProcess(
-  state: BeaconStateCachedPhase0 | BeaconStateCachedAltair,
+  state: CachedBeaconStatePhase0 | CachedBeaconStateAltair,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
 ): IEpochProcess {

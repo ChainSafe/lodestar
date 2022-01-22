@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {isSlashableValidator} from "../../util";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
 import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";
@@ -14,17 +14,17 @@ import {verifySignatureSet} from "../../util/signatureSets";
  */
 export function processProposerSlashing(
   fork: ForkName,
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  assertValidProposerSlashing(state as BeaconStateCachedAllForks, proposerSlashing, verifySignatures);
+  assertValidProposerSlashing(state as CachedBeaconStateAllForks, proposerSlashing, verifySignatures);
 
   slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
 
 export function assertValidProposerSlashing(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
@@ -59,7 +59,7 @@ export function assertValidProposerSlashing(
   // verify signatures
   if (verifySignatures) {
     for (const [i, signatureSet] of getProposerSlashingSignatureSets(
-      state as BeaconStateCachedAllForks,
+      state as CachedBeaconStateAllForks,
       proposerSlashing
     ).entries()) {
       if (!verifySignatureSet(signatureSet)) {

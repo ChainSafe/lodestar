@@ -2,7 +2,7 @@ import fs from "fs";
 import {join} from "path";
 import {expect} from "chai";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {altair, phase0, allForks, BeaconStateCachedPhase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {altair, phase0, allForks, CachedBeaconStatePhase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -37,7 +37,7 @@ export function rewardsPhase0(fork: ForkName): void {
         const config = getConfig(fork);
         const wrappedState = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<allForks.BeaconState>);
         const epochProcess = allForks.beforeProcessEpoch(wrappedState);
-        return phase0.getAttestationDeltas(wrappedState as BeaconStateCachedPhase0, epochProcess);
+        return phase0.getAttestationDeltas(wrappedState as CachedBeaconStatePhase0, epochProcess);
       },
       {
         inputTypes: inputTypeSszTreeBacked,

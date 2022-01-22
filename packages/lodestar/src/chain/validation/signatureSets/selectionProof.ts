@@ -2,14 +2,14 @@ import {DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey} from "@chainsafe/bls";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSelectionProofSignatureSet(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   slot: Slot,
   aggregator: PublicKey,
   aggregateAndProof: phase0.SignedAggregateAndProof

@@ -13,12 +13,12 @@ The beacon state transition and state transition utilities
 ## Usage
 
 ```typescript
-import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {generateEmptySignedBlock} from "../test/utils/block";
 import {generateState} from "../test/utils/state";
 
 // dummy test state
-const state: BeaconStateCachedAllForks = generateState() as BeaconStateCachedAllForks;
+const state: CachedBeaconStateAllForks = generateState() as CachedBeaconStateAllForks;
 
 // dummy test block
 const block: allForks.SignedBeaconBlock = generateEmptySignedBlock();

@@ -1,7 +1,7 @@
 import {altair, phase0, Root, RootHex, Slot, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -193,7 +193,7 @@ export class LightClientServer {
    */
   onImportBlock(
     block: altair.BeaconBlock,
-    postState: BeaconStateCachedAllForks,
+    postState: CachedBeaconStateAllForks,
     parentBlock: {blockRoot: RootHex; slot: Slot}
   ): void {
     // What is the syncAggregate signing?
@@ -322,7 +322,7 @@ export class LightClientServer {
 
   private async persistPostBlockImportData(
     block: altair.BeaconBlock,
-    postState: BeaconStateCachedAllForks,
+    postState: CachedBeaconStateAllForks,
     parentBlock: {blockRoot: RootHex; slot: Slot}
   ): Promise<void> {
     const blockSlot = block.slot;

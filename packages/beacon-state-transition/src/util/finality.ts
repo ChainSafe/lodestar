@@ -1,7 +1,7 @@
 import {MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@chainsafe/lodestar-params";
-import {BeaconStateCachedAllForks} from "../types";
+import {CachedBeaconStateAllForks} from "../types";
 
-export function getFinalityDelay(state: BeaconStateCachedAllForks): number {
+export function getFinalityDelay(state: CachedBeaconStateAllForks): number {
   return state.previousShuffling.epoch - state.finalizedCheckpoint.epoch;
 }
 
@@ -11,6 +11,6 @@ export function getFinalityDelay(state: BeaconStateCachedAllForks): number {
  * until blocks get finalized again. See here (https://github.com/ethereum/annotated-spec/blob/master/phase0/beacon-chain.md#inactivity-quotient) for what the inactivity leak is, what it's for and how
  * it works.
  */
-export function isInInactivityLeak(state: BeaconStateCachedAllForks): boolean {
+export function isInInactivityLeak(state: CachedBeaconStateAllForks): boolean {
   return getFinalityDelay(state) > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 }

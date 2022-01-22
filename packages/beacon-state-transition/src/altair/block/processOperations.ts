@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {altair} from "@chainsafe/lodestar-types";
 
-import {BeaconStateCachedAltair} from "../../types";
+import {CachedBeaconStateAltair} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestations} from "./processAttestation";
@@ -10,7 +10,7 @@ import {processVoluntaryExit} from "./processVoluntaryExit";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
 export function processOperations(
-  state: BeaconStateCachedAltair,
+  state: CachedBeaconStateAltair,
   body: altair.BeaconBlockBody,
   verifySignatures = true
 ): void {

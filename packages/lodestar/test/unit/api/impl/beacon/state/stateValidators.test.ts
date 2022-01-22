@@ -1,5 +1,5 @@
 import {config} from "@chainsafe/lodestar-config/default";
-import {BeaconStateCachedAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
@@ -53,7 +53,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: ({
           get: () => 0,
         } as unknown) as allForks.PubkeyIndexMap,
-      } as BeaconStateCachedAllForks);
+      } as CachedBeaconStateAllForks);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       const {data: validators} = await api.getStateValidators("someState", {indices: [0, 1, 123]});
       expect(validators.length).to.equal(2);
@@ -74,7 +74,7 @@ describe("beacon api impl - state - validators", function () {
           pubkey2index: ({
             get: () => i,
           } as unknown) as allForks.PubkeyIndexMap,
-        } as BeaconStateCachedAllForks);
+        } as CachedBeaconStateAllForks);
       }
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       const {data: validators} = await api.getStateValidators("someState", {
@@ -93,7 +93,7 @@ describe("beacon api impl - state - validators", function () {
           pubkey2index: ({
             get: () => i,
           } as unknown) as allForks.PubkeyIndexMap,
-        } as BeaconStateCachedAllForks);
+        } as CachedBeaconStateAllForks);
       }
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       const {data: stateValidators} = await api.getStateValidators("someState", {
@@ -128,7 +128,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: ({
           get: () => undefined,
         } as unknown) as allForks.PubkeyIndexMap,
-      } as BeaconStateCachedAllForks);
+      } as CachedBeaconStateAllForks);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       await expect(api.getStateValidator("someState", validatorId1)).to.be.rejectedWith("Validator not found");
     });
@@ -138,7 +138,7 @@ describe("beacon api impl - state - validators", function () {
         pubkey2index: ({
           get: () => 2,
         } as unknown) as allForks.PubkeyIndexMap,
-      } as BeaconStateCachedAllForks);
+      } as CachedBeaconStateAllForks);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       expect(await api.getStateValidator("someState", validatorId1)).to.not.be.null;
     });
@@ -157,7 +157,7 @@ describe("beacon api impl - state - validators", function () {
       pubkey2IndexStub.get.withArgs(validatorId2).returns(25);
       chainStub.getHeadState.returns({
         pubkey2index: (pubkey2IndexStub as unknown) as allForks.PubkeyIndexMap,
-      } as BeaconStateCachedAllForks);
+      } as CachedBeaconStateAllForks);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       const {data: balances} = await api.getStateValidatorBalances("somestate", [1, 24, validatorId1, validatorId2]);
       expect(balances.length).to.equal(2);

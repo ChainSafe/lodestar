@@ -1,4 +1,4 @@
-import {BeaconStateCachedAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
@@ -54,7 +54,7 @@ export async function validateGossipSyncCommittee(
  */
 export async function validateSyncCommitteeSigOnly(
   chain: IBeaconChain,
-  headState: BeaconStateCachedAllForks,
+  headState: CachedBeaconStateAllForks,
   syncCommittee: altair.SyncCommitteeMessage
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
@@ -70,7 +70,7 @@ export async function validateSyncCommitteeSigOnly(
  */
 export function validateGossipSyncCommitteeExceptSig(
   chain: IBeaconChain,
-  headState: BeaconStateCachedAllForks,
+  headState: CachedBeaconStateAllForks,
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee {
@@ -111,7 +111,7 @@ export function validateGossipSyncCommitteeExceptSig(
  * Returns `null` if not part of the sync committee or not part of the given `subnet`
  */
 function getIndexInSubCommittee(
-  headState: BeaconStateCachedAllForks,
+  headState: CachedBeaconStateAllForks,
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubCommittee | null {

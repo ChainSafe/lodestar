@@ -12,7 +12,7 @@ import {
 
 import {ZERO_HASH} from "../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
-import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../types";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances
@@ -20,7 +20,7 @@ import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../types";
  *
  * PERF: Work depends on number of Deposit per block. On regular networks the average is 0 / block.
  */
-export function processDeposit(fork: ForkName, state: BeaconStateCachedAllForks, deposit: phase0.Deposit): void {
+export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks, deposit: phase0.Deposit): void {
   const {config, validators, epochCtx} = state;
   // verify the merkle branch
   if (
@@ -83,7 +83,7 @@ export function processDeposit(fork: ForkName, state: BeaconStateCachedAllForks,
 
     // Forks: altair, bellatrix, and future
     if (fork !== ForkName.phase0) {
-      (state as BeaconStateCachedAltair).inactivityScores.push(0);
+      (state as CachedBeaconStateAltair).inactivityScores.push(0);
     }
 
     // now that there is a new validator, update the epoch context with the new pubkey

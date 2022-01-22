@@ -1,5 +1,5 @@
 import {
-  BeaconStateCachedAllForks,
+  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -110,7 +110,7 @@ export function getAttestationValidData(
 
   // Add state to regen
   const regen = ({
-    getState: async () => (state as unknown) as BeaconStateCachedAllForks,
+    getState: async () => (state as unknown) as CachedBeaconStateAllForks,
   } as Partial<IStateRegenerator>) as IStateRegenerator;
 
   const chain = ({

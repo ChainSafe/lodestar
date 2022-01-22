@@ -10,11 +10,11 @@ import {
   zipAllIndexesSyncCommitteeBits,
   zipIndexesSyncCommitteeBits,
 } from "../../util";
-import {BeaconStateCachedAltair} from "../../types";
+import {CachedBeaconStateAltair} from "../../types";
 import {G2_POINT_AT_INFINITY} from "../../constants";
 
 export function processSyncAggregate(
-  state: BeaconStateCachedAltair,
+  state: CachedBeaconStateAltair,
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
@@ -43,7 +43,7 @@ export function processSyncAggregate(
 }
 
 export function getSyncCommitteeSignatureSet(
-  state: BeaconStateCachedAltair,
+  state: CachedBeaconStateAltair,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]
@@ -92,13 +92,13 @@ export function getSyncCommitteeSignatureSet(
 }
 
 /** Get participant indices for a sync committee. */
-function getParticipantIndices(state: BeaconStateCachedAltair, syncAggregate: altair.SyncAggregate): number[] {
+function getParticipantIndices(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): number[] {
   const committeeIndices = state.currentSyncCommittee.validatorIndices;
   return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
 
 /** Return [0] as participant indices and [1] as unparticipant indices for a sync committee. */
-function getParticipantInfo(state: BeaconStateCachedAltair, syncAggregate: altair.SyncAggregate): [number[], number[]] {
+function getParticipantInfo(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): [number[], number[]] {
   const committeeIndices = state.currentSyncCommittee.validatorIndices;
   return zipAllIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }

@@ -1,6 +1,6 @@
 import {ByteVector, toHexString} from "@chainsafe/ssz";
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
@@ -18,7 +18,7 @@ export class StateContextCache {
    */
   readonly maxStates: number;
 
-  private readonly cache: MapTracker<string, BeaconStateCachedAllForks>;
+  private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new Map<Epoch, Set<string>>();
   private readonly metrics: IMetrics["stateCache"] | null | undefined;
@@ -32,7 +32,7 @@ export class StateContextCache {
     }
   }
 
-  get(rootHex: RootHex): BeaconStateCachedAllForks | null {
+  get(rootHex: RootHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const item = this.cache.get(rootHex);
     if (!item) {
@@ -42,7 +42,7 @@ export class StateContextCache {
     return item.clone();
   }
 
-  add(item: BeaconStateCachedAllForks): void {
+  add(item: CachedBeaconStateAllForks): void {
     const key = toHexString(item.hashTreeRoot());
     if (this.cache.get(key)) {
       return;

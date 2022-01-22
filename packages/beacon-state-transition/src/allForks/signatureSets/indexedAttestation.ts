@@ -8,10 +8,10 @@ import {
   SignatureSetType,
   verifySignatureSet,
 } from "../../util";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 
 export function verifyIndexedAttestationSignature(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   indexedAttestation: phase0.IndexedAttestation,
   indices?: number[]
 ): boolean {
@@ -19,7 +19,7 @@ export function verifyIndexedAttestationSignature(
 }
 
 export function getAttestationWithIndicesSignatureSet(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   attestation: Pick<phase0.Attestation, "data" | "signature">,
   indices: number[]
 ): ISignatureSet {
@@ -36,7 +36,7 @@ export function getAttestationWithIndicesSignatureSet(
 }
 
 export function getIndexedAttestationSignatureSet(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   indexedAttestation: phase0.IndexedAttestation,
   indices?: number[]
 ): ISignatureSet {
@@ -48,7 +48,7 @@ export function getIndexedAttestationSignatureSet(
 }
 
 export function getAttestationsSignatureSets(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
   return Array.from(readonlyValues(signedBlock.message.body.attestations), (attestation) =>

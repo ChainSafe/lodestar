@@ -2,13 +2,13 @@ import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {computeSigningRoot, ISignatureSet, SignatureSetType} from "../../util";
-import {BeaconStateCachedAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Extract signatures to allow validating all block signatures at once
  */
 export function getProposerSlashingSignatureSets(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   proposerSlashing: phase0.ProposerSlashing
 ): ISignatureSet[] {
   const {epochCtx} = state;
@@ -30,7 +30,7 @@ export function getProposerSlashingSignatureSets(
 }
 
 export function getProposerSlashingsSignatureSets(
-  state: BeaconStateCachedAllForks,
+  state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
   return Array.from(readonlyValues(signedBlock.message.body.proposerSlashings), (proposerSlashing) =>
