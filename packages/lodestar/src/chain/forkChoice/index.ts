@@ -16,6 +16,7 @@ import {GENESIS_SLOT} from "../../constants";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
+  proposerBoostEnabled: boolean;
 };
 
 /**
@@ -26,6 +27,7 @@ export function initializeForkChoice(
   emitter: ChainEventEmitter,
   currentSlot: Slot,
   state: CachedBeaconState<allForks.BeaconState>,
+  proposerBoostEnabled: boolean,
   metrics?: IMetrics | null
 ): ForkChoice {
   const {blockHeader, checkpoint} = computeAnchorCheckpoint(config, state);
@@ -69,6 +71,7 @@ export function initializeForkChoice(
     }),
 
     justifiedBalances,
+    proposerBoostEnabled,
     metrics
   );
 }

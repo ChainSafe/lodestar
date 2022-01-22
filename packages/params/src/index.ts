@@ -186,3 +186,4 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 23;
  * Optimistic sync
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+export const INTERVALS_PER_SLOT = 3;
