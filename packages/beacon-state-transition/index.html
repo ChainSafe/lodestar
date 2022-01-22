@@ -261,20 +261,19 @@
 </blockquote>
 <p>The beacon state transition and state transition utilities</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">¶</a></h2>
-<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">CachedBeaconState</span><span class="p">,</span> <span class="nx">stateTransition</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-beacon-state-transition/src/allForks"</span><span class="p">;</span>
-<span class="k">import</span> <span class="p">{</span><span class="nx">allForks</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-types"</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">CachedBeaconStateAllForks</span><span class="p">,</span> <span class="nx">allForks</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-beacon-state-transition"</span><span class="p">;</span>
 <span class="k">import</span> <span class="p">{</span><span class="nx">generateEmptySignedBlock</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"../test/utils/block"</span><span class="p">;</span>
 <span class="k">import</span> <span class="p">{</span><span class="nx">generateState</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"../test/utils/state"</span><span class="p">;</span>
 
 <span class="c1">// dummy test state</span>
-<span class="kd">const</span> <span class="nx">state</span>: <span class="kt">CachedBeaconState</span><span class="o">&lt;</span><span class="nx">allForks</span><span class="p">.</span><span class="nx">BeaconState</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">generateState</span><span class="p">()</span> <span class="kr">as</span> <span class="nx">CachedBeaconState</span><span class="o">&lt;</span><span class="nx">allForks</span><span class="p">.</span><span class="nx">BeaconState</span><span class="o">&gt;</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">state</span>: <span class="kt">CachedBeaconStateAllForks</span> <span class="o">=</span> <span class="nx">generateState</span><span class="p">()</span> <span class="kr">as</span> <span class="nx">CachedBeaconStateAllForks</span><span class="p">;</span>
 
-<span class="c1">// dummy test block </span>
+<span class="c1">// dummy test block</span>
 <span class="kd">const</span> <span class="nx">block</span>: <span class="kt">allForks.SignedBeaconBlock</span> <span class="o">=</span> <span class="nx">generateEmptySignedBlock</span><span class="p">();</span>
 
 <span class="kd">let</span> <span class="nx">postStateContext</span>: <span class="kt">allForks.BeaconState</span><span class="p">;</span>
 <span class="k">try</span> <span class="p">{</span>
-  <span class="nx">postStateContext</span> <span class="o">=</span> <span class="nx">stateTransition</span><span class="p">(</span><span class="nx">state</span><span class="p">,</span> <span class="nx">block</span><span class="p">);</span>
+  <span class="nx">postStateContext</span> <span class="o">=</span> <span class="nx">allForks</span><span class="p">.</span><span class="nx">stateTransition</span><span class="p">(</span><span class="nx">state</span><span class="p">,</span> <span class="nx">block</span><span class="p">);</span>
 <span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
   <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">e</span><span class="p">);</span>
 <span class="p">}</span>

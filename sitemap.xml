@@ -661,11 +661,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/chainconfig.ichainconfig/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/forkconfig.iforkconfig/</loc>
          <lastmod>2022-01-22</lastmod>
          <changefreq>daily</changefreq>
@@ -2646,47 +2641,17 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/enums/preset.presetname/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/enums/root.forkname/</loc>
          <lastmod>2022-01-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_altair.ialtairpreset/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/enums/root.presetname/</loc>
          <lastmod>2022-01-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_bellatrix.ibellatrixpreset/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/interfaces/preset_phase0.iphase0preset/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_altair/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_bellatrix/</loc>
-         <lastmod>2022-01-22</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/preset_phase0/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/params/modules/interface/</loc>
          <lastmod>2022-01-22</lastmod>
          <changefreq>daily</changefreq>
     </url>

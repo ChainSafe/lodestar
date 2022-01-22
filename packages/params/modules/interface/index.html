@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/params/modules/preset_phase0/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/params/modules/interface/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.7" name="generator"/>
-<title>Preset phase0 - Lodestar documentation</title>
+<title>Interface - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#module-presetphase0">
+<a class="md-skip" href="#module-interface">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Preset phase0
+              Interface
             
           </span>
 </div>
@@ -251,62 +251,65 @@
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references">
-    References
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#interfaces">
-    Interfaces
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables">
-    Variables
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#references_1">
-    References
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
   </a>
-<nav aria-label="References" class="md-nav">
+<nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#iphase0preset">
-    IPhase0Preset
+<a class="md-nav__link" href="#altairpreset">
+    AltairPreset
   </a>
+<nav aria-label="AltairPreset" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#beaconpreset">
+    BeaconPreset
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#bellatrixpreset">
+    BellatrixPreset
+  </a>
+<nav aria-label="BellatrixPreset" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_1">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#phase0preset">
     Phase0Preset
   </a>
+<nav aria-label="Phase0Preset" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_2">
+    Type declaration:
+  </a>
 </li>
 </ul>
 </nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables_1">
-    Variables
-  </a>
-<nav aria-label="Variables" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-bigint64">
-    Const BigInt64
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-number64">
-    Const Number64
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-phase0preset">
-    Const Phase0Preset
-  </a>
 </li>
 </ul>
 </nav>
@@ -318,96 +321,185 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/params/modules/preset_phase0.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/params/modules/interface.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-params</a> › <a href="../../globals/">Globals</a> › <a href="./">preset/phase0</a></p>
-<h1 id="module-presetphase0">Module: preset/phase0<a class="headerlink" href="#module-presetphase0" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-params</a> › <a href="../../globals/">Globals</a> › <a href="./">interface</a></p>
+<h1 id="module-interface">Module: interface<a class="headerlink" href="#module-interface" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#iphase0preset">IPhase0Preset</a></li>
+<li><a href="./#altairpreset">AltairPreset</a></li>
+<li><a href="./#beaconpreset">BeaconPreset</a></li>
+<li><a href="./#bellatrixpreset">BellatrixPreset</a></li>
 <li><a href="./#phase0preset">Phase0Preset</a></li>
 </ul>
-<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="altairpreset">AltairPreset<a class="headerlink" href="#altairpreset" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>AltairPreset</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/params/src/interface/altair.ts#L2">interface/altair.ts:2</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
-<li><a href="../../interfaces/preset_phase0.iphase0preset/">IPhase0Preset</a></li>
+<li>
+<p><strong>EPOCHS_PER_SYNC_COMMITTEE_PERIOD</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>INACTIVITY_PENALTY_QUOTIENT_ALTAIR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_SLASHING_PENALTY_QUOTIENT_ALTAIR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_SYNC_COMMITTEE_PARTICIPANTS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>SYNC_COMMITTEE_SIZE</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>UPDATE_TIMEOUT</strong>: <em>number</em></p>
+</li>
 </ul>
-<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
+<hr/>
+<h3 id="beaconpreset">BeaconPreset<a class="headerlink" href="#beaconpreset" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>BeaconPreset</strong>: <em><a href="./#phase0preset">Phase0Preset</a> &amp; <a href="./#altairpreset">AltairPreset</a> &amp; <a href="./#bellatrixpreset">BellatrixPreset</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/params/src/interface/index.ts#L5">interface/index.ts:5</a></em></p>
+<hr/>
+<h3 id="bellatrixpreset">BellatrixPreset<a class="headerlink" href="#bellatrixpreset" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>BellatrixPreset</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/params/src/interface/bellatrix.ts#L2">interface/bellatrix.ts:2</a></em></p>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
-<li><a href="./#const-bigint64">BigInt64</a></li>
-<li><a href="./#const-number64">Number64</a></li>
-<li><a href="./#const-phase0preset">Phase0Preset</a></li>
+<li>
+<p><strong>BYTES_PER_LOGS_BLOOM</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>INACTIVITY_PENALTY_QUOTIENT_BELLATRIX</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_BYTES_PER_TRANSACTION</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_EXTRA_DATA_BYTES</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_TRANSACTIONS_PER_PAYLOAD</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX</strong>: <em>number</em></p>
+</li>
 </ul>
-<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="iphase0preset">IPhase0Preset<a class="headerlink" href="#iphase0preset" title="Permanent link">¶</a></h3>
-<p>• <strong>IPhase0Preset</strong>:</p>
 <hr/>
 <h3 id="phase0preset">Phase0Preset<a class="headerlink" href="#phase0preset" title="Permanent link">¶</a></h3>
-<p>• <strong>Phase0Preset</strong>:</p>
-<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
-<h3 id="const-bigint64"><code>Const</code> BigInt64<a class="headerlink" href="#const-bigint64" title="Permanent link">¶</a></h3>
-<p>• <strong>BigInt64</strong>: <em>BigIntUintType‹›</em> = new BigIntUintType({byteLength: 8})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/params/src/preset/phase0/ssz.ts#L7">preset/phase0/ssz.ts:7</a></em></p>
-<hr/>
-<h3 id="const-number64"><code>Const</code> Number64<a class="headerlink" href="#const-number64" title="Permanent link">¶</a></h3>
-<p>• <strong>Number64</strong>: <em>NumberUintType‹›</em> = new NumberUintType({byteLength: 8})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/params/src/preset/phase0/ssz.ts#L6">preset/phase0/ssz.ts:6</a></em></p>
-<hr/>
-<h3 id="const-phase0preset"><code>Const</code> Phase0Preset<a class="headerlink" href="#const-phase0preset" title="Permanent link">¶</a></h3>
-<p>• <strong>Phase0Preset</strong>: <em>ContainerType‹<a href="../../interfaces/preset_phase0.iphase0preset/">IPhase0Preset</a>›</em> = new ContainerType<iphase0preset>({
-  fields: {
-    // Misc
-    MAX_COMMITTEES_PER_SLOT: Number64,
-    TARGET_COMMITTEE_SIZE: Number64,
-    MAX_VALIDATORS_PER_COMMITTEE: Number64,
-    SHUFFLE_ROUND_COUNT: Number64,
-    HYSTERESIS_QUOTIENT: Number64,
-    HYSTERESIS_DOWNWARD_MULTIPLIER: Number64,
-    HYSTERESIS_UPWARD_MULTIPLIER: Number64,</iphase0preset></p>
-<div class="codehilite"><pre><span></span><code>// Fork choice
-SAFE_SLOTS_TO_UPDATE_JUSTIFIED: Number64,
-
-// Gwei Values
-MIN_DEPOSIT_AMOUNT: BigInt64,
-MAX_EFFECTIVE_BALANCE: Number64,
-EFFECTIVE_BALANCE_INCREMENT: Number64,
-
-// Time parameters
-MIN_ATTESTATION_INCLUSION_DELAY: Number64,
-SLOTS_PER_EPOCH: Number64,
-MIN_SEED_LOOKAHEAD: Number64,
-MAX_SEED_LOOKAHEAD: Number64,
-EPOCHS_PER_ETH1_VOTING_PERIOD: Number64,
-SLOTS_PER_HISTORICAL_ROOT: Number64,
-MIN_EPOCHS_TO_INACTIVITY_PENALTY: Number64,
-
-// State vector lengths
-EPOCHS_PER_HISTORICAL_VECTOR: Number64,
-EPOCHS_PER_SLASHINGS_VECTOR: Number64,
-HISTORICAL_ROOTS_LIMIT: Number64,
-VALIDATOR_REGISTRY_LIMIT: Number64,
-
-// Reward and penalty quotients
-BASE_REWARD_FACTOR: Number64,
-WHISTLEBLOWER_REWARD_QUOTIENT: Number64,
-PROPOSER_REWARD_QUOTIENT: Number64,
-INACTIVITY_PENALTY_QUOTIENT: Number64,
-MIN_SLASHING_PENALTY_QUOTIENT: Number64,
-PROPORTIONAL_SLASHING_MULTIPLIER: Number64,
-
-// Max operations per block
-MAX_PROPOSER_SLASHINGS: Number64,
-MAX_ATTESTER_SLASHINGS: Number64,
-MAX_ATTESTATIONS: Number64,
-MAX_DEPOSITS: Number64,
-MAX_VOLUNTARY_EXITS: Number64,
-</code></pre></div>
-<p>},
-  // Expected and container fields are the same here
-  expectedCase: "notransform",
-})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/params/src/preset/phase0/ssz.ts#L9">preset/phase0/ssz.ts:9</a></em></p>
+<p>Ƭ <strong>Phase0Preset</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/params/src/interface/phase0.ts#L2">interface/phase0.ts:2</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>BASE_REWARD_FACTOR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>EFFECTIVE_BALANCE_INCREMENT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>EPOCHS_PER_ETH1_VOTING_PERIOD</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>EPOCHS_PER_HISTORICAL_VECTOR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>EPOCHS_PER_SLASHINGS_VECTOR</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>HISTORICAL_ROOTS_LIMIT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>HYSTERESIS_DOWNWARD_MULTIPLIER</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>HYSTERESIS_QUOTIENT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>HYSTERESIS_UPWARD_MULTIPLIER</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>INACTIVITY_PENALTY_QUOTIENT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_ATTESTATIONS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_ATTESTER_SLASHINGS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_COMMITTEES_PER_SLOT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_DEPOSITS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_EFFECTIVE_BALANCE</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_PROPOSER_SLASHINGS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_SEED_LOOKAHEAD</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_VALIDATORS_PER_COMMITTEE</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MAX_VOLUNTARY_EXITS</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_ATTESTATION_INCLUSION_DELAY</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_DEPOSIT_AMOUNT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_EPOCHS_TO_INACTIVITY_PENALTY</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_SEED_LOOKAHEAD</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>MIN_SLASHING_PENALTY_QUOTIENT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>PROPORTIONAL_SLASHING_MULTIPLIER</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>PROPOSER_REWARD_QUOTIENT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>SAFE_SLOTS_TO_UPDATE_JUSTIFIED</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>SHUFFLE_ROUND_COUNT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>SLOTS_PER_EPOCH</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>SLOTS_PER_HISTORICAL_ROOT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>TARGET_COMMITTEE_SIZE</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>VALIDATOR_REGISTRY_LIMIT</strong>: <em>number</em></p>
+</li>
+<li>
+<p><strong>WHISTLEBLOWER_REWARD_QUOTIENT</strong>: <em>number</em></p>
+</li>
+</ul>
 </article>
 </div>
 </div>

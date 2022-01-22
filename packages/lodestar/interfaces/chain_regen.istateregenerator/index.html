@@ -329,8 +329,8 @@
 </ul>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getblockslotstate">getBlockSlotState<a class="headerlink" href="#getblockslotstate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getBlockSlotState</strong>(<code>blockRoot</code>: RootHex, <code>slot</code>: Slot, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/lodestar/src/chain/regen/interface.ts#L42">packages/lodestar/src/chain/regen/interface.ts:42</a></em></p>
+<p>▸ <strong>getBlockSlotState</strong>(<code>blockRoot</code>: RootHex, <code>slot</code>: Slot, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/lodestar/src/chain/regen/interface.ts#L42">packages/lodestar/src/chain/regen/interface.ts:42</a></em></p>
 <p>Return the state of <code>blockRoot</code> processed to slot <code>slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -355,11 +355,11 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
+<p><strong>Returns:</strong> <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <hr/>
 <h3 id="getcheckpointstate">getCheckpointState<a class="headerlink" href="#getcheckpointstate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getCheckpointState</strong>(<code>cp</code>: Checkpoint, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/lodestar/src/chain/regen/interface.ts#L37">packages/lodestar/src/chain/regen/interface.ts:37</a></em></p>
+<p>▸ <strong>getCheckpointState</strong>(<code>cp</code>: Checkpoint, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/lodestar/src/chain/regen/interface.ts#L37">packages/lodestar/src/chain/regen/interface.ts:37</a></em></p>
 <p>Return a valid checkpoint state
 This will always return a state with <code>state.slot % SLOTS_PER_EPOCH === 0</code></p>
 <p><strong>Parameters:</strong></p>
@@ -381,11 +381,11 @@ This will always return a state with <code>state.slot % SLOTS_PER_EPOCH === 0</c
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
+<p><strong>Returns:</strong> <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <hr/>
 <h3 id="getprestate">getPreState<a class="headerlink" href="#getprestate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getPreState</strong>(<code>block</code>: allForks.BeaconBlock, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/lodestar/src/chain/regen/interface.ts#L31">packages/lodestar/src/chain/regen/interface.ts:31</a></em></p>
+<p>▸ <strong>getPreState</strong>(<code>block</code>: allForks.BeaconBlock, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/lodestar/src/chain/regen/interface.ts#L31">packages/lodestar/src/chain/regen/interface.ts:31</a></em></p>
 <p>Return a valid pre-state for a beacon block
 This will always return a state in the latest viable epoch</p>
 <p><strong>Parameters:</strong></p>
@@ -407,11 +407,11 @@ This will always return a state in the latest viable epoch</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
+<p><strong>Returns:</strong> <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <hr/>
 <h3 id="getstate">getState<a class="headerlink" href="#getstate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getState</strong>(<code>stateRoot</code>: RootHex, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9cb593/packages/lodestar/src/chain/regen/interface.ts#L51">packages/lodestar/src/chain/regen/interface.ts:51</a></em></p>
+<p>▸ <strong>getState</strong>(<code>stateRoot</code>: RootHex, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/lodestar/src/chain/regen/interface.ts#L47">packages/lodestar/src/chain/regen/interface.ts:47</a></em></p>
 <p>Return the exact state with <code>stateRoot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -432,7 +432,7 @@ This will always return a state in the latest viable epoch</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹CachedBeaconState‹allForks.BeaconState››</em></p>
+<p><strong>Returns:</strong> <em>Promise‹CachedBeaconStateAllForks›</em></p>
 </article>
 </div>
 </div>

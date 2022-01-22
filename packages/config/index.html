@@ -286,7 +286,7 @@
 <span class="nx">chainConfig</span><span class="p">.</span><span class="nx">SECONDS_PER_SLOT</span> <span class="o">===</span> <span class="mf">12</span><span class="p">;</span>
 </code></pre></div>
 <p>There are also utility functions to help create a <code>IChainConfig</code> from unknown input and partial configs.</p>
-<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">createIChainConfig</span><span class="p">,</span> <span class="nx">IChainConfig</span><span class="p">,</span> <span class="nx">parsePartialIChainConfigJson</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-config"</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">createIChainConfig</span><span class="p">,</span> <span class="nx">IChainConfig</span><span class="p">,</span> <span class="nx">chainConfigFromJson</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-config"</span><span class="p">;</span>
 
 <span class="c1">// example config</span>
 <span class="kd">let</span> <span class="nx">chainConfigObj</span>: <span class="kt">Record</span><span class="o">&lt;</span><span class="kt">string</span><span class="p">,</span> <span class="nx">unknown</span><span class="o">&gt;</span> <span class="o">=</span> <span class="p">{</span>
@@ -312,16 +312,16 @@
   <span class="nx">INACTIVITY_SCORE_RECOVERY_RATE</span>: <span class="kt">16</span><span class="p">,</span>
   <span class="nx">ALTAIR_FORK_VERSION</span><span class="o">:</span> <span class="s2">"0x01004811"</span><span class="p">,</span>
   <span class="nx">ALTAIR_FORK_EPOCH</span>: <span class="kt">10</span><span class="p">,</span>
-<span class="p">}</span>
+<span class="p">};</span>
 
-<span class="kd">const</span> <span class="nx">partialChainConfig</span>: <span class="kt">Partial</span><span class="o">&lt;</span><span class="nx">IChainConfig</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">parsePartialIChainConfigJson</span><span class="p">(</span><span class="nx">chainConfigObj</span><span class="p">);</span>
+<span class="kd">const</span> <span class="nx">partialChainConfig</span>: <span class="kt">Partial</span><span class="o">&lt;</span><span class="nx">IChainConfig</span><span class="o">&gt;</span> <span class="o">=</span> <span class="nx">chainConfigFromJson</span><span class="p">(</span><span class="nx">chainConfigObj</span><span class="p">);</span>
 
 <span class="c1">// Fill in the missing values with mainnet default values</span>
 <span class="kd">const</span> <span class="nx">chainConfig</span>: <span class="kt">IChainConfig</span> <span class="o">=</span> <span class="nx">createIChainConfig</span><span class="p">(</span><span class="nx">partialChainConfig</span><span class="p">);</span>
 </code></pre></div>
 <h3 id="fork-config">Fork config<a class="headerlink" href="#fork-config" title="Permanent link">¶</a></h3>
 <p>The variables described in the spec can be used to assemble a more structured 'fork schedule'. This info is organized as <code>IForkConfig</code> in the Lodestar config package. In practice, the <code>IChainConfig</code> and <code>IForkConfig</code> are usually combined as a <code>IChainForkConfig</code>.</p>
-<p>A <code>IForkConfig</code> provides methods to select the fork info, fork name, fork version, or fork ssz types given a slot. </p>
+<p>A <code>IForkConfig</code> provides methods to select the fork info, fork name, fork version, or fork ssz types given a slot.</p>
 <div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">GENESIS_SLOT</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-params"</span><span class="p">;</span>
 <span class="k">import</span> <span class="p">{</span><span class="nx">createIChainForkConfig</span><span class="p">,</span> <span class="nx">IChainForkConfig</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-config"</span><span class="p">;</span>
 <span class="k">import</span> <span class="p">{</span><span class="nx">config</span> <span class="kr">as</span> <span class="nx">chainConfig</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-config/default"</span><span class="p">;</span>
