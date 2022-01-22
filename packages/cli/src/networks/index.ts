@@ -151,11 +151,12 @@ export async function fetchWeakSubjectivityState(
       wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
     } else {
       wsCheckpoint = await fetchFinalizedCheckpoint(
-        `${weakSubjectivityServerUrl}/eth/v1/beacon/states/finalized/finality_checkpoints`
+        `${weakSubjectivityServerUrl}/eth/v1/beacon/states/head/finality_checkpoints`
       );
     }
     const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
     const apiVersion = config.getForkName(stateSlot) === ForkName.phase0 ? "v1" : "v2";
+
     const response = await got(`${weakSubjectivityServerUrl}/eth/${apiVersion}/debug/beacon/states/${stateSlot}`, {
       headers: {accept: "application/octet-stream"},
     });
@@ -172,11 +173,12 @@ export async function fetchWeakSubjectivityState(
  */
 async function fetchFinalizedCheckpoint(url: string): Promise<Checkpoint> {
   try {
+    const response = await got(url).json();
     const {
       data: {
         finalized: {epoch, root},
       },
-    } = (await got(url).json()) as {data: {finalized: {epoch: string; root: string}}};
+    } = response as {data: {finalized: {epoch: string; root: string}}};
     if (epoch === undefined || root === undefined) {
       throw Error(`Invalid fetch of finalized checkpoint from url=${url}`);
     }
