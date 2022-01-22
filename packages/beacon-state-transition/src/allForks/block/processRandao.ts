@@ -3,7 +3,7 @@ import {hash} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {verifyRandaoSignature} from "../signatureSets";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
 /**

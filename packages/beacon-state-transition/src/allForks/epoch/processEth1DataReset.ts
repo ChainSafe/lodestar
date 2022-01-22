@@ -1,7 +1,7 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../util";
+import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
 
 /**
  * Reset eth1DataVotes tree every `EPOCHS_PER_ETH1_VOTING_PERIOD`.

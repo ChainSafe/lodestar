@@ -2,7 +2,7 @@ import {Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks, EpochContext} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks, EpochContext} from "../../types";
 import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
   EFFECTIVE_BALANCE_INCREMENT,

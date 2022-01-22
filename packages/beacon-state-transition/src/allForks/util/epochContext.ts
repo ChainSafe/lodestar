@@ -40,7 +40,7 @@ import {
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
-import {BeaconStateCachedAllForks} from "./cachedBeaconState";
+import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
 
 export type AttesterDuty = {
@@ -312,7 +312,7 @@ export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveB
  * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
  * new epoch.
  */
-export function afterProcessEpoch(state: BeaconStateCachedAllForks, epochProcess: IEpochProcess): void {
+export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>, epochProcess: IEpochProcess): void {
   const {epochCtx} = state;
   epochCtx.previousShuffling = epochCtx.currentShuffling;
   epochCtx.currentShuffling = epochCtx.nextShuffling;

@@ -1,10 +1,5 @@
-import {allForks, altair, phase0} from "../../src";
-import {
-  IEpochProcess,
-  BeaconStateCachedAllForks,
-  BeaconStateCachedPhase0,
-  BeaconStateCachedAltair,
-} from "../../src/allForks";
+import {allForks, phase0, BeaconStateCachedAllForks, BeaconStateCachedPhase0, BeaconStateCachedAltair} from "../../src";
+import {IEpochProcess} from "../../src/types";
 
 // Type aliases to typesafe itBench() calls
 

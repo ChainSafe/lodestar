@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance} from "../../util";
-import {BeaconStateCachedAllForks, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit

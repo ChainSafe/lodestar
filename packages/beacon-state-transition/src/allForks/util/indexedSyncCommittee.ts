@@ -1,7 +1,7 @@
-import {altair, ssz, Slot, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
+import {altair, ssz, Slot, ValidatorIndex, BLSPubkey, allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {computeSyncPeriodAtSlot} from "../../util/epoch";
-import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "./cachedBeaconState";
+import {CachedBeaconState} from "./cachedBeaconState";
 import {PubkeyIndexMap} from "./epochContext";
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
@@ -116,7 +116,7 @@ function computeSyncCommitteeIndices(
  * 100 to 200,then you would actually produce signatures in slot 99 - 199.
  */
 export function getIndexedSyncCommittee(
-  state: BeaconStateCachedAllForks | BeaconStateCachedAltair,
+  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
   slot: Slot
 ): IndexedSyncCommittee {
   const statePeriod = computeSyncPeriodAtSlot(state.slot);

@@ -6,14 +6,8 @@ import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
 import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {
-  computeCommitteeCount,
-  createCachedBeaconState,
-  PubkeyIndexMap,
-  BeaconStateCachedAllForks,
-  BeaconStateCachedPhase0,
-  BeaconStateCachedAltair,
-} from "../../src/allForks";
+import {computeCommitteeCount, createCachedBeaconState, PubkeyIndexMap} from "../../src/allForks";
+import {BeaconStateCachedAllForks, BeaconStateCachedPhase0, BeaconStateCachedAltair} from "../../src/types";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";

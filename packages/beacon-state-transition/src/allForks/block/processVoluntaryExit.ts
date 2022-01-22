@@ -1,7 +1,7 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {isActiveValidator} from "../../util";
-import {BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {initiateValidatorExit} from "../../allForks/block";
 import {verifyVoluntaryExitSignature} from "../../allForks/signatureSets";
 

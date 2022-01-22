@@ -8,7 +8,7 @@ import {
   SignatureSetType,
   verifySignatureSet,
 } from "../../util";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 
 export function verifyVoluntaryExitSignature(
   state: BeaconStateCachedAllForks,

@@ -1,6 +1,6 @@
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 import {getRandaoMix} from "../../util";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../util";
+import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
 
 /**
  * Write next randaoMix

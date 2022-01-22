@@ -1,6 +1,6 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, BeaconStateCachedAllForks} from "../../types";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processSyncAggregate} from "../../altair/block/processSyncCommittee";

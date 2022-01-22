@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, BeaconStateCachedAllForks} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestations} from "../../altair/block/processAttestation";

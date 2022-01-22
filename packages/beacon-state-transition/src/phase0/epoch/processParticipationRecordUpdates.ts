@@ -1,6 +1,6 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {BeaconStateCachedPhase0} from "../../allForks/util";
+import {BeaconStateCachedPhase0} from "../../types";
 
 /**
  * PERF: Should have zero cost. It just moves a rootNode from one key to another. Then it creates an empty tree on the

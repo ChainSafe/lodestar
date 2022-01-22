@@ -1,6 +1,6 @@
 import {computeActivationExitEpoch} from "../../util";
 import {initiateValidatorExit} from "../block";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../util";
+import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit

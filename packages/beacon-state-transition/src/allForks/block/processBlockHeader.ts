@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {ZERO_HASH} from "../../constants";
 
 /**

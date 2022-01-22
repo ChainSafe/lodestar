@@ -1,7 +1,7 @@
 import {DOMAIN_RANDAO} from "@chainsafe/lodestar-params";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, computeSigningRoot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 
 export function verifyRandaoSignature(state: BeaconStateCachedAllForks, block: allForks.BeaconBlock): boolean {
   return verifySignatureSet(getRandaoRevealSignatureSet(state, block));

@@ -90,13 +90,13 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
 
   itBench({
     id: `${stateId} - altair processInactivityUpdates`,
-    beforeEach: () => stateOg.value.clone() as allForks.BeaconStateCachedAltair,
+    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAltair,
     fn: (state) => altair.processInactivityUpdates(state, epochProcess.value),
   });
 
   itBench({
     id: `${stateId} - altair processRewardsAndPenalties`,
-    beforeEach: () => stateOg.value.clone() as allForks.BeaconStateCachedAltair,
+    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAltair,
     fn: (state) => altair.processRewardsAndPenalties(state, epochProcess.value),
   });
 
@@ -110,7 +110,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
   itBench({
     id: `${stateId} - altair processSlashings`,
-    beforeEach: () => stateOg.value.clone() as allForks.BeaconStateCachedAltair,
+    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAltair,
     fn: (state) => altair.processSlashings(state, epochProcess.value),
   });
 
@@ -146,14 +146,14 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<BeaconStateCachedAllForks>
 
   itBench({
     id: `${stateId} - altair processParticipationFlagUpdates`,
-    beforeEach: () => stateOg.value.clone() as allForks.BeaconStateCachedAltair,
+    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAltair,
     fn: (state) => altair.processParticipationFlagUpdates(state),
   });
 
   itBench({
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
-    beforeEach: () => stateOg.value.clone() as allForks.BeaconStateCachedAltair,
+    beforeEach: () => stateOg.value.clone() as BeaconStateCachedAltair,
     fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess.value),
   });
 

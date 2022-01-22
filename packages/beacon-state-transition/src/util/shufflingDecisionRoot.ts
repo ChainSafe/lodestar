@@ -1,5 +1,5 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAllForks} from "../allForks/util/cachedBeaconState";
+import {BeaconStateCachedAllForks} from "../types";
 import {getBlockRootAtSlot} from "./blockRoot";
 import {computeStartSlotAtEpoch} from "./epoch";
 

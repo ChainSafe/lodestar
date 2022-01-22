@@ -1,6 +1,6 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {ZERO_HASH} from "../../constants";
 
 /**

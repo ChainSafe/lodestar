@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {computeEpochAtSlot} from "../../util";
-import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../types";
 import {isValidIndexedAttestation} from "../../allForks/block";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";

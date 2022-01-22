@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {verifyIndexedAttestationSignature} from "../signatureSets";
 
 /**

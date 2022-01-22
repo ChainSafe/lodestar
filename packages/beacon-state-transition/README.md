@@ -13,7 +13,7 @@ The beacon state transition and state transition utilities
 ## Usage
 
 ```typescript
-import {BeaconStateCachedAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition/src/allForks";
+import {BeaconStateCachedAllForks, stateTransition} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-types";
 import {generateEmptySignedBlock} from "../test/utils/block";
 import {generateState} from "../test/utils/state";

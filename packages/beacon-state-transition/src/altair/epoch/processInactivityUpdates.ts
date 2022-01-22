@@ -1,6 +1,6 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {Number64} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../types";
 import * as attesterStatusUtil from "../../allForks/util/attesterStatus";
 import {isInInactivityLeak} from "../../util";
 

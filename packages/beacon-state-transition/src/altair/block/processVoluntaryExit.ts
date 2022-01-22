@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks} from "../../allForks";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks} from "../../types";
 import {processVoluntaryExitAllForks} from "../../allForks/block";
 
 export function processVoluntaryExit(

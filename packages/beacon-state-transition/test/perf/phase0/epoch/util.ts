@@ -1,11 +1,5 @@
-import {
-  AttesterFlags,
-  BeaconStateCachedPhase0,
-  BeaconStateCachedAltair,
-  IAttesterStatus,
-  IEpochProcess,
-  toAttesterFlags,
-} from "../../../../src/allForks";
+import {AttesterFlags, IAttesterStatus, toAttesterFlags} from "../../../../src/allForks";
+import {BeaconStateCachedPhase0, BeaconStateCachedAltair, IEpochProcess} from "../../../../src/types";
 
 /**
  * Generate an incomplete IEpochProcess to simulate any network condition relevant to getAttestationDeltas

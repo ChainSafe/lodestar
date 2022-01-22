@@ -1,7 +1,7 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 
 /**
  * Store vote counts for every eth1 block that has votes; if any eth1 block wins majority support within a 1024-slot

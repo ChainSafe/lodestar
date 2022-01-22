@@ -10,7 +10,7 @@ import {
   zipAllIndexesSyncCommitteeBits,
   zipIndexesSyncCommitteeBits,
 } from "../../util";
-import {BeaconStateCachedAltair} from "../../allForks/util";
+import {BeaconStateCachedAltair} from "../../types";
 import {G2_POINT_AT_INFINITY} from "../../constants";
 
 export function processSyncAggregate(

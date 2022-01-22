@@ -12,7 +12,7 @@ import {
 
 import {ZERO_HASH} from "../../constants";
 import {computeDomain, computeSigningRoot, increaseBalance} from "../../util";
-import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../allForks/util";
+import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../types";
 
 /**
  * Process a Deposit operation. Potentially adds a new validator to the registry. Mutates the validators and balances

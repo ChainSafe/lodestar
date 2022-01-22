@@ -12,7 +12,7 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance, increaseBalance} from "../../util";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function slashValidatorAllForks(

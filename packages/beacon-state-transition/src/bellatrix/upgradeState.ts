@@ -1,5 +1,6 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedAltair, BeaconStateCachedBellatrix, createCachedBeaconState} from "../allForks/util";
+import {createCachedBeaconState} from "../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedBellatrix} from "../types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 

@@ -1,5 +1,5 @@
 import {MIN_EPOCHS_TO_INACTIVITY_PENALTY} from "@chainsafe/lodestar-params";
-import {BeaconStateCachedAllForks} from "../allForks/util";
+import {BeaconStateCachedAllForks} from "../types";
 
 export function getFinalityDelay(state: BeaconStateCachedAllForks): number {
   return state.previousShuffling.epoch - state.finalizedCheckpoint.epoch;

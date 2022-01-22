@@ -1,4 +1,4 @@
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,

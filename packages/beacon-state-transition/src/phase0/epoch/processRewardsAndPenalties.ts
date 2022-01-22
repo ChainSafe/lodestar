@@ -1,6 +1,6 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 
-import {BeaconStateCachedPhase0, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedPhase0, IEpochProcess} from "../../types";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
 /**

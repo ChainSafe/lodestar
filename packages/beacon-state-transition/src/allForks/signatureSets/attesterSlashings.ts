@@ -1,7 +1,7 @@
 import {readonlyValues} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ISignatureSet} from "../../util";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {getIndexedAttestationSignatureSet} from "./indexedAttestation";
 
 /** Get signature sets from a single AttesterSlashing object */

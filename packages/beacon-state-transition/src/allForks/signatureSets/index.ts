@@ -1,6 +1,6 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, ISignatureSet} from "../../util";
-import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../util";
+import {BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
 import {getAttestationsSignatureSets} from "./indexedAttestation";

@@ -1,7 +1,7 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {isSlashableValidator} from "../../util";
-import {BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
 import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
 import {verifySignatureSet} from "../../util/signatureSets";

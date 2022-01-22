@@ -1,5 +1,5 @@
 import {PersistentVector} from "@chainsafe/persistent-ts";
-import {BeaconStateCachedAltair} from "../../allForks/util";
+import {BeaconStateCachedAltair} from "../../types";
 
 /**
  * Updates `state.previousEpochParticipation` with precalculated epoch participation. Creates a new empty tree for

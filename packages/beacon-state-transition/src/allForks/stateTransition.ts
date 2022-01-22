@@ -6,14 +6,8 @@ import * as altair from "../altair";
 import * as bellatrix from "../bellatrix";
 import {IBeaconStateTransitionMetrics} from "../metrics";
 import {verifyProposerSignature} from "./signatureSets";
-import {
-  beforeProcessEpoch,
-  BeaconStateCachedAllForks,
-  BeaconStateCachedPhase0,
-  BeaconStateCachedAltair,
-  IEpochProcess,
-  afterProcessEpoch,
-} from "./util";
+import {beforeProcessEpoch, IEpochProcess, afterProcessEpoch} from "./util";
+import {BeaconStateCachedAllForks, BeaconStateCachedPhase0, BeaconStateCachedAltair} from "../types";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
 import {toHexString} from "@chainsafe/ssz";

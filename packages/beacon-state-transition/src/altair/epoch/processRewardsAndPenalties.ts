@@ -1,4 +1,4 @@
-import {BeaconStateCachedAltair, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAltair, IEpochProcess} from "../../types";
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {getRewardsPenaltiesDeltas} from "./balance";
 

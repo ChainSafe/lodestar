@@ -9,16 +9,14 @@ import {
   WEIGHT_DENOMINATOR,
   ForkName,
 } from "@chainsafe/lodestar-params";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks, IEpochProcess} from "../../types";
 import {
-  BeaconStateCachedAltair,
-  BeaconStateCachedAllForks,
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
   hasMarkers,
-  IEpochProcess,
-} from "../../allForks/util";
+} from "../../allForks";
 import {isInInactivityLeak, newZeroedArray} from "../../util";
 
 interface IRewardPenaltyItem {

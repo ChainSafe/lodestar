@@ -1,6 +1,6 @@
 import {altair} from "@chainsafe/lodestar-types";
 
-import {BeaconStateCachedAltair, BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedAltair, BeaconStateCachedAllForks} from "../../types";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestations, RootCache} from "./processAttestation";

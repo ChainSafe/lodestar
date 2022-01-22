@@ -2,7 +2,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 
 import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
 

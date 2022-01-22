@@ -1,5 +1,5 @@
 import {EPOCHS_PER_SLASHINGS_VECTOR} from "@chainsafe/lodestar-params";
-import {IEpochProcess, BeaconStateCachedAllForks} from "../util";
+import {IEpochProcess, BeaconStateCachedAllForks} from "../../types";
 
 /**
  * Reset the next slashings balance accumulator

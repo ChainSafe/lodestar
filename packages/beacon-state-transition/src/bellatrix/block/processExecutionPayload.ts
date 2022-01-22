@@ -1,6 +1,6 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {byteArrayEquals, List, toHexString} from "@chainsafe/ssz";
-import {BeaconStateCachedBellatrix} from "../../allForks";
+import {BeaconStateCachedBellatrix} from "../../types";
 import {getRandaoMix} from "../../util";
 import {ExecutionEngine} from "../executionEngine";
 import {isMergeTransitionComplete} from "../utils";

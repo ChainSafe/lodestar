@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 
 import {getBlockRoot} from "../../util";
-import {BeaconStateCachedAllForks, IEpochProcess} from "../util";
+import {BeaconStateCachedAllForks, IEpochProcess} from "../../types";
 
 /**
  * Update justified and finalized checkpoints depending on network participation.

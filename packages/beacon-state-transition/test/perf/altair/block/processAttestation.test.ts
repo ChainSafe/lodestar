@@ -10,7 +10,7 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, BeaconStateCachedAllForks} from "../../../../src";
+import {altair, BeaconStateCachedAllForks, BeaconStateCachedAltair} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateAltair, StateAttestations} from "../../types";
@@ -63,7 +63,7 @@ describe("altair processAttestation", () => {
       },
       beforeEach: ({state, attestations}) => ({state: state.clone(), attestations}),
       fn: ({state, attestations}) => {
-        altair.processAttestations(state as allForks.BeaconStateCachedAltair, attestations, false);
+        altair.processAttestations(state as BeaconStateCachedAltair, attestations, false);
       },
     });
   }

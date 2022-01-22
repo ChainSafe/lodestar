@@ -1,4 +1,4 @@
-import {BeaconStateCachedAltair, IEpochProcess} from "../../allForks/util";
+import {BeaconStateCachedAltair, IEpochProcess} from "../../types";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 
 /**

@@ -2,7 +2,7 @@ import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
 import {computeSigningRoot} from "../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util/signatureSets";
-import {BeaconStateCachedAllForks} from "../util";
+import {BeaconStateCachedAllForks} from "../../types";
 
 export function verifyProposerSignature(
   state: BeaconStateCachedAllForks,

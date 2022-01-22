@@ -1,7 +1,8 @@
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
-import {IEpochProcess, hasMarkers, BeaconStateCachedPhase0} from "../../allForks/util";
+import {IEpochProcess, BeaconStateCachedPhase0} from "../../types";
+import {hasMarkers} from "../../allForks";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,

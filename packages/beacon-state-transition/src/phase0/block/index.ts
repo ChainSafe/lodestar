@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../allForks/util";
+import {BeaconStateCachedPhase0, BeaconStateCachedAllForks} from "../../types";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestation, validateAttestation} from "./processAttestation";

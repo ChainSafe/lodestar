@@ -9,7 +9,7 @@ import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {BeaconStateCachedAllForks} from "./cachedBeaconState";
+import {BeaconStateCachedAllForks} from "../../types";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
