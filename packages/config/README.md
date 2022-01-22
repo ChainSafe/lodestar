@@ -8,7 +8,6 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-
 Lodestar defines all [network configuration variables](https://github.com/ethereum/eth2.0-specs/tree/dev/configs) defined in the [Ethereum Consensus / Eth2 spec](https://github.com/ethereum/eth2.0-specs). This tooling may be used to configure testnets, ingest mainnet/testnet config variables, or be used in downstream Lodestar libraries.
 
 ## Installation
@@ -50,7 +49,7 @@ chainConfig.SECONDS_PER_SLOT === 12;
 There are also utility functions to help create a `IChainConfig` from unknown input and partial configs.
 
 ```typescript
-import {createIChainConfig, IChainConfig, parsePartialIChainConfigJson} from "@chainsafe/lodestar-config";
+import {createIChainConfig, IChainConfig, chainConfigFromJson} from "@chainsafe/lodestar-config";
 
 // example config
 let chainConfigObj: Record<string, unknown> = {
@@ -76,9 +75,9 @@ let chainConfigObj: Record<string, unknown> = {
   INACTIVITY_SCORE_RECOVERY_RATE: 16,
   ALTAIR_FORK_VERSION: "0x01004811",
   ALTAIR_FORK_EPOCH: 10,
-}
+};
 
-const partialChainConfig: Partial<IChainConfig> = parsePartialIChainConfigJson(chainConfigObj);
+const partialChainConfig: Partial<IChainConfig> = chainConfigFromJson(chainConfigObj);
 
 // Fill in the missing values with mainnet default values
 const chainConfig: IChainConfig = createIChainConfig(partialChainConfig);
@@ -88,7 +87,7 @@ const chainConfig: IChainConfig = createIChainConfig(partialChainConfig);
 
 The variables described in the spec can be used to assemble a more structured 'fork schedule'. This info is organized as `IForkConfig` in the Lodestar config package. In practice, the `IChainConfig` and `IForkConfig` are usually combined as a `IChainForkConfig`.
 
-A `IForkConfig` provides methods to select the fork info, fork name, fork version, or fork ssz types given a slot. 
+A `IForkConfig` provides methods to select the fork info, fork name, fork version, or fork ssz types given a slot.
 
 ```typescript
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";

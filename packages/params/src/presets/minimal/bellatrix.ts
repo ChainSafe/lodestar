@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {IBellatrixPreset} from "../../preset";
+import {BellatrixPreset} from "../../interface/bellatrix";
 
-export const bellatrix: IBellatrixPreset = {
+/* eslint-disable @typescript-eslint/naming-convention */
+export const bellatrix: BellatrixPreset = {
   INACTIVITY_PENALTY_QUOTIENT_BELLATRIX: 16777216,
   MIN_SLASHING_PENALTY_QUOTIENT_BELLATRIX: 32,
   PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX: 3,

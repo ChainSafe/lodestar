@@ -1,7 +1,8 @@
 import {preset as mainnetParams} from "../../src/presets/mainnet";
 import {preset as minimalParams} from "../../src/presets/minimal";
 import {ACTIVE_PRESET, PresetName} from "../../src";
-import {setActivePreset} from "../../setPreset";
+import {setActivePreset} from "../../src/setPreset";
+import {setActivePreset as setActivePresetLib} from "../../setPreset";
 import {expect} from "chai";
 
 describe("active preset", () => {
@@ -31,7 +32,10 @@ describe("active preset", () => {
 
   it("Should not allow to change preset", () => {
     expect(() => {
+      // I'm not sure if mocha is requiring from src or lib. Each file has different state.
+      // To ensure this throws, call setActivePreset on both the src and lib file.
       setActivePreset(PresetName.minimal);
+      setActivePresetLib(PresetName.minimal);
     }).to.throw();
   });
 });

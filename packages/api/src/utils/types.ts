@@ -1,4 +1,4 @@
-import {ContainerType, IJsonOptions, Json, ListType, Type} from "@chainsafe/ssz";
+import {IJsonOptions, Json, ListType, Type} from "@chainsafe/ssz";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {objectToExpectedCase} from "@chainsafe/lodestar-utils";
@@ -111,8 +111,17 @@ export function ArrayOf<T>(elementType: Type<T>, limit = 1e6): ListType<T[]> {
  * data: T
  * ```
  */
-export function ContainerData<T>(dataType: Type<T>): ContainerType<{data: T}> {
-  return new ContainerType({fields: {data: dataType}, expectedCase: "notransform"});
+export function ContainerData<T>(dataType: TypeJson<T>): TypeJson<{data: T}> {
+  return {
+    toJson: ({data}, opts) => ({
+      data: dataType.toJson(data, opts),
+    }),
+    fromJson: ({data}: {data: Json}, opts) => {
+      return {
+        data: dataType.fromJson(data, opts),
+      };
+    },
+  };
 }
 
 /**

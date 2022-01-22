@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {IAltairPreset} from "../../preset";
+import {AltairPreset} from "../../interface/altair";
 
-export const altair: IAltairPreset = {
+/* eslint-disable @typescript-eslint/naming-convention */
+export const altair: AltairPreset = {
   SYNC_COMMITTEE_SIZE: 512,
   EPOCHS_PER_SYNC_COMMITTEE_PERIOD: 256,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR: 50331648,

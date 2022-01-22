@@ -1,6 +1,4 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-
-// Minimal preset - phase 1
 export const phase1Json = {
   CONFIG_NAME: "minimal",
 

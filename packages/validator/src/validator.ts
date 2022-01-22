@@ -94,11 +94,13 @@ export class Validator {
     const genesis = await waitForGenesis(api, opts.logger, signal);
     opts.logger.info("Genesis available");
 
-    const {data: nodeParams} = await api.config.getSpec();
-    assertEqualParams(config, nodeParams);
+    const {data: externalSpecJson} = await api.config.getSpec();
+    assertEqualParams(config, externalSpecJson);
     opts.logger.info("Verified node and validator have same config");
+
     await assertEqualGenesis(opts, genesis);
     opts.logger.info("Verified node and validator have same genesisValidatorRoot");
+
     return new Validator(opts, genesis);
   }
 

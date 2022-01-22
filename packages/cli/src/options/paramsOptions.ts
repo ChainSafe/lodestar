@@ -1,7 +1,7 @@
 import {Options} from "yargs";
+import {IChainConfig, chainConfigTypes} from "@chainsafe/lodestar-config";
 import {IBeaconParamsUnparsed} from "../config/types";
 import {ObjectKeys, ICliCommandOptions} from "../util";
-import {ChainConfig, IChainConfig} from "@chainsafe/lodestar-config";
 
 // No options are statically declared
 // If an arbitraty key notation is used, it removes typesafety on most of this CLI arg parsing code.
@@ -17,17 +17,14 @@ export type IParamsArgs = Record<never, never> & ITerminalPowArgs;
 const getArgKey = (key: keyof IBeaconParamsUnparsed): string => `params.${key}`;
 
 export function parseBeaconParamsArgs(args: Record<string, string | number>): IBeaconParamsUnparsed {
-  return ((ObjectKeys(ChainConfig.fields) as unknown) as (keyof IChainConfig)[]).reduce(
-    (beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
-      const value = args[getArgKey(key)];
-      if (value != null) beaconParams[key] = value;
-      return beaconParams;
-    },
-    {}
-  );
+  return ObjectKeys(chainConfigTypes).reduce((beaconParams: Partial<IBeaconParamsUnparsed>, key) => {
+    const value = args[getArgKey(key)];
+    if (value != null) beaconParams[key] = value;
+    return beaconParams;
+  }, {});
 }
 
-const paramsOptionsByName = ((ObjectKeys(ChainConfig.fields) as unknown) as (keyof IChainConfig)[]).reduce(
+const paramsOptionsByName = ObjectKeys(chainConfigTypes).reduce(
   (options: Record<string, Options>, key): Record<string, Options> => ({
     ...options,
     [getArgKey(key)]: {
