@@ -315,8 +315,8 @@
 </ul>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a>, <code>attesterSlashing</code>: AttesterSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts:6</a></em></p>
+<p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>attesterSlashing</code>: AttesterSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processAttesterSlashing.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -329,7 +329,7 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
 <td>-</td>
 </tr>
 <tr>
@@ -347,8 +347,8 @@
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a>, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/beacon-state-transition/src/bellatrix/block/index.ts#L15">packages/beacon-state-transition/src/bellatrix/block/index.ts:15</a></em></p>
+<p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/beacon-state-transition/src/bellatrix/block/index.ts#L15">packages/beacon-state-transition/src/bellatrix/block/index.ts:15</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -361,7 +361,7 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
 <td>-</td>
 </tr>
 <tr>
@@ -384,8 +384,8 @@
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processexecutionpayload">processExecutionPayload<a class="headerlink" href="#processexecutionpayload" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processExecutionPayload</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a>, <code>payload</code>: <a href="../bellatrix/#executionpayload">ExecutionPayload</a>, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts#L8">packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts:8</a></em></p>
+<p>▸ <strong>processExecutionPayload</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>payload</code>: <a href="../bellatrix/#executionpayload">ExecutionPayload</a>, <code>executionEngine</code>: <a href="../bellatrix/#executionengine">ExecutionEngine</a> | null): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts#L8">packages/beacon-state-transition/src/bellatrix/block/processExecutionPayload.ts:8</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -397,7 +397,7 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
 </tr>
 <tr>
 <td><code>payload</code></td>
@@ -412,8 +412,8 @@
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a>, <code>body</code>: BeaconBlockBody, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/beacon-state-transition/src/bellatrix/block/processOperations.ts#L12">packages/beacon-state-transition/src/bellatrix/block/processOperations.ts:12</a></em></p>
+<p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>body</code>: BeaconBlockBody, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/beacon-state-transition/src/bellatrix/block/processOperations.ts#L12">packages/beacon-state-transition/src/bellatrix/block/processOperations.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -426,7 +426,7 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
 <td>-</td>
 </tr>
 <tr>
@@ -444,8 +444,8 @@
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a>, <code>proposerSlashing</code>: ProposerSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7e1fb2f/packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts:6</a></em></p>
+<p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›, <code>proposerSlashing</code>: ProposerSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/bellatrix/block/processProposerSlashing.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -458,7 +458,7 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></td>
+<td><a href="../allforks/#cachedbeaconstate">CachedBeaconState</a>‹BeaconState›</td>
 <td>-</td>
 </tr>
 <tr>
