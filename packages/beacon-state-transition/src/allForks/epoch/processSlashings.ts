@@ -1,4 +1,3 @@
-import {allForks} from "@chainsafe/lodestar-types";
 import {bigIntMin} from "@chainsafe/lodestar-utils";
 import {readonlyValues} from "@chainsafe/ssz";
 import {
@@ -10,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance} from "../../util";
-import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -23,7 +22,7 @@ import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
  */
 export function processSlashingsAllForks(
   fork: ForkName,
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   process: IEpochProcess
 ): void {
   // No need to compute totalSlashings if there no index to slash

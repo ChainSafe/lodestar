@@ -1,5 +1,5 @@
 import {
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   allForks,
   getAttesterSlashableIndices,
@@ -118,7 +118,7 @@ export class OpPool {
    * slashings included earlier in the block.
    */
   getSlashingsAndExits(
-    state: CachedBeaconState<allForks.BeaconState>
+    state: CachedBeaconStateAllForks
   ): [phase0.AttesterSlashing[], phase0.ProposerSlashing[], phase0.SignedVoluntaryExit[]] {
     const stateEpoch = computeEpochAtSlot(state.slot);
     const toBeSlashedIndices = new Set<ValidatorIndex>();

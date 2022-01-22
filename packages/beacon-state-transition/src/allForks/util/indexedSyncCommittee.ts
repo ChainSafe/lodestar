@@ -1,4 +1,4 @@
-import {altair, ssz, allForks, Slot, ValidatorIndex, BLSPubkey} from "@chainsafe/lodestar-types";
+import {altair, ssz, Slot, ValidatorIndex, BLSPubkey, allForks} from "@chainsafe/lodestar-types";
 import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {computeSyncPeriodAtSlot} from "../../util/epoch";
 import {CachedBeaconState} from "./cachedBeaconState";

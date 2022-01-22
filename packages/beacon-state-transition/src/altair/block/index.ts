@@ -1,6 +1,6 @@
-import {allForks, altair} from "@chainsafe/lodestar-types";
+import {altair} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconState} from "../../allForks/util";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestations, RootCache} from "./processAttestation";
@@ -21,14 +21,10 @@ export {
   processSyncAggregate,
 };
 
-export function processBlock(
-  state: CachedBeaconState<altair.BeaconState>,
-  block: altair.BeaconBlock,
-  verifySignatures = true
-): void {
-  processBlockHeader(state as CachedBeaconState<allForks.BeaconState>, block);
-  processRandao(state as CachedBeaconState<allForks.BeaconState>, block, verifySignatures);
-  processEth1Data(state as CachedBeaconState<allForks.BeaconState>, block.body);
+export function processBlock(state: CachedBeaconStateAltair, block: altair.BeaconBlock, verifySignatures = true): void {
+  processBlockHeader(state as CachedBeaconStateAllForks, block);
+  processRandao(state as CachedBeaconStateAllForks, block, verifySignatures);
+  processEth1Data(state as CachedBeaconStateAllForks, block.body);
   processOperations(state, block.body, verifySignatures);
   processSyncAggregate(state, block, verifySignatures);
 }

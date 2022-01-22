@@ -1,14 +1,14 @@
 import {DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF} from "@chainsafe/lodestar-params";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getSyncCommitteeSelectionProofSignatureSet(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   contributionAndProof: altair.ContributionAndProof
 ): ISignatureSet {
   const {epochCtx, config} = state;

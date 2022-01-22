@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {allForks} from "../../../../src";
+import {allForks, CachedBeaconStateAllForks} from "../../../../src";
 import {beforeProcessEpoch, createCachedBeaconState} from "../../../../src/allForks";
 import {numValidators} from "../../util";
 import {StateEpoch} from "../../types";
@@ -46,7 +46,7 @@ function getEffectiveBalanceTestData(
   vc: number,
   changeRatio: number
 ): {
-  state: allForks.CachedBeaconState<allForks.BeaconState>;
+  state: CachedBeaconStateAllForks;
   epochProcess: allForks.IEpochProcess;
 } {
   const stateTree = ssz.phase0.BeaconState.defaultTreeBacked();
@@ -76,7 +76,7 @@ function getEffectiveBalanceTestData(
   epochProcess.balances = balances;
 
   return {
-    state: cachedBeaconState as allForks.CachedBeaconState<allForks.BeaconState>,
+    state: cachedBeaconState as CachedBeaconStateAllForks,
     epochProcess: epochProcess,
   };
 }

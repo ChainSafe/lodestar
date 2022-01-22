@@ -1,7 +1,6 @@
-import {allForks} from "@chainsafe/lodestar-types";
 import {computeActivationExitEpoch} from "../../util";
 import {initiateValidatorExit} from "../block";
-import {IEpochProcess, CachedBeaconState} from "../util";
+import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -17,10 +16,7 @@ import {IEpochProcess, CachedBeaconState} from "../util";
  *   - indicesEligibleForActivationQueue: 0
  *   - indicesToEject: 0
  */
-export function processRegistryUpdates(
-  state: CachedBeaconState<allForks.BeaconState>,
-  epochProcess: IEpochProcess
-): void {
+export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochProcess: IEpochProcess): void {
   const {epochCtx} = state;
 
   // Get the validators sub tree once for all the loop

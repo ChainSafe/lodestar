@@ -9,7 +9,7 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks} from "../../../../src";
+import {allForks, CachedBeaconStateAllForks} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateBlock} from "../../types";
@@ -102,7 +102,7 @@ describe("altair processBlock", () => {
     itBench<StateBlock, StateBlock>({
       id: `altair processBlock - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStateAltair() as allForks.CachedBeaconState<allForks.BeaconState>;
+        const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
         const block = getBlockAltair(state, opts);
         state.hashTreeRoot();
         return {state, block};

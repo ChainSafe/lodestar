@@ -1,5 +1,4 @@
-import {allForks, altair} from "@chainsafe/lodestar-types";
-import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -26,17 +25,17 @@ export {
   processParticipationFlagUpdates,
 };
 
-export function processEpoch(state: CachedBeaconState<altair.BeaconState>, epochProcess: IEpochProcess): void {
-  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+export function processEpoch(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
+  processJustificationAndFinalization(state as CachedBeaconStateAllForks, epochProcess);
   processInactivityUpdates(state, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
-  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processRegistryUpdates(state as CachedBeaconStateAllForks, epochProcess);
   processSlashings(state, epochProcess);
-  processEth1DataReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processEffectiveBalanceUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processSlashingsReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processEth1DataReset(state as CachedBeaconStateAllForks, epochProcess);
+  processEffectiveBalanceUpdates(state as CachedBeaconStateAllForks, epochProcess);
+  processSlashingsReset(state as CachedBeaconStateAllForks, epochProcess);
+  processRandaoMixesReset(state as CachedBeaconStateAllForks, epochProcess);
+  processHistoricalRootsUpdate(state as CachedBeaconStateAllForks, epochProcess);
   processParticipationFlagUpdates(state);
   processSyncCommitteeUpdates(state, epochProcess);
 }

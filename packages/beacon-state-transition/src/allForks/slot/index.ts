@@ -1,12 +1,12 @@
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconStateAllForks} from "../../types";
 import {ZERO_HASH} from "../../constants";
 
 /**
  * Dial state to next slot. Common for all forks
  */
-export function processSlot(state: CachedBeaconState<allForks.BeaconState>): void {
+export function processSlot(state: CachedBeaconStateAllForks): void {
   const {config} = state;
   const types = config.getForkTypes(state.slot);
 

@@ -3,7 +3,7 @@ import {hash} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {verifyRandaoSignature} from "../signatureSets";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconStateAllForks} from "../../types";
 import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
 
 /**
@@ -12,7 +12,7 @@ import {EPOCHS_PER_HISTORICAL_VECTOR} from "@chainsafe/lodestar-params";
  * PERF: Fixed work independent of block contents.
  */
 export function processRandao(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock,
   verifySignature = true
 ): void {
@@ -22,7 +22,7 @@ export function processRandao(
 
   // verify RANDAO reveal
   if (verifySignature) {
-    if (!verifyRandaoSignature(state as CachedBeaconState<allForks.BeaconState>, block)) {
+    if (!verifyRandaoSignature(state as CachedBeaconStateAllForks, block)) {
       throw new Error("RANDAO reveal is an invalid signature");
     }
   }

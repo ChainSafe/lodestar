@@ -5,8 +5,7 @@ import {
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {allForks} from "@chainsafe/lodestar-types";
-import {IEpochProcess, CachedBeaconState} from "../util";
+import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Update effective balances if validator.balance has changed enough
@@ -18,10 +17,7 @@ import {IEpochProcess, CachedBeaconState} from "../util";
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
  */
-export function processEffectiveBalanceUpdates(
-  state: CachedBeaconState<allForks.BeaconState>,
-  epochProcess: IEpochProcess
-): void {
+export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, epochProcess: IEpochProcess): void {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;

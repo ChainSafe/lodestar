@@ -1,6 +1,5 @@
-import {altair} from "@chainsafe/lodestar-types";
 import {PersistentVector} from "@chainsafe/persistent-ts";
-import {CachedBeaconState} from "../../allForks/util";
+import {CachedBeaconStateAltair} from "../../types";
 
 /**
  * Updates `state.previousEpochParticipation` with precalculated epoch participation. Creates a new empty tree for
@@ -9,7 +8,7 @@ import {CachedBeaconState} from "../../allForks/util";
  * PERF: Cost = 'proportional' $VALIDATOR_COUNT. Since it updates all of them at once, it will always recreate both
  * trees completely.
  */
-export function processParticipationFlagUpdates(state: CachedBeaconState<altair.BeaconState>): void {
+export function processParticipationFlagUpdates(state: CachedBeaconStateAltair): void {
   state.previousEpochParticipation.updateAllStatus(state.currentEpochParticipation.persistent.vector);
   state.currentEpochParticipation.updateAllStatus(
     PersistentVector.from(

@@ -11,3 +11,11 @@ export * as altair from "./altair";
 export * as bellatrix from "./bellatrix";
 export * as allForks from "./allForks";
 export {CachedBeaconState, createCachedBeaconState} from "./allForks/util/cachedBeaconState";
+
+export {
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAltair,
+  CachedBeaconStateBellatrix,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAnyFork,
+} from "./types";

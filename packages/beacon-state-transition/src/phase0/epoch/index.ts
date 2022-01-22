@@ -1,4 +1,4 @@
-import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -12,20 +12,19 @@ import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
 import {processSlashings} from "./processSlashings";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
 
-export function processEpoch(state: CachedBeaconState<phase0.BeaconState>, epochProcess: IEpochProcess): void {
-  processJustificationAndFinalization(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+export function processEpoch(state: CachedBeaconStatePhase0, epochProcess: IEpochProcess): void {
+  processJustificationAndFinalization(state as CachedBeaconStateAllForks, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
-  processRegistryUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processRegistryUpdates(state as CachedBeaconStateAllForks, epochProcess);
   processSlashings(state, epochProcess);
   // inline processFinalUpdates() to follow altair and for clarity
-  processEth1DataReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processEffectiveBalanceUpdates(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processSlashingsReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processRandaoMixesReset(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
-  processHistoricalRootsUpdate(state as CachedBeaconState<allForks.BeaconState>, epochProcess);
+  processEth1DataReset(state as CachedBeaconStateAllForks, epochProcess);
+  processEffectiveBalanceUpdates(state as CachedBeaconStateAllForks, epochProcess);
+  processSlashingsReset(state as CachedBeaconStateAllForks, epochProcess);
+  processRandaoMixesReset(state as CachedBeaconStateAllForks, epochProcess);
+  processHistoricalRootsUpdate(state as CachedBeaconStateAllForks, epochProcess);
   processParticipationRecordUpdates(state);
 }

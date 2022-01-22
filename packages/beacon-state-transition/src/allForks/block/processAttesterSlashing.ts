@@ -1,8 +1,8 @@
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 
 import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconStateAllForks} from "../../types";
 import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
 
@@ -14,11 +14,11 @@ import {slashValidatorAllForks} from "./slashValidator";
  */
 export function processAttesterSlashing(
   fork: ForkName,
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
-  assertValidAttesterSlashing(state as CachedBeaconState<allForks.BeaconState>, attesterSlashing, verifySignatures);
+  assertValidAttesterSlashing(state as CachedBeaconStateAllForks, attesterSlashing, verifySignatures);
 
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
@@ -38,7 +38,7 @@ export function processAttesterSlashing(
 }
 
 export function assertValidAttesterSlashing(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
