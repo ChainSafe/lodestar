@@ -19,13 +19,17 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {KeymanagerApi} from "./keymanager/impl";
+import {KeymanagerApi, SecretKeyInfo} from "./keymanager/impl";
 
+// TODO [DA] is this the best place to put the keystores key?
+// Combined the two new keys
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
   signers: Signer[];
+  secretKeysInfo?: SecretKeyInfo[];
+  importKeystoresPath?: string[];
   logger: ILogger;
   graffiti?: string;
 };
@@ -84,7 +88,14 @@ export class Validator {
     this.clock = clock;
     this.validatorStore = validatorStore;
 
-    this.keymanager = new KeymanagerApi(validatorStore, slashingProtection, genesis.genesisValidatorsRoot);
+    this.keymanager = new KeymanagerApi(
+      validatorStore,
+      slashingProtection,
+      genesis.genesisValidatorsRoot,
+      opts.importKeystoresPath,
+      opts.signers,
+      opts.secretKeysInfo
+    );
   }
 
   /** Waits for genesis and genesis time */

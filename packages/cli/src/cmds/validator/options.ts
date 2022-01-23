@@ -14,13 +14,13 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     graffiti: string;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
+    externalSignerUrl?: string;
+    externalSignerPublicKeys?: string[];
+    externalSignerFetchPubkeys?: boolean;
     keymanagerEnabled?: boolean;
     keymanagerPort?: number;
     keymanagerHost?: string;
     keymanagerCors?: string;
-    externalSignerUrl?: string;
-    externalSignerPublicKeys?: string[];
-    externalSignerFetchPubkeys?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;

@@ -12,13 +12,12 @@ import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 import {fromHexString} from "@chainsafe/ssz";
+import {SecretKeyInfo} from "@chainsafe/lodestar-validator/src/keymanager/impl";
 
 const LOCK_FILE_EXT = ".lock";
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
-export async function getLocalSecretKeys(
-  args: IValidatorCliArgs & IGlobalArgs
-): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
+export async function getLocalSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<SecretKeyInfo[]> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
   if (args.fromMnemonic) {
     if (args.network === defaultNetwork) {
@@ -30,22 +29,20 @@ export async function getLocalSecretKeys(
 
     const masterSK = deriveKeyFromMnemonic(args.fromMnemonic);
     const indexes = parseRange(args.mnemonicIndexes);
-    return {
-      secretKeys: indexes.map((index) => {
-        const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-        return SecretKey.fromBytes(signing);
-      }),
-    };
-  }
 
-  // Derive interop keys
-  else if (args.interopIndexes) {
+    return indexes.map((index) => {
+      const {signing} = deriveEth2ValidatorKeys(masterSK, index);
+      return {secretKey: SecretKey.fromBytes(signing)};
+    });
+  } else if (args.interopIndexes) {
+    // Derive interop keys
     const indexes = parseRange(args.interopIndexes);
-    return {secretKeys: indexes.map((index) => interopSecretKey(index))};
-  }
 
-  // Import JSON keystores and run
-  else if (args.importKeystoresPath) {
+    return indexes.map((index) => {
+      return {secretKey: interopSecretKey(index)};
+    });
+  } else if (args.importKeystoresPath) {
+    // Import JSON keystores and run
     if (!args.importKeystoresPassword) {
       throw new YargsError("Must specify importKeystoresPassword with importKeystoresPath");
     }
@@ -63,30 +60,46 @@ export async function getLocalSecretKeys(
       lockFile.lockSync(lockFilePath);
     }
 
-    const secretKeys = await Promise.all(
-      keystorePaths.map(async (keystorePath) =>
-        SecretKey.fromBytes(await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase))
-      )
+    const secretKeysInfo: SecretKeyInfo[] = await Promise.all(
+      keystorePaths.map(async (keystorePath) => {
+        const secretKey = SecretKey.fromBytes(
+          await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase)
+        );
+        return {
+          secretKey,
+          keystorePath,
+          unlockSecretKeys: () => {
+            lockFile.unlockSync(keystorePath + LOCK_FILE_EXT);
+          },
+        };
+      })
     );
 
-    return {
-      secretKeys,
-      unlockSecretKeys: () => {
-        for (const lockFilePath of lockFilePaths) {
-          lockFile.unlockSync(lockFilePath);
-        }
-      },
-    };
-  }
-
-  // Read keys from local account manager
-  else {
+    return secretKeysInfo;
+  } else {
+    // Read keys from local account manager
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
-    return {secretKeys: await validatorDirManager.decryptAllValidators({force: args.force})};
+    const secretKeys: SecretKey[] = await validatorDirManager.decryptAllValidators({force: args.force});
+    return secretKeys.map((secretKey) => {
+      return {secretKey};
+    });
   }
 }
 
+/**
+ * TODO [DA] there is this type definition in
+ * packages/validator/src/services/validatorStore.ts
+ *
+ * export type SignerRemote = {
+ *   type: SignerType.Remote;
+ *   externalSignerUrl: string;
+ *   pubkeyHex: PubkeyHex;
+ * };
+ *
+ * See why that cannot be re-used here?
+
+ */
 export type SignerRemote = {
   externalSignerUrl: string;
   pubkeyHex: string;

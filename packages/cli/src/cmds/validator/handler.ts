@@ -12,6 +12,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
+import {SecretKeyInfo} from "@chainsafe/lodestar-validator/src/keymanager/impl";
 
 /**
  * Runs a validator client.
@@ -39,8 +40,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   }, logger.info.bind(logger));
 
   const signers: Signer[] = [];
+  let secretKeysInfo: SecretKeyInfo[] = [];
 
   // Read remote keys
+  // TODO [DA] why not check args.externalSignerPublicKeys.length?
+  // this will prevent having to do some parsing to determine if externalSigners are provided
   const externalSigners = await getExternalSigners(args);
   if (externalSigners.length > 0) {
     logger.info(`Using ${externalSigners.length} external keys`);
@@ -59,23 +63,22 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         logger.info(pubkeyHex);
       }
     }
-  }
-
-  // Read local keys
-  else {
-    const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
-    if (secretKeys.length > 0) {
+  } else {
+    // Read local keys
+    secretKeysInfo = await getLocalSecretKeys(args);
+    if (secretKeysInfo.length > 0) {
       // Log pubkeys for auditing
-      logger.info(`Decrypted ${secretKeys.length} local keystores`);
-      for (const secretKey of secretKeys) {
-        logger.info(secretKey.toPublicKey().toHex());
+      logger.info(`Decrypted ${secretKeysInfo.length} local keystores`);
+      for (const secretKeyInfo of secretKeysInfo) {
+        logger.info(secretKeyInfo.secretKey.toPublicKey().toHex());
         signers.push({
           type: SignerType.Local,
-          secretKey,
+          secretKey: secretKeyInfo.secretKey,
         });
       }
 
-      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
+      // TODO [DA] revisit this
+      onGracefulShutdownCbs.push(() => secretKeysInfo.pop()?.unlockSecretKeys?.());
     }
   }
 
@@ -95,9 +98,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
-
+  const importKeystoresPath = args.importKeystoresPath;
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, signers, graffiti},
+    {dbOps, slashingProtection, api, logger, signers, secretKeysInfo, graffiti, importKeystoresPath},
     controller.signal
   );
 

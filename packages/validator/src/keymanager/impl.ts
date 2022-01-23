@@ -1,18 +1,18 @@
-import {SecretKey} from "@chainsafe/bls";
-import {Keystore} from "@chainsafe/bls-keystore";
+import { SecretKey } from "@chainsafe/bls";
+import { Keystore } from "@chainsafe/bls-keystore";
 import {
   Api,
-  ImportStatus,
   DeletionStatus,
+  ImportStatus,
   KeystoreStr,
-  SlashingProtectionData,
+  SlashingProtectionData
 } from "@chainsafe/lodestar-api/keymanager";
-import {fromHexString} from "@chainsafe/ssz";
-import {ISlashingProtection, Interchange} from "../slashingProtection";
-import {SignerType, ValidatorStore} from "../services/validatorStore";
-import {PubkeyHex} from "../types";
-import {Root} from "@chainsafe/lodestar-types";
-import {unlink, writeFile} from "fs/promises";
+import { fromHexString } from "@chainsafe/ssz";
+import { Interchange, ISlashingProtection } from "../slashingProtection";
+import { Signer, SignerType, ValidatorStore } from "../services/validatorStore";
+import { PubkeyHex } from "../types";
+import { Root } from "@chainsafe/lodestar-types";
+import { unlink, writeFile } from "fs/promises";
 
 // TODO [DA] move to a better location
 // Improve the modelling of the type to prevent secretKey.secretKey usage
@@ -27,8 +27,9 @@ export class KeymanagerApi implements Api {
     private readonly validatorStore: ValidatorStore,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
-    private readonly secretKeys: SecretKeyInfo[] = [],
-    private readonly importKeystoresPath?: string[]
+    private readonly importKeystoresPath?: string[],
+    private readonly signers?: Signer[],
+    private readonly secretKeysInfo?: SecretKeyInfo[]
   ) {}
 
   /**
@@ -110,8 +111,7 @@ export class KeymanagerApi implements Api {
 
         // Persist keys for latter restarts
         if (this.importKeystoresPath) {
-          // TODO [DA] switch file name to the keystore format
-          const fileName = `${this.importKeystoresPath.pop()}/key_${Date.now()}.json`;
+          const fileName = `${this.importKeystoresPath.pop()}/key_imported_${Date.now()}.json`;
           await writeFile(fileName, keystoreStr, {encoding: "utf8"});
         }
 
@@ -164,14 +164,16 @@ export class KeymanagerApi implements Api {
       deletedKey[i] = deleted;
 
       // Remove key from persistent storage
-      for (const secretKey of this.secretKeys) {
-        if (secretKey.secretKey.toPublicKey().toHex() === pubkeyHex) {
-          secretKey?.unlockSecretKeys?.();
-          if (secretKey?.keystorePath) {
-            try {
-              await unlink(secretKey?.keystorePath);
-            } catch (e) {
-              // TODO [DA] log some info
+      if (this.secretKeysInfo) {
+        for (const secretKeyInfo of this.secretKeysInfo) {
+          if (secretKeyInfo.secretKey.toPublicKey().toHex() === pubkeyHex) {
+            secretKeyInfo?.unlockSecretKeys?.();
+            if (secretKeyInfo?.keystorePath) {
+              try {
+                await unlink(secretKeyInfo?.keystorePath);
+              } catch (e) {
+                // TODO [DA] log some info
+              }
             }
           }
         }
