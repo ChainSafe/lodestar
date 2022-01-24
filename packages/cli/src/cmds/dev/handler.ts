@@ -21,7 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import { KeymanagerRestApi } from "@chainsafe/lodestar-keymanager-server";
+import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Run a beacon node with validator
