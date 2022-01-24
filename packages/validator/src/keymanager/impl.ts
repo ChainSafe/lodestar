@@ -1,18 +1,18 @@
-import { SecretKey } from "@chainsafe/bls";
-import { Keystore } from "@chainsafe/bls-keystore";
+import {SecretKey} from "@chainsafe/bls";
+import {Keystore} from "@chainsafe/bls-keystore";
 import {
   Api,
   DeletionStatus,
   ImportStatus,
   KeystoreStr,
-  SlashingProtectionData
+  SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
-import { fromHexString } from "@chainsafe/ssz";
-import { Interchange, ISlashingProtection } from "../slashingProtection";
-import { Signer, SignerType, ValidatorStore } from "../services/validatorStore";
-import { PubkeyHex } from "../types";
-import { Root } from "@chainsafe/lodestar-types";
-import { unlink, writeFile } from "fs/promises";
+import {fromHexString} from "@chainsafe/ssz";
+import {Interchange, ISlashingProtection} from "../slashingProtection";
+import {Signer, SignerType, ValidatorStore} from "../services/validatorStore";
+import {PubkeyHex} from "../types";
+import {Root} from "@chainsafe/lodestar-types";
+import {unlink, writeFile} from "fs/promises";
 
 // TODO [DA] move to a better location
 // Improve the modelling of the type to prevent secretKey.secretKey usage
