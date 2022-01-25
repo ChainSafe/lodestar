@@ -289,6 +289,12 @@ export class Eth1MergeBlockTracker {
     // Check if this block is already visited
 
     while (block.totalDifficulty >= this.config.TERMINAL_TOTAL_DIFFICULTY) {
+      if (block.parentHash === ZERO_HASH_HEX) {
+        // Allow genesis block to reach TTD
+        // https://github.com/ethereum/consensus-specs/pull/2719
+        return this.setTerminalPowBlock(block);
+      }
+
       const parent = await this.getPowBlock(block.parentHash);
       // Unknown parent
       if (!parent) {
