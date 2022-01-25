@@ -10,9 +10,10 @@ import got from "got";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
+import * as kintsugi from "./kintsugi";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
+export type NetworkName = "mainnet" | "pyrmont" | "prater" | "kintsugi" | "dev";
+export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "kintsugi"];
 
 function getNetworkData(
   network: NetworkName
@@ -30,6 +31,8 @@ function getNetworkData(
       return pyrmont;
     case "prater":
       return prater;
+    case "kintsugi":
+      return kintsugi;
     default:
       throw Error(`Network not supported: ${network}`);
   }
