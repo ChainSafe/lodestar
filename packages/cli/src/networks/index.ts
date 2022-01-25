@@ -1,7 +1,10 @@
+import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
+import {getClient} from "@chainsafe/lodestar-api";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
+import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -13,6 +16,11 @@ import * as prater from "./prater";
 
 export type NetworkName = "mainnet" | "pyrmont" | "prater" | "dev";
 export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater"];
+
+export type WeakSubjectivityFetchOptions = {
+  weakSubjectivityServerUrl: string;
+  weakSubjectivityCheckpoint?: string;
+};
 
 function getNetworkData(
   network: NetworkName
@@ -136,13 +144,35 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
  */
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
-  url: string
-): Promise<TreeBacked<allForks.BeaconState>> {
+  {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
+): Promise<{wsState: TreeBacked<allForks.BeaconState>; wsCheckpoint: Checkpoint}> {
   try {
-    const response = await got(url, {headers: {accept: "application/octet-stream"}});
-    const stateBytes = response.rawBody;
-    return getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes);
+    let wsCheckpoint;
+    const api = getClient(config, {baseUrl: weakSubjectivityServerUrl});
+    if (weakSubjectivityCheckpoint) {
+      wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
+    } else {
+      const {
+        data: {finalized},
+      } = await api.beacon.getStateFinalityCheckpoints("head");
+      wsCheckpoint = finalized;
+    }
+    const stateSlot = wsCheckpoint.epoch * SLOTS_PER_EPOCH;
+    const stateBytes = await (config.getForkName(stateSlot) === ForkName.phase0
+      ? api.debug.getState(`${stateSlot}`, "ssz")
+      : api.debug.getStateV2(`${stateSlot}`, "ssz"));
+
+    return {wsState: getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes), wsCheckpoint};
   } catch (e) {
     throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }
+}
+
+export function getCheckpointFromArg(checkpointStr: string): Checkpoint {
+  const checkpointRegex = new RegExp("^(?:0x)?([0-9a-f]{64}):([0-9]+)$");
+  const match = checkpointRegex.exec(checkpointStr.toLowerCase());
+  if (!match) {
+    throw new Error(`Could not parse checkpoint string: ${checkpointStr}`);
+  }
+  return {root: fromHex(match[1]), epoch: parseInt(match[2])};
 }

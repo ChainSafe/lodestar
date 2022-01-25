@@ -15,7 +15,6 @@ import {connect} from "../../utils/network";
 import {Network} from "../../../src/network";
 import {BackfillSyncEvent} from "../../../src/sync/backfill";
 import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("Start from WSS", function () {
@@ -102,14 +101,9 @@ describe("Start from WSS", function () {
       throw e;
     }
 
-    const url = "http://127.0.0.1:9596/eth/v1/debug/beacon/states/finalized";
-
-    loggerNodeB.important("Fetching weak subjectivity state from " + url);
-    const wsState = await fetchWeakSubjectivityState(config, url);
-    const wsCheckpoint = {
-      epoch: computeEpochAtSlot(wsState.latestBlockHeader.slot),
-      root: allForks.getLatestBlockRoot(config, wsState),
-    };
+    const weakSubjectivityServerUrl = "http://127.0.0.1:9596";
+    loggerNodeB.important("Fetching weak subjectivity state ", {weakSubjectivityServerUrl});
+    const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, {weakSubjectivityServerUrl});
     loggerNodeB.important("Fetched wss state");
 
     const bnStartingFromWSS = await getDevBeaconNode({
