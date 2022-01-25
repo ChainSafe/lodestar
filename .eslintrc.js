@@ -133,6 +133,9 @@ module.exports = {
     // Prevents accidentally pushing a commit with .only in Mocha tests
     "no-only-tests/no-only-tests": "error",
   },
+  settings: {
+    "import/core-modules": ["node:fs", "node:path"],
+  },
   overrides: [
     {
       files: ["**/test/**/*.ts"],

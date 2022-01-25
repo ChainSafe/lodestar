@@ -50,7 +50,7 @@ export function getLodestarApi({
         throw Error("Already writing heapdump");
       }
       // Lazily import NodeJS only modules
-      const fs = await import("fs");
+      const fs = await import("node:fs");
       const v8 = await import("v8");
       const snapshotStream = v8.getHeapSnapshot();
       // It's important that the filename end with `.heapsnapshot`,

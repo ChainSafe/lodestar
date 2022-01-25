@@ -1,5 +1,5 @@
-import fs from "fs";
-import {join} from "path";
+import fs from "node:fs";
+import {join} from "node:path";
 import {expect} from "chai";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {altair, phase0, allForks, CachedBeaconStatePhase0} from "@chainsafe/lodestar-beacon-state-transition";

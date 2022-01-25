@@ -7,7 +7,7 @@ no-console
 */
 
 const {execSync} = require("child_process");
-const fs = require("fs");
+const fs = require("node:fs");
 
 // Docs
 // [script] <fromTag> <toTag>

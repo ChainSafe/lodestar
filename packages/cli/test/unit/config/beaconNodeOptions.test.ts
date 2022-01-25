@@ -1,7 +1,7 @@
 import {defaultOptions} from "@chainsafe/lodestar";
 import {expect} from "chai";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
 import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks";
@@ -101,7 +101,7 @@ describe("config / bootnodes / parsing", () => {
       name: "can parse multiline JSON input",
       input: `
 {
-  "enrs": 
+  "enrs":
     [
       "enr:-cabfg",
       "enr:-deadbeef"

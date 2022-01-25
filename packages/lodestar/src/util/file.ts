@@ -2,8 +2,8 @@
  * @module util/file
  */
 
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 /**
  * Recursively ensures directory exists by creating any missing directories

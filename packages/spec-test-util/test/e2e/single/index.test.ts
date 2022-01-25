@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {unlinkSync, writeFileSync} from "fs";
-import {join} from "path";
+import {unlinkSync, writeFileSync} from "node:fs";
+import {join} from "node:path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";

@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import {BeaconNodeOptions, getBeaconConfigFromArgs, initPeerId, initEnr, readPeerId, readEnr} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";

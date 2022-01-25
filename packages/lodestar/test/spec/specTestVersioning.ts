@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 // WARNING! Don't move or rename this file !!!
 //

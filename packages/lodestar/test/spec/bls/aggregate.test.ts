@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import bls from "@chainsafe/bls";
 // eslint-disable-next-line no-restricted-imports
 import {EmptyAggregateError} from "@chainsafe/bls/lib/errors";

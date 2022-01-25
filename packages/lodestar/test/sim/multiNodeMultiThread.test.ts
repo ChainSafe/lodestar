@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import os from "os";
 import {Worker} from "worker_threads";
 import {phase0} from "@chainsafe/lodestar-types";

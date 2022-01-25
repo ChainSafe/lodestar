@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import fs from "fs";
+import fs from "node:fs";
 import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
 import {getTestdirPath} from "../../utils";

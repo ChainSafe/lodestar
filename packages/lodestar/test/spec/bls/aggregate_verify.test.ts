@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import bls from "@chainsafe/bls";
 import {fromHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";

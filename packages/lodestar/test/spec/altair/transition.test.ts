@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, phase0, Uint64, Epoch, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";

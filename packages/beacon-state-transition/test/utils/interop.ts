@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {interopSecretKey} from "../../src";
 import {testCachePath} from "../cache";
