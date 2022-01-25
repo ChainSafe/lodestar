@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seencontributionandproof/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.7" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.8" name="generator"/>
 <title>Chain seencache.seencontributionandproof - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.cd566b2a.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.6e60f8b8.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -339,11 +339,11 @@ This stays in-memory and should be pruned per slot.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-seencachebyslot"><code>Private</code> <code>Readonly</code> seenCacheBySlot<a class="headerlink" href="#private-readonly-seencachebyslot" title="Permanent link">¶</a></h3>
 <p>• <strong>seenCacheBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, Set‹string››</em> = new MapDef<slot, set\<aggregatorsubnetkey="">&gt;(() =&gt; new Set<aggregatorsubnetkey>())</aggregatorsubnetkey></slot,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/58efb95/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L18">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:18</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>slot</code>: Slot, <code>subCommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/58efb95/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L30">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:30</a></em></p>
 <p>Register item as seen in the cache</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -372,7 +372,7 @@ This stays in-memory and should be pruned per slot.</p>
 <hr/>
 <h3 id="isknown">isKnown<a class="headerlink" href="#isknown" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isKnown</strong>(<code>slot</code>: Slot, <code>subCommitteeIndex</code>: number, <code>aggregatorIndex</code>: ValidatorIndex): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L25">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/58efb95/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L25">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:25</a></em></p>
 <p>Gossip validation requires to check:
 The sync committee contribution is the first valid contribution received for the aggregator with index
 contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.</p>
@@ -403,7 +403,7 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 <hr/>
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prune</strong>(<code>headSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d9708a2/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L35">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/58efb95/packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts#L35">packages/lodestar/src/chain/seenCache/seenCommitteeContribution.ts:35</a></em></p>
 <p>Prune per head slot</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -458,6 +458,6 @@ contribution_and_proof.aggregator_index for the slot contribution.slot and subco
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.22074ed6.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.01de222e.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.960e086b.min.js"></script>
 </body>
 </html>
