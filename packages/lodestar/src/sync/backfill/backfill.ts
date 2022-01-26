@@ -6,7 +6,9 @@ import {blockToHeader} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
-import {List, toHexString} from "@chainsafe/ssz";
+import {List, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+
 import {IBeaconChain} from "../../chain";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
@@ -16,13 +18,10 @@ import {PeerSet} from "../../util/peerMap";
 import {shuffleOne} from "../../util/shuffle";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "../../util/bytes";
-import {TreeBacked} from "@chainsafe/ssz";
 import {computeAnchorCheckpoint} from "../../chain/initState";
-
-/** Default batch size. Same as range sync (2 epochs) */
-const BATCH_SIZE = 64;
+import {BlockArchiveBatchPutBinaryItem} from "../../db/repositories";
+import {EPOCHS_PER_BATCH} from "../constants";
 
 export type BackfillSyncModules = {
   chain: IBeaconChain;
@@ -44,7 +43,7 @@ type BackfillModules = BackfillSyncModules & {
 };
 
 export type BackfillSyncOpts = {
-  batchSize: number;
+  backfillBatchSize?: number;
 };
 
 export enum BackfillSyncEvent {
@@ -114,7 +113,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   /**
    * Process in blocks of at max batchSize
    */
-  private opts: BackfillSyncOpts;
+  private batchSize: number;
   /**
    * If wsCheckpoint provided was in past then the (db) state from which beacon node started,
    * needs to be validated as per spec.
@@ -151,7 +150,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private peers = new PeerSet();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
 
-  constructor(modules: BackfillModules, opts?: BackfillSyncOpts) {
+  constructor(opts: BackfillSyncOpts, modules: BackfillModules) {
     super();
 
     this.syncAnchor = modules.syncAnchor;
@@ -167,7 +166,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.logger = modules.logger;
     this.metrics = modules.metrics;
 
-    this.opts = opts ?? {batchSize: BATCH_SIZE};
+    this.batchSize = opts.backfillBatchSize ?? EPOCHS_PER_BATCH * SLOTS_PER_EPOCH;
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
 
@@ -225,8 +224,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
    * or wsCheckpoints identifiable as the keys of backfill sync.
    */
   static async init<T extends BackfillSync = BackfillSync>(
-    modules: BackfillSyncModules,
-    opts?: BackfillSyncOpts
+    opts: BackfillSyncOpts,
+    modules: BackfillSyncModules
   ): Promise<T> {
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
@@ -256,17 +255,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(
-      {
-        syncAnchor,
-        backfillStartFromSlot,
-        backfillRangeWrittenSlot,
-        wsCheckpointHeader,
-        prevFinalizedCheckpointBlock,
-        ...modules,
-      },
-      opts
-    ) as T;
+    return new this(opts, {
+      syncAnchor,
+      backfillStartFromSlot,
+      backfillRangeWrittenSlot,
+      wsCheckpointHeader,
+      prevFinalizedCheckpointBlock,
+      ...modules,
+    }) as T;
   }
 
   /** Throw / return all AsyncGenerators */
@@ -518,7 +514,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         // TODO: one can verify the child of wsDbCheckpointBlock is at
         // slot > wsCheckpointHeader
-        wsDbCheckpointBlock.message.slot > this.wsCheckpointHeader.slot
+        // Note: next epoch is at wsCheckpointHeader.slot + SLOTS_PER_EPOCH
+        wsDbCheckpointBlock.message.slot >= this.wsCheckpointHeader.slot + SLOTS_PER_EPOCH
       )
         // TODO: explode and stop the entire node
         throw new Error(
@@ -667,7 +664,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
-      backCount !== this.opts.batchSize &&
+      backCount !== this.batchSize &&
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
@@ -738,7 +735,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // we will need to go make checks on the top of sync loop before writing as it might
     // override prevFinalizedCheckpointBlock
     if (this.prevFinalizedCheckpointBlock.slot < anchorBlock.message.slot)
-      await this.db.blockArchive.put(anchorBlock.message.slot, anchorBlock);
+      // Block fetched from reqResp.beaconBlocksByRoot is treebacked
+      await this.archiveBlocksTreeBacked([anchorBlock] as TreeBacked<allForks.SignedBeaconBlock>[]);
 
     this.syncAnchor = {
       anchorBlock,
@@ -763,7 +761,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
 
     const toSlot = this.syncAnchor.anchorBlock.message.slot;
-    const fromSlot = Math.max(toSlot - this.opts.batchSize, this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT);
+    const fromSlot = Math.max(toSlot - this.batchSize, this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT);
     const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
       startSlot: fromSlot,
       count: toSlot - fromSlot,
@@ -783,7 +781,12 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       return;
     }
 
-    const {nextAnchor, verifiedBlocks, error} = verifyBlockSequence(this.config, blocks, anchorParentRoot);
+    const {nextAnchor, verifiedBlocks, error} = verifyBlockSequence(
+      this.config,
+      // Blocks fetched from reqResp.beaconBlocksByRange are treebacked.
+      blocks as TreeBacked<allForks.SignedBeaconBlock>[],
+      anchorParentRoot
+    );
 
     // If any of the block's proposer signature fail, we can't trust this peer at all
     if (verifiedBlocks.length > 0) {
@@ -799,7 +802,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       // Verified blocks are in reverse order with the nextAnchor being the smallest slot
       // if nextAnchor is on the same slot as prevFinalizedCheckpointBlock, we can't save
       // it before returning to top of sync loop for validation
-      await this.db.blockArchive.batchAdd(
+      // Blocks fetched from reqResp.beaconBlocksByRange are treebacked.
+      await this.archiveBlocksTreeBacked(
         nextAnchor.slot > this.prevFinalizedCheckpointBlock.slot
           ? verifiedBlocks
           : verifiedBlocks.slice(0, verifiedBlocks.length - 1)
@@ -820,6 +824,21 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       });
     }
     if (error) throw new BackfillSyncError({code: error});
+  }
+
+  private async archiveBlocksTreeBacked(blocks: TreeBacked<allForks.SignedBeaconBlock>[]): Promise<void> {
+    const blockEntries: BlockArchiveBatchPutBinaryItem[] = blocks.map((signedBlock) => {
+      const block = signedBlock.message as TreeBacked<allForks.BeaconBlock>;
+      return {
+        key: block.slot,
+        value: signedBlock.serialize(),
+        slot: block.slot,
+        blockRoot: block.hashTreeRoot(),
+        // TODO: Benchmark if faster to slice Buffer or fromHexString()
+        parentRoot: block.parentRoot,
+      };
+    });
+    await this.db.blockArchive.batchPutBinary(blockEntries);
   }
 }
 

@@ -169,7 +169,7 @@ export class BeaconNode {
       logger: logger.child(opts.logger.sync),
     });
 
-    const backfillSync = await BackfillSync.init({
+    const backfillSync = await BackfillSync.init(opts.sync, {
       config,
       db,
       chain,

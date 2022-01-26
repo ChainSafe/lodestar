@@ -2,6 +2,8 @@ import {allForks, CachedBeaconStateAllForks, ISignatureSet} from "@chainsafe/lod
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Root, allForks as allForkTypes, ssz, Slot} from "@chainsafe/lodestar-types";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {TreeBacked} from "@chainsafe/ssz";
+
 import {IBlsVerifier} from "../../chain/bls";
 import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 
@@ -14,19 +16,19 @@ export type BackfillBlock = BackfillBlockHeader & {block: allForks.SignedBeaconB
 
 export function verifyBlockSequence(
   config: IBeaconConfig,
-  blocks: allForkTypes.SignedBeaconBlock[],
+  blocks: TreeBacked<allForkTypes.SignedBeaconBlock>[],
   anchorRoot: Root
 ): {
   nextAnchor: BackfillBlock | null;
-  verifiedBlocks: allForkTypes.SignedBeaconBlock[];
+  verifiedBlocks: TreeBacked<allForkTypes.SignedBeaconBlock>[];
   error?: BackfillSyncErrorCode.NOT_LINEAR;
 } {
   let nextRoot: Root = anchorRoot;
   let nextAnchor: BackfillBlock | null = null;
 
-  const verifiedBlocks: allForkTypes.SignedBeaconBlock[] = [];
+  const verifiedBlocks: TreeBacked<allForkTypes.SignedBeaconBlock>[] = [];
   for (const block of blocks.reverse()) {
-    const blockRoot = config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message);
+    const blockRoot = (block.message as TreeBacked<allForkTypes.BeaconBlock>).hashTreeRoot();
     if (!ssz.Root.equals(blockRoot, nextRoot)) {
       if (ssz.Root.equals(nextRoot, anchorRoot)) {
         throw new BackfillSyncError({code: BackfillSyncErrorCode.NOT_ANCHORED});
