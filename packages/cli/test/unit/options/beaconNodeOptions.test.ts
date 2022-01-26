@@ -54,6 +54,7 @@ describe("options / beaconNodeOptions", () => {
       "network.dontSendGossipAttestationsToForkchoice": true,
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
+      "sync.backfillBatchSize": 34,
     } as IBeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -117,6 +118,7 @@ describe("options / beaconNodeOptions", () => {
       sync: {
         isSingleNode: true,
         disableProcessAsChainSegment: true,
+        backfillBatchSize: 34,
       },
     };
 
