@@ -237,6 +237,9 @@ export class PeerDiscovery {
    * Progressively called by discv5 as a result of any query.
    */
   private onDiscovered = async (enr: ENR): Promise<void> => {
+    console.log("peerId", (await enr.peerId()).toString());
+    console.log("udp", (await enr.getFullMultiaddr("udp"))?.toString());
+    console.log("tcp", (await enr.getFullMultiaddr("tcp"))?.toString());
     const status = await this.handleDiscoveredPeer(enr);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
