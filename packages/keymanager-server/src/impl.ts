@@ -8,9 +8,9 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection} from "../slashingProtection";
-import {Signer, SignerType, ValidatorStore} from "../services/validatorStore";
-import {PubkeyHex} from "../types";
+import {Interchange, ISlashingProtection} from "@chainsafe/lodestar-validator/src/slashingProtection";
+import {Signer, SignerType, ValidatorStore} from "@chainsafe/lodestar-validator/src/services/validatorStore";
+import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
 

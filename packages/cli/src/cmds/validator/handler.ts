@@ -1,8 +1,6 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
@@ -12,7 +10,9 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
-import {SecretKeyInfo} from "@chainsafe/lodestar-validator/src/keymanager/impl";
+import {SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server/src/impl";
+import {KeymanagerServer} from "@chainsafe/lodestar-keymanager-server/src";
+import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator/src";
 
 /**
  * Runs a validator client.
@@ -106,12 +106,12 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Start keymanager API backend
   if (args.keymanagerEnabled) {
-    const keymanagerRestApi = new KeymanagerRestApi(
+    const keymanagerServer = new KeymanagerServer(
       {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
       {config, logger, api: validator.keymanager}
     );
-    await keymanagerRestApi.listen();
-    onGracefulShutdownCbs.push(() => keymanagerRestApi.close());
+    await keymanagerServer.listen();
+    onGracefulShutdownCbs.push(() => keymanagerServer.close());
   }
 
   onGracefulShutdownCbs.push(() => validator.stop());

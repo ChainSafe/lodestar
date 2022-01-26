@@ -27,13 +27,7 @@ export interface IRestApiModules {
   api: Api;
 }
 
-/**
- * // TODO [DA] recommend renaming these kind of classes to have Server?
- * so for example KeymanagaerServer to differentiate it from the classes that exposes the actual
- * rest endpoints. Right now KeymanagerRestApi vs KeymanagerApi come across as very similar to me
- * REST API powered by `fastify` server.
- */
-export class KeymanagerRestApi {
+export class KeymanagerServer {
   private readonly opts: RestApiOptions;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;

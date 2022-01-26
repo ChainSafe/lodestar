@@ -1,5 +1,5 @@
 import fs from "fs";
-import {Interchange} from "@chainsafe/lodestar-validator";
+import {Interchange} from "@chainsafe/lodestar-validator/src";
 import {ICliCommand} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
 import {IAccountValidatorArgs} from "../options";

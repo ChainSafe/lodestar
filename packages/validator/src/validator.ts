@@ -19,7 +19,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {KeymanagerApi, SecretKeyInfo} from "./keymanager/impl";
+import {KeymanagerApi, SecretKeyInfo} from "../../keymanager-server/src/impl";
 
 // TODO [DA] is this the best place to put the keystores key?
 // Combined the two new keys

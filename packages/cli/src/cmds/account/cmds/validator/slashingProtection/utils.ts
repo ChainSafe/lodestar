@@ -1,6 +1,6 @@
 import {Root} from "@chainsafe/lodestar-types";
 import {getClient} from "@chainsafe/lodestar-api";
-import {SlashingProtection} from "@chainsafe/lodestar-validator";
+import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {YargsError} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";

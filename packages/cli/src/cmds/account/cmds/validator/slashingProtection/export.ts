@@ -1,4 +1,4 @@
-import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator";
+import {InterchangeFormatVersion} from "@chainsafe/lodestar-validator/src";
 import {Json} from "@chainsafe/ssz";
 import {ICliCommand, writeFile} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";

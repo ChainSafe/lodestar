@@ -6,7 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SlashingProtection, Validator, SignerType} from "@chainsafe/lodestar-validator";
+import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator/src";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,7 +21,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import {KeymanagerRestApi} from "@chainsafe/lodestar-keymanager-server";
+import {KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Run a beacon node with validator
@@ -160,12 +160,12 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
     // Start keymanager API backend
     if (args.keymanagerEnabled) {
-      const keymanagerRestApi = new KeymanagerRestApi(
+      const keymanagerServer = new KeymanagerServer(
         {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
         {config, logger, api: validator.keymanager}
       );
-      await keymanagerRestApi.listen();
-      onGracefulShutdownCbs.push(() => keymanagerRestApi.close());
+      await keymanagerServer.listen();
+      onGracefulShutdownCbs.push(() => keymanagerServer.close());
     }
 
     onGracefulShutdownCbs.push(() => validator.stop());
