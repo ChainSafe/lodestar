@@ -1,5 +1,5 @@
 import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors";
-import {Json} from "@chainsafe/ssz";
+import {Json, TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
@@ -44,10 +44,12 @@ describe("backfill sync - verify block sequence", function () {
   });
 
   //first 4 mainnet blocks
-  function getBlocks(): phase0.SignedBeaconBlock[] {
+  function getBlocks(): TreeBacked<phase0.SignedBeaconBlock>[] {
     const json = JSON.parse(readFileSync(path.join(__dirname, "./blocks.json"), "utf-8")) as Json[];
     return json.map((b) => {
-      return ssz.phase0.SignedBeaconBlock.fromJson(b, {case: "snake"});
+      return ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct(
+        ssz.phase0.SignedBeaconBlock.fromJson(b, {case: "snake"})
+      );
     });
   }
 });
