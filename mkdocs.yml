@@ -76,6 +76,5 @@ nav:
       - Command line: reference/cli.md
   - Libraries: libraries/index.md
   - Design:
-      - Beacon node architecture: design/architecture.md
       - Lodestar package structure: design/depgraph.md
   - Contributing: contributing.md
