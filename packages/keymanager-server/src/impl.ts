@@ -8,19 +8,12 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection} from "@chainsafe/lodestar-validator/src/slashingProtection";
-import {Signer, SignerType, ValidatorStore} from "@chainsafe/lodestar-validator/src/services/validatorStore";
+import {Interchange, ISlashingProtection} from "@chainsafe/lodestar-validator";
+import {SignerType, ValidatorStore} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
-
-// TODO [DA] move to a better location
-// Improve the modelling of the type to prevent secretKey.secretKey usage
-export type SecretKeyInfo = {
-  secretKey: SecretKey;
-  keystorePath?: string;
-  unlockSecretKeys?: () => void;
-};
+import {SecretKeyInfo} from "./index";
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -28,7 +21,6 @@ export class KeymanagerApi implements Api {
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
     private readonly importKeystoresPath?: string[],
-    private readonly signers?: Signer[],
     private readonly secretKeysInfo?: SecretKeyInfo[]
   ) {}
 

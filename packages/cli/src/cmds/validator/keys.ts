@@ -11,8 +11,8 @@ import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 import {fromHexString} from "@chainsafe/ssz";
-import {SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server/src/impl";
-import {externalSignerGetKeys} from "@chainsafe/lodestar-validator/src";
+import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
+import {SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server";
 
 const LOCK_FILE_EXT = ".lock";
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);

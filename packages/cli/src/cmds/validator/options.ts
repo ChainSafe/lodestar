@@ -1,9 +1,9 @@
-import {restApiOptionsDefault} from "@chainsafe/lodestar-keymanager-server";
 import {ICliCommandOptions, ILogArgs} from "../../util";
 import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/beaconNodeOptions/keymanager";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
@@ -17,18 +17,15 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     externalSignerUrl?: string;
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
-    keymanagerEnabled?: boolean;
-    keymanagerPort?: number;
-    keymanagerHost?: string;
-    keymanagerCors?: string;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
-  };
+  } & KeymanagerArgs;
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
   ...logOptions,
+  ...keymanagerOptions,
   logFile: beaconPathsOptions.logFile,
 
   validatorsDbDir: {
@@ -64,31 +61,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Path to a file with password to decrypt all keystores from importKeystoresPath option",
     defaultDescription: "./password.txt",
     type: "string",
-  },
-
-  keymanagerEnabled: {
-    type: "boolean",
-    description: "Enable keymanager API server",
-    default: false,
-    group: "keymanager",
-  },
-  keymanagerPort: {
-    type: "number",
-    description: "Set port for keymanager API",
-    defaultDescription: String(restApiOptionsDefault.port),
-    group: "keymanager",
-  },
-  keymanagerHost: {
-    type: "string",
-    description: "Set host for keymanager API",
-    defaultDescription: restApiOptionsDefault.host,
-    group: "keymanager",
-  },
-  keymanagerCors: {
-    type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
-    defaultDescription: restApiOptionsDefault.cors,
-    group: "keymanager",
   },
 
   // HIDDEN INTEROP OPTIONS

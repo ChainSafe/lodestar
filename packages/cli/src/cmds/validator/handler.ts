@@ -10,9 +10,8 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
-import {SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server/src/impl";
-import {KeymanagerServer} from "@chainsafe/lodestar-keymanager-server/src";
-import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator/src";
+import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {KeymanagerServer, KeymanagerApi, SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Runs a validator client.
@@ -106,9 +105,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   // Start keymanager API backend
   if (args.keymanagerEnabled) {
+    const keymanagerApi = new KeymanagerApi(
+      validator.validatorStore,
+      slashingProtection,
+      validator.genesis.genesisValidatorsRoot,
+      importKeystoresPath,
+      secretKeysInfo
+    );
+
     const keymanagerServer = new KeymanagerServer(
       {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
-      {config, logger, api: validator.keymanager}
+      {config, logger, api: keymanagerApi}
     );
     await keymanagerServer.listen();
     onGracefulShutdownCbs.push(() => keymanagerServer.close());

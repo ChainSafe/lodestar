@@ -19,7 +19,14 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {KeymanagerApi, SecretKeyInfo} from "../../keymanager-server/src/impl";
+import {SecretKey} from "@chainsafe/bls";
+
+// TODO [DA] this is duplicated also in @chainsafe/lodestar-keymanager-server. Improve?
+export type SecretKeyInfo = {
+  secretKey: SecretKey;
+  keystorePath?: string;
+  unlockSecretKeys?: () => void;
+};
 
 // TODO [DA] is this the best place to put the keystores key?
 // Combined the two new keys
@@ -49,17 +56,16 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  * Main class for the Validator client.
  */
 export class Validator {
-  readonly keymanager: KeymanagerApi;
+  readonly validatorStore: ValidatorStore;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly validatorStore: ValidatorStore;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, genesis: Genesis) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
@@ -87,15 +93,6 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
-
-    this.keymanager = new KeymanagerApi(
-      validatorStore,
-      slashingProtection,
-      genesis.genesisValidatorsRoot,
-      opts.importKeystoresPath,
-      opts.signers,
-      opts.secretKeysInfo
-    );
   }
 
   /** Waits for genesis and genesis time */

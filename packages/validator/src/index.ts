@@ -3,6 +3,7 @@
  */
 
 export {Validator, ValidatorOptions} from "./validator";
+export {ValidatorStore} from "./services/validatorStore";
 export {waitForGenesis} from "./genesis";
 export {SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 

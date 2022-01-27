@@ -1,4 +1,4 @@
-import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator/src";
+import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {readdirSync} from "fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";

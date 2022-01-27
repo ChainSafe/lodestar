@@ -6,7 +6,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 import {BeaconNode, BeaconDb, initStateFromAnchorState, createNodeJsLibp2p, nodeUtils} from "@chainsafe/lodestar";
-import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator/src";
+import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
@@ -21,7 +21,8 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
-import {KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
+import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
+import {Signer} from "@chainsafe/lodestar-validator/src";
 
 /**
  * Run a beacon node with validator
@@ -147,22 +148,32 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     onGracefulShutdownCbs.push(async () => controller.abort());
 
     // Initailize genesis once for all validators
+    const signers: Signer[] = secretKeys.map((secretKey) => ({
+      type: SignerType.Local,
+      secretKey,
+    }));
+    const importKeystoresPath = args.importKeystoresPath;
     const validator = await Validator.initializeFromBeaconNode({
       dbOps,
       slashingProtection,
       api,
       logger: logger.child({module: "vali"}),
-      signers: secretKeys.map((secretKey) => ({
-        type: SignerType.Local,
-        secretKey,
-      })),
+      signers,
+      importKeystoresPath,
     });
 
     // Start keymanager API backend
     if (args.keymanagerEnabled) {
+      const keymanagerApi = new KeymanagerApi(
+        validator.validatorStore,
+        slashingProtection,
+        validator.genesis.genesisValidatorsRoot,
+        importKeystoresPath
+      );
+
       const keymanagerServer = new KeymanagerServer(
         {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
-        {config, logger, api: validator.keymanager}
+        {config, logger, api: keymanagerApi}
       );
       await keymanagerServer.listen();
       onGracefulShutdownCbs.push(() => keymanagerServer.close());

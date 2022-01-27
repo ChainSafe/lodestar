@@ -2,22 +2,25 @@ import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
-import {restApiOptionsDefault} from "@chainsafe/lodestar-keymanager-server";
+import {IValidatorCliArgs, validatorOptions} from "../validator/options";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/beaconNodeOptions/keymanager";
 
-interface IDevOwnArgs {
+type IDevOwnArgs = {
   genesisEth1Hash?: string;
   genesisValidators?: number;
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
   server: string;
-  keymanagerEnabled?: boolean;
-  keymanagerPort?: number;
-  keymanagerHost?: string;
-  keymanagerCors?: string;
-}
+} & KeymanagerArgs &
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+  ...keymanagerOptions,
+  ...{
+    importKeystoresPath: validatorOptions["importKeystoresPath"],
+    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  },
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",
@@ -55,31 +58,6 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
-  },
-
-  keymanagerEnabled: {
-    type: "boolean",
-    description: "Enable keymanager API server",
-    default: false,
-    group: "keymanager",
-  },
-  keymanagerPort: {
-    type: "number",
-    description: "Set port for keymanager API",
-    defaultDescription: String(restApiOptionsDefault.port),
-    group: "keymanager",
-  },
-  keymanagerHost: {
-    type: "string",
-    description: "Set host for keymanager API",
-    defaultDescription: restApiOptionsDefault.host,
-    group: "keymanager",
-  },
-  keymanagerCors: {
-    type: "string",
-    description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
-    defaultDescription: restApiOptionsDefault.cors,
-    group: "keymanager",
   },
 };
 
