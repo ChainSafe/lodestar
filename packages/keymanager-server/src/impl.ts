@@ -93,12 +93,8 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        // TODO [DA]
         const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
 
-        // Import keys to live signer
-        // TODO [DA] only supporting local signer now,
-        //  Confirm if remote should also be supported
         this.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
         // Persist keys for latter restarts
