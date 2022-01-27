@@ -192,14 +192,14 @@ Effort estimations can help planning to tackle issues that are particulary easy 
 * `q7-involved`: Can be fixed by a team of developers and probably takes some time.
 * `q9-epic`: Can only be fixed by John Skeet. ;)
 
-###### `spec.*` Eth2 Consensus Spec Version Target
+###### `spec.*` Ethereum Consensus Spec Version Target
 
-Issues that target a specific version of the Eth2 consensus spec, shall be tagged accordingly.
-* `spec0-phase0`: Issues targeting the initial Eth2 spec version.
-* `spec1-altair`: Issues targeting the Altair Eth2 spec version.
-* `spec3-merge`: Issues targeting the merge Eth2 spec version.
-* `spec5-phase1`: Issues targeting the Phase1 Eth2 spec version.
-* `spec7-phase2`: Issues targeting the Phase2 Eth2 spec version.
+Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.
+* `spec0-phase0`: Issues targeting the initial Ethereum consensus spec version.
+* `spec1-altair`: Issues targeting the Altair Ethereum consensus spec version.
+* `spec3-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
+* `spec5-phase1`: Issues targeting the Phase1 Ethereum consensus spec version.
+* `spec7-phase2`: Issues targeting the Phase2 Ethereum consensus spec version.
 
 ###### `meta.*` Meta Labels to organize Miscelaneous Issues
 
