@@ -127,6 +127,8 @@ export class PeerDiscovery {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
     this.discv5.on("discovered", this.onDiscovered);
+    // on start, dial the discv5.bootEnrs that has been added to the routing table
+    this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
   }
 
   async stop(): Promise<void> {
@@ -237,9 +239,6 @@ export class PeerDiscovery {
    * Progressively called by discv5 as a result of any query.
    */
   private onDiscovered = async (enr: ENR): Promise<void> => {
-    console.log("peerId", (await enr.peerId()).toString());
-    console.log("udp", (await enr.getFullMultiaddr("udp"))?.toString());
-    console.log("tcp", (await enr.getFullMultiaddr("tcp"))?.toString());
     const status = await this.handleDiscoveredPeer(enr);
     this.metrics?.discovery.discoveredStatus.inc({status});
   };
