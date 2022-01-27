@@ -53,7 +53,6 @@ yarn build
 ## Architecture Overview
 
 - :package: This mono-repository contains a suite of Ethereum 2.0 packages.
-- :triangular_ruler: The [architecure docs](https://chainsafe.github.io/lodestar/design/architecture/) for Lodestar should give an overview over the node modules.
 - :balance_scale: The mono-repository is released under [LGPLv3 license](./LICENSE). Note, that the packages contain their own licenses.
 
 | Package                                                                                                                           | Version                                                                                                                                                       | License                                                                                                               | Docs                                                                                                                                             | Description                                 |
