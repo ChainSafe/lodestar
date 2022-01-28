@@ -15,7 +15,7 @@ import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {SyncCommitteeFast} from "./types";
 import {chunkifyInclusiveRange} from "./utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
-import {assertValidSignedHeader, assertValidLightClientUpdate} from "./validation";
+import {assertValidSignedHeader, assertValidLightClientUpdate, activeHeader} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
@@ -438,8 +438,7 @@ export class Lightclient {
    */
   private processSyncCommitteeUpdate(update: altair.LightClientUpdate): void {
     // Prevent registering updates for slots too far in the future
-    const isFinalized = !isEmptyHeader(update.finalizedHeader);
-    const updateSlot = isFinalized ? update.finalizedHeader.slot : update.attestedHeader.slot;
+    const updateSlot = activeHeader(update).slot;
     if (updateSlot > slotWithFutureTolerance(this.config, this.genesisTime, MAX_CLOCK_DISPARITY_SEC)) {
       throw Error(`updateSlot ${updateSlot} is too far in the future, currentSlot ${this.currentSlot}`);
     }
@@ -464,7 +463,7 @@ export class Lightclient {
     const nextPeriod = updatePeriod + 1;
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
-      isFinalized,
+      isFinalized: !isEmptyHeader(update.finalizedHeader),
       participation: sumBits(update.syncCommitteeAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
