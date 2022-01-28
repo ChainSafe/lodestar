@@ -551,11 +551,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="irrelevantpeertype">IrrelevantPeerType<a class="headerlink" href="#irrelevantpeertype" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IrrelevantPeerType</strong>: <em>object | object | object | object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L18">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L18">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:18</a></em></p>
 <hr/>
 <h3 id="requestedsubnet_1">RequestedSubnet<a class="headerlink" href="#requestedsubnet_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>RequestedSubnet</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/subnetMap.ts#L3">packages/lodestar/src/network/peers/utils/subnetMap.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/subnetMap.ts#L3">packages/lodestar/src/network/peers/utils/subnetMap.ts:3</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -568,7 +568,7 @@
 <hr/>
 <h3 id="subnetdiscvquery">SubnetDiscvQuery<a class="headerlink" href="#subnetdiscvquery" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SubnetDiscvQuery</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L17">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L17">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:17</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -584,31 +584,31 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-future_slot_tolerance"><code>Const</code> FUTURE_SLOT_TOLERANCE<a class="headerlink" href="#const-future_slot_tolerance" title="Permanent link">¶</a></h3>
 <p>• <strong>FUTURE_SLOT_TOLERANCE</strong>: <em>1</em> = 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L9">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L9">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:9</a></em></p>
 <hr/>
 <h3 id="const-max_target_subnet_peers"><code>Const</code> MAX_TARGET_SUBNET_PEERS<a class="headerlink" href="#const-max_target_subnet_peers" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_TARGET_SUBNET_PEERS</strong>: <em>6</em> = 6</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L9">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L9">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:9</a></em></p>
 <p>Target number of peers we'd like to have connected to a given long-lived subnet</p>
 <hr/>
 <h3 id="const-peers_to_connect_overshoot_factor"><code>Const</code> PEERS_TO_CONNECT_OVERSHOOT_FACTOR<a class="headerlink" href="#const-peers_to_connect_overshoot_factor" title="Permanent link">¶</a></h3>
 <p>• <strong>PEERS_TO_CONNECT_OVERSHOOT_FACTOR</strong>: <em>3</em> = 3</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L15">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:15</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L15">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:15</a></em></p>
 <p>Instead of attempting to connect the exact amount necessary this will overshoot a little since the success
 rate of outgoing connections is low, &lt;33%. If we try to connect exactly <code>targetPeers - connectedPeerCount</code> the
 peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary</p>
 <hr/>
 <h3 id="const-zeroattnets"><code>Const</code> zeroAttnets<a class="headerlink" href="#const-zeroattnets" title="Permanent link">¶</a></h3>
 <p>• <strong>zeroAttnets</strong>: <em>boolean[]</em> = newFilledArray(ATTESTATION_SUBNET_COUNT, false)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L4">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L4">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:4</a></em></p>
 <hr/>
 <h3 id="const-zerosyncnets"><code>Const</code> zeroSyncnets<a class="headerlink" href="#const-zerosyncnets" title="Permanent link">¶</a></h3>
 <p>• <strong>zeroSyncnets</strong>: <em>boolean[]</em> = newFilledArray(SYNC_COMMITTEE_SUBNET_COUNT, false)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L5">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L5">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assertpeerrelevance_1">assertPeerRelevance<a class="headerlink" href="#assertpeerrelevance_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertPeerRelevance</strong>(<code>remote</code>: Status, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>): <em><a href="./#irrelevantpeertype">IrrelevantPeerType</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L28">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L28">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:28</a></em></p>
 <p>Process a <code>Status</code> message to determine if a peer is relevant to us. If the peer is
 irrelevant the reason is returned.</p>
 <p><strong>Parameters:</strong></p>
@@ -634,7 +634,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="deserializeenrsubnets">deserializeEnrSubnets<a class="headerlink" href="#deserializeenrsubnets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deserializeEnrSubnets</strong>(<code>bytes</code>: Uint8Array, <code>subnetCount</code>: number): <em>boolean[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L14">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts#L14">packages/lodestar/src/network/peers/utils/enrSubnetsDeserialize.ts:14</a></em></p>
 <p>Fast deserialize a BitVector, with pre-cached bool array in <code>getUint8ByteToBitBooleanArray()</code></p>
 <p>Never throw a deserialization error:
 - if bytes is too short, it will pad with zeroes
@@ -662,7 +662,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="getconnectedpeerids_1">getConnectedPeerIds<a class="headerlink" href="#getconnectedpeerids_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getConnectedPeerIds</strong>(<code>libp2p</code>: LibP2p): <em>PeerId[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L7">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L7">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:7</a></em></p>
 <p>Return peers with at least one connection in status "open"</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -683,7 +683,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="getrootathistoricalepoch">getRootAtHistoricalEpoch<a class="headerlink" href="#getrootathistoricalepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getRootAtHistoricalEpoch</strong>(<code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>epoch</code>: Epoch): <em>Root | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L90">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:90</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L90">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:90</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -707,7 +707,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="hassomeconnectedpeer_1">hasSomeConnectedPeer<a class="headerlink" href="#hassomeconnectedpeer_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hasSomeConnectedPeer</strong>(<code>libp2p</code>: LibP2p): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L21">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L21">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:21</a></em></p>
 <p>Efficiently check if there is at least one peer connected</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -728,7 +728,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="isconnectionopen">isConnectionOpen<a class="headerlink" href="#isconnectionopen" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isConnectionOpen</strong>(<code>connection</code>: Connection): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L30">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts#L30">packages/lodestar/src/network/peers/utils/getConnectedPeerIds.ts:30</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -748,7 +748,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="iszeroroot_1">isZeroRoot<a class="headerlink" href="#iszeroroot_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isZeroRoot</strong>(<code>root</code>: Root): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L85">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L85">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:85</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -768,7 +768,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="prioritizepeers_1">prioritizePeers<a class="headerlink" href="#prioritizepeers_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prioritizePeers</strong>(<code>connectedPeers</code>: object[], <code>activeAttnets</code>: <a href="./#requestedsubnet">RequestedSubnet</a>[], <code>activeSyncnets</code>: <a href="./#requestedsubnet">RequestedSubnet</a>[], <code>__namedParameters</code>: object): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L26">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/prioritizePeers.ts#L26">packages/lodestar/src/network/peers/utils/prioritizePeers.ts:26</a></em></p>
 <p>Prioritize which peers to disconect and which to connect. Conditions:
 - Reach <code>targetPeers</code>
 - Don't exceed <code>maxPeers</code>
@@ -815,7 +815,7 @@ irrelevant the reason is returned.</p>
 <hr/>
 <h3 id="renderirrelevantpeertype_1">renderIrrelevantPeerType<a class="headerlink" href="#renderirrelevantpeertype_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>renderIrrelevantPeerType</strong>(<code>type</code>: <a href="./#irrelevantpeertype">IrrelevantPeerType</a>): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L116">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:116</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5d92233/packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts#L116">packages/lodestar/src/network/peers/utils/assertPeerRelevance.ts:116</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
