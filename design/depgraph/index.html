@@ -212,11 +212,6 @@
           Design
         </label>
 <ul class="md-nav__list" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="../architecture/">
-        Beacon node architecture
-      </a>
-</li>
 <li class="md-nav__item md-nav__item--active">
 <input class="md-nav__toggle md-toggle" data-md-toggle="toc" id="__toc" type="checkbox"/>
 <label class="md-nav__link md-nav__link--active" for="__toc">
@@ -463,9 +458,9 @@
 <p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/fork-choice">@chainsafe/lodestar-fork-choice</a> holds the methods for reading/writing the fork choice DAG. The <a href="#chainsafelodestar"><code>@chainsafe/lodestar</code></a> package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
 For a good explainer on how the fork choice itself works, see the <a href="https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md">annotated fork choice spec</a>. This is an annotated version of the <a href="https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md">Eth2 fork choice spec</a> which <code>lodestar-fork-choice</code> is based on.</p>
 <h2 id="chainsafelodestar-validator">@chainsafe/lodestar-validator<a class="headerlink" href="#chainsafelodestar-validator" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/validator">@chainsafe/lodestar-validator</a> contains the validator client. The sole consumer of this package is <a href="#chainsafelodestar-cli">@chainsafe/lodestar-cli</a>, which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in <a href="#chainsafelodestar">@chainsafe/lodestar</a> (specifically in the <a href="../architecture/#api"><code>api</code> module</a>) to perform the validator duties.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/validator">@chainsafe/lodestar-validator</a> contains the validator client. The sole consumer of this package is <a href="#chainsafelodestar-cli">@chainsafe/lodestar-cli</a>, which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in <a href="#chainsafelodestar">@chainsafe/lodestar</a> (specifically in the <code>api</code> module) to perform the validator duties.</p>
 <h2 id="chainsafelodestar">@chainsafe/lodestar<a class="headerlink" href="#chainsafelodestar" title="Permanent link">¶</a></h2>
-<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar">@chainsafe/lodestar</a> contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the <a href="../architecture">node modules</a> live in this package as well.</p>
+<p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar">@chainsafe/lodestar</a> contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the node modules live in this package as well.</p>
 <h2 id="chainsafelodestar-cli">@chainsafe/lodestar-cli<a class="headerlink" href="#chainsafelodestar-cli" title="Permanent link">¶</a></h2>
 <p><a href="https://github.com/ChainSafe/lodestar/tree/master/packages/cli">@chainsafe/lodestar-cli</a> combines everything together for CLI usage and configuration of the beacon node and validator.</p>
 </article>
@@ -474,7 +469,7 @@ For a good explainer on how the fork choice itself works, see the <a href="https
 </main>
 <footer class="md-footer">
 <nav aria-label="Footer" class="md-footer__inner md-grid">
-<a aria-label="Previous: Beacon node architecture" class="md-footer__link md-footer__link--prev" href="../architecture/" rel="prev">
+<a aria-label="Previous: Libraries" class="md-footer__link md-footer__link--prev" href="../../libraries/" rel="prev">
 <div class="md-footer__button md-icon">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12z"></path></svg>
 </div>
@@ -483,7 +478,7 @@ For a good explainer on how the fork choice itself works, see the <a href="https
 <span class="md-footer__direction">
                 Previous
               </span>
-              Beacon node architecture
+              Libraries
             </div>
 </div>
 </a>

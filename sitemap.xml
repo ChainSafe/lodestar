@@ -21,11 +21,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/design/architecture/</loc>
-         <lastmod>2022-01-28</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/design/depgraph/</loc>
          <lastmod>2022-01-28</lastmod>
          <changefreq>daily</changefreq>

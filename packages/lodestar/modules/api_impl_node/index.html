@@ -213,11 +213,6 @@
         </label>
 <ul class="md-nav__list" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="../../../../design/architecture/">
-        Beacon node architecture
-      </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="../../../../design/depgraph/">
         Lodestar package structure
       </a>
@@ -310,7 +305,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="formatnodepeer">formatNodePeer<a class="headerlink" href="#formatnodepeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>formatNodePeer</strong>(<code>peerIdStr</code>: string, <code>connections</code>: Connection[]): <em>routes.node.NodePeer</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50a46bb/packages/lodestar/src/api/impl/node/utils.ts#L8">packages/lodestar/src/api/impl/node/utils.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/api/impl/node/utils.ts#L8">packages/lodestar/src/api/impl/node/utils.ts:8</a></em></p>
 <p>Format a list of connections from libp2p connections manager into the API's format NodePeer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -335,7 +330,7 @@
 <hr/>
 <h3 id="getnodeapi">getNodeApi<a class="headerlink" href="#getnodeapi" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNodeApi</strong>(<code>opts</code>: <a href="../../interfaces/api.iapioptions/">IApiOptions</a>, <code>__namedParameters</code>: object): <em>routes.node.Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50a46bb/packages/lodestar/src/api/impl/node/index.ts#L8">packages/lodestar/src/api/impl/node/index.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/api/impl/node/index.ts#L8">packages/lodestar/src/api/impl/node/index.ts:8</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>opts</strong>: <em><a href="../../interfaces/api.iapioptions/">IApiOptions</a></em></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
@@ -361,7 +356,7 @@
 <hr/>
 <h3 id="getpeerstate">getPeerState<a class="headerlink" href="#getpeerstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPeerState</strong>(<code>status</code>: <a href="../network/#peerstatus">PeerStatus</a>): <em>routes.node.PeerState</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50a46bb/packages/lodestar/src/api/impl/node/utils.ts#L41">packages/lodestar/src/api/impl/node/utils.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/api/impl/node/utils.ts#L41">packages/lodestar/src/api/impl/node/utils.ts:41</a></em></p>
 <p>Map libp2p connection status to the API's peer state notation</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -384,7 +379,7 @@
 <hr/>
 <h3 id="getrevelantconnection">getRevelantConnection<a class="headerlink" href="#getrevelantconnection" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getRevelantConnection</strong>(<code>connections</code>: Connection[]): <em>Connection | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50a46bb/packages/lodestar/src/api/impl/node/utils.ts#L27">packages/lodestar/src/api/impl/node/utils.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0fea712/packages/lodestar/src/api/impl/node/utils.ts#L27">packages/lodestar/src/api/impl/node/utils.ts:27</a></em></p>
 <p>From a list of connections, get the most relevant of a peer
 - The first open connection if any
 - Otherwise, the first closing connection
