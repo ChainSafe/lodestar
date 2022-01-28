@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ProofType, SingleProof} from "@chainsafe/persistent-merkle-tree";

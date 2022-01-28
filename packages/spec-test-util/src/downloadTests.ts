@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import rimraf from "rimraf";
 import axios from "axios";
 import tar from "tar";

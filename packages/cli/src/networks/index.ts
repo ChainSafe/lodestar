@@ -8,7 +8,7 @@ import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {TreeBacked} from "@chainsafe/ssz";
-import fs from "fs";
+import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet";
 import * as pyrmont from "./pyrmont";

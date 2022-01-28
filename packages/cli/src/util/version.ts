@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import findUp from "find-up";
 import {readLodestarGitData} from "./gitData";
 import {GitData} from "./gitData/gitDataPath";

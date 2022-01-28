@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import {loadYaml} from "@chainsafe/lodestar-utils";
 
 export function isDirectory(path: string): boolean {

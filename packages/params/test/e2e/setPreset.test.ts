@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import util from "util";
 import * as child from "child_process";
 import {expect, use} from "chai";

@@ -1,5 +1,5 @@
-import {join} from "path";
-import fs from "fs";
+import {join} from "node:path";
+import fs from "node:fs";
 
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";

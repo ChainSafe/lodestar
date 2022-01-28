@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";

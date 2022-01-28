@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";

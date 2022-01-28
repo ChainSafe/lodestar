@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {before, after} from "mocha";
-import {existsSync} from "fs";
+import {existsSync} from "node:fs";
 import rimraf from "rimraf";
 import {initEnr, initPeerId, readPeerId, FileENR} from "../../../src/config";
 import {testFilesDir} from "../../utils";

@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {readdirSync, readFileSync, existsSync} from "fs";
-import {basename, join, parse} from "path";
+import {readdirSync, readFileSync, existsSync} from "node:fs";
+import {basename, join, parse} from "node:path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
 import {isDirectory, loadYamlFile} from "./util";

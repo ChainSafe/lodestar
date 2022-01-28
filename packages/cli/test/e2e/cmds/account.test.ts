@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import rimraf from "rimraf";
 import {expect} from "chai";
 import {getAccountPaths} from "../../../src/cmds/account/paths";

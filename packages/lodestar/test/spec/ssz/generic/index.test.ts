@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 // eslint-disable-next-line no-restricted-imports
 import {parseInvalidTestcase, parseValidTestcase} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {CompositeType, isCompositeType, toHexString, Type} from "@chainsafe/ssz";
