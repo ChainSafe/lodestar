@@ -173,8 +173,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         try {
           chain.forkChoice.onAttestation(indexedAttestation);
         } catch (e) {
-          logger.error(
-            "Error adding aggregated attestation to forkchoice",
+          logger.debug(
+            "Error adding gossip aggregated attestation to forkchoice",
             {slot: aggregatedAttestation.data.slot},
             e as Error
           );
@@ -218,7 +218,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         try {
           chain.forkChoice.onAttestation(indexedAttestation);
         } catch (e) {
-          logger.error("Error adding unaggregated attestation to forkchoice", {subnet}, e as Error);
+          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
     },
