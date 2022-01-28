@@ -103,11 +103,11 @@ For a good explainer on how the fork choice itself works, see the [annotated for
 
 ## @chainsafe/lodestar-validator
 
-[@chainsafe/lodestar-validator](https://github.com/ChainSafe/lodestar/tree/master/packages/validator) contains the validator client. The sole consumer of this package is [@chainsafe/lodestar-cli](#chainsafelodestar-cli), which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in [@chainsafe/lodestar](#chainsafelodestar) (specifically in the [`api` module](../architecture/#api)) to perform the validator duties.
+[@chainsafe/lodestar-validator](https://github.com/ChainSafe/lodestar/tree/master/packages/validator) contains the validator client. The sole consumer of this package is [@chainsafe/lodestar-cli](#chainsafelodestar-cli), which provides CLI access to run and configure the validator client. However, the validator client communicates to a REST API that is contained in [@chainsafe/lodestar](#chainsafelodestar) (specifically in the `api` module) to perform the validator duties.
 
 ## @chainsafe/lodestar
 
-[@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar) contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the [node modules](../architecture) live in this package as well.
+[@chainsafe/lodestar](https://github.com/ChainSafe/lodestar/tree/master/packages/lodestar) contains the actual beacon node process itself, which is the aggregate of all the above packages and the "brain" of the Lodestar beacon chain implementation. All of the node modules live in this package as well.
 
 ## @chainsafe/lodestar-cli
 
