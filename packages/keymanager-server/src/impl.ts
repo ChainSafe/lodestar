@@ -98,7 +98,7 @@ export class KeymanagerApi implements Api {
         this.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
         // Persist keys for latter restarts
-        if (this.importKeystoresPath) {
+        if (this.importKeystoresPath && this.importKeystoresPath.length > 0) {
           const fileName = `${this.importKeystoresPath.pop()}/key_imported_${Date.now()}.json`;
           await writeFile(fileName, keystoreStr, {encoding: "utf8"});
         }
