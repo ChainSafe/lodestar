@@ -170,8 +170,9 @@ export class KeymanagerApi implements Api {
 
       // Remove key from persistent storage
       if (this.secretKeysInfo) {
-        for (const secretKeyInfo of this.secretKeysInfo) {
+        for (const [key, secretKeyInfo] of this.secretKeysInfo.entries()) {
           if (secretKeyInfo.secretKey.toPublicKey().toHex() === pubkeyHex) {
+            this.secretKeysInfo.splice(key, 1);
             secretKeyInfo?.unlockSecretKeys?.();
             if (secretKeyInfo?.keyFile) {
               try {

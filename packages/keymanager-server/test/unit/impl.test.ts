@@ -176,11 +176,24 @@ describe("keymanager", () => {
 
       const fsStub = sinon.stub(fs.promises, "unlink").withArgs(sinon.match.any).resolves();
 
+      const notDeletedPubKeyStub = sinon.createStubInstance(PublicKey);
+      notDeletedPubKeyStub.toHex.returns("x0ff");
+
+      const notDeletedSecretKeyStub = sinon.createStubInstance(SecretKey);
+      notDeletedSecretKeyStub.toPublicKey.returns(notDeletedPubKeyStub);
+      const secondKeyFile = "not_deleted.json";
+
       const secretKeyInfos: SecretKeyInfo[] = [
         {
           secretKey: secretKeyStub,
           keystorePath,
           keyFile,
+          unlockSecretKeys,
+        },
+        {
+          secretKey: notDeletedSecretKeyStub,
+          keystorePath,
+          keyFile: secondKeyFile,
           unlockSecretKeys,
         },
       ];
@@ -200,6 +213,11 @@ describe("keymanager", () => {
       assert.equal(unlockSecretKeys.called, true);
       assert.equal(fsStub.called, true);
       assert.equal(result.data[0].status, "deleted");
+      assert.equal(secretKeyInfos.length, 1);
+      assert.equal(
+        secretKeyInfos.some((x) => x.keyFile === secondKeyFile),
+        true
+      );
       // eslint-disable-next-line
       assert.equal(result.slashingProtection, "{\"data\":[{\"pubkey\":\"8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970\",\"signed_blocks\":[],\"signed_attestations\":[]}]}");
     });
