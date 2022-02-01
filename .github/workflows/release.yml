@@ -44,6 +44,8 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v2
         with:
           node-version: "lts/gallium"
