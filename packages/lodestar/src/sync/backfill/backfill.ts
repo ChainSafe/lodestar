@@ -64,6 +64,8 @@ export enum BackfillSyncStatus {
   aborted = "aborted",
 }
 
+type CachedSignedBeaconBlock = TreeBacked<allForks.SignedBeaconBlock> & {bytes: Buffer};
+
 /** Map a SyncState to an integer for rendering in Grafana */
 const syncStatus: {[K in BackfillSyncStatus]: number} = {
   [BackfillSyncStatus.aborted]: 0,
@@ -724,7 +726,10 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   }
 
   private async syncBlockByRoot(peer: PeerId, anchorBlockRoot: Root): Promise<void> {
-    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot] as List<Root>);
+    const [anchorBlock] = await this.network.reqResp.beaconBlocksByRoot(peer, [anchorBlockRoot] as List<Root>, {
+      cacheBytes: true,
+      deserializeToTree: true,
+    });
     if (anchorBlock == null) throw new Error("InvalidBlockSyncedFromPeer");
 
     // GENESIS_SLOT doesn't has valid signature
@@ -762,11 +767,15 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     const toSlot = this.syncAnchor.anchorBlock.message.slot;
     const fromSlot = Math.max(toSlot - this.batchSize, this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT);
-    const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
-      startSlot: fromSlot,
-      count: toSlot - fromSlot,
-      step: 1,
-    });
+    const blocks = await this.network.reqResp.beaconBlocksByRange(
+      peer,
+      {
+        startSlot: fromSlot,
+        count: toSlot - fromSlot,
+        step: 1,
+      },
+      {cacheBytes: true, deserializeToTree: true}
+    );
 
     const anchorParentRoot = this.syncAnchor.anchorBlock.message.parentRoot;
 
@@ -831,7 +840,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       const block = signedBlock.message as TreeBacked<allForks.BeaconBlock>;
       return {
         key: block.slot,
-        value: signedBlock.serialize(),
+        value: (signedBlock as CachedSignedBeaconBlock).bytes ?? signedBlock.serialize(),
         slot: block.slot,
         blockRoot: block.hashTreeRoot(),
         // TODO: Benchmark if faster to slice Buffer or fromHexString()

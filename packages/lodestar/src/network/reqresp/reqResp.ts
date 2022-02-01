@@ -12,7 +12,7 @@ import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {RespStatus, timeoutOptions} from "../../constants";
 import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
-import {sendRequest} from "./request";
+import {sendRequest, ISszSnappyOptions} from "./request";
 import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
 import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
@@ -111,14 +111,16 @@ export class ReqResp implements IReqResp {
 
   async beaconBlocksByRange(
     peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
+    request: phase0.BeaconBlocksByRangeRequest,
+    options?: Partial<ISszSnappyOptions>
   ): Promise<allForks.SignedBeaconBlock[]> {
     const blocks = await this.sendRequest<allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRange,
       [Version.V2, Version.V1], // Prioritize V2
       request,
-      request.count
+      request.count,
+      options
     );
     assertSequentialBlocksInRange(blocks, request);
     return blocks;
@@ -126,14 +128,16 @@ export class ReqResp implements IReqResp {
 
   async beaconBlocksByRoot(
     peerId: PeerId,
-    request: phase0.BeaconBlocksByRootRequest
+    request: phase0.BeaconBlocksByRootRequest,
+    options?: Partial<ISszSnappyOptions>
   ): Promise<allForks.SignedBeaconBlock[]> {
     return await this.sendRequest<allForks.SignedBeaconBlock[]>(
       peerId,
       Method.BeaconBlocksByRoot,
       [Version.V2, Version.V1], // Prioritize V2
       request,
-      request.length
+      request.length,
+      options
     );
   }
 
@@ -147,7 +151,8 @@ export class ReqResp implements IReqResp {
     method: Method,
     versions: Version[],
     body: RequestBody,
-    maxResponses = 1
+    maxResponses = 1,
+    options: Partial<ISszSnappyOptions> = {}
   ): Promise<T> {
     try {
       this.metrics?.reqRespOutgoingRequests.inc({method});
@@ -162,7 +167,7 @@ export class ReqResp implements IReqResp {
         body,
         maxResponses,
         this.controller.signal,
-        this.options,
+        {...this.options, ...options},
         this.reqCount++
       );
 

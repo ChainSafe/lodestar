@@ -3,13 +3,19 @@ import varint from "varint";
 import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
 import {BufferedSource} from "../../utils";
-import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types";
+import {
+  RequestOrResponseType,
+  RequestOrIncomingResponseBody,
+  cachedTreeBackedProxyHandler,
+  cachedProxyHandler,
+} from "../../types";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
 import {maxEncodedLen} from "./utils";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 export interface ISszSnappyOptions {
   deserializeToTree?: boolean;
+  cacheBytes?: boolean;
 }
 
 /**
@@ -138,9 +144,18 @@ function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
   try {
     if (options?.deserializeToTree) {
       const typeTree = (type as unknown) as CompositeType<Record<string, unknown>>;
-      return (typeTree.createTreeBackedFromBytes(bytes) as unknown) as T;
+      const treeBacked = typeTree.createTreeBackedFromBytes(bytes) as unknown;
+      if (options?.cacheBytes) {
+        return (new Proxy({treeBacked, bytes}, cachedTreeBackedProxyHandler) as unknown) as T;
+      }
+      return (treeBacked as unknown) as T;
     } else {
-      return type.deserialize(bytes) as T;
+      const struct = type.deserialize(bytes);
+      if (options?.cacheBytes) {
+        return (new Proxy({struct, bytes}, cachedProxyHandler) as unknown) as T;
+      } else {
+        return struct as T;
+      }
     }
   } catch (e) {
     throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e as Error});

@@ -10,7 +10,7 @@ import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} 
 import {formatProtocolId} from "../utils";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
-import {responseDecode} from "../encoders/responseDecode";
+import {responseDecode, ISszSnappyOptions} from "../encoders/responseDecode";
 import {Libp2pConnection} from "../interface";
 import {collectResponses} from "./collectResponses";
 import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
@@ -23,6 +23,7 @@ import {
 } from "./errors";
 
 export {RequestError, RequestErrorCode};
+export {ISszSnappyOptions};
 
 type SendRequestModules = {
   logger: ILogger;
@@ -50,7 +51,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
   requestBody: RequestBody,
   maxResponses: number,
   signal?: AbortSignal,
-  options?: Partial<typeof timeoutOptions>,
+  options?: Partial<typeof timeoutOptions & ISszSnappyOptions>,
   requestId = 0
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
@@ -136,7 +137,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
         () =>
           pipe(
             stream.source,
-            responseTimeoutsHandler(responseDecode(forkDigestContext, protocol), options),
+            responseTimeoutsHandler(responseDecode(forkDigestContext, protocol, options), options),
             collectResponses(method, maxResponses)
           ),
         maxTotalResponseTimeout(maxResponses, options)

@@ -2,7 +2,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {RespStatus} from "../../../constants";
 import {BufferedSource, decodeErrorMessage} from "../utils";
-import {readEncodedPayload} from "../encodingStrategies";
+import {readEncodedPayload, ISszSnappyOptions} from "../encodingStrategies";
 import {ResponseError} from "../response";
 import {
   Protocol,
@@ -21,6 +21,7 @@ enum StreamStatus {
   Ended = "STREAM_ENDED",
 }
 
+export {ISszSnappyOptions};
 /**
  * Consumes a stream source to read a `<response>`
  * ```bnf
@@ -31,10 +32,11 @@ enum StreamStatus {
  */
 export function responseDecode(
   forkDigestContext: IForkDigestContext,
-  protocol: Protocol
+  protocol: Protocol,
+  options: Partial<ISszSnappyOptions> = {}
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
-    const deserializeToTree = deserializeToTreeByMethod[protocol.method];
+    const deserializeToTree = options?.deserializeToTree || deserializeToTreeByMethod[protocol.method];
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
 
@@ -58,7 +60,7 @@ export function responseDecode(
       const forkName = await readForkName(forkDigestContext, bufferedSource, contextBytesType);
       const type = getResponseSzzTypeByMethod(protocol, forkName);
 
-      yield await readEncodedPayload(bufferedSource, protocol.encoding, type, {deserializeToTree});
+      yield await readEncodedPayload(bufferedSource, protocol.encoding, type, {...options, deserializeToTree});
     }
   };
 }

@@ -10,6 +10,7 @@ import {INetworkEventBus} from "../events";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
 import {RequestTypedContainer} from "./types";
+import {ISszSnappyOptions} from "./request";
 
 export interface IReqResp {
   start(): void;
@@ -20,9 +21,14 @@ export interface IReqResp {
   metadata(peerId: PeerId, fork?: ForkName): Promise<allForks.Metadata>;
   beaconBlocksByRange(
     peerId: PeerId,
-    request: phase0.BeaconBlocksByRangeRequest
+    request: phase0.BeaconBlocksByRangeRequest,
+    options?: Partial<ISszSnappyOptions>
   ): Promise<allForks.SignedBeaconBlock[]>;
-  beaconBlocksByRoot(peerId: PeerId, request: phase0.BeaconBlocksByRootRequest): Promise<allForks.SignedBeaconBlock[]>;
+  beaconBlocksByRoot(
+    peerId: PeerId,
+    request: phase0.BeaconBlocksByRootRequest,
+    options?: Partial<ISszSnappyOptions>
+  ): Promise<allForks.SignedBeaconBlock[]>;
   pruneRateLimiterData(peerId: PeerId): void;
 }
 

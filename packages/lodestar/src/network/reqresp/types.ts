@@ -217,3 +217,25 @@ export type ReqRespBlockResponse = {
   bytes: Uint8Array;
   slot: Slot;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const cachedTreeBackedProxyHandler: any = {
+  get({treeBacked, bytes}: {treeBacked: Record<string, unknown>; bytes: Buffer}, name: string) {
+    if (name === "bytes") {
+      return bytes;
+    } else {
+      return treeBacked[name];
+    }
+  },
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const cachedProxyHandler: any = {
+  get({struct, bytes}: {struct: Record<string, unknown>; bytes: Buffer}, name: string) {
+    if (name === "bytes") {
+      return bytes;
+    } else {
+      return struct[name];
+    }
+  },
+};
