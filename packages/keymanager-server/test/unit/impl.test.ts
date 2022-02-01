@@ -9,6 +9,7 @@ import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
 import fs from "fs";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {IInterchangeV5} from "@chainsafe/lodestar-validator/src/slashingProtection/interchange/formats/v5";
+import {getLockFile} from "@chainsafe/lodestar-utils";
 
 describe("keymanager", () => {
   let validatorStoreSub: Sinon.SinonStubbedInstance<ValidatorStore>;
@@ -18,6 +19,7 @@ describe("keymanager", () => {
 
   // eslint-disable-next-line
   const keyStoreStr = "{\"crypto\": {\"kdf\": {\"function\": \"scrypt\", \"params\": {\"dklen\": 32, \"n\": 262144, \"r\": 8, \"p\": 1, \"salt\": \"34d24f0a6f85b7b55d5ccc54efd0ba2955472a39a72d55e1c71fb770717639de\"}, \"message\": \"\"}, \"checksum\": {\"function\": \"sha256\", \"params\": {}, \"message\": \"c043032c9c50ebcaab5ec6edccad095d223ba5e7be40b2a39b8931ab931585a3\"}, \"cipher\": {\"function\": \"aes-128-ctr\", \"params\": {\"iv\": \"53e5deb6df661b998140ca59de04bd69\"}, \"message\": \"c3fa507c9fdb0bf14983a09175210b6d650d89451bb5a39f368e2f0421db0b14\"}}, \"description\": \"\", \"pubkey\": \"8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970\", \"path\": \"m/12381/3600/0/0/0\", \"uuid\": \"a7fa0c0f-edd6-4640-b46d-872db3696a36\", \"version\": 4}";
+
 
   beforeEach(() => {
     validatorStoreSub = sinon.createStubInstance(ValidatorStore);
@@ -76,8 +78,17 @@ describe("keymanager", () => {
       validatorStoreSub.hasVotingPubkey.withArgs(sinon.match.any).returns(false);
       const fsStub = sinon
         .stub(fs.promises, "writeFile")
-        .withArgs(sinon.match.any, keyStoreStr, {encoding: "utf8"})
+        .withArgs(sinon.match(/key_imported/), keyStoreStr, {encoding: "utf8"})
         .resolves();
+
+      const lockFile = getLockFile();
+
+      sinon
+        .stub(lockFile, "lockSync")
+        .withArgs(sinon.match(/json\.lock/))
+        .callsFake(() => {
+          return;
+        });
 
       const km = new KeymanagerApi(
         (validatorStoreSub as unknown) as ValidatorStore,
@@ -133,7 +144,8 @@ describe("keymanager", () => {
     });
 
     const unlockSecretKeys = sinon.fake();
-    const keystorePath = "/path/keystore.json";
+    const keystorePath = "/path";
+    const keyFile = "keystore.json";
 
     it("should delete keystore", async () => {
       const pubkeyToDelete = [
@@ -156,6 +168,7 @@ describe("keymanager", () => {
         {
           secretKey: secretKeyStub,
           keystorePath,
+          keyFile,
           unlockSecretKeys,
         },
       ];
@@ -200,6 +213,7 @@ describe("keymanager", () => {
         {
           secretKey: secretKeyStub,
           keystorePath,
+          keyFile,
           unlockSecretKeys,
         },
       ];

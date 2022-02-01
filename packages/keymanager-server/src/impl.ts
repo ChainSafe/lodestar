@@ -99,11 +99,26 @@ export class KeymanagerApi implements Api {
 
         this.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
+        const lockFile: Lockfile = getLockFile();
+        const keystorePath = this.importKeystoresPath?.[0];
+        const keyFile = `${keystorePath}/key_imported_${Date.now()}.json`;
+        const lockFilePath = `${keyFile}${LOCK_FILE_EXT}`;
+
         // Persist keys for latter restarts
-        if (this.importKeystoresPath && this.importKeystoresPath.length > 0) {
-          const fileName = `${this.importKeystoresPath.pop()}/key_imported_${Date.now()}.json`;
-          await writeFile(fileName, keystoreStr, {encoding: "utf8"});
+        if (keystorePath) {
+          await writeFile(keyFile, keystoreStr, {encoding: "utf8"});
+          lockFile.lockSync(lockFilePath);
         }
+
+        this.secretKeysInfo?.push({
+          secretKey,
+          keystorePath,
+          keyFile,
+          unlockSecretKeys: () => {
+            lockFile.unlockSync(lockFilePath);
+          },
+        });
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -158,9 +173,9 @@ export class KeymanagerApi implements Api {
         for (const secretKeyInfo of this.secretKeysInfo) {
           if (secretKeyInfo.secretKey.toPublicKey().toHex() === pubkeyHex) {
             secretKeyInfo?.unlockSecretKeys?.();
-            if (secretKeyInfo?.keystorePath) {
+            if (secretKeyInfo?.keyFile) {
               try {
-                await unlink(secretKeyInfo?.keystorePath);
+                await unlink(secretKeyInfo?.keyFile);
               } catch (e) {
                 // TODO [DA] log some info
               }
