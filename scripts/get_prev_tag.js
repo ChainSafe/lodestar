@@ -30,7 +30,7 @@ async function run() {
   const tags = stdout.trim().split("\n");
   for (const tag of tags) {
     if (tag !== CURRENT_TAG && !tag.includes(IGNORE_PATTERN)) {
-      console.log(`echo ::set-output name=prev_tag::${tag}`);
+      console.log(`::set-output name=prev_tag::${tag}`);
       return;
     }
   }
