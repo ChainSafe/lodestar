@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Get tag
         id: get_tag
         run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
@@ -26,13 +28,12 @@ jobs:
         id: get_prev_tag
         run: node scripts/get_prev_tag.js
         env:
-          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
+          CURRENT_TAG: ${{ steps.get_tag.outputs.tag }}
           IGNORE_PATTERN: beta
     outputs:
       is_beta: ${{ contains(github.ref, 'beta') }}
-      tag: ${{ steps.tag.outputs.tagname }}
+      tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
-      version: ${{ steps.get_version.outputs.version }}
 
   npm:
     name: Publish to NPM Registry
