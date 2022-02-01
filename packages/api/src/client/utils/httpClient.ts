@@ -50,7 +50,7 @@ export class HttpClient implements IHttpClient {
   constructor(opts: HttpClientOptions) {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
-    this.timeoutMs = opts.timeoutMs ?? 40000;
+    this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
   }
