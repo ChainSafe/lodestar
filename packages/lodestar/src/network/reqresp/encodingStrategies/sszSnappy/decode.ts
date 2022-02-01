@@ -3,12 +3,7 @@ import varint from "varint";
 import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
 import {BufferedSource} from "../../utils";
-import {
-  RequestOrResponseType,
-  RequestOrIncomingResponseBody,
-  cachedTreeBackedProxyHandler,
-  cachedProxyHandler,
-} from "../../types";
+import {RequestOrResponseType, RequestOrIncomingResponseBody, cachedTreeBackedProxyHandler} from "../../types";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
 import {maxEncodedLen} from "./utils";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
@@ -152,10 +147,9 @@ function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
     } else {
       const struct = type.deserialize(bytes);
       if (options?.cacheBytes) {
-        return (new Proxy({struct, bytes}, cachedProxyHandler) as unknown) as T;
-      } else {
-        return struct as T;
+        (struct as T & {bytes: Buffer}).bytes = bytes;
       }
+      return struct as T;
     }
   } catch (e) {
     throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e as Error});
