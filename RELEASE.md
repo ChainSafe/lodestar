@@ -6,9 +6,14 @@
 
 In the same day:
 
-1. The team selects a commit from `master` as a "stable target" for a new version release. As example target next version is `v0.34.0`. Master package.json versions are already at `v0.34.0` to release nightly versions.
+1. The team selects a commit from `master` as a "stable target" for a new version release. As example target next version is `v0.34.0`, commit `9fceb02`. Master package.json versions are already at `v0.34.0` to release nightly versions.
 2. The selected commit is branched into a separate release branch (Example: `v0.34.x`)
 3. The selected commit is tagged as `v0.34.0-beta.0`, released, and published for testing as a Pre-Release
+
+```
+export TAG=v0.34.0-beta.0 && git tag -a $TAG 9fceb02 -m "$TAG" && git push origin $TAG
+```
+
 4. The team creates a PR to bump `master` to the next version (in the example: `v0.35.0`) and continues releasing nightly builds.
 
 ```
@@ -18,6 +23,10 @@ lerna version minor --no-git-tag-version
 After 3-5 days of testing:
 
 5. Tag final stable commit as `v0.34.0`, release and publish the stable release. This commit will be in `v0.34.x` branch and may note be on `master` if beta candidate required bug fixes.
+
+```
+export TAG=v0.34.0 git && tag -a $TAG 9fceb02 -m "$TAG" && git push origin $TAG
+```
 
 ## Pre-Releases
 
