@@ -45,7 +45,9 @@
     "js-yaml": "^3.13.1",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.5",
-    "winston-transport": "^4.3.0"
+    "winston-transport": "^4.3.0",
+    "@types/lockfile": "^1.0.1",
+    "lockfile": "^1.0.4"
   },
   "devDependencies": {
     "@types/js-yaml": "^3.12.1",

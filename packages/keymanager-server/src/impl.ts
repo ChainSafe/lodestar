@@ -14,6 +14,8 @@ import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
 import {SecretKeyInfo} from "./index";
+import {getLockFile, LOCK_FILE_EXT} from "@chainsafe/lodestar-utils";
+import {Lockfile} from "@chainsafe/lodestar-utils/src";
 
 export class KeymanagerApi implements Api {
   constructor(
