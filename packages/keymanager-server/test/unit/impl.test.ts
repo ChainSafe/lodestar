@@ -78,14 +78,14 @@ describe("keymanager", () => {
       validatorStoreSub.hasVotingPubkey.withArgs(sinon.match.any).returns(false);
       const fsStub = sinon
         .stub(fs.promises, "writeFile")
-        .withArgs(sinon.match(/key_imported/), keyStoreStr, {encoding: "utf8"})
+        .withArgs(sinon.match.any, keyStoreStr, {encoding: "utf8"})
         .resolves();
 
       const lockFile = getLockFile();
 
       sinon
         .stub(lockFile, "lockSync")
-        .withArgs(sinon.match(/json\.lock/))
+        .withArgs(sinon.match.any)
         .callsFake(() => {
           return;
         });
@@ -113,6 +113,15 @@ describe("keymanager", () => {
         .stub(fs.promises, "writeFile")
         .withArgs(sinon.match.any, keyStoreStr, {encoding: "utf8"})
         .resolves();
+
+      const lockFile = getLockFile();
+
+      sinon
+        .stub(lockFile, "lockSync")
+        .withArgs(sinon.match.any)
+        .callsFake(() => {
+          return;
+        });
 
       const km = new KeymanagerApi(
         (validatorStoreSub as unknown) as ValidatorStore,
