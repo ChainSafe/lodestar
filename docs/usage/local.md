@@ -7,11 +7,11 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 Run a beacon node, with 8 validators with the following command. 
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --network prater --rootDir </path/to/node1> --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --network prater --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
 ```
 
-`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where lodestar should store the beacon state
-while the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
+`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where 
+lodestar should store the beacon state, `--enr.ip` sets the enr ip entry for the node while the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
 
 Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value. 
 
