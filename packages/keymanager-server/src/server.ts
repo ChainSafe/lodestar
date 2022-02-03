@@ -139,6 +139,7 @@ export class KeymanagerServer {
     try {
       const address = await this.server.listen(this.opts.port, this.opts.host);
       this.logger.info("Started Keymanager api server", {address});
+      this.logger.info("Keymanager bearer access token located at:", this.apiTokenPath);
     } catch (e) {
       this.logger.error(
         "Error starting Keymanager api server",
