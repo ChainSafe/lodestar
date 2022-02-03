@@ -172,7 +172,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       );
 
       const keymanagerServer = new KeymanagerServer(
-        {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
+        {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors, tokenDir: validatorsDbDir},
         {config, logger, api: keymanagerApi}
       );
       await keymanagerServer.listen();

@@ -1,13 +1,16 @@
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
+import bearerAuthPlugin from "fastify-bearer-auth";
 import querystring from "querystring";
 import {IncomingMessage} from "http";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
 import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
-import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, getLockFile, ILogger, LOCK_FILE_EXT} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
+import crypto from "crypto";
+import {unlink, writeFile} from "fs/promises";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
 // TODO [DA] move to a better location
@@ -23,6 +26,8 @@ export type RestApiOptions = {
   host: string;
   cors: string;
   port: number;
+  // TODO [DA] make compulsory
+  tokenDir?: string;
 };
 
 export const restApiOptionsDefault: RestApiOptions = {
@@ -37,17 +42,41 @@ export interface IRestApiModules {
   api: Api;
 }
 
+const apiTokenFileName = "api-token.txt";
+
 export class KeymanagerServer {
   private readonly opts: RestApiOptions;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
   private readonly activeRequests = new Set<IncomingMessage>();
+  private readonly apiTokenPath: string;
+  private readonly bearerToken: string;
+  private tokenUnlock: () => void;
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
     const opts = {
       ...restApiOptionsDefault,
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
+    };
+    this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
+    // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
+    this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
+    const lockFile = getLockFile();
+    const tokenLockFile = `${this.apiTokenPath}${LOCK_FILE_EXT}`;
+    const initToken = async (): Promise<void> => {
+      await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      lockFile.lockSync(tokenLockFile);
+    };
+
+    void initToken();
+
+    this.tokenUnlock = () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      lockFile.unlockSync(tokenLockFile);
     };
 
     const server = fastify({
@@ -73,6 +102,7 @@ export class KeymanagerServer {
       void server.register(fastifyCors, {origin: opts.cors});
     }
 
+    void server.register(bearerAuthPlugin, {keys: new Set([this.bearerToken])});
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req) => {
@@ -131,6 +161,8 @@ export class KeymanagerServer {
     for (const req of this.activeRequests) {
       req.destroy(Error("Closing"));
     }
+    this.tokenUnlock();
+    await unlink(this.apiTokenPath);
     await this.server.close();
   }
 }
