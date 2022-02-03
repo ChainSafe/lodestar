@@ -65,14 +65,17 @@ describe("keymanager", () => {
         genesisValidatorRootStub
       );
 
-      void km.importKeystores([keyStoreStr], [PASSWORD], "").then((result) => {
-        assert.equal(result.data.length, 1);
-        assert.equal(result.data[0].status, "duplicate");
-        done();
-      });
+      void km
+        .importKeystores([keyStoreStr], [PASSWORD], "")
+        .then((result) => {
+          assert.equal(result.data.length, 1);
+          assert.equal(result.data[0].status, "duplicate");
+          done();
+        })
+        .catch(done);
     });
 
-    it("should add a new key with KeystoresPath given", (done) => {
+    it("should add a new key with KeystoresPath given", async () => {
       slashingProtectionStub.importInterchange.withArgs(interchange, genesisValidatorRootStub).resolves();
       validatorStoreSub.hasVotingPubkey.withArgs(sinon.match.any).returns(false);
       const fsStub = sinon
@@ -97,17 +100,15 @@ describe("keymanager", () => {
         ["path"]
       );
 
-      void km.importKeystores([keyStoreStr], [PASSWORD], "").then((result) => {
-        assert.equal(validatorStoreSub.addSigner.called, true);
-        assert.equal(fsStub.called, true);
-        assert.equal(lockStub.called, true);
-        assert.equal(result.data.length, 1);
-        assert.equal(result.data[0].status, "imported");
-        done();
-      });
+      const result = await km.importKeystores([keyStoreStr], [PASSWORD], "");
+      assert.equal(validatorStoreSub.addSigner.called, true);
+      assert.equal(fsStub.called, true);
+      assert.equal(lockStub.called, true);
+      assert.equal(result.data.length, 1);
+      assert.equal(result.data[0].status, "imported");
     });
 
-    it("should add a new key with no KeystoresPath given", (done) => {
+    it("should add a new key with no KeystoresPath given", async () => {
       slashingProtectionStub.importInterchange.withArgs(interchange, genesisValidatorRootStub).resolves();
       validatorStoreSub.hasVotingPubkey.withArgs(sinon.match.any).returns(false);
       const fsStub = sinon
@@ -131,14 +132,12 @@ describe("keymanager", () => {
         genesisValidatorRootStub
       );
 
-      void km.importKeystores([keyStoreStr], [PASSWORD], "").then((result) => {
-        assert.equal(validatorStoreSub.addSigner.called, true);
-        assert.equal(fsStub.called, false);
-        assert.equal(lockStub.called, false);
-        assert.equal(result.data.length, 1);
-        assert.equal(result.data[0].status, "imported");
-        done();
-      });
+      const result = await km.importKeystores([keyStoreStr], [PASSWORD], "");
+      assert.equal(validatorStoreSub.addSigner.called, true);
+      assert.equal(fsStub.called, false);
+      assert.equal(lockStub.called, false);
+      assert.equal(result.data.length, 1);
+      assert.equal(result.data[0].status, "imported");
     });
   });
 
