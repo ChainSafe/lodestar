@@ -50,9 +50,12 @@ export async function createNodeJsLibp2p(
 
   // Append discv5.bootEnrs to bootMultiaddrs if requested
   if (networkOpts.connectToDiscv5Bootnodes) {
-    if (!networkOpts.bootMultiaddrs) networkOpts.bootMultiaddrs = [];
-    if (!networkOpts.discv5) networkOpts.discv5 = defaultDiscv5Options;
-
+    if (!networkOpts.bootMultiaddrs) {
+      networkOpts.bootMultiaddrs = [];
+    }
+    if (!networkOpts.discv5) {
+      networkOpts.discv5 = defaultDiscv5Options;
+    }
     for (const enrOrStr of networkOpts.discv5.bootEnrs) {
       const enr = typeof enrOrStr === "string" ? ENR.decodeTxt(enrOrStr) : enrOrStr;
       const fullMultiAddr = await enr.getFullMultiaddr("tcp");

@@ -66,7 +66,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
 
   // BeaconNode setup
-  const libp2p = await createNodeJsLibp2p(peerId, options.network);
+  const libp2p = await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir});
   const logger = getCliLogger(args, beaconPaths, config);
   logger.info("Lodestar", {version: getVersion(), network: args.network});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
