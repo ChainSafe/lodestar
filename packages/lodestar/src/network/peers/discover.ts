@@ -22,6 +22,7 @@ export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
+  connectToDiscv5Bootnodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
@@ -91,6 +92,8 @@ export class PeerDiscovery {
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
 
+  private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
     this.libp2p = libp2p;
@@ -101,6 +104,7 @@ export class PeerDiscovery {
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
+    this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
     this.discv5 = Discv5.create({
       enr: opts.discv5.enr,
@@ -112,7 +116,6 @@ export class PeerDiscovery {
         [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
       },
     });
-
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
 
     if (metrics) {
@@ -127,8 +130,13 @@ export class PeerDiscovery {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
     this.discv5.on("discovered", this.onDiscovered);
-    // on start, dial the discv5.bootEnrs that has been added to the routing table
-    this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
+    if (this.connectToDiscv5BootnodesOnStart) {
+      // We are not supposed to connect to the Mainnet bootnodes
+      // so only connect to them on local devnet if the  cli flag
+      // connectToDiscv5Bootnodes has been set to true. If so then
+      // on start, dial the discv5.bootEnrs that has been added to the routing table
+      this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
+    }
   }
 
   async stop(): Promise<void> {
