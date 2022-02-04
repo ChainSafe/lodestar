@@ -2,8 +2,8 @@
  * @module chain
  */
 
-import fs from "fs";
-import {CachedBeaconState, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import fs from "node:fs";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
@@ -127,7 +127,14 @@ export class BeaconChain implements IBeaconChain {
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
     const cachedState = restoreStateCaches(config, stateCache, checkpointStateCache, anchorState);
-    const forkChoice = initializeForkChoice(config, emitter, clock.currentSlot, cachedState, metrics);
+    const forkChoice = initializeForkChoice(
+      config,
+      emitter,
+      clock.currentSlot,
+      cachedState,
+      opts.proposerBoostEnabled,
+      metrics
+    );
     const regen = new QueuedStateRegenerator({
       config,
       forkChoice,
@@ -203,7 +210,7 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconState<allForks.BeaconState> {
+  getHeadState(): CachedBeaconStateAllForks {
     // head state should always exist
     const head = this.forkChoice.getHead();
     const headState =
@@ -212,7 +219,7 @@ export class BeaconChain implements IBeaconChain {
     return headState;
   }
 
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconState<allForks.BeaconState>> {
+  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;

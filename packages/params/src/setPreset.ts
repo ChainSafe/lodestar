@@ -1,4 +1,4 @@
-import {PresetName} from "./preset";
+import {PresetName} from "./presetName";
 import {presetStatus} from "./presetStatus";
 
 export {PresetName};

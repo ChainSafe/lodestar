@@ -1,10 +1,10 @@
-import fs from "fs";
+import fs from "node:fs";
 import {init} from "@chainsafe/bls";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {NetworkName} from "@chainsafe/lodestar-config/networks";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {allForks, computeEpochAtSlot, computeStartSlotAtEpoch} from "../../src";
+import {allForks, computeEpochAtSlot, computeStartSlotAtEpoch, CachedBeaconStateAllForks} from "../../src";
 import {parseAttesterFlags} from "../../lib/allForks";
 import {AttesterFlags} from "../../src/allForks";
 import {Validator} from "../../lib/phase0";
@@ -94,7 +94,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const postState = allForks.createCachedBeaconState(config, stateTB);
 
     const epochProcess = allForks.beforeProcessEpoch(postState);
-    allForks.processSlots(postState as allForks.CachedBeaconState<allForks.BeaconState>, nextEpochSlot, null);
+    allForks.processSlots(postState as CachedBeaconStateAllForks, nextEpochSlot, null);
 
     const validatorCount = state.validators.length;
 

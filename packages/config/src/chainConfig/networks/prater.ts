@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString as b} from "@chainsafe/ssz";
-import {IChainConfig} from "..";
+import {IChainConfig} from "../types";
 import {chainConfig as mainnet} from "../presets/mainnet";
 
 /* eslint-disable max-len */

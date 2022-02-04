@@ -3,9 +3,9 @@
  */
 
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {allForks, altair, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {CachedBeaconState} from "../allForks";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -28,7 +28,7 @@ export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorI
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
 export function increaseBalance(
-  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  state: CachedBeaconStateAllForks | CachedBeaconStateAltair,
   index: ValidatorIndex,
   delta: number
 ): void {
@@ -42,7 +42,7 @@ export function increaseBalance(
  * Set to ``0`` when underflow.
  */
 export function decreaseBalance(
-  state: CachedBeaconState<allForks.BeaconState> | CachedBeaconState<altair.BeaconState>,
+  state: CachedBeaconStateAllForks | CachedBeaconStateAltair,
   index: ValidatorIndex,
   delta: number
 ): void {
@@ -54,7 +54,7 @@ export function decreaseBalance(
  * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
  * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
  */
-export function getEffectiveBalances(justifiedState: CachedBeaconState<allForks.BeaconState>): number[] {
+export function getEffectiveBalances(justifiedState: CachedBeaconStateAllForks): number[] {
   const {activeIndices} = justifiedState.currentShuffling;
   // 5x faster than using readonlyValuesListOfLeafNodeStruct
   const count = justifiedState.validators.length;

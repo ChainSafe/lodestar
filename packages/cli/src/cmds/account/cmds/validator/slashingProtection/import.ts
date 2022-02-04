@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import {Interchange} from "@chainsafe/lodestar-validator";
 import {ICliCommand} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";

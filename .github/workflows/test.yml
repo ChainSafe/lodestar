@@ -47,6 +47,8 @@ jobs:
         run: ./lodestar --version
       - name: Check Types
         run: yarn run check-types
+      - name: README check
+        run: yarn run check-readme
       - name: Lint
         run: yarn lint
       - name: Unit tests
@@ -57,5 +59,3 @@ jobs:
         run: yarn test:e2e
         env:
           GOERLI_RPC_URL: ${{ secrets.GOERLI_RPC_URL!=0 && secrets.GOERLI_RPC_URL || env.GOERLI_RPC_DEFAULT_URL }}
-      - name: README check
-        run: yarn run check-readme

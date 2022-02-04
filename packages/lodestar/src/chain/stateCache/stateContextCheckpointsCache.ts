@@ -1,6 +1,6 @@
 import {toHexString} from "@chainsafe/ssz";
-import {phase0, Epoch, allForks, RootHex} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, Epoch, RootHex} from "@chainsafe/lodestar-types";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
@@ -16,7 +16,7 @@ const MAX_EPOCHS = 10;
  * Similar API to Repository
  */
 export class CheckpointStateCache {
-  private readonly cache: MapTracker<string, CachedBeaconState<allForks.BeaconState>>;
+  private readonly cache: MapTracker<string, CachedBeaconStateAllForks>;
   /** Epoch -> Set<blockRoot> */
   private readonly epochIndex = new MapDef<Epoch, Set<string>>(() => new Set<string>());
   private readonly metrics: IMetrics["cpStateCache"] | null | undefined;
@@ -32,7 +32,7 @@ export class CheckpointStateCache {
     }
   }
 
-  get(cp: CheckpointHex): CachedBeaconState<allForks.BeaconState> | null {
+  get(cp: CheckpointHex): CachedBeaconStateAllForks | null {
     this.metrics?.lookups.inc();
     const cpKey = toCheckpointKey(cp);
     const item = this.cache.get(cpKey);
@@ -45,7 +45,7 @@ export class CheckpointStateCache {
     return item ? item.clone() : null;
   }
 
-  add(cp: phase0.Checkpoint, item: CachedBeaconState<allForks.BeaconState>): void {
+  add(cp: phase0.Checkpoint, item: CachedBeaconStateAllForks): void {
     const cpHex = toCheckpointHex(cp);
     const key = toCheckpointKey(cpHex);
     if (this.cache.has(key)) {
@@ -59,7 +59,7 @@ export class CheckpointStateCache {
   /**
    * Searches for the latest cached state with a `root`, starting with `epoch` and descending
    */
-  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconState<allForks.BeaconState> | null {
+  getLatest(rootHex: RootHex, maxEpoch: Epoch): CachedBeaconStateAllForks | null {
     // sort epochs in descending order, only consider epochs lte `epoch`
     const epochs = Array.from(this.epochIndex.keys())
       .sort((a, b) => b - a)

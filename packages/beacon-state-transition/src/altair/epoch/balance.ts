@@ -1,4 +1,3 @@
-import {allForks, altair} from "@chainsafe/lodestar-types";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   INACTIVITY_PENALTY_QUOTIENT_ALTAIR,
@@ -10,15 +9,14 @@ import {
   WEIGHT_DENOMINATOR,
   ForkName,
 } from "@chainsafe/lodestar-params";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 import {
-  CachedBeaconState,
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
   hasMarkers,
-  IEpochProcess,
-} from "../../allForks/util";
+} from "../../allForks";
 import {isInInactivityLeak, newZeroedArray} from "../../util";
 
 interface IRewardPenaltyItem {
@@ -44,7 +42,7 @@ interface IRewardPenaltyItem {
  *   - eligibleAttester:   98%
  */
 export function getRewardsPenaltiesDeltas(
-  state: CachedBeaconState<altair.BeaconState>,
+  state: CachedBeaconStateAltair,
   process: IEpochProcess
 ): [number[], number[]] {
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
@@ -53,7 +51,7 @@ export function getRewardsPenaltiesDeltas(
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  const isInInactivityLeakBn = isInInactivityLeak(state as CachedBeaconState<allForks.BeaconState>);
+  const isInInactivityLeakBn = isInInactivityLeak(state as CachedBeaconStateAllForks);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32000000000, 31000000000, 30000000000
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();

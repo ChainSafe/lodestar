@@ -1,5 +1,11 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
-import {allForks, altair, CachedBeaconState, computeStartSlotAtEpoch} from "../../../../src";
+import {
+  allForks,
+  altair,
+  computeStartSlotAtEpoch,
+  CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
+} from "../../../../src";
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {StateEpoch} from "../../types";
 import {altairState} from "../../params";
@@ -21,10 +27,10 @@ describe(`altair processEpoch - ${stateId}`, () => {
   itBench({
     id: `altair processEpoch - ${stateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
-    beforeEach: () => stateOg.value.clone() as CachedBeaconState<allForks.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAllForks,
     fn: (state) => {
       const epochProcess = allForks.beforeProcessEpoch(state);
-      altair.processEpoch(state as CachedBeaconState<altair.BeaconState>, epochProcess);
+      altair.processEpoch(state as CachedBeaconStateAltair, epochProcess);
       allForks.afterProcessEpoch(state, epochProcess);
       // Simulate root computation through the next block to account for changes
       state.hashTreeRoot();
@@ -39,13 +45,10 @@ describe(`altair processEpoch - ${stateId}`, () => {
   });
 });
 
-function benchmarkAltairEpochSteps(
-  stateOg: LazyValue<allForks.CachedBeaconState<allForks.BeaconState>>,
-  stateId: string
-): void {
+function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>, stateId: string): void {
   const epochProcess = beforeValue(() => allForks.beforeProcessEpoch(stateOg.value));
 
-  // const getPerfState = (): CachedBeaconState<altair.BeaconState> => {
+  // const getPerfState = (): CachedBeaconStateAltair => {
   //   const state = originalState.clone();
   //   state.setStateCachesAsTransient();
   //   return state;
@@ -87,13 +90,13 @@ function benchmarkAltairEpochSteps(
 
   itBench({
     id: `${stateId} - altair processInactivityUpdates`,
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => altair.processInactivityUpdates(state, epochProcess.value),
   });
 
   itBench({
     id: `${stateId} - altair processRewardsAndPenalties`,
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => altair.processRewardsAndPenalties(state, epochProcess.value),
   });
 
@@ -107,7 +110,7 @@ function benchmarkAltairEpochSteps(
   // TODO: Needs a better state to test with, current does not include enough actions: 39.985 us/op
   itBench({
     id: `${stateId} - altair processSlashings`,
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => altair.processSlashings(state, epochProcess.value),
   });
 
@@ -143,14 +146,14 @@ function benchmarkAltairEpochSteps(
 
   itBench({
     id: `${stateId} - altair processParticipationFlagUpdates`,
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => altair.processParticipationFlagUpdates(state),
   });
 
   itBench({
     id: `${stateId} - altair processSyncCommitteeUpdates`,
     convergeFactor: 1 / 100, // Very unstable make it converge faster
-    beforeEach: () => stateOg.value.clone() as allForks.CachedBeaconState<altair.BeaconState>,
+    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAltair,
     fn: (state) => altair.processSyncCommitteeUpdates(state, epochProcess.value),
   });
 
@@ -160,7 +163,7 @@ function benchmarkAltairEpochSteps(
     before: () => {
       const state = stateOg.value.clone();
       const epochProcessAfter = allForks.beforeProcessEpoch(state);
-      altair.processEpoch(state as CachedBeaconState<altair.BeaconState>, epochProcessAfter);
+      altair.processEpoch(state as CachedBeaconStateAltair, epochProcessAfter);
       return {state, epochProcess: epochProcessAfter};
     },
     beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),

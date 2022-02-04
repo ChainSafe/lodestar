@@ -4,13 +4,13 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {
   phase0,
   createCachedBeaconState,
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeDomain,
   computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedChain} from "../../../utils/stub";
@@ -26,7 +26,7 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 describe("validate voluntary exit", () => {
   const sandbox = sinon.createSandbox();
   let chainStub: StubbedChain;
-  let state: CachedBeaconState<allForks.BeaconState>;
+  let state: CachedBeaconStateAllForks;
   let signedVoluntaryExit: phase0.SignedVoluntaryExit;
   let opPool: OpPool & SinonStubbedInstance<OpPool>;
 

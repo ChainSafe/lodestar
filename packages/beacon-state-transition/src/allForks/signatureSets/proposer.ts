@@ -2,10 +2,10 @@ import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {allForks} from "@chainsafe/lodestar-types";
 import {computeSigningRoot} from "../../util";
 import {ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util/signatureSets";
-import {CachedBeaconState} from "../util";
+import {CachedBeaconStateAllForks} from "../../types";
 
 export function verifyProposerSignature(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): boolean {
   const signatureSet = getProposerSignatureSet(state, signedBlock);
@@ -13,7 +13,7 @@ export function verifyProposerSignature(
 }
 
 export function getProposerSignatureSet(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet {
   const {config, epochCtx} = state;

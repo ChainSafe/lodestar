@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {expect} from "chai";
 import {phase0, Uint64, Root, ssz, allForks, bellatrix} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";

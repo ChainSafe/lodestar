@@ -102,10 +102,10 @@ export async function prepareUpdateNaive(
   const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
-    attestedHeader: finalizedCheckpointBlockHeader,
+    attestedHeader: syncAttestedBlockHeader,
     nextSyncCommittee: finalizedCheckpointState.nextSyncCommittee,
     nextSyncCommitteeBranch: nextSyncCommitteeBranch,
-    finalizedHeader: syncAttestedBlockHeader,
+    finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
     syncCommitteeAggregate: syncAggregate,
     forkVersion: syncAttestedForkVersion,

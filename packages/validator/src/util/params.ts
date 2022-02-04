@@ -1,20 +1,18 @@
-import {ChainConfig, IChainConfig} from "@chainsafe/lodestar-config";
+import {IChainConfig, chainConfigToJson} from "@chainsafe/lodestar-config";
 
 export class NotEqualParamsError extends Error {}
 
 /**
- * Assert that two IBeaconParams are identical. Throws error otherwise
+ * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
  */
-export function assertEqualParams(currentParams: IChainConfig, expectedParams: IChainConfig): void {
-  const params1Json = ChainConfig.toJson(currentParams) as Record<string, unknown>;
-  const params2Json = ChainConfig.toJson(expectedParams) as Record<string, unknown>;
-  const keys = new Set([...Object.keys(params1Json), ...Object.keys(params2Json)]);
+export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: Record<string, string>): void {
+  const params1Json = chainConfigToJson(localConfig) as Record<string, unknown>;
+  const params2Json = externalSpecJson;
 
   const errors: string[] = [];
 
-  for (const key of keys) {
-    if (!params1Json[key]) errors.push(`${key} not in current params`);
-    if (!params2Json[key]) errors.push(`${key} not in expected params`);
+  // Ensure only that the localConfig values match the remote spec
+  for (const key of Object.keys(params1Json)) {
     if (params1Json[key] !== params2Json[key])
       errors.push(`${key} different value: ${params1Json[key]} != ${params2Json[key]}`);
   }

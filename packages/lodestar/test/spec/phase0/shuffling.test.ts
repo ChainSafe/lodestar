@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {Uint64} from "@chainsafe/lodestar-types";

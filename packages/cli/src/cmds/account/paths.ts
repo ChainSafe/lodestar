@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import {IGlobalArgs} from "../../options";
 import {IGlobalPaths, getGlobalPaths} from "../../paths/global";
 

@@ -1,5 +1,5 @@
 import {SignerType, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {readdirSync} from "fs";
+import {readdirSync} from "node:fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import inquirer from "inquirer";
 import {ICliCommand, initBLS} from "../../../../util";

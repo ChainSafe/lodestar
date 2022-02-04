@@ -62,4 +62,30 @@ describe("getCommonAncestor", () => {
       expect(ancestorNode && ancestorNode.blockRoot).to.equal(ancestor);
     });
   }
+
+  const deltas = Array.from({length: fc.nodes.length}, () => 0);
+  fc.applyScoreChanges({
+    deltas,
+    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    justifiedEpoch: 0,
+    justifiedRoot: "-",
+    finalizedEpoch: 0,
+    finalizedRoot: "-",
+  });
+  const weightsAfterCall1 = fc.nodes.map((nrow) => nrow.weight);
+
+  const deltasNew = Array.from({length: fc.nodes.length}, () => 0);
+  fc.applyScoreChanges({
+    deltas: deltasNew,
+    proposerBoost: {root: blocks[blocks.length - 1].root, score: 34},
+    justifiedEpoch: 0,
+    justifiedRoot: "-",
+    finalizedEpoch: 0,
+    finalizedRoot: "-",
+  });
+  const weightsAfterCall2 = fc.nodes.map((nrow) => nrow.weight);
+
+  // multiple calls to applyScoreChanges don't keep on adding boosts to weight over
+  // and over again, and applyScoreChanges can be safely called after onAttestations
+  expect(weightsAfterCall1).to.deep.equal(weightsAfterCall2);
 });

@@ -1,6 +1,6 @@
 import {FAR_FUTURE_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconState} from "../util";
+import {phase0} from "@chainsafe/lodestar-types";
+import {CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Initiate the exit of the validator with index ``index``.
@@ -22,10 +22,7 @@ import {CachedBeaconState} from "../util";
  * ```
  * Forcing consumers to pass the SubTree of `validator` directly mitigates this issue.
  */
-export function initiateValidatorExit(
-  state: CachedBeaconState<allForks.BeaconState>,
-  validator: phase0.Validator
-): void {
+export function initiateValidatorExit(state: CachedBeaconStateAllForks, validator: phase0.Validator): void {
   const {config, epochCtx} = state;
 
   // return if validator already initiated exit

@@ -64,12 +64,16 @@ jobs:
         # --force-publish: 
         #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages 
         #   to publish"
+        # --exact
+        #   lerna will link the dependencies of monorepo packages without ^ operator as npm 
+        #   is apparently bad at resolving ^ dependencies of the canary versions. For e.g
+        #   @chainsafe/lodestar-cli@^0.34.0-dev.4 resolves to => 0.34.0
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
           node_modules/.bin/lerna publish --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset --force-publish \
-          --preid dev
+          --preid dev --exact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Get version

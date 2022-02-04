@@ -1,7 +1,6 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconState, IEpochProcess} from "../../allForks/util";
+import {CachedBeaconStatePhase0, IEpochProcess} from "../../types";
 import {getAttestationDeltas} from "./getAttestationDeltas";
 
 /**
@@ -10,10 +9,7 @@ import {getAttestationDeltas} from "./getAttestationDeltas";
  * PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags
  * are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*
  */
-export function processRewardsAndPenalties(
-  state: CachedBeaconState<phase0.BeaconState>,
-  epochProcess: IEpochProcess
-): void {
+export function processRewardsAndPenalties(state: CachedBeaconStatePhase0, epochProcess: IEpochProcess): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (epochProcess.currentEpoch === GENESIS_EPOCH) {
     return;

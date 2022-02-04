@@ -1,8 +1,12 @@
-import * as constants from "../../src";
-import {ssz} from "@chainsafe/lodestar-types";
+import * as constants from "@chainsafe/lodestar-params";
+import {ssz} from "../../src";
 import {expect} from "chai";
 
 /* eslint-disable @typescript-eslint/naming-convention */
+
+// NOTE: This test is here and not in lodestar-params, to prevent lodestar-params depending on SSZ
+// Since lodestar-params and lodestar-types are in the same mono-repo, running this test here is enough
+// guarantee that these constants are correct.
 
 describe("Lightclient pre-computed constants", () => {
   const FINALIZED_ROOT_GINDEX = Number(ssz.altair.BeaconState.getPathGindex(["finalizedCheckpoint", "root"]));

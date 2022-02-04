@@ -1,14 +1,14 @@
 import {DOMAIN_CONTRIBUTION_AND_PROOF} from "@chainsafe/lodestar-params";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   computeSigningRoot,
   ISignatureSet,
   SignatureSetType,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getContributionAndProofSignatureSet(
-  state: CachedBeaconState<allForks.BeaconState>,
+  state: CachedBeaconStateAllForks,
   signedContributionAndProof: altair.SignedContributionAndProof
 ): ISignatureSet {
   const {epochCtx} = state;

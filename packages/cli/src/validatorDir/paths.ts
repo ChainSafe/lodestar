@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import {add0xPrefix} from "../util/format";
 
 export const VOTING_KEYSTORE_FILE = "voting-keystore.json";

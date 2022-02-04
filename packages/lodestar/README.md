@@ -21,10 +21,6 @@ You will need to go over the [specification](https://github.com/ethereum/eth2.0-
 - Quickly try out the whole stack by [starting a local testnet](https://chainsafe.github.io/lodestar/usage).
 - View the [typedoc code docs](https://chainsafe.github.io/lodestar/packages).
 
-## Architecture Overview
-
-see [Beacon Node Module Architecture](https://chainsafe.github.io/lodestar/design/architecture/)
-
 ## Contributors
 
 Read our [contributors document](/CONTRIBUTING.md), [submit an issue](https://github.com/ChainSafe/lodestar/issues/new/choose) or talk to us on our [discord](https://discord.gg/yjyvFRP)!

@@ -1,58 +1,79 @@
 # Local testnet
 
-To quickly test and run Lodestar we recommend to start a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators
+To quickly test and run Lodestar we recommend starting a local testnet. We recommend a simple configuration of two beacon nodes with multiple validators
 
 **Terminal 1**
 
-Run a beacon node with 8 validators and default settings. State will be written to .tmp/state.ssz
+Run a beacon node, with 8 validators with the following command. 
 
 ```bash
-./lodestar dev --genesisValidators 8 --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
 ```
+
+`--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where 
+lodestar should store the beacon state, `--enr.ip` sets the enr ip entry for the node while the `--reset` flag ensures the state is cleared on each restart - which is useful when testing locally.
+
+Once the node has started, make a request to `curl http://localhost:9596/eth/v1/node/identity` and copy the `enr` value. 
+
+This would be used to connect from the second node.
+
+> enr stands for ethereum node records, which is a format for conveying p2p connectivity information for ethereum nodes.
+> For more info see [eip-778](https://eips.ethereum.org/EIPS/eip-778)
 
 **Terminal 2**
 
-Connect to bootnode (node 1 default multiaddrs) but without starting validators.
+Start the second node without starting any validators and connect to the first node by supplying the copied `enr` value:
 
 ```bash
 ./lodestar dev --startValidators 0:0 \
-  --genesisStateFile ./dev/genesis.ssz \
-  --network.localMultiaddrs /ip4/127.0.0.1/tcp/30607 \
-  --sync.minPeers 1
+  --genesisValidators 8 --genesisTime 1578787200 \
+  --rootDir /path/to/node2 \
+  --port 9001 \
+  --api.rest.port 9597 \
+  --network.connectToDiscv5Bootnodes true \
+  --network.discv5.bootEnrs <enr value>
+  --reset
 ```
 
----
+By default, lodestar starts as many validators as the number supplied by `--genesisValidators`. In other to not start any validator, this is overridden by
+the `--startValidators` option. Passing a value of `0:0` means no validators should be started.
 
-Once both instances are running you should see an output similar to this
+Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in other for the two nodes
+to have the same beacon chain. 
 
-**Terminal 1**
+Finally `--port` and `--api.rest.port` are supplied since the default values will already be in use by the first node.
 
-```bash
-2020-06-21 16:42:40  [SYNC]             warn: Current peerCount=0, required = 2
-2020-06-21 16:42:43  [SYNC]             warn: Current peerCount=0, required = 2
-2020-06-21 16:42:43  [VALIDATOR 7]      info: Validator is proposer at slot 9
-2020-06-21 16:42:43  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x3223a51b51fa4f42ea2281e8580806907a8e69f490cfe12a380b8e8b41b21d27, slot=9, epoch=1
-2020-06-21 16:42:43  [VALIDATOR 7]      info: Proposed block with hash 0x3223a51b51fa4f42ea2281e8580806907a8e69f490cfe12a380b8e8b41b21d27 and slot 9
-2020-06-21 16:42:46  [SYNC]             warn: Current peerCount=1, required = 2
-2020-06-21 16:42:49  [SYNC]             warn: Current peerCount=1, required = 2
-2020-06-21 16:42:49  [VALIDATOR 6]      info: Validator is proposer at slot 10
-2020-06-21 16:42:49  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x7c3a77ad892ca631b750b988277a6caca9cc011461e326537fb607c94359b95f, slot=10, epoch=1
-2020-06-21 16:42:49  [VALIDATOR 6]      info: Proposed block with hash 0x7c3a77ad892ca631b750b988277a6caca9cc011461e326537fb607c94359b95f and slot 10
-2020-06-21 16:42:52  [SYNC]             warn: Current peerCount=1, required = 2
-2020-06-21 16:42:55  [SYNC]             warn: Current peerCount=1, required = 2
-2020-06-21 16:42:55  [VALIDATOR 2]      info: Validator is proposer at slot 11
-2020-06-21 16:42:55  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x74e96be4058e0edec26028c2f727b30dbc05e12c3f29f364e487916e16777f4a, slot=11, epoch=1
-2020-06-21 16:42:55  [VALIDATOR 2]      info: Proposed block with hash 0x74e96be4058e0edec26028c2f727b30dbc05e12c3f29f364e487916e16777f4a and slot 11
+The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet. 
+The exact enr of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.
+
+Once the second node starts, you should see an output similar to the following in either of the terminals:
+
+```
+Eph 167991/6 6.007 []  info: Searching peers - peers: 1 - slot: 5375718 (skipped 5375718) - head: 0 0xcc67…3345 - finalized: 0x0000…0000:0
 ```
 
-**Terminal 2**
+For further confirmation that both nodes are connected as peers, make a request to the `/eth/v1/node/peers` endpoint. 
 
-```bash
-2020-06-21 16:42:49  [SYNC]             info: Sync caught up to latest slot 9
-2020-06-21 16:42:49  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x7c3a77ad892ca631b750b988277a6caca9cc011461e326537fb607c94359b95f, slot=10, epoch=1
-2020-06-21 16:42:56  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x74e96be4058e0edec26028c2f727b30dbc05e12c3f29f364e487916e16777f4a, slot=11, epoch=1
-2020-06-21 16:43:01  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x75ff1e7143acead878913a516c87f620022e178298e7a7f4a9485fd731bc7128, slot=12, epoch=1
-2020-06-21 16:43:07  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x250da6f5ebad021894eb07824b535c3442fe0f7a67949f266d46ffa6b5a18b76, slot=13, epoch=1
-2020-06-21 16:43:13  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x2e90c4a2cea722cb8bfccdfe3b73a4211e7a21d07075d11307626d8b048b9074, slot=14, epoch=1
-2020-06-21 16:43:19  [CHAIN]            info: Processed new chain head newChainHeadRoot=0x03fcff4f23de519c1e294f6b1256d194199c107c56b4466efed6bfab8d6e7e92, slot=15, epoch=1
+For example, making the request on the first node via the following command: 
+
+`curl http://localhost:9596/eth/v1/node/peers | jq`
+
+will give a result similar to the following:
+
+```
+
+{
+  "data": [
+    {
+      "peer_id": "...",
+      "enr": "",
+      "last_seen_p2p_address": "....",
+      "direction": "inbound",
+      "state": "connected"
+    }
+  ],
+  "meta": {
+    "count": 1
+  }
+}
 ```

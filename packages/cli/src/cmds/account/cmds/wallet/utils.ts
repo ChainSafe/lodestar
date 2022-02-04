@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import {IGlobalArgs} from "../../../../options";
 import {YargsError, writeFile600Perm, randomPassword, readPassphraseFile} from "../../../../util";
 import {WalletManager} from "../../../../wallet";

@@ -5122,7 +5122,7 @@ fast-url-parser@^1.1.3:
   dependencies:
     punycode "^1.3.2"
 
-fastify-bearer-auth@6.0.1:
+fastify-bearer-auth@6.1.0:
   version "6.1.0"
   resolved "https://registry.yarnpkg.com/fastify-bearer-auth/-/fastify-bearer-auth-6.1.0.tgz#906780002e32b556fbc3dce3e14861896812fd32"
   integrity sha512-qplgYoQ1OipyAMwSlAQVxEhlRnBtYukF6sLmxmfBqFgCdHPkvpZ0gL/AsQfpKFt31wlq4fuHZIymMNaWHVfgcA==

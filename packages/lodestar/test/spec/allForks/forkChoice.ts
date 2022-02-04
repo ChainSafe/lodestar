@@ -1,11 +1,11 @@
-import {join} from "path";
+import {join} from "node:path";
 import {expect} from "chai";
 import {
   createCachedBeaconState,
   phase0,
   allForks,
   computeEpochAtSlot,
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   ZERO_HASH,
   getEffectiveBalances,
   computeStartSlotAtEpoch,
@@ -22,7 +22,7 @@ import {
 import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
@@ -46,15 +46,19 @@ export function forkChoiceTest(fork: ForkName): void {
         let state = createCachedBeaconState(config, tbState);
 
         const emitter = new ChainEventEmitter();
-        const forkchoice = initializeForkChoice(config, emitter, currentSlot, state);
+        const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
 
         const checkpointStateCache = new CheckpointStateCache({});
-        const stateCache = new Map<string, CachedBeaconState<allForks.BeaconState>>();
+        const stateCache = new Map<string, CachedBeaconStateAllForks>();
         cacheState(state, stateCache);
+
+        /** This is to track test's tickTime to be used in proposer boost */
+        let tickTime = 0;
 
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
-            forkchoice.updateTime(Number(step.tick) / config.SECONDS_PER_SLOT);
+            tickTime = Number(step.tick);
+            forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT));
           }
 
           // attestation step
@@ -73,7 +77,8 @@ export function forkChoiceTest(fork: ForkName): void {
               continue;
               // should not throw error, on_block_bad_parent_root test wants this
             }
-            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache);
+            const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
+            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
             cacheState(state, stateCache);
           }
 
@@ -85,18 +90,29 @@ export function forkChoiceTest(fork: ForkName): void {
               justifiedCheckpoint,
               finalizedCheckpoint,
               bestJustifiedCheckpoint,
+              proposerBoostRoot: expectedProposerBoostRoot,
             } = step.checks;
 
             // Forkchoice head is computed lazily only on request
             const head = forkchoice.updateHead();
+            const proposerBootRoot = forkchoice.getProposerBoostRoot();
 
-            expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-            expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
-
-            // time in spec mapped to Slot in our forkchoice implementation
+            if (expectedHead !== undefined) {
+              expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
+              expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+            }
+            if (expectedProposerBoostRoot !== undefined) {
+              expect(proposerBootRoot).to.be.equal(
+                expectedProposerBoostRoot,
+                `Invalid proposer boost root at step ${i}`
+              );
+            }
+            // time in spec mapped to Slot in our forkchoice implementation.
+            // Compare in slots because proposer boost steps doesn't always come on
+            // slot boundary.
             if (expectedTime !== undefined && expectedTime > 0)
-              expect(forkchoice.getTime() * config.SECONDS_PER_SLOT).to.be.equal(
-                Number(expectedTime),
+              expect(forkchoice.getTime()).to.be.equal(
+                Math.floor(Number(expectedTime) / config.SECONDS_PER_SLOT),
                 `Invalid forkchoice time at step ${i}`
               );
             if (justifiedCheckpoint) {
@@ -157,23 +173,18 @@ export function forkChoiceTest(fork: ForkName): void {
         timeout: 10000,
         // eslint-disable-next-line @typescript-eslint/no-empty-function
         expectFunc: () => {},
-        shouldSkip: (_testCase, name, _index) => {
-          // Proposer boost test cases
-          const ignoreTestsWithKeywords = ["proposer_boost", "shorter_chain_but_heavier_weight"];
-          const ignoreTest = ignoreTestsWithKeywords.reduce((acc, kword) => acc || name.includes(kword), false);
-          return ignoreTest;
-        },
       }
     );
   }
 }
 
 function runStateTranstion(
-  preState: CachedBeaconState<allForks.BeaconState>,
+  preState: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock,
   forkchoice: IForkChoice,
-  checkpointCache: CheckpointStateCache
-): CachedBeaconState<allForks.BeaconState> {
+  checkpointCache: CheckpointStateCache,
+  blockDelaySec: number
+): CachedBeaconStateAllForks {
   const preSlot = preState.slot;
   const postSlot = signedBlock.message.slot - 1;
   let preEpoch = computeEpochAtSlot(preSlot);
@@ -198,8 +209,8 @@ function runStateTranstion(
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
   let justifiedBalances: number[] = [];
+  const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
-    const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
     if (!justifiedState) {
       const epoch = postState.currentJustifiedCheckpoint.epoch;
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
@@ -208,7 +219,10 @@ function runStateTranstion(
     justifiedBalances = getEffectiveBalances(justifiedState);
   }
   try {
-    forkchoice.onBlock(signedBlock.message, postState, {justifiedBalances});
+    forkchoice.onBlock(signedBlock.message, postState, {
+      blockDelaySec,
+      justifiedBalances,
+    });
     for (const attestation of signedBlock.message.body.attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
@@ -221,10 +235,7 @@ function runStateTranstion(
   return postState;
 }
 
-function cacheCheckpointState(
-  checkpointState: CachedBeaconState<allForks.BeaconState>,
-  checkpointCache: CheckpointStateCache
-): void {
+function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
   const config = checkpointState.config;
   const slot = checkpointState.slot;
   if (slot % SLOTS_PER_EPOCH !== 0) {
@@ -241,10 +252,7 @@ function cacheCheckpointState(
   checkpointCache.add(cp, checkpointState);
 }
 
-function cacheState(
-  wrappedState: CachedBeaconState<allForks.BeaconState>,
-  stateCache: Map<string, CachedBeaconState<allForks.BeaconState>>
-): void {
+function cacheState(wrappedState: CachedBeaconStateAllForks, stateCache: Map<string, CachedBeaconStateAllForks>): void {
   const blockHeader = ssz.phase0.BeaconBlockHeader.clone(wrappedState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
     blockHeader.stateRoot = wrappedState.hashTreeRoot();
@@ -294,6 +302,7 @@ type Checks = {
     justifiedCheckpoint?: SpecTestCheckpoint;
     finalizedCheckpoint?: SpecTestCheckpoint;
     bestJustifiedCheckpoint?: SpecTestCheckpoint;
+    proposerBoostRoot?: RootHex;
   };
 };
 

@@ -1,6 +1,6 @@
 import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipActionError} from "./gossipValidation";
 
 export enum BlockErrorCode {
@@ -74,11 +74,11 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INCORRECT_PROPOSER; proposerIndex: ValidatorIndex}
   | {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID}
   | {code: BlockErrorCode.UNKNOWN_PROPOSER; proposerIndex: ValidatorIndex}
-  | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconState<allForks.BeaconState>}
+  | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
-      preState: CachedBeaconState<allForks.BeaconState>;
-      postState: CachedBeaconState<allForks.BeaconState>;
+      preState: CachedBeaconStateAllForks;
+      postState: CachedBeaconStateAllForks;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}

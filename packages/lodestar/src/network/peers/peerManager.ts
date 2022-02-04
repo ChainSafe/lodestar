@@ -54,6 +54,10 @@ export type PeerManagerOpts = {
    * If null, Don't run discv5 queries, nor connect to cached peers in the peerStore
    */
   discv5: IDiscv5DiscoveryInputOptions | null;
+  /**
+   * If set to true, connect to Discv5 bootnodes. If not set or false, do not connect
+   */
+  connectToDiscv5Bootnodes?: boolean;
 };
 
 export type PeerManagerModules = {
@@ -137,6 +141,7 @@ export class PeerManager {
         maxPeers: opts.maxPeers,
         discv5FirstQueryDelayMs: opts.discv5FirstQueryDelayMs,
         discv5: opts.discv5,
+        connectToDiscv5Bootnodes: opts.connectToDiscv5Bootnodes,
       });
 
     const {metrics} = modules;

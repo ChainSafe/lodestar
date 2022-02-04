@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import tmp from "tmp";
 
 const tmpDir = tmp.dirSync({unsafeCleanup: true});

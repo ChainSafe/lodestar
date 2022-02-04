@@ -3,8 +3,8 @@
  * at what commit was this src build. This is used in the metrics and to log initially.
  */
 
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 
 /**
  * WARNING!! If you change this path make sure to update:

@@ -4,9 +4,9 @@ import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {readFileSync} from "fs";
+import {readFileSync} from "node:fs";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify";
-import path from "path";
+import path from "node:path";
 
 describe("backfill sync - verify block sequence", function () {
   //mainnet validators root

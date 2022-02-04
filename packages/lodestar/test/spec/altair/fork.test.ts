@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -14,10 +14,7 @@ describeDirectorySpecTest<IUpgradeStateCase, altair.BeaconState>(
   `${ACTIVE_PRESET}/altair/fork/fork`,
   join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/altair/fork/fork/pyspec_tests`),
   (testcase) => {
-    const phase0State = allForks.createCachedBeaconState<phase0.BeaconState>(
-      config,
-      testcase.pre as TreeBacked<phase0.BeaconState>
-    );
+    const phase0State = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<phase0.BeaconState>);
     const altairState = altair.upgradeState(phase0State);
     // this test has a random slot so createCachedBeaconState is not able to create indexed sync committee
     const tbAltairState = altairState.type.createTreeBacked(altairState.tree);

@@ -2,7 +2,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
   getEffectiveBalances,
   bellatrix,
@@ -86,7 +86,11 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // current justified checkpoint should be prev epoch or current epoch if it's just updated
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
-  const onBlockPrecachedData: OnBlockPrecachedData = {executionStatus};
+
+  const onBlockPrecachedData: OnBlockPrecachedData = {
+    executionStatus,
+    blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
+  };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
@@ -267,9 +271,9 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
  */
 function getStateForJustifiedBalances(
   chain: ImportBlockModules,
-  postState: CachedBeaconState<allForks.BeaconState>,
+  postState: CachedBeaconStateAllForks,
   block: allForks.SignedBeaconBlock
-): CachedBeaconState<allForks.BeaconState> {
+): CachedBeaconStateAllForks {
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
   const checkpointHex = toCheckpointHex(justifiedCheckpoint);
   const checkpointSlot = computeStartSlotAtEpoch(checkpointHex.epoch);

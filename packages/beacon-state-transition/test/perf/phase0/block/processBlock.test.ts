@@ -8,7 +8,7 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@chainsafe/lodestar-params";
-import {allForks} from "../../../../src";
+import {allForks, CachedBeaconStateAllForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 import {BlockOpts, getBlockPhase0} from "./util";
 import {StateBlock} from "../../types";
@@ -101,7 +101,7 @@ describe("phase0 processBlock", () => {
     itBench<StateBlock, StateBlock>({
       id: `phase0 processBlock - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStatePhase0() as allForks.CachedBeaconState<allForks.BeaconState>;
+        const state = generatePerfTestCachedStatePhase0() as CachedBeaconStateAllForks;
         const block = getBlockPhase0(state, opts);
         state.hashTreeRoot();
         return {block, state};

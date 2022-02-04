@@ -1,11 +1,9 @@
-import {Json} from "@chainsafe/ssz";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {IChainConfig} from "./types";
-import {ChainConfig} from "./sszTypes";
 import {defaultChainConfig} from "./default";
 
+export {chainConfigToJson, chainConfigFromJson} from "./json";
 export * from "./types";
-export * from "./sszTypes";
 export * from "./default";
 
 /**
@@ -25,22 +23,5 @@ export function createIChainConfig(input: Partial<IChainConfig>): IChainConfig {
       `Can only create a config for the active preset: ACTIVE_PRESET=${ACTIVE_PRESET} PRESET_BASE=${config.PRESET_BASE}`
     );
   }
-  return config;
-}
-
-export function parsePartialIChainConfigJson(input?: Record<string, unknown>): Partial<IChainConfig> {
-  if (!input) {
-    return {};
-  }
-
-  const config = {};
-
-  // Parse config input values, if they exist
-  for (const [fieldName, fieldType] of Object.entries(ChainConfig.fields)) {
-    if (input[fieldName] != null) {
-      (config as Record<string, unknown>)[fieldName] = fieldType.fromJson(input[fieldName] as Json);
-    }
-  }
-
   return config;
 }

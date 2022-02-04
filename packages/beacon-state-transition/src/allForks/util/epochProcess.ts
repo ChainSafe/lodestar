@@ -1,4 +1,4 @@
-import {Epoch, ValidatorIndex, phase0, allForks} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex, allForks, phase0} from "@chainsafe/lodestar-types";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
@@ -261,19 +261,20 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   );
 
   if (forkName === ForkName.phase0) {
+    const statePhase0 = (state as unknown) as CachedBeaconState<phase0.BeaconState>;
     statusProcessEpoch(
-      state,
+      statePhase0,
       statuses,
-      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).previousEpochAttestations,
+      statePhase0.previousEpochAttestations,
       prevEpoch,
       FLAG_PREV_SOURCE_ATTESTER,
       FLAG_PREV_TARGET_ATTESTER,
       FLAG_PREV_HEAD_ATTESTER
     );
     statusProcessEpoch(
-      state,
+      statePhase0,
       statuses,
-      ((state as unknown) as CachedBeaconState<phase0.BeaconState>).currentEpochAttestations,
+      statePhase0.currentEpochAttestations,
       currentEpoch,
       FLAG_CURR_SOURCE_ATTESTER,
       FLAG_CURR_TARGET_ATTESTER,

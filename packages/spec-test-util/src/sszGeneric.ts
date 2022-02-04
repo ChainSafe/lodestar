@@ -1,5 +1,5 @@
-import {join} from "path";
-import {readFileSync, readdirSync} from "fs";
+import {join} from "node:path";
+import {readFileSync, readdirSync} from "node:fs";
 import {fromHexString, Json, Type} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
 import {loadYamlFile} from "./util";

@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import net from "net";
 import {spawn} from "child_process";
 import {Context} from "mocha";

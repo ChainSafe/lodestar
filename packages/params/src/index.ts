@@ -1,11 +1,13 @@
-import {PresetName} from "./preset";
+import {PresetName} from "./presetName";
 import {preset as mainnet} from "./presets/mainnet";
 import {preset as minimal} from "./presets/minimal";
 import {presetStatus} from "./presetStatus";
 import {userSelectedPreset} from "./setPreset";
 
-export * from "./preset";
+export * from "./interface";
 export {ForkName} from "./forkName";
+export {presetToJson} from "./json";
+export {PresetName};
 
 const presets = {
   [PresetName.mainnet]: mainnet,
@@ -23,7 +25,7 @@ presetStatus.frozen = true;
  *
  * The active preset can be manually overridden with `setActivePreset`
  */
-export const ACTIVE_PRESET: PresetName =
+export const ACTIVE_PRESET =
   userSelectedPreset || PresetName[process?.env?.LODESTAR_PRESET as PresetName] || PresetName.mainnet;
 export const activePreset = presets[ACTIVE_PRESET];
 
@@ -186,3 +188,4 @@ export const NEXT_SYNC_COMMITTEE_INDEX = 23;
  * Optimistic sync
  */
 export const SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY = 128;
+export const INTERVALS_PER_SLOT = 3;

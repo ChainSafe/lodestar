@@ -1,5 +1,5 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {GENESIS_SLOT, INTERVALS_PER_SLOT} from "@chainsafe/lodestar-params";
 import {Number64, Slot, Epoch} from "@chainsafe/lodestar-types";
 import {computeStartSlotAtEpoch, computeEpochAtSlot} from ".";
 
@@ -19,4 +19,9 @@ export function computeSlotsSinceEpochStart(slot: Slot, epoch?: Epoch): number {
 
 export function computeTimeAtSlot(config: IChainConfig, slot: Slot, genesisTime: Number64): Number64 {
   return genesisTime + slot * config.SECONDS_PER_SLOT;
+}
+
+export function getCurrentInterval(config: IChainConfig, genesisTime: Number64, secondsIntoSlot: number): number {
+  const timePerInterval = Math.floor(config.SECONDS_PER_SLOT / INTERVALS_PER_SLOT);
+  return Math.floor(secondsIntoSlot / timePerInterval);
 }

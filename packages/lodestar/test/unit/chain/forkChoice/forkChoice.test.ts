@@ -10,7 +10,7 @@ import {
   computeEpochAtSlot,
   getTemporaryBlockHeader,
   phase0,
-  CachedBeaconState,
+  CachedBeaconStateAllForks,
   createCachedBeaconState,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
@@ -37,7 +37,7 @@ describe("LodestarForkChoice", function () {
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
-  let state: CachedBeaconState<allForks.BeaconState>;
+  let state: CachedBeaconStateAllForks;
 
   before(() => {
     state = createCachedBeaconState(config, anchorState);
@@ -46,7 +46,7 @@ describe("LodestarForkChoice", function () {
   beforeEach(() => {
     const emitter = new ChainEventEmitter();
     const currentSlot = 40;
-    forkChoice = initializeForkChoice(config, emitter, currentSlot, state);
+    forkChoice = initializeForkChoice(config, emitter, currentSlot, state, false);
   });
 
   describe("forkchoice", function () {
@@ -73,7 +73,7 @@ describe("LodestarForkChoice", function () {
       forkChoice.updateTime(childBlock.message.slot);
       // 3 validators involved
       const justifiedBalances = [1, 2, 3];
-      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances});
+      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       let head = forkChoice.getHead();
       expect(head.slot).to.be.equal(orphanedBlock.message.slot);
@@ -134,12 +134,12 @@ describe("LodestarForkChoice", function () {
       forkChoice.updateTime(128);
       // 3 validators involved
       const justifiedBalances = [1, 2, 3];
-      forkChoice.onBlock(block08.message, state08, {justifiedBalances});
-      forkChoice.onBlock(block12.message, state12, {justifiedBalances});
-      forkChoice.onBlock(block16.message, state16, {justifiedBalances});
-      forkChoice.onBlock(block20.message, state20, {justifiedBalances});
-      forkChoice.onBlock(block24.message, state24, {justifiedBalances});
-      forkChoice.onBlock(block28.message, state28, {justifiedBalances});
+      forkChoice.onBlock(block08.message, state08, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block12.message, state12, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block16.message, state16, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block20.message, state20, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block24.message, state24, {justifiedBalances, blockDelaySec: 0});
+      forkChoice.onBlock(block28.message, state28, {justifiedBalances, blockDelaySec: 0});
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         3,
         "getAllAncestorBlocks should return 3 blocks"
@@ -152,7 +152,7 @@ describe("LodestarForkChoice", function () {
       expect(forkChoice.getBlockHex(hashBlock(block12.message))).to.be.not.null;
       expect(forkChoice.hasBlockHex(hashBlock(block08.message))).to.be.true;
       expect(forkChoice.hasBlockHex(hashBlock(block12.message))).to.be.true;
-      forkChoice.onBlock(block32.message, state32, {justifiedBalances});
+      forkChoice.onBlock(block32.message, state32, {justifiedBalances, blockDelaySec: 0});
       forkChoice.prune(hashBlock(block16.message));
       expect(forkChoice.getAllAncestorBlocks(hashBlock(block16.message)).length).to.be.equal(
         0,
@@ -186,7 +186,7 @@ describe("LodestarForkChoice", function () {
       forkChoice.updateTime(35);
       // 3 validators involved
       const justifiedBalances = [1, 2, 3];
-      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances});
+      forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       forkChoice.onBlock(parentBlock.message, parentState);
       forkChoice.onBlock(childBlock.message, childState);
