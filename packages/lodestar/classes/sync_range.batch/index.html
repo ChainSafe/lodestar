@@ -489,7 +489,7 @@ downloaded.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Batch</strong>(<code>startEpoch</code>: Epoch, <code>config</code>: IChainForkConfig, <code>opts</code>: <a href="../../modules/sync_range/#batchopts">BatchOpts</a>): <em><a href="./">Batch</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L78">packages/lodestar/src/sync/range/batch.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L78">packages/lodestar/src/sync/range/batch.ts:78</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -517,41 +517,41 @@ downloaded.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L78">packages/lodestar/src/sync/range/batch.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L78">packages/lodestar/src/sync/range/batch.ts:78</a></em></p>
 <hr/>
 <h3 id="readonly-executionerrorattempts"><code>Readonly</code> executionErrorAttempts<a class="headerlink" href="#readonly-executionerrorattempts" title="Permanent link">¶</a></h3>
 <p>• <strong>executionErrorAttempts</strong>: <em><a href="../../modules/sync_range/#attempt">Attempt</a>[]</em> = []</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L75">packages/lodestar/src/sync/range/batch.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L75">packages/lodestar/src/sync/range/batch.ts:75</a></em></p>
 <p>The <code>Attempts</code> that have been made and failed because of execution malfunction.</p>
 <hr/>
 <h3 id="private-readonly-faileddownloadattempts"><code>Private</code> <code>Readonly</code> failedDownloadAttempts<a class="headerlink" href="#private-readonly-faileddownloadattempts" title="Permanent link">¶</a></h3>
 <p>• <strong>failedDownloadAttempts</strong>: <em>PeerId[]</em> = []</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L77">packages/lodestar/src/sync/range/batch.ts:77</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L77">packages/lodestar/src/sync/range/batch.ts:77</a></em></p>
 <p>The number of download retries this batch has undergone due to a failed request.</p>
 <hr/>
 <h3 id="readonly-failedprocessingattempts"><code>Readonly</code> failedProcessingAttempts<a class="headerlink" href="#readonly-failedprocessingattempts" title="Permanent link">¶</a></h3>
 <p>• <strong>failedProcessingAttempts</strong>: <em><a href="../../modules/sync_range/#attempt">Attempt</a>[]</em> = []</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L73">packages/lodestar/src/sync/range/batch.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L73">packages/lodestar/src/sync/range/batch.ts:73</a></em></p>
 <p>The <code>Attempts</code> that have been made and failed to send us this batch.</p>
 <hr/>
 <h3 id="readonly-request"><code>Readonly</code> request<a class="headerlink" href="#readonly-request" title="Permanent link">¶</a></h3>
 <p>• <strong>request</strong>: <em>BeaconBlocksByRangeRequest</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L71">packages/lodestar/src/sync/range/batch.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L71">packages/lodestar/src/sync/range/batch.ts:71</a></em></p>
 <p>BeaconBlocksByRangeRequest</p>
 <hr/>
 <h3 id="readonly-startepoch"><code>Readonly</code> startEpoch<a class="headerlink" href="#readonly-startepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>startEpoch</strong>: <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L67">packages/lodestar/src/sync/range/batch.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L67">packages/lodestar/src/sync/range/batch.ts:67</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="downloadingerror">downloadingError<a class="headerlink" href="#downloadingerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>downloadingError</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L129">packages/lodestar/src/sync/range/batch.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L129">packages/lodestar/src/sync/range/batch.ts:129</a></em></p>
 <p>Downloading -&gt; AwaitingDownload</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="downloadingsuccess">downloadingSuccess<a class="headerlink" href="#downloadingsuccess" title="Permanent link">¶</a></h3>
 <p>▸ <strong>downloadingSuccess</strong>(<code>blocks</code>: allForks.SignedBeaconBlock[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L118">packages/lodestar/src/sync/range/batch.ts:118</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L118">packages/lodestar/src/sync/range/batch.ts:118</a></em></p>
 <p>Downloading -&gt; AwaitingProcessing</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -572,7 +572,7 @@ downloaded.</p>
 <hr/>
 <h3 id="private-errortype"><code>Private</code> errorType<a class="headerlink" href="#private-errortype" title="Permanent link">¶</a></h3>
 <p>▸ <strong>errorType</strong>(<code>type</code>: <a href="../../modules/sync_range/#batcherrortype">BatchErrorType</a>): <em><a href="../../modules/sync_range/#batcherrortype">BatchErrorType</a> &amp; <a href="../../modules/sync_range/#batcherrormetadata">BatchErrorMetadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L226">packages/lodestar/src/sync/range/batch.ts:226</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L226">packages/lodestar/src/sync/range/batch.ts:226</a></em></p>
 <p>Helper to construct typed BatchError. Stack traces are correct as the error is thrown above</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -593,18 +593,18 @@ downloaded.</p>
 <hr/>
 <h3 id="getfailedpeers">getFailedPeers<a class="headerlink" href="#getfailedpeers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getFailedPeers</strong>(): <em>PeerId[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L96">packages/lodestar/src/sync/range/batch.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L96">packages/lodestar/src/sync/range/batch.ts:96</a></em></p>
 <p>Gives a list of peers from which this batch has had a failed download or processing attempt.</p>
 <p><strong>Returns:</strong> <em>PeerId[]</em></p>
 <hr/>
 <h3 id="getmetadata">getMetadata<a class="headerlink" href="#getmetadata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getMetadata</strong>(): <em><a href="../../modules/sync_range/#batchmetadata">BatchMetadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L100">packages/lodestar/src/sync/range/batch.ts:100</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L100">packages/lodestar/src/sync/range/batch.ts:100</a></em></p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync_range/#batchmetadata">BatchMetadata</a></em></p>
 <hr/>
 <h3 id="private-onexecutionengineerror"><code>Private</code> onExecutionEngineError<a class="headerlink" href="#private-onexecutionengineerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onExecutionEngineError</strong>(<code>attempt</code>: <a href="../../modules/sync_range/#attempt">Attempt</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L207">packages/lodestar/src/sync/range/batch.ts:207</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L207">packages/lodestar/src/sync/range/batch.ts:207</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -624,7 +624,7 @@ downloaded.</p>
 <hr/>
 <h3 id="private-onprocessingerror"><code>Private</code> onProcessingError<a class="headerlink" href="#private-onprocessingerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onProcessingError</strong>(<code>attempt</code>: <a href="../../modules/sync_range/#attempt">Attempt</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L216">packages/lodestar/src/sync/range/batch.ts:216</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L216">packages/lodestar/src/sync/range/batch.ts:216</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -644,7 +644,7 @@ downloaded.</p>
 <hr/>
 <h3 id="processingerror">processingError<a class="headerlink" href="#processingerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processingError</strong>(<code>err</code>: <a href="../api_impl.apierror/#static-error">Error</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L170">packages/lodestar/src/sync/range/batch.ts:170</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L170">packages/lodestar/src/sync/range/batch.ts:170</a></em></p>
 <p>Processing -&gt; AwaitingDownload</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -665,13 +665,13 @@ downloaded.</p>
 <hr/>
 <h3 id="processingsuccess">processingSuccess<a class="headerlink" href="#processingsuccess" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processingSuccess</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L159">packages/lodestar/src/sync/range/batch.ts:159</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L159">packages/lodestar/src/sync/range/batch.ts:159</a></em></p>
 <p>Processing -&gt; AwaitingValidation</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="startdownloading">startDownloading<a class="headerlink" href="#startdownloading" title="Permanent link">¶</a></h3>
 <p>▸ <strong>startDownloading</strong>(<code>peer</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L107">packages/lodestar/src/sync/range/batch.ts:107</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L107">packages/lodestar/src/sync/range/batch.ts:107</a></em></p>
 <p>AwaitingDownload -&gt; Downloading</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -692,13 +692,13 @@ downloaded.</p>
 <hr/>
 <h3 id="startprocessing">startProcessing<a class="headerlink" href="#startprocessing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>startProcessing</strong>(): <em>allForks.SignedBeaconBlock[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L145">packages/lodestar/src/sync/range/batch.ts:145</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L145">packages/lodestar/src/sync/range/batch.ts:145</a></em></p>
 <p>AwaitingProcessing -&gt; Processing</p>
 <p><strong>Returns:</strong> <em>allForks.SignedBeaconBlock[]</em></p>
 <hr/>
 <h3 id="validationerror">validationError<a class="headerlink" href="#validationerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validationError</strong>(<code>err</code>: <a href="../api_impl.apierror/#static-error">Error</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L185">packages/lodestar/src/sync/range/batch.ts:185</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L185">packages/lodestar/src/sync/range/batch.ts:185</a></em></p>
 <p>AwaitingValidation -&gt; AwaitingDownload</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -719,13 +719,13 @@ downloaded.</p>
 <hr/>
 <h3 id="validationsuccess">validationSuccess<a class="headerlink" href="#validationsuccess" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validationSuccess</strong>(): <em><a href="../../modules/sync_range/#attempt">Attempt</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L200">packages/lodestar/src/sync/range/batch.ts:200</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L200">packages/lodestar/src/sync/range/batch.ts:200</a></em></p>
 <p>AwaitingValidation -&gt; Done</p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync_range/#attempt">Attempt</a></em></p>
 <hr/>
 <h3 id="private-wrongstatuserrortype"><code>Private</code> wrongStatusErrorType<a class="headerlink" href="#private-wrongstatuserrortype" title="Permanent link">¶</a></h3>
 <p>▸ <strong>wrongStatusErrorType</strong>(<code>expectedStatus</code>: <a href="../../enums/sync_range.batchstatus/">BatchStatus</a>): <em><a href="../../modules/sync_range/#batcherrortype">BatchErrorType</a> &amp; <a href="../../modules/sync_range/#batcherrormetadata">BatchErrorMetadata</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L230">packages/lodestar/src/sync/range/batch.ts:230</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L230">packages/lodestar/src/sync/range/batch.ts:230</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -745,11 +745,11 @@ downloaded.</p>
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="state">state<a class="headerlink" href="#state" title="Permanent link">¶</a></h3>
 <h3 id="state-object">▪ <strong>state</strong>: <em>object</em><a class="headerlink" href="#state-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L69">packages/lodestar/src/sync/range/batch.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L69">packages/lodestar/src/sync/range/batch.ts:69</a></em></p>
 <p>State of the batch.</p>
 <h3 id="status">status<a class="headerlink" href="#status" title="Permanent link">¶</a></h3>
 <p>• <strong>status</strong>: <em><a href="../../enums/sync_range.batchstatus/#awaitingdownload">AwaitingDownload</a></em> = BatchStatus.AwaitingDownload</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6a71301/packages/lodestar/src/sync/range/batch.ts#L69">packages/lodestar/src/sync/range/batch.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/fd65bc9/packages/lodestar/src/sync/range/batch.ts#L69">packages/lodestar/src/sync/range/batch.ts:69</a></em></p>
 </article>
 </div>
 </div>
