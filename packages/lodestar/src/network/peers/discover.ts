@@ -131,10 +131,9 @@ export class PeerDiscovery {
     this.discv5StartMs = Date.now();
     this.discv5.on("discovered", this.onDiscovered);
     if (this.connectToDiscv5BootnodesOnStart) {
-      // We are not supposed to connect to the Mainnet bootnodes
-      // so only connect to them on local devnet if the  cli flag
-      // connectToDiscv5Bootnodes has been set to true. If so then
-      // on start, dial the discv5.bootEnrs that has been added to the routing table
+      // In devnet scenarios, especially, we want more control over which peers we connect to.
+      // Only dial the discv5.bootEnrs if the option
+      // network.connectToDiscv5Bootnodes has been set to true.
       this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
     }
   }
