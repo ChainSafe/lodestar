@@ -9,7 +9,7 @@ import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
 import fs from "fs";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {IInterchangeV5} from "@chainsafe/lodestar-validator/src/slashingProtection/interchange/formats/v5";
-import {getLockFile} from "@chainsafe/lodestar-utils";
+import lockfile from "lockfile";
 
 describe("keymanager", () => {
   let validatorStoreSub: Sinon.SinonStubbedInstance<ValidatorStore>;
@@ -83,11 +83,8 @@ describe("keymanager", () => {
         .withArgs(sinon.match(/key_imported/), keyStoreStr, {encoding: "utf8"})
         .resolves();
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
-      const lockFile = getLockFile();
-
       const lockStub = sinon
-        .stub(lockFile, "lockSync")
+        .stub(lockfile, "lockSync")
         .withArgs(sinon.match(/json.lock/))
         .callsFake(() => {
           return;
@@ -116,11 +113,8 @@ describe("keymanager", () => {
         .withArgs(sinon.match(/key_imported/), keyStoreStr, {encoding: "utf8"})
         .resolves();
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
-      const lockFile = getLockFile();
-
       const lockStub = sinon
-        .stub(lockFile, "lockSync")
+        .stub(lockfile, "lockSync")
         .withArgs(sinon.match.any)
         .callsFake(() => {
           return;
