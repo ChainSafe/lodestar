@@ -86,9 +86,6 @@ export class Validator {
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(opts: ValidatorOptions, signal?: AbortSignal): Promise<Validator> {
     const {config} = opts.dbOps;
-    // TODO [DA] is there any objection to renaming api to client?
-    // it then becomes obvious this is a client that makes a request to an api
-    // instead of this being an api that is being made available
     const api =
       typeof opts.api === "string"
         ? getClient(config, {baseUrl: opts.api, timeoutMs: 12000, getAbortSignal: () => signal})
