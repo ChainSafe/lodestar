@@ -7,7 +7,7 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 Run a beacon node, with 8 validators with the following command. 
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --network prater --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
 ```
 
 `--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where 
@@ -27,7 +27,6 @@ Start the second node without starting any validators and connect to the first n
 ```bash
 ./lodestar dev --startValidators 0:0 \
   --genesisValidators 8 --genesisTime 1578787200 \
-  --network prater \
   --rootDir /path/to/node2 \
   --port 9001 \
   --api.rest.port 9597 \
