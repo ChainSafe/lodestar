@@ -30,6 +30,7 @@ Start the second node without starting any validators and connect to the first n
   --rootDir /path/to/node2 \
   --port 9001 \
   --api.rest.port 9597 \
+  --network.connectToDiscv5Bootnodes true \
   --network.discv5.bootEnrs <enr value>
   --reset
 ```
@@ -40,7 +41,10 @@ the `--startValidators` option. Passing a value of `0:0` means no validators sho
 Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in other for the two nodes
 to have the same beacon chain. 
 
-Finally `port` and `api.rest.port` are supplied since the default values will already be in use by the first node.
+Finally `--port` and `--api.rest.port` are supplied since the default values will already be in use by the first node.
+
+The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet. 
+The exact enr of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.
 
 Once the second node starts, you should see an output similar to the following in either of the terminals:
 
