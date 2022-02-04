@@ -6,7 +6,7 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {add0xPrefix} from "../util/format";
-import {getLockFile} from "@chainsafe/lodestar-utils";
+import {getLockFile} from "../util/lockfile";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,

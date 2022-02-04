@@ -6,7 +6,7 @@ import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-key
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
-import {getLockFile, LOCK_FILE_EXT} from "@chainsafe/lodestar-utils";
+import {getLockFile, LOCK_FILE_EXT} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";

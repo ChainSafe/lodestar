@@ -14,8 +14,9 @@ import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
 import {SecretKeyInfo} from "./index";
-import {getLockFile, LOCK_FILE_EXT} from "@chainsafe/lodestar-utils";
-import {Lockfile} from "@chainsafe/lodestar-utils/src";
+import lockfile from "lockfile";
+
+export const LOCK_FILE_EXT = ".lock";
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -99,8 +100,6 @@ export class KeymanagerApi implements Api {
 
         this.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
-        const lockFile: Lockfile = getLockFile();
         const keystorePath = this.importKeystoresPath?.[0];
         const keyFile = `${keystorePath}/key_imported_${Date.now()}.json`;
         const lockFilePath = `${keyFile}${LOCK_FILE_EXT}`;
@@ -108,7 +107,7 @@ export class KeymanagerApi implements Api {
         // Persist keys for latter restarts
         if (keystorePath) {
           await writeFile(keyFile, keystoreStr, {encoding: "utf8"});
-          lockFile.lockSync(lockFilePath);
+          lockfile.lockSync(lockFilePath);
         }
 
         this.secretKeysInfo?.push({
@@ -116,7 +115,7 @@ export class KeymanagerApi implements Api {
           keystorePath,
           keyFile,
           unlockSecretKeys: () => {
-            lockFile.unlockSync(lockFilePath);
+            lockfile.unlockSync(lockFilePath);
           },
         });
 

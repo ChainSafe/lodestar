@@ -1,4 +1,4 @@
-export type Lockfile = {
+type Lockfile = {
   lockSync(path: string): void;
   unlockSync(path: string): void;
 };
@@ -11,7 +11,9 @@ export const LOCK_FILE_EXT = ".lock";
  * beacon_node client context
  */
 export function getLockFile(): Lockfile {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-  if (!lockFile) lockFile = require("lockfile") as Lockfile;
+  if (!lockFile) {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+    lockFile = require("lockfile") as Lockfile;
+  }
   return lockFile;
 }

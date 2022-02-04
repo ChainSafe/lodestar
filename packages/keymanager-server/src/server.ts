@@ -6,7 +6,7 @@ import {IncomingMessage} from "http";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
 import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
-import {ErrorAborted, getLockFile, ILogger, LOCK_FILE_EXT} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
 import crypto from "crypto";
@@ -51,7 +51,6 @@ export class KeymanagerServer {
   private readonly activeRequests = new Set<IncomingMessage>();
   private readonly apiTokenPath: string;
   private readonly bearerToken: string;
-  private tokenUnlock: () => void;
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
@@ -63,21 +62,11 @@ export class KeymanagerServer {
     // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
     this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call
-    const lockFile = getLockFile();
-    const tokenLockFile = `${this.apiTokenPath}${LOCK_FILE_EXT}`;
     const initToken = async (): Promise<void> => {
       await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      lockFile.lockSync(tokenLockFile);
     };
 
     void initToken();
-
-    this.tokenUnlock = () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      lockFile.unlockSync(tokenLockFile);
-    };
 
     const server = fastify({
       logger: false,
@@ -162,7 +151,6 @@ export class KeymanagerServer {
     for (const req of this.activeRequests) {
       req.destroy(Error("Closing"));
     }
-    this.tokenUnlock();
     await unlink(this.apiTokenPath);
     await this.server.close();
   }
