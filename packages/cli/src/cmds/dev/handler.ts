@@ -181,8 +181,5 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
 
     onGracefulShutdownCbs.push(() => validator.stop());
     await validator.start();
-
-    onGracefulShutdownCbs.push(() => validator.stop());
-    await validator.start();
   }
 }
