@@ -2,8 +2,9 @@ import {join} from "node:path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
-import {bellatrix, ssz, Uint64} from "@chainsafe/lodestar-types";
+import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest, shouldVerify} from "../type";
@@ -23,7 +24,7 @@ export function sanitySlot(fork: ForkName): void {
     (testcase) => {
       const stateTB = (testcase.pre as TreeBacked<allForks.BeaconState>).clone();
       const state = allForks.createCachedBeaconState(getConfig(fork), stateTB);
-      const postState = allForks.processSlots(state, state.slot + Number(testcase.slots));
+      const postState = allForks.processSlots(state, state.slot + bnToNum(testcase.slots));
       return postState.type.createTreeBacked(postState.tree);
     },
     {
@@ -95,7 +96,7 @@ interface IBlockSanityTestCase extends IBaseSpecTest {
   [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
   meta: {
     blocks_count: number;
-    bls_setting: BigInt;
+    bls_setting: bigint;
   };
   pre: allForks.BeaconState;
   post: allForks.BeaconState;
@@ -104,5 +105,5 @@ interface IBlockSanityTestCase extends IBaseSpecTest {
 interface IProcessSlotsTestCase extends IBaseSpecTest {
   pre: allForks.BeaconState;
   post?: allForks.BeaconState;
-  slots: Uint64;
+  slots: bigint;
 }

@@ -65,7 +65,7 @@ interface IFinalityTestCase extends IBaseSpecTest {
   [k: string]: altair.SignedBeaconBlock | unknown | null | undefined;
   meta: {
     blocks_count: number;
-    bls_setting: BigInt;
+    bls_setting: bigint;
   };
   pre: altair.BeaconState;
   post?: altair.BeaconState;

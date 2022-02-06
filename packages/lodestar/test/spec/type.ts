@@ -2,7 +2,7 @@
 
 export interface IBaseSpecTest {
   meta?: {
-    bls_setting?: BigInt;
+    bls_setting?: bigint;
   };
 }
 
