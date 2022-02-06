@@ -7,6 +7,8 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "../../../src/single";
 import {loadYamlFile} from "../../../src/util";
 
+/* eslint-disable @typescript-eslint/naming-convention */
+
 export interface ISimpleStruct {
   test: boolean;
   number: number;
@@ -16,7 +18,7 @@ export interface ISimpleCase extends Iterable<string> {
   input: ISimpleStruct;
   output: number;
   meta?: {
-    blsSetting?: BigInt;
+    bls_setting?: BigInt;
   };
 }
 

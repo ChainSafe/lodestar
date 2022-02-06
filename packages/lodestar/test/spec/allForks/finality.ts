@@ -5,10 +5,12 @@ import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {bellatrix, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
+import {IBaseSpecTest, shouldVerify} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
 import {generateBlocksSZZTypeMapping} from "./sanity";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export function finality(fork: ForkName): void {
   describeDirectorySpecTest<IFinalityTestCase, allForks.BeaconState>(
@@ -19,7 +21,7 @@ export function finality(fork: ForkName): void {
         getConfig(fork),
         testcase.pre as TreeBacked<allForks.BeaconState>
       ) as CachedBeaconStateAllForks;
-      const verify = testcase.meta !== undefined && testcase.meta.blsSetting === BigInt(1);
+      const verify = shouldVerify(testcase);
       for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
@@ -52,11 +54,18 @@ export function finality(fork: ForkName): void {
   );
 }
 
+/**
+ * `meta.yaml`
+ * ```
+ * {blocks_count: 16}
+ * ```
+ * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/finality/README.md
+ */
 interface IFinalityTestCase extends IBaseSpecTest {
   [k: string]: altair.SignedBeaconBlock | unknown | null | undefined;
   meta: {
-    blocksCount: Uint64;
-    blsSetting: BigInt;
+    blocks_count: number;
+    bls_setting: BigInt;
   };
   pre: altair.BeaconState;
   post?: altair.BeaconState;

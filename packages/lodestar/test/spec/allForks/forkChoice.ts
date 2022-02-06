@@ -25,8 +25,9 @@ import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -306,10 +307,10 @@ type Checks = {
   };
 };
 
-interface IForkChoiceTestCase extends IBaseSpecTest {
+interface IForkChoiceTestCase {
   meta?: {
     description?: string;
-    blsSetting: BigInt;
+    bls_setting: BigInt;
   };
   anchorState: allForks.BeaconState;
   anchorBlock: allForks.BeaconBlock;

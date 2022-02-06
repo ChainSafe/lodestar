@@ -6,8 +6,10 @@ import {bellatrix, ssz, Uint64} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
+import {IBaseSpecTest, shouldVerify} from "../type";
 import {getConfig} from "./util";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export function sanity(fork: ForkName): void {
   sanitySlot(fork);
@@ -47,8 +49,8 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
     (testcase) => {
       const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
       let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
-      const verify = testcase.meta !== undefined && testcase.meta.blsSetting === BigInt(1);
-      for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
+      const verify = shouldVerify(testcase);
+      for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
         wrappedState = allForks.stateTransition(
           wrappedState,
@@ -92,8 +94,8 @@ export function generateBlocksSZZTypeMapping(fork: ForkName, n: number): BlocksS
 interface IBlockSanityTestCase extends IBaseSpecTest {
   [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
   meta: {
-    blocksCount: Uint64;
-    blsSetting: BigInt;
+    blocks_count: number;
+    bls_setting: BigInt;
   };
   pre: allForks.BeaconState;
   post: allForks.BeaconState;

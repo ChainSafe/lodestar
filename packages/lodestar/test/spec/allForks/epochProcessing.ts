@@ -13,6 +13,9 @@ import {IBaseSpecTest} from "../type";
 
 export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: allForks.IEpochProcess) => void;
 
+/**
+ * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ */
 type EpochProcessingStateTestCase = IBaseSpecTest & {
   pre: allForks.BeaconState;
   post: allForks.BeaconState;
