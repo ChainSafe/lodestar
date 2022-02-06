@@ -18,7 +18,6 @@ export {allNamespaces} from "@chainsafe/lodestar-api";
 export type SecretKeyInfo = {
   secretKey: SecretKey;
   keystorePath?: string;
-  keyFile?: string;
   unlockSecretKeys?: () => void;
 };
 

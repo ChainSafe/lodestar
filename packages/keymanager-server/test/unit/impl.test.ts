@@ -157,8 +157,7 @@ describe("keymanager", () => {
     });
 
     const unlockSecretKeys = sinon.fake();
-    const keystorePath = "/path";
-    const keyFile = "keystore.json";
+    const keystorePath = "/path/keystore.json";
 
     it("should delete keystore", async () => {
       const pubkeyToDelete = [
@@ -188,13 +187,11 @@ describe("keymanager", () => {
         {
           secretKey: secretKeyStub,
           keystorePath,
-          keyFile,
           unlockSecretKeys,
         },
         {
           secretKey: notDeletedSecretKeyStub,
-          keystorePath,
-          keyFile: secondKeyFile,
+          keystorePath: secondKeyFile,
           unlockSecretKeys,
         },
       ];
@@ -216,7 +213,7 @@ describe("keymanager", () => {
       assert.equal(result.data[0].status, "deleted");
       assert.equal(secretKeyInfos.length, 1);
       assert.equal(
-        secretKeyInfos.some((x) => x.keyFile === secondKeyFile),
+        secretKeyInfos.some((x) => x.keystorePath === secondKeyFile),
         true
       );
       // eslint-disable-next-line
@@ -244,7 +241,6 @@ describe("keymanager", () => {
         {
           secretKey: secretKeyStub,
           keystorePath,
-          keyFile,
           unlockSecretKeys,
         },
       ];
