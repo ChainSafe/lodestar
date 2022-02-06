@@ -18,6 +18,7 @@ type StateAltair = CachedBeaconStateAltair;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
 type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
+type UpgradeStateFn = (state: StateAllForks) => StateAllForks;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
   [ForkName.phase0]: phase0.processBlock as ProcessBlockFn,
@@ -31,6 +32,12 @@ const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.bellatrix]: altair.processEpoch as ProcessEpochFn,
 };
 
+export const upgradeStateByFork: Record<ForkName, UpgradeStateFn> = {
+  // Dummy placeholder Fn for phase0
+  [ForkName.phase0]: ((x) => x) as UpgradeStateFn,
+  [ForkName.altair]: altair.upgradeState as UpgradeStateFn,
+  [ForkName.bellatrix]: bellatrix.upgradeState as UpgradeStateFn,
+};
 // Multifork capable state transition
 
 /**
