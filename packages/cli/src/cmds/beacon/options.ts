@@ -59,7 +59,7 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 
   weakSubjectivityServerUrl: {
     description:
-      "Pass in a custom server from which to fetch weak subjectivity states (if you don't want to use the built-in Lodestar servers).",
+      "Pass in a server hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivitySyncLatest or --weakSubjectivityCheckpoint sync.",
     type: "string",
   },
 };
