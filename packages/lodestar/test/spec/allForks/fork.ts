@@ -14,10 +14,6 @@ export function fork<
   PreBeaconState extends phase0.BeaconState | altair.BeaconState,
   PostBeaconState extends altair.BeaconState | bellatrix.BeaconState
 >(pre: ForkName, fork: ForkName): void {
-  interface IUpgradeStateCase extends IBaseSpecTest {
-    pre: allForks.BeaconState;
-    post: allForks.BeaconState;
-  }
   describeDirectorySpecTest<IUpgradeStateCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/fork/fork`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork/fork/pyspec_tests`),
@@ -52,4 +48,9 @@ export function fork<
       },
     }
   );
+
+  interface IUpgradeStateCase extends IBaseSpecTest {
+    pre: PreBeaconState;
+    post: PostBeaconState;
+  }
 }
