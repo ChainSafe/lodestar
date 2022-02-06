@@ -114,7 +114,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     );
 
     const keymanagerServer = new KeymanagerServer(
-      {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors},
+      {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors, tokenDir: dbPath},
       {config, logger, api: keymanagerApi}
     );
     await keymanagerServer.listen();
