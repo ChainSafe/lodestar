@@ -7,6 +7,7 @@ export interface IEth1Args {
   "eth1.providerUrls": string[];
   "eth1.depositContractDeployBlock": number;
   "eth1.disableEth1DepositDataTracker": boolean;
+  "eth1.unsafeAllowDepositDataOverwrite": boolean;
 }
 
 export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
@@ -22,6 +23,7 @@ export function parseArgs(args: IEth1Args): IBeaconNodeOptions["eth1"] {
     providerUrls: providerUrls,
     depositContractDeployBlock: args["eth1.depositContractDeployBlock"],
     disableEth1DepositDataTracker: args["eth1.disableEth1DepositDataTracker"],
+    unsafeAllowDepositDataOverwrite: args["eth1.unsafeAllowDepositDataOverwrite"],
   };
 }
 
@@ -59,6 +61,15 @@ export const options: ICliCommandOptions<IEth1Args> = {
     description: "Disable Eth1DepositDataTracker modules",
     type: "boolean",
     defaultDescription: String(defaultOptions.eth1.disableEth1DepositDataTracker),
+    group: "eth1",
+  },
+
+  "eth1.unsafeAllowDepositDataOverwrite": {
+    hidden: true,
+    description:
+      "Allow the deposit tracker to overwrite previously fetched and saved deposit event data. Warning!!! This is an unsafe operation, so enable this flag only if you know what you are doing.",
+    type: "boolean",
+    defaultDescription: String(defaultOptions.eth1.unsafeAllowDepositDataOverwrite),
     group: "eth1",
   },
 };

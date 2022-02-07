@@ -37,6 +37,7 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: 0,
+      unsafeAllowDepositDataOverwrite: false,
     };
   });
 

@@ -66,6 +66,7 @@ describe("eth1 / Eth1Provider", function () {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: medallaTestnetConfig.depositBlock,
+      unsafeAllowDepositDataOverwrite: false,
     };
     const eth1Provider = new Eth1Provider(config, eth1Options, controller.signal);
 
