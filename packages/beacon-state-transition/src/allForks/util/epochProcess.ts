@@ -281,24 +281,22 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       FLAG_CURR_HEAD_ATTESTER
     );
   } else {
-    state.previousEpochParticipation.forEachStatus((participationStatus, i) => {
+    state.previousEpochParticipation.forEachStatus((participationFlags, i) => {
       const status = statuses[i];
       // this is required to pass random spec tests in altair
       if (isActivePrevEpoch[i]) {
         status.flags |=
-          ((participationStatus.timelySource && FLAG_PREV_SOURCE_ATTESTER) as number) |
-          ((participationStatus.timelyTarget && FLAG_PREV_TARGET_ATTESTER) as number) |
-          ((participationStatus.timelyHead && FLAG_PREV_HEAD_ATTESTER) as number);
+          // FLAG_PREV are indexes [0,1,2]
+          status.flags |= participationFlags;
       }
     });
-    state.currentEpochParticipation.forEachStatus((participationStatus, i) => {
+    state.currentEpochParticipation.forEachStatus((participationFlags, i) => {
       const status = statuses[i];
       // this is required to pass random spec tests in altair
       if (status.active) {
         status.flags |=
-          ((participationStatus.timelySource && FLAG_CURR_SOURCE_ATTESTER) as number) |
-          ((participationStatus.timelyTarget && FLAG_CURR_TARGET_ATTESTER) as number) |
-          ((participationStatus.timelyHead && FLAG_CURR_HEAD_ATTESTER) as number);
+          // FLAG_PREV are indexes [3,4,5], so shift by 3
+          status.flags |= participationFlags << 3;
       }
     });
   }

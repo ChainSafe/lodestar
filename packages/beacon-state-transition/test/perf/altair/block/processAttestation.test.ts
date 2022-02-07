@@ -14,8 +14,7 @@ import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateAltair, StateAttestations} from "../../types";
-import {phase0} from "@chainsafe/lodestar-types";
-import {IParticipationStatus} from "../../../../src/allForks/util/cachedEpochParticipation";
+import {ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
 import {updateEpochParticipants} from "../../../../src/altair/block/processAttestation";
 
 // Most of the cost of processAttestation in altair is for updating participation flag tree
@@ -98,7 +97,7 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         let count = 0;
         for (const committees of state.currentShuffling.committees[10]) {
           for (const committee of committees) {
-            currentEpochParticipation.setStatus(committee, {timelyHead: true, timelySource: true, timelyTarget: true});
+            currentEpochParticipation.set(committee, 0b111);
             count++;
             if (count >= numAttesters) break;
           }
@@ -121,11 +120,11 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         const numAttesters = Math.floor((state.currentShuffling.activeIndices.length * ratio) / SLOTS_PER_EPOCH);
         // just get committees of slot 10
         let count = 0;
-        const epochStatuses = new Map<number, IParticipationStatus>();
+        const epochStatuses = new Map<number, ParticipationFlags>();
         for (const committees of state.currentShuffling.committees[10]) {
           for (const committee of committees) {
             // currentEpochParticipation.setStatus(committee, {timelyHead: true, timelySource: true, timelyTarget: true});
-            epochStatuses.set(committee, {timelyHead: true, timelySource: true, timelyTarget: true});
+            epochStatuses.set(committee, 0b111);
             count++;
             if (count >= numAttesters) break;
           }

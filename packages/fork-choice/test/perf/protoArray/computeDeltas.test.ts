@@ -2,9 +2,16 @@ import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {IVoteTracker} from "../../../src/protoArray/interface";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas";
 import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice";
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+function flagIsTimelySource(flag: number): boolean {
+  return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
+}
 
 describe("computeDeltas", () => {
   let originalState: CachedBeaconStateAllForks;
@@ -22,10 +29,10 @@ describe("computeDeltas", () => {
     }) as unknown) as CachedBeaconStateAllForks;
     const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
       .toArray()
-      .filter((part) => part !== undefined && part.timelySource).length;
+      .filter((flags) => flagIsTimelySource(flags)).length;
     const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
       .toArray()
-      .filter((part) => part !== undefined && part.timelySource).length;
+      .filter((flags) => flagIsTimelySource(flags)).length;
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");

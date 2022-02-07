@@ -16,12 +16,7 @@ import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
 import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
 import {BalanceList} from "./balanceList";
-import {
-  CachedEpochParticipation,
-  CachedEpochParticipationProxyHandler,
-  fromParticipationFlags,
-  IParticipationStatus,
-} from "./cachedEpochParticipation";
+import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./cachedEpochParticipation";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {
   convertToIndexedSyncCommittee,
@@ -105,16 +100,11 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
   if (forkName === ForkName.phase0) {
     // TODO: More efficient way of getting the length?
     const validatorCount = state.validators.length;
-    const emptyParticipationStatus = {
-      timelyHead: false,
-      timelySource: false,
-      timelyTarget: false,
-    };
     currIndexedSyncCommittee = emptyIndexedSyncCommittee;
     nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
     // Can these arrays be zero-ed for phase0? Are they actually used?
-    cachedPreviousParticipation = MutableVector.from(newFilledArray(validatorCount, emptyParticipationStatus));
-    cachedCurrentParticipation = MutableVector.from(newFilledArray(validatorCount, emptyParticipationStatus));
+    cachedPreviousParticipation = MutableVector.from(newFilledArray(validatorCount, 0));
+    cachedCurrentParticipation = MutableVector.from(newFilledArray(validatorCount, 0));
     cachedInactivityScores = MutableVector.empty();
   } else {
     const {pubkey2index} = epochCtx;
@@ -122,11 +112,9 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
     currIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, false);
     nextIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, true);
     cachedPreviousParticipation = MutableVector.from(
-      Array.from(readonlyValues(altairState.previousEpochParticipation), fromParticipationFlags)
+      Array.from(readonlyValues(altairState.previousEpochParticipation))
     );
-    cachedCurrentParticipation = MutableVector.from(
-      Array.from(readonlyValues(altairState.currentEpochParticipation), fromParticipationFlags)
-    );
+    cachedCurrentParticipation = MutableVector.from(Array.from(readonlyValues(altairState.currentEpochParticipation)));
     cachedInactivityScores = MutableVector.from(readonlyValues(altairState.inactivityScores));
   }
   return new Proxy(
@@ -266,8 +254,8 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   constructor(
     type: ContainerType<T>,
     tree: Tree,
-    previousEpochParticipationCache: MutableVector<IParticipationStatus>,
-    currentEpochParticipationCache: MutableVector<IParticipationStatus>,
+    previousEpochParticipationCache: MutableVector<ParticipationFlags>,
+    currentEpochParticipationCache: MutableVector<ParticipationFlags>,
     currentSyncCommittee: IndexedSyncCommittee,
     nextSyncCommittee: IndexedSyncCommittee,
     inactivityScoresCache: MutableVector<Number64>,

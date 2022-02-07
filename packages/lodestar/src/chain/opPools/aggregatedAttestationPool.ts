@@ -1,6 +1,12 @@
 import bls from "@chainsafe/bls";
-import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {
+  ForkName,
+  MAX_ATTESTATIONS,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+  TIMELY_SOURCE_FLAG_INDEX,
+} from "@chainsafe/lodestar-params";
+import {Epoch, ParticipationFlags, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   CachedBeaconStateAllForks,
@@ -34,6 +40,9 @@ const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
  * want to store more than 2 per group.
  */
 const MAX_ATTESTATIONS_PER_GROUP = 2;
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
@@ -220,7 +229,7 @@ export class AggregatedAttestationPool {
 
       const seenValidatorIndices = new Set<ValidatorIndex>();
       for (const validatorIndex of committee) {
-        if (participationStatus[validatorIndex]?.timelySource) {
+        if (flagIsTimelySource(participationStatus[validatorIndex])) {
           seenValidatorIndices.add(validatorIndex);
         }
       }
@@ -393,4 +402,11 @@ export function isValidAttestationData(
     justifiedCheckpoint = previousJustifiedCheckpoint;
   }
   return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+}
+
+/**
+ * Returns true if the `TIMELY_SOURCE` bit in a `ParticipationFlags` is set
+ */
+export function flagIsTimelySource(flag: ParticipationFlags): boolean {
+  return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
 }

@@ -1,4 +1,5 @@
 import {PersistentVector} from "@chainsafe/persistent-ts";
+import {newFilledArray} from "../../util/array";
 import {CachedBeaconStateAltair} from "../../types";
 
 /**
@@ -10,13 +11,5 @@ import {CachedBeaconStateAltair} from "../../types";
  */
 export function processParticipationFlagUpdates(state: CachedBeaconStateAltair): void {
   state.previousEpochParticipation.updateAllStatus(state.currentEpochParticipation.persistent.vector);
-  state.currentEpochParticipation.updateAllStatus(
-    PersistentVector.from(
-      Array.from({length: state.validators.length}, () => ({
-        timelyHead: false,
-        timelySource: false,
-        timelyTarget: false,
-      }))
-    )
-  );
+  state.currentEpochParticipation.updateAllStatus(PersistentVector.from(newFilledArray(state.validators.length, 0)));
 }
