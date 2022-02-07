@@ -198,10 +198,9 @@ describe("aggregateInto", function () {
   });
 
   it("should aggregate 2 attestations", () => {
-    const committee = [100, 200];
     const attWithIndex1 = {attestation: attestation1, attestingIndices: new Set([100])};
     const attWithIndex2 = {attestation: attestation2, attestingIndices: new Set([200])};
-    aggregateInto(attWithIndex1, attWithIndex2, committee);
+    aggregateInto(attWithIndex1, attWithIndex2);
     expect(attWithIndex1.attestingIndices).to.be.deep.equal(new Set([100, 200]), "invalid aggregated attestingIndices");
     expect(attWithIndex1.attestation.aggregationBits).to.be.deep.equal([true, true], "invalid aggregationBits");
     const aggregatedSignature = bls.Signature.fromBytes(

@@ -10,7 +10,7 @@ import {
   phase0,
   zipIndexesCommitteeBits,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {List, readonlyValues, toHexString} from "@chainsafe/ssz";
+import {BitList, List, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
@@ -268,7 +268,7 @@ export class MatchingDataAttestationGroup {
           : intersection(attestingIndices, existingAttestingIndices);
       // no intersection
       if (numIntersection === 0) {
-        aggregateInto(existingAttestation, attestation, this.committee);
+        aggregateInto(existingAttestation, attestation);
         insertResult = InsertOutcome.Aggregated;
       } else if (numIntersection === attestingIndices.size) {
         // this new attestation is actually a subset of an existing one, don't want to add it
@@ -322,18 +322,13 @@ export class MatchingDataAttestationGroup {
   }
 }
 
-export function aggregateInto(
-  attestation1: AttestationWithIndex,
-  attestation2: AttestationWithIndex,
-  committee: ValidatorIndex[]
-): void {
+export function aggregateInto(attestation1: AttestationWithIndex, attestation2: AttestationWithIndex): void {
   for (const attIndex of attestation2.attestingIndices) {
     attestation1.attestingIndices.add(attIndex);
   }
 
-  attestation1.attestation.aggregationBits = Array.from({length: committee.length}, (_, i) =>
-    attestation1.attestingIndices.has(committee[i])
-  ) as List<boolean>;
+  // Merge bits of attestation2 into attestation1
+  bitArrayMergeOrWith(attestation1.attestation.aggregationBits, attestation2.attestation.aggregationBits);
 
   const signature1 = bls.Signature.fromBytes(
     attestation1.attestation.signature.valueOf() as Uint8Array,
@@ -393,4 +388,12 @@ export function isValidAttestationData(
     justifiedCheckpoint = previousJustifiedCheckpoint;
   }
   return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+}
+
+function bitArrayMergeOrWith(bits1: BitList, bits2: BitList): void {
+  for (let i = 0; i < bits2.length; i++) {
+    if (bits2[i]) {
+      bits1[i] = true;
+    }
+  }
 }
