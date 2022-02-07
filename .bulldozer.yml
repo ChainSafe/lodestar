@@ -50,29 +50,29 @@ merge:
 
   # "options" defines additional options for the individual merge methods.
   #options:
-    # "squash" options are only used when the merge method is "squash"
-    #squash:
-      # "title" defines how the title of the commit message is created when
-      # generating a squash commit. The options are "pull_request_title",
-      # "first_commit_title", and "github_default_title". The default is
-      # "pull_request_title".
-      #title: "pull_request_title"
+  # "squash" options are only used when the merge method is "squash"
+  #squash:
+  # "title" defines how the title of the commit message is created when
+  # generating a squash commit. The options are "pull_request_title",
+  # "first_commit_title", and "github_default_title". The default is
+  # "pull_request_title".
+  #title: "pull_request_title"
 
-      # "body" defines how the body of the commit message is created when
-      # generating a squash commit. The options are "pull_request_body",
-      # "summarize_commits", and "empty_body". The default is "empty_body".
-      #body: "empty_body"
+  # "body" defines how the body of the commit message is created when
+  # generating a squash commit. The options are "pull_request_body",
+  # "summarize_commits", and "empty_body". The default is "empty_body".
+  #body: "empty_body"
 
-      # If "body" is "pull_request_body", then the commit message will be the
-      # part of the pull request body surrounded by "message_delimiter"
-      # strings. This is disabled (empty string) by default.
-      #message_delimiter: ==COMMIT_MSG==
+  # If "body" is "pull_request_body", then the commit message will be the
+  # part of the pull request body surrounded by "message_delimiter"
+  # strings. This is disabled (empty string) by default.
+  #message_delimiter: ==COMMIT_MSG==
 
   # "required_statuses" is a list of additional status contexts that must pass
   # before bulldozer can merge a pull request. This is useful if you want to
   # require extra testing for automated merges, but not for manual merges.
   #required_statuses:
-    #- "ci/circleci: ete-tests"
+  #- "ci/circleci: ete-tests"
 
   # If true, bulldozer will delete branches after their pull requests merge.
   delete_after_merge: true

@@ -98,7 +98,7 @@ module.exports = {
         allowNullableBoolean: true,
         allowNullableString: true,
         allowAny: true,
-      }
+      },
     ],
     "import/no-extraneous-dependencies": [
       "error",
