@@ -1,5 +1,5 @@
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
@@ -121,9 +121,6 @@ function getIndexInSubCommittee(
     // Not part of the sync committee
     return null;
   }
-
-  // TODO: Cache this value
-  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
   for (const indexInCommittee of indexesInCommittee) {
     if (Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE) === subnet) {
