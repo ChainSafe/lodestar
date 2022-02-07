@@ -2251,11 +2251,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/util.ielementdescription/</loc>
-         <lastmod>2022-02-07</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/util.iretryoptions/</loc>
          <lastmod>2022-02-07</lastmod>
          <changefreq>daily</changefreq>

@@ -376,7 +376,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new StateRegenerator</strong>(<code>modules</code>: <a href="../../modules/chain_regen/#regenmodules">RegenModules</a>): <em><a href="./">StateRegenerator</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L34">packages/lodestar/src/chain/regen/regen.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L34">packages/lodestar/src/chain/regen/regen.ts:34</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -396,11 +396,11 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-modules"><code>Private</code> <code>Readonly</code> modules<a class="headerlink" href="#private-readonly-modules" title="Permanent link">¶</a></h3>
 <p>• <strong>modules</strong>: <em><a href="../../modules/chain_regen/#regenmodules">RegenModules</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L35">packages/lodestar/src/chain/regen/regen.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L35">packages/lodestar/src/chain/regen/regen.ts:35</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-findfirststateblock"><code>Private</code> findFirstStateBlock<a class="headerlink" href="#private-findfirststateblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>findFirstStateBlock</strong>(<code>stateRoot</code>: RootHex): <em>IProtoBlock</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L202">packages/lodestar/src/chain/regen/regen.ts:202</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L202">packages/lodestar/src/chain/regen/regen.ts:202</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -421,7 +421,7 @@
 <h3 id="getblockslotstate">getBlockSlotState<a class="headerlink" href="#getblockslotstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBlockSlotState</strong>(<code>blockRoot</code>: RootHex, <code>slot</code>: Slot, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <p><em>Implementation of <a href="../../interfaces/chain_regen.istateregenerator/">IStateRegenerator</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L78">packages/lodestar/src/chain/regen/regen.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L78">packages/lodestar/src/chain/regen/regen.ts:78</a></em></p>
 <p>Get state after block <code>blockRoot</code> dialed forward to <code>slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -451,7 +451,7 @@
 <h3 id="getcheckpointstate">getCheckpointState<a class="headerlink" href="#getcheckpointstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCheckpointState</strong>(<code>cp</code>: Checkpoint, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <p><em>Implementation of <a href="../../interfaces/chain_regen.istateregenerator/">IStateRegenerator</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L70">packages/lodestar/src/chain/regen/regen.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L70">packages/lodestar/src/chain/regen/regen.ts:70</a></em></p>
 <p>Get state after block <code>cp.root</code> dialed forward to first slot of <code>cp.epoch</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -477,7 +477,7 @@
 <h3 id="getprestate">getPreState<a class="headerlink" href="#getprestate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPreState</strong>(<code>block</code>: allForks.BeaconBlock, <code>rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <p><em>Implementation of <a href="../../interfaces/chain_regen.istateregenerator/">IStateRegenerator</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L42">packages/lodestar/src/chain/regen/regen.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L42">packages/lodestar/src/chain/regen/regen.ts:42</a></em></p>
 <p>Get the state to run with <code>block</code>. May be:
 - If parent is in same epoch -&gt; Exact state at <code>block.parentRoot</code>
 - If parent is in prev epoch -&gt; State after <code>block.parentRoot</code> dialed forward through epoch transition</p>
@@ -505,7 +505,7 @@
 <h3 id="getstate">getState<a class="headerlink" href="#getstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getState</strong>(<code>stateRoot</code>: RootHex, <code>_rCaller</code>: <a href="../../modules/chain_regen/#regencaller">RegenCaller</a>): <em>Promise‹CachedBeaconStateAllForks›</em></p>
 <p><em>Implementation of <a href="../../interfaces/chain_regen.istateregenerator/">IStateRegenerator</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/aedf4a9/packages/lodestar/src/chain/regen/regen.ts#L114">packages/lodestar/src/chain/regen/regen.ts:114</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69c0477/packages/lodestar/src/chain/regen/regen.ts#L114">packages/lodestar/src/chain/regen/regen.ts:114</a></em></p>
 <p>Get state by exact root. If not in cache directly, requires finding the block that references the state from the
 forkchoice and replaying blocks to get to it.</p>
 <p><strong>Parameters:</strong></p>
