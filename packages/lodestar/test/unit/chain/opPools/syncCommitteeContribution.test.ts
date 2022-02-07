@@ -46,9 +46,9 @@ describe("replaceIfBetter", function () {
   // const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   beforeEach(() => {
     bestContribution = {
-      syncSubCommitteeBits: [true, true, false, false, false, false, false, false],
+      syncSubcommitteeBits: [true, true, false, false, false, false, false, false],
       numParticipants: 2,
-      syncSubCommitteeSignature: ({} as unknown) as Signature,
+      syncSubcommitteeSignature: ({} as unknown) as Signature,
     };
   });
   it("less participants", () => {
@@ -79,7 +79,7 @@ describe("replaceIfBetter", function () {
       InsertOutcome.NewData,
       "more participant item should replace the best contribution"
     );
-    expect(bestContribution.syncSubCommitteeBits).to.be.deep.equal(
+    expect(bestContribution.syncSubcommitteeBits).to.be.deep.equal(
       [false, false, false, true, true, true, false, false],
       "incorect subcommittees"
     );
@@ -101,7 +101,7 @@ describe("contributionToFast", function () {
     contribution.aggregationBits[5] = true;
     contribution.signature = sk1.sign(Buffer.alloc(32)).toBytes();
     const fast = contributionToFast(contribution);
-    expect(fast.syncSubCommitteeBits).to.be.deep.equal(
+    expect(fast.syncSubcommitteeBits).to.be.deep.equal(
       [false, false, false, true, true, true, false, false],
       "incorect subcommittees"
     );
@@ -129,9 +129,9 @@ describe("aggregate", function () {
       for (let subnet = 0; subnet < numSubnet; subnet++) {
         bestContributionBySubnet.set(subnet, {
           // first participation of each subnet is true
-          syncSubCommitteeBits: [true, false, false, false, false, false, false, false],
+          syncSubcommitteeBits: [true, false, false, false, false, false, false, false],
           numParticipants: 1,
-          syncSubCommitteeSignature: sks[subnet].sign(blockRoot),
+          syncSubcommitteeSignature: sks[subnet].sign(blockRoot),
         });
         testSks.push(sks[subnet]);
       }

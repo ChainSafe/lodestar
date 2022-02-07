@@ -510,7 +510,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               `Error on publishContributionAndProofs [${i}]`,
               {
                 slot: contributionAndProof.message.contribution.slot,
-                subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
+                subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
               },
               e as Error
             );
