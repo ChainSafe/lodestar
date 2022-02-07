@@ -58,7 +58,7 @@ export class AttestationDutiesService {
    *   }
    * @param signer
    */
-  remove(signer: PubkeyHex) {
+  remove(signer: PubkeyHex): void {
     mapValues(Object.fromEntries(this.dutiesByIndexByEpoch), (attDutiesAtEpoch, _epoch) => {
       mapValues(Object.fromEntries(attDutiesAtEpoch.dutiesByIndex), (attDutyAndProof, vIndex) => {
         if (toHexString(attDutyAndProof.duty.pubkey) === signer) {

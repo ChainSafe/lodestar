@@ -153,7 +153,7 @@ export class Validator {
     return new Validator(opts, genesis);
   }
 
-  removeSignerFromDutiesAndIndices(signer: PubkeyHex) {
+  removeSignerFromDutiesAndIndices(signer: PubkeyHex): void {
     this.indicesService.remove(signer);
     this.blockDutiesService.remove(signer);
     this.attestationDutiesService.remove(signer);

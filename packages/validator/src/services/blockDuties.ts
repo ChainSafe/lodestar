@@ -60,7 +60,7 @@ export class BlockDutiesService {
     return Array.from(publicKeys.values());
   }
 
-  remove(signer: PubkeyHex) {
+  remove(signer: PubkeyHex): void {
     mapValues(Object.fromEntries(this.proposers), (blockDutyAtEpoch, _epoch) => {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
         return toHexString(proposer.pubkey) !== signer;

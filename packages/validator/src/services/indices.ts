@@ -27,16 +27,6 @@ export class IndicesService {
     private readonly validatorStore: ValidatorStore
   ) {}
 
-  remove(signer: PubkeyHex) {
-    mapValues(Object.fromEntries(this.index2pubkey), (value, key) => {
-      if (value === signer) {
-        this.index2pubkey.delete(parseInt(key as string));
-      }
-      return value;
-    });
-
-    this.pubkey2index.delete(signer);
-  }
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
     return Array.from(this.index2pubkey.keys());
@@ -61,6 +51,16 @@ export class IndicesService {
       this.pollValidatorIndicesPromise = null;
     });
     return this.pollValidatorIndicesPromise;
+  }
+
+  remove(signer: PubkeyHex): void {
+    mapValues(Object.fromEntries(this.index2pubkey), (value, key) => {
+      if (value === signer) {
+        this.index2pubkey.delete(parseInt(key as string));
+      }
+      return value;
+    });
+    this.pubkey2index.delete(signer);
   }
 
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown

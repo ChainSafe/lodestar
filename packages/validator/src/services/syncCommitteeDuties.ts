@@ -61,17 +61,6 @@ export class SyncCommitteeDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
   }
 
-  remove(signer: PubkeyHex) {
-    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, _syncPeriod) => {
-      mapValues(Object.fromEntries(validatorDutyAtPeriodMap), (dutyAtPeriod, validatorIndex) => {
-        if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
-          validatorDutyAtPeriodMap.delete(parseInt(validatorIndex as string));
-        }
-        return dutyAtPeriod;
-      });
-    });
-  }
-
   /**
    * Returns all `ValidatorDuty` for the given `slot`
    *
@@ -96,6 +85,17 @@ export class SyncCommitteeDutiesService {
     }
 
     return duties;
+  }
+
+  remove(signer: PubkeyHex): void {
+    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, _syncPeriod) => {
+      mapValues(Object.fromEntries(validatorDutyAtPeriodMap), (dutyAtPeriod, validatorIndex) => {
+        if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
+          validatorDutyAtPeriodMap.delete(parseInt(validatorIndex as string));
+        }
+        return dutyAtPeriod;
+      });
+    });
   }
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {

@@ -24,7 +24,7 @@ export class KeymanagerApi implements Api {
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
     private readonly importKeystoresPath?: string[],
-    private readonly secretKeysInfo?: SecretKeyInfo[],
+    private readonly secretKeysInfo?: SecretKeyInfo[]
   ) {}
 
   /**
