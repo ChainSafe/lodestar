@@ -262,10 +262,12 @@
   <span class="nx">baseUrl</span><span class="o">:</span> <span class="s2">"http://localhost:9596"</span><span class="p">,</span>
 <span class="p">});</span>
 
-<span class="nx">api</span><span class="p">.</span><span class="nx">beacon</span><span class="p">.</span><span class="nx">getStateValidator</span><span class="p">(</span>
-  <span class="s2">"head"</span><span class="p">,</span>
-  <span class="s2">"0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"</span>
-<span class="p">).</span><span class="nx">then</span><span class="p">((</span><span class="nx">res</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Your balance is:"</span><span class="p">,</span> <span class="nx">res</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">balance</span><span class="p">));</span>
+<span class="nx">api</span><span class="p">.</span><span class="nx">beacon</span>
+  <span class="p">.</span><span class="nx">getStateValidator</span><span class="p">(</span>
+    <span class="s2">"head"</span><span class="p">,</span>
+    <span class="s2">"0x933ad9491b62059dd065b560d256d8957a8c402cc6e8d8ee7290ae11e8f7329267a8811c397529dac52ae1342ba58c95"</span>
+  <span class="p">)</span>
+  <span class="p">.</span><span class="nx">then</span><span class="p">((</span><span class="nx">res</span><span class="p">)</span> <span class="p">=&gt;</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s2">"Your balance is:"</span><span class="p">,</span> <span class="nx">res</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">balance</span><span class="p">));</span>
 </code></pre></div>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">¶</a></h2>
 <ul>
