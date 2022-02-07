@@ -30,15 +30,15 @@ To start a Lodestar beacon run the command:
 ./lodestar beacon --network $NETWORK_NAME
 ```
 
-This will assume an eth1 client is available at the default location of `localhost:8545`. 
+This will assume an eth1 client is available at the default location of `localhost:8545`.
 
-In case eth1 clients are available at different locations, use `--eth1.providerUrls` to specify these locations in the command: 
+In case eth1 clients are available at different locations, use `--eth1.providerUrls` to specify these locations in the command:
 
 ```bash
 ./lodestar beacon --network $NETWORK_NAME --eth1.providerUrls eth1.url1 eth1.url2
 ```
 
-It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1.enabled` option in the command: 
+It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1.enabled` option in the command:
 
 ```bash
 ./lodestar beacon --eth1.enabled false --network $NETWORK_NAME
