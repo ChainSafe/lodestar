@@ -1,4 +1,4 @@
-import {allForks, Slot, ssz} from "@chainsafe/lodestar-types";
+import {allForks, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
@@ -8,7 +8,6 @@ import {
   ReturnTypes,
   RoutesData,
   Schema,
-  StringType,
   ReqSerializers,
   ReqEmpty,
   sameType,
