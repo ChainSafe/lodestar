@@ -237,8 +237,9 @@ function runStateTranstion(
       } catch (e) {
         if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
           logger.debug("INVALID_ATTESTATION onAttestation", e.type.err);
+        } else {
+          logger.error("Error onAttestation", {}, e as Error);
         }
-        logger.error("Error onAttestation", {}, e as Error);
       }
     }
   } catch (e) {
