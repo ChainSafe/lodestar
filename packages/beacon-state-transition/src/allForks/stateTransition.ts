@@ -32,9 +32,7 @@ const processEpochByFork: Record<ForkName, ProcessEpochFn> = {
   [ForkName.bellatrix]: altair.processEpoch as ProcessEpochFn,
 };
 
-export const upgradeStateByFork: Record<ForkName, UpgradeStateFn> = {
-  // Dummy placeholder Fn for phase0
-  [ForkName.phase0]: ((x) => x) as UpgradeStateFn,
+export const upgradeStateByFork: Record<Exclude<ForkName, ForkName.phase0>, UpgradeStateFn> = {
   [ForkName.altair]: altair.upgradeState as UpgradeStateFn,
   [ForkName.bellatrix]: bellatrix.upgradeState as UpgradeStateFn,
 };

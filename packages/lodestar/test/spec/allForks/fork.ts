@@ -1,27 +1,26 @@
 import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/default";
-import {allForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, altair, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {phase0, altair, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
+import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 
-export function fork<
-  PreBeaconState extends phase0.BeaconState | altair.BeaconState,
-  PostBeaconState extends altair.BeaconState | bellatrix.BeaconState
->(pre: ForkName, fork: ForkName): void {
+export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exclude<ForkName, ForkName.phase0>): void {
+  const testConfig = createIChainForkConfig(forkConfig);
   describeDirectorySpecTest<IUpgradeStateCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/fork/fork`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork/fork/pyspec_tests`),
     (testcase) => {
-      const preState = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<PreBeaconState>);
-      const postState = allForks.upgradeStateByFork[fork]((preState as unknown) as CachedBeaconStateAllForks);
+      const preState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
+      const postState = allForks.upgradeStateByFork[fork](preState);
 
-      // this test has a random slot so createCachedBeaconState is not able to create indexed sync committee
+      // Any post state will have fields belonging to altair fork. These need to be set as
+      // this test has a random slot so createCachedBeaconState is not able to create indexed
+      // sync committee
       const tbPostState = (postState.type.createTreeBacked(postState.tree) as unknown) as TreeBacked<PostBeaconState>;
       postState.currentSyncCommittee = allForks.convertToIndexedSyncCommittee(
         tbPostState.currentSyncCommittee as TreeBacked<altair.SyncCommittee>,
@@ -48,9 +47,11 @@ export function fork<
       },
     }
   );
+}
 
-  interface IUpgradeStateCase extends IBaseSpecTest {
-    pre: PreBeaconState;
-    post: PostBeaconState;
-  }
+type PostBeaconState = Exclude<allForks.BeaconState, phase0.BeaconState>;
+
+interface IUpgradeStateCase extends IBaseSpecTest {
+  pre: allForks.BeaconState;
+  post: PostBeaconState;
 }
