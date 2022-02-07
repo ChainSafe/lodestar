@@ -1,6 +1,8 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {byteArrayEquals} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+
 import {IBeaconDb} from "../db";
 import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
@@ -37,15 +39,29 @@ export class Eth1DepositsCache {
     assertConsecutiveDeposits(depositEvents);
 
     const lastLog = await this.db.depositEvent.lastValue();
-    const firstEvent = depositEvents[0];
-    if (lastLog !== null && firstEvent !== undefined) {
-      const newIndex = firstEvent.index;
-      const prevIndex = lastLog.index;
-      if (newIndex <= prevIndex) {
-        throw new Eth1Error({code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG, newIndex, prevIndex});
+    // Check, validate and skip if we got any deposit events already present in DB
+    if (lastLog !== null) {
+      const lastLogIndex = lastLog.index;
+      let skipEvents = 0;
+      for (; skipEvents < depositEvents.length && depositEvents[skipEvents].index <= lastLogIndex; skipEvents++) {
+        const depositEvent = depositEvents[skipEvents];
+        const prevDBSerializedEvent = await this.db.depositEvent.getBinary(depositEvent.index);
+        if (!prevDBSerializedEvent) {
+          throw new Eth1Error({code: Eth1ErrorCode.MISSING_DEPOSIT_LOG, index: depositEvent.index, lastLogIndex});
+        }
+        const serializedEvent = ssz.phase0.DepositEvent.serialize(depositEvent);
+        if (!byteArrayEquals(prevDBSerializedEvent, serializedEvent))
+          throw new Eth1Error({code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG, index: depositEvent.index, lastLogIndex});
+        skipEvents++;
       }
-      if (newIndex > prevIndex + 1) {
-        throw new Eth1Error({code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS, newIndex, prevIndex});
+
+      if (skipEvents > 0) depositEvents.splice(0, skipEvents);
+      const firstEvent = depositEvents[0];
+      if (firstEvent !== undefined) {
+        const newIndex = firstEvent.index;
+        if (newIndex > lastLogIndex + 1) {
+          throw new Eth1Error({code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS, newIndex, lastLogIndex});
+        }
       }
     }
 
