@@ -33,8 +33,8 @@ export type Eth1ErrorType =
   | {code: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE; fromBlock: number; toBlock: number}
   | {code: Eth1ErrorCode.NO_DEPOSIT_ROOT; depositCount: number}
   | {code: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS; index: number; treeLength: number}
-  | {code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG; index: number; lastLogIndex: number}
+  | {code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG; newIndex: number; lastLogIndex: number}
   | {code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS; newIndex: number; lastLogIndex: number}
-  | {code: Eth1ErrorCode.MISSING_DEPOSIT_LOG; index: number; lastLogIndex: number};
+  | {code: Eth1ErrorCode.MISSING_DEPOSIT_LOG; newIndex: number; lastLogIndex: number};
 
 export class Eth1Error extends LodestarError<Eth1ErrorType> {}

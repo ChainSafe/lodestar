@@ -54,7 +54,7 @@ export class Eth1DepositDataTracker {
     this.signal = signal;
     this.logger = logger;
     this.eth1Provider = eth1Provider;
-    this.depositsCache = new Eth1DepositsCache(config, db);
+    this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.lastProcessedDepositBlockNumber = null;
 
