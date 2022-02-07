@@ -88,7 +88,7 @@ export function rewardsAltair(fork: ForkName): void {
         //   + set all inactivityScores to zero
         // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
         //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-        return altair.getRewardsPenaltiesDeltas(state, epochProcess);
+        return altair.getRewardsAndPenalties(state, epochProcess);
       },
       {
         inputTypes: inputTypeSszTreeBacked,

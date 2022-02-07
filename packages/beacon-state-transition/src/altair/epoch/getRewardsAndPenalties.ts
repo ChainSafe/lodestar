@@ -41,10 +41,7 @@ interface IRewardPenaltyItem {
  *   - unslashed:          100%
  *   - eligibleAttester:   98%
  */
-export function getRewardsPenaltiesDeltas(
-  state: CachedBeaconStateAltair,
-  process: IEpochProcess
-): [number[], number[]] {
+export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: IEpochProcess): [number[], number[]] {
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = process.totalActiveStakeByIncrement;
