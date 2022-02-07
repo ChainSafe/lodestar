@@ -16,7 +16,7 @@ import {
 export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
   signedContributionAndProof: altair.SignedContributionAndProof
-): Promise<void> {
+): Promise<{syncCommitteeParticipants: number}> {
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
   const {subcommitteeIndex, slot} = contribution;
@@ -85,4 +85,6 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
   chain.seenContributionAndProof.add(slot, subcommitteeIndex, aggregatorIndex);
+
+  return {syncCommitteeParticipants: pubkeys.length};
 }
