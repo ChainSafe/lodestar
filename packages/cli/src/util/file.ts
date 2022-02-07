@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
-import stream from "stream";
-import {promisify} from "util";
+import stream from "node:stream";
+import {promisify} from "node:util";
 import got from "got";
 import {load, dump, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
 import {Json} from "@chainsafe/ssz";

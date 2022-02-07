@@ -6,7 +6,7 @@ import {createLogger, Logger} from "winston";
 import {Context, defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface";
 import chalk from "chalk";
 import {getFormat} from "./format";
-import {Writable} from "stream";
+import {Writable} from "node:stream";
 import {TransportOpts, TransportType, fromTransportOpts} from "./transport";
 
 const defaultTransportOpts: TransportOpts = {type: TransportType.console};

@@ -131,11 +131,16 @@ module.exports = {
       {
         patterns: ["../lib/*", "@chainsafe/*/lib/*"],
         paths: [
-          {name: "fs", message: "Please use node:fs instead."},
-          {name: "path", message: "Please use node:path instead."},
+          {name: "child_process", message: "Please use node:child_process instead."},
           {name: "crypto", message: "Please use node:crypto instead."},
-          {name: "url", message: "Please use node:url instead."},
+          {name: "fs", message: "Please use node:fs instead."},
+          {name: "http", message: "Please use node:http instead."},
+          {name: "net", message: "Please use node:net instead."},
           {name: "os", message: "Please use node:os instead."},
+          {name: "path", message: "Please use node:path instead."},
+          {name: "stream", message: "Please use node:stream instead."},
+          {name: "util", message: "Please use node:util instead."},
+          {name: "url", message: "Please use node:url instead."},
         ],
       },
     ],
@@ -146,7 +151,18 @@ module.exports = {
     "no-only-tests/no-only-tests": "error",
   },
   settings: {
-    "import/core-modules": ["node:fs", "node:path"],
+    "import/core-modules": [
+      "node:child_process",
+      "node:crypto",
+      "node:fs",
+      "node:http",
+      "node:net",
+      "node:os",
+      "node:path",
+      "node:stream",
+      "node:util",
+      "node:url",
+    ],
   },
   overrides: [
     {

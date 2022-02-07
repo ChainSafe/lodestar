@@ -2,7 +2,7 @@
  * @module logger
  */
 
-import {Writable} from "stream";
+import {Writable} from "node:stream";
 
 export enum LogLevel {
   error = "error",
