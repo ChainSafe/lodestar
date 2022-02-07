@@ -135,6 +135,11 @@ export class CheckpointStateCache {
       lastRead: this.cache.lastRead.get(key) ?? 0,
     }));
   }
+
+  /** ONLY FOR DEBUGGING PURPOSES. For spec tests on error */
+  dumpCheckpointKeys(): string[] {
+    return Array.from(this.cache.keys());
+  }
 }
 
 export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
@@ -144,6 +149,6 @@ export function toCheckpointHex(checkpoint: phase0.Checkpoint): CheckpointHex {
   };
 }
 
-function toCheckpointKey(cp: CheckpointHex): string {
+export function toCheckpointKey(cp: CheckpointHex): string {
   return `${cp.rootHex}:${cp.epoch}`;
 }

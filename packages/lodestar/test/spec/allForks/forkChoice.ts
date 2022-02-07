@@ -16,12 +16,14 @@ import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
 import {
   CheckpointStateCache,
   toCheckpointHex,
+  toCheckpointKey,
 } from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
 import {ChainEventEmitter} from "@chainsafe/lodestar/src/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
-import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ForkChoiceError, ForkChoiceErrorCode, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
+import {testLogger} from "../../utils/logger";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
@@ -30,6 +32,8 @@ const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
+
+const logger = testLogger("spec-test");
 
 export function forkChoiceTest(fork: ForkName): void {
   for (const testFolder of ["get_head", "on_block"]) {
@@ -207,15 +211,20 @@ function runStateTranstion(
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
   let justifiedBalances: EffectiveBalanceIncrements | undefined;
-  const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
-  if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
+  const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
+  const justifiedState = checkpointCache.get(checkpointHex);
+  if (
+    postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch ||
+    postState.finalizedCheckpoint.epoch > forkchoice.getFinalizedCheckpoint().epoch
+  ) {
     if (!justifiedState) {
-      const epoch = postState.currentJustifiedCheckpoint.epoch;
-      const root = toHexString(postState.currentJustifiedCheckpoint.root);
-      throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
+      const checkpointHexKey = toCheckpointKey(checkpointHex);
+      const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
+      throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
     }
     justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
+
   try {
     forkchoice.onBlock(signedBlock.message, postState, {
       blockDelaySec,
@@ -225,11 +234,20 @@ function runStateTranstion(
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
         forkchoice.onAttestation(indexedAttestation);
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (e) {
+        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+          logger.debug("INVALID_ATTESTATION onAttestation", e.type.err);
+        }
+        logger.error("Error onAttestation", {}, e as Error);
+      }
     }
-    // eslint-disable-next-line no-empty
-  } catch (e) {}
+  } catch (e) {
+    if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_BLOCK) {
+      logger.debug("INVALID_BLOCK onBlock", e.type.err);
+    } else {
+      logger.error("Error onBlock", {}, e as Error);
+    }
+  }
   return postState;
 }
 
