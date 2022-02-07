@@ -397,11 +397,11 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-proposer_reward_dominator"><code>Const</code> PROPOSER_REWARD_DOMINATOR<a class="headerlink" href="#const-proposer_reward_dominator" title="Permanent link">¶</a></h3>
 <p>• <strong>PROPOSER_REWARD_DOMINATOR</strong>: <em>number</em> = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L20">packages/beacon-state-transition/src/altair/block/processAttestation.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L20">packages/beacon-state-transition/src/altair/block/processAttestation.ts:20</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="accumulatedelta">accumulateDelta<a class="headerlink" href="#accumulatedelta" title="Permanent link">¶</a></h3>
 <p>▸ <strong>accumulateDelta</strong>(<code>deltaByIndex</code>: Map‹ValidatorIndex, number›, <code>index</code>: ValidatorIndex, <code>delta</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L106">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:106</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L106">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:106</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -429,7 +429,7 @@
 <hr/>
 <h3 id="getattestationparticipationstatus">getAttestationParticipationStatus<a class="headerlink" href="#getattestationparticipationstatus" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAttestationParticipationStatus</strong>(<code>data</code>: AttestationData, <code>inclusionDelay</code>: number, <code>rootCache</code>: <a href="../../classes/altair_block.rootcache/">RootCache</a>, <code>epochCtx</code>: <a href="../../classes/allforks_util.epochcontext/">EpochContext</a>): <em><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L125">packages/beacon-state-transition/src/altair/block/processAttestation.ts:125</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L125">packages/beacon-state-transition/src/altair/block/processAttestation.ts:125</a></em></p>
 <p>https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.4/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -462,7 +462,7 @@
 <hr/>
 <h3 id="getparticipantindices">getParticipantIndices<a class="headerlink" href="#getparticipantindices" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getParticipantIndices</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>syncAggregate</code>: SyncAggregate): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L95">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:95</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L95">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:95</a></em></p>
 <p>Get participant indices for a sync committee.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -487,7 +487,7 @@
 <hr/>
 <h3 id="getparticipantinfo">getParticipantInfo<a class="headerlink" href="#getparticipantinfo" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getParticipantInfo</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>syncAggregate</code>: SyncAggregate): <em>[number[], number[]]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L101">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:101</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L101">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:101</a></em></p>
 <p>Return [0] as participant indices and [1] as unparticipant indices for a sync committee.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -512,7 +512,7 @@
 <hr/>
 <h3 id="getsynccommitteesignatureset">getSyncCommitteeSignatureSet<a class="headerlink" href="#getsynccommitteesignatureset" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSyncCommitteeSignatureSet</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>block</code>: BeaconBlock, <code>participantIndices?</code>: number[]): <em><a href="../util/#isignatureset">ISignatureSet</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L45">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L45">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:45</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -540,7 +540,7 @@
 <hr/>
 <h3 id="processattestations">processAttestations<a class="headerlink" href="#processattestations" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processAttestations</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>attestations</code>: Attestation[], <code>verifySignature</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L22">packages/beacon-state-transition/src/altair/block/processAttestation.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L22">packages/beacon-state-transition/src/altair/block/processAttestation.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -572,7 +572,7 @@
 <hr/>
 <h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>attesterSlashing</code>: AttesterSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processAttesterSlashing.ts#L6">packages/beacon-state-transition/src/altair/block/processAttesterSlashing.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processAttesterSlashing.ts#L6">packages/beacon-state-transition/src/altair/block/processAttesterSlashing.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -604,7 +604,7 @@
 <hr/>
 <h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/index.ts#L24">packages/beacon-state-transition/src/altair/block/index.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/index.ts#L24">packages/beacon-state-transition/src/altair/block/index.ts:24</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -636,7 +636,7 @@
 <hr/>
 <h3 id="processdeposit">processDeposit<a class="headerlink" href="#processdeposit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processDeposit</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>deposit</code>: Deposit): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processDeposit.ts#L7">packages/beacon-state-transition/src/altair/block/processDeposit.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processDeposit.ts#L7">packages/beacon-state-transition/src/altair/block/processDeposit.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -660,7 +660,7 @@
 <hr/>
 <h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>body</code>: BeaconBlockBody, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processOperations.ts#L12">packages/beacon-state-transition/src/altair/block/processOperations.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processOperations.ts#L12">packages/beacon-state-transition/src/altair/block/processOperations.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -692,7 +692,7 @@
 <hr/>
 <h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>proposerSlashing</code>: ProposerSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/altair/block/processProposerSlashing.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/altair/block/processProposerSlashing.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -724,7 +724,7 @@
 <hr/>
 <h3 id="processsyncaggregate">processSyncAggregate<a class="headerlink" href="#processsyncaggregate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processSyncAggregate</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L16">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts#L16">packages/beacon-state-transition/src/altair/block/processSyncCommittee.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -756,7 +756,7 @@
 <hr/>
 <h3 id="processvoluntaryexit">processVoluntaryExit<a class="headerlink" href="#processvoluntaryexit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processVoluntaryExit</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>signedVoluntaryExit</code>: SignedVoluntaryExit, <code>verifySignature</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processVoluntaryExit.ts#L5">packages/beacon-state-transition/src/altair/block/processVoluntaryExit.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processVoluntaryExit.ts#L5">packages/beacon-state-transition/src/altair/block/processVoluntaryExit.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -788,7 +788,7 @@
 <hr/>
 <h3 id="updateepochparticipants">updateEpochParticipants<a class="headerlink" href="#updateepochparticipants" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateEpochParticipants</strong>(<code>epochStatuses</code>: Map‹number, <a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›, <code>epochParticipation</code>: <a href="../../classes/allforks_util.cachedepochparticipation/">CachedEpochParticipation</a>, <code>numActiveValidators</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6ebae5c/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L195">packages/beacon-state-transition/src/altair/block/processAttestation.ts:195</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/beacon-state-transition/src/altair/block/processAttestation.ts#L195">packages/beacon-state-transition/src/altair/block/processAttestation.ts:195</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
