@@ -35,7 +35,7 @@ function upgradeTreeBackedState(config: IBeaconConfig, state: CachedBeaconStateP
   postState.previousEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.currentEpochParticipation = newZeroedArray(validatorCount) as List<ParticipationFlags>;
   postState.inactivityScores = newZeroedArray(validatorCount) as List<Uint8>;
-  const syncCommittee = getNextSyncCommittee(state, nextEpochActiveIndices, state.epochCtx.effectiveBalances);
+  const syncCommittee = getNextSyncCommittee(state, nextEpochActiveIndices, state.epochCtx.effectiveBalanceIncrements);
   postState.currentSyncCommittee = syncCommittee;
   postState.nextSyncCommittee = syncCommittee;
   return postState;

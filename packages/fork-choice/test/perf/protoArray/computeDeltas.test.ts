@@ -1,6 +1,11 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {expect} from "chai";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeStartSlotAtEpoch,
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroed,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {IVoteTracker} from "../../../src/protoArray/interface";
 import {computeDeltas} from "../../../src/protoArray/computeDeltas";
@@ -9,8 +14,9 @@ import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/for
 describe("computeDeltas", () => {
   let originalState: CachedBeaconStateAllForks;
   const indices: Map<string, number> = new Map<string, number>();
-  const oldBalances: number[] = [];
-  const newBalances: number[] = [];
+  let oldBalances: EffectiveBalanceIncrements;
+  let newBalances: EffectiveBalanceIncrements;
+
   const oldRoot = "0x32dec344944029ba183ac387a7aa1f2068591c00e9bfadcfb238e50fbe9ea38e";
   const newRoot = "0xb59f3a209f639dd6b5645ea9fad8d441df44c3be93bd1bbf50ef90bf124d1238";
 
@@ -29,9 +35,13 @@ describe("computeDeltas", () => {
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");
+
+    oldBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
+    newBalances = getEffectiveBalanceIncrementsZeroed(numPreviousEpochParticipation);
+
     for (let i = 0; i < numPreviousEpochParticipation; i++) {
-      oldBalances.push(32);
-      newBalances.push(32);
+      oldBalances[i] = 32;
+      newBalances[i] = 32;
     }
     for (let i = 0; i < 10000; i++) {
       indices.set("" + i, i);

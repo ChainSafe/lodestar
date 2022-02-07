@@ -13,6 +13,7 @@ import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_ATTESTATIONS,
@@ -28,7 +29,6 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
 import {getInfuraBeaconUrl} from "./infura";
 import {testCachePath} from "../cache";
-import {MutableVector} from "@chainsafe/persistent-ts";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -180,8 +180,10 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
     const epoch = computeEpochAtSlot(state.slot);
     const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
-    const effectiveBalances = MutableVector.from(Array.from(state.validators).map((v) => v.effectiveBalance));
-    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalances);
+    const effectiveBalanceIncrements = new Uint8Array(
+      Array.from(state.validators).map((v) => v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+    );
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalanceIncrements);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);

@@ -9,7 +9,7 @@ import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} fr
 
 import {generateValidators} from "../../utils/validator";
 import {generateCachedState, generateState} from "../../utils/state";
-import {getEffectiveBalances} from "../../../src";
+import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
@@ -105,6 +105,9 @@ describe("getEffectiveBalances", () => {
           : 0
       );
     }
-    expect(getEffectiveBalances(justifiedState)).to.be.deep.equal(effectiveBalances, "wrong effectiveBalances");
+    expect(getEffectiveBalanceIncrementsZeroInactive(justifiedState)).to.be.deep.equal(
+      effectiveBalances,
+      "wrong effectiveBalances"
+    );
   });
 });

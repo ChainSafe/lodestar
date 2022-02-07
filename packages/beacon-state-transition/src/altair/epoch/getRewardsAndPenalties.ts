@@ -50,7 +50,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
 
   const isInInactivityLeakBn = isInInactivityLeak(state as CachedBeaconStateAllForks);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
-  // so there are limited values of them like 32000000000, 31000000000, 30000000000
+  // so there are limited values of them like 32, 31, 30
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {config, epochCtx} = state;
   const fork = config.getForkName(state.slot);
@@ -65,11 +65,12 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
     if (!hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       continue;
     }
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const effectiveBalance = epochCtx.effectiveBalances.get(i)!;
-    let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalance);
+
+    const effectiveBalanceIncrement = epochCtx.effectiveBalanceIncrements[i];
+
+    let rewardPenaltyItem = rewardPenaltyItemCache.get(effectiveBalanceIncrement);
     if (!rewardPenaltyItem) {
-      const baseReward = (effectiveBalance / EFFECTIVE_BALANCE_INCREMENT) * process.baseRewardPerIncrement;
+      const baseReward = effectiveBalanceIncrement * process.baseRewardPerIncrement;
       const tsWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_SOURCE_FLAG_INDEX];
       const ttWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX];
       const thWeigh = PARTICIPATION_FLAG_WEIGHTS[TIMELY_HEAD_FLAG_INDEX];
@@ -87,7 +88,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
         timelySourcePenalty: Math.floor((baseReward * tsWeigh) / WEIGHT_DENOMINATOR),
         timelyTargetPenalty: Math.floor((baseReward * ttWeigh) / WEIGHT_DENOMINATOR),
       };
-      rewardPenaltyItemCache.set(effectiveBalance, rewardPenaltyItem);
+      rewardPenaltyItemCache.set(effectiveBalanceIncrement, rewardPenaltyItem);
     }
     const {
       timelySourceReward,
@@ -119,7 +120,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
     // Same logic to getInactivityPenaltyDeltas
     // TODO: if we have limited value in inactivityScores we can provide a cache too
     if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-      const penaltyNumerator = effectiveBalance * state.inactivityScores[i];
+      const penaltyNumerator = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT * state.inactivityScores[i];
       penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
     }
   }

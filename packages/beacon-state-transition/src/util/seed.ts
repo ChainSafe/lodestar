@@ -7,6 +7,7 @@ import {Epoch, Bytes32, DomainType, allForks, ValidatorIndex} from "@chainsafe/l
 import {assert, bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {
   DOMAIN_BEACON_PROPOSER,
+  EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_EFFECTIVE_BALANCE,
   MIN_SEED_LOOKAHEAD,
@@ -14,7 +15,7 @@ import {
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
 import {IEpochShuffling} from "../allForks";
-import {MutableVector} from "@chainsafe/persistent-ts";
+import {EffectiveBalanceIncrements} from "../allForks/util/effectiveBalanceIncrements";
 import {computeStartSlotAtEpoch} from "./epoch";
 
 /**
@@ -23,7 +24,7 @@ import {computeStartSlotAtEpoch} from "./epoch";
 export function computeProposers(
   state: allForks.BeaconState,
   shuffling: IEpochShuffling,
-  effectiveBalances: MutableVector<number>
+  effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
   const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
@@ -31,7 +32,7 @@ export function computeProposers(
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
     proposers.push(
       computeProposerIndex(
-        effectiveBalances,
+        effectiveBalanceIncrements,
         shuffling.activeIndices,
         hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
@@ -46,7 +47,7 @@ export function computeProposers(
  * SLOW CODE - 🐢
  */
 export function computeProposerIndex(
-  effectiveBalances: MutableVector<number>,
+  effectiveBalanceIncrements: EffectiveBalanceIncrements,
   indices: ValidatorIndex[],
   seed: Uint8Array
 ): ValidatorIndex {
@@ -54,6 +55,7 @@ export function computeProposerIndex(
 
   // TODO: Inline outside this function
   const MAX_RANDOM_BYTE = 2 ** 8 - 1;
+  const MAX_EFFECTIVE_BALANCE_INCREMENT = MAX_EFFECTIVE_BALANCE / EFFECTIVE_BALANCE_INCREMENT;
 
   let i = 0;
   /* eslint-disable-next-line no-constant-condition */
@@ -68,8 +70,8 @@ export function computeProposerIndex(
     )[i % 32];
 
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const effectiveBalance = effectiveBalances.get(candidateIndex)!;
-    if (effectiveBalance * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE * randByte) {
+    const effectiveBalanceIncrement = effectiveBalanceIncrements[candidateIndex];
+    if (effectiveBalanceIncrement * MAX_RANDOM_BYTE >= MAX_EFFECTIVE_BALANCE_INCREMENT * randByte) {
       return candidateIndex;
     }
     i += 1;

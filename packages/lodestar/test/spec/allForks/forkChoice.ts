@@ -7,7 +7,7 @@ import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   ZERO_HASH,
-  getEffectiveBalances,
+  getEffectiveBalanceIncrementsZeroInactive,
   computeStartSlotAtEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
@@ -216,7 +216,7 @@ function runStateTranstion(
       const root = toHexString(postState.currentJustifiedCheckpoint.root);
       throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
     }
-    justifiedBalances = getEffectiveBalances(justifiedState);
+    justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
   try {
     forkchoice.onBlock(signedBlock.message, postState, {

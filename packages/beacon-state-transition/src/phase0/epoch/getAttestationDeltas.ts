@@ -75,15 +75,16 @@ export function getAttestationDeltas(
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
-  // so there are limited values of them like 32000000000, 31000000000, 30000000000
+  // so there are limited values of them like 32, 31, 30
   const rewardPnaltyItemCache = new Map<number, IRewardPenaltyItem>();
   const {statuses} = epochProcess;
-  const {effectiveBalances} = state.epochCtx;
+  const {effectiveBalanceIncrements} = state.epochCtx;
   for (let i = 0; i < statuses.length; i++) {
+    const effectiveBalanceIncrement = effectiveBalanceIncrements[i];
+    const effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
     const status = statuses[i];
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const effectiveBalance = effectiveBalances.get(i)!;
-    let rewardItem = rewardPnaltyItemCache.get(effectiveBalance);
+
+    let rewardItem = rewardPnaltyItemCache.get(effectiveBalanceIncrement);
     if (!rewardItem) {
       const baseReward = Math.floor(
         Math.floor((effectiveBalance * BASE_REWARD_FACTOR) / balanceSqRoot) / BASE_REWARDS_PER_EPOCH
@@ -105,7 +106,7 @@ export function getAttestationDeltas(
         basePenalty: baseReward * BASE_REWARDS_PER_EPOCH_CONST - proposerReward,
         finalityDelayPenalty: Math.floor((effectiveBalance * finalityDelay) / INACTIVITY_PENALTY_QUOTIENT),
       };
-      rewardPnaltyItemCache.set(effectiveBalance, rewardItem);
+      rewardPnaltyItemCache.set(effectiveBalanceIncrement, rewardItem);
     }
 
     const {

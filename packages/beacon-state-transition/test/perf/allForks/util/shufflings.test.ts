@@ -22,7 +22,7 @@ describe("epoch shufflings", () => {
   itBench({
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
-      computeProposers(state, state.epochCtx.nextShuffling, state.effectiveBalances);
+      computeProposers(state, state.epochCtx.nextShuffling, state.effectiveBalanceIncrements);
     },
   });
 
@@ -36,7 +36,7 @@ describe("epoch shufflings", () => {
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
-      getNextSyncCommittee(state, state.epochCtx.nextShuffling.activeIndices, state.effectiveBalances);
+      getNextSyncCommittee(state, state.epochCtx.nextShuffling.activeIndices, state.effectiveBalanceIncrements);
     },
   });
 });

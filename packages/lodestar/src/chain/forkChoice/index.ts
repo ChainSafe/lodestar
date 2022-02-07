@@ -6,7 +6,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkChoice, ProtoArray, ForkChoiceStore, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {getEffectiveBalances, CachedBeaconStateAllForks, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  getEffectiveBalanceIncrementsZeroInactive,
+  CachedBeaconStateAllForks,
+  bellatrix,
+} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
@@ -41,7 +45,7 @@ export function initializeForkChoice(
     epoch: checkpoint.epoch === 0 ? checkpoint.epoch : checkpoint.epoch + 1,
   };
 
-  const justifiedBalances = getEffectiveBalances(state);
+  const justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
 
   return new ForkChoice(
     config,

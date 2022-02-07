@@ -24,7 +24,6 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {bigIntSqrt, LodestarError} from "@chainsafe/lodestar-utils";
-import {MutableVector} from "@chainsafe/persistent-ts";
 
 import {
   computeActivationExitEpoch,
@@ -133,7 +132,6 @@ export function createEpochContext(
   const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
-  const effectiveBalancesArr: number[] = [];
   const effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(validatorCount));
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
@@ -167,7 +165,6 @@ export function createEpochContext(
     // TODO: Should have 0 for not active validators to be re-usable in ForkChoice
     effectiveBalanceIncrements[i] = validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   }
-  const effectiveBalances = MutableVector.from(effectiveBalancesArr);
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
   // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
@@ -186,7 +183,8 @@ export function createEpochContext(
   const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
   // Allow to create CachedBeaconState for empty states
-  const proposers = state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalances) : [];
+  const proposers =
+    state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
 
   // Only after altair, compute the indices of the current sync committee
   const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
