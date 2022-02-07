@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.synccommitteemessagepool/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.9" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.10" name="generator"/>
 <title>Chain oppools.synccommitteemessagepool - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.2b4465f4.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.d6be258b.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -345,17 +345,17 @@ This stays in-memory and should be pruned per slot.</p>
 <blockquote>
 <p>(() =&gt; new MapDef<subnet, contributionfast="" map\<blockroothex,="">&gt;(() =&gt; new Map<blockroothex, contributionfast="">()))</blockroothex,></subnet,></p>
 </blockquote>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L41">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L41">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:41</a></em></p>
 <p>Each array item is respective to a subCommitteeIndex.
 Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">¶</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L45">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L45">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:45</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>subnet</code>: <a href="../../modules/chain_oppools/#subnet">Subnet</a>, <code>signature</code>: SyncCommitteeMessage, <code>indexInSubCommittee</code>: number): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L48">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L48">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:48</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -383,7 +383,7 @@ Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="getcontribution">getContribution<a class="headerlink" href="#getcontribution" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getContribution</strong>(<code>subnet</code>: SubCommitteeIndex, <code>slot</code>: Slot, <code>prevBlockRoot</code>: Root): <em>SyncCommitteeContribution | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L79">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L79">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:79</a></em></p>
 <p>This is for the aggregator to produce ContributionAndProof.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -412,7 +412,7 @@ Preaggregate into SyncCommitteeContribution.</p>
 <hr/>
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L96">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts#L96">packages/lodestar/src/chain/opPools/syncCommitteeMessagePool.ts:96</a></em></p>
 <p>Prune per clock slot.
 SyncCommittee signatures are only useful during a single slot according to our peer's clocks</p>
 <p><strong>Parameters:</strong></p>
@@ -467,7 +467,7 @@ SyncCommittee signatures are only useful during a single slot according to our p
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.22074ed6.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.960e086b.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.092fa1f6.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.e3b2bf44.min.js"></script>
 </body>
 </html>

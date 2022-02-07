@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_archiver.archiver/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.9" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.1.10" name="generator"/>
 <title>Chain archiver.archiver - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.2b4465f4.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.d6be258b.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -392,7 +392,7 @@ periodically.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Archiver</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>logger</code>: ILogger, <code>signal</code>: AbortSignal): <em><a href="./">Archiver</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L20">packages/lodestar/src/chain/archiver/index.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L20">packages/lodestar/src/chain/archiver/index.ts:20</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -424,32 +424,32 @@ periodically.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-chain"><code>Private</code> <code>Readonly</code> chain<a class="headerlink" href="#private-readonly-chain" title="Permanent link">¶</a></h3>
 <p>• <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L24">packages/lodestar/src/chain/archiver/index.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L24">packages/lodestar/src/chain/archiver/index.ts:24</a></em></p>
 <hr/>
 <h3 id="private-readonly-db"><code>Private</code> <code>Readonly</code> db<a class="headerlink" href="#private-readonly-db" title="Permanent link">¶</a></h3>
 <p>• <strong>db</strong>: <em><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L23">packages/lodestar/src/chain/archiver/index.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L23">packages/lodestar/src/chain/archiver/index.ts:23</a></em></p>
 <hr/>
 <h3 id="private-jobqueue"><code>Private</code> jobQueue<a class="headerlink" href="#private-jobqueue" title="Permanent link">¶</a></h3>
 <p>• <strong>jobQueue</strong>: <em><a href="../util_queue.jobitemqueue/">JobItemQueue</a>‹[CheckpointWithHex], void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L18">packages/lodestar/src/chain/archiver/index.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L18">packages/lodestar/src/chain/archiver/index.ts:18</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L25">packages/lodestar/src/chain/archiver/index.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L25">packages/lodestar/src/chain/archiver/index.ts:25</a></em></p>
 <hr/>
 <h3 id="private-readonly-statesarchiver"><code>Private</code> <code>Readonly</code> statesArchiver<a class="headerlink" href="#private-readonly-statesarchiver" title="Permanent link">¶</a></h3>
 <p>• <strong>statesArchiver</strong>: <em><a href="../chain_archiver.statesarchiver/">StatesArchiver</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L20">packages/lodestar/src/chain/archiver/index.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L20">packages/lodestar/src/chain/archiver/index.ts:20</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-oncheckpoint"><code>Private</code> onCheckpoint<a class="headerlink" href="#private-oncheckpoint" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onCheckpoint</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L56">packages/lodestar/src/chain/archiver/index.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L56">packages/lodestar/src/chain/archiver/index.ts:56</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="private-onfinalizedcheckpoint"><code>Private</code> onFinalizedCheckpoint<a class="headerlink" href="#private-onfinalizedcheckpoint" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onFinalizedCheckpoint</strong>(<code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L52">packages/lodestar/src/chain/archiver/index.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L52">packages/lodestar/src/chain/archiver/index.ts:52</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -469,13 +469,13 @@ periodically.</p>
 <hr/>
 <h3 id="persisttodisk">persistToDisk<a class="headerlink" href="#persisttodisk" title="Permanent link">¶</a></h3>
 <p>▸ <strong>persistToDisk</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L48">packages/lodestar/src/chain/archiver/index.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L48">packages/lodestar/src/chain/archiver/index.ts:48</a></em></p>
 <p>Archive latest finalized state</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="private-processfinalizedcheckpoint"><code>Private</code> processFinalizedCheckpoint<a class="headerlink" href="#private-processfinalizedcheckpoint" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processFinalizedCheckpoint</strong>(<code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L65">packages/lodestar/src/chain/archiver/index.ts:65</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L65">packages/lodestar/src/chain/archiver/index.ts:65</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -495,7 +495,7 @@ periodically.</p>
 <hr/>
 <h3 id="private-updatebackfillrange"><code>Private</code> updateBackfillRange<a class="headerlink" href="#private-updatebackfillrange" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateBackfillRange</strong>(<code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f1f2b9f/packages/lodestar/src/chain/archiver/index.ts#L96">packages/lodestar/src/chain/archiver/index.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/96b5959/packages/lodestar/src/chain/archiver/index.ts#L96">packages/lodestar/src/chain/archiver/index.ts:96</a></em></p>
 <p>Backfill sync relies on verified connected ranges (which are represented as key,value
 with a verified jump from a key back to value). Since the node could have progressed
 ahead from, we need to save the forward progress of this node as another backfill
@@ -556,7 +556,7 @@ slot.</p>
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.22074ed6.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.960e086b.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.092fa1f6.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.e3b2bf44.min.js"></script>
 </body>
 </html>
