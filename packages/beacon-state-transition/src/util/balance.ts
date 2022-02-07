@@ -60,12 +60,13 @@ export function getEffectiveBalanceIncrementsZeroInactive(
 ): EffectiveBalanceIncrements {
   const {activeIndices} = justifiedState.currentShuffling;
   // 5x faster than using readonlyValuesListOfLeafNodeStruct
-  const count = justifiedState.validators.length;
+  const validatorCount = justifiedState.validators.length;
   const {effectiveBalanceIncrements} = justifiedState;
-  const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0);
+  // Slice up to `validatorCount` since it won't be mutated, nor accessed beyond `validatorCount`
+  const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0, validatorCount);
 
   let j = 0;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < validatorCount; i++) {
     if (i === activeIndices[j]) {
       // active validator
       j++;

@@ -9,7 +9,7 @@ import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} fr
 
 import {generateValidators} from "../../utils/validator";
 import {generateCachedState, generateState} from "../../utils/state";
-import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src";
+import {getEffectiveBalanceIncrementsZeroInactive, getEffectiveBalanceIncrementsZeroed} from "../../../src";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {
@@ -95,16 +95,16 @@ describe("getEffectiveBalances", () => {
       ] as List<phase0.Validator>,
     });
     const justifiedEpoch = justifiedState.currentShuffling.epoch;
-    const effectiveBalances: number[] = [];
     const validators = readonlyValuesListOfLeafNodeStruct(justifiedState.validators);
+    const effectiveBalances = getEffectiveBalanceIncrementsZeroed(validators.length);
+
     for (let i = 0, len = validators.length; i < len; i++) {
       const validator = validators[i];
-      effectiveBalances.push(
-        isActiveValidator(validator, justifiedEpoch)
-          ? Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
-          : 0
-      );
+      effectiveBalances[i] = isActiveValidator(validator, justifiedEpoch)
+        ? Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+        : 0;
     }
+
     expect(getEffectiveBalanceIncrementsZeroInactive(justifiedState)).to.be.deep.equal(
       effectiveBalances,
       "wrong effectiveBalances"
