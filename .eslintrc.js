@@ -98,7 +98,7 @@ module.exports = {
         allowNullableBoolean: true,
         allowNullableString: true,
         allowAny: true,
-      }
+      },
     ],
     "import/no-extraneous-dependencies": [
       "error",
@@ -126,7 +126,19 @@ module.exports = {
     "prefer-const": "error",
     quotes: ["error", "double"],
     semi: "off",
-    "no-restricted-imports": ["error", {patterns: ["../lib/*", "@chainsafe/*/lib/*"]}],
+    "no-restricted-imports": [
+      "error",
+      {
+        patterns: ["../lib/*", "@chainsafe/*/lib/*"],
+        paths: [
+          {name: "fs", message: "Please use node:fs instead."},
+          {name: "path", message: "Please use node:path instead."},
+          {name: "crypto", message: "Please use node:crypto instead."},
+          {name: "url", message: "Please use node:url instead."},
+          {name: "os", message: "Please use node:os instead."},
+        ],
+      },
+    ],
     // Force to add names to all functions to ease CPU profiling
     "func-names": ["error", "always"],
 
