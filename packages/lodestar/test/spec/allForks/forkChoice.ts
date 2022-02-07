@@ -9,17 +9,15 @@ import {
   ZERO_HASH,
   getEffectiveBalanceIncrementsZeroInactive,
   computeStartSlotAtEpoch,
+  EffectiveBalanceIncrements,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-// eslint-disable-next-line no-restricted-imports
-import {initializeForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice";
-// eslint-disable-next-line no-restricted-imports
+import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
 import {
   CheckpointStateCache,
   toCheckpointHex,
-} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
-// eslint-disable-next-line no-restricted-imports
-import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
+} from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
+import {ChainEventEmitter} from "@chainsafe/lodestar/src/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
@@ -208,7 +206,7 @@ function runStateTranstion(
     cacheCheckpointState(postState, checkpointCache);
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: number[] = [];
+  let justifiedBalances: EffectiveBalanceIncrements | undefined;
   const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
   if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
     if (!justifiedState) {
