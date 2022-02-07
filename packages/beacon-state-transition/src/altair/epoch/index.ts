@@ -15,7 +15,7 @@ import {processInactivityUpdates} from "./processInactivityUpdates";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 
 // For spec tests
-export {getRewardsPenaltiesDeltas} from "./balance";
+export {getRewardsAndPenalties} from "./getRewardsAndPenalties";
 
 export {
   processInactivityUpdates,

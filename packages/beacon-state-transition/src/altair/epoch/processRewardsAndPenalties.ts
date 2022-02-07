@@ -1,6 +1,6 @@
-import {CachedBeaconStateAltair, IEpochProcess} from "../../types";
-import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-import {getRewardsPenaltiesDeltas} from "./balance";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {processRewardsAndPenaltiesAllForks} from "../../allForks/epoch/processRewardsAndPenalties";
 
 /**
  * Iterate over all validator and compute rewards and penalties to apply to balances.
@@ -9,38 +9,5 @@ import {getRewardsPenaltiesDeltas} from "./balance";
  * are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*
  */
 export function processRewardsAndPenalties(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
-  if (state.currentShuffling.epoch == GENESIS_EPOCH) {
-    return;
-  }
-
-  const [rewards, penalties] = getRewardsPenaltiesDeltas(state, epochProcess);
-  const deltas = rewards.map((_, i) => Number(rewards[i] - penalties[i]));
-  // important: do not change state one balance at a time
-  // set them all at once, constructing the tree in one go
-  // cache the balances array, too
-  epochProcess.balances = state.balanceList.updateAll(deltas);
+  processRewardsAndPenaltiesAllForks(ForkName.altair, state as CachedBeaconStateAllForks, epochProcess);
 }
-
-// // naive version, leave here for debugging purposes
-// function processRewardsAndPenaltiesNAIVE() {
-//   const flagDeltas = Array.from({length: PARTICIPATION_FLAG_WEIGHTS.length}, (_, flag) =>
-//     getFlagIndexDeltas(state, process, flag)
-//   );
-
-//   const inactivityPenaltyDeltas = getInactivityPenaltyDeltas(state, process);
-//   flagDeltas.push(inactivityPenaltyDeltas);
-
-//   const newBalances = new BigUint64Array(balances.length);
-//   balances.forEach((balance, i) => {
-//     let newBalance = balance;
-//     for (const [rewards, penalties] of flagDeltas) {
-//       const b = newBalance + BigInt(rewards[i] - penalties[i]);
-//       if (b > 0) {
-//         newBalance = b;
-//       } else {
-//         newBalance = BigInt(0);
-//       }
-//     }
-//     newBalances[i] = newBalance;
-//   });
-// }

@@ -1,7 +1,6 @@
-import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
-
-import {CachedBeaconStatePhase0, IEpochProcess} from "../../types";
-import {getAttestationDeltas} from "./getAttestationDeltas";
+import {ForkName} from "@chainsafe/lodestar-params";
+import {processRewardsAndPenaltiesAllForks} from "../../allForks/epoch/processRewardsAndPenalties";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 
 /**
  * Iterate over all validator and compute rewards and penalties to apply to balances.
@@ -10,14 +9,5 @@ import {getAttestationDeltas} from "./getAttestationDeltas";
  * are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*
  */
 export function processRewardsAndPenalties(state: CachedBeaconStatePhase0, epochProcess: IEpochProcess): void {
-  // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
-  if (epochProcess.currentEpoch === GENESIS_EPOCH) {
-    return;
-  }
-  const [rewards, penalties] = getAttestationDeltas(state, epochProcess);
-  const deltas = rewards.map((_, i) => rewards[i] - penalties[i]);
-  // important: do not change state one balance at a time
-  // set them all at once, constructing the tree in one go
-  // cache the balances array, too
-  epochProcess.balances = state.balanceList.updateAll(deltas);
+  processRewardsAndPenaltiesAllForks(ForkName.phase0, state as CachedBeaconStateAllForks, epochProcess);
 }
