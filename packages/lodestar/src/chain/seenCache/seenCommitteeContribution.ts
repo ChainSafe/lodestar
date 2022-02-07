@@ -6,7 +6,7 @@ import {MapDef} from "../../util/map";
  */
 const MAX_SLOTS_IN_CACHE = 8;
 
-/** AggregatorSubnetKey = `aggregatorIndex + subCommitteeIndex` */
+/** AggregatorSubnetKey = `aggregatorIndex + subcommitteeIndex` */
 type AggregatorSubnetKey = string;
 
 /**
@@ -22,13 +22,13 @@ export class SeenContributionAndProof {
    * The sync committee contribution is the first valid contribution received for the aggregator with index
    * contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
    */
-  isKnown(slot: Slot, subCommitteeIndex: number, aggregatorIndex: ValidatorIndex): boolean {
-    return this.seenCacheBySlot.get(slot)?.has(seenCacheKey(subCommitteeIndex, aggregatorIndex)) === true;
+  isKnown(slot: Slot, subcommitteeIndex: number, aggregatorIndex: ValidatorIndex): boolean {
+    return this.seenCacheBySlot.get(slot)?.has(seenCacheKey(subcommitteeIndex, aggregatorIndex)) === true;
   }
 
   /** Register item as seen in the cache */
-  add(slot: Slot, subCommitteeIndex: number, aggregatorIndex: ValidatorIndex): void {
-    this.seenCacheBySlot.getOrDefault(slot).add(seenCacheKey(subCommitteeIndex, aggregatorIndex));
+  add(slot: Slot, subcommitteeIndex: number, aggregatorIndex: ValidatorIndex): void {
+    this.seenCacheBySlot.getOrDefault(slot).add(seenCacheKey(subcommitteeIndex, aggregatorIndex));
   }
 
   /** Prune per head slot */
@@ -41,6 +41,6 @@ export class SeenContributionAndProof {
   }
 }
 
-function seenCacheKey(subCommitteeIndex: number, aggregatorIndex: ValidatorIndex): AggregatorSubnetKey {
-  return `${subCommitteeIndex}-${aggregatorIndex}`;
+function seenCacheKey(subcommitteeIndex: number, aggregatorIndex: ValidatorIndex): AggregatorSubnetKey {
+  return `${subcommitteeIndex}-${aggregatorIndex}`;
 }

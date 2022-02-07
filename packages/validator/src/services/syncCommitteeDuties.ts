@@ -26,7 +26,7 @@ const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 export type SyncSelectionProof = {
   /** This value is only set to not null if the proof indicates that the validator is an aggregator. */
   selectionProof: BLSSignature | null;
-  subCommitteeIndex: number;
+  subcommitteeIndex: number;
 };
 
 /** Neatly joins SyncDuty with the locally-generated `selectionProof`. */
@@ -230,12 +230,12 @@ export class SyncCommitteeDutiesService {
 
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const index of duty.validatorSyncCommitteeIndices) {
-      const subCommitteeIndex = Math.floor(index / SYNC_COMMITTEE_SUBNET_SIZE);
-      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(pubkey, slot, subCommitteeIndex);
+      const subcommitteeIndex = Math.floor(index / SYNC_COMMITTEE_SUBNET_SIZE);
+      const selectionProof = await this.validatorStore.signSyncCommitteeSelectionProof(pubkey, slot, subcommitteeIndex);
       dutiesAndProofs.push({
         // selectionProof === null is used to check if is aggregator
         selectionProof: isSyncCommitteeAggregator(selectionProof) ? selectionProof : null,
-        subCommitteeIndex,
+        subcommitteeIndex,
       });
     }
     return dutiesAndProofs;

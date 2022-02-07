@@ -1,4 +1,4 @@
-import {SubCommitteeIndex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {SubcommitteeIndex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {MapDef} from "../../util/map";
 
 /**
@@ -6,7 +6,7 @@ import {MapDef} from "../../util/map";
  */
 const MAX_SLOTS_IN_CACHE = 3;
 
-/** ValidataorSubnetKey = `validatorIndex + subCommitteeIndex` */
+/** ValidataorSubnetKey = `validatorIndex + subcommitteeIndex` */
 type ValidataorSubnetKey = string;
 
 /**
@@ -18,12 +18,12 @@ export class SeenSyncCommitteeMessages {
   /**
    * based on slot + validator index
    */
-  isKnown(slot: Slot, subnet: SubCommitteeIndex, validatorIndex: ValidatorIndex): boolean {
+  isKnown(slot: Slot, subnet: SubcommitteeIndex, validatorIndex: ValidatorIndex): boolean {
     return this.seenCacheBySlot.get(slot)?.has(seenCacheKey(subnet, validatorIndex)) === true;
   }
 
   /** Register item as seen in the cache */
-  add(slot: Slot, subnet: SubCommitteeIndex, validatorIndex: ValidatorIndex): void {
+  add(slot: Slot, subnet: SubcommitteeIndex, validatorIndex: ValidatorIndex): void {
     this.seenCacheBySlot.getOrDefault(slot).add(seenCacheKey(subnet, validatorIndex));
   }
 
