@@ -4,6 +4,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {IClock, extendError, differenceHex, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {PubkeyHex} from "../types";
+import {mapValues} from "@chainsafe/lodestar-utils";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -58,6 +60,15 @@ export class BlockDutiesService {
     return Array.from(publicKeys.values());
   }
 
+  remove(signer: PubkeyHex) {
+    mapValues(Object.fromEntries(this.proposers), (blockDutyAtEpoch, _epoch) => {
+      blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
+        return toHexString(proposer.pubkey) !== signer;
+      });
+      return blockDutyAtEpoch;
+    });
+  }
+
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
     try {
       if (slot < 0) {
@@ -103,12 +114,14 @@ export class BlockDutiesService {
    */
   private async pollBeaconProposersAndNotify(currentSlot: Slot): Promise<void> {
     // Notify the block proposal service for any proposals that we have in our cache.
+    // TODO [DA] basically using local this.proposers
     const initialBlockProposers = this.getblockProposersAtSlot(currentSlot);
     if (initialBlockProposers.length > 0) {
       this.notifyBlockProductionFn(currentSlot, initialBlockProposers);
     }
 
     // Poll proposers again for the same slot
+    // TODO [DA] this basically updates this.proposers
     await this.pollBeaconProposers(computeEpochAtSlot(currentSlot));
 
     // Compute the block proposers for this slot again, now that we've received an update from the BN.
@@ -140,6 +153,7 @@ export class BlockDutiesService {
     });
     const dependentRoot = proposerDuties.dependentRoot;
     const relevantDuties = proposerDuties.data.filter((duty) =>
+      // TODO [DA] this filter will ensure that public key that has removed is filtered out?
       this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
     );
 

@@ -15,7 +15,7 @@ import {ChainHeaderTracker} from "./chainHeaderTracker";
  * Service that sets up and handles validator sync duties.
  */
 export class SyncCommitteeService {
-  private readonly dutiesService: SyncCommitteeDutiesService;
+  readonly dutiesService: SyncCommitteeDutiesService;
 
   constructor(
     private readonly config: IChainForkConfig,

@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {mapValues, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
@@ -8,6 +8,7 @@ import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
+import {PubkeyHex} from "../types";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -44,6 +45,30 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+  }
+
+  /**
+   *   remove(signer: PubkeyHex) {
+   *     mapValues(Object.fromEntries(this.proposers), (blockDutyAtEpoch, _epoch) => {
+   *       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
+   *         return toHexString(proposer.pubkey) !== signer;
+   *       });
+   *       return blockDutyAtEpoch;
+   *     });
+   *   }
+   * @param signer
+   */
+  remove(signer: PubkeyHex) {
+    mapValues(Object.fromEntries(this.dutiesByIndexByEpoch), (attDutiesAtEpoch, _epoch) => {
+      mapValues(Object.fromEntries(attDutiesAtEpoch.dutiesByIndex), (attDutyAndProof, vIndex) => {
+        if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
+          attDutiesAtEpoch.dutiesByIndex.delete(parseInt(vIndex as string));
+        }
+        return attDutyAndProof;
+      });
+
+      return attDutiesAtEpoch;
+    });
   }
 
   /** Returns all `ValidatorDuty` for the given `slot` */

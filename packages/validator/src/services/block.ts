@@ -12,7 +12,7 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
  * Service that sets up and handles validator block proposal duties.
  */
 export class BlockProposingService {
-  private readonly dutiesService: BlockDutiesService;
+  readonly dutiesService: BlockDutiesService;
 
   constructor(
     private readonly config: IChainForkConfig,

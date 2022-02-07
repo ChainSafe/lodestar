@@ -16,7 +16,7 @@ import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
  * Service that sets up and handles validator attester duties.
  */
 export class AttestationService {
-  private readonly dutiesService: AttestationDutiesService;
+  readonly dutiesService: AttestationDutiesService;
 
   constructor(
     private readonly logger: ILoggerVc,

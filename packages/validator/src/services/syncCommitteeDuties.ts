@@ -15,6 +15,8 @@ import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {PubkeyHex} from "../types";
+import {mapValues} from "@chainsafe/lodestar-utils";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -57,6 +59,17 @@ export class SyncCommitteeDutiesService {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+  }
+
+  remove(signer: PubkeyHex) {
+    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, _syncPeriod) => {
+      mapValues(Object.fromEntries(validatorDutyAtPeriodMap), (dutyAtPeriod, validatorIndex) => {
+        if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
+          validatorDutyAtPeriodMap.delete(parseInt(validatorIndex as string));
+        }
+        return dutyAtPeriod;
+      });
+    });
   }
 
   /**

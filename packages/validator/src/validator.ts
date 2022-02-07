@@ -20,6 +20,10 @@ import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SecretKey} from "@chainsafe/bls";
+import {BlockDutiesService} from "./services/blockDuties";
+import {AttestationDutiesService} from "./services/attestationDuties";
+import {SyncCommitteeDutiesService} from "./services/syncCommitteeDuties";
+import {PubkeyHex} from "./types";
 
 // TODO [DA] this is duplicated also in @chainsafe/lodestar-keymanager-server. Improve?
 export type SecretKeyInfo = {
@@ -57,6 +61,10 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  */
 export class Validator {
   readonly validatorStore: ValidatorStore;
+  private readonly blockDutiesService: BlockDutiesService;
+  private readonly attestationDutiesService: AttestationDutiesService;
+  private readonly syncCommitteeDutiesService: SyncCommitteeDutiesService;
+  private readonly indicesService: IndicesService;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
@@ -81,13 +89,39 @@ export class Validator {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    this.indicesService = new IndicesService(logger, api, validatorStore);
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
-    new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
-    new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
-    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
+
+    this.blockDutiesService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      graffiti
+    ).dutiesService;
+
+    this.attestationDutiesService = new AttestationService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.emitter,
+      this.indicesService,
+      this.chainHeaderTracker
+    ).dutiesService;
+
+    this.syncCommitteeDutiesService = new SyncCommitteeService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.chainHeaderTracker,
+      this.indicesService
+    ).dutiesService;
 
     this.config = config;
     this.logger = logger;
@@ -117,6 +151,13 @@ export class Validator {
     opts.logger.info("Verified node and validator have same genesisValidatorRoot");
 
     return new Validator(opts, genesis);
+  }
+
+  removeSignerFromDutiesAndIndices(signer: PubkeyHex) {
+    this.indicesService.remove(signer);
+    this.blockDutiesService.remove(signer);
+    this.attestationDutiesService.remove(signer);
+    this.syncCommitteeDutiesService.remove(signer);
   }
 
   /**

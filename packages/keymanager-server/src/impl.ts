@@ -8,8 +8,8 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection} from "@chainsafe/lodestar-validator";
-import {SignerType, ValidatorStore} from "@chainsafe/lodestar-validator";
+import {Interchange, ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SignerType} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
@@ -20,11 +20,11 @@ export const LOCK_FILE_EXT = ".lock";
 
 export class KeymanagerApi implements Api {
   constructor(
-    private readonly validatorStore: ValidatorStore,
+    private readonly validator: Validator,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
     private readonly importKeystoresPath?: string[],
-    private readonly secretKeysInfo?: SecretKeyInfo[]
+    private readonly secretKeysInfo?: SecretKeyInfo[],
   ) {}
 
   /**
@@ -41,7 +41,7 @@ export class KeymanagerApi implements Api {
       readonly?: boolean;
     }[];
   }> {
-    const pubkeys = this.validatorStore.votingPubkeys();
+    const pubkeys = this.validator.validatorStore.votingPubkeys();
     return {
       data: pubkeys.map((pubkey) => ({
         validatingPubkey: pubkey,
@@ -91,14 +91,14 @@ export class KeymanagerApi implements Api {
         const keystore = Keystore.parse(keystoreStr);
 
         // Check for duplicates and skip keystore before decrypting
-        if (this.validatorStore.hasVotingPubkey(keystore.pubkey)) {
+        if (this.validator.validatorStore.hasVotingPubkey(keystore.pubkey)) {
           statuses[i] = {status: ImportStatus.duplicate};
           continue;
         }
 
         const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
 
-        this.validatorStore.addSigner({type: SignerType.Local, secretKey});
+        this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
         const importKeystoresPath = this.importKeystoresPath?.[0];
         const keystorePath = `${importKeystoresPath}/key_imported_${Date.now()}.json`;
@@ -163,8 +163,14 @@ export class KeymanagerApi implements Api {
       const pubkeyHex = pubkeysHex[i];
 
       // Remove key from live signer
-      const deleted = this.validatorStore.removeSigner(pubkeyHex);
+      const deleted = this.validator.validatorStore.removeSigner(pubkeyHex);
       deletedKey[i] = deleted;
+
+      // Remove key from blockduties
+      // Remove from attestation duties
+      // Remove from Sync committee duties
+      // Remove from indices
+      this.validator?.removeSignerFromDutiesAndIndices(pubkeyHex);
 
       // Remove key from persistent storage
       if (this.secretKeysInfo) {
