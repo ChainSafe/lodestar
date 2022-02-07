@@ -1,4 +1,4 @@
-import os from "os";
+import os from "node:os";
 import path from "node:path";
 import {NetworkName} from "../networks";
 

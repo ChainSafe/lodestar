@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 const DEFAULT_PASSWORD_LEN = 48;
 

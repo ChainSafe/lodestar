@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import "mocha";
 import {expect} from "chai";
-import {promisify} from "util";
+import {promisify} from "node:util";
 import leveldown from "leveldown";
 import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
