@@ -9,6 +9,7 @@ import {expect} from "chai";
   @typescript-eslint/no-unsafe-assignment,
   @typescript-eslint/no-explicit-any,
   @typescript-eslint/no-unused-vars,
+  @typescript-eslint/naming-convention,
   func-names */
 
 export interface IBaseCase {
@@ -23,12 +24,12 @@ export interface IBaseCase {
 interface TestSpec<TestCase extends IBaseCase> {
   title: string;
   summary: string;
-  forksTimeline: string;
+  forks_timeline: string;
   forks: string;
   config: string;
   runner: string;
   handler: string;
-  testCases: TestCase[];
+  test_cases: TestCase[];
 }
 
 /**
@@ -66,7 +67,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
 
   describe(testSuiteName, function () {
     this.timeout(timeout);
-    for (const [index, testCase] of testSpec.testCases.entries()) {
+    for (const [index, testCase] of testSpec.test_cases.entries()) {
       if (shouldSkip(testCase, index)) {
         continue;
       }

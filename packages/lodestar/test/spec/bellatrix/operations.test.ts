@@ -59,10 +59,10 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
 
   execution_payload: (
     state,
-    testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {executionValid: boolean}}
+    testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
   ) => {
     processExecutionPayload((state as unknown) as CachedBeaconStateBellatrix, testCase.execution_payload, {
-      executePayload: () => testCase.execution.executionValid,
+      executePayload: () => testCase.execution.execution_valid,
     });
   },
 });
