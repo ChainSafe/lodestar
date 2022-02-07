@@ -37,7 +37,7 @@ export class MetaDataRepository {
     await this.db.put(this.encodeKey(GENESIS_TIME), Buffer.from(ssz.Uint64.serialize(genesisTime)));
   }
 
-  private encodeKey(key: Buffer): Buffer {
+  private encodeKey(key: Uint8Array): Uint8Array {
     return encodeKey(this.bucket, key);
   }
 }
