@@ -51,11 +51,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/api/classes/utils.stringtype/</loc>
-         <lastmod>2022-02-07</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/enums/routes.eventtype/</loc>
          <lastmod>2022-02-07</lastmod>
          <changefreq>daily</changefreq>
