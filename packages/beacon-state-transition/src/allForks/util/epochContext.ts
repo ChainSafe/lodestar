@@ -40,6 +40,7 @@ import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
+import {EffectiveBalanceIncrements} from "./effectiveBalanceIncrements";
 
 export type AttesterDuty = {
   // Index of validator in validator registry
@@ -129,13 +130,14 @@ export function createEpochContext(
   let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
   let exitQueueChurn = 0;
 
+  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+  const validatorCount = validators.length;
+
   const effectiveBalancesArr: number[] = [];
+  const effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(validatorCount));
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
   const nextActiveIndices: ValidatorIndex[] = [];
-
-  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
-  const validatorCount = validators.length;
 
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
@@ -163,7 +165,7 @@ export function createEpochContext(
     }
 
     // TODO: Should have 0 for not active validators to be re-usable in ForkChoice
-    effectiveBalancesArr.push(validator.effectiveBalance);
+    effectiveBalanceIncrements[i] = validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   }
   const effectiveBalances = MutableVector.from(effectiveBalancesArr);
 
@@ -225,7 +227,7 @@ export function createEpochContext(
     previousShuffling,
     currentShuffling,
     nextShuffling,
-    effectiveBalances,
+    effectiveBalanceIncrements,
     syncParticipantReward,
     syncProposerReward,
     baseRewardPerIncrement,
@@ -298,7 +300,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
     epochProcess.nextEpochShufflingActiveValidatorIndices,
     nextEpoch
   );
-  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling, epochCtx.effectiveBalances);
+  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling, epochCtx.effectiveBalanceIncrements);
 
   // TODO: DEDUPLICATE from createEpochContext
   //
@@ -345,7 +347,7 @@ interface IEpochContextData {
   previousShuffling: IEpochShuffling;
   currentShuffling: IEpochShuffling;
   nextShuffling: IEpochShuffling;
-  effectiveBalances: MutableVector<number>;
+  effectiveBalanceIncrements: EffectiveBalanceIncrements;
   syncParticipantReward: number;
   syncProposerReward: number;
   baseRewardPerIncrement: number;
@@ -403,7 +405,7 @@ export class EpochContext {
   /**
    * Effective balances, for altair processAttestations()
    */
-  effectiveBalances: MutableVector<number>;
+  effectiveBalanceIncrements: EffectiveBalanceIncrements;
   syncParticipantReward: number;
   syncProposerReward: number;
   /**
@@ -443,7 +445,7 @@ export class EpochContext {
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
-    this.effectiveBalances = data.effectiveBalances;
+    this.effectiveBalanceIncrements = data.effectiveBalanceIncrements;
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
@@ -470,8 +472,9 @@ export class EpochContext {
       previousShuffling: this.previousShuffling,
       currentShuffling: this.currentShuffling,
       nextShuffling: this.nextShuffling,
-      // MutableVector, requires cloning
-      effectiveBalances: this.effectiveBalances.clone(),
+      // Uint8Array, requires cloning, but it is cloned only when necessary before an epoch transition
+      // See EpochContext.beforeEpochTransition()
+      effectiveBalanceIncrements: this.effectiveBalanceIncrements,
       // Basic types (numbers) cloned implicitly
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
@@ -481,6 +484,11 @@ export class EpochContext {
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
     });
+  }
+
+  beforeEpochTransition(): void {
+    // Clone before being mutated in processEffectiveBalanceUpdates
+    this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
   }
 
   /**
@@ -625,6 +633,22 @@ export class EpochContext {
       throw new Error(`Requesting slot committee out of range epoch: ${epoch} current: ${this.currentShuffling.epoch}`);
     }
   }
+
+  effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
+    if (index >= this.effectiveBalanceIncrements.length) {
+      // Clone and extend effectiveBalanceIncrements
+      const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
+      this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+      this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
+    }
+
+    this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+  }
+}
+
+function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
+  // TODO: Research what's the best number to minimize both memory cost and copy costs
+  return 1024 * Math.ceil(validatorCount / 1024);
 }
 
 export enum EpochContextErrorCode {

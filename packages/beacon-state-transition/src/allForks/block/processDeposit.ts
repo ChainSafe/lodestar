@@ -75,7 +75,12 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
       slashed: false,
     });
     state.balanceList.push(Number(amount));
-    epochCtx.effectiveBalances.push(effectiveBalance);
+
+    // Updating here is better than updating at once on epoch transition
+    // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
+    // - Keep related code together to reduce risk of breaking this cache
+    // - Should have equal performance since it sets a value in a flat array
+    epochCtx.effectiveBalanceIncrementsSet(validators.length, effectiveBalance);
 
     // add participation caches
     state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
