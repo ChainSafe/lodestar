@@ -12,7 +12,6 @@ export * from "./domain";
 export * from "./epoch";
 export * from "./genesis";
 export * from "./interop";
-export * from "./proposer";
 export * from "./seed";
 export * from "./shuffle";
 export * from "./shufflingDecisionRoot";

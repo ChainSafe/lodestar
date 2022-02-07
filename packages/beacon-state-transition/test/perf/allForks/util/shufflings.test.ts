@@ -1,9 +1,10 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, CachedBeaconStateAllForks} from "../../../../src";
-import {computeEpochShuffling, computeProposers} from "../../../../src/allForks";
+import {computeEpochShuffling} from "../../../../src/allForks";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {getNextSyncCommittee} from "../../../../src/altair/util/syncCommittee";
+import {computeProposers} from "../../../../src/util/seed";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;
