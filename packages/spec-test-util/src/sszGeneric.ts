@@ -1,7 +1,7 @@
 import path, {join} from "node:path";
 import fs, {readFileSync, readdirSync} from "node:fs";
 import {Json, Type} from "@chainsafe/ssz";
-import {loadYaml} from "@chainsafe/lodestar-utils";
+import {loadYaml, objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {uncompress} from "snappyjs";
 
 export interface IValidTestcase<T> {
@@ -19,7 +19,7 @@ export function parseValidTestcase<T>(dirpath: string, type: Type<T>): IValidTes
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
   const metaStr = fs.readFileSync(path.join(dirpath, "meta.yaml"), "utf8");
-  const meta = loadYaml(metaStr) as {root: string};
+  const meta = loadYaml<{root: string}>(metaStr);
   if (typeof meta.root !== "string") {
     throw Error(`meta.root not a string: ${meta.root}\n${fs}`);
   }
@@ -27,7 +27,9 @@ export function parseValidTestcase<T>(dirpath: string, type: Type<T>): IValidTes
   const serialized = uncompress<Uint8Array>(readFileSync(join(dirpath, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
-  const value = type.fromJson(loadYaml<Json>(fs.readFileSync(join(dirpath, "value.yaml"), "utf8")));
+  const yamlSnake = loadYaml(fs.readFileSync(join(dirpath, "value.yaml"), "utf8"));
+  const yamlCamel = objectToExpectedCase(yamlSnake, "camel");
+  const value = type.fromJson(yamlCamel as Json);
 
   return {
     root: meta.root,

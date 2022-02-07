@@ -3,7 +3,6 @@ import fs, {readdirSync, readFileSync, existsSync} from "node:fs";
 import {basename, join, parse} from "node:path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
-import {isDirectory} from "./util";
 import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable
@@ -32,6 +31,10 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
     type: inputType as InputType,
     treeBacked: false,
   };
+}
+
+function isDirectory(path: string): boolean {
+  return fs.lstatSync(path).isDirectory();
 }
 
 export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
