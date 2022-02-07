@@ -1,4 +1,4 @@
-import {ByteVector, hash, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
+import {ByteVector, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
 import {
   BLSSignature,
@@ -14,7 +14,6 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   BASE_REWARD_FACTOR,
-  DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
@@ -24,16 +23,15 @@ import {
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {bigIntSqrt, intToBytes, LodestarError} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, LodestarError} from "@chainsafe/lodestar-utils";
 import {MutableVector} from "@chainsafe/persistent-ts";
 
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computeProposerIndex,
+  computeProposers,
   computeStartSlotAtEpoch,
   getChurnLimit,
-  getSeed,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
@@ -267,29 +265,6 @@ export function syncPubkeys(
     // > Do not do any validation here
     index2pubkey.push(bls.PublicKey.fromBytes(pubkey, CoordType.jacobian)); // Optimize for aggregation
   }
-}
-
-/**
- * Compute proposer indices for an epoch
- */
-export function computeProposers(
-  state: allForks.BeaconState,
-  shuffling: IEpochShuffling,
-  effectiveBalances: MutableVector<number>
-): number[] {
-  const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
-  const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
-  const proposers = [];
-  for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
-    proposers.push(
-      computeProposerIndex(
-        effectiveBalances,
-        shuffling.activeIndices,
-        hash(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
-      )
-    );
-  }
-  return proposers;
 }
 
 /**
