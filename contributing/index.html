@@ -249,6 +249,15 @@
 <a class="md-nav__link" href="#tests">
     Tests
   </a>
+<nav aria-label="Tests" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#debugging-spec-tests">
+    Debugging spec tests
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#docker">
@@ -384,6 +393,15 @@
 <a class="md-nav__link" href="#tests">
     Tests
   </a>
+<nav aria-label="Tests" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#debugging-spec-tests">
+    Debugging spec tests
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#docker">
@@ -520,6 +538,15 @@
 <li>:test_tube: Run <code>lerna run test:e2e</code> for end-to-end tests.</li>
 <li>:test_tube: Run <code>lerna run test</code> to run all tests.</li>
 </ul>
+<h3 id="debugging-spec-tests">Debugging spec tests<a class="headerlink" href="#debugging-spec-tests" title="Permanent link">¶</a></h3>
+<ul>
+<li>To fix errors always focus on passing all minimal tests first without running mainnet tests.</li>
+<li>Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option <code>--inline-diffs</code>.</li>
+<li>A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option <code>--bail</code> to stop at the first failed test</li>
+<li>To then run only that failed test you can run against a specific file as use mocha's option <code>--grep</code> to run only one case</li>
+</ul>
+<div class="highlight"><pre><span></span><code>LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep "attestation"
+</code></pre></div>
 <h2 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">¶</a></h2>
 <p>The docker-compose file requires that a <code>.env</code> file be present in this directory. The <code>default.env</code> file provides a template and can be copied <code>.env</code>:</p>
 <div class="highlight"><pre><span></span><code>cp default.env .env

@@ -356,7 +356,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="getforknamefromresponsebody">getForkNameFromResponseBody<a class="headerlink" href="#getforknamefromresponsebody" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getForkNameFromResponseBody</strong>‹<strong>K</strong>›(<code>config</code>: IBeaconConfig, <code>protocol</code>: <a href="../network_reqresp/#protocol">Protocol</a>, <code>body</code>: OutgoingResponseBodyByMethod[K] | IncomingResponseBodyByMethod[K]): <em>ForkName</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L92">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:92</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L92">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:92</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>K</strong>: <em><a href="../../enums/network_reqresp.method/">Method</a></em></p>
 <p><strong>Parameters:</strong></p>
@@ -386,7 +386,7 @@
 <hr/>
 <h3 id="readcontextbytesforkdigest">readContextBytesForkDigest<a class="headerlink" href="#readcontextbytesforkdigest" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readContextBytesForkDigest</strong>(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>): <em>Promise‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L138">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:138</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L138">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:138</a></em></p>
 <p>Consumes a stream source to read <code>&lt;context-bytes&gt;</code>, where it's a fixed-width 4 byte</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -407,7 +407,7 @@
 <hr/>
 <h3 id="readerrormessage">readErrorMessage<a class="headerlink" href="#readerrormessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readErrorMessage</strong>(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>): <em>Promise‹string›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L94">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L94">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:94</a></em></p>
 <p>Consumes a stream source to read an optional <code>&lt;error_response&gt;?</code>
 <div class="highlight"><pre><span></span><code>error_response  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">result</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">error_message</span><span class="p">&gt;</span>?
 result          <span class="o">::=</span> "1" | "2" | ["128" ... "255"]
@@ -431,7 +431,7 @@ result          <span class="o">::=</span> "1" | "2" | ["128" ... "255"]
 <hr/>
 <h3 id="readforkname">readForkName<a class="headerlink" href="#readforkname" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readForkName</strong>(<code>forkDigestContext</code>: IForkDigestContext, <code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>contextBytes</code>: <a href="../../enums/network_reqresp.contextbytestype/">ContextBytesType</a>): <em>Promise‹ForkName›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L119">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:119</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L119">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:119</a></em></p>
 <p>Consumes a stream source to read a variable length <code>&lt;context-bytes&gt;</code> depending on the method.
 While <code>&lt;context-bytes&gt;</code> has a single type of <code>ForkDigest</code>, this function only parses the <code>ForkName</code>
 of the <code>ForkDigest</code> or defaults to <code>phase0</code></p>
@@ -462,7 +462,7 @@ of the <code>ForkDigest</code> or defaults to <code>phase0</code></p>
 <hr/>
 <h3 id="readresultheader">readResultHeader<a class="headerlink" href="#readresultheader" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readResultHeader</strong>(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>): <em>Promise‹<a href="../../enums/constants.respstatus/">RespStatus</a> | <a href="../../enums/network_reqresp_encoders.streamstatus/">StreamStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L73">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L73">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:73</a></em></p>
 <p>Consumes a stream source to read a <code>&lt;result&gt;</code>
 <div class="highlight"><pre><span></span><code>result  <span class="o">::=</span> "0" | "1" | "2" | ["128" ... "255"]
 </code></pre></div>
@@ -486,7 +486,7 @@ of the <code>ForkDigest</code> or defaults to <code>phase0</code></p>
 <hr/>
 <h3 id="requestdecode">requestDecode<a class="headerlink" href="#requestdecode" title="Permanent link">¶</a></h3>
 <p>▸ <strong>requestDecode</strong>(<code>protocol</code>: Pick‹<a href="../network_reqresp/#protocol">Protocol</a>, "method" | "encoding"›): <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/requestDecode.ts#L12">packages/lodestar/src/network/reqresp/encoders/requestDecode.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/requestDecode.ts#L12">packages/lodestar/src/network/reqresp/encoders/requestDecode.ts:12</a></em></p>
 <p>Consumes a stream source to read a <code>&lt;request&gt;</code>
 <div class="highlight"><pre><span></span><code>request  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">encoding-dependent-header</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoded-payload</span><span class="p">&gt;</span>
 </code></pre></div></p>
@@ -525,7 +525,7 @@ of the <code>ForkDigest</code> or defaults to <code>phase0</code></p>
 <hr/>
 <h3 id="requestencode">requestEncode<a class="headerlink" href="#requestencode" title="Permanent link">¶</a></h3>
 <p>▸ <strong>requestEncode</strong>(<code>protocol</code>: Pick‹<a href="../network_reqresp/#protocol">Protocol</a>, "method" | "encoding"›, <code>requestBody</code>: <a href="../network_reqresp/#requestbody">RequestBody</a>): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/requestEncode.ts#L12">packages/lodestar/src/network/reqresp/encoders/requestEncode.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/requestEncode.ts#L12">packages/lodestar/src/network/reqresp/encoders/requestEncode.ts:12</a></em></p>
 <p>Yields byte chunks for a <code>&lt;request&gt;</code>
 <div class="highlight"><pre><span></span><code>request  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">encoding-dependent-header</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoded-payload</span><span class="p">&gt;</span>
 </code></pre></div>
@@ -554,7 +554,7 @@ if so, it would yield no byte chunks</p>
 <hr/>
 <h3 id="responsedecode">responseDecode<a class="headerlink" href="#responsedecode" title="Permanent link">¶</a></h3>
 <p>▸ <strong>responseDecode</strong>(<code>forkDigestContext</code>: IForkDigestContext, <code>protocol</code>: <a href="../network_reqresp/#protocol">Protocol</a>): <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L32">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseDecode.ts#L32">packages/lodestar/src/network/reqresp/encoders/responseDecode.ts:32</a></em></p>
 <p>Consumes a stream source to read a <code>&lt;response&gt;</code>
 <div class="highlight"><pre><span></span><code>response        <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">response_chunk</span><span class="p">&gt;</span>*
 response_chunk  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">result</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">context-bytes</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoding-dependent-header</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoded-payload</span><span class="p">&gt;</span>
@@ -599,7 +599,7 @@ result          <span class="o">::=</span> "0" | "1" | "2" | ["128" ... "255"]
 <hr/>
 <h3 id="responseencodeerror">responseEncodeError<a class="headerlink" href="#responseencodeerror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>responseEncodeError</strong>(<code>status</code>: <a href="../constants/#rpcresponsestatuserror">RpcResponseStatusError</a>, <code>errorMessage</code>: string): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L59">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L59">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:59</a></em></p>
 <p>Yields byte chunks for a <code>&lt;response_chunk&gt;</code> with a non-zero response code <code>&lt;result&gt;</code>
 denoted as <code>&lt;error_response&gt;</code>
 <div class="highlight"><pre><span></span><code>error_response  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">result</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">error_message</span><span class="p">&gt;</span>?
@@ -630,7 +630,7 @@ fn yields exactly one <code>&lt;error_response&gt;</code> and afterwards the str
 <hr/>
 <h3 id="responseencodesuccess">responseEncodeSuccess<a class="headerlink" href="#responseencodesuccess" title="Permanent link">¶</a></h3>
 <p>▸ <strong>responseEncodeSuccess</strong>(<code>config</code>: IBeaconConfig, <code>protocol</code>: <a href="../network_reqresp/#protocol">Protocol</a>): <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L27">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L27">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:27</a></em></p>
 <p>Yields byte chunks for a <code>&lt;response&gt;</code> with a zero response code <code>&lt;result&gt;</code>
 <div class="highlight"><pre><span></span><code>response        <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">response_chunk</span><span class="p">&gt;</span>*
 response_chunk  <span class="o">::=</span> <span class="p">&lt;</span><span class="nc">result</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">context-bytes</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoding-dependent-header</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoded-payload</span><span class="p">&gt;</span>
@@ -676,7 +676,7 @@ Note: <code>response</code> has zero or more chunks (denoted by <code>&lt;&gt;*<
 <hr/>
 <h3 id="writecontextbytes">writeContextBytes<a class="headerlink" href="#writecontextbytes" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeContextBytes</strong>(<code>config</code>: IBeaconConfig, <code>contextBytesType</code>: <a href="../../enums/network_reqresp.contextbytestype/">ContextBytesType</a>, <code>forkName</code>: ForkName): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L76">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:76</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/network/reqresp/encoders/responseEncode.ts#L76">packages/lodestar/src/network/reqresp/encoders/responseEncode.ts:76</a></em></p>
 <p>Yields byte chunks for a <code>&lt;context-bytes&gt;</code>. See <code>ContextBytesType</code> for possible types.
 This item is mandatory but may be empty.</p>
 <p><strong>Parameters:</strong></p>

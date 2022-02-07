@@ -337,7 +337,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="assembleblockmodules">AssembleBlockModules<a class="headerlink" href="#assembleblockmodules" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>AssembleBlockModules</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/chain/factory/block/index.ts#L16">packages/lodestar/src/chain/factory/block/index.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/chain/factory/block/index.ts#L16">packages/lodestar/src/chain/factory/block/index.ts:16</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -350,7 +350,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assembleblock">assembleBlock<a class="headerlink" href="#assembleblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assembleBlock</strong>(<code>__namedParameters</code>: object, <code>__namedParameters</code>: object): <em>Promise‹allForks.BeaconBlock›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/chain/factory/block/index.ts#L21">packages/lodestar/src/chain/factory/block/index.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/chain/factory/block/index.ts#L21">packages/lodestar/src/chain/factory/block/index.ts:21</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
 <table>
@@ -402,7 +402,7 @@
 <hr/>
 <h3 id="assemblebody">assembleBody<a class="headerlink" href="#assemblebody" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assembleBody</strong>(<code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>currentState</code>: CachedBeaconStateAllForks, <code>__namedParameters</code>: object): <em>Promise‹allForks.BeaconBlockBody›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/chain/factory/block/body.ts#L32">packages/lodestar/src/chain/factory/block/body.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/chain/factory/block/body.ts#L32">packages/lodestar/src/chain/factory/block/body.ts:32</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
 <p>▪ <strong>currentState</strong>: <em>CachedBeaconStateAllForks</em></p>
@@ -445,7 +445,7 @@
 <hr/>
 <h3 id="computenewstateroot">computeNewStateRoot<a class="headerlink" href="#computenewstateroot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeNewStateRoot</strong>(<code>__namedParameters</code>: object, <code>state</code>: CachedBeaconStateAllForks, <code>block</code>: allForks.BeaconBlock): <em>Root</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/chain/factory/block/index.ts#L64">packages/lodestar/src/chain/factory/block/index.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/chain/factory/block/index.ts#L64">packages/lodestar/src/chain/factory/block/index.ts:64</a></em></p>
 <p>Instead of running fastStateTransition(), only need to process block since
 state is processed until block.slot already (this is to avoid double
 epoch transition which happen at slot % 32 === 0)</p>
@@ -475,7 +475,7 @@ epoch transition which happen at slot % 32 === 0)</p>
 <hr/>
 <h3 id="prepareexecutionpayload">prepareExecutionPayload<a class="headerlink" href="#prepareexecutionpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prepareExecutionPayload</strong>(<code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>finalizedBlockHash</code>: RootHex, <code>state</code>: CachedBeaconStateBellatrix, <code>suggestedFeeRecipient</code>: ExecutionAddress): <em>Promise‹<a href="../executionengine/#payloadid">PayloadId</a> | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/14f5284/packages/lodestar/src/chain/factory/block/body.ts#L121">packages/lodestar/src/chain/factory/block/body.ts:121</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f9c7432/packages/lodestar/src/chain/factory/block/body.ts#L121">packages/lodestar/src/chain/factory/block/body.ts:121</a></em></p>
 <p>Produce ExecutionPayload for pre-merge, merge, and post-merge.</p>
 <p>Expects <code>eth1MergeBlockFinder</code> to be actively searching for blocks well in advance to being called.</p>
 <p><strong>Parameters:</strong></p>
