@@ -1,8 +1,4 @@
-import {
-  EPOCHS_PER_SYNC_COMMITTEE_PERIOD,
-  SYNC_COMMITTEE_SIZE,
-  SYNC_COMMITTEE_SUBNET_COUNT,
-} from "@chainsafe/lodestar-params";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {
   computeSyncPeriodAtEpoch,
   computeSyncPeriodAtSlot,
@@ -223,8 +219,6 @@ export class SyncCommitteeDutiesService {
   }
 
   private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
-    // TODO: Cache this value
-    const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
     // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
     const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
 

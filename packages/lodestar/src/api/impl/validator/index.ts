@@ -11,8 +11,7 @@ import {
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
-  SYNC_COMMITTEE_SIZE,
-  SYNC_COMMITTEE_SUBNET_COUNT,
+  SYNC_COMMITTEE_SUBNET_SIZE,
 } from "@chainsafe/lodestar-params";
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
@@ -568,9 +567,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      */
     async prepareSyncCommitteeSubnets(subscriptions) {
       notWhileSyncing();
-
-      // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];
