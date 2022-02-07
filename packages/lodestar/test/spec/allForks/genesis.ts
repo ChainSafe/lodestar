@@ -19,7 +19,7 @@ export function genesis(fork: ForkName): void {
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/genesis/initialization/pyspec_tests`),
     (testcase) => {
       const deposits: phase0.Deposit[] = [];
-      for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
+      for (let i = 0; i < testcase.meta.deposits_count; i++) {
         deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
       }
       let executionPayloadHeader: TreeBacked<bellatrix.ExecutionPayloadHeader> | undefined = undefined;
@@ -91,7 +91,7 @@ interface IGenesisInitSpecTest {
   eth1_block_hash: Root;
   eth1_timestamp: Uint64;
   meta: {
-    depositsCount: Uint64;
+    deposits_count: number;
   };
   execution_payload_header?: bellatrix.ExecutionPayloadHeader;
   state: phase0.BeaconState;

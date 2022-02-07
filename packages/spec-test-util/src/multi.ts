@@ -1,5 +1,6 @@
+import fs from "node:fs";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {loadYamlFile} from "./util";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-call,
@@ -59,7 +60,7 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   expectFunc = (testCase: TestCase, expect: any, expected: any, actual: any) => expect(actual).to.be.equal(expected),
   timeout = 10 * 60 * 1000
 ): void {
-  const testSpec = (loadYamlFile(testYamlPath) as unknown) as TestSpec<TestCase>;
+  const testSpec = loadYaml<TestSpec<TestCase>>(fs.readFileSync(testYamlPath, "utf8"));
 
   const testSuiteName = `${testSpec.runner} - ${testSpec.handler} - ${testSpec.title} - ${testSpec.config}`;
 

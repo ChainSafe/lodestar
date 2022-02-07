@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import {unlinkSync, writeFileSync} from "node:fs";
+import fs, {unlinkSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "../../../src/single";
-import {loadYamlFile} from "../../../src/util";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -65,7 +65,7 @@ describeDirectorySpecTest<ISimpleCase, number>(
 
 function yamlToSSZ(file: string, sszSchema: Type<any>): void {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const input: any = sszSchema.fromJson(loadYamlFile(file) as Json);
+  const input: any = sszSchema.fromJson(loadYaml<Json>(fs.readFileSync(file, "utf8")));
   if (input.number) {
     input.number = Number(input.number);
   }

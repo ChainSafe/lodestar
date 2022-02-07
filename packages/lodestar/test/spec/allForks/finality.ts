@@ -2,7 +2,7 @@ import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {bellatrix, ssz, Uint64} from "@chainsafe/lodestar-types";
+import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest, shouldVerify} from "../type";
@@ -22,7 +22,7 @@ export function finality(fork: ForkName): void {
         testcase.pre as TreeBacked<allForks.BeaconState>
       ) as CachedBeaconStateAllForks;
       const verify = shouldVerify(testcase);
-      for (let i = 0; i < Number(testcase.meta.blocksCount); i++) {
+      for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
 
         wrappedState = allForks.stateTransition(

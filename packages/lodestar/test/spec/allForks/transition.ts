@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {Uint64, Epoch, ssz, phase0} from "@chainsafe/lodestar-types";
+import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
@@ -8,6 +8,7 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 
 type CreateTreeBackedSignedBlock = (block: allForks.SignedBeaconBlock) => TreeBacked<allForks.SignedBeaconBlock>;
 const createTreeBackedSignedBlockByFork: Record<ForkName, CreateTreeBackedSignedBlock> = {
@@ -33,13 +34,12 @@ export function transition(
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/transition/core/pyspec_tests`),
     (testcase) => {
       const meta = testcase.meta;
-      const {forkEpoch, blocksCount, forkBlock} = meta;
       // testConfig is used here to load forkEpoch from meta.yaml
-      const testConfig = createIChainForkConfig(forkConfig(Number(forkEpoch)));
+      const testConfig = createIChainForkConfig(forkConfig(bnToNum(meta.fork_epoch)));
       let wrappedState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
-      for (let i = 0; i < Number(blocksCount); i++) {
+      for (let i = 0; i < meta.blocks_count; i++) {
         let tbSignedBlock: TreeBacked<allForks.SignedBeaconBlock>;
-        if (i <= forkBlock) {
+        if (i <= meta.fork_block) {
           const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
           tbSignedBlock = createTreeBackedSignedBlockByFork[pre](signedBlock);
         } else {
@@ -81,8 +81,8 @@ export function transition(
     }
     const blocksMapping: BlocksSZZTypeMapping = {};
     // The fork_block is the index in the test data of the last block of the initial fork.
-    for (let i = 0; i < meta.blocksCount; i++) {
-      blocksMapping[`blocks_${i}`] = i <= meta.forkBlock ? ssz[pre].SignedBeaconBlock : ssz[fork].SignedBeaconBlock;
+    for (let i = 0; i < meta.blocks_count; i++) {
+      blocksMapping[`blocks_${i}`] = i <= meta.fork_block ? ssz[pre].SignedBeaconBlock : ssz[fork].SignedBeaconBlock;
     }
     return blocksMapping;
   }
@@ -91,14 +91,15 @@ export function transition(
 type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
 type PostBeaconState = Exclude<allForks.BeaconState, phase0.BeaconState>;
 
+/* eslint-disable @typescript-eslint/naming-convention */
 interface ITransitionTestCase extends IBaseSpecTest {
   [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
   meta: {
-    postFork: ForkName;
-    forkEpoch: Epoch;
-    forkBlock: Uint64;
-    blocksCount: Uint64;
-    blsSetting?: BigInt;
+    post_fork: ForkName;
+    fork_epoch: bigint;
+    fork_block: bigint;
+    blocks_count: bigint;
+    bls_setting?: bigint;
   };
   pre: allForks.BeaconState;
   post: PostBeaconState;
