@@ -20,7 +20,7 @@ export type BlockProcessFn<BeaconState extends allForks.BeaconState> = (
 export type OperationsTestCase<BeaconState extends allForks.BeaconState> = IBaseSpecTest & {
   pre: BeaconState;
   post: BeaconState;
-  execution: {executionValid: boolean};
+  execution: {execution_valid: boolean};
 };
 
 export function operations<BeaconState extends allForks.BeaconState>(

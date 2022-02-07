@@ -8,7 +8,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBaseSpecTest} from "../type";
+import {IBaseSpecTest, shouldVerify} from "../type";
 import {operations, BlockProcessFn} from "../allForks/operations";
 // eslint-disable-next-line no-restricted-imports
 import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/bellatrix/block/processExecutionPayload";
@@ -35,8 +35,7 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
-    const verify = !!testCase.meta && !!testCase.meta.blsSetting && testCase.meta.blsSetting === BigInt(1);
-    bellatrix.processAttesterSlashing(state, testCase.attester_slashing, verify);
+    bellatrix.processAttesterSlashing(state, testCase.attester_slashing, shouldVerify(testCase));
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: altair.BeaconBlock}) => {
@@ -60,10 +59,10 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
 
   execution_payload: (
     state,
-    testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {executionValid: boolean}}
+    testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
   ) => {
     processExecutionPayload((state as unknown) as CachedBeaconStateBellatrix, testCase.execution_payload, {
-      executePayload: () => testCase.execution.executionValid,
+      executePayload: () => testCase.execution.execution_valid,
     });
   },
 });

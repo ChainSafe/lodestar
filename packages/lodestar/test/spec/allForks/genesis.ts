@@ -4,6 +4,7 @@ import {phase0, Uint64, Root, ssz, allForks, bellatrix} from "@chainsafe/lodesta
 import {TreeBacked} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeBeaconStateFromEth1, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {expectEqualBeaconState} from "../util";
@@ -18,7 +19,7 @@ export function genesis(fork: ForkName): void {
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/genesis/initialization/pyspec_tests`),
     (testcase) => {
       const deposits: phase0.Deposit[] = [];
-      for (let i = 0; i < Number(testcase.meta.depositsCount); i++) {
+      for (let i = 0; i < testcase.meta.deposits_count; i++) {
         deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
       }
       let executionPayloadHeader: TreeBacked<bellatrix.ExecutionPayloadHeader> | undefined = undefined;
@@ -29,8 +30,8 @@ export function genesis(fork: ForkName): void {
       }
       return initializeBeaconStateFromEth1(
         getConfig(fork),
-        ssz.Root.fromJson((testcase.eth1 as IGenesisInitCase).eth1BlockHash),
-        Number((testcase.eth1 as IGenesisInitCase).eth1Timestamp),
+        ssz.Root.fromJson((testcase.eth1 as IGenesisInitCase).eth1_block_hash),
+        bnToNum((testcase.eth1 as IGenesisInitCase).eth1_timestamp),
         deposits,
         undefined,
         executionPayloadHeader
@@ -90,15 +91,15 @@ interface IGenesisInitSpecTest {
   eth1_block_hash: Root;
   eth1_timestamp: Uint64;
   meta: {
-    depositsCount: Uint64;
+    deposits_count: number;
   };
   execution_payload_header?: bellatrix.ExecutionPayloadHeader;
   state: phase0.BeaconState;
 }
 
 interface IGenesisInitCase {
-  eth1BlockHash: any;
-  eth1Timestamp: any;
+  eth1_block_hash: string;
+  eth1_timestamp: bigint;
 }
 
 interface IGenesisValidityTestCase extends IBaseSpecTest {
