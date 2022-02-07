@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {Uint64, Epoch, ssz, phase0, altair, bellatrix} from "@chainsafe/lodestar-types";
+import {Uint64, Epoch, ssz, phase0} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
@@ -92,13 +92,7 @@ type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlo
 type PostBeaconState = Exclude<allForks.BeaconState, phase0.BeaconState>;
 
 interface ITransitionTestCase extends IBaseSpecTest {
-  [k: string]:
-    | phase0.SignedBeaconBlock
-    | altair.SignedBeaconBlock
-    | bellatrix.SignedBeaconBlock
-    | unknown
-    | null
-    | undefined;
+  [k: string]: allForks.SignedBeaconBlock | unknown | null | undefined;
   meta: {
     postFork: ForkName;
     forkEpoch: Epoch;
