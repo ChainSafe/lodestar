@@ -1,7 +1,7 @@
 import {IExecutionEngine} from "./interface";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
-  async executePayload(): Promise<never> {
+  async notifyNewPayload(): Promise<never> {
     throw Error("Execution engine disabled");
   }
 

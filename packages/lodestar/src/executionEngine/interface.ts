@@ -13,6 +13,15 @@ export enum ExecutePayloadStatus {
   INVALID = "INVALID",
   /** sync process is in progress */
   SYNCING = "SYNCING",
+  /**
+   * blockHash is valid, but payload is not part of canonical chain and hasn't been fully
+   * validated
+   */
+  ACCEPTED = "ACCEPTED",
+  /** blockHash is invalid */
+  INVALID_BLOCK_HASH = "INVALID_BLOCK_HASH",
+  /** invalid terminal block */
+  INVALID_TERMINAL_BLOCK = "INVALID_TERMINAL_BLOCK",
   /** EL error */
   ELERROR = "ELERROR",
   /** EL unavailable */
@@ -20,21 +29,24 @@ export enum ExecutePayloadStatus {
 }
 
 export type ExecutePayloadResponse =
-  | {status: ExecutePayloadStatus.SYNCING; latestValidHash: RootHex | null; validationError: null}
+  | {status: ExecutePayloadStatus.SYNCING | ExecutePayloadStatus.ACCEPTED; latestValidHash: null; validationError: null}
   | {status: ExecutePayloadStatus.VALID; latestValidHash: RootHex; validationError: null}
   | {status: ExecutePayloadStatus.INVALID; latestValidHash: RootHex; validationError: string | null}
   | {
-      status: ExecutePayloadStatus.ELERROR | ExecutePayloadStatus.UNAVAILABLE;
+      status:
+        | ExecutePayloadStatus.INVALID_BLOCK_HASH
+        | ExecutePayloadStatus.INVALID_TERMINAL_BLOCK
+        | ExecutePayloadStatus.ELERROR
+        | ExecutePayloadStatus.UNAVAILABLE;
       latestValidHash: null;
       validationError: string;
     };
 
-export enum ForkChoiceUpdateStatus {
-  /** given payload is valid */
-  SUCCESS = "SUCCESS",
-  /** sync process is in progress */
-  SYNCING = "SYNCING",
-}
+export type ForkChoiceUpdateStatus =
+  | ExecutePayloadStatus.VALID
+  | ExecutePayloadStatus.INVALID
+  | ExecutePayloadStatus.SYNCING
+  | ExecutePayloadStatus.INVALID_TERMINAL_BLOCK;
 
 export type PayloadAttributes = {
   timestamp: number;
@@ -66,7 +78,7 @@ export interface IExecutionEngine {
    *
    * Should be called in advance before, after or in parallel to block processing
    */
-  executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse>;
+  notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse>;
 
   /**
    * Signal fork choice updates

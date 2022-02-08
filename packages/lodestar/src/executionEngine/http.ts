@@ -55,18 +55,32 @@ export class ExecutionEngineHttp implements IExecutionEngine {
   }
 
   /**
-   * `engine_executePayloadV1`
+   * `engine_newPayloadV1`
+   * From: https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.6/src/engine/specification.md#engine_newpayloadv1
    *
-   * 1. Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.
-   * 2. Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.
-   * 3. Client software MUST discard the payload if it's deemed invalid.
-   * 4. The call MUST be responded with SYNCING status while the sync process is in progress and thus the execution cannot yet be validated.
-   * 5. In the case when the parent block is unknown, client software MUST pull the block from the network and take one of the following actions depending on the parent block properties:
-   * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
-   *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
+   * Client software MUST respond to this method call in the following way:
+   *
+   *   1. {status: INVALID_BLOCK_HASH, latestValidHash: null, validationError:
+   *      errorMessage | null} if the blockHash validation has failed
+   *
+   *   2. {status: INVALID_TERMINAL_BLOCK, latestValidHash: null, validationError:
+   *      errorMessage | null} if terminal block conditions are not satisfied
+   *
+   *   3. {status: SYNCING, latestValidHash: null, validationError: null} if the payload
+   *      extends the canonical chain and requisite data for its validation is missing
+   *      with the payload status obtained from the Payload validation process if the payload
+   *      has been fully validated while processing the call
+   *
+   *   4. {status: ACCEPTED, latestValidHash: null, validationError: null} if the
+   *      following conditions are met:
+   *        i) the blockHash of the payload is valid
+   *        ii) the payload doesn't extend the canonical chain
+   *        iii) the payload hasn't been fully validated.
+   *
+   * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
-  async executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
-    const method = "engine_executePayloadV1";
+  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+    const method = "engine_newPayloadV1";
     const serializedExecutionPayload = serializeExecutionPayload(executionPayload);
     const {status, latestValidHash, validationError} = await this.rpc
       .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
@@ -82,15 +96,6 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           return {status: ExecutePayloadStatus.UNAVAILABLE, latestValidHash: null, validationError: e.message};
         }
       });
-
-    // Validate status is known
-    if (!ExecutePayloadStatus[status]) {
-      return {
-        status: ExecutePayloadStatus.ELERROR,
-        latestValidHash: null,
-        validationError: `Invalid EL status on executePayload: ${status}`,
-      };
-    }
 
     switch (status) {
       case ExecutePayloadStatus.VALID:
@@ -116,7 +121,12 @@ export class ExecutionEngineHttp implements IExecutionEngine {
         }
 
       case ExecutePayloadStatus.SYNCING:
-        return {status, latestValidHash, validationError: null};
+      case ExecutePayloadStatus.ACCEPTED:
+        return {status, latestValidHash: null, validationError: null};
+
+      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
+        return {status, latestValidHash: null, validationError: validationError ?? "Malformed block"};
 
       case ExecutePayloadStatus.UNAVAILABLE:
       case ExecutePayloadStatus.ELERROR:
@@ -125,14 +135,45 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           latestValidHash: null,
           validationError: validationError ?? "Unknown ELERROR",
         };
+
+      default:
+        return {
+          status: ExecutePayloadStatus.ELERROR,
+          latestValidHash: null,
+          validationError: `Invalid EL status on executePayload: ${status}`,
+        };
     }
   }
 
   /**
-   * `engine_forkchoiceUpdated`
+   * `engine_forkchoiceUpdatedV1`
+   * From: https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.6/src/engine/specification.md#engine_forkchoiceupdatedv1
    *
-   * 1. This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.
-   * 2. Client software MUST respond with 4: Unknown block error if the payload identified by either the headBlockHash or the finalizedBlockHash is unknown.
+   * Client software MUST respond to this method call in the following way:
+   *
+   *   1. {payloadStatus: {status: SYNCING, latestValidHash: null, validationError: null}
+   *      , payloadId: null}
+   *      if forkchoiceState.headBlockHash references an unknown payload or a payload that
+   *      can't be validated because requisite data for the validation is missing
+   *
+   *   2. {payloadStatus: {status: INVALID, latestValidHash: null, validationError:
+   *      errorMessage | null}, payloadId: null}
+   *      obtained from the Payload validation process if the payload is deemed INVALID
+   *
+   *   3. {payloadStatus: {status: INVALID_TERMINAL_BLOCK, latestValidHash: null,
+   *      validationError: errorMessage | null}, payloadId: null}
+   *      either obtained from the Payload validation process or as a result of validating a
+   *      PoW block referenced by forkchoiceState.headBlockHash
+   *
+   *   4. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
+   *      validationError: null}, payloadId: null}
+   *      if the payload is deemed VALID and a build process hasn't been started
+   *
+   *   5. {payloadStatus: {status: VALID, latestValidHash: forkchoiceState.headBlockHash,
+   *      validationError: null}, payloadId: buildProcessId}
+   *      if the payload is deemed VALID and the build process has begun.
+   *
+   * If any of the above fails due to errors unrelated to the normal processing flow of the method, client software MUST respond with an error object.
    */
   notifyForkchoiceUpdate(
     headBlockHash: Root | RootHex,
@@ -158,17 +199,40 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           ...apiPayloadAttributes,
         ],
       })
-      .then(({status, payloadId}) => {
-        // Validate status is known
-        const statusEnum = ForkChoiceUpdateStatus[status];
-        if (statusEnum === undefined) {
-          throw Error(`Unknown status ${status}`);
+      .then(({payloadStatus: {status, validationError}, payloadId}) => {
+        switch (status) {
+          case ExecutePayloadStatus.VALID:
+            // if payloadAttributes are provided, a valid payloadId is expected
+            if (payloadAttributes && (!payloadId || payloadId === "0x")) {
+              throw Error(`Received invalid payloadId=${payloadId}`);
+            }
+            return payloadId !== "0x" ? payloadId : null;
+
+          case ExecutePayloadStatus.SYNCING:
+            // Throw error on syncing if requested to produce a block, else silently ignore
+            if (payloadAttributes) {
+              throw Error("Execution Layer Syncing");
+            } else {
+              return null;
+            }
+
+          case ExecutePayloadStatus.INVALID:
+            throw Error(
+              `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
+                validationError ?? ""
+              }`
+            );
+
+          case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
+            throw Error(
+              `Invalid terminal block for ${
+                payloadAttributes ? "prepare payload" : "forkchoice request"
+              }, validationError=${validationError ?? ""}`
+            );
+
+          default:
+            throw Error(`Unknown status ${status}`);
         }
-
-        // Throw error on syncing if requested to produce a block, else silently ignore
-        if (payloadAttributes && statusEnum === ForkChoiceUpdateStatus.SYNCING) throw Error("Execution Layer Syncing");
-
-        return payloadId !== "0x" ? payloadId : null;
       });
   }
 
@@ -199,17 +263,11 @@ type EngineApiRpcParamTypes = {
   /**
    * 1. Object - Instance of ExecutionPayload
    */
-  engine_executePayloadV1: [ExecutionPayloadRpc];
+  engine_newPayloadV1: [ExecutionPayloadRpc];
   /**
    * 1. Object - Payload validity status with respect to the consensus rules:
    *   - blockHash: DATA, 32 Bytes - block hash value of the payload
    *   - status: String: VALID|INVALID - result of the payload validation with respect to the proof-of-stake consensus rules
-   */
-  engine_consensusValidated: [{blockHash: DATA; status: "VALID" | "INVALID"}];
-  /**
-   * 1. Object - The state of the fork choice:
-   *   - headBlockHash: DATA, 32 Bytes - block hash of the head of the canonical chain
-   *   - finalizedBlockHash: DATA, 32 Bytes - block hash of the most recent finalized block
    */
   engine_forkchoiceUpdatedV1: [
     param1: {headBlockHash: DATA; safeBlockHash: DATA; finalizedBlockHash: DATA},
@@ -226,18 +284,15 @@ type EngineApiRpcReturnTypes = {
    * Object - Response object:
    * - status: String - the result of the payload execution:
    */
-  engine_executePayloadV1: {
-    status:
-      | ExecutePayloadStatus.VALID
-      | ExecutePayloadStatus.INVALID
-      | ExecutePayloadStatus.SYNCING
-      | ExecutePayloadStatus.ELERROR
-      | ExecutePayloadStatus.UNAVAILABLE;
+  engine_newPayloadV1: {
+    status: ExecutePayloadStatus;
     latestValidHash: DATA | null;
     validationError: string | null;
   };
-  engine_consensusValidated: void;
-  engine_forkchoiceUpdatedV1: {status: ForkChoiceUpdateStatus; payloadId: QUANTITY};
+  engine_forkchoiceUpdatedV1: {
+    payloadStatus: {status: ForkChoiceUpdateStatus; latestValidHash: DATA | null; validationError: string | null};
+    payloadId: QUANTITY | null;
+  };
   /**
    * payloadId | Error: QUANTITY, 64 Bits - Identifier of the payload building process
    */
