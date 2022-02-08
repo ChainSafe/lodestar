@@ -644,7 +644,7 @@ export class EpochContext {
     } else if (slotPeriod === this.syncPeriod + 1) {
       return this.nextSyncCommitteeIndexed;
     } else {
-      throw new Error(`No sync committee for slot ${slot}`);
+      throw new Error(`No sync committee for period ${slotPeriod}`);
     }
   }
 
