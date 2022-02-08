@@ -8,6 +8,7 @@ import {getEth1DataForBlocks} from "./utils/eth1Data";
 import {assertConsecutiveDeposits} from "./utils/eth1DepositEvent";
 import {getDepositsWithProofs} from "./utils/deposits";
 import {Eth1Error, Eth1ErrorCode} from "./errors";
+import {Eth1Block} from "./interface";
 
 export class Eth1DepositsCache {
   unsafeAllowDepositDataOverwrite: boolean;
@@ -111,9 +112,9 @@ export class Eth1DepositsCache {
    * @param toBlock
    */
   async getEth1DataForBlocks(
-    blocks: phase0.Eth1Block[],
+    blocks: Eth1Block[],
     lastProcessedDepositBlockNumber: number | null
-  ): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
+  ): Promise<(phase0.Eth1Data & Eth1Block)[]> {
     const highestBlock = blocks[blocks.length - 1]?.blockNumber;
     return await getEth1DataForBlocks(
       blocks,
