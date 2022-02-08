@@ -13,19 +13,20 @@ import {
 } from "../../../../src/chain/opPools/syncContributionAndProofPool";
 import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof";
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
-import bls, {SecretKey, Signature} from "@chainsafe/bls";
+import bls, {SecretKey} from "@chainsafe/bls";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
+  const syncCommitteeParticipants = 0;
   const contributionAndProof: altair.ContributionAndProof = generateContributionAndProof({
     contribution: {slot, beaconBlockRoot},
   });
 
   beforeEach(() => {
     cache = new SyncContributionAndProofPool();
-    cache.add(contributionAndProof);
+    cache.add(contributionAndProof, syncCommitteeParticipants);
   });
 
   it("should return SyncCommitteeContribution list based on same slot and block root", () => {
@@ -33,7 +34,7 @@ describe("chain / opPools / SyncContributionAndProofPool", function () {
       aggregatorIndex: contributionAndProof.aggregatorIndex + 1,
       contribution: {slot, beaconBlockRoot},
     });
-    cache.add(newContributionAndProof);
+    cache.add(newContributionAndProof, syncCommitteeParticipants);
     const aggregate = cache.getAggregate(slot, beaconBlockRoot);
     expect(ssz.altair.SyncAggregate.equals(aggregate, ssz.altair.SyncAggregate.defaultValue())).to.be.false;
     // TODO Test it's correct. Modify the contributions above so they have 1 bit set to true
@@ -48,13 +49,13 @@ describe("replaceIfBetter", function () {
     bestContribution = {
       syncSubcommitteeBits: [true, true, false, false, false, false, false, false],
       numParticipants: 2,
-      syncSubcommitteeSignature: ({} as unknown) as Signature,
+      syncSubcommitteeSignature: new Uint8Array(0),
     };
   });
   it("less participants", () => {
     const contribution = generateEmptyContribution();
     contribution.aggregationBits[0] = true;
-    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+    expect(replaceIfBetter(bestContribution, contribution, 0)).to.be.equal(
       InsertOutcome.NotBetterThan,
       "less participant item should not replace the best contribution"
     );
@@ -64,7 +65,7 @@ describe("replaceIfBetter", function () {
     const contribution = generateEmptyContribution();
     contribution.aggregationBits[0] = true;
     contribution.aggregationBits[7] = true;
-    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+    expect(replaceIfBetter(bestContribution, contribution, 2)).to.be.equal(
       InsertOutcome.NotBetterThan,
       "same participant item should not replace the best contribution"
     );
@@ -75,7 +76,7 @@ describe("replaceIfBetter", function () {
     contribution.aggregationBits[3] = true;
     contribution.aggregationBits[4] = true;
     contribution.aggregationBits[5] = true;
-    expect(replaceIfBetter(bestContribution, contribution)).to.be.equal(
+    expect(replaceIfBetter(bestContribution, contribution, 3)).to.be.equal(
       InsertOutcome.NewData,
       "more participant item should replace the best contribution"
     );
@@ -100,7 +101,7 @@ describe("contributionToFast", function () {
     contribution.aggregationBits[4] = true;
     contribution.aggregationBits[5] = true;
     contribution.signature = sk1.sign(Buffer.alloc(32)).toBytes();
-    const fast = contributionToFast(contribution);
+    const fast = contributionToFast(contribution, 3);
     expect(fast.syncSubcommitteeBits).to.be.deep.equal(
       [false, false, false, true, true, true, false, false],
       "incorect subcommittees"
@@ -131,7 +132,7 @@ describe("aggregate", function () {
           // first participation of each subnet is true
           syncSubcommitteeBits: [true, false, false, false, false, false, false, false],
           numParticipants: 1,
-          syncSubcommitteeSignature: sks[subnet].sign(blockRoot),
+          syncSubcommitteeSignature: sks[subnet].sign(blockRoot).toBytes(),
         });
         testSks.push(sks[subnet]);
       }

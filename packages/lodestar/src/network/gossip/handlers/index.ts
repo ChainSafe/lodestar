@@ -260,9 +260,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
-      try {
-        await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
-      } catch (e) {
+      const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+        chain,
+        contributionAndProof
+      ).catch((e) => {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
             "contributionAndProof",
@@ -272,12 +273,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
         }
         throw e;
-      }
+      });
 
       // Handler
 
       try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message);
+        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }

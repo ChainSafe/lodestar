@@ -500,8 +500,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
-            chain.syncContributionAndProofPool.add(contributionAndProof.message);
+            const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+              chain,
+              contributionAndProof
+            );
+            chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             errors.push(e as Error);
