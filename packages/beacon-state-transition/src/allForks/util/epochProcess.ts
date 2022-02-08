@@ -295,7 +295,7 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
       // this is required to pass random spec tests in altair
       if (status.active) {
         status.flags |=
-          // FLAG_PREV are indexes [3,4,5], so shift by 3
+          // FLAG_CURR are indexes [3,4,5], so shift by 3
           status.flags |= participationFlags << 3;
       }
     });
