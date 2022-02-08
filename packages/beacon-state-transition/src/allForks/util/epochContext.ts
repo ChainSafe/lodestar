@@ -39,7 +39,7 @@ import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
-import {EffectiveBalanceIncrements} from "./effectiveBalanceIncrements";
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
 
 export type AttesterDuty = {
@@ -90,7 +90,7 @@ export function createEpochContext(
   const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
-  const effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(validatorCount));
+  const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
   const previousActiveIndices: ValidatorIndex[] = [];
   const currentActiveIndices: ValidatorIndex[] = [];
   const nextActiveIndices: ValidatorIndex[] = [];
@@ -563,17 +563,13 @@ export class EpochContext {
     if (index >= this.effectiveBalanceIncrements.length) {
       // Clone and extend effectiveBalanceIncrements
       const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
-      this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+      // Note: getEffectiveBalanceIncrementsWithLen() returns a Uint8Array larger than `index + 1` to reduce copy-ing
+      this.effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(index + 1);
       this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
     }
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
-}
-
-function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
-  // TODO: Research what's the best number to minimize both memory cost and copy costs
-  return 1024 * Math.ceil(validatorCount / 1024);
 }
 
 export enum EpochContextErrorCode {
