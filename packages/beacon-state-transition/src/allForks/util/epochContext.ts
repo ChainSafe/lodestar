@@ -296,7 +296,7 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
   // postState.slot++;
   // afterProcessEpoch(postState, epochProcess);
   // ```
-  epochCtx.afterEpochTransitionSetTime(nextEpoch);
+  epochCtx.afterEpochTransitionSetTime(state.slot);
 }
 
 /**
@@ -471,7 +471,8 @@ export class EpochContext {
   }
 
   /** After advancing the state slot, advance the time units of its cache */
-  afterEpochTransitionSetTime(stateEpoch: Epoch): void {
+  afterEpochTransitionSetTime(stateSlot: Slot): void {
+    const stateEpoch = computeEpochAtSlot(stateSlot);
     this.epoch = stateEpoch;
     this.syncPeriod = computeSyncPeriodAtEpoch(stateEpoch);
   }
