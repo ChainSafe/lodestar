@@ -161,16 +161,18 @@ export class AttestationPool {
  * Aggregate a new contribution into `aggregate` mutating it
  */
 function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.Attestation): InsertOutcome {
-  for (const [index, participated] of Array.from(readonlyValues(attestation.aggregationBits)).entries()) {
-    if (participated) {
-      if (aggregate.aggregationBits[index] === true) {
-        return InsertOutcome.AlreadyKnown;
-      }
+  const bitIndex = bitArrayGetSingleTrueBit(attestation.aggregationBits);
 
-      aggregate.aggregationBits[index] = true;
-    }
+  // Should never happen, attestations are verified against this exact condition before
+  if (bitIndex === null) {
+    throw Error("Invalid attestation not exactly one bit set");
   }
 
+  if (aggregate.aggregationBits[bitIndex] === true) {
+    return InsertOutcome.AlreadyKnown;
+  }
+
+  aggregate.aggregationBits[bitIndex] = true;
   aggregate.signature = Signature.aggregate([
     aggregate.signature,
     bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array, undefined, true),
@@ -198,4 +200,13 @@ function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
     aggregationBits: aggFast.aggregationBits as BitList,
     signature: aggFast.signature.toBytes(PointFormat.compressed),
   };
+}
+
+function bitArrayGetSingleTrueBit(bits: BitList): number | null {
+  for (const [index, participated] of Array.from(readonlyValues(bits)).entries()) {
+    if (participated) {
+      return index;
+    }
+  }
+  return null;
 }
