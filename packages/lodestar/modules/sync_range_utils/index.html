@@ -498,7 +498,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="chaintarget_1">ChainTarget<a class="headerlink" href="#chaintarget_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ChainTarget</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/chainTarget.ts#L8">packages/lodestar/src/sync/range/utils/chainTarget.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/chainTarget.ts#L8">packages/lodestar/src/sync/range/utils/chainTarget.ts:8</a></em></p>
 <p>Sync this up to this target. Uses slot instead of epoch to re-use logic for finalized sync
 and head sync. The root is used to uniquely identify this chain on different forks</p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
@@ -513,7 +513,7 @@ and head sync. The root is used to uniquely identify this chain on different for
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="computemostcommontarget_1">computeMostCommonTarget<a class="headerlink" href="#computemostcommontarget_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeMostCommonTarget</strong>(<code>targets</code>: <a href="./#chaintarget">ChainTarget</a>[]): <em><a href="./#chaintarget">ChainTarget</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/chainTarget.ts#L13">packages/lodestar/src/sync/range/utils/chainTarget.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/chainTarget.ts#L13">packages/lodestar/src/sync/range/utils/chainTarget.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -533,7 +533,7 @@ and head sync. The root is used to uniquely identify this chain on different for
 <hr/>
 <h3 id="getnextbatchtoprocess_1">getNextBatchToProcess<a class="headerlink" href="#getnextbatchtoprocess_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getNextBatchToProcess</strong>(<code>batches</code>: <a href="../../classes/sync_range.batch/">Batch</a>[]): <em><a href="../../classes/sync_range.batch/">Batch</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/batches.ts#L43">packages/lodestar/src/sync/range/utils/batches.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/batches.ts#L43">packages/lodestar/src/sync/range/utils/batches.ts:43</a></em></p>
 <p>Return the next batch to process if any.</p>
 <p><strong><code>see</code></strong> validateBatchesStatus for batches state description</p>
 <p><strong>Parameters:</strong></p>
@@ -555,7 +555,7 @@ and head sync. The root is used to uniquely identify this chain on different for
 <hr/>
 <h3 id="hashblocks_1">hashBlocks<a class="headerlink" href="#hashblocks_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hashBlocks</strong>(<code>blocks</code>: allForks.SignedBeaconBlock[], <code>config</code>: IChainForkConfig): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/hashBlocks.ts#L10">packages/lodestar/src/sync/range/utils/hashBlocks.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/hashBlocks.ts#L10">packages/lodestar/src/sync/range/utils/hashBlocks.ts:10</a></em></p>
 <p>Hash SignedBeaconBlock in a byte form easy to compare only</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -583,7 +583,7 @@ and head sync. The root is used to uniquely identify this chain on different for
 <hr/>
 <h3 id="prioritizesyncchains">prioritizeSyncChains<a class="headerlink" href="#prioritizesyncchains" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prioritizeSyncChains</strong>(<code>syncChains</code>: <a href="../../classes/sync_range.syncchain/">SyncChain</a>[]): <em><a href="../../classes/sync_range.syncchain/">SyncChain</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/updateChains.ts#L60">packages/lodestar/src/sync/range/utils/updateChains.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/updateChains.ts#L60">packages/lodestar/src/sync/range/utils/updateChains.ts:60</a></em></p>
 <p>Order <code>syncChains</code> by most peers and already syncing first
 If two chains have the same number of peers, prefer the already syncing to not drop progress</p>
 <p><strong>Parameters:</strong></p>
@@ -605,7 +605,7 @@ If two chains have the same number of peers, prefer the already syncing to not d
 <hr/>
 <h3 id="shouldremovechain_1">shouldRemoveChain<a class="headerlink" href="#shouldremovechain_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>shouldRemoveChain</strong>(<code>syncChain</code>: <a href="../../classes/sync_range.syncchain/">SyncChain</a>, <code>localFinalizedSlot</code>: Slot, <code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/shouldRemoveChain.ts#L8">packages/lodestar/src/sync/range/utils/shouldRemoveChain.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/shouldRemoveChain.ts#L8">packages/lodestar/src/sync/range/utils/shouldRemoveChain.ts:8</a></em></p>
 <p>Checks if a Finalized or Head chain should be removed</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -634,7 +634,7 @@ If two chains have the same number of peers, prefer the already syncing to not d
 <hr/>
 <h3 id="toarr_1">toArr<a class="headerlink" href="#toarr_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toArr</strong>‹<strong>K</strong>, <strong>V</strong>›(<code>map</code>: <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹K, V›): <em>V[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/batches.ts#L82">packages/lodestar/src/sync/range/utils/batches.ts:82</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/batches.ts#L82">packages/lodestar/src/sync/range/utils/batches.ts:82</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>K</strong></p>
 <p>▪ <strong>V</strong></p>
@@ -657,7 +657,7 @@ If two chains have the same number of peers, prefer the already syncing to not d
 <hr/>
 <h3 id="tobedownloadedstartepoch_1">toBeDownloadedStartEpoch<a class="headerlink" href="#tobedownloadedstartepoch_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toBeDownloadedStartEpoch</strong>(<code>batches</code>: <a href="../../classes/sync_range.batch/">Batch</a>[], <code>startEpoch</code>: Epoch, <code>opts</code>: <a href="../sync_range/#batchopts">BatchOpts</a>): <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/batches.ts#L77">packages/lodestar/src/sync/range/utils/batches.ts:77</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/batches.ts#L77">packages/lodestar/src/sync/range/utils/batches.ts:77</a></em></p>
 <p>Compute the startEpoch of the next batch to be downloaded</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -686,7 +686,7 @@ If two chains have the same number of peers, prefer the already syncing to not d
 <hr/>
 <h3 id="tobeprocessedstartepoch_1">toBeProcessedStartEpoch<a class="headerlink" href="#tobeprocessedstartepoch_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toBeProcessedStartEpoch</strong>(<code>batches</code>: <a href="../../classes/sync_range.batch/">Batch</a>[], <code>startEpoch</code>: Epoch, <code>opts</code>: <a href="../sync_range/#batchopts">BatchOpts</a>): <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/batches.ts#L67">packages/lodestar/src/sync/range/utils/batches.ts:67</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/batches.ts#L67">packages/lodestar/src/sync/range/utils/batches.ts:67</a></em></p>
 <p>Compute the startEpoch of the next batch to be processed</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -715,7 +715,7 @@ If two chains have the same number of peers, prefer the already syncing to not d
 <hr/>
 <h3 id="updatechains_1">updateChains<a class="headerlink" href="#updatechains_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>updateChains</strong>(<code>chains</code>: <a href="../../classes/sync_range.syncchain/">SyncChain</a>[]): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/updateChains.ts#L10">packages/lodestar/src/sync/range/utils/updateChains.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/updateChains.ts#L10">packages/lodestar/src/sync/range/utils/updateChains.ts:10</a></em></p>
 <p>Priotize existing chains based on their target and peer count
 Returns an array of chains toStart and toStop to comply with the priotization</p>
 <p><strong>Parameters:</strong></p>
@@ -745,7 +745,7 @@ Returns an array of chains toStart and toStop to comply with the priotization</p
 <hr/>
 <h3 id="validatebatchesstatus_1">validateBatchesStatus<a class="headerlink" href="#validatebatchesstatus_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validateBatchesStatus</strong>(<code>batches</code>: <a href="../../classes/sync_range.batch/">Batch</a>[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3dc5915/packages/lodestar/src/sync/range/utils/batches.ts#L10">packages/lodestar/src/sync/range/utils/batches.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/37a6b2f/packages/lodestar/src/sync/range/utils/batches.ts#L10">packages/lodestar/src/sync/range/utils/batches.ts:10</a></em></p>
 <p>Validates that the status and ordering of batches is valid
 <div class="highlight"><pre><span></span><code>[AwaitingValidation]* [Processing]? [AwaitingDownload,Downloading,AwaitingProcessing]*
 </code></pre></div></p>
