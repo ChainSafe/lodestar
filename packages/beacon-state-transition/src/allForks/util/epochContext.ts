@@ -140,13 +140,16 @@ export function createEpochContext(
   for (let i = 0; i < validatorCount; i++) {
     const validator = validators[i];
 
+    // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
+    effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+
     if (isActiveValidator(validator, previousEpoch)) {
       previousActiveIndices.push(i);
     }
     if (isActiveValidator(validator, currentEpoch)) {
       currentActiveIndices.push(i);
       // We track totalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      totalActiveBalanceByIncrement += Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      totalActiveBalanceByIncrement += effectiveBalanceIncrements[i];
     }
     if (isActiveValidator(validator, nextEpoch)) {
       nextActiveIndices.push(i);
@@ -161,9 +164,6 @@ export function createEpochContext(
         exitQueueChurn += 1;
       }
     }
-
-    // TODO: Should have 0 for not active validators to be re-usable in ForkChoice
-    effectiveBalanceIncrements[i] = validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT;
   }
 
   // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
