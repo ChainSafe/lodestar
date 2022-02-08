@@ -160,6 +160,9 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
   const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
   const validatorCount = validators.length;
 
+  // Clone before being mutated in processEffectiveBalanceUpdates
+  epochCtx.beforeEpochTransition();
+
   const effectiveBalancesByIncrements = newZeroedArray(validators.length);
 
   for (let i = 0; i < validatorCount; i++) {
