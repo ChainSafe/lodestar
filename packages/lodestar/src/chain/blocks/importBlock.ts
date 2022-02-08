@@ -4,7 +4,7 @@ import {allForks} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
-  getEffectiveBalances,
+  getEffectiveBalanceIncrementsZeroInactive,
   bellatrix,
   altair,
   computeEpochAtSlot,
@@ -93,7 +93,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
-    onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
+    onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
   }
 
   if (

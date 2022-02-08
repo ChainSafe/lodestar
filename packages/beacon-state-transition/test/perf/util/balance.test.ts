@@ -1,16 +1,16 @@
 import {itBench} from "@dapplion/benchmark";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../util";
 import {State} from "../types";
-import {getEffectiveBalances} from "../../../src/util";
+import {getEffectiveBalanceIncrementsZeroInactive} from "../../../src/util";
 
-describe("getEffectiveBalances", () => {
+describe("getEffectiveBalanceIncrementsZeroInactive", () => {
   itBench<State, State>({
-    id: `getEffectiveBalances - ${perfStateId}`,
+    id: `getEffectiveBalanceIncrementsZeroInactive - ${perfStateId}`,
     before: () => generatePerfTestCachedStatePhase0() as State,
     beforeEach: (state) => state.clone(),
     fn: (state) => {
       for (let i = 0; i <= 100; i++) {
-        getEffectiveBalances(state);
+        getEffectiveBalanceIncrementsZeroInactive(state);
       }
     },
     runsFactor: 100,

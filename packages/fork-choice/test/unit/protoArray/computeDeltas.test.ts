@@ -1,3 +1,4 @@
+import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 
 import {computeDeltas} from "../../../src/protoArray/computeDeltas";
@@ -8,8 +9,8 @@ describe("computeDeltas", () => {
 
     const indices = new Map();
     const votes = [];
-    const oldBalances = [];
-    const newBalances = [];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set(i.toString(), i);
@@ -18,8 +19,8 @@ describe("computeDeltas", () => {
         nextRoot: "0",
         nextEpoch: 0,
       });
-      oldBalances.push(0);
-      newBalances.push(0);
+      oldBalances[i] = 0;
+      newBalances[i] = 0;
     }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
@@ -38,8 +39,8 @@ describe("computeDeltas", () => {
 
     const indices = new Map();
     const votes = [];
-    const oldBalances = [];
-    const newBalances = [];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
@@ -48,8 +49,8 @@ describe("computeDeltas", () => {
         nextRoot: "1",
         nextEpoch: 0,
       });
-      oldBalances.push(balance);
-      newBalances.push(balance);
+      oldBalances[i] = balance;
+      newBalances[i] = balance;
     }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
@@ -71,8 +72,8 @@ describe("computeDeltas", () => {
 
     const indices = new Map();
     const votes = [];
-    const oldBalances = [];
-    const newBalances = [];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
@@ -81,8 +82,8 @@ describe("computeDeltas", () => {
         nextRoot: (i + 1).toString(),
         nextEpoch: 0,
       });
-      oldBalances.push(balance);
-      newBalances.push(balance);
+      oldBalances[i] = balance;
+      newBalances[i] = balance;
     }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
@@ -100,8 +101,8 @@ describe("computeDeltas", () => {
 
     const indices = new Map();
     const votes = [];
-    const oldBalances = [];
-    const newBalances = [];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
@@ -110,8 +111,8 @@ describe("computeDeltas", () => {
         nextRoot: "2",
         nextEpoch: 0,
       });
-      oldBalances.push(balance);
-      newBalances.push(balance);
+      oldBalances[i] = balance;
+      newBalances[i] = balance;
     }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
@@ -153,8 +154,14 @@ describe("computeDeltas", () => {
         nextEpoch: 0,
       },
     ];
-    const oldBalances = [balance, balance];
-    const newBalances = [balance, balance];
+
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(votes.length);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(votes.length);
+    for (const balances of [oldBalances, newBalances]) {
+      for (let i = 0; i < votes.length; i++) {
+        balances[i] = balance;
+      }
+    }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
 
@@ -174,8 +181,8 @@ describe("computeDeltas", () => {
 
     const indices = new Map();
     const votes = [];
-    const oldBalances = [];
-    const newBalances = [];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
+    const newBalances = getEffectiveBalanceIncrementsZeroed(validatorCount);
 
     for (const i of Array.from({length: validatorCount}, (_, i) => i)) {
       indices.set((i + 1).toString(), i);
@@ -184,8 +191,8 @@ describe("computeDeltas", () => {
         nextRoot: "2",
         nextEpoch: 0,
       });
-      oldBalances.push(oldBalance);
-      newBalances.push(newBalance);
+      oldBalances[i] = oldBalance;
+      newBalances[i] = newBalance;
     }
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
@@ -217,10 +224,14 @@ describe("computeDeltas", () => {
       nextRoot: "3",
       nextEpoch: 0,
     }));
+
     // There is only one validator in the old balances.
-    const oldBalances = [balance];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(1);
+    oldBalances[0] = balance;
     // There are two validators in the new balances.
-    const newBalances = [balance, balance];
+    const newBalances = getEffectiveBalanceIncrementsZeroed(2);
+    newBalances[0] = balance;
+    newBalances[1] = balance;
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
 
@@ -249,9 +260,12 @@ describe("computeDeltas", () => {
       nextEpoch: 0,
     }));
     // There are two validators in the old balances.
-    const oldBalances = [balance, balance];
+    const oldBalances = getEffectiveBalanceIncrementsZeroed(2);
+    oldBalances[0] = balance;
+    oldBalances[1] = balance;
     // There is only one validator in the new balances.
-    const newBalances = [balance];
+    const newBalances = getEffectiveBalanceIncrementsZeroed(1);
+    newBalances[0] = balance;
 
     const deltas = computeDeltas(indices, votes, oldBalances, newBalances);
 

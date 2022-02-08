@@ -8,6 +8,7 @@ import {
   computeEpochAtSlot,
   ZERO_HASH,
   bellatrix,
+  EffectiveBalanceIncrements,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
@@ -59,7 +60,7 @@ export class ForkChoice implements IForkChoice {
    *
    * This should be the balances of the state at fcStore.bestJustifiedCheckpoint
    */
-  private bestJustifiedBalances: number[];
+  private bestJustifiedBalances: EffectiveBalanceIncrements;
 
   /** Avoid having to compute detas all the times. */
   private synced = false;
@@ -89,7 +90,7 @@ export class ForkChoice implements IForkChoice {
      *
      * This should be the balances of the state at fcStore.justifiedCheckpoint
      */
-    private justifiedBalances: number[],
+    private justifiedBalances: EffectiveBalanceIncrements,
     private readonly proposerBoostEnabled: boolean,
     private readonly metrics?: IForkChoiceMetrics | null
   ) {
@@ -703,14 +704,17 @@ export class ForkChoice implements IForkChoice {
     return executionStatus;
   }
 
-  private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: number[]): void {
+  private updateJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: EffectiveBalanceIncrements): void {
     this.synced = false;
     this.justifiedBalances = justifiedBalances;
     this.justifiedProposerBoostScore = null;
     this.fcStore.justifiedCheckpoint = justifiedCheckpoint;
   }
 
-  private updateBestJustified(justifiedCheckpoint: CheckpointWithHex, justifiedBalances: number[]): void {
+  private updateBestJustified(
+    justifiedCheckpoint: CheckpointWithHex,
+    justifiedBalances: EffectiveBalanceIncrements
+  ): void {
     this.bestJustifiedBalances = justifiedBalances;
     this.fcStore.bestJustifiedCheckpoint = justifiedCheckpoint;
   }
@@ -1053,7 +1057,7 @@ function computeProposerBoostScore(
 }
 
 export function computeProposerBoostScoreFromBalances(
-  justifiedBalances: number[],
+  justifiedBalances: EffectiveBalanceIncrements,
   config: {slotsPerEpoch: number; proposerScoreBoost: number}
 ): number {
   let justifiedTotalActiveBalanceByIncrement = 0,

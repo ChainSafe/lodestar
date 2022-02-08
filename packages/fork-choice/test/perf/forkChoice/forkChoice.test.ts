@@ -2,6 +2,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {itBench} from "@dapplion/benchmark";
 import {AttestationData, IndexedAttestation} from "@chainsafe/lodestar-types/phase0";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 import {ExecutionStatus, ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray} from "../../../src";
@@ -43,7 +44,7 @@ describe("ForkChoice", () => {
       bestJustifiedCheckpoint: {epoch: genesisEpoch, root: fromHexString(finalizedRoot), rootHex: finalizedRoot},
     };
 
-    forkchoice = new ForkChoice(config, fcStore, protoArr, [], false);
+    forkchoice = new ForkChoice(config, fcStore, protoArr, getEffectiveBalanceIncrementsZeroed(0), false);
 
     let parentBlockRoot = finalizedRoot;
     // assume there are 64 unfinalized blocks, this number does not make a difference in term of performance

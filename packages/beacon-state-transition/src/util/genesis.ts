@@ -174,7 +174,7 @@ export function applyDeposits(
     const balance = state.balanceList.get(index)!;
     const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validator.effectiveBalance = effectiveBalance;
-    state.effectiveBalances.set(index, effectiveBalance);
+    state.effectiveBalanceIncrementsSet(index, effectiveBalance);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
@@ -225,7 +225,7 @@ export function initializeBeaconStateFromEth1(
   const activeValidatorIndices = applyDeposits(config, state, deposits, fullDepositDataRootList);
 
   if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
-    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
+    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalanceIncrements);
     const stateAltair = state as TreeBacked<altair.BeaconState>;
     stateAltair.fork.previousVersion = config.ALTAIR_FORK_VERSION;
     stateAltair.fork.currentVersion = config.ALTAIR_FORK_VERSION;

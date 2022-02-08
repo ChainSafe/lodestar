@@ -5,7 +5,6 @@ import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} f
 import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochContext} from "../../types";
 import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
 import {
-  EFFECTIVE_BALANCE_INCREMENT,
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
@@ -25,7 +24,7 @@ export function processAttestations(
   verifySignature = true
 ): void {
   const {epochCtx} = state;
-  const {effectiveBalances} = epochCtx;
+  const {effectiveBalanceIncrements} = epochCtx;
   const stateSlot = state.slot;
   const rootCache = new RootCache(state as CachedBeaconStateAllForks);
 
@@ -71,7 +70,7 @@ export function processAttestations(
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
-    let totalBalancesWithWeight = 0;
+    let totalBalanceIncrementsWithWeight = 0;
     for (const index of attestingIndices) {
       const status = epochStatuses.get(index) || (epochParticipation.getStatus(index) as IParticipationStatus);
       const newStatus = {
@@ -95,13 +94,12 @@ export function processAttestations(
       const totalWeight = tsWeight + ttWeight + thWeight;
 
       if (totalWeight > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        totalBalancesWithWeight += effectiveBalances.get(index)! * totalWeight;
+        totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
       }
     }
 
     // Do the discrete math inside the loop to ensure a deterministic result
-    const totalIncrements = Math.floor(totalBalancesWithWeight / EFFECTIVE_BALANCE_INCREMENT);
+    const totalIncrements = totalBalanceIncrementsWithWeight;
     const proposerRewardNumerator = totalIncrements * state.baseRewardPerIncrement;
     proposerReward += Math.floor(proposerRewardNumerator / PROPOSER_REWARD_DOMINATOR);
   }

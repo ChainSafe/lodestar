@@ -19,3 +19,8 @@ export {
   CachedBeaconStateAllForks,
   CachedBeaconStateAnyFork,
 } from "./types";
+
+export {
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroed,
+} from "./allForks/util/effectiveBalanceIncrements";
