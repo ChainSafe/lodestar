@@ -275,8 +275,8 @@
 <nav aria-label="Properties" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#private-readonly-map">
-    Private Readonly map
+<a class="md-nav__link" href="#readonly-map">
+    Readonly map
   </a>
 </li>
 </ul>
@@ -334,7 +334,7 @@
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#private-readonly-map">map</a></li>
+<li><a href="./#readonly-map">map</a></li>
 </ul>
 <h3 id="accessors">Accessors<a class="headerlink" href="#accessors" title="Permanent link">¶</a></h3>
 <ul>
@@ -346,18 +346,18 @@
 <li><a href="./#set">set</a></li>
 </ul>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="private-readonly-map"><code>Private</code> <code>Readonly</code> map<a class="headerlink" href="#private-readonly-map" title="Permanent link">¶</a></h3>
+<h3 id="readonly-map"><code>Readonly</code> map<a class="headerlink" href="#readonly-map" title="Permanent link">¶</a></h3>
 <p>• <strong>map</strong>: <em>Map‹string, number›</em> = new Map<pubkeyhex, validatorindex="">()</pubkeyhex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd2edf2/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L89">packages/beacon-state-transition/src/allForks/util/epochContext.ts:89</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11a9c98/packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts#L30">packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts:30</a></em></p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
 <h3 id="size">size<a class="headerlink" href="#size" title="Permanent link">¶</a></h3>
 <p>• <strong>get size</strong>(): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd2edf2/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L91">packages/beacon-state-transition/src/allForks/util/epochContext.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11a9c98/packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts#L32">packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts:32</a></em></p>
 <p><strong>Returns:</strong> <em>number</em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
 <p>▸ <strong>get</strong>(<code>key</code>: ByteVector | Uint8Array | <a href="../../modules/allforks_util/#pubkeyhex">PubkeyHex</a>): <em>ValidatorIndex | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd2edf2/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L98">packages/beacon-state-transition/src/allForks/util/epochContext.ts:98</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11a9c98/packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts#L39">packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts:39</a></em></p>
 <p>Must support reading with string for API support where pubkeys are already strings</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -377,8 +377,8 @@
 <p><strong>Returns:</strong> <em>ValidatorIndex | undefined</em></p>
 <hr/>
 <h3 id="set">set<a class="headerlink" href="#set" title="Permanent link">¶</a></h3>
-<p>▸ <strong>set</strong>(<code>key</code>: ByteVector | Uint8Array, <code>value</code>: ValidatorIndex): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/cd2edf2/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L102">packages/beacon-state-transition/src/allForks/util/epochContext.ts:102</a></em></p>
+<p>▸ <strong>set</strong>(<code>key</code>: Uint8Array, <code>value</code>: ValidatorIndex): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/11a9c98/packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts#L43">packages/beacon-state-transition/src/allForks/util/pubkeyCache.ts:43</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -390,7 +390,7 @@
 <tbody>
 <tr>
 <td><code>key</code></td>
-<td>ByteVector | Uint8Array</td>
+<td>Uint8Array</td>
 </tr>
 <tr>
 <td><code>value</code></td>
