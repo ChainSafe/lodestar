@@ -372,16 +372,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#getstatus">
-    getStatus
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#iteratestatus">
-    iterateStatus
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#map">
     map
   </a>
@@ -402,18 +392,8 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#pushstatus">
-    pushStatus
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#set">
     set
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#setstatus">
-    setStatus
   </a>
 </li>
 <li class="md-nav__item">
@@ -471,21 +451,17 @@
 <li><a href="./#foreach">forEach</a></li>
 <li><a href="./#foreachstatus">forEachStatus</a></li>
 <li><a href="./#get">get</a></li>
-<li><a href="./#getstatus">getStatus</a></li>
-<li><a href="./#iteratestatus">iterateStatus</a></li>
 <li><a href="./#map">map</a></li>
 <li><a href="./#mapstatus">mapStatus</a></li>
 <li><a href="./#pop">pop</a></li>
 <li><a href="./#push">push</a></li>
-<li><a href="./#pushstatus">pushStatus</a></li>
 <li><a href="./#set">set</a></li>
-<li><a href="./#setstatus">setStatus</a></li>
 <li><a href="./#updateallstatus">updateAllStatus</a></li>
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new CachedEpochParticipation</strong>(<code>opts</code>: <a href="../../interfaces/allforks_util.icachedepochparticipationopts/">ICachedEpochParticipationOpts</a>): <em><a href="./">CachedEpochParticipation</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L46">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L17">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:17</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -504,30 +480,30 @@
 <p><strong>Returns:</strong> <em><a href="./">CachedEpochParticipation</a></em></p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="persistent">persistent<a class="headerlink" href="#persistent" title="Permanent link">¶</a></h3>
-<p>• <strong>persistent</strong>: <em>MutableVector‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L46">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:46</a></em></p>
+<p>• <strong>persistent</strong>: <em>MutableVector‹ParticipationFlags›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L17">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:17</a></em></p>
 <hr/>
 <h3 id="optional-tree"><code>Optional</code> tree<a class="headerlink" href="#optional-tree" title="Permanent link">¶</a></h3>
 <p>• <strong>tree</strong>? : <em>Tree</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L45">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L16">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:16</a></em></p>
 <hr/>
 <h3 id="optional-type"><code>Optional</code> type<a class="headerlink" href="#optional-type" title="Permanent link">¶</a></h3>
 <p>• <strong>type</strong>? : <em>BasicListType‹List‹Uint8››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L44">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L15">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:15</a></em></p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
 <h3 id="length">length<a class="headerlink" href="#length" title="Permanent link">¶</a></h3>
 <p>• <strong>get length</strong>(): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L54">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L25">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:25</a></em></p>
 <p><strong>Returns:</strong> <em>number</em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="symboliterator">[Symbol.iterator]<a class="headerlink" href="#symboliterator" title="Permanent link">¶</a></h3>
 <p>▸ <strong>[Symbol.iterator]</strong>(): <em>Iterator‹ParticipationFlags›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L106">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:106</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L62">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:62</a></em></p>
 <p><strong>Returns:</strong> <em>Iterator‹ParticipationFlags›</em></p>
 <hr/>
 <h3 id="find">find<a class="headerlink" href="#find" title="Permanent link">¶</a></h3>
 <p>▸ <strong>find</strong>(<code>fn</code>: function): <em>ParticipationFlags | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L117">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:117</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L69">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:69</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
 <p>▸ (<code>value</code>: ParticipationFlags, <code>index</code>: number, <code>list</code>: this): <em>boolean</em></p>
@@ -558,7 +534,7 @@
 <hr/>
 <h3 id="findindex">findIndex<a class="headerlink" href="#findindex" title="Permanent link">¶</a></h3>
 <p>▸ <strong>findIndex</strong>(<code>fn</code>: function): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L122">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:122</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L74">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:74</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
 <p>▸ (<code>value</code>: ParticipationFlags, <code>index</code>: number, <code>list</code>: this): <em>boolean</em></p>
@@ -589,7 +565,7 @@
 <hr/>
 <h3 id="foreach">forEach<a class="headerlink" href="#foreach" title="Permanent link">¶</a></h3>
 <p>▸ <strong>forEach</strong>(<code>fn</code>: function): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L126">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:126</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L78">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:78</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
 <p>▸ (<code>value</code>: ParticipationFlags, <code>index</code>: number, <code>list</code>: this): <em>void</em></p>
@@ -620,10 +596,10 @@
 <hr/>
 <h3 id="foreachstatus">forEachStatus<a class="headerlink" href="#foreachstatus" title="Permanent link">¶</a></h3>
 <p>▸ <strong>forEachStatus</strong>(<code>fn</code>: function): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L136">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:136</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L86">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:86</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
-<p>▸ (<code>value</code>: <a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>, <code>index</code>: number, <code>list</code>: this): <em>void</em></p>
+<p>▸ (<code>value</code>: ParticipationFlags, <code>index</code>: number, <code>list</code>: this): <em>void</em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -635,7 +611,7 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a></td>
+<td>ParticipationFlags</td>
 </tr>
 <tr>
 <td><code>index</code></td>
@@ -651,7 +627,7 @@
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
 <p>▸ <strong>get</strong>(<code>index</code>: number): <em>ParticipationFlags | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L58">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L29">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -669,34 +645,9 @@
 </table>
 <p><strong>Returns:</strong> <em>ParticipationFlags | undefined</em></p>
 <hr/>
-<h3 id="getstatus">getStatus<a class="headerlink" href="#getstatus" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getStatus</strong>(<code>index</code>: number): <em><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a> | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L69">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:69</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>index</code></td>
-<td>number</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a> | undefined</em></p>
-<hr/>
-<h3 id="iteratestatus">iterateStatus<a class="headerlink" href="#iteratestatus" title="Permanent link">¶</a></h3>
-<p>▸ <strong>iterateStatus</strong>(): <em>IterableIterator‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L112">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:112</a></em></p>
-<p><strong>Returns:</strong> <em>IterableIterator‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›</em></p>
-<hr/>
 <h3 id="map">map<a class="headerlink" href="#map" title="Permanent link">¶</a></h3>
 <p>▸ <strong>map</strong>‹<strong>T</strong>›(<code>fn</code>: function): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L132">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:132</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L82">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:82</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
@@ -725,12 +676,12 @@
 <hr/>
 <h3 id="mapstatus">mapStatus<a class="headerlink" href="#mapstatus" title="Permanent link">¶</a></h3>
 <p>▸ <strong>mapStatus</strong>‹<strong>T</strong>›(<code>fn</code>: function): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L140">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:140</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L90">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:90</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
-<p>▸ (<code>value</code>: <a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>, <code>index</code>: number): <em>T</em></p>
+<p>▸ (<code>value</code>: ParticipationFlags, <code>index</code>: number): <em>T</em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -742,7 +693,7 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a></td>
+<td>ParticipationFlags</td>
 </tr>
 <tr>
 <td><code>index</code></td>
@@ -754,12 +705,12 @@
 <hr/>
 <h3 id="pop">pop<a class="headerlink" href="#pop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pop</strong>(): <em>ParticipationFlags</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L99">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L55">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:55</a></em></p>
 <p><strong>Returns:</strong> <em>ParticipationFlags</em></p>
 <hr/>
 <h3 id="push">push<a class="headerlink" href="#push" title="Permanent link">¶</a></h3>
 <p>▸ <strong>push</strong>(<code>value</code>: ParticipationFlags): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L94">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L49">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:49</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -777,29 +728,9 @@
 </table>
 <p><strong>Returns:</strong> <em>number</em></p>
 <hr/>
-<h3 id="pushstatus">pushStatus<a class="headerlink" href="#pushstatus" title="Permanent link">¶</a></h3>
-<p>▸ <strong>pushStatus</strong>(<code>data</code>: <a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L89">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:89</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>data</code></td>
-<td><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
 <h3 id="set">set<a class="headerlink" href="#set" title="Permanent link">¶</a></h3>
 <p>▸ <strong>set</strong>(<code>index</code>: number, <code>value</code>: ParticipationFlags): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L64">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L33">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:33</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -821,33 +752,9 @@
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="setstatus">setStatus<a class="headerlink" href="#setstatus" title="Permanent link">¶</a></h3>
-<p>▸ <strong>setStatus</strong>(<code>index</code>: number, <code>data</code>: <a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L73">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:73</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>index</code></td>
-<td>number</td>
-</tr>
-<tr>
-<td><code>data</code></td>
-<td><a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
 <h3 id="updateallstatus">updateAllStatus<a class="headerlink" href="#updateallstatus" title="Permanent link">¶</a></h3>
-<p>▸ <strong>updateAllStatus</strong>(<code>data</code>: PersistentVector‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>› | TransientVector‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L78">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:78</a></em></p>
+<p>▸ <strong>updateAllStatus</strong>(<code>data</code>: PersistentVector‹ParticipationFlags› | TransientVector‹ParticipationFlags›): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts#L38">packages/beacon-state-transition/src/allForks/util/cachedEpochParticipation.ts:38</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -859,7 +766,7 @@
 <tbody>
 <tr>
 <td><code>data</code></td>
-<td>PersistentVector‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>› | TransientVector‹<a href="../../interfaces/allforks_util.iparticipationstatus/">IParticipationStatus</a>›</td>
+<td>PersistentVector‹ParticipationFlags› | TransientVector‹ParticipationFlags›</td>
 </tr>
 </tbody>
 </table>

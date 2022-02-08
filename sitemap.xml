@@ -221,11 +221,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iparticipationstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.ireadonlyepochshuffling/</loc>
          <lastmod>2022-02-08</lastmod>
          <changefreq>daily</changefreq>

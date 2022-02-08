@@ -362,7 +362,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new StatesArchiver</strong>(<code>checkpointStateCache</code>: <a href="../chain_statecache.checkpointstatecache/">CheckpointStateCache</a>, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>logger</code>: ILogger): <em><a href="./">StatesArchiver</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L26">packages/lodestar/src/chain/archiver/archiveStates.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L26">packages/lodestar/src/chain/archiver/archiveStates.ts:26</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -390,19 +390,19 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-checkpointstatecache"><code>Private</code> <code>Readonly</code> checkpointStateCache<a class="headerlink" href="#private-readonly-checkpointstatecache" title="Permanent link">¶</a></h3>
 <p>• <strong>checkpointStateCache</strong>: <em><a href="../chain_statecache.checkpointstatecache/">CheckpointStateCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L28">packages/lodestar/src/chain/archiver/archiveStates.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L28">packages/lodestar/src/chain/archiver/archiveStates.ts:28</a></em></p>
 <hr/>
 <h3 id="private-readonly-db"><code>Private</code> <code>Readonly</code> db<a class="headerlink" href="#private-readonly-db" title="Permanent link">¶</a></h3>
 <p>• <strong>db</strong>: <em><a href="../../interfaces/db.ibeacondb/">IBeaconDb</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L29">packages/lodestar/src/chain/archiver/archiveStates.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L29">packages/lodestar/src/chain/archiver/archiveStates.ts:29</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L30">packages/lodestar/src/chain/archiver/archiveStates.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L30">packages/lodestar/src/chain/archiver/archiveStates.ts:30</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="archivestate">archiveState<a class="headerlink" href="#archivestate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>archiveState</strong>(<code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L68">packages/lodestar/src/chain/archiver/archiveStates.ts:68</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L68">packages/lodestar/src/chain/archiver/archiveStates.ts:68</a></em></p>
 <p>Archives finalized states from active bucket to archive bucket.
 Only the new finalized state is stored to disk</p>
 <p><strong>Parameters:</strong></p>
@@ -424,7 +424,7 @@ Only the new finalized state is stored to disk</p>
 <hr/>
 <h3 id="maybearchivestate">maybeArchiveState<a class="headerlink" href="#maybearchivestate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>maybeArchiveState</strong>(<code>finalized</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/dc9e3cd/packages/lodestar/src/chain/archiver/archiveStates.ts#L45">packages/lodestar/src/chain/archiver/archiveStates.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d702222/packages/lodestar/src/chain/archiver/archiveStates.ts#L45">packages/lodestar/src/chain/archiver/archiveStates.ts:45</a></em></p>
 <p>Persist states every some epochs to
 - Minimize disk space, storing the least states possible
 - Minimize the sync progress lost on unexpected crash, storing temp state every few epochs</p>
