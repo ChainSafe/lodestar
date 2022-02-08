@@ -130,7 +130,11 @@ describe("ExecutionEngine / http", () => {
         },
       ],
     };
-    returnValue = {jsonrpc: "2.0", id: 67, result: {status: "SUCCESS", payloadId: "0x"}};
+    returnValue = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
+    };
 
     await executionEngine.notifyForkchoiceUpdate(request.params[0].headBlockHash, request.params[0].finalizedBlockHash);
 
