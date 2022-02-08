@@ -221,12 +221,12 @@ export class ValidatorStore {
   async signSyncCommitteeSelectionProof(
     pubkey: BLSPubkey | string,
     slot: Slot,
-    subCommitteeIndex: number
+    subcommitteeIndex: number
   ): Promise<BLSSignature> {
     const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
     const signingData: altair.SyncAggregatorSelectionData = {
       slot,
-      subCommitteeIndex: subCommitteeIndex,
+      subcommitteeIndex: subcommitteeIndex,
     };
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);

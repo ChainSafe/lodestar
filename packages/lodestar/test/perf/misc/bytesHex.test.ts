@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import {itBench} from "@dapplion/benchmark";
 import {toHexString} from "@chainsafe/ssz";
 

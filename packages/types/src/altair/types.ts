@@ -10,7 +10,7 @@ import {
   Slot,
   Root,
   ValidatorIndex,
-  SubCommitteeIndex,
+  SubcommitteeIndex,
 } from "../primitive/types";
 import * as phase0 from "../phase0/types";
 
@@ -37,7 +37,7 @@ export interface SyncCommitteeMessage {
 export interface SyncCommitteeContribution {
   slot: Slot;
   beaconBlockRoot: Root;
-  subCommitteeIndex: SubCommitteeIndex;
+  subcommitteeIndex: SubcommitteeIndex;
   aggregationBits: BitList;
   signature: BLSSignature;
 }
@@ -55,7 +55,7 @@ export interface SignedContributionAndProof {
 
 export interface SyncAggregatorSelectionData {
   slot: Slot;
-  subCommitteeIndex: SubCommitteeIndex;
+  subcommitteeIndex: SubcommitteeIndex;
 }
 
 export interface SyncAggregate {

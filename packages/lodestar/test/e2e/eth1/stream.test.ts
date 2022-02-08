@@ -22,6 +22,7 @@ describe("Eth1 streams", function () {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: 0,
+      unsafeAllowDepositDataOverwrite: false,
     };
     return new Eth1Provider(config, eth1Options, controller.signal);
   }

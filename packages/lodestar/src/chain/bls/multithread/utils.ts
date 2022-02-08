@@ -28,7 +28,7 @@ export function getDefaultPoolSize(): number {
 
   if (typeof require !== "undefined") {
     // eslint-disable-next-line
-    return require("os").cpus().length;
+    return require("node:os").cpus().length;
   }
 
   return 8;

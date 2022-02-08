@@ -35,8 +35,8 @@ export function getContributionPubkeys(
 ): PublicKey[] {
   const pubkeys: PublicKey[] = [];
 
-  const subCommitteeSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-  const startIndex = contribution.subCommitteeIndex * subCommitteeSize;
+  const subcommitteeSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const startIndex = contribution.subcommitteeIndex * subcommitteeSize;
   const aggBits = Array.from(readonlyValues(contribution.aggregationBits));
   const syncCommittee = allForks.getIndexedSyncCommittee(state, contribution.slot);
   for (const [i, bit] of aggBits.entries()) {

@@ -1,5 +1,5 @@
-import {ByteVector, BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
-import bls, {CoordType, PublicKey} from "@chainsafe/bls";
+import {BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
+import bls, {CoordType} from "@chainsafe/bls";
 import {
   BLSSignature,
   CommitteeIndex,
@@ -40,6 +40,7 @@ import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
 import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
 import {EffectiveBalanceIncrements} from "./effectiveBalanceIncrements";
+import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
 
 export type AttesterDuty = {
   // Index of validator in validator registry
@@ -55,54 +56,11 @@ export type AttesterDuty = {
   slot: Slot;
 };
 
-export type Index2PubkeyCache = PublicKey[];
-
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
   index2pubkey?: Index2PubkeyCache;
   skipSyncPubkeys?: boolean;
 };
-
-type PubkeyHex = string;
-
-/**
- * toHexString() creates hex strings via string concatenation, which are very memory inneficient.
- * Memory benchmarks show that Buffer.toString("hex") produces strings with 10x less memory.
- *
- * Does not prefix to save memory, thus the prefix is removed from an already string representation.
- *
- * See https://github.com/ChainSafe/lodestar/issues/3446
- */
-function toMemoryEfficientHexStr(hex: ByteVector | Uint8Array | string): string {
-  if (typeof hex === "string") {
-    if (hex.startsWith("0x")) {
-      hex = hex.slice(2);
-    }
-    return hex;
-  }
-
-  return Buffer.from(hex as Uint8Array).toString("hex");
-}
-
-export class PubkeyIndexMap {
-  // We don't really need the full pubkey. We could just use the first 20 bytes like an Ethereum address
-  private readonly map = new Map<PubkeyHex, ValidatorIndex>();
-
-  get size(): number {
-    return this.map.size;
-  }
-
-  /**
-   * Must support reading with string for API support where pubkeys are already strings
-   */
-  get(key: ByteVector | Uint8Array | PubkeyHex): ValidatorIndex | undefined {
-    return this.map.get(toMemoryEfficientHexStr(key));
-  }
-
-  set(key: ByteVector | Uint8Array, value: ValidatorIndex): void {
-    this.map.set(toMemoryEfficientHexStr(key), value);
-  }
-}
 
 /**
  * Create an epoch cache
@@ -234,37 +192,6 @@ export function createEpochContext(
     exitQueueEpoch,
     exitQueueChurn,
   });
-}
-
-/**
- * Checks the pubkey indices against a state and adds missing pubkeys
- *
- * Mutates `pubkey2index` and `index2pubkey`
- *
- * If pubkey caches are empty: SLOW CODE - 🐢
- */
-export function syncPubkeys(
-  state: allForks.BeaconState,
-  pubkey2index: PubkeyIndexMap,
-  index2pubkey: Index2PubkeyCache
-): void {
-  const currentCount = pubkey2index.size;
-  if (currentCount !== index2pubkey.length) {
-    throw new Error(`Pubkey indices have fallen out of sync: ${currentCount} != ${index2pubkey.length}`);
-  }
-
-  // Get the validators sub tree once for all the loop
-  const validators = state.validators;
-
-  const newCount = state.validators.length;
-  for (let i = currentCount; i < newCount; i++) {
-    const pubkey = validators[i].pubkey.valueOf() as Uint8Array;
-    pubkey2index.set(pubkey, i);
-    // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
-    // Afterwards any public key is the state consider validated.
-    // > Do not do any validation here
-    index2pubkey.push(bls.PublicKey.fromBytes(pubkey, CoordType.jacobian)); // Optimize for aggregation
-  }
 }
 
 /**

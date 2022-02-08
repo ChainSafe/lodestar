@@ -112,7 +112,7 @@ describe("SyncCommitteeDutiesService", function () {
     );
 
     expect(await dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
-      [{duty, selectionProofs: [{selectionProof: null, subCommitteeIndex: 0}]}],
+      [{duty, selectionProofs: [{selectionProof: null, subcommitteeIndex: 0}]}],
       "Wrong getAttestersAtSlot()"
     );
 

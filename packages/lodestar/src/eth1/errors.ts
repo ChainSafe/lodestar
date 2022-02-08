@@ -21,6 +21,8 @@ export enum Eth1ErrorCode {
   DUPLICATE_DISTINCT_LOG = "ETH1_ERROR_DUPLICATE_DISTINCT_LOG",
   /** Attempted to insert a log with index != prev + 1 into the Eth1DepositsCache */
   NON_CONSECUTIVE_LOGS = "ETH1_ERROR_NON_CONSECUTIVE_LOGS",
+  /** Expected a deposit log in the db for the index, missing log implies a corrupted db */
+  MISSING_DEPOSIT_LOG = "ETH1_ERROR_MISSING_DEPOSIT_LOG",
 }
 
 export type Eth1ErrorType =
@@ -31,7 +33,8 @@ export type Eth1ErrorType =
   | {code: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE; fromBlock: number; toBlock: number}
   | {code: Eth1ErrorCode.NO_DEPOSIT_ROOT; depositCount: number}
   | {code: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS; index: number; treeLength: number}
-  | {code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG; newIndex: number; prevIndex: number}
-  | {code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS; newIndex: number; prevIndex: number};
+  | {code: Eth1ErrorCode.DUPLICATE_DISTINCT_LOG; newIndex: number; lastLogIndex: number}
+  | {code: Eth1ErrorCode.NON_CONSECUTIVE_LOGS; newIndex: number; lastLogIndex: number}
+  | {code: Eth1ErrorCode.MISSING_DEPOSIT_LOG; newIndex: number; lastLogIndex: number};
 
 export class Eth1Error extends LodestarError<Eth1ErrorType> {}

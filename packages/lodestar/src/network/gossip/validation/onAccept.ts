@@ -50,7 +50,7 @@ export const getGossipAcceptMetadataByType: GetGossipAcceptMetadataFns = {
     const {contribution} = contributionAndProof.message;
     return {
       slot: contribution.slot,
-      index: contribution.subCommitteeIndex,
+      index: contribution.subcommitteeIndex,
     };
   },
   [GossipType.sync_committee]: (config, syncCommitteeSignature, topic) => ({
