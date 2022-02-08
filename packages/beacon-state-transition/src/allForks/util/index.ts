@@ -6,6 +6,6 @@ export * from "./epochProcess";
 export * from "./epochShuffling";
 export * from "./epochStakeSummary";
 export * from "./flat";
-export * from "./indexedSyncCommittee";
+export * from "./syncCommitteeCache";
 export * from "./pubkeyCache";
 export * from "./weakSubjectivity";

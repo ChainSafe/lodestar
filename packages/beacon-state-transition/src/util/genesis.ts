@@ -89,7 +89,7 @@ export function getGenesisBeaconState(
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
 
-  return createCachedBeaconState(config, state);
+  return createCachedBeaconState(config, state, {skipSyncCommitteeCache: true});
 }
 
 /**

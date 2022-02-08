@@ -3,14 +3,18 @@ import {routes} from "@chainsafe/lodestar-api";
 import {Api as IBeaconStateApi} from "@chainsafe/lodestar-api/lib/routes/beacon/state";
 import {allForks, altair} from "@chainsafe/lodestar-types";
 import {readonlyValues} from "@chainsafe/ssz";
-import {computeEpochAtSlot, getCurrentEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAltair,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  getCurrentEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiError} from "../../errors";
 import {ApiModules} from "../../types";
 import {
   filterStateValidatorsByStatuses,
   getEpochBeaconCommittees,
   getStateValidatorIndex,
-  getSyncCommittees,
   getValidatorStatus,
   resolveStateId,
   toValidatorResponse,
@@ -172,9 +176,18 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
         throw new ApiError(400, "Requested state before ALTAIR_FORK_EPOCH");
       }
 
+      const stateCached = state as CachedBeaconStateAltair;
+      if (stateCached.epochCtx === undefined) {
+        throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
+      }
+
+      const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommittee(
+        computeStartSlotAtEpoch(epoch ?? stateEpoch)
+      );
+
       return {
         data: {
-          validators: getSyncCommittees(state, epoch ?? stateEpoch),
+          validators: syncCommitteeCache.validatorIndices,
           // TODO: This is not used by the validator and will be deprecated soon
           validatorAggregates: [],
         },

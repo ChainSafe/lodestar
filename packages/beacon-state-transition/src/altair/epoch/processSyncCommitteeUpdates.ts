@@ -1,5 +1,7 @@
-import {CachedBeaconStateAltair, IEpochProcess} from "../../types";
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
+import {aggregatePublicKeys} from "@chainsafe/bls";
+import {getNextSyncCommitteeIndices} from "../util/syncCommittee";
+import {CachedBeaconStateAltair} from "../../types";
 
 /**
  * Rotate nextSyncCommittee to currentSyncCommittee if sync committee period is over.
@@ -7,9 +9,27 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
  * PERF: Once every `EPOCHS_PER_SYNC_COMMITTEE_PERIOD`, do an expensive operation to compute the next committee.
  * Calculating the next sync committee has a proportional cost to $VALIDATOR_COUNT
  */
-export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
-  const nextEpoch = epochProcess.currentEpoch + 1;
+export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): void {
+  const nextEpoch = state.epochCtx.epoch + 1;
+
   if (nextEpoch % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-    state.rotateSyncCommittee();
+    const activeValidatorIndices = state.epochCtx.nextShuffling.activeIndices;
+    const {effectiveBalances} = state.epochCtx;
+
+    const nextSyncCommitteeIndices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalances);
+
+    // Using the index2pubkey cache is slower because it needs the serialized pubkey.
+    const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map(
+      (index) => state.validators[index].pubkey.valueOf() as Uint8Array
+    );
+
+    // Rotate syncCommittee in state
+    state.currentSyncCommittee = state.nextSyncCommittee;
+    state.nextSyncCommittee = {
+      pubkeys: nextSyncCommitteePubkeys,
+      aggregatePubkey: aggregatePublicKeys(nextSyncCommitteePubkeys),
+    };
+
+    state.epochCtx.rotateSyncCommitteeIndexed(nextSyncCommitteeIndices);
   }
 }

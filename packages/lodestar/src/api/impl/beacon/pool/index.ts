@@ -1,7 +1,6 @@
 // eslint-disable-next-line no-restricted-imports
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
@@ -127,7 +126,7 @@ export function getBeaconPoolApi({
       await Promise.all(
         signatures.map(async (signature, i) => {
           try {
-            const synCommittee = allForks.getIndexedSyncCommittee(state, signature.slot);
+            const synCommittee = state.epochCtx.getIndexedSyncCommittee(signature.slot);
             const indexesInCommittee = synCommittee.validatorIndexMap.get(signature.validatorIndex);
             if (indexesInCommittee === undefined || indexesInCommittee.length === 0) {
               return; // Not a sync committee member

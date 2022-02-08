@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {ssz, phase0} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
@@ -29,7 +29,7 @@ export function transition(
   pre: ForkName,
   fork: Exclude<ForkName, ForkName.phase0>
 ): void {
-  describeDirectorySpecTest<ITransitionTestCase, PostBeaconState>(
+  describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
     `${ACTIVE_PRESET}/${fork}/transition`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/transition/core/pyspec_tests`),
     (testcase) => {
@@ -89,7 +89,6 @@ export function transition(
 }
 
 type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
-type PostBeaconState = Exclude<allForks.BeaconState, phase0.BeaconState>;
 
 /* eslint-disable @typescript-eslint/naming-convention */
 interface ITransitionTestCase extends IBaseSpecTest {
@@ -102,5 +101,5 @@ interface ITransitionTestCase extends IBaseSpecTest {
     bls_setting?: bigint;
   };
   pre: allForks.BeaconState;
-  post: PostBeaconState;
+  post: allForks.BeaconState;
 }

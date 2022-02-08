@@ -1,35 +1,7 @@
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
-  computeEpochAtSlot,
-  computeSlotsSinceEpochStart,
-  computeSyncPeriodAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeSlotsSinceEpochStart} from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {allForks, BLSPubkey, CommitteeIndex, Epoch, phase0, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, BLSPubkey, CommitteeIndex, phase0, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {BranchNodeStruct, TreeValue, List} from "@chainsafe/ssz";
-import {ApiError} from "../errors";
-
-export function getSyncComitteeValidatorIndexMap(
-  state: allForks.BeaconState | CachedBeaconStateAllForks,
-  requestedEpoch: Epoch
-): Map<ValidatorIndex, number[]> {
-  const statePeriod = computeSyncPeriodAtEpoch(computeEpochAtSlot(state.slot));
-  const requestPeriod = computeSyncPeriodAtEpoch(requestedEpoch);
-
-  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
-    switch (requestPeriod) {
-      case statePeriod:
-        return (state as CachedBeaconStateAltair).currentSyncCommittee.validatorIndexMap;
-      case statePeriod + 1:
-        return (state as CachedBeaconStateAltair).nextSyncCommittee.validatorIndexMap;
-      default:
-        throw new ApiError(400, "Epoch out of bounds");
-    }
-  }
-
-  throw new ApiError(400, "No CachedBeaconState available");
-}
 
 export function computeSubnetForCommitteesAtSlot(
   slot: Slot,
