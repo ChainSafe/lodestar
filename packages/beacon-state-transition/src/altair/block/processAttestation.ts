@@ -1,15 +1,18 @@
-import {Epoch, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, ParticipationFlags, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
 import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochContext} from "../../types";
-import {CachedEpochParticipation, IParticipationStatus} from "../../allForks/util/cachedEpochParticipation";
+import {CachedEpochParticipation} from "../../allForks/util/cachedEpochParticipation";
 import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
+  TIMELY_HEAD_FLAG_INDEX,
   TIMELY_HEAD_WEIGHT,
+  TIMELY_SOURCE_FLAG_INDEX,
   TIMELY_SOURCE_WEIGHT,
+  TIMELY_TARGET_FLAG_INDEX,
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
@@ -17,6 +20,11 @@ import {checkpointToStr, validateAttestation} from "../../phase0/block/processAt
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
+const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
+const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
 
 export function processAttestations(
   state: CachedBeaconStateAltair,
@@ -30,8 +38,8 @@ export function processAttestations(
 
   // Process all attestations first and then increase the balance of the proposer once
   let proposerReward = 0;
-  const previousEpochStatuses = new Map<number, IParticipationStatus>();
-  const currentEpochStatuses = new Map<number, IParticipationStatus>();
+  const previousEpochStatuses = new Map<number, ParticipationFlags>();
+  const currentEpochStatuses = new Map<number, ParticipationFlags>();
   for (const attestation of attestations) {
     const data = attestation.data;
 
@@ -61,37 +69,32 @@ export function processAttestations(
     const epochStatuses =
       data.target.epoch === epochCtx.currentShuffling.epoch ? currentEpochStatuses : previousEpochStatuses;
 
-    const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
-      data,
-      stateSlot - data.slot,
-      rootCache,
-      epochCtx
-    );
+    const flagsAttestation = getAttestationParticipationStatus(data, stateSlot - data.slot, rootCache, epochCtx);
 
     // For each participant, update their participation
     // In epoch processing, this participation info is used to calculate balance updates
     let totalBalanceIncrementsWithWeight = 0;
     for (const index of attestingIndices) {
-      const status = epochStatuses.get(index) || (epochParticipation.getStatus(index) as IParticipationStatus);
-      const newStatus = {
-        timelySource: status.timelySource || timelySource,
-        timelyTarget: status.timelyTarget || timelyTarget,
-        timelyHead: status.timelyHead || timelyHead,
-      };
+      const flags = epochStatuses.get(index) ?? (epochParticipation.get(index) as ParticipationFlags);
+      // Merge (OR) `flagsAttestation` (new flags) with `flags` (current flags)
+      const newFlags = flagsAttestation | flags;
+
       // For normal block, > 90% of attestations belong to current epoch
       // At epoch boundary, 100% of attestations belong to previous epoch
       // so we want to update the participation flag tree in batch
-      epochStatuses.set(index, newStatus);
+      epochStatuses.set(index, newFlags);
       // epochParticipation.setStatus(index, newStatus);
-      /**
-       * Spec:
-       * baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
-       * proposerRewardNumerator += baseReward * totalWeight
-       */
-      const tsWeight: number = !status.timelySource && timelySource ? TIMELY_SOURCE_WEIGHT : 0;
-      const ttWeight: number = !status.timelyTarget && timelyTarget ? TIMELY_TARGET_WEIGHT : 0;
-      const thWeight: number = !status.timelyHead && timelyHead ? TIMELY_HEAD_WEIGHT : 0;
-      const totalWeight = tsWeight + ttWeight + thWeight;
+
+      // Returns flags that are NOT set before (~ bitwise NOT) AND are set after
+      const flagsNewSet = ~flags & flagsAttestation;
+
+      // Spec:
+      // baseReward = state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT * baseRewardPerIncrement;
+      // proposerRewardNumerator += baseReward * totalWeight
+      let totalWeight = 0;
+      if ((flagsNewSet & TIMELY_SOURCE) === TIMELY_SOURCE) totalWeight += TIMELY_SOURCE_WEIGHT;
+      if ((flagsNewSet & TIMELY_TARGET) === TIMELY_TARGET) totalWeight += TIMELY_TARGET_WEIGHT;
+      if ((flagsNewSet & TIMELY_HEAD) === TIMELY_HEAD) totalWeight += TIMELY_HEAD_WEIGHT;
 
       if (totalWeight > 0) {
         totalBalanceIncrementsWithWeight += effectiveBalanceIncrements[index] * totalWeight;
@@ -125,7 +128,7 @@ export function getAttestationParticipationStatus(
   inclusionDelay: number,
   rootCache: RootCache,
   epochCtx: EpochContext
-): IParticipationStatus {
+): ParticipationFlags {
   const justifiedCheckpoint =
     data.target.epoch === epochCtx.currentShuffling.epoch
       ? rootCache.currentJustifiedCheckpoint
@@ -145,15 +148,19 @@ export function getAttestationParticipationStatus(
       )} justifiedCheckpoint=${checkpointToStr(justifiedCheckpoint)}`
     );
   }
+
   const isMatchingTarget = ssz.Root.equals(data.target.root, rootCache.getBlockRoot(data.target.epoch));
+
   // a timely head is only be set if the target is _also_ matching
   const isMatchingHead =
     isMatchingTarget && ssz.Root.equals(data.beaconBlockRoot, rootCache.getBlockRootAtSlot(data.slot));
-  return {
-    timelySource: isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH),
-    timelyTarget: isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH,
-    timelyHead: isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY,
-  };
+
+  let flags = 0;
+  if (isMatchingSource && inclusionDelay <= intSqrt(SLOTS_PER_EPOCH)) flags |= TIMELY_SOURCE;
+  if (isMatchingTarget && inclusionDelay <= SLOTS_PER_EPOCH) flags |= TIMELY_TARGET;
+  if (isMatchingHead && inclusionDelay === MIN_ATTESTATION_INCLUSION_DELAY) flags |= TIMELY_HEAD;
+
+  return flags;
 }
 
 /**
@@ -191,21 +198,21 @@ export class RootCache {
 }
 
 export function updateEpochParticipants(
-  epochStatuses: Map<number, IParticipationStatus>,
+  epochStatuses: Map<number, ParticipationFlags>,
   epochParticipation: CachedEpochParticipation,
   numActiveValidators: number
 ): void {
   // all active validators are attesters, there are 32 slots per epoch
-  // if 1/2 of that or more are updated status, do that in batch, see the benchmark for more details
+  // if 1/2 of that or more are updated flags, do that in batch, see the benchmark for more details
   if (epochStatuses.size >= numActiveValidators / (2 * SLOTS_PER_EPOCH)) {
     const transientVector = epochParticipation.persistent.asTransient();
-    for (const [index, status] of epochStatuses.entries()) {
-      transientVector.set(index, status);
+    for (const [index, flags] of epochStatuses.entries()) {
+      transientVector.set(index, flags);
     }
     epochParticipation.updateAllStatus(transientVector.vector);
   } else {
-    for (const [index, status] of epochStatuses.entries()) {
-      epochParticipation.setStatus(index, status);
+    for (const [index, flags] of epochStatuses.entries()) {
+      epochParticipation.set(index, flags);
     }
   }
 }

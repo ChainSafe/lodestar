@@ -4,7 +4,6 @@ import {createCachedBeaconState} from "../allForks";
 import {newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IParticipationStatus} from "../allForks/util/cachedEpochParticipation";
 import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation";
 import {getNextSyncCommittee} from "./util/syncCommittee";
 
@@ -50,22 +49,13 @@ function translateParticipation(state: CachedBeaconStateAltair, pendingAttesatio
   const epochParticipation = state.previousEpochParticipation;
   for (const attestation of pendingAttesations) {
     const data = attestation.data;
-    const {timelySource, timelyTarget, timelyHead} = getAttestationParticipationStatus(
-      data,
-      attestation.inclusionDelay,
-      rootCache,
-      epochCtx
-    );
+    const flagsAttestation = getAttestationParticipationStatus(data, attestation.inclusionDelay, rootCache, epochCtx);
 
     const attestingIndices = state.getAttestingIndices(data, attestation.aggregationBits);
     for (const index of attestingIndices) {
-      const status = epochParticipation.getStatus(index) as IParticipationStatus;
-      const newStatus = {
-        timelySource: status.timelySource || timelySource,
-        timelyTarget: status.timelyTarget || timelyTarget,
-        timelyHead: status.timelyHead || timelyHead,
-      };
-      epochParticipation.setStatus(index, newStatus);
+      const flags = epochParticipation.get(index) as ParticipationFlags;
+      // Merge (OR) `flagsAttestation` (new flags) with `flags` (current flags)
+      epochParticipation.set(index, flags | flagsAttestation);
     }
   }
 }

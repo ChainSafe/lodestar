@@ -83,8 +83,8 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
     epochCtx.effectiveBalanceIncrementsSet(validators.length, effectiveBalance);
 
     // add participation caches
-    state.previousEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
-    state.currentEpochParticipation.pushStatus({timelyHead: false, timelySource: false, timelyTarget: false});
+    state.previousEpochParticipation.push(0);
+    state.currentEpochParticipation.push(0);
 
     // Forks: altair, bellatrix, and future
     if (fork !== ForkName.phase0) {

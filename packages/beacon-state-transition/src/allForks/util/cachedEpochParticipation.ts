@@ -1,49 +1,20 @@
 import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
-import {TIMELY_HEAD_FLAG_INDEX, TIMELY_SOURCE_FLAG_INDEX, TIMELY_TARGET_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
 import {MutableVector, PersistentVector, TransientVector} from "@chainsafe/persistent-ts";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
 
-export interface IParticipationStatus {
-  timelyHead: boolean;
-  timelyTarget: boolean;
-  timelySource: boolean;
-}
-
-/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
-const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
-const TIMELY_TARGET = 1 << TIMELY_TARGET_FLAG_INDEX;
-const TIMELY_HEAD = 1 << TIMELY_HEAD_FLAG_INDEX;
-
-// TODO: No need to do math! All these operations can be cached before hand in a giant if
-export function toParticipationFlags(data: IParticipationStatus): ParticipationFlags {
-  return (
-    ((data.timelySource && TIMELY_SOURCE) as number) |
-    ((data.timelyHead && TIMELY_HEAD) as number) |
-    ((data.timelyTarget && TIMELY_TARGET) as number)
-  );
-}
-
-export function fromParticipationFlags(flags: ParticipationFlags): IParticipationStatus {
-  return {
-    timelySource: (TIMELY_SOURCE & flags) === TIMELY_SOURCE,
-    timelyTarget: (TIMELY_TARGET & flags) === TIMELY_TARGET,
-    timelyHead: (TIMELY_HEAD & flags) === TIMELY_HEAD,
-  };
-}
-
 interface ICachedEpochParticipationOpts {
   type?: BasicListType<List<Uint8>>;
   tree?: Tree;
-  persistent: MutableVector<IParticipationStatus>;
+  persistent: MutableVector<ParticipationFlags>;
 }
 
 export class CachedEpochParticipation implements List<ParticipationFlags> {
   [index: number]: ParticipationFlags;
   type?: BasicListType<List<Uint8>>;
   tree?: Tree;
-  persistent: MutableVector<IParticipationStatus>;
+  persistent: MutableVector<ParticipationFlags>;
 
   constructor(opts: ICachedEpochParticipationOpts) {
     this.type = opts.type;
@@ -56,61 +27,42 @@ export class CachedEpochParticipation implements List<ParticipationFlags> {
   }
 
   get(index: number): ParticipationFlags | undefined {
-    const inclusionData = this.getStatus(index);
-    if (!inclusionData) return undefined;
-    return toParticipationFlags(inclusionData);
-  }
-
-  set(index: number, value: ParticipationFlags): void {
-    this.persistent.set(index, fromParticipationFlags(value));
-    if (this.type && this.tree) this.type.tree_setProperty(this.tree, index, value);
-  }
-
-  getStatus(index: number): IParticipationStatus | undefined {
     return this.persistent.get(index) ?? undefined;
   }
 
-  setStatus(index: number, data: IParticipationStatus): void {
-    if (this.type && this.tree) this.type.tree_setProperty(this.tree, index, toParticipationFlags(data));
-    return this.persistent.set(index, data);
+  set(index: number, value: ParticipationFlags): void {
+    this.persistent.set(index, value);
+    if (this.type && this.tree) this.type.tree_setProperty(this.tree, index, value);
   }
 
-  updateAllStatus(data: PersistentVector<IParticipationStatus> | TransientVector<IParticipationStatus>): void {
+  updateAllStatus(data: PersistentVector<ParticipationFlags> | TransientVector<ParticipationFlags>): void {
     this.persistent.vector = data;
 
     if (this.type && this.tree) {
       const packedData = new Uint8Array(data.length);
-      data.forEach((d, i) => (packedData[i] = toParticipationFlags(d)));
+      data.forEach((d, i) => (packedData[i] = d));
       this.tree.rootNode = unsafeUint8ArrayToTree(packedData, this.type.getChunkDepth());
       this.type.tree_setLength(this.tree, data.length);
     }
   }
 
-  pushStatus(data: IParticipationStatus): void {
-    this.persistent.push(data);
-    if (this.type && this.tree) this.type.tree_push(this.tree, toParticipationFlags(data));
-  }
-
   push(value: ParticipationFlags): number {
-    this.pushStatus(fromParticipationFlags(value));
+    this.persistent.push(value);
+    if (this.type && this.tree) this.type.tree_push(this.tree, value);
     return this.persistent.length;
   }
 
   pop(): ParticipationFlags {
     const popped = this.persistent.pop();
     if (this.type && this.tree) this.type.tree_pop(this.tree);
-    if (!popped) return (undefined as unknown) as ParticipationFlags;
-    return toParticipationFlags(popped);
+    if (popped === undefined) return (undefined as unknown) as ParticipationFlags;
+    return popped;
   }
 
   *[Symbol.iterator](): Iterator<ParticipationFlags> {
     for (const data of this.persistent) {
-      yield toParticipationFlags(data);
+      yield data;
     }
-  }
-
-  *iterateStatus(): IterableIterator<IParticipationStatus> {
-    yield* this.persistent[Symbol.iterator]();
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -124,20 +76,18 @@ export class CachedEpochParticipation implements List<ParticipationFlags> {
   }
 
   forEach(fn: (value: ParticipationFlags, index: number, list: this) => void): void {
-    this.persistent.forEach((value, index) =>
-      (fn as (value: ParticipationFlags, index: number) => void)(toParticipationFlags(value), index)
-    );
+    this.persistent.forEach((value, index) => (fn as (value: ParticipationFlags, index: number) => void)(value, index));
   }
 
   map<T>(fn: (value: ParticipationFlags, index: number) => T): T[] {
-    return this.persistent.map((value, index) => fn(toParticipationFlags(value), index));
+    return this.persistent.map((value, index) => fn(value, index));
   }
 
-  forEachStatus(fn: (value: IParticipationStatus, index: number, list: this) => void): void {
-    this.persistent.forEach(fn as (t: IParticipationStatus, i: number) => void);
+  forEachStatus(fn: (value: ParticipationFlags, index: number, list: this) => void): void {
+    this.persistent.forEach(fn as (t: ParticipationFlags, i: number) => void);
   }
 
-  mapStatus<T>(fn: (value: IParticipationStatus, index: number) => T): T[] {
+  mapStatus<T>(fn: (value: ParticipationFlags, index: number) => T): T[] {
     return this.persistent.map((value, index) => fn(value, index));
   }
 }
