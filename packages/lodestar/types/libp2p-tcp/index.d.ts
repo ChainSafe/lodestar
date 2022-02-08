@@ -3,7 +3,7 @@
 // Definitions by: Jaco Greeff <https://github.com/jacogr>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
-declare module 'libp2p-tcp' {
+declare module "libp2p-tcp" {
   const tcp: import("libp2p-interfaces/src/transport/types").TransportFactory<any, any>;
   export default tcp;
 }

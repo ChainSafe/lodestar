@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import "mocha";
 import {expect} from "chai";
-import {promisify} from "util";
+import {promisify} from "node:util";
 import leveldown from "leveldown";
 import {AbortController} from "@chainsafe/abort-controller";
 import {sleep} from "@chainsafe/lodestar-utils";
@@ -66,6 +66,7 @@ describe("eth1 / Eth1Provider", function () {
       enabled: true,
       providerUrls: [getGoerliRpcUrl()],
       depositContractDeployBlock: medallaTestnetConfig.depositBlock,
+      unsafeAllowDepositDataOverwrite: false,
     };
     const eth1Provider = new Eth1Provider(config, eth1Options, controller.signal);
 

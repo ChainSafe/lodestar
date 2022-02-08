@@ -24,6 +24,7 @@ describe("options / beaconNodeOptions", () => {
       "eth1.providerUrls": ["http://my.node:8545"],
       "eth1.depositContractDeployBlock": 1625314,
       "eth1.disableEth1DepositDataTracker": true,
+      "eth1.unsafeAllowDepositDataOverwrite": false,
 
       "execution.urls": ["http://localhost:8550"],
       "execution.timeout": 12000,
@@ -78,6 +79,7 @@ describe("options / beaconNodeOptions", () => {
         providerUrls: ["http://my.node:8545"],
         depositContractDeployBlock: 1625314,
         disableEth1DepositDataTracker: true,
+        unsafeAllowDepositDataOverwrite: false,
       },
       executionEngine: {
         urls: ["http://localhost:8550"],

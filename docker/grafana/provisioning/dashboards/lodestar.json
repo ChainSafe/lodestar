@@ -12434,10 +12434,7 @@
                   {
                     "id": "custom.lineStyle",
                     "value": {
-                      "dash": [
-                        10,
-                        10
-                      ],
+                      "dash": [10, 10],
                       "fill": "dash"
                     }
                   }

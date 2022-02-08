@@ -1,4 +1,4 @@
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
@@ -54,7 +54,7 @@ export class Eth1DepositDataTracker {
     this.signal = signal;
     this.logger = logger;
     this.eth1Provider = eth1Provider;
-    this.depositsCache = new Eth1DepositsCache(config, db);
+    this.depositsCache = new Eth1DepositsCache(opts, config, db);
     this.eth1DataCache = new Eth1DataCache(config, db);
     this.lastProcessedDepositBlockNumber = null;
 
@@ -99,8 +99,12 @@ export class Eth1DepositDataTracker {
     state: CachedBeaconStateAllForks,
     eth1DataVote: phase0.Eth1Data
   ): Promise<phase0.Deposit[]> {
+    // TODO: Review if this is optimal
+    // Convert to view first to hash once and compare hashes
+    const eth1DataVoteView = ssz.phase0.Eth1Data.createTreeBackedFromStruct(eth1DataVote);
+
     // Eth1 data may change due to the vote included in this block
-    const newEth1Data = allForks.getNewEth1Data(state, eth1DataVote) || state.eth1Data;
+    const newEth1Data = allForks.becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;
     return await getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
   }
 

@@ -23,10 +23,12 @@ import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
@@ -57,7 +59,7 @@ export function forkChoiceTest(fork: ForkName): void {
 
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
-            tickTime = Number(step.tick);
+            tickTime = bnToNum(step.tick);
             forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT));
           }
 
@@ -84,52 +86,43 @@ export function forkChoiceTest(fork: ForkName): void {
 
           // checks step
           else if (isCheck(step)) {
-            const {
-              head: expectedHead,
-              time: expectedTime,
-              justifiedCheckpoint,
-              finalizedCheckpoint,
-              bestJustifiedCheckpoint,
-              proposerBoostRoot: expectedProposerBoostRoot,
-            } = step.checks;
-
             // Forkchoice head is computed lazily only on request
             const head = forkchoice.updateHead();
             const proposerBootRoot = forkchoice.getProposerBoostRoot();
 
-            if (expectedHead !== undefined) {
-              expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-              expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+            if (step.checks.head !== undefined) {
+              expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
+              expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
             }
-            if (expectedProposerBoostRoot !== undefined) {
+            if (step.checks.proposer_boost_root !== undefined) {
               expect(proposerBootRoot).to.be.equal(
-                expectedProposerBoostRoot,
+                step.checks.proposer_boost_root,
                 `Invalid proposer boost root at step ${i}`
               );
             }
             // time in spec mapped to Slot in our forkchoice implementation.
             // Compare in slots because proposer boost steps doesn't always come on
             // slot boundary.
-            if (expectedTime !== undefined && expectedTime > 0)
+            if (step.checks.time !== undefined && step.checks.time > 0)
               expect(forkchoice.getTime()).to.be.equal(
-                Math.floor(Number(expectedTime) / config.SECONDS_PER_SLOT),
+                Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
                 `Invalid forkchoice time at step ${i}`
               );
-            if (justifiedCheckpoint) {
+            if (step.checks.justified_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getJustifiedCheckpoint())).to.be.deep.equal(
-                justifiedCheckpoint,
+                step.checks.justified_checkpoint,
                 `Invalid justified checkpoint at step ${i}`
               );
             }
-            if (finalizedCheckpoint) {
+            if (step.checks.finalized_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getFinalizedCheckpoint())).to.be.deep.equal(
-                finalizedCheckpoint,
+                step.checks.finalized_checkpoint,
                 `Invalid finalized checkpoint at step ${i}`
               );
             }
-            if (bestJustifiedCheckpoint) {
+            if (step.checks.best_justified_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getBestJustifiedCheckpoint())).to.be.deep.equal(
-                bestJustifiedCheckpoint,
+                step.checks.best_justified_checkpoint,
                 `Invalid best justified checkpoint at step ${i}`
               );
             }
@@ -277,7 +270,7 @@ type SpecTestCheckpoint = {epoch: BigInt; root: string};
 
 type OnTick = {
   /** to execute `on_tick(store, time)` */
-  tick: number;
+  tick: bigint;
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -297,19 +290,22 @@ type OnBlock = {
 type Checks = {
   /** Value in the ForkChoice store to verify it's correct after being mutated by another step */
   checks: {
-    head: {slot: number; root: string};
-    time?: number;
-    justifiedCheckpoint?: SpecTestCheckpoint;
-    finalizedCheckpoint?: SpecTestCheckpoint;
-    bestJustifiedCheckpoint?: SpecTestCheckpoint;
-    proposerBoostRoot?: RootHex;
+    head?: {
+      slot: bigint;
+      root: string;
+    };
+    time?: bigint;
+    justified_checkpoint?: SpecTestCheckpoint;
+    finalized_checkpoint?: SpecTestCheckpoint;
+    best_justified_checkpoint?: SpecTestCheckpoint;
+    proposer_boost_root?: RootHex;
   };
 };
 
-interface IForkChoiceTestCase extends IBaseSpecTest {
+interface IForkChoiceTestCase {
   meta?: {
     description?: string;
-    blsSetting: BigInt;
+    bls_setting: BigInt;
   };
   anchorState: allForks.BeaconState;
   anchorBlock: allForks.BeaconBlock;

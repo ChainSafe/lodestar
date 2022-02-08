@@ -2,7 +2,7 @@
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
@@ -122,9 +122,6 @@ export function getBeaconPoolApi({
       // TODO: Fetch states at signature slots
       const state = chain.getHeadState();
 
-      // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-
       const errors: Error[] = [];
 
       await Promise.all(
@@ -144,8 +141,8 @@ export function getBeaconPoolApi({
               indexesInCommittee.map(async (indexInCommittee) => {
                 // Sync committee subnet members are just sequential in the order they appear in SyncCommitteeIndexes array
                 const subnet = Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE);
-                const indexInSubCommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
-                chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubCommittee);
+                const indexInSubcommittee = indexInCommittee % SYNC_COMMITTEE_SUBNET_SIZE;
+                chain.syncCommitteeMessagePool.add(subnet, signature, indexInSubcommittee);
                 await network.gossip.publishSyncCommitteeSignature(signature, subnet);
               })
             );

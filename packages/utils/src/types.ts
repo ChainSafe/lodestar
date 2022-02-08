@@ -9,3 +9,8 @@ export type RecursivePartial<T> = {
     ? Readonly<RecursivePartial<U>>[]
     : RecursivePartial<T[P]>;
 };
+
+/** Type safe wrapper for Number constructor that takes 'any' */
+export function bnToNum(bn: bigint): number {
+  return Number(bn);
+}

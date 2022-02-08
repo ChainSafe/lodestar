@@ -284,9 +284,9 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
-      let indexInSubCommittee = 0;
+      let indexInSubcommittee = 0;
       try {
-        indexInSubCommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubCommittee;
+        indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -302,7 +302,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // Handler
 
       try {
-        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubCommittee);
+        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
       } catch (e) {
         logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }

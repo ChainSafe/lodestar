@@ -7,7 +7,7 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
-import {groupSyncDutiesBySubCommitteeIndex, SubCommitteeDuty} from "./utils";
+import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
 import {ChainHeaderTracker} from "./chainHeaderTracker";
 
@@ -58,7 +58,7 @@ export class SyncCommitteeService {
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is convervative to reduce the node's load, review
-      const dutiesBySubcommitteeIndex = groupSyncDutiesBySubCommitteeIndex(dutiesAtSlot);
+      const dutiesBySubcommitteeIndex = groupSyncDutiesBySubcommitteeIndex(dutiesAtSlot);
       await Promise.all(
         Array.from(dutiesBySubcommitteeIndex.entries()).map(async ([subcommitteeIndex, duties]) => {
           if (duties.length === 0) return;
@@ -140,7 +140,7 @@ export class SyncCommitteeService {
     slot: Slot,
     subcommitteeIndex: CommitteeIndex,
     beaconBlockRoot: Root,
-    duties: SubCommitteeDuty[]
+    duties: SubcommitteeDuty[]
   ): Promise<void> {
     const logCtx = {slot, index: subcommitteeIndex};
 

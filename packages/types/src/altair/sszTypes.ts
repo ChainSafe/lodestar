@@ -21,7 +21,7 @@ const {
   Bytes32,
   Number64,
   Slot,
-  SubCommitteeIndex,
+  SubcommitteeIndex,
   ValidatorIndex,
   Gwei,
   Root,
@@ -83,14 +83,14 @@ export const SyncCommitteeContribution = new ContainerType<altair.SyncCommitteeC
   fields: {
     slot: Slot,
     beaconBlockRoot: Root,
-    subCommitteeIndex: SubCommitteeIndex,
+    subcommitteeIndex: SubcommitteeIndex,
     aggregationBits: new BitVectorType({length: SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT}),
     signature: BLSSignature,
   },
   casingMap: {
     slot: "slot",
     beaconBlockRoot: "beacon_block_root",
-    subCommitteeIndex: "subcommittee_index",
+    subcommitteeIndex: "subcommittee_index",
     aggregationBits: "aggregation_bits",
     signature: "signature",
   },
@@ -120,11 +120,11 @@ export const SignedContributionAndProof = new ContainerType<altair.SignedContrib
 export const SyncAggregatorSelectionData = new ContainerType<altair.SyncAggregatorSelectionData>({
   fields: {
     slot: Slot,
-    subCommitteeIndex: SubCommitteeIndex,
+    subcommitteeIndex: SubcommitteeIndex,
   },
   casingMap: {
     slot: "slot",
-    subCommitteeIndex: "subcommittee_index",
+    subcommitteeIndex: "subcommittee_index",
   },
 });
 

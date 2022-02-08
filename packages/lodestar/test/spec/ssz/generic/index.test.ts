@@ -58,7 +58,7 @@ for (const testType of fs.readdirSync(rootGenericSszPath)) {
 
         const testData = parseValidTestcase(path.join(validCasesPath, validCase), type);
         const testDataSerialized = toHexString(testData.serialized);
-        const testDataRoot = toHexString(testData.root);
+        const testDataRoot = testData.root;
 
         const serialized = wrapErr(() => type.serialize(testData.value), "type.serialize()");
         const value = wrapErr(() => type.deserialize(testData.serialized), "type.deserialize()");

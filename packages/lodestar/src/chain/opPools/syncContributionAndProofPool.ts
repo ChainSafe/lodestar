@@ -23,9 +23,9 @@ const MAX_ITEMS_PER_SLOT = 512;
  * A one-one mapping to SyncContribution with fast data structure to help speed up the aggregation.
  */
 export type SyncContributionFast = {
-  syncSubCommitteeBits: boolean[];
+  syncSubcommitteeBits: boolean[];
   numParticipants: number;
-  syncSubCommitteeSignature: Signature;
+  syncSubcommitteeSignature: Signature;
 };
 
 /** Hex string of `contribution.beaconBlockRoot` */
@@ -65,7 +65,7 @@ export class SyncContributionAndProofPool {
     }
 
     const bestContributionBySubnet = bestContributionBySubnetByRoot.getOrDefault(rootHex);
-    const subnet = contribution.subCommitteeIndex;
+    const subnet = contribution.subcommitteeIndex;
     const bestContribution = bestContributionBySubnet.get(subnet);
     if (bestContribution) {
       return replaceIfBetter(bestContribution, contribution);
@@ -113,11 +113,11 @@ export function replaceIfBetter(
 ): InsertOutcome {
   const {numParticipants} = bestContribution;
   const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-  const newSyncSubCommitteeBits = newFilledArray(subnetSize, false);
+  const newSyncSubcommitteeBits = newFilledArray(subnetSize, false);
   let newNumParticipants = 0;
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
-      newSyncSubCommitteeBits[index] = true;
+      newSyncSubcommitteeBits[index] = true;
       newNumParticipants++;
     }
   }
@@ -126,9 +126,9 @@ export function replaceIfBetter(
     return InsertOutcome.NotBetterThan;
   }
 
-  bestContribution.syncSubCommitteeBits = newSyncSubCommitteeBits;
+  bestContribution.syncSubcommitteeBits = newSyncSubcommitteeBits;
   bestContribution.numParticipants = newNumParticipants;
-  bestContribution.syncSubCommitteeSignature = bls.Signature.fromBytes(
+  bestContribution.syncSubcommitteeSignature = bls.Signature.fromBytes(
     contribution.signature.valueOf() as Uint8Array,
     undefined,
     true
@@ -141,19 +141,19 @@ export function replaceIfBetter(
  */
 export function contributionToFast(contribution: altair.SyncCommitteeContribution): SyncContributionFast {
   const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
-  const syncSubCommitteeBits = newFilledArray(subnetSize, false);
+  const syncSubcommitteeBits = newFilledArray(subnetSize, false);
   let numParticipants = 0;
   for (const [index, participated] of Array.from(readonlyValues(contribution.aggregationBits)).entries()) {
     if (participated) {
-      syncSubCommitteeBits[index] = true;
+      syncSubcommitteeBits[index] = true;
       numParticipants++;
     }
   }
 
   return {
-    syncSubCommitteeBits,
+    syncSubcommitteeBits,
     numParticipants,
-    syncSubCommitteeSignature: bls.Signature.fromBytes(contribution.signature.valueOf() as Uint8Array, undefined, true),
+    syncSubcommitteeSignature: bls.Signature.fromBytes(contribution.signature.valueOf() as Uint8Array, undefined, true),
   };
 }
 
@@ -168,10 +168,10 @@ export function aggregate(bestContributionBySubnet: Map<number, SyncContribution
   const signatures: Signature[] = [];
   for (const [subnet, bestContribution] of bestContributionBySubnet.entries()) {
     const indexOffset = subnet * subnetSize;
-    for (const [index, participated] of bestContribution.syncSubCommitteeBits.entries()) {
+    for (const [index, participated] of bestContribution.syncSubcommitteeBits.entries()) {
       if (participated) syncCommitteeBits[indexOffset + index] = true;
     }
-    signatures.push(bestContribution.syncSubCommitteeSignature);
+    signatures.push(bestContribution.syncSubcommitteeSignature);
   }
   return {
     syncCommitteeBits,

@@ -7,8 +7,8 @@ import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
 
 describe("chain / opPools / SyncCommitteeMessagePool", function () {
   let cache: SyncCommitteeMessagePool;
-  const subCommitteeIndex = 2;
-  const indexInSubCommittee = 3;
+  const subcommitteeIndex = 2;
+  const indexInSubcommittee = 3;
   const beaconBlockRoot = Buffer.alloc(32, 1);
   const slot = 10;
   let syncCommittee: altair.SyncCommitteeMessage;
@@ -25,11 +25,11 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
 
   beforeEach(() => {
     cache = new SyncCommitteeMessagePool();
-    cache.add(subCommitteeIndex, syncCommittee, indexInSubCommittee);
+    cache.add(subcommitteeIndex, syncCommittee, indexInSubcommittee);
   });
 
   it("should preaggregate SyncCommitteeContribution", () => {
-    let contribution = cache.getContribution(subCommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+    let contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
     const newSecretKey = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     const newSyncCommittee = generateSyncCommitteeSignature({
@@ -40,14 +40,14 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
       signature: newSecretKey.sign(beaconBlockRoot).toBytes(),
     });
     const newIndicesInSubSyncCommittee = [1];
-    cache.add(subCommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
-    contribution = cache.getContribution(subCommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
+    cache.add(subcommitteeIndex, newSyncCommittee, newIndicesInSubSyncCommittee[0]);
+    contribution = cache.getContribution(subcommitteeIndex, syncCommittee.slot, syncCommittee.beaconBlockRoot);
     expect(contribution).to.be.not.null;
     if (contribution) {
       expect(contribution.slot).to.be.equal(syncCommittee.slot);
       expect(toHexString(contribution.beaconBlockRoot)).to.be.equal(toHexString(syncCommittee.beaconBlockRoot));
-      expect(contribution.subCommitteeIndex).to.be.equal(subCommitteeIndex);
-      const newIndices = [...newIndicesInSubSyncCommittee, indexInSubCommittee];
+      expect(contribution.subcommitteeIndex).to.be.equal(subcommitteeIndex);
+      const newIndices = [...newIndicesInSubSyncCommittee, indexInSubcommittee];
       const aggregationBits = contribution.aggregationBits;
       for (let index = 0; index < aggregationBits.length; index++) {
         if (newIndices.includes(index)) {

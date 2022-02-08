@@ -1,4 +1,4 @@
-import {execSync} from "child_process";
+import {execSync} from "node:child_process";
 
 /**
  * This file is created in the build step and is distributed through NPM
