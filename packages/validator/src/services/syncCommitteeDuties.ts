@@ -88,13 +88,17 @@ export class SyncCommitteeDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, _syncPeriod) => {
+    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, syncPeriod) => {
       mapValues(Object.fromEntries(validatorDutyAtPeriodMap), (dutyAtPeriod, validatorIndex) => {
         if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
           validatorDutyAtPeriodMap.delete(parseInt(validatorIndex as string));
+          if (validatorDutyAtPeriodMap.size === 0) {
+            this.dutiesByIndexByPeriod.delete(parseInt(syncPeriod as string));
+          }
         }
         return dutyAtPeriod;
       });
+      return validatorDutyAtPeriodMap;
     });
   }
 
