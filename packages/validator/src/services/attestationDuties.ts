@@ -47,22 +47,15 @@ export class AttestationDutiesService {
     chainHeadTracker.runOnNewHead(this.onNewHead);
   }
 
-  /**
-   *   remove(signer: PubkeyHex) {
-   *     mapValues(Object.fromEntries(this.proposers), (blockDutyAtEpoch, _epoch) => {
-   *       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
-   *         return toHexString(proposer.pubkey) !== signer;
-   *       });
-   *       return blockDutyAtEpoch;
-   *     });
-   *   }
-   * @param signer
-   */
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.dutiesByIndexByEpoch), (attDutiesAtEpoch, _epoch) => {
+    mapValues(Object.fromEntries(this.dutiesByIndexByEpoch), (attDutiesAtEpoch, epoch) => {
       mapValues(Object.fromEntries(attDutiesAtEpoch.dutiesByIndex), (attDutyAndProof, vIndex) => {
         if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
           attDutiesAtEpoch.dutiesByIndex.delete(parseInt(vIndex as string));
+          if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
+            // TODO [DA] confirm if its okay to remove the epoch entry if there is no dutiesByIndex at that epoch
+            this.dutiesByIndexByEpoch.delete(parseInt(epoch as string));
+          }
         }
         return attDutyAndProof;
       });
