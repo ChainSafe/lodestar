@@ -6,7 +6,7 @@ import {chunkifyInclusiveRange} from "../../util/chunkify";
 import {linspace} from "../../util/numpy";
 import {retry} from "../../util/retry";
 import {depositEventTopics, parseDepositLog} from "../utils/depositContract";
-import {IEth1Provider} from "../interface";
+import {Eth1Block, IEth1Provider} from "../interface";
 import {Eth1Options} from "../options";
 import {isValidAddress} from "../../util/address";
 import {EthJsonRpcBlockRaw} from "../interface";
@@ -181,7 +181,7 @@ export class Eth1Provider implements IEth1Provider {
   }
 }
 
-export function parseEth1Block(blockRaw: EthJsonRpcBlockRaw): phase0.Eth1Block {
+export function parseEth1Block(blockRaw: EthJsonRpcBlockRaw): Eth1Block {
   if (typeof blockRaw !== "object") throw Error("block is not an object");
   return {
     blockHash: dataToBytes(blockRaw.hash, 32),

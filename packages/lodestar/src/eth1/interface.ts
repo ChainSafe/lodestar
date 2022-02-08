@@ -51,6 +51,13 @@ export interface IEth1ForBlockProduction {
   getPowBlock(powBlockHash: string): Promise<PowMergeBlock | null>;
 }
 
+/** Different Eth1Block from phase0.Eth1Block with blockHash */
+export type Eth1Block = {
+  blockHash: Uint8Array;
+  blockNumber: number;
+  timestamp: number;
+};
+
 export type PowMergeBlock = {
   number: number;
   blockhash: RootHex;

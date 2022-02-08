@@ -4,9 +4,9 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {Eth1Options} from "../../../src/eth1/options";
 import {getTestnetConfig} from "../../utils/testnet";
 import {fromHexString} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
 import {goerliTestnetDepositEvents} from "../../utils/testnet";
 import {Eth1Provider, parseEth1Block} from "../../../src/eth1/provider/eth1Provider";
+import {Eth1Block} from "../../../src/eth1/interface";
 import {getGoerliRpcUrl} from "../../testParams";
 
 describe("eth1 / Eth1Provider", function () {
@@ -39,7 +39,7 @@ describe("eth1 / Eth1Provider", function () {
   });
 
   it("Should get a specific block by number", async function () {
-    const goerliGenesisBlock: phase0.Eth1Block = {
+    const goerliGenesisBlock: Eth1Block = {
       blockHash: fromHexString("0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a"),
       blockNumber: 0,
       timestamp: 1548854791,
@@ -58,7 +58,7 @@ describe("eth1 / Eth1Provider", function () {
 
   //
 
-  const firstGoerliBlocks: phase0.Eth1Block[] = [
+  const firstGoerliBlocks: Eth1Block[] = [
     [0, 1548854791, "0xbf7e331f7f7c1dd2e05159666b3bf8bc7a8a3a9eb1d518969eab529dd9b88c1a"],
     [1, 1548947453, "0x8f5bab218b6bb34476f51ca588e9f4553a3a7ce5e13a66c660a5283e97e9a85a"],
     [2, 1548947468, "0xe675f1362d82cdd1ec260b16fb046c17f61d8a84808150f5d715ccce775f575e"],
