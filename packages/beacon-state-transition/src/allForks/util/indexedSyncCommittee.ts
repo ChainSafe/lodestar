@@ -2,7 +2,7 @@ import {altair, ssz, Slot, ValidatorIndex, BLSPubkey, allForks} from "@chainsafe
 import {TreeBacked, Vector} from "@chainsafe/ssz";
 import {computeSyncPeriodAtSlot} from "../../util/epoch";
 import {CachedBeaconState} from "./cachedBeaconState";
-import {PubkeyIndexMap} from "./epochContext";
+import {PubkeyIndexMap} from "./pubkeyCache";
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
 
