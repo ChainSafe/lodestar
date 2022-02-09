@@ -18,14 +18,6 @@ import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext
 import {BalanceList} from "./balanceList";
 import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./cachedEpochParticipation";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {
-  convertToIndexedSyncCommittee,
-  createIndexedSyncCommittee,
-  emptyIndexedSyncCommittee,
-  IndexedSyncCommittee,
-} from "./indexedSyncCommittee";
-import {getNextSyncCommittee} from "../../altair/util/syncCommittee";
-import {ssz} from "@chainsafe/lodestar-types";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 import {newFilledArray} from "../../util";
 
@@ -93,24 +85,17 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
 
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
-  let currIndexedSyncCommittee: IndexedSyncCommittee;
-  let nextIndexedSyncCommittee: IndexedSyncCommittee;
   const epochCtx = createEpochContext(config, state, opts);
   let cachedInactivityScores: MutableVector<Number64>;
   if (forkName === ForkName.phase0) {
     // TODO: More efficient way of getting the length?
     const validatorCount = state.validators.length;
-    currIndexedSyncCommittee = emptyIndexedSyncCommittee;
-    nextIndexedSyncCommittee = emptyIndexedSyncCommittee;
     // Can these arrays be zero-ed for phase0? Are they actually used?
     cachedPreviousParticipation = MutableVector.from(newFilledArray(validatorCount, 0));
     cachedCurrentParticipation = MutableVector.from(newFilledArray(validatorCount, 0));
     cachedInactivityScores = MutableVector.empty();
   } else {
-    const {pubkey2index} = epochCtx;
     const altairState = (state as unknown) as TreeBacked<altair.BeaconState>;
-    currIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, false);
-    nextIndexedSyncCommittee = createIndexedSyncCommittee(pubkey2index, altairState, true);
     cachedPreviousParticipation = MutableVector.from(
       Array.from(readonlyValues(altairState.previousEpochParticipation))
     );
@@ -123,8 +108,6 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
       state.tree,
       cachedPreviousParticipation,
       cachedCurrentParticipation,
-      currIndexedSyncCommittee,
-      nextIndexedSyncCommittee,
       cachedInactivityScores,
       epochCtx
     ),
@@ -216,23 +199,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
   /** Same as previousEpochParticipation */
   currentEpochParticipation: CachedEpochParticipation & List<ParticipationFlags>;
   /**
-   * Returns a Proxy to IndexedSyncCommittee (Note: phase0 has no sync committee)
-   *
-   * Stores state<altair>.currentSyncCommittee in two duplicated forms (not structurally shared):
-   * 1. TreeBacked, for efficient hashing
-   * 2. Indexed data structures
-   *   - pubkeys vector (of the committee members)
-   *   - aggregatePubkey
-   *   - validatorIndices (of the committee members)
-   *   - validatorIndexMap: Map of ValidatorIndex -> syncCommitteeIndexes
-   *
-   * The syncCommittee is immutable and changes as a whole every ~ 27h.
-   * It contains fixed 512 members so it's rather small.
-   */
-  currentSyncCommittee: IndexedSyncCommittee;
-  /** Same as currentSyncCommittee */
-  nextSyncCommittee: IndexedSyncCommittee;
-  /**
    * Returns a Proxy to CachedInactivityScoreList
    *
    * Stores state<altair>.inactivityScores in two duplicated forms (both structures are structurally shared):
@@ -256,8 +222,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
     tree: Tree,
     previousEpochParticipationCache: MutableVector<ParticipationFlags>,
     currentEpochParticipationCache: MutableVector<ParticipationFlags>,
-    currentSyncCommittee: IndexedSyncCommittee,
-    nextSyncCommittee: IndexedSyncCommittee,
     inactivityScoresCache: MutableVector<Number64>,
     epochCtx: EpochContext
   ) {
@@ -285,8 +249,6 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       }),
       CachedEpochParticipationProxyHandler
     ) as unknown) as CachedEpochParticipation & List<ParticipationFlags>;
-    this.currentSyncCommittee = currentSyncCommittee;
-    this.nextSyncCommittee = nextSyncCommittee;
     this.inactivityScores = (new Proxy(
       new CachedInactivityScoreList(
         this.type.fields["inactivityScores"] as BasicListType<List<Number64>>,
@@ -304,25 +266,11 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
         this.tree.clone(),
         this.previousEpochParticipation.persistent.clone(),
         this.currentEpochParticipation.persistent.clone(),
-        // states in the same sync period has same sync committee
-        this.currentSyncCommittee,
-        this.nextSyncCommittee,
         this.inactivityScores.persistent.clone(),
         this.epochCtx.copy()
       ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
-  }
-
-  rotateSyncCommittee(): void {
-    const state = (this.type.createTreeBacked(this.tree) as unknown) as TreeBacked<altair.BeaconState>;
-    this.currentSyncCommittee = this.nextSyncCommittee;
-    state.currentSyncCommittee = state.nextSyncCommittee;
-    const nextSyncCommittee = ssz.altair.SyncCommittee.createTreeBackedFromStruct(
-      getNextSyncCommittee(state, this.epochCtx.nextShuffling.activeIndices, this.epochCtx.effectiveBalanceIncrements)
-    );
-    this.nextSyncCommittee = convertToIndexedSyncCommittee(nextSyncCommittee, this.epochCtx.pubkey2index);
-    state.nextSyncCommittee = nextSyncCommittee;
   }
 
   /**
@@ -353,10 +301,6 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
       return target.previousEpochParticipation;
     } else if (key === "currentEpochParticipation") {
       return target.currentEpochParticipation;
-    } else if (key === "currentSyncCommittee") {
-      return target.currentSyncCommittee;
-    } else if (key === "nextSyncCommittee") {
-      return target.nextSyncCommittee;
     } else if (key === "inactivityScores") {
       return target.inactivityScores;
     } else if (target.type.fields[key] !== undefined) {
@@ -396,28 +340,8 @@ export const CachedBeaconStateProxyHandler: ProxyHandler<CachedBeaconState<allFo
         return target.type.tree_setProperty(target.tree, key, value);
       } else {
         if (isTreeBacked(value)) {
-          if (key === "currentSyncCommittee") {
-            target.currentSyncCommittee = convertToIndexedSyncCommittee(
-              (value as unknown) as TreeBacked<altair.SyncCommittee>,
-              target.epochCtx.pubkey2index
-            );
-          } else if (key === "nextSyncCommittee") {
-            target.nextSyncCommittee = convertToIndexedSyncCommittee(
-              (value as unknown) as TreeBacked<altair.SyncCommittee>,
-              target.epochCtx.pubkey2index
-            );
-          }
           return target.type.tree_setProperty(target.tree, key, value.tree);
         } else {
-          if (key === "currentSyncCommittee") {
-            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
-            target.currentSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
-            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
-          } else if (key === "nextSyncCommittee") {
-            const treeBackedValue = ssz.altair.SyncCommittee.createTreeBackedFromStruct(value as altair.SyncCommittee);
-            target.nextSyncCommittee = convertToIndexedSyncCommittee(treeBackedValue, target.epochCtx.pubkey2index);
-            return target.type.tree_setProperty(target.tree, key, treeBackedValue.tree);
-          }
           return target.type.tree_setProperty(
             target.tree,
             key,

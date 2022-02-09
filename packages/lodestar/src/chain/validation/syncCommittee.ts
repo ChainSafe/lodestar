@@ -1,4 +1,4 @@
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
@@ -115,7 +115,7 @@ function getIndexInSubcommittee(
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
 ): IndexInSubcommittee | null {
-  const syncCommittee = allForks.getIndexedSyncCommittee(headState, data.slot);
+  const syncCommittee = headState.epochCtx.getIndexedSyncCommittee(data.slot);
   const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
     // Not part of the sync committee

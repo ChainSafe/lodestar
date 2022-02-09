@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -16,21 +16,7 @@ export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exc
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork/fork/pyspec_tests`),
     (testcase) => {
       const preState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
-      const postState = allForks.upgradeStateByFork[fork](preState);
-
-      // Any post state will have fields belonging to altair fork. These need to be set as
-      // this test has a random slot so createCachedBeaconState is not able to create indexed
-      // sync committee
-      const tbPostState = (postState.type.createTreeBacked(postState.tree) as unknown) as TreeBacked<PostBeaconState>;
-      postState.currentSyncCommittee = allForks.convertToIndexedSyncCommittee(
-        tbPostState.currentSyncCommittee as TreeBacked<altair.SyncCommittee>,
-        postState.pubkey2index
-      );
-      postState.nextSyncCommittee = allForks.convertToIndexedSyncCommittee(
-        tbPostState.nextSyncCommittee as TreeBacked<altair.SyncCommittee>,
-        postState.pubkey2index
-      );
-      return postState;
+      return allForks.upgradeStateByFork[fork](preState);
     },
     {
       inputTypes: inputTypeSszTreeBacked,

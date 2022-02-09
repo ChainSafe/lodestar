@@ -10,6 +10,8 @@ import {
   allForks,
   Gwei,
   Number64,
+  altair,
+  SyncPeriod,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
@@ -34,6 +36,7 @@ import {
   isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
+  computeSyncPeriodAtEpoch,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
 import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
@@ -41,6 +44,12 @@ import {CachedBeaconState} from "./cachedBeaconState";
 import {IEpochProcess} from "./epochProcess";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
+import {
+  computeSyncCommitteeCache,
+  getSyncCommitteeCache,
+  SyncCommitteeCache,
+  SyncCommitteeCacheEmpty,
+} from "./syncCommitteeCache";
 
 export type AttesterDuty = {
   // Index of validator in validator registry
@@ -60,6 +69,7 @@ export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
   index2pubkey?: Index2PubkeyCache;
   skipSyncPubkeys?: boolean;
+  skipSyncCommitteeCache?: boolean;
 };
 
 /**
@@ -145,15 +155,27 @@ export function createEpochContext(
     state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
 
   // Only after altair, compute the indices of the current sync committee
-  const onAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
+  const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
 
   const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  const syncParticipantReward = onAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
-  const syncProposerReward = onAltairFork
+  const syncParticipantReward = afterAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
+  const syncProposerReward = afterAltairFork
     ? Math.floor((syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
     : 0;
 
-  const baseRewardPerIncrement = onAltairFork ? computeBaseRewardPerIncrement(totalActiveBalanceByIncrement) : 0;
+  const baseRewardPerIncrement = afterAltairFork ? computeBaseRewardPerIncrement(totalActiveBalanceByIncrement) : 0;
+
+  let currentSyncCommitteeIndexed: SyncCommitteeCache;
+  let nextSyncCommitteeIndexed: SyncCommitteeCache;
+  // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
+  if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
+    const altairState = state as altair.BeaconState;
+    currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
+    nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
+  } else {
+    currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
+    nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
+  }
 
   // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
   // active validator indices set changes in size. Validators change active status only when:
@@ -191,6 +213,10 @@ export function createEpochContext(
     churnLimit,
     exitQueueEpoch,
     exitQueueChurn,
+    currentSyncCommitteeIndexed,
+    nextSyncCommitteeIndexed,
+    epoch: currentEpoch,
+    syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
   });
 }
 
@@ -262,24 +288,14 @@ export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>
 
     epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceByIncrement);
   }
-}
 
-interface IEpochContextData {
-  config: IBeaconConfig;
-  pubkey2index: PubkeyIndexMap;
-  index2pubkey: Index2PubkeyCache;
-  proposers: number[];
-  previousShuffling: IEpochShuffling;
-  currentShuffling: IEpochShuffling;
-  nextShuffling: IEpochShuffling;
-  effectiveBalanceIncrements: EffectiveBalanceIncrements;
-  syncParticipantReward: number;
-  syncProposerReward: number;
-  baseRewardPerIncrement: number;
-  totalActiveBalanceByIncrement: number;
-  churnLimit: number;
-  exitQueueEpoch: Epoch;
-  exitQueueChurn: number;
+  // Advance epochCtx time units
+  // state.slot is advanced right before calling this function
+  // ```
+  // postState.slot++;
+  // afterProcessEpoch(postState, epochProcess);
+  // ```
+  epochCtx.afterEpochTransitionSetTime(state.slot);
 }
 
 /**
@@ -362,7 +378,43 @@ export class EpochContext {
    */
   exitQueueChurn: number;
 
-  constructor(data: IEpochContextData) {
+  /**
+   * Returns a SyncCommitteeCache. (Note: phase0 has no sync committee, and returns an empty cache)
+   * - validatorIndices (of the committee members)
+   * - validatorIndexMap: Map of ValidatorIndex -> syncCommitteeIndexes
+   *
+   * The syncCommittee is immutable and changes as a whole every ~ 27h.
+   * It contains fixed 512 members so it's rather small.
+   */
+  currentSyncCommitteeIndexed: SyncCommitteeCache;
+  /** Same as currentSyncCommitteeIndexed */
+  nextSyncCommitteeIndexed: SyncCommitteeCache;
+
+  // TODO: Helper stats
+  epoch: Epoch;
+  syncPeriod: SyncPeriod;
+
+  constructor(data: {
+    config: IBeaconConfig;
+    pubkey2index: PubkeyIndexMap;
+    index2pubkey: Index2PubkeyCache;
+    proposers: number[];
+    previousShuffling: IEpochShuffling;
+    currentShuffling: IEpochShuffling;
+    nextShuffling: IEpochShuffling;
+    effectiveBalanceIncrements: EffectiveBalanceIncrements;
+    syncParticipantReward: number;
+    syncProposerReward: number;
+    baseRewardPerIncrement: number;
+    totalActiveBalanceByIncrement: number;
+    churnLimit: number;
+    exitQueueEpoch: Epoch;
+    exitQueueChurn: number;
+    currentSyncCommitteeIndexed: SyncCommitteeCache;
+    nextSyncCommitteeIndexed: SyncCommitteeCache;
+    epoch: Epoch;
+    syncPeriod: SyncPeriod;
+  }) {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
@@ -378,6 +430,10 @@ export class EpochContext {
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
+    this.currentSyncCommitteeIndexed = data.currentSyncCommitteeIndexed;
+    this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
+    this.epoch = data.epoch;
+    this.syncPeriod = data.syncPeriod;
   }
 
   /**
@@ -408,12 +464,23 @@ export class EpochContext {
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
+      currentSyncCommitteeIndexed: this.currentSyncCommitteeIndexed,
+      nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
+      epoch: this.epoch,
+      syncPeriod: this.syncPeriod,
     });
   }
 
   beforeEpochTransition(): void {
     // Clone before being mutated in processEffectiveBalanceUpdates
     this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
+  }
+
+  /** After advancing the state slot, advance the time units of its cache */
+  afterEpochTransitionSetTime(stateSlot: Slot): void {
+    const stateEpoch = computeEpochAtSlot(stateSlot);
+    this.epoch = stateEpoch;
+    this.syncPeriod = computeSyncPeriodAtEpoch(stateEpoch);
   }
 
   /**
@@ -569,6 +636,38 @@ export class EpochContext {
     }
 
     this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+  }
+
+  /**
+   * Note: The range of slots a validator has to perform duties is off by one.
+   * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
+   * 100 to 200,then you would actually produce signatures in slot 99 - 199.
+   */
+  getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache {
+    // See note above for the +1 offset
+    return this.getIndexedSyncCommitteeAtEpoch(computeEpochAtSlot(slot + 1));
+  }
+
+  /**
+   * **DO NOT USE FOR GOSSIP VALIDATION**: Sync committee duties are offset by one slot. @see {@link EpochContext.getIndexedSyncCommittee}
+   *
+   * Get indexed sync committee at epoch without offsets
+   */
+  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
+    switch (computeSyncPeriodAtEpoch(epoch)) {
+      case this.syncPeriod:
+        return this.currentSyncCommitteeIndexed;
+      case this.syncPeriod + 1:
+        return this.nextSyncCommitteeIndexed;
+      default:
+        throw new Error(`No sync committee for epoch ${epoch}`);
+    }
+  }
+
+  /** On processSyncCommitteeUpdates rotate next to current and set nextSyncCommitteeIndexed */
+  rotateSyncCommitteeIndexed(nextSyncCommitteeIndices: number[]): void {
+    this.currentSyncCommitteeIndexed = this.nextSyncCommitteeIndexed;
+    this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
   }
 }
 

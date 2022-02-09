@@ -3,9 +3,7 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodest
 // this will need async once we wan't to resolve archive slot
 import {
   CachedBeaconStateAllForks,
-  CachedBeaconStateAltair,
   createCachedBeaconState,
-  computeSyncPeriodAtSlot,
   computeEpochAtSlot,
   isActiveValidator,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -141,30 +139,6 @@ export function getEpochBeaconCommittees(
   }
   const shuffling = allForks.computeEpochShuffling(state, activeValidatorIndices, epoch);
   return shuffling.committees;
-}
-
-/**
- * Returns committees as an array of validator index
- */
-export function getSyncCommittees(
-  state: allForks.BeaconState | CachedBeaconStateAllForks,
-  epoch: Epoch
-): ValidatorIndex[] {
-  const statePeriod = computeSyncPeriodAtSlot(computeEpochAtSlot(state.slot));
-  const requestPeriod = computeSyncPeriodAtSlot(epoch);
-
-  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
-    switch (requestPeriod) {
-      case statePeriod:
-        return (state as CachedBeaconStateAltair).currentSyncCommittee.validatorIndices;
-      case statePeriod + 1:
-        return (state as CachedBeaconStateAltair).nextSyncCommittee.validatorIndices;
-      default:
-        throw new ApiError(400, "Epoch out of bounds");
-    }
-  }
-
-  throw new ApiError(400, "No CachedBeaconState available");
 }
 
 async function stateByName(

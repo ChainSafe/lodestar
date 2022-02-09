@@ -37,5 +37,5 @@ export function processEpoch(state: CachedBeaconStateAltair, epochProcess: IEpoc
   processRandaoMixesReset(state as CachedBeaconStateAllForks, epochProcess);
   processHistoricalRootsUpdate(state as CachedBeaconStateAllForks, epochProcess);
   processParticipationFlagUpdates(state);
-  processSyncCommitteeUpdates(state, epochProcess);
+  processSyncCommitteeUpdates(state);
 }
