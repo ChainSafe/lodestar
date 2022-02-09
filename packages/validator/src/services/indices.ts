@@ -58,7 +58,6 @@ export class IndicesService {
       if (value === signer) {
         this.index2pubkey.delete(parseInt(key as string));
       }
-      return value;
     });
     this.pubkey2index.delete(signer);
   }

@@ -44,5 +44,7 @@ describe("IndicesService", function () {
 
     expect(Array.from(indicesService.index2pubkey.values()).includes(pubkey2)).to.be.false;
     expect(Array.from(indicesService.pubkey2index.keys()).includes(pubkey2)).to.be.false;
+    expect(Array.from(indicesService.index2pubkey.values()).includes(pubkey1)).to.be.true;
+    expect(Array.from(indicesService.pubkey2index.keys()).includes(pubkey1)).to.be.true;
   });
 });
