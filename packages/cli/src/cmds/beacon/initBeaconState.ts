@@ -108,7 +108,7 @@ export async function initBeaconState(
       // Validate the weakSubjectivityServerUrl and only log the origin to mask the
       // username password credentials
       const wssUrl = new URL(args.weakSubjectivityServerUrl);
-      logger.info("Fetching weak subjectivity state from", {
+      logger.info("Fetching weak subjectivity state", {
         weakSubjectivityServerUrl: wssUrl.origin,
       });
     } catch (e) {
