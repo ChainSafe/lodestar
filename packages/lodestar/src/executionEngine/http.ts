@@ -191,49 +191,53 @@ export class ExecutionEngineHttp implements IExecutionEngine {
           },
         ]
       : [];
-    return this.rpc
-      .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
-        method,
-        params: [
-          {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
-          ...apiPayloadAttributes,
-        ],
-      })
-      .then(({payloadStatus: {status, validationError}, payloadId}) => {
-        switch (status) {
-          case ExecutePayloadStatus.VALID:
-            // if payloadAttributes are provided, a valid payloadId is expected
-            if (payloadAttributes && (!payloadId || payloadId === "0x")) {
-              throw Error(`Received invalid payloadId=${payloadId}`);
-            }
-            return payloadId !== "0x" ? payloadId : null;
+    return (
+      this.rpc
+        .fetch<EngineApiRpcReturnTypes[typeof method], EngineApiRpcParamTypes[typeof method]>({
+          method,
+          params: [
+            {headBlockHash: headBlockHashData, safeBlockHash: headBlockHashData, finalizedBlockHash},
+            ...apiPayloadAttributes,
+          ],
+        })
+        // TODO: propogate latestValidHash to the forkchoice, for now ignore it as we
+        // currently do not propogate the validation status up the forkchoice
+        .then(({payloadStatus: {status, latestValidHash: _latestValidHash, validationError}, payloadId}) => {
+          switch (status) {
+            case ExecutePayloadStatus.VALID:
+              // if payloadAttributes are provided, a valid payloadId is expected
+              if (payloadAttributes && (!payloadId || payloadId === "0x")) {
+                throw Error(`Received invalid payloadId=${payloadId}`);
+              }
+              return payloadId !== "0x" ? payloadId : null;
 
-          case ExecutePayloadStatus.SYNCING:
-            // Throw error on syncing if requested to produce a block, else silently ignore
-            if (payloadAttributes) {
-              throw Error("Execution Layer Syncing");
-            } else {
-              return null;
-            }
+            case ExecutePayloadStatus.SYNCING:
+              // Throw error on syncing if requested to produce a block, else silently ignore
+              if (payloadAttributes) {
+                throw Error("Execution Layer Syncing");
+              } else {
+                return null;
+              }
 
-          case ExecutePayloadStatus.INVALID:
-            throw Error(
-              `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
-                validationError ?? ""
-              }`
-            );
+            case ExecutePayloadStatus.INVALID:
+              throw Error(
+                `Invalid ${payloadAttributes ? "prepare payload" : "forkchoice request"}, validationError=${
+                  validationError ?? ""
+                }`
+              );
 
-          case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
-            throw Error(
-              `Invalid terminal block for ${
-                payloadAttributes ? "prepare payload" : "forkchoice request"
-              }, validationError=${validationError ?? ""}`
-            );
+            case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
+              throw Error(
+                `Invalid terminal block for ${
+                  payloadAttributes ? "prepare payload" : "forkchoice request"
+                }, validationError=${validationError ?? ""}`
+              );
 
-          default:
-            throw Error(`Unknown status ${status}`);
-        }
-      });
+            default:
+              throw Error(`Unknown status ${status}`);
+          }
+        })
+    );
   }
 
   /**
