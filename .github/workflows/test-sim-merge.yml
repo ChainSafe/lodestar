@@ -35,7 +35,7 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
-      Install Geth merge interop
+      # Install Geth merge interop
       - uses: actions/setup-go@v2
       - name: Clone Geth merge interop branch
         run: git clone -b merge-kiln https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
