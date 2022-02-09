@@ -26,7 +26,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable
-// EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to 
+// EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to
 // execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
 // TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
