@@ -378,9 +378,16 @@ export class EpochContext {
    */
   exitQueueChurn: number;
 
-  /** TODO: Indexed SyncCommitteeCache */
+  /**
+   * Returns a SyncCommitteeCache. (Note: phase0 has no sync committee, and returns an empty cache)
+   * - validatorIndices (of the committee members)
+   * - validatorIndexMap: Map of ValidatorIndex -> syncCommitteeIndexes
+   *
+   * The syncCommittee is immutable and changes as a whole every ~ 27h.
+   * It contains fixed 512 members so it's rather small.
+   */
   currentSyncCommitteeIndexed: SyncCommitteeCache;
-  /** TODO: Indexed SyncCommitteeCache */
+  /** Same as currentSyncCommitteeIndexed */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
   // TODO: Helper stats
