@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochcontextdata/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.synccommitteecacheempty/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.1.10" name="generator"/>
-<title>Allforks util.iepochcontextdata - Lodestar documentation</title>
+<title>Allforks util.synccommitteecacheempty - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.d6be258b.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-iepochcontextdata">
+<a class="md-skip" href="#class-synccommitteecacheempty">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Allforks util.iepochcontextdata
+              Allforks util.synccommitteecacheempty
             
           </span>
 </div>
@@ -245,98 +245,38 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#implements">
+    Implements
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#accessors">
+    Accessors
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#accessors_1">
+    Accessors
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="Accessors" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#baserewardperincrement">
-    baseRewardPerIncrement
+<a class="md-nav__link" href="#validatorindexmap">
+    validatorIndexMap
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#churnlimit">
-    churnLimit
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#config">
-    config
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#currentshuffling">
-    currentShuffling
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#effectivebalanceincrements">
-    effectiveBalanceIncrements
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#exitqueuechurn">
-    exitQueueChurn
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#exitqueueepoch">
-    exitQueueEpoch
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#index2pubkey">
-    index2pubkey
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#nextshuffling">
-    nextShuffling
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#previousshuffling">
-    previousShuffling
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#proposers">
-    proposers
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#pubkey2index">
-    pubkey2index
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#syncparticipantreward">
-    syncParticipantReward
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#syncproposerreward">
-    syncProposerReward
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#totalactivebalancebyincrement">
-    totalActiveBalanceByIncrement
+<a class="md-nav__link" href="#validatorindices">
+    validatorIndices
   </a>
 </li>
 </ul>
@@ -349,94 +289,36 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/beacon-state-transition/interfaces/allforks_util.iepochcontextdata.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/beacon-state-transition/classes/allforks_util.synccommitteecacheempty.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-beacon-state-transition</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/allforks_util/">allForks/util</a> › <a href="./">IEpochContextData</a></p>
-<h1 id="interface-iepochcontextdata">Interface: IEpochContextData<a class="headerlink" href="#interface-iepochcontextdata" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-beacon-state-transition</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/allforks_util/">allForks/util</a> › <a href="./">SyncCommitteeCacheEmpty</a></p>
+<h1 id="class-synccommitteecacheempty">Class: SyncCommitteeCacheEmpty<a class="headerlink" href="#class-synccommitteecacheempty" title="Permanent link">¶</a></h1>
+<p>Placeholder object for pre-altair fork</p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li><strong>IEpochContextData</strong></li>
+<li><strong>SyncCommitteeCacheEmpty</strong></li>
+</ul>
+<h2 id="implements">Implements<a class="headerlink" href="#implements" title="Permanent link">¶</a></h2>
+<ul>
+<li>object</li>
 </ul>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="accessors">Accessors<a class="headerlink" href="#accessors" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#baserewardperincrement">baseRewardPerIncrement</a></li>
-<li><a href="./#churnlimit">churnLimit</a></li>
-<li><a href="./#config">config</a></li>
-<li><a href="./#currentshuffling">currentShuffling</a></li>
-<li><a href="./#effectivebalanceincrements">effectiveBalanceIncrements</a></li>
-<li><a href="./#exitqueuechurn">exitQueueChurn</a></li>
-<li><a href="./#exitqueueepoch">exitQueueEpoch</a></li>
-<li><a href="./#index2pubkey">index2pubkey</a></li>
-<li><a href="./#nextshuffling">nextShuffling</a></li>
-<li><a href="./#previousshuffling">previousShuffling</a></li>
-<li><a href="./#proposers">proposers</a></li>
-<li><a href="./#pubkey2index">pubkey2index</a></li>
-<li><a href="./#syncparticipantreward">syncParticipantReward</a></li>
-<li><a href="./#syncproposerreward">syncProposerReward</a></li>
-<li><a href="./#totalactivebalancebyincrement">totalActiveBalanceByIncrement</a></li>
+<li><a href="./#validatorindexmap">validatorIndexMap</a></li>
+<li><a href="./#validatorindices">validatorIndices</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="baserewardperincrement">baseRewardPerIncrement<a class="headerlink" href="#baserewardperincrement" title="Permanent link">¶</a></h3>
-<p>• <strong>baseRewardPerIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L278">packages/beacon-state-transition/src/allForks/util/epochContext.ts:278</a></em></p>
+<h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
+<h3 id="validatorindexmap">validatorIndexMap<a class="headerlink" href="#validatorindexmap" title="Permanent link">¶</a></h3>
+<p>• <strong>get validatorIndexMap</strong>(): <em><a href="../../modules/allforks_util/#synccomitteevalidatorindexmap">SyncComitteeValidatorIndexMap</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3dd009/packages/beacon-state-transition/src/allForks/util/syncCommitteeCache.ts#L26">packages/beacon-state-transition/src/allForks/util/syncCommitteeCache.ts:26</a></em></p>
+<p><strong>Returns:</strong> <em><a href="../../modules/allforks_util/#synccomitteevalidatorindexmap">SyncComitteeValidatorIndexMap</a></em></p>
 <hr/>
-<h3 id="churnlimit">churnLimit<a class="headerlink" href="#churnlimit" title="Permanent link">¶</a></h3>
-<p>• <strong>churnLimit</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L280">packages/beacon-state-transition/src/allForks/util/epochContext.ts:280</a></em></p>
-<hr/>
-<h3 id="config">config<a class="headerlink" href="#config" title="Permanent link">¶</a></h3>
-<p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L268">packages/beacon-state-transition/src/allForks/util/epochContext.ts:268</a></em></p>
-<hr/>
-<h3 id="currentshuffling">currentShuffling<a class="headerlink" href="#currentshuffling" title="Permanent link">¶</a></h3>
-<p>• <strong>currentShuffling</strong>: <em><a href="../allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L273">packages/beacon-state-transition/src/allForks/util/epochContext.ts:273</a></em></p>
-<hr/>
-<h3 id="effectivebalanceincrements">effectiveBalanceIncrements<a class="headerlink" href="#effectivebalanceincrements" title="Permanent link">¶</a></h3>
-<p>• <strong>effectiveBalanceIncrements</strong>: <em><a href="../../modules/allforks_util/#effectivebalanceincrements">EffectiveBalanceIncrements</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L275">packages/beacon-state-transition/src/allForks/util/epochContext.ts:275</a></em></p>
-<hr/>
-<h3 id="exitqueuechurn">exitQueueChurn<a class="headerlink" href="#exitqueuechurn" title="Permanent link">¶</a></h3>
-<p>• <strong>exitQueueChurn</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L282">packages/beacon-state-transition/src/allForks/util/epochContext.ts:282</a></em></p>
-<hr/>
-<h3 id="exitqueueepoch">exitQueueEpoch<a class="headerlink" href="#exitqueueepoch" title="Permanent link">¶</a></h3>
-<p>• <strong>exitQueueEpoch</strong>: <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L281">packages/beacon-state-transition/src/allForks/util/epochContext.ts:281</a></em></p>
-<hr/>
-<h3 id="index2pubkey">index2pubkey<a class="headerlink" href="#index2pubkey" title="Permanent link">¶</a></h3>
-<p>• <strong>index2pubkey</strong>: <em><a href="../../modules/allforks_util/#index2pubkeycache">Index2PubkeyCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L270">packages/beacon-state-transition/src/allForks/util/epochContext.ts:270</a></em></p>
-<hr/>
-<h3 id="nextshuffling">nextShuffling<a class="headerlink" href="#nextshuffling" title="Permanent link">¶</a></h3>
-<p>• <strong>nextShuffling</strong>: <em><a href="../allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L274">packages/beacon-state-transition/src/allForks/util/epochContext.ts:274</a></em></p>
-<hr/>
-<h3 id="previousshuffling">previousShuffling<a class="headerlink" href="#previousshuffling" title="Permanent link">¶</a></h3>
-<p>• <strong>previousShuffling</strong>: <em><a href="../allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L272">packages/beacon-state-transition/src/allForks/util/epochContext.ts:272</a></em></p>
-<hr/>
-<h3 id="proposers">proposers<a class="headerlink" href="#proposers" title="Permanent link">¶</a></h3>
-<p>• <strong>proposers</strong>: <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L271">packages/beacon-state-transition/src/allForks/util/epochContext.ts:271</a></em></p>
-<hr/>
-<h3 id="pubkey2index">pubkey2index<a class="headerlink" href="#pubkey2index" title="Permanent link">¶</a></h3>
-<p>• <strong>pubkey2index</strong>: <em><a href="../../classes/allforks_util.pubkeyindexmap/">PubkeyIndexMap</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L269">packages/beacon-state-transition/src/allForks/util/epochContext.ts:269</a></em></p>
-<hr/>
-<h3 id="syncparticipantreward">syncParticipantReward<a class="headerlink" href="#syncparticipantreward" title="Permanent link">¶</a></h3>
-<p>• <strong>syncParticipantReward</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L276">packages/beacon-state-transition/src/allForks/util/epochContext.ts:276</a></em></p>
-<hr/>
-<h3 id="syncproposerreward">syncProposerReward<a class="headerlink" href="#syncproposerreward" title="Permanent link">¶</a></h3>
-<p>• <strong>syncProposerReward</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L277">packages/beacon-state-transition/src/allForks/util/epochContext.ts:277</a></em></p>
-<hr/>
-<h3 id="totalactivebalancebyincrement">totalActiveBalanceByIncrement<a class="headerlink" href="#totalactivebalancebyincrement" title="Permanent link">¶</a></h3>
-<p>• <strong>totalActiveBalanceByIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/09fb4d4/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L279">packages/beacon-state-transition/src/allForks/util/epochContext.ts:279</a></em></p>
+<h3 id="validatorindices">validatorIndices<a class="headerlink" href="#validatorindices" title="Permanent link">¶</a></h3>
+<p>• <strong>get validatorIndices</strong>(): <em>ValidatorIndex[]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e3dd009/packages/beacon-state-transition/src/allForks/util/syncCommitteeCache.ts#L22">packages/beacon-state-transition/src/allForks/util/syncCommitteeCache.ts:22</a></em></p>
+<p><strong>Returns:</strong> <em>ValidatorIndex[]</em></p>
 </article>
 </div>
 </div>

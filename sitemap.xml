@@ -156,12 +156,12 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.indexedsynccommittee/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.pubkeyindexmap/</loc>
          <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.pubkeyindexmap/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.synccommitteecacheempty/</loc>
          <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -197,11 +197,6 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.icachedepochparticipationopts/</loc>
-         <lastmod>2022-02-09</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochcontextdata/</loc>
          <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
