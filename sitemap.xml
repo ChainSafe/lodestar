@@ -2,3442 +2,3442 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://chainsafe.github.io/lodestar/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/contributing/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/installation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/design/depgraph/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/libraries/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/classes/client_utils.httpclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/classes/client_utils.httperror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/enums/routes.eventtype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/enums/routes.nodehealth/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/enums/utils.schema/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/enums/utils.tokentype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/interfaces/client_utils.ihttpclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/client/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/client_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/routes/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/routes_beacon/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/server/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/server_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/modules/utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.balancelist/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.beaconstatecontext/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.cachedepochparticipation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.cachedinactivityscorelist/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.epochcontext/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.epochcontexterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.indexedsynccommittee/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/allforks_util.pubkeyindexmap/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/altair_block.rootcache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/classes/util.aggregationbitserror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/enums/allforks_util.epochcontexterrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/enums/util.aggregationbitserrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/enums/util.signaturesettype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iattesterstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.icachedepochparticipationopts/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochcontextdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochprocess/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochshuffling/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.iepochstakesummary/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/allforks_util.ireadonlyepochshuffling/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/altair_epoch.irewardpenaltyitem/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/phase0_epoch.irewardpenaltyitem/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/root.ibeaconstatetransitionmetrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/interfaces/root.ihistogram/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks_epoch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks_signaturesets/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks_slot/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/allforks_util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/altair/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/altair_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/altair_epoch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/altair_util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/bellatrix_epoch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/constants/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/phase0/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/phase0_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/phase0_epoch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/beacon-state-transition/modules/util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/config.beaconnodeoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/config.fileenr/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/util.yargserror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/validatordir.validatordir-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/validatordir.validatordirbuilder/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/validatordir.validatordirmanager/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/wallet.wallet-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/classes/wallet.walletmanager/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/enums/util.fileformat/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/enums/util.releasetrack/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account.iaccountpaths/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_validator.iaccountvalidatorargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_validator.ivalidatorcreateargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_validator.ivalidatorimportargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_validator_slashingprotection.iexportargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_validator_slashingprotection.iimportargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account_cmds_wallet.iaccountwalletargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_beacon.ibeaconextraargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_beacon.ibeaconpaths/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_dev.idevownargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/config.ibeaconparamsargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/config.ienrjson/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options.ienrargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options.iglobalsingleargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.iapiargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.ichainargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.ieth1args/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.imetricsargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.inetworkargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.isyncargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/paths.iglobalpaths/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/util.iclicommand/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/util.ilogargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/validatordir.ieth1depositdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/validatordir.ivalidatordirbuildoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/validatordir.ivalidatordiroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/wallet.iwalletkeystorejson/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_account/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_account_cmds_validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_account_cmds_validator_slashingprotection/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_account_cmds_wallet/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_beacon/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_dev/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_init/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/cmds_validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/config/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/depositcontract/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/networks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/options/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/options_beaconnodeoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/paths/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/util_gitdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/validatordir/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/wallet/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/forkconfig.iforkconfig/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/forkconfig.iforkinfo/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/genesisconfig.icachedgenesis/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/interfaces/genesisconfig.iforkdigestcontext/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/chainconfig/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/chainconfig_networks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/chainconfig_presets/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/forkconfig/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/genesisconfig/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/config/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/classes/controller.leveldbcontroller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/classes/root.databaseservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/classes/root.repository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/enums/controller.status/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/enums/root.bucket/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/enums/root.key/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/controller.ileveldboptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.idatabasecontroller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.idatabaseoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.ifilteroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/db_controller.ikeyvalue/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/root.icounter/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/root.idatabaseapioptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/interfaces/root.idbmetrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/modules/controller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/modules/db_controller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/db/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/classes/forkchoice.forkchoice-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/classes/forkchoice.forkchoiceerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/classes/forkchoice.forkchoicestore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/classes/protoarray.protoarray-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/classes/protoarray.protoarrayerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/forkchoice.forkchoiceerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/forkchoice.invalidattestationcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/forkchoice.invalidblockcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/protoarray.executionstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/enums/protoarray.protoarrayerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/forkchoice.iforkchoice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/forkchoice.iforkchoicestore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/forkchoice.ilatestmessage/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/forkchoice.iqueuedattestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/protoarray.ivotetracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/root.iforkchoicemetrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/root.igauge/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/interfaces/root.ihistogram/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/modules/forkchoice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/modules/protoarray/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/fork-choice/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/enums/root.lightclientevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/enums/root.networkname/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/light-client/modules/utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_impl.apierror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_impl.datanotavailable/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_impl.nodeissyncing/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_impl.statenotfound/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_impl.validationerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_rest.restapi/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.beaconchain/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.chaineventemitter/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.precomputenextepochtransitionscheduler/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain.reprocesscontroller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_archiver.archiver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_archiver.statesarchiver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_blocks.blockprocessor/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_blocks_utils.pendingevents/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_bls.blssinglethreadverifier/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_bls_multithread.blsmultithreadworkerpool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_clock.localclock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.attestationerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.attesterslashingerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.blockerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.blockgossiperror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.chainsegmenterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.gossipactionerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.proposerslashingerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.synccommitteeerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_errors.voluntaryexiterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_genesis.genesisbuilder/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_lightclient.lightclientserver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.aggregatedattestationpool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.attestationpool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.matchingdataattestationgroup/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.oppool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.oppoolerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.synccommitteemessagepool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.synccontributionandproofpool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_regen.queuedstateregenerator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_regen.regenerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_regen.stateregenerator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seenaggregators/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seenattesters/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seenblockproposers/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seencontributionandproof/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_seencache.seensynccommitteemessages/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_statecache.checkpointstatecache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_statecache.maptracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_statecache.statecontextcache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db.beacondb/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.attesterslashingrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.backfilledranges/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.bestpartiallightclientupdaterepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.blockarchiverepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.blockrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.checkpointheaderrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.depositdatarootrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.depositeventrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.eth1datarepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.proposerslashingrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.statearchiverepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.synccommitteerepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.synccommitteewitnessrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_repositories.voluntaryexitrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_single.pregenesisstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/db_single.pregenesisstatelastprocessedblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1datacache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1depositdatatracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1depositscache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1error/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1forblockproduction/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1forblockproductiondisabled/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1.eth1mergeblocktracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.errorjsonrpcresponse/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.errorparsejson/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.eth1provider/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.httprpcerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/eth1_provider.jsonrpchttpclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/executionengine.executionenginedisabled/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/executionengine.executionenginehttp/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/executionengine.executionenginemock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_server.httpmetricsserver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.avgminmax/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.gaugechild/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.gaugeextra/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.histogramchild/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.histogramextra/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/metrics_utils.registrymetriccreator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network.metadatacontroller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network.network-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network.networkeventbus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.eth2gossipsub/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.gossiptopiccache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.gossipvalidationerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.uncompresscache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_nodejs.nodejsnode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers.libp2ppeermetadatastore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers.peerdiscovery/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers.peermanager/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers.peerrpcscorestore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers_utils.subnetmap/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp.ratetracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp.reqresp/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_encodingstrategies_sszsnappy.sszsnappyerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_encodingstrategies_sszsnappy_snappyframes.snappyframesuncompress/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_request.requesterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_request.requestinternalerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_response.inboundratelimiter/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_response.responseerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_utils.blocksbyrangeerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_reqresp_utils.bufferedsource/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_subnets.attnetsservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_subnets.syncnetsservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/node.beaconnode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync.beaconsync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync.unknownblocksync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_backfill.backfillsync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_backfill.backfillsyncerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range.batch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range.batcherror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range.rangesync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range.syncchain/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range.syncchainstarterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/sync_range_utils.chainpeersbalancer/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.errorbinarysearch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.errornovalueminvalue/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.errornovalues/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.ittrigger/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.map2d/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.map2darr/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.mapdef/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.peermap/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.peerset/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util.timeseries/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util_queue.jobfnqueue/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util_queue.jobitemqueue/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/util_queue.queueerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain.chainevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain.reprocessstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_bls_multithread.workerstatuscode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_bls_multithread.workresultcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.attestationerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.attesterslashingerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.blockerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.gossipaction/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.proposerslashingerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.synccommitteeerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_errors.voluntaryexiterrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_oppools.insertoutcome/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_oppools.oppoolerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_regen.regencaller/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_regen.regenerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/chain_regen.regenfnname/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/constants.goodbyereasoncode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/constants.libp2pevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/constants.respstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/eth1.eth1errorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/eth1.statuscode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/executionengine.executepayloadstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/executionengine.forkchoiceupdatestatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/metrics.opsource/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.enrkey/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.networkevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network.subnettype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_gossip.gossipencoding/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_gossip.gossiptype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.clientkind/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.discoveredpeerstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.peeraction/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.querystatuscode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.relevantpeerstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers.scorestate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers_utils.irrelevantpeercode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp.contextbytestype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp.encoding/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp.method/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp.version/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_encoders.streamstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_encodingstrategies_sszsnappy.sszsnappyerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_encodingstrategies_sszsnappy_snappyframes.chunktype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_request.requesterrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_response.responseerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_reqresp_utils.blocksbyrangeerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/node.beaconnodestatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync.pendingblockstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync.syncstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncmethod/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_backfill.backfillsyncstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_range.batcherrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_range.batchstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_range.rangesyncevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_range.rangesyncstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_range.syncchainstatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_utils.peersynctype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/sync_utils.rangesynctype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/util_queue.queueerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/util_queue.queuetype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/api.iapioptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/api_rest.irestapimodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain.ibeaconchain/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain.ichainevents/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_bls.iblsverifier/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_clock.ibeaconclock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_errors.isynccommitteejob/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_genesis.igenesisbuilder/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_genesis.igenesisbuilderkwargs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_genesis.igenesisresult/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_lightclient.ilightclientinitermodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_oppools.attestationwithindex/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_regen.istateregenerator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/db.ibeacondb/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/db.idatabaseoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/db_repositories.iblockfilteroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1.ibatchdepositevents/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1.ieth1forblockproduction/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1.ieth1provider/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1.ieth1streamer/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1.irpcpayload/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1_provider.iethjsonrpcreturntypes/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1_provider.ijsonrpchttpclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1_provider.irpcresponse/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/eth1_provider.irpcresponseerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/executionengine.iexecutionengine/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics.imetricsoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics.ivalidatormonitor/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_server.imetricsserver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_utils.gaugeextra.internal/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_utils.histogramextra.config/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_utils.histogramextra.internal/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.imetadatamodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.imetadataopts/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.inetwork/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.inetworkmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network.inetworkoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossipevents/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossipmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossipsubmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossiptopic/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossiptopiccache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.iuncompresscache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_nodejs.ilibp2poptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_peers.ipeermetadatastore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_peers.ipeerrpcscorestore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp.iratelimiter/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp.ireqresp/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp.ireqrespmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_encodingstrategies_sszsnappy.isszsnappyoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_encodingstrategies_sszsnappy_snappyframes.iuncompressstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_request.irequesterrormetadata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_reqresp_response.iratelimitermodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_subnets.iattnetsservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_subnets.isubnetsservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/node.ibeaconloggeroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/node.ibeaconnodeinitmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/node.ibeaconnodemodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/node.ibeaconnodeoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/node.ivalidatorloggeroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/sync.ibeaconsync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/sync.islotrange/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/sync.isyncmodule/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/sync.isyncmodules/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/util.iretryoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/util_queue.iqueuemetrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_beacon/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_beacon_blocks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_beacon_pool/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_beacon_state/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_config/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_debug/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_events/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_lightclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_lodestar/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_node/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_impl_validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/api_rest/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_archiver/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_blocks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_blocks_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_bls/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_bls_multithread/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_clock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_errors/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_factory_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_forkchoice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_genesis/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_lightclient/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_oppools/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_regen/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_seencache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_statecache/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_validation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain_validation_signaturesets/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/constants/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/db/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/db_repositories/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/db_single/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/eth1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/eth1_provider/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/eth1_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/executionengine/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics_metrics/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics_server/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/metrics_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_gossip/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_gossip_handlers/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_gossip_validation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_nodejs/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_peers/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_peers_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encoders/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encodingstrategies/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encodingstrategies_sszsnappy/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_encodingstrategies_sszsnappy_snappyframes/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_handlers/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_request/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_response/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_reqresp_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/network_subnets/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/node/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/node_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/node_utils_interop/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync_backfill/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync_range/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync_range_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/sync_utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/modules/util_queue/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/enums/root.forkname/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/enums/root.presetname/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/modules/interface/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/modules/presets_mainnet/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/modules/presets_minimal/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/params/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/enums/root.inputtype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.ibasecase/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.idownloadgenerictestsoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.idownloadtestsoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.iinvalidtestcase/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.ispectestoptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.itestcasemeta/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.ivalidtestcase/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/interfaces/root.testspec/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/spec-test-util/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/classes/utils.lazyvariable/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/classes/utils.stringtype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconblockbody/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.beaconstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.contributionandproof/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientstore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.lightclientupdate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.metadata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.signedbeaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.signedcontributionandproof/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.syncaggregate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.syncaggregatorselectiondata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommittee/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommitteecontribution/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/altair.synccommitteemessage/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconblockbody/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.beaconstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/bellatrix.signedbeaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.aggregateandproof/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attestationdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.attesterslashing/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblockbody/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblockheader/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconblocksbyrangerequest/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.beaconstate/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.checkpoint/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.committeeassignment/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.deposit/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.depositmessage/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.enrforkid/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1data/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.eth1dataordered/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.fork/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.forkdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.genesis/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.historicalbatch/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.indexedattestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.metadata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.pendingattestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.proposerslashing/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedaggregateandproof/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedbeaconblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedbeaconblockheader/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signedvoluntaryexit/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.signingdata/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.status/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/interfaces/phase0.voluntaryexit/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/allforks/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/altair/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/bellatrix/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/phase0/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/primitive/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/types/modules/utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/classes/logger.winstonlogger/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/classes/root.assertionerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/classes/root.erroraborted/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/classes/root.lodestarerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/classes/root.timeouterror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/enums/logger.loglevel/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/enums/logger.timestampformatcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/enums/logger.transporttype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/interfaces/logger.ilogger/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/interfaces/logger.iloggeroptions/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/interfaces/logger.iwinstoninfoarg/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/modules/logger/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/modules/util_math/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/utils/modules/yaml/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/globals/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/repositories.metadatarepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/root.validator/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.attestationdutiesservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.attestationservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.blockdutiesservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.blockproposingservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.chainheadertracker/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.indicesservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.synccommitteedutiesservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.synccommitteeservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.validatoreventemitter/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/services.validatorstore/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection.slashingprotection-1/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_attestation.attestationbytargetrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_attestation.attestationlowerboundrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_attestation.invalidattestationerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_attestation.slashingprotectionattestationservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_block.blockbyslotrepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_block.invalidblockerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_block.slashingprotectionblockservice/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_interchange.interchangeerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_minmaxsurround.distancestorerepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_minmaxsurround.minmaxsurround/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_minmaxsurround.spandistancerepository/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/slashingprotection_minmaxsurround.surroundattestationerror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/util.clock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/classes/util.notequalparamserror/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/root.status/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/services.signertype/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/services.validatorevent/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_attestation.invalidattestationerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_attestation.safestatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_block.invalidblockerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_block.safestatus/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_interchange.interchangeerrorerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/slashingprotection_minmaxsurround.surroundattestationerrorcode/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/util.timeitem/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/services.ivalidatorevents/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection.islashingprotection/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection.slashingprotectionattestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection.slashingprotectionblock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_attestation.slashingprotectionlowerbound/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_interchange.iinterchangelodestar/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_interchange_formats.iinterchangecompletev4/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_interchange_formats.iinterchangev5/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_minmaxsurround.idistanceentry/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/slashingprotection_minmaxsurround.iminmaxsurround/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/util.iclock/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/repositories/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/root/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/services/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection_attestation/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection_block/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection_interchange/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection_interchange_formats/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/slashingprotection_minmaxsurround/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/modules/util/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/reference/cli/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/key-management/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/local/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/prometheus-grafana/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/usage/testnet/</loc>
-         <lastmod>2022-02-08</lastmod>
+         <lastmod>2022-02-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
