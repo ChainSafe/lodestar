@@ -6,7 +6,6 @@ import {readonlyValues} from "@chainsafe/ssz";
 import {
   CachedBeaconStateAltair,
   computeEpochAtSlot,
-  computeStartSlotAtEpoch,
   getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiError} from "../../errors";
