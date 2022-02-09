@@ -6,8 +6,7 @@ import {
   SLOTS_PER_EPOCH,
   TARGET_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-
-import {getSeed, unshuffleList} from "../../util";
+import {getSeed, unshuffleList} from "../util";
 
 /**
  * Readonly interface for IEpochShuffling.

@@ -9,7 +9,7 @@ import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../types";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
@@ -17,7 +17,7 @@ import {
   ZERO_HASH,
   getChurnLimit,
   getCurrentSlot,
-} from "../..";
+} from "..";
 
 export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = BigInt(10);

@@ -2,7 +2,7 @@ import {BasicListType, List, TreeBacked} from "@chainsafe/ssz";
 import {ParticipationFlags, Uint8} from "@chainsafe/lodestar-types";
 import {MutableVector, PersistentVector, TransientVector} from "@chainsafe/persistent-ts";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {unsafeUint8ArrayToTree} from "./unsafeUint8ArrayToTree";
+import {unsafeUint8ArrayToTree} from "../util/unsafeUint8ArrayToTree";
 
 interface ICachedEpochParticipationOpts {
   type?: BasicListType<List<Uint8>>;

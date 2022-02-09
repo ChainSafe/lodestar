@@ -1,6 +1,6 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List, toHexString} from "@chainsafe/ssz";
 import {
   allForks,
@@ -16,7 +16,7 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
 import {RegenCaller} from "../regen";
 
-const {EpochContextError, EpochContextErrorCode, computeSubnetForSlot, getIndexedAttestationSignatureSet} = allForks;
+const {EpochContextError, EpochContextErrorCode, getIndexedAttestationSignatureSet} = allForks;
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,
@@ -304,4 +304,14 @@ export function getCommitteeIndices(
       throw e;
     }
   }
+}
+
+/**
+ * Compute the correct subnet for a slot/committee index
+ */
+export function computeSubnetForSlot(epochCtx: allForks.EpochContext, slot: number, committeeIndex: number): number {
+  const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
+  const committeesPerSlot = epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+  const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+  return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

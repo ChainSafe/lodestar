@@ -19,7 +19,7 @@ import {BalanceList} from "./balanceList";
 import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./cachedEpochParticipation";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
-import {newFilledArray} from "../../util";
+import {newFilledArray} from "../util/array";
 
 /**
  * `BeaconState` with various caches

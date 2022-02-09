@@ -14,9 +14,9 @@ import {
   SHUFFLE_ROUND_COUNT,
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
-import {IEpochShuffling} from "../allForks";
-import {EffectiveBalanceIncrements} from "../allForks/util/effectiveBalanceIncrements";
 import {computeStartSlotAtEpoch} from "./epoch";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
+import {IEpochShuffling} from "../cache/epochShuffling";
 
 /**
  * Compute proposer indices for an epoch
