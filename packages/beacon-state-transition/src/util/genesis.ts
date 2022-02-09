@@ -89,6 +89,14 @@ export function getGenesisBeaconState(
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
 
+  // We need a CachedBeaconState to run processDeposit() which uses various caches.
+  // However at this point the state's syncCommittees are not known.
+  // This function can be called by:
+  // - 1. genesis spec tests: Don't care about the committee cache
+  // - 2. genesis builder: Only supports starting from genesis at phase0 fork
+  // - 3. interop state: Only supports starting from genesis at phase0 fork
+  // So it's okay to skip syncing the sync committee cache here and expect it to be
+  // populated latter when the altair fork happens for cases 2, 3.
   return createCachedBeaconState(config, state, {skipSyncCommitteeCache: true});
 }
 
