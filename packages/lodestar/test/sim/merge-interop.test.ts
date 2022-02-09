@@ -26,12 +26,13 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable
-// EL_SCRIPT_DIR: Directory in kintsugi folder for the EL client, from where to execute post-merge/pre-merge EL scenario scripts
+// EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to 
+// execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
 // TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
 // Example:
 // ```
-// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=geth EL_PORT=8545 TX_SCENARIOS=simple ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 TX_SCENARIOS=simple ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
@@ -117,7 +118,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     fs.mkdirSync(dataPath, {recursive: true});
 
     startELProcess({
-      runScriptPath: `../../kintsugi/${process.env.EL_SCRIPT_DIR}/${elScript}`,
+      runScriptPath: `../../${process.env.EL_SCRIPT_DIR}/${elScript}`,
       TTD: `${ttd}`,
       DATA_DIR: dataPath,
     });

@@ -47,7 +47,7 @@ jobs:
         working-directory: packages/lodestar
         env:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
-          EL_SCRIPT_DIR: geth
+          EL_SCRIPT_DIR: kiln/geth
           EL_PORT: 8545
           TX_SCENARIOS: simple
 
@@ -65,7 +65,7 @@ jobs:
         working-directory: packages/lodestar
         env:
           EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
-          EL_SCRIPT_DIR: nethermind
+          EL_SCRIPT_DIR: kiln/nethermind
           EL_PORT: 8550
 
       - name: Upload debug log test files
