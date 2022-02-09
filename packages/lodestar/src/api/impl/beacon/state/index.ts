@@ -181,9 +181,7 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
         throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
       }
 
-      const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommittee(
-        computeStartSlotAtEpoch(epoch ?? stateEpoch)
-      );
+      const syncCommitteeCache = stateCached.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch ?? stateEpoch);
 
       return {
         data: {

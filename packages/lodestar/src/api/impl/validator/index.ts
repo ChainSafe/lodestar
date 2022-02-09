@@ -388,7 +388,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-      const syncCommitteeCache = state.epochCtx.getIndexedSyncCommittee(computeStartSlotAtEpoch(epoch));
+      const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
       const syncComitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];

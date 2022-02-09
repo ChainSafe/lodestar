@@ -36,7 +36,6 @@ import {
   isActiveValidator,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
-  computeSyncPeriodAtSlot,
   computeSyncPeriodAtEpoch,
 } from "../../util";
 import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
@@ -638,13 +637,23 @@ export class EpochContext {
    * 100 to 200,then you would actually produce signatures in slot 99 - 199.
    */
   getIndexedSyncCommittee(slot: Slot): SyncCommitteeCache {
-    const slotPeriod = computeSyncPeriodAtSlot(slot + 1); // See note above for the +1 offset
-    if (slotPeriod === this.syncPeriod) {
-      return this.currentSyncCommitteeIndexed;
-    } else if (slotPeriod === this.syncPeriod + 1) {
-      return this.nextSyncCommitteeIndexed;
-    } else {
-      throw new Error(`No sync committee for period ${slotPeriod}`);
+    // See note above for the +1 offset
+    return this.getIndexedSyncCommitteeAtEpoch(computeEpochAtSlot(slot + 1));
+  }
+
+  /**
+   * **DO NOT USE FOR GOSSIP VALIDATION**: Sync committee duties are offset by one slot. @see {@link EpochContext.getIndexedSyncCommittee}
+   *
+   * Get indexed sync committee at epoch without offsets
+   */
+  getIndexedSyncCommitteeAtEpoch(epoch: Epoch): SyncCommitteeCache {
+    switch (computeSyncPeriodAtEpoch(epoch)) {
+      case this.syncPeriod:
+        return this.currentSyncCommitteeIndexed;
+      case this.syncPeriod + 1:
+        return this.nextSyncCommitteeIndexed;
+      default:
+        throw new Error(`No sync committee for epoch ${epoch}`);
     }
   }
 
