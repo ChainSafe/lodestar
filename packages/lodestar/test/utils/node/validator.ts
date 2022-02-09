@@ -1,7 +1,7 @@
 import tmp from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {SlashingProtection, Validator, Signer, SignerType} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator, Signer, SignerType, ISlashingProtection} from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 import {SecretKey} from "@chainsafe/bls";
@@ -22,9 +22,10 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-}): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
+}): Promise<{validators: Validator[]; secretKeys: SecretKey[]; keymanagerOps?: Record<string, ISlashingProtection>}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
+  const keymanagerOps: Record<string, ISlashingProtection> = {};
 
   for (let i = 0; i < validatorClientCount; i++) {
     const startIndexVc = startIndex + i * validatorClientCount;
@@ -64,12 +65,15 @@ export async function getAndInitDevValidators({
         signers,
       })
     );
+
+    keymanagerOps[i] = slashingProtection;
   }
 
   return {
     validators: await Promise.all(validators),
     // Return secretKeys to start the externalSigner
     secretKeys,
+    keymanagerOps,
   };
 }
 

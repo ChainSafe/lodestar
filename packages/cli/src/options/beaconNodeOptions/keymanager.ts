@@ -3,6 +3,7 @@ import {restApiOptionsDefault} from "@chainsafe/lodestar-keymanager-server";
 
 export type KeymanagerArgs = {
   keymanagerEnabled?: boolean;
+  keymanagerAuthEnabled?: boolean;
   keymanagerPort?: number;
   keymanagerHost?: string;
   keymanagerCors?: string;
@@ -13,6 +14,12 @@ export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
     type: "boolean",
     description: "Enable keymanager API server",
     default: false,
+    group: "keymanager",
+  },
+  keymanagerAuthEnabled: {
+    type: "boolean",
+    description: "Enable token bearer authentication for keymanager API server",
+    default: true,
     group: "keymanager",
   },
   keymanagerPort: {

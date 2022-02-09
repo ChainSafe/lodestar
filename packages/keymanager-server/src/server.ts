@@ -26,6 +26,7 @@ export type RestApiOptions = {
   cors: string;
   port: number;
   // TODO [DA] make compulsory
+  auth?: boolean;
   tokenDir?: string;
 };
 
@@ -57,15 +58,21 @@ export class KeymanagerServer {
       ...restApiOptionsDefault,
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
-    this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
-    // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
-    this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
+    if (optsArg.auth) {
+      this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
+      // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
+      this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
 
-    const initToken = async (): Promise<void> => {
-      await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
-    };
+      const initToken = async (): Promise<void> => {
+        await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
+      };
 
-    void initToken();
+      void initToken();
+    } else {
+      // TODO [DA] Log a warning
+      this.apiTokenPath = "";
+      this.bearerToken = "";
+    }
 
     const server = fastify({
       logger: false,
@@ -90,7 +97,9 @@ export class KeymanagerServer {
       void server.register(fastifyCors, {origin: opts.cors});
     }
 
-    void server.register(bearerAuthPlugin, {keys: new Set([this.bearerToken])});
+    if (opts.auth && this.bearerToken !== "") {
+      void server.register(bearerAuthPlugin, {keys: new Set([this.bearerToken])});
+    }
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req) => {
@@ -150,7 +159,9 @@ export class KeymanagerServer {
     for (const req of this.activeRequests) {
       req.destroy(Error("Closing"));
     }
-    await unlink(this.apiTokenPath);
+    if (this.opts.auth && this.apiTokenPath !== "") {
+      await unlink(this.apiTokenPath);
+    }
     await this.server.close();
   }
 }

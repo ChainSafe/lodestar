@@ -159,7 +159,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       api,
       logger: logger.child({module: "vali"}),
       signers,
-      importKeystoresPath,
+      importKeystoresPath, // TODO [DA] is this still needed?
     });
 
     // Start keymanager API backend
@@ -172,7 +172,13 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       );
 
       const keymanagerServer = new KeymanagerServer(
-        {host: args.keymanagerHost, port: args.keymanagerPort, cors: args.keymanagerCors, tokenDir: validatorsDbDir},
+        {
+          host: args.keymanagerHost,
+          port: args.keymanagerPort,
+          cors: args.keymanagerCors,
+          auth: args.keymanagerAuthEnabled,
+          tokenDir: validatorsDbDir,
+        },
         {config, logger, api: keymanagerApi}
       );
       await keymanagerServer.listen();
