@@ -68,7 +68,7 @@ export function readLodestarGitData(): GitData {
     }
 
     return {
-      semver: gitData?.semver || "N/A",
+      semver: gitData?.semver,
       branch: gitData?.branch || "N/A",
       commit: gitData?.commit || "N/A",
       numCommits: gitData?.numCommits || "",
