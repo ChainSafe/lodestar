@@ -557,7 +557,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new EpochContext</strong>(<code>data</code>: object): <em><a href="./">EpochContext</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L395">packages/beacon-state-transition/src/allForks/util/epochContext.ts:395</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L395">packages/beacon-state-transition/src/allForks/util/epochContext.ts:395</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>data</strong>: <em>object</em></p>
 <table>
@@ -650,27 +650,27 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="baserewardperincrement">baseRewardPerIncrement<a class="headerlink" href="#baserewardperincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>baseRewardPerIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L355">packages/beacon-state-transition/src/allForks/util/epochContext.ts:355</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L355">packages/beacon-state-transition/src/allForks/util/epochContext.ts:355</a></em></p>
 <p>Update freq: once per epoch after <code>process_effective_balance_updates()</code></p>
 <hr/>
 <h3 id="churnlimit">churnLimit<a class="headerlink" href="#churnlimit" title="Permanent link">¶</a></h3>
 <p>• <strong>churnLimit</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L365">packages/beacon-state-transition/src/allForks/util/epochContext.ts:365</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L365">packages/beacon-state-transition/src/allForks/util/epochContext.ts:365</a></em></p>
 <p>Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
 change through the epoch. It's used in initiateValidatorExit(). Must be update after changing active indexes.</p>
 <hr/>
 <h3 id="config">config<a class="headerlink" href="#config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L310">packages/beacon-state-transition/src/allForks/util/epochContext.ts:310</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L310">packages/beacon-state-transition/src/allForks/util/epochContext.ts:310</a></em></p>
 <hr/>
 <h3 id="currentshuffling">currentShuffling<a class="headerlink" href="#currentshuffling" title="Permanent link">¶</a></h3>
 <p>• <strong>currentShuffling</strong>: <em><a href="../../interfaces/allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L343">packages/beacon-state-transition/src/allForks/util/epochContext.ts:343</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L343">packages/beacon-state-transition/src/allForks/util/epochContext.ts:343</a></em></p>
 <p>Same as previousShuffling</p>
 <hr/>
 <h3 id="currentsynccommitteeindexed">currentSyncCommitteeIndexed<a class="headerlink" href="#currentsynccommitteeindexed" title="Permanent link">¶</a></h3>
 <p>• <strong>currentSyncCommitteeIndexed</strong>: <em><a href="../../modules/allforks_util/#synccommitteecache">SyncCommitteeCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L389">packages/beacon-state-transition/src/allForks/util/epochContext.ts:389</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L389">packages/beacon-state-transition/src/allForks/util/epochContext.ts:389</a></em></p>
 <p>Returns a SyncCommitteeCache. (Note: phase0 has no sync committee, and returns an empty cache)
 - validatorIndices (of the committee members)
 - validatorIndexMap: Map of ValidatorIndex -&gt; syncCommitteeIndexes</p>
@@ -679,60 +679,60 @@ It contains fixed 512 members so it's rather small.</p>
 <hr/>
 <h3 id="effectivebalanceincrements">effectiveBalanceIncrements<a class="headerlink" href="#effectivebalanceincrements" title="Permanent link">¶</a></h3>
 <p>• <strong>effectiveBalanceIncrements</strong>: <em><a href="../../modules/allforks_util/#effectivebalanceincrements">EffectiveBalanceIncrements</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L349">packages/beacon-state-transition/src/allForks/util/epochContext.ts:349</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L349">packages/beacon-state-transition/src/allForks/util/epochContext.ts:349</a></em></p>
 <p>Effective balances, for altair processAttestations()</p>
 <hr/>
 <h3 id="epoch">epoch<a class="headerlink" href="#epoch" title="Permanent link">¶</a></h3>
 <p>• <strong>epoch</strong>: <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L394">packages/beacon-state-transition/src/allForks/util/epochContext.ts:394</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L394">packages/beacon-state-transition/src/allForks/util/epochContext.ts:394</a></em></p>
 <hr/>
 <h3 id="exitqueuechurn">exitQueueChurn<a class="headerlink" href="#exitqueuechurn" title="Permanent link">¶</a></h3>
 <p>• <strong>exitQueueChurn</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L379">packages/beacon-state-transition/src/allForks/util/epochContext.ts:379</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L379">packages/beacon-state-transition/src/allForks/util/epochContext.ts:379</a></em></p>
 <p>Number of validators initiating an exit at exitQueueEpoch. May be updated every block as validators are
 initiateValidatorExit(). This value may vary on each fork of the state.</p>
 <p>NOTE: Changes block to block</p>
 <hr/>
 <h3 id="exitqueueepoch">exitQueueEpoch<a class="headerlink" href="#exitqueueepoch" title="Permanent link">¶</a></h3>
 <p>• <strong>exitQueueEpoch</strong>: <em>Epoch</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L372">packages/beacon-state-transition/src/allForks/util/epochContext.ts:372</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L372">packages/beacon-state-transition/src/allForks/util/epochContext.ts:372</a></em></p>
 <p>Closest epoch with available churn for validators to exit at. May be updated every block as validators are
 initiateValidatorExit(). This value may vary on each fork of the state.</p>
 <p>NOTE: Changes block to block</p>
 <hr/>
 <h3 id="index2pubkey">index2pubkey<a class="headerlink" href="#index2pubkey" title="Permanent link">¶</a></h3>
 <p>• <strong>index2pubkey</strong>: <em><a href="../../modules/allforks_util/#index2pubkeycache">Index2PubkeyCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L328">packages/beacon-state-transition/src/allForks/util/epochContext.ts:328</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L328">packages/beacon-state-transition/src/allForks/util/epochContext.ts:328</a></em></p>
 <p>Unique globally shared pubkey registry. There should only exist one for the entire application.</p>
 <p>Warning: may contain indices that do not yet exist in the current state, but do in a later processed state.</p>
 <p>$VALIDATOR_COUNT x BLST deserialized pubkey (Jacobian coordinates)</p>
 <hr/>
 <h3 id="nextshuffling">nextShuffling<a class="headerlink" href="#nextshuffling" title="Permanent link">¶</a></h3>
 <p>• <strong>nextShuffling</strong>: <em><a href="../../interfaces/allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L345">packages/beacon-state-transition/src/allForks/util/epochContext.ts:345</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L345">packages/beacon-state-transition/src/allForks/util/epochContext.ts:345</a></em></p>
 <p>Same as previousShuffling</p>
 <hr/>
 <h3 id="nextsynccommitteeindexed">nextSyncCommitteeIndexed<a class="headerlink" href="#nextsynccommitteeindexed" title="Permanent link">¶</a></h3>
 <p>• <strong>nextSyncCommitteeIndexed</strong>: <em><a href="../../modules/allforks_util/#synccommitteecache">SyncCommitteeCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L391">packages/beacon-state-transition/src/allForks/util/epochContext.ts:391</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L391">packages/beacon-state-transition/src/allForks/util/epochContext.ts:391</a></em></p>
 <p>Same as currentSyncCommitteeIndexed</p>
 <hr/>
 <h3 id="previousshuffling">previousShuffling<a class="headerlink" href="#previousshuffling" title="Permanent link">¶</a></h3>
 <p>• <strong>previousShuffling</strong>: <em><a href="../../interfaces/allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L341">packages/beacon-state-transition/src/allForks/util/epochContext.ts:341</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L341">packages/beacon-state-transition/src/allForks/util/epochContext.ts:341</a></em></p>
 <p>Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
 Note: Per spec definition, shuffling will always be defined. They are never called before loadState()</p>
 <p>$VALIDATOR_COUNT x Number</p>
 <hr/>
 <h3 id="proposers">proposers<a class="headerlink" href="#proposers" title="Permanent link">¶</a></h3>
 <p>• <strong>proposers</strong>: <em>ValidatorIndex[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L334">packages/beacon-state-transition/src/allForks/util/epochContext.ts:334</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L334">packages/beacon-state-transition/src/allForks/util/epochContext.ts:334</a></em></p>
 <p>Indexes of the block proposers for the current epoch.</p>
 <p>32 x Number</p>
 <hr/>
 <h3 id="pubkey2index">pubkey2index<a class="headerlink" href="#pubkey2index" title="Permanent link">¶</a></h3>
 <p>• <strong>pubkey2index</strong>: <em><a href="../allforks_util.pubkeyindexmap/">PubkeyIndexMap</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L320">packages/beacon-state-transition/src/allForks/util/epochContext.ts:320</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L320">packages/beacon-state-transition/src/allForks/util/epochContext.ts:320</a></em></p>
 <p>Unique globally shared pubkey registry. There should only exist one for the entire application.</p>
 <p>TODO: this is a hack, we need a safety mechanism in case a bad eth1 majority vote is in,
 or handle non finalized data differently, or use an immutable.js structure for cheap copies
@@ -741,24 +741,24 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="syncparticipantreward">syncParticipantReward<a class="headerlink" href="#syncparticipantreward" title="Permanent link">¶</a></h3>
 <p>• <strong>syncParticipantReward</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L350">packages/beacon-state-transition/src/allForks/util/epochContext.ts:350</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L350">packages/beacon-state-transition/src/allForks/util/epochContext.ts:350</a></em></p>
 <hr/>
 <h3 id="syncperiod">syncPeriod<a class="headerlink" href="#syncperiod" title="Permanent link">¶</a></h3>
 <p>• <strong>syncPeriod</strong>: <em>SyncPeriod</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L395">packages/beacon-state-transition/src/allForks/util/epochContext.ts:395</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L395">packages/beacon-state-transition/src/allForks/util/epochContext.ts:395</a></em></p>
 <hr/>
 <h3 id="syncproposerreward">syncProposerReward<a class="headerlink" href="#syncproposerreward" title="Permanent link">¶</a></h3>
 <p>• <strong>syncProposerReward</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L351">packages/beacon-state-transition/src/allForks/util/epochContext.ts:351</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L351">packages/beacon-state-transition/src/allForks/util/epochContext.ts:351</a></em></p>
 <hr/>
 <h3 id="totalactivebalancebyincrement">totalActiveBalanceByIncrement<a class="headerlink" href="#totalactivebalancebyincrement" title="Permanent link">¶</a></h3>
 <p>• <strong>totalActiveBalanceByIncrement</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L359">packages/beacon-state-transition/src/allForks/util/epochContext.ts:359</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L359">packages/beacon-state-transition/src/allForks/util/epochContext.ts:359</a></em></p>
 <p>Total active balance for current epoch, to be used instead of getTotalBalance()</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="addpubkey">addPubkey<a class="headerlink" href="#addpubkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addPubkey</strong>(<code>index</code>: ValidatorIndex, <code>pubkey</code>: Uint8Array): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L607">packages/beacon-state-transition/src/allForks/util/epochContext.ts:607</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L607">packages/beacon-state-transition/src/allForks/util/epochContext.ts:607</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -782,7 +782,7 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="afterepochtransitionsettime">afterEpochTransitionSetTime<a class="headerlink" href="#afterepochtransitionsettime" title="Permanent link">¶</a></h3>
 <p>▸ <strong>afterEpochTransitionSetTime</strong>(<code>stateSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L480">packages/beacon-state-transition/src/allForks/util/epochContext.ts:480</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L480">packages/beacon-state-transition/src/allForks/util/epochContext.ts:480</a></em></p>
 <p>After advancing the state slot, advance the time units of its cache</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -803,18 +803,18 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="beforeepochtransition">beforeEpochTransition<a class="headerlink" href="#beforeepochtransition" title="Permanent link">¶</a></h3>
 <p>▸ <strong>beforeEpochTransition</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L474">packages/beacon-state-transition/src/allForks/util/epochContext.ts:474</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L474">packages/beacon-state-transition/src/allForks/util/epochContext.ts:474</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="copy">copy<a class="headerlink" href="#copy" title="Permanent link">¶</a></h3>
 <p>▸ <strong>copy</strong>(): <em><a href="./">EpochContext</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L442">packages/beacon-state-transition/src/allForks/util/epochContext.ts:442</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L442">packages/beacon-state-transition/src/allForks/util/epochContext.ts:442</a></em></p>
 <p>Copies a given EpochContext while avoiding copying its immutable parts.</p>
 <p><strong>Returns:</strong> <em><a href="./">EpochContext</a></em></p>
 <hr/>
 <h3 id="effectivebalanceincrementsset">effectiveBalanceIncrementsSet<a class="headerlink" href="#effectivebalanceincrementsset" title="Permanent link">¶</a></h3>
 <p>▸ <strong>effectiveBalanceIncrementsSet</strong>(<code>index</code>: number, <code>effectiveBalance</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L629">packages/beacon-state-transition/src/allForks/util/epochContext.ts:629</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L629">packages/beacon-state-transition/src/allForks/util/epochContext.ts:629</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -838,7 +838,7 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="getattestingindices">getAttestingIndices<a class="headerlink" href="#getattestingindices" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getAttestingIndices</strong>(<code>data</code>: AttestationData, <code>bits</code>: BitList): <em>ValidatorIndex[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L532">packages/beacon-state-transition/src/allForks/util/epochContext.ts:532</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L532">packages/beacon-state-transition/src/allForks/util/epochContext.ts:532</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -862,7 +862,7 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="getbeaconcommittee">getBeaconCommittee<a class="headerlink" href="#getbeaconcommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBeaconCommittee</strong>(<code>slot</code>: Slot, <code>index</code>: CommitteeIndex): <em>ValidatorIndex[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L489">packages/beacon-state-transition/src/allForks/util/epochContext.ts:489</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L489">packages/beacon-state-transition/src/allForks/util/epochContext.ts:489</a></em></p>
 <p>Return the beacon committee at slot for index.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -887,7 +887,7 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="getbeaconproposer">getBeaconProposer<a class="headerlink" href="#getbeaconproposer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBeaconProposer</strong>(<code>slot</code>: Slot): <em>ValidatorIndex</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L505">packages/beacon-state-transition/src/allForks/util/epochContext.ts:505</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L505">packages/beacon-state-transition/src/allForks/util/epochContext.ts:505</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -907,7 +907,7 @@ Warning: may contain pubkeys that do not yet exist in the current state, but do 
 <hr/>
 <h3 id="getcommitteeassignment">getCommitteeAssignment<a class="headerlink" href="#getcommitteeassignment" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommitteeAssignment</strong>(<code>epoch</code>: Epoch, <code>validatorIndex</code>: ValidatorIndex): <em>CommitteeAssignment | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L578">packages/beacon-state-transition/src/allForks/util/epochContext.ts:578</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L578">packages/beacon-state-transition/src/allForks/util/epochContext.ts:578</a></em></p>
 <p>Return the committee assignment in the <code>epoch</code> for <code>validator_index</code>.
 <code>assignment</code> returned is a tuple of the following form:
 <code>assignment[0]</code> is the list of validators in the committee
@@ -937,7 +937,7 @@ Return null if no assignment..</p>
 <hr/>
 <h3 id="getcommitteeassignments">getCommitteeAssignments<a class="headerlink" href="#getcommitteeassignments" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommitteeAssignments</strong>(<code>epoch</code>: Epoch, <code>requestedValidatorIndices</code>: ValidatorIndex[]): <em>Map‹ValidatorIndex, <a href="../../modules/allforks_util/#attesterduty">AttesterDuty</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L538">packages/beacon-state-transition/src/allForks/util/epochContext.ts:538</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L538">packages/beacon-state-transition/src/allForks/util/epochContext.ts:538</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -961,7 +961,7 @@ Return null if no assignment..</p>
 <hr/>
 <h3 id="getcommitteecountperslot">getCommitteeCountPerSlot<a class="headerlink" href="#getcommitteecountperslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCommitteeCountPerSlot</strong>(<code>epoch</code>: Epoch): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L501">packages/beacon-state-transition/src/allForks/util/epochContext.ts:501</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L501">packages/beacon-state-transition/src/allForks/util/epochContext.ts:501</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -981,7 +981,7 @@ Return null if no assignment..</p>
 <hr/>
 <h3 id="getindexedattestation">getIndexedAttestation<a class="headerlink" href="#getindexedattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getIndexedAttestation</strong>(<code>attestation</code>: Attestation): <em>IndexedAttestation</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L518">packages/beacon-state-transition/src/allForks/util/epochContext.ts:518</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L518">packages/beacon-state-transition/src/allForks/util/epochContext.ts:518</a></em></p>
 <p>Return the indexed attestation corresponding to <code>attestation</code>.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1002,7 +1002,7 @@ Return null if no assignment..</p>
 <hr/>
 <h3 id="getindexedsynccommittee">getIndexedSyncCommittee<a class="headerlink" href="#getindexedsynccommittee" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getIndexedSyncCommittee</strong>(<code>slot</code>: Slot): <em><a href="../../modules/allforks_util/#synccommitteecache">SyncCommitteeCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L646">packages/beacon-state-transition/src/allForks/util/epochContext.ts:646</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L646">packages/beacon-state-transition/src/allForks/util/epochContext.ts:646</a></em></p>
 <p>Note: The range of slots a validator has to perform duties is off by one.
 The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
 100 to 200,then you would actually produce signatures in slot 99 - 199.</p>
@@ -1025,7 +1025,7 @@ The previous slot wording means that if your validator is in a sync committee fo
 <hr/>
 <h3 id="getindexedsynccommitteeatepoch">getIndexedSyncCommitteeAtEpoch<a class="headerlink" href="#getindexedsynccommitteeatepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getIndexedSyncCommitteeAtEpoch</strong>(<code>epoch</code>: Epoch): <em><a href="../../modules/allforks_util/#synccommitteecache">SyncCommitteeCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L656">packages/beacon-state-transition/src/allForks/util/epochContext.ts:656</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L656">packages/beacon-state-transition/src/allForks/util/epochContext.ts:656</a></em></p>
 <p><strong>DO NOT USE FOR GOSSIP VALIDATION</strong>: Sync committee duties are offset by one slot. @see <a href="./#getindexedsynccommittee">EpochContext.getIndexedSyncCommittee</a></p>
 <p>Get indexed sync committee at epoch without offsets</p>
 <p><strong>Parameters:</strong></p>
@@ -1047,7 +1047,7 @@ The previous slot wording means that if your validator is in a sync committee fo
 <hr/>
 <h3 id="getshufflingatepoch">getShufflingAtEpoch<a class="headerlink" href="#getshufflingatepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getShufflingAtEpoch</strong>(<code>epoch</code>: Epoch): <em><a href="../../interfaces/allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L617">packages/beacon-state-transition/src/allForks/util/epochContext.ts:617</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L617">packages/beacon-state-transition/src/allForks/util/epochContext.ts:617</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1067,7 +1067,7 @@ The previous slot wording means that if your validator is in a sync committee fo
 <hr/>
 <h3 id="getshufflingatslot">getShufflingAtSlot<a class="headerlink" href="#getshufflingatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getShufflingAtSlot</strong>(<code>slot</code>: Slot): <em><a href="../../interfaces/allforks_util.iepochshuffling/">IEpochShuffling</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L612">packages/beacon-state-transition/src/allForks/util/epochContext.ts:612</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L612">packages/beacon-state-transition/src/allForks/util/epochContext.ts:612</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1087,7 +1087,7 @@ The previous slot wording means that if your validator is in a sync committee fo
 <hr/>
 <h3 id="isaggregator">isAggregator<a class="headerlink" href="#isaggregator" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isAggregator</strong>(<code>slot</code>: Slot, <code>index</code>: CommitteeIndex, <code>slotSignature</code>: BLSSignature): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L602">packages/beacon-state-transition/src/allForks/util/epochContext.ts:602</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L602">packages/beacon-state-transition/src/allForks/util/epochContext.ts:602</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1115,7 +1115,7 @@ The previous slot wording means that if your validator is in a sync committee fo
 <hr/>
 <h3 id="rotatesynccommitteeindexed">rotateSyncCommitteeIndexed<a class="headerlink" href="#rotatesynccommitteeindexed" title="Permanent link">¶</a></h3>
 <p>▸ <strong>rotateSyncCommitteeIndexed</strong>(<code>nextSyncCommitteeIndices</code>: number[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1ae1398/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L668">packages/beacon-state-transition/src/allForks/util/epochContext.ts:668</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/1c86d16/packages/beacon-state-transition/src/allForks/util/epochContext.ts#L668">packages/beacon-state-transition/src/allForks/util/epochContext.ts:668</a></em></p>
 <p>On processSyncCommitteeUpdates rotate next to current and set nextSyncCommitteeIndexed</p>
 <p><strong>Parameters:</strong></p>
 <table>
