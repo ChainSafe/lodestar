@@ -112,6 +112,9 @@ module.exports = {
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-relative-packages": "error",
+    // 'import/no-cycle' is expensive computationally, consider restricting its `maxdepth`
+    // See https://github.com/import-js/eslint-plugin-import/blob/HEAD/docs/rules/no-cycle.md#maxdepth
+    "import/no-cycle": "error",
     "node/no-deprecated-api": "error",
     "new-parens": "error",
     "no-caller": "error",
