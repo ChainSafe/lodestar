@@ -4,8 +4,7 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodest
 import {
   CachedBeaconStateAllForks,
   createCachedBeaconState,
-  computeEpochAtSlot,
-  isActiveValidator,
+  PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -113,34 +112,6 @@ export function toValidatorResponse(
   };
 }
 
-/**
- * Returns committees mapped by index -> slot -> validator index
- */
-export function getEpochBeaconCommittees(
-  state: allForks.BeaconState | CachedBeaconStateAllForks,
-  epoch: Epoch
-): ValidatorIndex[][][] {
-  if ((state as CachedBeaconStateAllForks).epochCtx !== undefined) {
-    const stateEpoch = computeEpochAtSlot(state.slot);
-    switch (epoch) {
-      case stateEpoch:
-        return (state as CachedBeaconStateAllForks).currentShuffling.committees;
-      case stateEpoch - 1:
-        return (state as CachedBeaconStateAllForks).previousShuffling.committees;
-      // default: continue to manual computation below
-    }
-  }
-
-  const activeValidatorIndices: ValidatorIndex[] = [];
-  for (const [i, v] of Array.from(readonlyValues(state.validators)).entries()) {
-    if (isActiveValidator(v, epoch)) {
-      activeValidatorIndices.push(i);
-    }
-  }
-  const shuffling = allForks.computeEpochShuffling(state, activeValidatorIndices, epoch);
-  return shuffling.committees;
-}
-
 async function stateByName(
   db: IBeaconDb,
   stateCache: StateContextCache,
@@ -202,7 +173,7 @@ async function stateBySlot(
 export function filterStateValidatorsByStatuses(
   statuses: string[],
   state: allForks.BeaconState,
-  pubkey2index: allForks.PubkeyIndexMap,
+  pubkey2index: PubkeyIndexMap,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
@@ -259,7 +230,7 @@ async function getFinalizedState(
 export function getStateValidatorIndex(
   id: routes.beacon.ValidatorId | ByteVector,
   state: allForks.BeaconState,
-  pubkey2index: allForks.PubkeyIndexMap
+  pubkey2index: PubkeyIndexMap
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;
   if (typeof id === "number") {

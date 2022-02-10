@@ -12,7 +12,6 @@ import {ApiError} from "../../errors";
 import {ApiModules} from "../../types";
 import {
   filterStateValidatorsByStatuses,
-  getEpochBeaconCommittees,
   getStateValidatorIndex,
   getValidatorStatus,
   resolveStateId,
@@ -138,7 +137,13 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
     async getEpochCommittees(stateId, filters) {
       const state = await resolveStateId(config, chain, db, stateId);
 
-      const committes = getEpochBeaconCommittees(state, filters?.epoch ?? computeEpochAtSlot(state.slot));
+      const stateCached = state as CachedBeaconStateAltair;
+      if (stateCached.epochCtx === undefined) {
+        throw new ApiError(400, `No cached state available for stateId: ${stateId}`);
+      }
+
+      const shuffling = stateCached.epochCtx.getShufflingAtEpoch(filters?.epoch ?? computeEpochAtSlot(state.slot));
+      const committes = shuffling.committees;
       const committesFlat = committes.flatMap((slotCommittees, committeeIndex) => {
         if (filters?.index !== undefined && filters.index !== committeeIndex) {
           return [];

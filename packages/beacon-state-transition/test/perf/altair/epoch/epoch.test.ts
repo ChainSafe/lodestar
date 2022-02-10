@@ -5,6 +5,7 @@ import {
   computeStartSlotAtEpoch,
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
+  beforeProcessEpoch,
 } from "../../../../src";
 import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
 import {StateEpoch} from "../../types";
@@ -29,9 +30,9 @@ describe(`altair processEpoch - ${stateId}`, () => {
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     beforeEach: () => stateOg.value.clone() as CachedBeaconStateAllForks,
     fn: (state) => {
-      const epochProcess = allForks.beforeProcessEpoch(state);
+      const epochProcess = beforeProcessEpoch(state);
       altair.processEpoch(state as CachedBeaconStateAltair, epochProcess);
-      allForks.afterProcessEpoch(state, epochProcess);
+      state.epochCtx.afterProcessEpoch(state, epochProcess);
       // Simulate root computation through the next block to account for changes
       state.hashTreeRoot();
     },
@@ -46,7 +47,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
 });
 
 function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>, stateId: string): void {
-  const epochProcess = beforeValue(() => allForks.beforeProcessEpoch(stateOg.value));
+  const epochProcess = beforeValue(() => beforeProcessEpoch(stateOg.value));
 
   // const getPerfState = (): CachedBeaconStateAltair => {
   //   const state = originalState.clone();
@@ -78,7 +79,7 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
   itBench({
     id: `${stateId} - altair beforeProcessEpoch`,
     fn: () => {
-      allForks.beforeProcessEpoch(stateOg.value);
+      beforeProcessEpoch(stateOg.value);
     },
   });
 
@@ -162,11 +163,11 @@ function benchmarkAltairEpochSteps(stateOg: LazyValue<CachedBeaconStateAllForks>
     // Compute a state and epochProcess after running processEpoch() since those values are mutated
     before: () => {
       const state = stateOg.value.clone();
-      const epochProcessAfter = allForks.beforeProcessEpoch(state);
+      const epochProcessAfter = beforeProcessEpoch(state);
       altair.processEpoch(state as CachedBeaconStateAltair, epochProcessAfter);
       return {state, epochProcess: epochProcessAfter};
     },
     beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
-    fn: ({state, epochProcess}) => allForks.afterProcessEpoch(state, epochProcess),
+    fn: ({state, epochProcess}) => state.epochCtx.afterProcessEpoch(state, epochProcess),
   });
 }

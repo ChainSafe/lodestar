@@ -23,8 +23,9 @@ import {
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
-import {getNextSyncCommittee} from "../altair/util/syncCommittee";
-import {createCachedBeaconState, processDeposit} from "../allForks";
+import {getNextSyncCommittee} from "../util/syncCommittee";
+import {processDeposit} from "../allForks";
+import {createCachedBeaconState} from "../cache/cachedBeaconState";
 import {CachedBeaconStateAllForks} from "../types";
 
 // TODO: Refactor to work with non-phase0 genesis state

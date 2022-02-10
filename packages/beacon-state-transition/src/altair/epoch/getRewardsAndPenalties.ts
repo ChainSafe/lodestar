@@ -9,14 +9,14 @@ import {
   WEIGHT_DENOMINATOR,
   ForkName,
 } from "@chainsafe/lodestar-params";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {
   FLAG_ELIGIBLE_ATTESTER,
   FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED,
   FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
   hasMarkers,
-} from "../../allForks";
+} from "../../util/attesterStatus";
 import {isInInactivityLeak, newZeroedArray} from "../../util";
 
 interface IRewardPenaltyItem {
@@ -41,7 +41,7 @@ interface IRewardPenaltyItem {
  *   - unslashed:          100%
  *   - eligibleAttester:   98%
  */
-export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: IEpochProcess): [number[], number[]] {
+export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: EpochProcess): [number[], number[]] {
   // TODO: Is there a cheaper way to measure length that going to `state.validators`?
   const validatorCount = state.validators.length;
   const activeIncrements = process.totalActiveStakeByIncrement;
@@ -90,6 +90,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
       };
       rewardPenaltyItemCache.set(effectiveBalanceIncrement, rewardPenaltyItem);
     }
+
     const {
       timelySourceReward,
       timelySourcePenalty,
@@ -97,6 +98,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
       timelyTargetPenalty,
       timelyHeadReward,
     } = rewardPenaltyItem;
+
     // same logic to getFlagIndexDeltas
     if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
       if (!isInInactivityLeakBn) {

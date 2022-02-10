@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition";
 import {StateContextCache} from "../../../../src/chain/stateCache";
 import {generateCachedState} from "../../../utils/state";
 import {ZERO_HASH} from "../../../../src/constants";
@@ -9,7 +9,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 describe("StateContextCache", function () {
   let cache: StateContextCache;
   let key1: ByteVector, key2: ByteVector;
-  const shuffling: allForks.IEpochShuffling = {
+  const shuffling: IEpochShuffling = {
     epoch: 0,
     activeIndices: [],
     shuffling: [],

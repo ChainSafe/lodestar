@@ -1,5 +1,5 @@
 import {join} from "node:path";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
@@ -36,7 +36,7 @@ export function transition(
       const meta = testcase.meta;
       // testConfig is used here to load forkEpoch from meta.yaml
       const testConfig = createIChainForkConfig(forkConfig(bnToNum(meta.fork_epoch)));
-      let wrappedState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
+      let wrappedState = createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
       for (let i = 0; i < meta.blocks_count; i++) {
         let tbSignedBlock: TreeBacked<allForks.SignedBeaconBlock>;
         if (i <= meta.fork_block) {

@@ -16,7 +16,7 @@ import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
 import {RegenCaller} from "../regen";
 
-const {EpochContextError, EpochContextErrorCode, getIndexedAttestationSignatureSet} = allForks;
+const {getIndexedAttestationSignatureSet} = allForks;
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,
@@ -292,26 +292,24 @@ export function getCommitteeIndices(
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {
-  try {
-    return attestationTargetState.getBeaconCommittee(attestationSlot, attestationIndex);
-  } catch (e) {
-    if (e instanceof EpochContextError && e.type.code === EpochContextErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE) {
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-        index: attestationIndex,
-      });
-    } else {
-      throw e;
-    }
+  const {committees} = attestationTargetState.getShufflingAtSlot(attestationSlot);
+  const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
+
+  if (attestationIndex >= slotCommittees.length) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+      index: attestationIndex,
+    });
   }
+  return slotCommittees[attestationIndex];
 }
 
 /**
  * Compute the correct subnet for a slot/committee index
  */
-export function computeSubnetForSlot(epochCtx: allForks.EpochContext, slot: number, committeeIndex: number): number {
+export function computeSubnetForSlot(state: CachedBeaconStateAllForks, slot: number, committeeIndex: number): number {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-  const committeesPerSlot = epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+  const committeesPerSlot = state.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
   const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

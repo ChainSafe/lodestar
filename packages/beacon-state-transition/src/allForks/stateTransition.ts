@@ -1,23 +1,23 @@
 /* eslint-disable import/namespace */
 import {allForks, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {toHexString} from "@chainsafe/ssz";
 import * as phase0 from "../phase0";
 import * as altair from "../altair";
 import * as bellatrix from "../bellatrix";
 import {IBeaconStateTransitionMetrics} from "../metrics";
+import {EpochProcess, beforeProcessEpoch} from "../cache/epochProcess";
 import {verifyProposerSignature} from "./signatureSets";
-import {beforeProcessEpoch, IEpochProcess, afterProcessEpoch} from "./util";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types";
 import {processSlot} from "./slot";
 import {computeEpochAtSlot} from "../util";
-import {toHexString} from "@chainsafe/ssz";
 
 type StateAllForks = CachedBeaconStateAllForks;
 type StatePhase0 = CachedBeaconStatePhase0;
 type StateAltair = CachedBeaconStateAltair;
 
 type ProcessBlockFn = (state: StateAllForks, block: allForks.BeaconBlock, verifySignatures: boolean) => void;
-type ProcessEpochFn = (state: StateAllForks, epochProcess: IEpochProcess) => void;
+type ProcessEpochFn = (state: StateAllForks, epochProcess: EpochProcess) => void;
 type UpgradeStateFn = (state: StateAllForks) => StateAllForks;
 
 const processBlockByFork: Record<ForkName, ProcessBlockFn> = {
@@ -161,7 +161,7 @@ function processSlotsWithTransientCache(
         metrics?.registerValidatorStatuses(currentEpoch, statuses, balances);
 
         postState.slot++;
-        afterProcessEpoch(postState, epochProcess);
+        postState.epochCtx.afterProcessEpoch(postState, epochProcess);
       } finally {
         if (timer) timer();
       }

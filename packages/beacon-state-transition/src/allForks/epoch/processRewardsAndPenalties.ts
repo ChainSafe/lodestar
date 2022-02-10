@@ -1,4 +1,4 @@
-import {CachedBeaconStateAltair, CachedBeaconStatePhase0, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStatePhase0, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {ForkName, GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {getAttestationDeltas as getAttestationDeltasPhase0} from "../../phase0/epoch/getAttestationDeltas";
 import {getRewardsAndPenalties as getRewardsPenaltiesAltair} from "../../altair/epoch/getRewardsAndPenalties";
@@ -12,7 +12,7 @@ import {getRewardsAndPenalties as getRewardsPenaltiesAltair} from "../../altair/
 export function processRewardsAndPenaltiesAllForks<T extends CachedBeaconStateAllForks>(
   fork: ForkName,
   state: T,
-  epochProcess: IEpochProcess
+  epochProcess: EpochProcess
 ): void {
   // No rewards are applied at the end of `GENESIS_EPOCH` because rewards are for work done in the previous epoch
   if (epochProcess.currentEpoch === GENESIS_EPOCH) {

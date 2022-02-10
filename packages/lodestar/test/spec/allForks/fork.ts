@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
-import {allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -15,7 +15,7 @@ export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exc
     `${ACTIVE_PRESET}/${fork}/fork/fork`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork/fork/pyspec_tests`),
     (testcase) => {
-      const preState = allForks.createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
+      const preState = createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
       return allForks.upgradeStateByFork[fork](preState);
     },
     {
