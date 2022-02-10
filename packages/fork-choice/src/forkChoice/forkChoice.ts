@@ -1026,7 +1026,8 @@ function assertValidTerminalPowBlock(
   } else {
     // If no TERMINAL_BLOCK_HASH override, check ttd
 
-    // Delay powBlock checks if the payload execution status is unknown because of syncing response in executePayload call while verifying
+    // Delay powBlock checks if the payload execution status is unknown because of
+    // syncing response in notifyNewPayload call while verifying
     if (preCachedData?.executionStatus === ExecutionStatus.Syncing) return;
 
     const {powBlock, powBlockParent} = preCachedData || {};

@@ -55,7 +55,7 @@ export enum BlockErrorCode {
   SAME_PARENT_HASH = "BLOCK_ERROR_SAME_PARENT_HASH",
   /** Total size of executionPayload.transactions exceed a sane limit to prevent DOS attacks */
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
-  /** Execution engine returned not valid after executePayload() call */
+  /** Execution engine returned not valid after notifyNewPayload() call */
   EXECUTION_PAYLOAD_NOT_VALID = "BLOCK_ERROR_EXECUTION_PAYLOAD_NOT_VALID",
   /** Execution engine is unavailable, syncing, or api call errored. Peers must not be downscored on this code */
   EXECUTION_ENGINE_ERROR = "BLOCK_ERROR_EXECUTION_ERROR",

@@ -11,5 +11,5 @@ docker build  . --tag geth:kintsugi
 
 ```bash
 cd packages/lodestar
-EL_BINARY_DIR=geth:kintsugi EL_SCRIPT_DIR=gethdocker EL_PORT=8545 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
+EL_BINARY_DIR=geth:kintsugi EL_SCRIPT_DIR=kiln/gethdocker EL_PORT=8545 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
 ```
