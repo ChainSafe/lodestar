@@ -18,6 +18,7 @@ describe("options / beaconNodeOptions", () => {
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
+      "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -73,6 +74,7 @@ describe("options / beaconNodeOptions", () => {
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
+        safeSlotsToImportOptimistically: 256,
       },
       eth1: {
         enabled: true,

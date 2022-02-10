@@ -1,3 +1,4 @@
+import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {ForkChoiceOpts} from "./forkChoice";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -14,6 +15,10 @@ export type BlockProcessOpts = {
    * Will double processing times. Use only for debugging purposes.
    */
   disableBlsBatchVerify?: boolean;
+  /**
+   * Override SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY
+   */
+  safeSlotsToImportOptimistically: number;
 };
 
 export const defaultChainOptions: IChainOptions = {
@@ -22,4 +27,5 @@ export const defaultChainOptions: IChainOptions = {
   persistInvalidSszObjects: true,
   persistInvalidSszObjectsDir: "",
   proposerBoostEnabled: false,
+  safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
 };

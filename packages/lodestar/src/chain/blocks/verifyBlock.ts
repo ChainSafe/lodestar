@@ -1,5 +1,4 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -235,11 +234,11 @@ export async function verifyBlockStateTransition(
 
         if (
           justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-          block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
+          block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-            errorMessage: `not safe to import not yet validated payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot, status=${execResult.status}`,
+            errorMessage: `not safe to import not yet validated payload within ${opts.safeSlotsToImportOptimistically} of currentSlot, status=${execResult.status}`,
           });
         }
 
