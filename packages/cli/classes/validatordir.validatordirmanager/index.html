@@ -382,7 +382,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ValidatorDirManager</strong>(<code>__namedParameters</code>: object): <em><a href="./">ValidatorDirManager</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L23">packages/cli/src/validatorDir/ValidatorDirManager.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L23">packages/cli/src/validatorDir/ValidatorDirManager.ts:23</a></em></p>
 <p>Open a directory containing multiple validators.</p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
@@ -408,15 +408,15 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="keystoresdir">keystoresDir<a class="headerlink" href="#keystoresdir" title="Permanent link">¶</a></h3>
 <p>• <strong>keystoresDir</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L22">packages/cli/src/validatorDir/ValidatorDirManager.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L22">packages/cli/src/validatorDir/ValidatorDirManager.ts:22</a></em></p>
 <hr/>
 <h3 id="secretsdir">secretsDir<a class="headerlink" href="#secretsdir" title="Permanent link">¶</a></h3>
 <p>• <strong>secretsDir</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L23">packages/cli/src/validatorDir/ValidatorDirManager.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L23">packages/cli/src/validatorDir/ValidatorDirManager.ts:23</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="decryptallvalidators">decryptAllValidators<a class="headerlink" href="#decryptallvalidators" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decryptAllValidators</strong>(<code>options?</code>: <a href="../../modules/validatordir/#ivalidatordiroptions">IValidatorDirOptions</a>): <em>Promise‹SecretKey[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L73">packages/cli/src/validatorDir/ValidatorDirManager.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L73">packages/cli/src/validatorDir/ValidatorDirManager.ts:73</a></em></p>
 <p>Opens all the validator directories in <code>this</code> and decrypts the validator secretKeys.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -437,7 +437,7 @@
 <hr/>
 <h3 id="decryptvalidator">decryptValidator<a class="headerlink" href="#decryptvalidator" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decryptValidator</strong>(<code>pubkey</code>: string, <code>options?</code>: <a href="../../modules/validatordir/#ivalidatordiroptions">IValidatorDirOptions</a>): <em>Promise‹SecretKey›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L65">packages/cli/src/validatorDir/ValidatorDirManager.ts:65</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L65">packages/cli/src/validatorDir/ValidatorDirManager.ts:65</a></em></p>
 <p>Opens the given validator and decrypts its secretKeys.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -462,14 +462,14 @@
 <hr/>
 <h3 id="iterdir">iterDir<a class="headerlink" href="#iterdir" title="Permanent link">¶</a></h3>
 <p>▸ <strong>iterDir</strong>(): <em>string[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L40">packages/cli/src/validatorDir/ValidatorDirManager.ts:40</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L40">packages/cli/src/validatorDir/ValidatorDirManager.ts:40</a></em></p>
 <p>Iterate the nodes in <code>this.keystoresDir</code>, filtering out things that are unlikely to be
 a validator directory.</p>
 <p><strong>Returns:</strong> <em>string[]</em></p>
 <hr/>
 <h3 id="openallvalidators">openAllValidators<a class="headerlink" href="#openallvalidators" title="Permanent link">¶</a></h3>
 <p>▸ <strong>openAllValidators</strong>(<code>options?</code>: <a href="../../modules/validatordir/#ivalidatordiroptions">IValidatorDirOptions</a>): <em><a href="../validatordir.validatordir-1/">ValidatorDir</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L58">packages/cli/src/validatorDir/ValidatorDirManager.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L58">packages/cli/src/validatorDir/ValidatorDirManager.ts:58</a></em></p>
 <p>Opens all the validator directories in <code>this</code>.
 <em>Note</em>: Returns an error if any of the directories is unable to be opened</p>
 <p><strong>Parameters:</strong></p>
@@ -491,7 +491,7 @@ a validator directory.</p>
 <hr/>
 <h3 id="openvalidator">openValidator<a class="headerlink" href="#openvalidator" title="Permanent link">¶</a></h3>
 <p>▸ <strong>openValidator</strong>(<code>pubkey</code>: string, <code>options?</code>: <a href="../../modules/validatordir/#ivalidatordiroptions">IValidatorDirOptions</a>): <em><a href="../validatordir.validatordir-1/">ValidatorDir</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/cli/src/validatorDir/ValidatorDirManager.ts#L50">packages/cli/src/validatorDir/ValidatorDirManager.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/89da7ce/packages/cli/src/validatorDir/ValidatorDirManager.ts#L50">packages/cli/src/validatorDir/ValidatorDirManager.ts:50</a></em></p>
 <p>Open a <code>ValidatorDir</code> at the given <code>path</code>.
 <em>Note</em>: It is not enforced that <code>path</code> is contained in <code>this.dir</code>.</p>
 <p><strong>Parameters:</strong></p>
