@@ -1,4 +1,5 @@
 import {sleep} from "@chainsafe/lodestar-utils";
+import {LinkedList} from "../array";
 import {QueueError, QueueErrorCode} from "./errors";
 import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./options";
 
@@ -9,12 +10,16 @@ import {defaultQueueOpts, IQueueMetrics, JobQueueOpts, QueueType} from "./option
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class JobItemQueue<Args extends any[], R> {
   private readonly opts: Required<JobQueueOpts>;
-  private readonly jobs: {
+  /**
+   * We choose to use LinkedList instead of regular array to improve shift() / push() / pop() performance.
+   * See the LinkedList benchmark for more details.
+   * */
+  private readonly jobs: LinkedList<{
     args: Args;
     addedTimeMs: number;
     resolve: (result: R | PromiseLike<R>) => void;
     reject: (error?: Error) => void;
-  }[] = [];
+  }> = new LinkedList();
   private readonly metrics?: IQueueMetrics;
   private runningJobs = 0;
   private lastYield = 0;
@@ -60,7 +65,7 @@ export class JobItemQueue<Args extends any[], R> {
   }
 
   dropAllJobs = (): void => {
-    this.jobs.splice(0, this.jobs.length);
+    this.jobs.prune();
   };
 
   private runJob = async (): Promise<void> => {

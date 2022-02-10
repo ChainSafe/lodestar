@@ -112,4 +112,17 @@ export class LinkedList<T> {
 
     return arr;
   }
+
+  map<U>(fn: (t: T) => U): U[] {
+    let node = this.head;
+    if (!node) return [];
+
+    const arr: U[] = [];
+    while (node) {
+      arr.push(fn(node.data));
+      node = node.next;
+    }
+
+    return arr;
+  }
 }
