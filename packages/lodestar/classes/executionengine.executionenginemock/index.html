@@ -328,11 +328,6 @@
 <nav aria-label="Methods" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#executepayload">
-    executePayload
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#getpayload">
     getPayload
   </a>
@@ -340,6 +335,11 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#notifyforkchoiceupdate">
     notifyForkchoiceUpdate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#notifynewpayload">
+    notifyNewPayload
   </a>
 </li>
 </ul>
@@ -381,14 +381,14 @@
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#executepayload">executePayload</a></li>
 <li><a href="./#getpayload">getPayload</a></li>
 <li><a href="./#notifyforkchoiceupdate">notifyForkchoiceUpdate</a></li>
+<li><a href="./#notifynewpayload">notifyNewPayload</a></li>
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ExecutionEngineMock</strong>(<code>opts</code>: <a href="../../modules/executionengine/#executionenginemockopts">ExecutionEngineMockOpts</a>): <em><a href="./">ExecutionEngineMock</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L29">packages/lodestar/src/executionEngine/mock.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L29">packages/lodestar/src/executionEngine/mock.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -408,59 +408,28 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="finalizedblockroot">finalizedBlockRoot<a class="headerlink" href="#finalizedblockroot" title="Permanent link">¶</a></h3>
 <p>• <strong>finalizedBlockRoot</strong>: <em>string</em> = ZERO_HASH_HEX</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L25">packages/lodestar/src/executionEngine/mock.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L25">packages/lodestar/src/executionEngine/mock.ts:25</a></em></p>
 <hr/>
 <h3 id="headblockroot">headBlockRoot<a class="headerlink" href="#headblockroot" title="Permanent link">¶</a></h3>
 <p>• <strong>headBlockRoot</strong>: <em>string</em> = ZERO_HASH_HEX</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L24">packages/lodestar/src/executionEngine/mock.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L24">packages/lodestar/src/executionEngine/mock.ts:24</a></em></p>
 <hr/>
 <h3 id="private-knownblocks"><code>Private</code> knownBlocks<a class="headerlink" href="#private-knownblocks" title="Permanent link">¶</a></h3>
 <p>• <strong>knownBlocks</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, ExecutionPayload›</em> = new Map<roothex, bellatrix.executionpayload="">()</roothex,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L27">packages/lodestar/src/executionEngine/mock.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L27">packages/lodestar/src/executionEngine/mock.ts:27</a></em></p>
 <hr/>
 <h3 id="private-payloadid"><code>Private</code> payloadId<a class="headerlink" href="#private-payloadid" title="Permanent link">¶</a></h3>
 <p>• <strong>payloadId</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L29">packages/lodestar/src/executionEngine/mock.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L29">packages/lodestar/src/executionEngine/mock.ts:29</a></em></p>
 <hr/>
 <h3 id="private-preparingpayloads"><code>Private</code> preparingPayloads<a class="headerlink" href="#private-preparingpayloads" title="Permanent link">¶</a></h3>
 <p>• <strong>preparingPayloads</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹number, ExecutionPayload›</em> = new Map<number, bellatrix.executionpayload="">()</number,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L28">packages/lodestar/src/executionEngine/mock.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L28">packages/lodestar/src/executionEngine/mock.ts:28</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="executepayload">executePayload<a class="headerlink" href="#executepayload" title="Permanent link">¶</a></h3>
-<p>▸ <strong>executePayload</strong>(<code>executionPayload</code>: bellatrix.ExecutionPayload): <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
-<p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L61">packages/lodestar/src/executionEngine/mock.ts:61</a></em></p>
-<p><code>engine_executePayload</code></p>
-<ol>
-<li>Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.</li>
-<li>Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.</li>
-<li>Client software MUST discard the payload if it's deemed invalid.</li>
-<li>The call MUST be responded with SYNCING status while the sync process is in progress and thus the execution cannot yet be validated.</li>
-<li>In the case when the parent block is unknown, client software MUST pull the block from the network and take one of the following actions depending on the parent block properties:</li>
-<li>If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
-   If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.</li>
-</ol>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>executionPayload</code></td>
-<td>bellatrix.ExecutionPayload</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
-<hr/>
 <h3 id="getpayload">getPayload<a class="headerlink" href="#getpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPayload</strong>(<code>payloadId</code>: <a href="../../modules/executionengine/#payloadid">PayloadId</a>): <em>Promise‹bellatrix.ExecutionPayload›</em></p>
 <p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L134">packages/lodestar/src/executionEngine/mock.ts:134</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L134">packages/lodestar/src/executionEngine/mock.ts:134</a></em></p>
 <p><code>engine_getPayload</code></p>
 <ol>
 <li>Given the payloadId client software MUST respond with the most recent version of the payload that is available in the corresponding building process at the time of receiving the call.</li>
@@ -486,7 +455,7 @@
 <hr/>
 <h3 id="notifyforkchoiceupdate">notifyForkchoiceUpdate<a class="headerlink" href="#notifyforkchoiceupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: Root, <code>finalizedBlockHash</code>: RootHex, <code>payloadAttributes?</code>: <a href="../../modules/executionengine/#payloadattributes">PayloadAttributes</a>): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/mock.ts#L81">packages/lodestar/src/executionEngine/mock.ts:81</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L81">packages/lodestar/src/executionEngine/mock.ts:81</a></em></p>
 <p><code>engine_forkchoiceUpdated</code></p>
 <ol>
 <li>This method call maps on the POS_FORKCHOICE_UPDATED event of EIP-3675 and MUST be processed according to the specification defined in the EIP.</li>
@@ -516,6 +485,37 @@
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a>›</em></p>
+<hr/>
+<h3 id="notifynewpayload">notifyNewPayload<a class="headerlink" href="#notifynewpayload" title="Permanent link">¶</a></h3>
+<p>▸ <strong>notifyNewPayload</strong>(<code>executionPayload</code>: bellatrix.ExecutionPayload): <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
+<p><em>Implementation of <a href="../../interfaces/executionengine.iexecutionengine/">IExecutionEngine</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/mock.ts#L61">packages/lodestar/src/executionEngine/mock.ts:61</a></em></p>
+<p><code>engine_newPayloadV1</code></p>
+<ol>
+<li>Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.</li>
+<li>Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.</li>
+<li>Client software MUST discard the payload if it's deemed invalid.</li>
+<li>The call MUST be responded with SYNCING status while the sync process is in progress and thus the execution cannot yet be validated.</li>
+<li>In the case when the parent block is unknown, client software MUST pull the block from the network and take one of the following actions depending on the parent block properties:</li>
+<li>If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
+   If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.</li>
+</ol>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>executionPayload</code></td>
+<td>bellatrix.ExecutionPayload</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
 </article>
 </div>
 </div>

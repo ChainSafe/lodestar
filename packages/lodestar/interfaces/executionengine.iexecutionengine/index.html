@@ -270,11 +270,6 @@
 <nav aria-label="Methods" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#executepayload">
-    executePayload
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#getpayload">
     getPayload
   </a>
@@ -282,6 +277,11 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#notifyforkchoiceupdate">
     notifyForkchoiceUpdate
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#notifynewpayload">
+    notifyNewPayload
   </a>
 </li>
 </ul>
@@ -316,39 +316,14 @@
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#executepayload">executePayload</a></li>
 <li><a href="./#getpayload">getPayload</a></li>
 <li><a href="./#notifyforkchoiceupdate">notifyForkchoiceUpdate</a></li>
+<li><a href="./#notifynewpayload">notifyNewPayload</a></li>
 </ul>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="executepayload">executePayload<a class="headerlink" href="#executepayload" title="Permanent link">¶</a></h3>
-<p>▸ <strong>executePayload</strong>(<code>executionPayload</code>: bellatrix.ExecutionPayload): <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/interface.ts#L69">packages/lodestar/src/executionEngine/interface.ts:69</a></em></p>
-<p>A state transition function which applies changes to the self.execution_state.
-Returns <code>True</code> iff <code>execution_payload</code> is valid with respect to <code>self.execution_state</code>.</p>
-<p>Required for block processing in the beacon state transition function.
-https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-chain.md#on_payload</p>
-<p>Should be called in advance before, after or in parallel to block processing</p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>executionPayload</code></td>
-<td>bellatrix.ExecutionPayload</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
-<hr/>
 <h3 id="getpayload">getPayload<a class="headerlink" href="#getpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPayload</strong>(<code>payloadId</code>: <a href="../../modules/executionengine/#payloadid">PayloadId</a>): <em>Promise‹bellatrix.ExecutionPayload›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/interface.ts#L96">packages/lodestar/src/executionEngine/interface.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/interface.ts#L108">packages/lodestar/src/executionEngine/interface.ts:108</a></em></p>
 <p>Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
 since the corresponding call to prepare_payload method.</p>
 <p>Required for block producing
@@ -372,7 +347,7 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#ge
 <hr/>
 <h3 id="notifyforkchoiceupdate">notifyForkchoiceUpdate<a class="headerlink" href="#notifyforkchoiceupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: Root | RootHex, <code>finalizedBlockHash</code>: RootHex, <code>payloadAttributes?</code>: <a href="../../modules/executionengine/#payloadattributes">PayloadAttributes</a>): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a> | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/18df0a6/packages/lodestar/src/executionEngine/interface.ts#L83">packages/lodestar/src/executionEngine/interface.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/interface.ts#L95">packages/lodestar/src/executionEngine/interface.ts:95</a></em></p>
 <p>Signal fork choice updates
 This function performs two actions atomically:
 - Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
@@ -405,6 +380,31 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a> | null›</em></p>
+<hr/>
+<h3 id="notifynewpayload">notifyNewPayload<a class="headerlink" href="#notifynewpayload" title="Permanent link">¶</a></h3>
+<p>▸ <strong>notifyNewPayload</strong>(<code>executionPayload</code>: bellatrix.ExecutionPayload): <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67c3c0c/packages/lodestar/src/executionEngine/interface.ts#L81">packages/lodestar/src/executionEngine/interface.ts:81</a></em></p>
+<p>A state transition function which applies changes to the self.execution_state.
+Returns <code>True</code> iff <code>execution_payload</code> is valid with respect to <code>self.execution_state</code>.</p>
+<p>Required for block processing in the beacon state transition function.
+https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-chain.md#on_payload</p>
+<p>Should be called in advance before, after or in parallel to block processing</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>executionPayload</code></td>
+<td>bellatrix.ExecutionPayload</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
 </article>
 </div>
 </div>
