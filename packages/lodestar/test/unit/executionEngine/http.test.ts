@@ -118,17 +118,16 @@ describe("ExecutionEngine / http", () => {
     /**
      *  curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdated","params":[{"headBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174", "finalizedBlockHash":"0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174"}],"id":67}' http://localhost:8545
      */
+    const forkChoiceHeadData = {
+      headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+      finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
+    };
 
     const request = {
       jsonrpc: "2.0",
       method: "engine_forkchoiceUpdatedV1",
-      params: [
-        {
-          headBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          safeBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-          finalizedBlockHash: "0xb084c10440f05f5a23a55d1d7ebcb1b3892935fb56f23cdc9a7f42c348eed174",
-        },
-      ],
+      params: [forkChoiceHeadData, null],
     };
     returnValue = {
       jsonrpc: "2.0",
@@ -136,7 +135,10 @@ describe("ExecutionEngine / http", () => {
       result: {payloadStatus: {status: "VALID", latestValidHash: null, validationError: null}, payloadId: "0x"},
     };
 
-    await executionEngine.notifyForkchoiceUpdate(request.params[0].headBlockHash, request.params[0].finalizedBlockHash);
+    await executionEngine.notifyForkchoiceUpdate(
+      forkChoiceHeadData.headBlockHash,
+      forkChoiceHeadData.finalizedBlockHash
+    );
 
     expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
