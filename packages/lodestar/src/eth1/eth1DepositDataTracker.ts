@@ -83,12 +83,18 @@ export class Eth1DepositDataTracker {
    * Requires internal caches to be updated regularly to return good results
    */
   private async getEth1Data(state: allForks.BeaconState): Promise<phase0.Eth1Data> {
-    const eth1VotesToConsider = await getEth1VotesToConsider(
-      this.config,
-      state,
-      this.eth1DataCache.get.bind(this.eth1DataCache)
-    );
-    return pickEth1Vote(state, eth1VotesToConsider);
+    try {
+      const eth1VotesToConsider = await getEth1VotesToConsider(
+        this.config,
+        state,
+        this.eth1DataCache.get.bind(this.eth1DataCache)
+      );
+      return pickEth1Vote(state, eth1VotesToConsider);
+    } catch (e) {
+      // Note: In case there's a DB issue, don't stop a block proposal. Just vote for current eth1Data
+      this.logger.error("CRITICIAL: Error reading valid votes, voting for current eth1Data", {}, e as Error);
+      return state.eth1Data;
+    }
   }
 
   /**
@@ -99,6 +105,11 @@ export class Eth1DepositDataTracker {
     state: CachedBeaconStateAllForks,
     eth1DataVote: phase0.Eth1Data
   ): Promise<phase0.Deposit[]> {
+    // No new deposits have to be included, continue
+    if (eth1DataVote.depositCount === state.eth1DepositIndex) {
+      return [];
+    }
+
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = allForks.getNewEth1Data(state, eth1DataVote) || state.eth1Data;
     return await getDeposits(state, newEth1Data, this.depositsCache.get.bind(this.depositsCache));
