@@ -11,12 +11,11 @@ import {TreeBacked} from "@chainsafe/ssz";
 import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet";
-import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
 import * as kintsugi from "./kintsugi";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "kintsugi" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "kintsugi"];
+export type NetworkName = "mainnet" | "prater" | "kintsugi" | "dev";
+export const networkNames: NetworkName[] = ["mainnet", "prater", "kintsugi"];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -35,8 +34,6 @@ function getNetworkData(
   switch (network) {
     case "mainnet":
       return mainnet;
-    case "pyrmont":
-      return pyrmont;
     case "prater":
       return prater;
     case "kintsugi":

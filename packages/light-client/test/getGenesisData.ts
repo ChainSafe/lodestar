@@ -11,7 +11,7 @@ import {NetworkName} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable no-console */
 
-const networksInInfura: NetworkName[] = ["mainnet", "prater", "pyrmont"];
+const networksInInfura: NetworkName[] = ["mainnet", "prater"];
 
 async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {

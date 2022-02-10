@@ -19,7 +19,7 @@ export const importCmd: ICliCommand<IImportArgs, ISlashingProtectionArgs & IAcco
 
   examples: [
     {
-      command: "account validator slashing-protection import --network pyrmont --file interchange.json",
+      command: "account validator slashing-protection import --network prater --file interchange.json",
       description: "Import an interchange file to the slashing protection DB",
     },
   ],
