@@ -28,17 +28,15 @@ const defaultReleaseTrack = ReleaseTrack.alpha;
  */
 export function getVersion(): string {
   const gitData: GitData = readLodestarGitData();
-  const semver: string | undefined = gitData.semver;
+  let semver: string | undefined = gitData.semver;
   const numCommits: string | undefined = gitData.numCommits;
   const commitSlice: string | undefined = gitData.commit?.slice(0, 8);
 
-  // Fall back to/assume local package version if git is unavailable
-  if (!semver || semver.includes("N/A")) {
-    return `v${getLocalVersion()} (${ReleaseTrack.npm})`;
-  }
+  // ansible github branch deployment returns no semver
+  semver = semver ?? `v${getLocalVersion()}`;
 
-  // If these values are empty/undefined, we assume tag release.
-  if (!commitSlice || !numCommits || numCommits === "") {
+  // Tag release has numCommits as "0"
+  if (!commitSlice || numCommits === "0") {
     return `${semver} (${defaultReleaseTrack})`;
   }
 
