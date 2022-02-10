@@ -104,7 +104,17 @@ export async function initBeaconState(
     if (!args.weakSubjectivityServerUrl) {
       throw Error(`Must set arg --weakSubjectivityServerUrl for network ${args.network}`);
     }
-    logger.info("Fetching weak subjectivity state", {weakSubjectivityServerUrl: args.weakSubjectivityServerUrl});
+    try {
+      // Validate the weakSubjectivityServerUrl and only log the origin to mask the
+      // username password credentials
+      const wssUrl = new URL(args.weakSubjectivityServerUrl);
+      logger.info("Fetching weak subjectivity state", {
+        weakSubjectivityServerUrl: wssUrl.origin,
+      });
+    } catch (e) {
+      logger.error("Invalid", {weakSubjectivityServerUrl: args.weakSubjectivityServerUrl}, e as Error);
+      throw e;
+    }
 
     const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(
       chainForkConfig,
