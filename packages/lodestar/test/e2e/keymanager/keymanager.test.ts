@@ -56,7 +56,7 @@ describe("keymanager delete and import test", async function () {
       );
 
       keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: 9667, cors: "*", tokenDir: "."},
+        {host: "127.0.0.1", port: 9667, cors: "*", auth: false, tokenDir: "."},
         {config, logger: loggerNodeA, api: keymanagerApi}
       );
 
@@ -64,7 +64,7 @@ describe("keymanager delete and import test", async function () {
 
       const client = getKeymanagerClient(config, new HttpClient({baseUrl: "http://127.0.0.1:9667"}));
       const _keys = await client.listKeys();
-      //console.log(keys);
+      // console.log(_keys);
       await Promise.all(validators.map((v) => v.stop()));
       await bn.close();
     }

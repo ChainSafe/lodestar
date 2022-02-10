@@ -25,8 +25,7 @@ export type RestApiOptions = {
   host: string;
   cors: string;
   port: number;
-  // TODO [DA] make compulsory
-  auth?: boolean;
+  auth: boolean;
   tokenDir?: string;
 };
 
@@ -34,6 +33,7 @@ export const restApiOptionsDefault: RestApiOptions = {
   host: "127.0.0.1",
   port: 9597,
   cors: "*",
+  auth: true,
 };
 
 export interface IRestApiModules {
@@ -58,7 +58,7 @@ export class KeymanagerServer {
       ...restApiOptionsDefault,
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
-    if (optsArg.auth) {
+    if (opts.auth) {
       this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
       // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
       this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
