@@ -1,5 +1,4 @@
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Json} from "@chainsafe/ssz";
@@ -7,22 +6,19 @@ import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
 import {
+  GossipJobQueues,
   GossipType,
   GossipValidatorFn,
   ValidatorFnsByType,
   GossipHandlers,
   GossipHandlerFn,
-  ProcessRpcMessageFn,
-  GossipTopic,
-  ProcessRpcMessageFnsByType,
-  GossipJobQueues,
 } from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
+import {createValidationQueues} from "./queue";
 import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
-import {createProcessRpcMessageQueues} from "./queue";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
@@ -39,30 +35,23 @@ type ValidatorFnModules = {
 export function createValidatorFnsByType(
   gossipHandlers: GossipHandlers,
   modules: ValidatorFnModules & {signal: AbortSignal}
-): ValidatorFnsByType {
-  return mapValues(gossipHandlers, (gossipHandler, type) => {
+): {validatorFnsByType: ValidatorFnsByType; jobQueues: GossipJobQueues} {
+  const gossipValidatorFns = mapValues(gossipHandlers, (gossipHandler, type) => {
     return getGossipValidatorFn(gossipHandler, type, modules);
   });
-}
 
-/**
- * Return ProcessRpcMessageFnsByType for each GossipType, this wraps the parent processRpcMsgFn()
- * (in js-libp2p-gossipsub) in a queue so that we only uncompress, compute message id, deserialize
- * messages when we execute them.
- */
-export function createProcessRpcMessageFnsByType(
-  processRpcMsgFn: ProcessRpcMessageFn,
-  signal: AbortSignal,
-  metrics: IMetrics | null
-): {processRpcMessagesFnByType: ProcessRpcMessageFnsByType; jobQueues: GossipJobQueues} {
-  const jobQueues = createProcessRpcMessageQueues(processRpcMsgFn, signal, metrics);
-  const processRpcMessagesFnByType = mapValues(jobQueues, (jobQueue) => {
-    return async function processRpcMessageFnWithQueue(topic: GossipTopic, message: InMessage) {
-      await jobQueue.push(topic, message);
-    };
-  });
+  const jobQueues = createValidationQueues(gossipValidatorFns, modules.signal, modules.metrics);
 
-  return {processRpcMessagesFnByType, jobQueues};
+  const validatorFnsByType = mapValues(
+    jobQueues,
+    (jobQueue): GossipValidatorFn => {
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg, seenTimestampsMs) {
+        await jobQueue.push(topic, gossipMsg, seenTimestampsMs);
+      };
+    }
+  );
+
+  return {jobQueues, validatorFnsByType};
 }
 
 /**
