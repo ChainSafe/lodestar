@@ -153,7 +153,9 @@ describe("keymanager delete and import test", async function () {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
     await bn.close();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     await keymanagerServerForVC1.close();
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     await keymanagerServerForVC2.close();
     vc1Info.tempDirs.keystoreDir.removeCallback();
     vc1Info.tempDirs.passwordFile.removeCallback();
