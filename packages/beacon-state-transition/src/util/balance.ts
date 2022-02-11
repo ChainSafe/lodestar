@@ -5,7 +5,7 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {EffectiveBalanceIncrements} from "../allForks/util/effectiveBalanceIncrements";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types";
 
 /**

@@ -1,6 +1,6 @@
 import {join} from "node:path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked} from "@chainsafe/ssz";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -23,7 +23,7 @@ export function sanitySlot(fork: ForkName): void {
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/slots/pyspec_tests`),
     (testcase) => {
       const stateTB = (testcase.pre as TreeBacked<allForks.BeaconState>).clone();
-      const state = allForks.createCachedBeaconState(getConfig(fork), stateTB);
+      const state = createCachedBeaconState(getConfig(fork), stateTB);
       const postState = allForks.processSlots(state, state.slot + bnToNum(testcase.slots));
       return postState.type.createTreeBacked(postState.tree);
     },
@@ -49,7 +49,7 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
     join(SPEC_TEST_LOCATION, testPath),
     (testcase) => {
       const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
-      let wrappedState = allForks.createCachedBeaconState(getConfig(fork), stateTB);
+      let wrappedState = createCachedBeaconState(getConfig(fork), stateTB);
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;

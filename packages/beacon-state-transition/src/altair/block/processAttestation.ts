@@ -3,7 +3,6 @@ import {intSqrt} from "@chainsafe/lodestar-utils";
 
 import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
 import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochContext} from "../../types";
-import {CachedEpochParticipation} from "../../allForks/util/cachedEpochParticipation";
 import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
@@ -18,6 +17,7 @@ import {
 } from "@chainsafe/lodestar-params";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
+import {CachedEpochParticipation} from "../../cache/cachedEpochParticipation";
 
 const PROPOSER_REWARD_DOMINATOR = ((WEIGHT_DENOMINATOR - PROPOSER_WEIGHT) * WEIGHT_DENOMINATOR) / PROPOSER_WEIGHT;
 

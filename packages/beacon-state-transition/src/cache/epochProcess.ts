@@ -7,8 +7,9 @@ import {
   ForkName,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
+import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 
-import {isActiveValidator, newZeroedArray} from "../../util";
+import {isActiveValidator, newZeroedArray} from "../util";
 import {
   IAttesterStatus,
   createIAttesterStatus,
@@ -21,21 +22,24 @@ import {
   FLAG_CURR_SOURCE_ATTESTER,
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
-} from "./attesterStatus";
-import {IEpochStakeSummary} from "./epochStakeSummary";
-import {CachedBeaconState} from "./cachedBeaconState";
-import {statusProcessEpoch} from "../../phase0/epoch/processPendingAttestations";
-import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
-import {readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
+} from "../util/attesterStatus";
+import {CachedBeaconState} from "../cache/cachedBeaconState";
+import {statusProcessEpoch} from "../phase0/epoch/processPendingAttestations";
+import {computeBaseRewardPerIncrement} from "../util/syncCommittee";
 
 /**
- * Pre-computed disposable data to process epoch transitions faster at the cost of more memory.
+ * EpochProcess is the parent object of:
+ * - Any data-structures not part of the spec'ed BeaconState
+ * - Necessary to only compute data once
+ * - Only necessary for epoch processing, can be disposed immediatelly
+ * - Not already part of `EpochContext` {@see} {@link EpochContext}
  *
- * The AttesterStatus (and FlatValidator under status.validator) objects and
- * EpochStakeSummary are tracked in the IEpochProcess and made available as additional context in the
- * epoch transition.
+ * EpochProcess speeds up epoch processing as a whole at the cost of more memory temporarily. This is okay since
+ * only epoch process is done at once, limiting the max total memory increase. In summary it helps:
+ * - Only loop state.validators once for all `process_*` fns
+ * - Only loop status array once
  */
-export interface IEpochProcess {
+export type EpochProcess = {
   prevEpoch: Epoch;
   currentEpoch: Epoch;
   /**
@@ -44,7 +48,11 @@ export interface IEpochProcess {
   totalActiveStakeByIncrement: number;
   /** For altair */
   baseRewardPerIncrement: number;
-  prevEpochUnslashedStake: IEpochStakeSummary;
+  prevEpochUnslashedStake: {
+    sourceStakeByIncrement: number;
+    targetStakeByIncrement: number;
+    headStakeByIncrement: number;
+  };
   currEpochUnslashedTargetStakeByIncrement: number;
   /**
    * Indices which will receive the slashing penalty
@@ -130,9 +138,9 @@ export interface IEpochProcess {
    * Used in `processEffectiveBalanceUpdates` to save one loop over validators after epoch process.
    */
   isActiveNextEpoch: boolean[];
-}
+};
 
-export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): IEpochProcess {
+export function beforeProcessEpoch<T extends allForks.BeaconState>(state: CachedBeaconState<T>): EpochProcess {
   const {config, epochCtx} = state;
   const forkName = config.getForkName(state.slot);
   const currentEpoch = epochCtx.currentShuffling.epoch;
@@ -343,7 +351,6 @@ export function beforeProcessEpoch<T extends allForks.BeaconState>(state: Cached
     prevEpoch,
     currentEpoch,
     totalActiveStakeByIncrement,
-
     baseRewardPerIncrement,
     prevEpochUnslashedStake: {
       sourceStakeByIncrement: prevSourceUnslStake,

@@ -14,12 +14,12 @@ import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodesta
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {createEpochContext, EpochContext, EpochContextOpts} from "./epochContext";
+import {EpochContext, EpochContextOpts} from "./epochContext";
 import {BalanceList} from "./balanceList";
 import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./cachedEpochParticipation";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
-import {newFilledArray} from "../../util";
+import {newFilledArray} from "../util/array";
 
 /**
  * `BeaconState` with various caches
@@ -85,7 +85,7 @@ export function createCachedBeaconState<T extends allForks.BeaconState>(
 
   let cachedPreviousParticipation, cachedCurrentParticipation;
   const forkName = config.getForkName(state.slot);
-  const epochCtx = createEpochContext(config, state, opts);
+  const epochCtx = EpochContext.createFromState(config, state, opts);
   let cachedInactivityScores: MutableVector<Number64>;
   if (forkName === ForkName.phase0) {
     // TODO: More efficient way of getting the length?

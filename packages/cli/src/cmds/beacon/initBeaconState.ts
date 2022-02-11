@@ -3,7 +3,12 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  allForks,
+  getLatestBlockRoot,
+  isWithinWeakSubjectivityPeriod,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEth1} from "@chainsafe/lodestar";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
@@ -21,7 +26,7 @@ import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 function getCheckpointFromState(config: IChainForkConfig, state: allForks.BeaconState): Checkpoint {
   return {
     epoch: computeEpochAtSlot(state.latestBlockHeader.slot),
-    root: allForks.getLatestBlockRoot(config, state),
+    root: getLatestBlockRoot(config, state),
   };
 }
 
@@ -54,7 +59,7 @@ async function initAndVerifyWeakSubjectivityState(
     );
   }
 
-  if (!allForks.isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
+  if (!isWithinWeakSubjectivityPeriod(config, anchorState, anchorCheckpoint)) {
     throw new Error("Fetched weak subjectivity checkpoint not within weak subjectivity period.");
   }
 

@@ -1,5 +1,11 @@
 import {itBench} from "@dapplion/benchmark";
-import {allForks, phase0, CachedBeaconStatePhase0, CachedBeaconStateAllForks} from "../../../../src";
+import {
+  phase0,
+  beforeProcessEpoch,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAllForks,
+  EpochProcess,
+} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StateEpoch} from "../../types";
 
@@ -40,10 +46,10 @@ function getProcessSlashingsTestData(
   indicesToSlashLen: number
 ): {
   state: CachedBeaconStateAllForks;
-  epochProcess: allForks.IEpochProcess;
+  epochProcess: EpochProcess;
 } {
   const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
-  const epochProcess = allForks.beforeProcessEpoch(state);
+  const epochProcess = beforeProcessEpoch(state);
 
   epochProcess.indicesToSlash = linspace(indicesToSlashLen);
 

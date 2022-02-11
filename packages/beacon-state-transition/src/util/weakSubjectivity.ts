@@ -9,7 +9,7 @@ import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateAllForks} from "../types";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
@@ -17,7 +17,7 @@ import {
   ZERO_HASH,
   getChurnLimit,
   getCurrentSlot,
-} from "../..";
+} from "..";
 
 export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = BigInt(10);
@@ -48,7 +48,7 @@ export function computeWeakSubjectivityPeriodCachedState(
   const activeValidatorCount = state.currentShuffling.activeIndices.length;
   return computeWeakSubjectivityPeriodFromConstituents(
     activeValidatorCount,
-    state.totalActiveBalanceByIncrement,
+    state.totalActiveBalanceIncrements,
     getChurnLimit(config, activeValidatorCount),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );
@@ -56,20 +56,20 @@ export function computeWeakSubjectivityPeriodCachedState(
 
 /**
  * Same to computeWeakSubjectivityPeriodCachedState but for normal state
- * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceByIncrement manually
+ * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceIncrements manually
  */
 export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: allForks.BeaconState): number {
   const activeIndices = getActiveValidatorIndices(state, getCurrentEpoch(state));
-  let totalActiveBalanceByIncrement = 0;
+  let totalActiveBalanceIncrements = 0;
   for (const index of activeIndices) {
-    totalActiveBalanceByIncrement += Math.floor(state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+    totalActiveBalanceIncrements += Math.floor(state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
-  if (totalActiveBalanceByIncrement <= 1) {
-    totalActiveBalanceByIncrement = 1;
+  if (totalActiveBalanceIncrements <= 1) {
+    totalActiveBalanceIncrements = 1;
   }
   return computeWeakSubjectivityPeriodFromConstituents(
     activeIndices.length,
-    totalActiveBalanceByIncrement,
+    totalActiveBalanceIncrements,
     getChurnLimit(config, activeIndices.length),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );

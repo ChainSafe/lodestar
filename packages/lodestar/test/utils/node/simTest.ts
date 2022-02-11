@@ -3,6 +3,7 @@ import {
   computeStartSlotAtEpoch,
   allForks,
   CachedBeaconStateAllForks,
+  beforeProcessEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
@@ -44,7 +45,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   function logParticipation(state: CachedBeaconStateAllForks): void {
     // Compute participation (takes 5ms with 64 validators)
     // Need a CachedBeaconStateAllForks where (state.slot + 1) % SLOTS_EPOCH == 0
-    const epochProcess = allForks.beforeProcessEpoch(state);
+    const epochProcess = beforeProcessEpoch(state);
     const epoch = computeEpochAtSlot(state.slot);
 
     const prevParticipation =

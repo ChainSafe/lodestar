@@ -10,7 +10,7 @@ export * as phase0 from "./phase0";
 export * as altair from "./altair";
 export * as bellatrix from "./bellatrix";
 export * as allForks from "./allForks";
-export {CachedBeaconState, createCachedBeaconState} from "./allForks/util/cachedBeaconState";
+export {CachedBeaconState, createCachedBeaconState} from "./cache/cachedBeaconState";
 
 export {
   CachedBeaconStatePhase0,
@@ -20,7 +20,8 @@ export {
   CachedBeaconStateAnyFork,
 } from "./types";
 
-export {
-  EffectiveBalanceIncrements,
-  getEffectiveBalanceIncrementsZeroed,
-} from "./allForks/util/effectiveBalanceIncrements";
+export {EpochContext} from "./cache/epochContext";
+export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess";
+export {PubkeyIndexMap, Index2PubkeyCache} from "./cache/pubkeyCache";
+
+export {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "./cache/effectiveBalanceIncrements";

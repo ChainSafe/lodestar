@@ -8,24 +8,20 @@ import {
   ValidatorIndex,
   phase0,
   allForks,
-  Gwei,
   Number64,
   altair,
   SyncPeriod,
 } from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {
-  BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
   PROPOSER_WEIGHT,
   SLOTS_PER_EPOCH,
-  SYNC_COMMITTEE_SIZE,
-  SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {bigIntSqrt, LodestarError} from "@chainsafe/lodestar-utils";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 
 import {
   computeActivationExitEpoch,
@@ -37,11 +33,8 @@ import {
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
   computeSyncPeriodAtEpoch,
-} from "../../util";
-import {computeEpochShuffling, IEpochShuffling} from "./epochShuffling";
-import {computeBaseRewardPerIncrement} from "../../altair/util/misc";
-import {CachedBeaconState} from "./cachedBeaconState";
-import {IEpochProcess} from "./epochProcess";
+} from "../util";
+import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
 import {
@@ -50,20 +43,10 @@ import {
   SyncCommitteeCache,
   SyncCommitteeCacheEmpty,
 } from "./syncCommitteeCache";
+import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee";
 
-export type AttesterDuty = {
-  // Index of validator in validator registry
-  validatorIndex: ValidatorIndex;
-  committeeIndex: CommitteeIndex;
-  // Number of validators in committee
-  committeeLength: Number64;
-  // Number of committees at the provided slot
-  committeesAtSlot: Number64;
-  // Index of validator in committee
-  validatorCommitteeIndex: Number64;
-  // The slot at which the validator must attest.
-  slot: Slot;
-};
+/** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
+export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
 export type EpochContextOpts = {
   pubkey2index?: PubkeyIndexMap;
@@ -73,238 +56,26 @@ export type EpochContextOpts = {
 };
 
 /**
- * Create an epoch cache
- * @param validators cached validators that matches `state.validators`
+ * EpochContext is the parent object of:
+ * - Any data-structures not part of the spec'ed BeaconState
+ * - Necessary to only compute data once
+ * - Must be kept at all times through an epoch
  *
- * SLOW CODE - 🐢
- */
-export function createEpochContext(
-  config: IBeaconConfig,
-  state: allForks.BeaconState,
-  opts?: EpochContextOpts
-): EpochContext {
-  const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
-  const index2pubkey = opts?.index2pubkey || ([] as Index2PubkeyCache);
-  if (!opts?.skipSyncPubkeys) {
-    syncPubkeys(state, pubkey2index, index2pubkey);
-  }
-
-  const currentEpoch = computeEpochAtSlot(state.slot);
-  const previousEpoch = currentEpoch === GENESIS_EPOCH ? GENESIS_EPOCH : currentEpoch - 1;
-  const nextEpoch = currentEpoch + 1;
-
-  let totalActiveBalanceByIncrement = 0;
-  let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
-  let exitQueueChurn = 0;
-
-  const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
-  const validatorCount = validators.length;
-
-  const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
-  const previousActiveIndices: ValidatorIndex[] = [];
-  const currentActiveIndices: ValidatorIndex[] = [];
-  const nextActiveIndices: ValidatorIndex[] = [];
-
-  for (let i = 0; i < validatorCount; i++) {
-    const validator = validators[i];
-
-    // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
-    effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
-
-    if (isActiveValidator(validator, previousEpoch)) {
-      previousActiveIndices.push(i);
-    }
-    if (isActiveValidator(validator, currentEpoch)) {
-      currentActiveIndices.push(i);
-      // We track totalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      totalActiveBalanceByIncrement += effectiveBalanceIncrements[i];
-    }
-    if (isActiveValidator(validator, nextEpoch)) {
-      nextActiveIndices.push(i);
-    }
-
-    const {exitEpoch} = validator;
-    if (exitEpoch !== FAR_FUTURE_EPOCH) {
-      if (exitEpoch > exitQueueEpoch) {
-        exitQueueEpoch = exitEpoch;
-        exitQueueChurn = 1;
-      } else if (exitEpoch === exitQueueEpoch) {
-        exitQueueChurn += 1;
-      }
-    }
-  }
-
-  // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
-  // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
-  if (totalActiveBalanceByIncrement < 1) {
-    totalActiveBalanceByIncrement = 1;
-  } else if (totalActiveBalanceByIncrement >= Number.MAX_SAFE_INTEGER) {
-    throw Error("totalActiveBalanceByIncrement >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
-  }
-
-  const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
-  const previousShuffling =
-    previousEpoch === currentEpoch
-      ? // in case of genesis
-        currentShuffling
-      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
-  const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
-
-  // Allow to create CachedBeaconState for empty states
-  const proposers =
-    state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
-
-  // Only after altair, compute the indices of the current sync committee
-  const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
-
-  const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  const syncParticipantReward = afterAltairFork ? computeSyncParticipantReward(config, totalActiveBalance) : 0;
-  const syncProposerReward = afterAltairFork
-    ? Math.floor((syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT))
-    : 0;
-
-  const baseRewardPerIncrement = afterAltairFork ? computeBaseRewardPerIncrement(totalActiveBalanceByIncrement) : 0;
-
-  let currentSyncCommitteeIndexed: SyncCommitteeCache;
-  let nextSyncCommitteeIndexed: SyncCommitteeCache;
-  // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
-  if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
-    const altairState = state as altair.BeaconState;
-    currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
-    nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
-  } else {
-    currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
-    nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
-  }
-
-  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
-  // active validator indices set changes in size. Validators change active status only when:
-  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
-  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
-  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
-  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
-  // ```
-  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
-  // ```
-  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
-  //
-  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
-  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
-  // transition and the result is valid until the end of the next epoch transition
-  const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
-  if (exitQueueChurn >= churnLimit) {
-    exitQueueEpoch += 1;
-    exitQueueChurn = 0;
-  }
-
-  return new EpochContext({
-    config,
-    pubkey2index,
-    index2pubkey,
-    proposers,
-    previousShuffling,
-    currentShuffling,
-    nextShuffling,
-    effectiveBalanceIncrements,
-    syncParticipantReward,
-    syncProposerReward,
-    baseRewardPerIncrement,
-    totalActiveBalanceByIncrement,
-    churnLimit,
-    exitQueueEpoch,
-    exitQueueChurn,
-    currentSyncCommitteeIndexed,
-    nextSyncCommitteeIndexed,
-    epoch: currentEpoch,
-    syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-  });
-}
-
-/**
- * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
- */
-export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): number {
-  // TODO: manage totalActiveBalance in eth
-  const totalActiveIncrements = Number(totalActiveBalance / BigInt(EFFECTIVE_BALANCE_INCREMENT));
-  const baseRewardPerIncrement = Math.floor(
-    (EFFECTIVE_BALANCE_INCREMENT * BASE_REWARD_FACTOR) / Number(bigIntSqrt(totalActiveBalance))
-  );
-  const totalBaseRewards = baseRewardPerIncrement * totalActiveIncrements;
-  const maxParticipantRewards = Math.floor(
-    Math.floor((totalBaseRewards * SYNC_REWARD_WEIGHT) / WEIGHT_DENOMINATOR) / SLOTS_PER_EPOCH
-  );
-  return Math.floor(maxParticipantRewards / SYNC_COMMITTEE_SIZE);
-}
-
-/**
- * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
- * new epoch.
- */
-export function afterProcessEpoch(state: CachedBeaconState<allForks.BeaconState>, epochProcess: IEpochProcess): void {
-  const {epochCtx} = state;
-  epochCtx.previousShuffling = epochCtx.currentShuffling;
-  epochCtx.currentShuffling = epochCtx.nextShuffling;
-  const currEpoch = epochCtx.currentShuffling.epoch;
-  const nextEpoch = currEpoch + 1;
-  epochCtx.nextShuffling = computeEpochShuffling(
-    state,
-    epochProcess.nextEpochShufflingActiveValidatorIndices,
-    nextEpoch
-  );
-  epochCtx.proposers = computeProposers(state, epochCtx.currentShuffling, epochCtx.effectiveBalanceIncrements);
-
-  // TODO: DEDUPLICATE from createEpochContext
-  //
-  // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
-  // active validator indices set changes in size. Validators change active status only when:
-  // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
-  //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
-  // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
-  //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
-  // ```
-  // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
-  // ```
-  // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
-  //
-  // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
-  // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
-  // transition and the result is valid until the end of the next epoch transition
-  epochCtx.churnLimit = getChurnLimit(epochCtx.config, epochCtx.currentShuffling.activeIndices.length);
-
-  // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
-  const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
-  if (exitQueueEpoch > epochCtx.exitQueueEpoch) {
-    epochCtx.exitQueueEpoch = exitQueueEpoch;
-    epochCtx.exitQueueChurn = 0;
-  }
-  const totalActiveBalanceByIncrement = epochProcess.nextEpochTotalActiveBalanceByIncrement;
-  epochCtx.totalActiveBalanceByIncrement = totalActiveBalanceByIncrement;
-  if (currEpoch >= epochCtx.config.ALTAIR_FORK_EPOCH) {
-    const totalActiveBalance = BigInt(totalActiveBalanceByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-    epochCtx.syncParticipantReward = computeSyncParticipantReward(epochCtx.config, totalActiveBalance);
-    epochCtx.syncProposerReward = Math.floor(
-      (epochCtx.syncParticipantReward * PROPOSER_WEIGHT) / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)
-    );
-
-    epochCtx.baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceByIncrement);
-  }
-
-  // Advance epochCtx time units
-  // state.slot is advanced right before calling this function
-  // ```
-  // postState.slot++;
-  // afterProcessEpoch(postState, epochProcess);
-  // ```
-  epochCtx.afterEpochTransitionSetTime(state.slot);
-}
-
-/**
- * Cached persisted data constant through an epoch attached to a state:
+ * The performance gains with EpochContext are fundamental for the BeaconNode to be able to participate in a
+ * production network with 100_000s of validators. In summary, it contains:
+ *
+ * Expensive data constant through the epoch:
  * - pubkey cache
  * - proposer indexes
  * - shufflings
- *
- * This data is used for faster processing of the beacon-state-transition-function plus gossip and API validation.
+ * - sync committee indexed
+ * Counters (maybe) mutated through the epoch:
+ * - churnLimit
+ * - exitQueueEpoch
+ * - exitQueueChurn
+ * Time data faster than recomputing from the state:
+ * - epoch
+ * - syncPeriod
  **/
 export class EpochContext {
   config: IBeaconConfig;
@@ -356,7 +127,7 @@ export class EpochContext {
   /**
    * Total active balance for current epoch, to be used instead of getTotalBalance()
    */
-  totalActiveBalanceByIncrement: number;
+  totalActiveBalanceIncrements: number;
 
   /**
    * Rate at which validators can enter or leave the set per epoch. Depends only on activeIndexes, so it does not
@@ -406,7 +177,7 @@ export class EpochContext {
     syncParticipantReward: number;
     syncProposerReward: number;
     baseRewardPerIncrement: number;
-    totalActiveBalanceByIncrement: number;
+    totalActiveBalanceIncrements: number;
     churnLimit: number;
     exitQueueEpoch: Epoch;
     exitQueueChurn: number;
@@ -426,7 +197,7 @@ export class EpochContext {
     this.syncParticipantReward = data.syncParticipantReward;
     this.syncProposerReward = data.syncProposerReward;
     this.baseRewardPerIncrement = data.baseRewardPerIncrement;
-    this.totalActiveBalanceByIncrement = data.totalActiveBalanceByIncrement;
+    this.totalActiveBalanceIncrements = data.totalActiveBalanceIncrements;
     this.churnLimit = data.churnLimit;
     this.exitQueueEpoch = data.exitQueueEpoch;
     this.exitQueueChurn = data.exitQueueChurn;
@@ -434,6 +205,147 @@ export class EpochContext {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
+  }
+
+  /**
+   * Create an epoch cache
+   * @param validators cached validators that matches `state.validators`
+   *
+   * SLOW CODE - 🐢
+   */
+  static createFromState(config: IBeaconConfig, state: allForks.BeaconState, opts?: EpochContextOpts): EpochContext {
+    const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
+    const index2pubkey = opts?.index2pubkey || ([] as Index2PubkeyCache);
+    if (!opts?.skipSyncPubkeys) {
+      syncPubkeys(state, pubkey2index, index2pubkey);
+    }
+
+    const currentEpoch = computeEpochAtSlot(state.slot);
+    const isGenesis = currentEpoch === GENESIS_EPOCH;
+    const previousEpoch = isGenesis ? GENESIS_EPOCH : currentEpoch - 1;
+    const nextEpoch = currentEpoch + 1;
+
+    let totalActiveBalanceIncrements = 0;
+    let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
+    let exitQueueChurn = 0;
+
+    const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+    const validatorCount = validators.length;
+
+    const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
+    const previousActiveIndices: ValidatorIndex[] = [];
+    const currentActiveIndices: ValidatorIndex[] = [];
+    const nextActiveIndices: ValidatorIndex[] = [];
+
+    for (let i = 0; i < validatorCount; i++) {
+      const validator = validators[i];
+
+      // Note: Not usable for fork-choice balances since in-active validators are not zero'ed
+      effectiveBalanceIncrements[i] = Math.floor(validator.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+
+      if (isActiveValidator(validator, previousEpoch)) {
+        previousActiveIndices.push(i);
+      }
+      if (isActiveValidator(validator, currentEpoch)) {
+        currentActiveIndices.push(i);
+        // We track totalActiveBalanceIncrements as ETH to fit total network balance in a JS number (53 bits)
+        totalActiveBalanceIncrements += effectiveBalanceIncrements[i];
+      }
+      if (isActiveValidator(validator, nextEpoch)) {
+        nextActiveIndices.push(i);
+      }
+
+      const {exitEpoch} = validator;
+      if (exitEpoch !== FAR_FUTURE_EPOCH) {
+        if (exitEpoch > exitQueueEpoch) {
+          exitQueueEpoch = exitEpoch;
+          exitQueueChurn = 1;
+        } else if (exitEpoch === exitQueueEpoch) {
+          exitQueueChurn += 1;
+        }
+      }
+    }
+
+    // Spec: `EFFECTIVE_BALANCE_INCREMENT` Gwei minimum to avoid divisions by zero
+    // 1 = 1 unit of EFFECTIVE_BALANCE_INCREMENT
+    if (totalActiveBalanceIncrements < 1) {
+      totalActiveBalanceIncrements = 1;
+    } else if (totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER) {
+      throw Error("totalActiveBalanceIncrements >= Number.MAX_SAFE_INTEGER. MAX_EFFECTIVE_BALANCE is too low.");
+    }
+
+    const currentShuffling = computeEpochShuffling(state, currentActiveIndices, currentEpoch);
+    const previousShuffling = isGenesis
+      ? currentShuffling
+      : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
+    const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
+
+    // Allow to create CachedBeaconState for empty states
+    const proposers =
+      state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
+
+    // Only after altair, compute the indices of the current sync committee
+    const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
+
+    // Values syncParticipantReward, syncProposerReward, baseRewardPerIncrement are only used after altair.
+    // However, since they are very cheap to compute they are computed always to simplify upgradeState function.
+    const syncParticipantReward = computeSyncParticipantReward(totalActiveBalanceIncrements);
+    const syncProposerReward = Math.floor(syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
+    const baseRewardPerIncrement = computeBaseRewardPerIncrement(totalActiveBalanceIncrements);
+
+    let currentSyncCommitteeIndexed: SyncCommitteeCache;
+    let nextSyncCommitteeIndexed: SyncCommitteeCache;
+    // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
+    if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
+      const altairState = state as altair.BeaconState;
+      currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
+      nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
+    } else {
+      currentSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
+      nextSyncCommitteeIndexed = new SyncCommitteeCacheEmpty();
+    }
+
+    // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+    // active validator indices set changes in size. Validators change active status only when:
+    // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+    //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+    // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+    //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+    // ```
+    // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+    // ```
+    // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+    //
+    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+    // transition and the result is valid until the end of the next epoch transition
+    const churnLimit = getChurnLimit(config, currentShuffling.activeIndices.length);
+    if (exitQueueChurn >= churnLimit) {
+      exitQueueEpoch += 1;
+      exitQueueChurn = 0;
+    }
+
+    return new EpochContext({
+      config,
+      pubkey2index,
+      index2pubkey,
+      proposers,
+      previousShuffling,
+      currentShuffling,
+      nextShuffling,
+      effectiveBalanceIncrements,
+      syncParticipantReward,
+      syncProposerReward,
+      baseRewardPerIncrement,
+      totalActiveBalanceIncrements: totalActiveBalanceIncrements,
+      churnLimit,
+      exitQueueEpoch,
+      exitQueueChurn,
+      currentSyncCommitteeIndexed,
+      nextSyncCommitteeIndexed,
+      epoch: currentEpoch,
+      syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
+    });
   }
 
   /**
@@ -460,7 +372,7 @@ export class EpochContext {
       syncParticipantReward: this.syncParticipantReward,
       syncProposerReward: this.syncProposerReward,
       baseRewardPerIncrement: this.baseRewardPerIncrement,
-      totalActiveBalanceByIncrement: this.totalActiveBalanceByIncrement,
+      totalActiveBalanceIncrements: this.totalActiveBalanceIncrements,
       churnLimit: this.churnLimit,
       exitQueueEpoch: this.exitQueueEpoch,
       exitQueueChurn: this.exitQueueChurn,
@@ -471,16 +383,69 @@ export class EpochContext {
     });
   }
 
+  /**
+   * Called to re-use information, such as the shuffling of the next epoch, after transitioning into a
+   * new epoch.
+   */
+  afterProcessEpoch(
+    state: allForks.BeaconState,
+    epochProcess: {
+      nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
+      nextEpochTotalActiveBalanceByIncrement: number;
+    }
+  ): void {
+    this.previousShuffling = this.currentShuffling;
+    this.currentShuffling = this.nextShuffling;
+    const currEpoch = this.currentShuffling.epoch;
+    const nextEpoch = currEpoch + 1;
+    this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
+    this.proposers = computeProposers(state, this.currentShuffling, this.effectiveBalanceIncrements);
+
+    // TODO: DEDUPLICATE from createEpochContext
+    //
+    // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
+    // active validator indices set changes in size. Validators change active status only when:
+    // - validator.activation_epoch is set. Only changes in process_registry_updates() if validator can be activated. If
+    //   the value changes it will be set to `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+    // - validator.exit_epoch is set. Only changes in initiate_validator_exit() if validator exits. If the value changes,
+    //   it will be set to at least `epoch + 1 + MAX_SEED_LOOKAHEAD`.
+    // ```
+    // is_active_validator = validator.activation_epoch <= epoch < validator.exit_epoch
+    // ```
+    // So the returned value of is_active_validator(epoch) is guaranteed to not change during `MAX_SEED_LOOKAHEAD` epochs.
+    //
+    // activeIndices size is dependant on the state epoch. The epoch is advanced after running the epoch transition, and
+    // the first block of the epoch process_block() call. So churnLimit must be computed at the end of the before epoch
+    // transition and the result is valid until the end of the next epoch transition
+    this.churnLimit = getChurnLimit(this.config, this.currentShuffling.activeIndices.length);
+
+    // Maybe advance exitQueueEpoch at the end of the epoch if there haven't been any exists for a while
+    const exitQueueEpoch = computeActivationExitEpoch(currEpoch);
+    if (exitQueueEpoch > this.exitQueueEpoch) {
+      this.exitQueueEpoch = exitQueueEpoch;
+      this.exitQueueChurn = 0;
+    }
+
+    this.totalActiveBalanceIncrements = epochProcess.nextEpochTotalActiveBalanceByIncrement;
+    if (currEpoch >= this.config.ALTAIR_FORK_EPOCH) {
+      this.syncParticipantReward = computeSyncParticipantReward(this.totalActiveBalanceIncrements);
+      this.syncProposerReward = Math.floor(this.syncParticipantReward * PROPOSER_WEIGHT_FACTOR);
+      this.baseRewardPerIncrement = computeBaseRewardPerIncrement(this.totalActiveBalanceIncrements);
+    }
+
+    // Advance time units
+    // state.slot is advanced right before calling this function
+    // ```
+    // postState.slot++;
+    // afterProcessEpoch(postState, epochProcess);
+    // ```
+    this.epoch = computeEpochAtSlot(state.slot);
+    this.syncPeriod = computeSyncPeriodAtEpoch(this.epoch);
+  }
+
   beforeEpochTransition(): void {
     // Clone before being mutated in processEffectiveBalanceUpdates
     this.effectiveBalanceIncrements = this.effectiveBalanceIncrements.slice(0);
-  }
-
-  /** After advancing the state slot, advance the time units of its cache */
-  afterEpochTransitionSetTime(stateSlot: Slot): void {
-    const stateEpoch = computeEpochAtSlot(stateSlot);
-    this.epoch = stateEpoch;
-    this.syncPeriod = computeSyncPeriodAtEpoch(stateEpoch);
   }
 
   /**
@@ -670,6 +635,16 @@ export class EpochContext {
     this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
   }
 }
+
+// Copied from lodestar-api package to avoid depending on the package
+type AttesterDuty = {
+  validatorIndex: ValidatorIndex;
+  committeeIndex: CommitteeIndex;
+  committeeLength: Number64;
+  committeesAtSlot: Number64;
+  validatorCommitteeIndex: Number64;
+  slot: Slot;
+};
 
 export enum EpochContextErrorCode {
   COMMITTEE_INDEX_OUT_OF_RANGE = "EPOCH_CONTEXT_ERROR_COMMITTEE_INDEX_OUT_OF_RANGE",

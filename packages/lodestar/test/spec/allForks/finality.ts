@@ -1,6 +1,11 @@
 import {join} from "node:path";
 import {TreeBacked} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  allForks,
+  altair,
+  createCachedBeaconState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
@@ -17,7 +22,7 @@ export function finality(fork: ForkName): void {
     `${ACTIVE_PRESET}/${fork}/finality/finality`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/finality/finality/pyspec_tests`),
     (testcase) => {
-      let wrappedState = allForks.createCachedBeaconState(
+      let wrappedState = createCachedBeaconState(
         getConfig(fork),
         testcase.pre as TreeBacked<allForks.BeaconState>
       ) as CachedBeaconStateAllForks;

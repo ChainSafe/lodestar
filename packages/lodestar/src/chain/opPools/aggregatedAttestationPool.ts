@@ -7,7 +7,6 @@ import {
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
 import {Epoch, ParticipationFlags, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -194,11 +193,10 @@ export class AggregatedAttestationPool {
   private getParticipationPhase0(state: CachedBeaconStateAllForks): GetParticipationFn {
     // check for phase0 block already
     const phase0State = state as CachedBeaconStatePhase0;
-    const {epochCtx} = phase0State;
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, epochCtx);
-    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, epochCtx);
+    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, state);
+    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, state);
 
     return (epoch: Epoch) => {
       return epoch === stateEpoch
@@ -354,8 +352,9 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
 
 export function extractParticipation(
   attestations: List<phase0.PendingAttestation>,
-  epochCtx: allForks.EpochContext
+  state: CachedBeaconStateAllForks
 ): Set<ValidatorIndex> {
+  const {epochCtx} = state;
   const allParticipants = new Set<ValidatorIndex>();
   for (const att of readonlyValues(attestations)) {
     const aggregationBits = att.aggregationBits;

@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 import {aggregatePublicKeys} from "@chainsafe/bls";
-import {getNextSyncCommitteeIndices} from "../util/syncCommittee";
 import {CachedBeaconStateAltair} from "../../types";
+import {getNextSyncCommitteeIndices} from "../../util/seed";
 
 /**
  * Rotate nextSyncCommittee to currentSyncCommittee if sync committee period is over.
