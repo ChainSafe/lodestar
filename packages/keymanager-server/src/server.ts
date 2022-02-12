@@ -2,14 +2,14 @@ import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import querystring from "querystring";
-import {IncomingMessage} from "http";
+import {IncomingMessage} from "node:http";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
 import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {SecretKey} from "@chainsafe/bls";
-import crypto from "crypto";
+import crypto from "node:crypto";
 import {unlink, writeFile} from "fs/promises";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 

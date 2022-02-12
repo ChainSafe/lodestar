@@ -6,7 +6,7 @@ import {Root} from "@chainsafe/lodestar-types";
 import {SecretKeyInfo} from "../../src";
 import Sinon from "sinon";
 import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
-import fs from "fs";
+import fs from "node:fs";
 import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {IInterchangeV5} from "@chainsafe/lodestar-validator/src/slashingProtection/interchange/formats/v5";
 import {Keystore} from "@chainsafe/bls-keystore";

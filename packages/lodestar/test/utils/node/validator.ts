@@ -1,5 +1,5 @@
 import tmp, {DirResult, FileResult} from "tmp";
-import fs from "fs";
+import fs from "node:fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SlashingProtection, Validator, Signer, SignerType, ISlashingProtection} from "@chainsafe/lodestar-validator";
