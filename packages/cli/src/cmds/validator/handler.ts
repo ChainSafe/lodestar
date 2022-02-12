@@ -10,8 +10,8 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
-import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {KeymanagerServer, KeymanagerApi, SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server";
+import {SignerType, Signer, SlashingProtection, Validator, SecretKeyInfo} from "@chainsafe/lodestar-validator";
+import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 
 /**
  * Runs a validator client.
@@ -42,8 +42,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   let secretKeysInfo: SecretKeyInfo[] = [];
 
   // Read remote keys
-  // TODO [DA] why not check args.externalSignerPublicKeys.length?
-  // this will prevent having to do some parsing to determine if externalSigners are provided
   const externalSigners = await getExternalSigners(args);
   if (externalSigners.length > 0) {
     logger.info(`Using ${externalSigners.length} external keys`);
@@ -99,7 +97,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const slashingProtection = new SlashingProtection(dbOps);
   const importKeystoresPath = args.importKeystoresPath;
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, signers, secretKeysInfo, graffiti, importKeystoresPath},
+    {dbOps, slashingProtection, api, logger, signers, secretKeysInfo, graffiti},
     controller.signal
   );
 

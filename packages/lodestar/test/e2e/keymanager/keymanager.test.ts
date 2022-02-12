@@ -105,11 +105,13 @@ describe("keymanager delete and import test", async function () {
     // 1.b. CONFIRM PRESENCE OF KEYS VIA FILE SYSTEM
 
     // confirm keystore for k1 exist on file
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
     const keystoreFile1 = vc1Info.secretKeysInfo[0].keystorePath;
     expect(fs.existsSync(keystoreFile1 as string)).to.be.true;
     expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, key1)).to.be.true;
     expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, key2)).to.be.false;
     // confirm keystore for k2 exist on file
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
     const keystoreFile2 = vc1Info.secretKeysInfo[0].keystorePath;
     expect(fs.existsSync(keystoreFile2 as string)).to.be.true;
     expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, key2)).to.be.true;

@@ -8,18 +8,10 @@ import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {SecretKey} from "@chainsafe/bls";
 import crypto from "node:crypto";
 import {unlink, writeFile} from "fs/promises";
+import {toHexString} from "@chainsafe/ssz";
 export {allNamespaces} from "@chainsafe/lodestar-api";
-
-// TODO [DA] move to a better location
-// Improve the modelling of the type to prevent secretKey.secretKey usage
-export type SecretKeyInfo = {
-  secretKey: SecretKey;
-  keystorePath?: string;
-  unlockSecretKeys?: () => void;
-};
 
 export type RestApiOptions = {
   host: string;
@@ -60,8 +52,7 @@ export class KeymanagerServer {
     };
     if (opts.auth) {
       this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
-      // TODO [DA] I noticed we use some function to generate hex. see if you need to use that here
-      this.bearerToken = `api-token-${crypto.randomBytes(32).toString("hex")}`;
+      this.bearerToken = `api-token-${toHexString(crypto.randomBytes(32))}`;
 
       const initToken = async (): Promise<void> => {
         await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});

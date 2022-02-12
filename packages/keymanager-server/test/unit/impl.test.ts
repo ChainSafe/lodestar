@@ -1,9 +1,8 @@
 import {assert} from "chai";
 import sinon from "sinon";
 import {KeymanagerApi} from "../../src";
-import {Interchange, Validator, ValidatorStore} from "@chainsafe/lodestar-validator";
+import {Interchange, Validator, ValidatorStore, SecretKeyInfo} from "@chainsafe/lodestar-validator";
 import {Root} from "@chainsafe/lodestar-types";
-import {SecretKeyInfo} from "../../src";
 import Sinon from "sinon";
 import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
 import fs from "node:fs";

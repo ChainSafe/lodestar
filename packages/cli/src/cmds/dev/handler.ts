@@ -159,7 +159,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
       api,
       logger: logger.child({module: "vali"}),
       signers,
-      importKeystoresPath, // TODO [DA] is this still needed?
     });
 
     // Start keymanager API backend

@@ -13,7 +13,7 @@ import {SignerType} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
-import {SecretKeyInfo} from "./index";
+import {SecretKeyInfo} from "@chainsafe/lodestar-validator";
 import lockfile from "lockfile";
 
 export const LOCK_FILE_EXT = ".lock";

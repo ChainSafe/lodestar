@@ -25,7 +25,6 @@ import {AttestationDutiesService} from "./services/attestationDuties";
 import {SyncCommitteeDutiesService} from "./services/syncCommitteeDuties";
 import {PubkeyHex} from "./types";
 
-// TODO [DA] this is duplicated also in @chainsafe/lodestar-keymanager-server. Improve?
 export type SecretKeyInfo = {
   secretKey: SecretKey;
   keystorePath?: string;
@@ -40,7 +39,6 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   secretKeysInfo?: SecretKeyInfo[];
-  importKeystoresPath?: string[];
   logger: ILogger;
   graffiti?: string;
 };
