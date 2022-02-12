@@ -1,4 +1,4 @@
-import {Epoch, RootHex, Slot, ssz} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
 import {
   jsonType,
@@ -9,7 +9,6 @@ import {
   RoutesData,
   sameType,
   Schema,
-  StringType,
   ArrayOf,
 } from "../utils";
 

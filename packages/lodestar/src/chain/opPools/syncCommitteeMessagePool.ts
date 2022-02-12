@@ -1,7 +1,7 @@
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair, Root, Slot, SubCommitteeIndex} from "@chainsafe/lodestar-types";
+import {altair, Root, Slot, SubcommitteeIndex} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
@@ -26,7 +26,7 @@ type ContributionFast = Omit<altair.SyncCommitteeContribution, "aggregationBits"
 
 /** Hex string of `contribution.beaconBlockRoot` */
 type BlockRootHex = string;
-type Subnet = SubCommitteeIndex;
+type Subnet = SubcommitteeIndex;
 
 /**
  * Preaggregate SyncCommitteeMessage into SyncCommitteeContribution
@@ -35,7 +35,7 @@ type Subnet = SubCommitteeIndex;
  */
 export class SyncCommitteeMessagePool {
   /**
-   * Each array item is respective to a subCommitteeIndex.
+   * Each array item is respective to a subcommitteeIndex.
    * Preaggregate into SyncCommitteeContribution.
    * */
   private readonly contributionsByRootBySubnetBySlot = new MapDef<
@@ -44,8 +44,8 @@ export class SyncCommitteeMessagePool {
   >(() => new MapDef<Subnet, Map<BlockRootHex, ContributionFast>>(() => new Map<BlockRootHex, ContributionFast>()));
   private lowestPermissibleSlot = 0;
 
-  // TODO: indexInSubCommittee: number should be indicesInSyncCommittee
-  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubCommittee: number): InsertOutcome {
+  // TODO: indexInSubcommittee: number should be indicesInSyncCommittee
+  add(subnet: Subnet, signature: altair.SyncCommitteeMessage, indexInSubcommittee: number): InsertOutcome {
     const {slot, beaconBlockRoot} = signature;
     const rootHex = toHexString(beaconBlockRoot);
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
@@ -65,10 +65,10 @@ export class SyncCommitteeMessagePool {
     const contribution = contributionsByRoot.get(rootHex);
     if (contribution) {
       // Aggregate mutating
-      return aggregateSignatureInto(contribution, signature, indexInSubCommittee);
+      return aggregateSignatureInto(contribution, signature, indexInSubcommittee);
     } else {
       // Create new aggregate
-      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubCommittee));
+      contributionsByRoot.set(rootHex, signatureToAggregate(subnet, signature, indexInSubcommittee));
       return InsertOutcome.NewData;
     }
   }
@@ -76,7 +76,7 @@ export class SyncCommitteeMessagePool {
   /**
    * This is for the aggregator to produce ContributionAndProof.
    */
-  getContribution(subnet: SubCommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
+  getContribution(subnet: SubcommitteeIndex, slot: Slot, prevBlockRoot: Root): altair.SyncCommitteeContribution | null {
     const contribution = this.contributionsByRootBySubnetBySlot.get(slot)?.get(subnet)?.get(toHexString(prevBlockRoot));
     if (!contribution) {
       return null;
@@ -105,13 +105,13 @@ export class SyncCommitteeMessagePool {
 function aggregateSignatureInto(
   contribution: ContributionFast,
   signature: altair.SyncCommitteeMessage,
-  indexInSubCommittee: number
+  indexInSubcommittee: number
 ): InsertOutcome {
-  if (contribution.aggregationBits[indexInSubCommittee] === true) {
+  if (contribution.aggregationBits[indexInSubcommittee] === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
-  contribution.aggregationBits[indexInSubCommittee] = true;
+  contribution.aggregationBits[indexInSubcommittee] = true;
 
   contribution.signature = Signature.aggregate([
     contribution.signature,
@@ -126,16 +126,16 @@ function aggregateSignatureInto(
 function signatureToAggregate(
   subnet: number,
   signature: altair.SyncCommitteeMessage,
-  indexInSubCommittee: number
+  indexInSubcommittee: number
 ): ContributionFast {
   const indexesPerSubnet = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
   const aggregationBits = newFilledArray(indexesPerSubnet, false);
-  aggregationBits[indexInSubCommittee] = true;
+  aggregationBits[indexInSubcommittee] = true;
 
   return {
     slot: signature.slot,
     beaconBlockRoot: signature.beaconBlockRoot,
-    subCommitteeIndex: subnet,
+    subcommitteeIndex: subnet,
     aggregationBits,
     signature: bls.Signature.fromBytes(signature.signature.valueOf() as Uint8Array, undefined, true),
   };

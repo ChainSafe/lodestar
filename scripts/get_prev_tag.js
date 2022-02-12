@@ -11,8 +11,8 @@
 //
 // Outputs to output.prev_tag
 
-const {exec} = require("child_process");
-const {promisify} = require("util");
+const {exec} = require("node:child_process");
+const {promisify} = require("node:util");
 
 async function run() {
   const {CURRENT_TAG, IGNORE_PATTERN} = process.env;

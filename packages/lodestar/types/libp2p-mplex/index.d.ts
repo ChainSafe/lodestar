@@ -3,7 +3,7 @@
 // Definitions by: Jaco Greeff <https://github.com/jacogr>
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 
-declare module 'libp2p-mplex' {
+declare module "libp2p-mplex" {
   const mplex: import("libp2p-interfaces/src/stream-muxer/types").MuxerFactory;
   export default mplex;
 }

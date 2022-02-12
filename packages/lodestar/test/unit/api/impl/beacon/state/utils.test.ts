@@ -1,21 +1,16 @@
-import {computeStartSlotAtEpoch, phase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon from "sinon";
-import {
-  getEpochBeaconCommittees,
-  resolveStateId,
-  getValidatorStatus,
-} from "../../../../../../src/api/impl/beacon/state/utils";
+import {resolveStateId, getValidatorStatus} from "../../../../../../src/api/impl/beacon/state/utils";
 import {IBeaconChain} from "../../../../../../src/chain";
 import {PERSIST_STATE_EVERY_EPOCHS} from "../../../../../../src/chain/archiver/archiveStates";
 import {generateProtoBlock} from "../../../../../utils/block";
 import {generateCachedState, generateState} from "../../../../../utils/state";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
-import {generateValidators} from "../../../../../utils/validator";
 
 use(chaiAsPromised);
 
@@ -219,32 +214,6 @@ describe("beacon state api utils", function () {
       } catch (error) {
         expect(error).to.have.property("message", "ValidatorStatus unknown");
       }
-    });
-  });
-
-  describe("getEpochBeaconCommittees", function () {
-    it("current epoch with epoch context", function () {
-      const state = generateCachedState({}, config);
-      state.slot = computeStartSlotAtEpoch(1);
-      const committees = getEpochBeaconCommittees(state, 1);
-      expect(committees).to.be.deep.equal(state.currentShuffling.committees);
-    });
-
-    it("previous epoch with epoch context", function () {
-      const state = generateCachedState({}, config);
-      state.slot = computeStartSlotAtEpoch(2);
-      const committees = getEpochBeaconCommittees(state, 1);
-      expect(committees).to.be.deep.equal(state.previousShuffling.committees);
-    });
-
-    it("old/new epoch with epoch context", function () {
-      const state = generateCachedState(
-        {validators: generateValidators(24, {activationEpoch: 0, exitEpoch: 10})},
-        config
-      );
-      state.slot = computeStartSlotAtEpoch(3);
-      const committees = getEpochBeaconCommittees(state, 1);
-      expect(committees[0][0][0]).to.not.be.undefined;
     });
   });
 });

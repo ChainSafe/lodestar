@@ -16,13 +16,13 @@ import {
 export async function validateSyncCommitteeGossipContributionAndProof(
   chain: IBeaconChain,
   signedContributionAndProof: altair.SignedContributionAndProof
-): Promise<void> {
+): Promise<{syncCommitteeParticipants: number}> {
   const contributionAndProof = signedContributionAndProof.message;
   const {contribution, aggregatorIndex} = contributionAndProof;
-  const {subCommitteeIndex, slot} = contribution;
+  const {subcommitteeIndex, slot} = contribution;
 
   const headState = chain.getHeadState();
-  validateGossipSyncCommitteeExceptSig(chain, headState, subCommitteeIndex, {
+  validateGossipSyncCommitteeExceptSig(chain, headState, subcommitteeIndex, {
     slot,
     validatorIndex: contributionAndProof.aggregatorIndex,
   });
@@ -37,7 +37,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
 
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
-  if (chain.seenContributionAndProof.isKnown(slot, subCommitteeIndex, aggregatorIndex)) {
+  if (chain.seenContributionAndProof.isKnown(slot, subcommitteeIndex, aggregatorIndex)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
     });
@@ -84,5 +84,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   }
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
-  chain.seenContributionAndProof.add(slot, subCommitteeIndex, aggregatorIndex);
+  chain.seenContributionAndProof.add(slot, subcommitteeIndex, aggregatorIndex);
+
+  return {syncCommitteeParticipants: pubkeys.length};
 }

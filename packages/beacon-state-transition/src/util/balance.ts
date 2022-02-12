@@ -5,6 +5,7 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types";
 
 /**
@@ -54,23 +55,26 @@ export function decreaseBalance(
  * This is consumed by forkchoice which based on delta so we return "by increment" (in ether) value,
  * ie [30, 31, 32] instead of [30e9, 31e9, 32e9]
  */
-export function getEffectiveBalances(justifiedState: CachedBeaconStateAllForks): number[] {
+export function getEffectiveBalanceIncrementsZeroInactive(
+  justifiedState: CachedBeaconStateAllForks
+): EffectiveBalanceIncrements {
   const {activeIndices} = justifiedState.currentShuffling;
   // 5x faster than using readonlyValuesListOfLeafNodeStruct
-  const count = justifiedState.validators.length;
-  const {effectiveBalances} = justifiedState;
-  const effectiveBalancesArr = new Array<number>(count);
+  const validatorCount = justifiedState.validators.length;
+  const {effectiveBalanceIncrements} = justifiedState;
+  // Slice up to `validatorCount` since it won't be mutated, nor accessed beyond `validatorCount`
+  const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0, validatorCount);
+
   let j = 0;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < validatorCount; i++) {
     if (i === activeIndices[j]) {
       // active validator
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      effectiveBalancesArr[i] = Math.floor(effectiveBalances.get(i)! / EFFECTIVE_BALANCE_INCREMENT);
       j++;
     } else {
       // inactive validator
-      effectiveBalancesArr[i] = 0;
+      effectiveBalanceIncrementsZeroInactive[i] = 0;
     }
   }
-  return effectiveBalancesArr;
+
+  return effectiveBalanceIncrementsZeroInactive;
 }

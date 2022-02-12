@@ -20,9 +20,9 @@ describe("paths / global", () => {
     },
     {
       id: "Network paths",
-      args: {network: "pyrmont"},
+      args: {network: "prater"},
       globalPaths: {
-        rootDir: "/my-root-dir/lodestar/pyrmont",
+        rootDir: "/my-root-dir/lodestar/prater",
         paramsFile: undefined,
       },
     },

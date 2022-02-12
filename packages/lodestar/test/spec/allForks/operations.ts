@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {join} from "node:path";
-import {CachedBeaconState, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconState, allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked, Type} from "@chainsafe/ssz";
@@ -20,7 +20,7 @@ export type BlockProcessFn<BeaconState extends allForks.BeaconState> = (
 export type OperationsTestCase<BeaconState extends allForks.BeaconState> = IBaseSpecTest & {
   pre: BeaconState;
   post: BeaconState;
-  execution: {executionValid: boolean};
+  execution: {execution_valid: boolean};
 };
 
 export function operations<BeaconState extends allForks.BeaconState>(
@@ -45,7 +45,7 @@ export function operations<BeaconState extends allForks.BeaconState>(
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
         const stateTB = (testcase.pre as TreeBacked<BeaconState>).clone();
-        const state = allForks.createCachedBeaconState(getConfig(fork), stateTB);
+        const state = createCachedBeaconState(getConfig(fork), stateTB);
         operationFn(state, testcase);
         return state;
       },

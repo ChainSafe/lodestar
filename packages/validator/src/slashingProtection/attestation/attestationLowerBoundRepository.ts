@@ -43,7 +43,7 @@ export class AttestationLowerBoundRepository {
     await this.db.put(this.encodeKey(pubkey), Buffer.from(this.type.serialize(value)));
   }
 
-  private encodeKey(pubkey: BLSPubkey): Buffer {
+  private encodeKey(pubkey: BLSPubkey): Uint8Array {
     return encodeKey(this.bucket, Buffer.from(pubkey as Uint8Array));
   }
 }

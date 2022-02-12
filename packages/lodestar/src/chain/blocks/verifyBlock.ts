@@ -171,11 +171,11 @@ export async function verifyBlockStateTransition(
 
   let executionStatus: ExecutionStatus;
   if (executionPayloadEnabled) {
-    // TODO: Handle better executePayload() returning error is syncing
-    const execResult = await chain.executionEngine.executePayload(
+    // TODO: Handle better notifyNewPayload() returning error is syncing
+    const execResult = await chain.executionEngine.notifyNewPayload(
       // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
       // For clarity and since it's needed anyway, just send the struct representation at this level such that
-      // executePayload() can expect a regular JS object.
+      // notifyNewPayload() can expect a regular JS object.
       // TODO: If blocks are no longer TreeBacked, remove.
       executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
     );
@@ -200,6 +200,15 @@ export async function verifyBlockStateTransition(
         });
       }
 
+      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
+        throw new BlockError(block, {
+          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
+          errorMessage: execResult.validationError,
+        });
+
+      // Accepted and Syncing have the same treatment, as final validation of block is pending
+      case ExecutePayloadStatus.ACCEPTED:
       case ExecutePayloadStatus.SYNCING: {
         // It's okay to ignore SYNCING status as EL could switch into syncing
         // 1. On intial startup/restart
@@ -230,14 +239,11 @@ export async function verifyBlockStateTransition(
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-            errorMessage: `not safe to import SYNCING payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot`,
+            errorMessage: `not safe to import not yet validated payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot, status=${execResult.status}`,
           });
         }
 
         executionStatus = ExecutionStatus.Syncing;
-        if (execResult.latestValidHash) {
-          chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
-        }
         break;
       }
 

@@ -1,9 +1,13 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, CachedBeaconStateAllForks} from "../../../../src";
-import {computeEpochShuffling, computeProposers} from "../../../../src/allForks";
+import {
+  computeEpochAtSlot,
+  CachedBeaconStateAllForks,
+  computeEpochShuffling,
+  getNextSyncCommittee,
+} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
-import {getNextSyncCommittee} from "../../../../src/altair/util/syncCommittee";
+import {computeProposers} from "../../../../src/util/seed";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;
@@ -21,7 +25,7 @@ describe("epoch shufflings", () => {
   itBench({
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
-      computeProposers(state, state.epochCtx.nextShuffling, state.effectiveBalances);
+      computeProposers(state, state.epochCtx.nextShuffling, state.effectiveBalanceIncrements);
     },
   });
 
@@ -35,7 +39,7 @@ describe("epoch shufflings", () => {
   itBench({
     id: `getNextSyncCommittee - vc ${numValidators}`,
     fn: () => {
-      getNextSyncCommittee(state, state.epochCtx.nextShuffling.activeIndices, state.effectiveBalances);
+      getNextSyncCommittee(state, state.epochCtx.nextShuffling.activeIndices, state.effectiveBalanceIncrements);
     },
   });
 });

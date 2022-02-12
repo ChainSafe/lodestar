@@ -2,6 +2,7 @@ import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray, ExecutionStatus} 
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";
+import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 
 describe("Forkchoice", function () {
   const genesisSlot = 0;
@@ -54,7 +55,7 @@ describe("Forkchoice", function () {
 
   it("getAllAncestorBlocks", function () {
     protoArr.onBlock(block);
-    const forkchoice = new ForkChoice(config, fcStore, protoArr, [], false);
+    const forkchoice = new ForkChoice(config, fcStore, protoArr, getEffectiveBalanceIncrementsZeroed(0), false);
     const summaries = forkchoice.getAllAncestorBlocks(finalizedDesc);
     // there are 2 blocks in protoArray but iterateAncestorBlocks should only return non-finalized blocks
     expect(summaries.length).to.be.equals(1, "should not return the finalized block");

@@ -1,7 +1,7 @@
 /**
  * @module metrics/server
  */
-import http from "http";
+import http from "node:http";
 import {createHttpTerminator, HttpTerminator} from "http-terminator";
 import {Registry} from "prom-client";
 import {ILogger} from "@chainsafe/lodestar-utils";

@@ -42,30 +42,30 @@ jobs:
       # </common-build>
 
       - name: Publish to npm registry
-        # Just use lerna publish with --canary option. Using 'from-package' ignore other options 
-        # and only compares against the verison in package.json, and skips release if already 
+        # Just use lerna publish with --canary option. Using 'from-package' ignore other options
+        # and only compares against the verison in package.json, and skips release if already
         # published.
         #
-        # --no-git-reset: 
+        # --no-git-reset:
         #   Do not delete code version artifacts so the next step can pick the version
         #
-        # --canary: 
+        # --canary:
         #   Format version with commit (1.1.0-alpha.0+81e3b443). Make sure the previous
         #   released tags are not lightweight("commit" type), but proper annotated ("tag" type)
         #   Otherwise the version canary will generate will be from last annotated tag type
         #   Best way to create such a tag is by using 'git tag -a' or using lerna publish!
         #
-        # --dist-tag next: 
+        # --dist-tag next:
         #   Make this nightly version installable with `@next`
         #
-        # --preid dev: 
+        # --preid dev:
         #   Tag version with `dev` instead of `alpha`
         #
-        # --force-publish: 
-        #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages 
+        # --force-publish:
+        #   lerna doesn't want to publish anything otherwise - "lerna success No changed packages
         #   to publish"
         # --exact
-        #   lerna will link the dependencies of monorepo packages without ^ operator as npm 
+        #   lerna will link the dependencies of monorepo packages without ^ operator as npm
         #   is apparently bad at resolving ^ dependencies of the canary versions. For e.g
         #   @chainsafe/lodestar-cli@^0.34.0-dev.4 resolves to => 0.34.0
         #
@@ -91,10 +91,16 @@ jobs:
     needs: npm
     steps:
       - uses: actions/checkout@v2
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker build --tag chainsafe/lodestar:next --build-arg VERSION=${{ needs.npm.outputs.version }} .
-      - run: docker push chainsafe/lodestar:next
+      - run: docker buildx build --push --tag chainsafe/lodestar:next --platform linux/amd64 --build-arg VERSION=${{ needs.npm.outputs.version }} .
+      - run: docker run chainsafe/lodestar:next --help

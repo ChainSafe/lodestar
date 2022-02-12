@@ -22,6 +22,17 @@ Thanks for your contribution to Lodestar. It's people like you that push the Eth
 - :test_tube: Run `lerna run test:e2e` for end-to-end tests.
 - :test_tube: Run `lerna run test` to run all tests.
 
+### Debugging spec tests
+
+- To fix errors always focus on passing all minimal tests first without running mainnet tests.
+- Spec tests often compare full expected vs actual states in JSON format. To better understand the diff it's convenient to use mocha's option `--inline-diffs`.
+- A single logical error can cause many spec tests to fail. To focus on a single test at a time you can use mocha's option `--bail` to stop at the first failed test
+- To then run only that failed test you can run against a specific file as use mocha's option `--grep` to run only one case
+
+```
+LODESTAR_PRESET=minimal ../../node_modules/.bin/mocha --config .mocharc.spec.yml test/spec/phase0/sanity.test.ts --inline-diffs --bail --grep "attestation"
+```
+
 ## Docker
 
 The docker-compose file requires that a `.env` file be present in this directory. The `default.env` file provides a template and can be copied `.env`:
@@ -55,7 +66,7 @@ docker-compose -f docker/docker-compose.local.yml up -d
 Unsure where to begin contributing to Lodestar? Here are some ideas!
 
 - :pencil2: See any typos? See any verbiage that should be changed or updated? Go for it! Github makes it easy to make contributions right from the browser.
-- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). _(Hint: look for issues labeled `meta0-goodfirstissue` or `meta1-helpwanted`!)_
+- :mag_right: Look through our [outstanding unassigned issues](https://github.com/ChainSafe/lodestar/issues?q=is%3Aopen+is%3Aissue+no%3Aassignee). (Hint: look for issues labeled `meta0-goodfirstissue` or `meta1-helpwanted`!)
 - :speech_balloon: Join our [Discord chat](https://discord.gg/aMxzVcr)!
   [![Discord](https://img.shields.io/discord/593655374469660673.svg?label=Discord&logo=discord)](https://discord.gg/aMxzVcr)
 
@@ -81,6 +92,7 @@ If you are contributing from this repo prefix the branch name with your Github u
 **Pull request naming**
 
 Pull request titles must be:
+
 - Short and descriptive summary
 - Should be capitalized and written in imperative present tense
 - Not end with period
@@ -130,88 +142,94 @@ Label descriptions can be found below.
 ###### `status.*` Pull Request Status
 
 Status labels only apply to pull requests.
-* `status0-blocked`: This is blocked by another issue that requires resolving first.
-* `status1-donotmerge`: Merging this issue will break the build. Do not merge!
-* `status2-onice`: This work is on ice as per the reasons described by the author.
-* `status3-needsreview`: This pull-request needs a review.
-* `status4-needschanges`: This pull-request has issues that needs to be addressed first.
-* `status5-mergeready`: This pull-request has been reviewed well and can be merged.
-* `status6-bulldozer`: Pull request is reviewed and can be merged (used by the bulldozer bot).
-* `status7-opendiscussion`: This work is still being discussed.
-* `status9-workinprogress`: This work is still in progress and not ready for review.
+
+- `status0-blocked`: This is blocked by another issue that requires resolving first.
+- `status1-donotmerge`: Merging this issue will break the build. Do not merge!
+- `status2-onice`: This work is on ice as per the reasons described by the author.
+- `status3-needsreview`: This pull-request needs a review.
+- `status4-needschanges`: This pull-request has issues that needs to be addressed first.
+- `status5-mergeready`: This pull-request has been reviewed well and can be merged.
+- `status6-bulldozer`: Pull request is reviewed and can be merged (used by the bulldozer bot).
+- `status7-opendiscussion`: This work is still being discussed.
+- `status9-workinprogress`: This work is still in progress and not ready for review.
 
 ###### `mod.*` Relevant Modules and Components
 
 The Module labels should be applied to all issues and pull requests if possible.
-* `mod1-beaconchain`: The @chainsafe/lodestar beacon-chain module.
-* `mod2-validator`: The @chainsafe/lodestar-validator module.
-* `mod3-lightclient`: The @chainsafe/lodestar-light-client module.
-* `mod4-api`: The @chainsafe/lodestar-api module.
-* `mod5-cli`: The @chainsafe/lodestar-cli module.
-* `mod6-statetransition`: The @chainsafe/lodestar-beacon-state-transition module.
-* `mod7-types`: The @chainsafe/lodestar-types module.
-* `mod8-params`: The @chainsafe/lodestar-params module.
-* `mod9-utils`: The @chainsafe/lodestar-utils module.
-* `moda-config`: The @chainsafe/lodestar-config module.
-* `modb-database`: The @chainsafe/lodestar-db module.
-* `modc-forkchoice`: The @chainsafe/lodestar-fork-choice module.
-* `modd-spectests`: The @chainsafe/lodestar-spec-test-* modules.
+
+- `mod1-beaconchain`: The @chainsafe/lodestar beacon-chain module.
+- `mod2-validator`: The @chainsafe/lodestar-validator module.
+- `mod3-lightclient`: The @chainsafe/lodestar-light-client module.
+- `mod4-api`: The @chainsafe/lodestar-api module.
+- `mod5-cli`: The @chainsafe/lodestar-cli module.
+- `mod6-statetransition`: The @chainsafe/lodestar-beacon-state-transition module.
+- `mod7-types`: The @chainsafe/lodestar-types module.
+- `mod8-params`: The @chainsafe/lodestar-params module.
+- `mod9-utils`: The @chainsafe/lodestar-utils module.
+- `moda-config`: The @chainsafe/lodestar-config module.
+- `modb-database`: The @chainsafe/lodestar-db module.
+- `modc-forkchoice`: The @chainsafe/lodestar-fork-choice module.
+- `modd-spectests`: The @chainsafe/lodestar-spec-test-\* modules.
 
 ###### `scope.*` Scope Indicator
 
 Scope is comparable to Module labels but less strict with the definition of components. It applies to both, issues and pull requests.
-* `scope1-audits`: Resolves issue identified in the first audit.
-* `scope2-memory`: Issues to reduce and improve memory usage.
-* `scope3-performance`: Performance issue and ideas to improve performance.
-* `scope4-benchmarks`: All issues with regards to benchmarking.
-* `scope5-networking`: All issues related to networking, gossip, and libp2p.
-* `scope6-metrics`: All issues with regards to the exposed metrics.
-* `scope7-ssz`: All issues related to SSZ serialization and deserialization.
-* `scope8-bls`: All issues related to BLS and cryptography used.
-* `scope9-testnetdebugging`: Issues uncovered through running a node on a public testnet.
-* `scopea-eth1`: All issues related to the Eth1 provider.
-* `scopeb-ci`: All issues related to the Continuous Integration and Github Workflows.
-* `scopec-documentation`: All issues related to the Lodestar documentation.
+
+- `scope1-audits`: Resolves issue identified in the first audit.
+- `scope2-memory`: Issues to reduce and improve memory usage.
+- `scope3-performance`: Performance issue and ideas to improve performance.
+- `scope4-benchmarks`: All issues with regards to benchmarking.
+- `scope5-networking`: All issues related to networking, gossip, and libp2p.
+- `scope6-metrics`: All issues with regards to the exposed metrics.
+- `scope7-ssz`: All issues related to SSZ serialization and deserialization.
+- `scope8-bls`: All issues related to BLS and cryptography used.
+- `scope9-testnetdebugging`: Issues uncovered through running a node on a public testnet.
+- `scopea-eth1`: All issues related to the Eth1 provider.
+- `scopeb-ci`: All issues related to the Continuous Integration and Github Workflows.
+- `scopec-documentation`: All issues related to the Lodestar documentation.
 
 ###### `prio.*` Prioritization Indicator
 
 A simple indicator of issue prioritization. It mainly applies to issues.
-* `prio0-critical`: Drop everything to resolve this immediately.
-* `prio2-high`: Resolve issues as soon as possible.
-* `prio5-medium`: Resolve this some time soon (tm).
-* `prio7-low`: This is nice to have.
-* `prio9-none`: We might get back to this one day (maybe).
+
+- `prio0-critical`: Drop everything to resolve this immediately.
+- `prio2-high`: Resolve issues as soon as possible.
+- `prio5-medium`: Resolve this some time soon (tm).
+- `prio7-low`: This is nice to have.
+- `prio9-none`: We might get back to this one day (maybe).
 
 ###### `q.*` Effort Quantization
 
 Effort estimations can help planning to tackle issues that are particulary easy or difficult with regard of work force required. It mainly applies to issues (before work is started).
-* `q0-trivial`: Can be fixed by anyone with access to a computer.
-* `q2-easy`: Can be fixed by copy and pasting from StackOverflow.
-* `q3-medium`: A fair chunk of work, not necessarily very hard but not trivial either
-* `q5-substantial`: Can be fixed by a developer with decent experience.
-* `q7-involved`: Can be fixed by a team of developers and probably takes some time.
-* `q9-epic`: Can only be fixed by John Skeet. ;)
+
+- `q0-trivial`: Can be fixed by anyone with access to a computer.
+- `q2-easy`: Can be fixed by copy and pasting from StackOverflow.
+- `q3-medium`: A fair chunk of work, not necessarily very hard but not trivial either
+- `q5-substantial`: Can be fixed by a developer with decent experience.
+- `q7-involved`: Can be fixed by a team of developers and probably takes some time.
+- `q9-epic`: Can only be fixed by John Skeet. ;)
 
 ###### `spec.*` Eth2 Consensus Spec Version Target
 
 Issues that target a specific version of the Eth2 consensus spec, shall be tagged accordingly.
-* `spec0-phase0`: Issues targeting the initial Eth2 spec version.
-* `spec1-altair`: Issues targeting the Altair Eth2 spec version.
-* `spec3-merge`: Issues targeting the merge Eth2 spec version.
-* `spec5-phase1`: Issues targeting the Phase1 Eth2 spec version.
-* `spec7-phase2`: Issues targeting the Phase2 Eth2 spec version.
+
+- `spec0-phase0`: Issues targeting the initial Eth2 spec version.
+- `spec1-altair`: Issues targeting the Altair Eth2 spec version.
+- `spec3-merge`: Issues targeting the merge Eth2 spec version.
+- `spec5-phase1`: Issues targeting the Phase1 Eth2 spec version.
+- `spec7-phase2`: Issues targeting the Phase2 Eth2 spec version.
 
 ###### `meta.*` Meta Labels to organize Miscelaneous Issues
 
-* `meta0-goodfirstissue`: Good first issues for newcomers and first-time contributors.
-* `meta1-helpwanted`: The author indicates that additional help is wanted.
-* `meta2-breakingchange`: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!
-* `meta4-cosmetic`: The changes introduces are barely touching any code.
-* `meta5-technicaldebt`: Issues introducing or resolving technical debts.
-* `meta6-discussion`: Indicates a topic that requires input from various developers.
-* `meta7-botstale`: Label for stale issues (applied by the stale bot).
-* `meta8-excludefromchangelog`: This work is not relevant for the changelog (used by Github actions). Use sparingly!
-* `meta9-dependencies`: Pull requests that update a dependency (used by Dependabot).
+- `meta0-goodfirstissue`: Good first issues for newcomers and first-time contributors.
+- `meta1-helpwanted`: The author indicates that additional help is wanted.
+- `meta2-breakingchange`: Introduces breaking changes to DB, Validator, Beacon Node, or CLI interfaces. Handle with care!
+- `meta4-cosmetic`: The changes introduces are barely touching any code.
+- `meta5-technicaldebt`: Issues introducing or resolving technical debts.
+- `meta6-discussion`: Indicates a topic that requires input from various developers.
+- `meta7-botstale`: Label for stale issues (applied by the stale bot).
+- `meta8-excludefromchangelog`: This work is not relevant for the changelog (used by Github actions). Use sparingly!
+- `meta9-dependencies`: Pull requests that update a dependency (used by Dependabot).
 
 ## Community
 

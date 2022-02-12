@@ -5,19 +5,19 @@ import path from "node:path";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
 import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks";
-import {bootEnrs as pyrmontBootEnrs} from "../../../src/networks/pyrmont";
+import {bootEnrs as praterBootEnrs} from "../../../src/networks/prater";
 import {testFilesDir} from "../../utils";
 
 describe("config / beaconNodeOptions", () => {
-  it("Should return pyrmont options", () => {
+  it("Should return prater options", () => {
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "pyrmont",
+      network: "prater",
       beaconNodeOptionsCli: {},
     });
 
     // Asserts only part of the data structure to avoid unnecesary duplicate code
     const optionsPartial = beaconNodeOptions.get();
-    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(pyrmontBootEnrs);
+    expect(optionsPartial?.network?.discv5?.bootEnrs).to.deep.equal(praterBootEnrs);
   });
 
   it("Should return added partial options", () => {
@@ -43,7 +43,7 @@ describe("config / beaconNodeOptions", () => {
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "pyrmont",
+      network: "prater",
       bootnodesFile: beaconPaths.bootnodesFile,
       beaconNodeOptionsCli: {},
     });
@@ -65,7 +65,7 @@ describe("config / beaconNodeOptions", () => {
     beaconPaths.bootnodesFile = bootnodesFile;
 
     const beaconNodeOptions = new BeaconNodeOptions({
-      network: "pyrmont",
+      network: "prater",
       bootnodesFile: beaconPaths.bootnodesFile,
       beaconNodeOptionsCli: enrsToNetworkConfig([expectedBootEnr]),
     });

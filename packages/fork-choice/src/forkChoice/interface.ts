@@ -1,3 +1,4 @@
+import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
@@ -147,7 +148,7 @@ export type PowBlockHex = {
 
 export type OnBlockPrecachedData = {
   /** `justifiedBalances` balances of justified state which is updated synchronously. */
-  justifiedBalances?: number[];
+  justifiedBalances?: EffectiveBalanceIncrements;
   /** Time in seconds when the block was received */
   blockDelaySec: number;
   /**

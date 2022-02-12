@@ -80,4 +80,4 @@ This command will print the public address of every active keystore.
 
 ### Submit a validator deposit
 
-DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://pyrmont.launchpad.ethereum.org
+DEPRECATED. Please use the official tools to perform your deposits - eth2.0-deposit-cli: https://github.com/ethereum/eth2.0-deposit-cli - Ethereum Foundation launchpad: https://prater.launchpad.ethereum.org

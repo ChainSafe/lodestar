@@ -4,15 +4,24 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {allForks, interopSecretKey, computeEpochAtSlot, getActiveValidatorIndices} from "../../src";
+import {
+  allForks,
+  interopSecretKey,
+  computeEpochAtSlot,
+  getActiveValidatorIndices,
+  PubkeyIndexMap,
+  createCachedBeaconState,
+  getNextSyncCommittee,
+  computeCommitteeCount,
+} from "../../src";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {computeCommitteeCount, createCachedBeaconState, PubkeyIndexMap} from "../../src/allForks";
 import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/types";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
   MAX_ATTESTATIONS,
@@ -25,10 +34,8 @@ import {
 } from "@chainsafe/lodestar-params";
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {getClient} from "@chainsafe/lodestar-api";
-import {getNextSyncCommittee} from "../../src/altair/util/syncCommittee";
 import {getInfuraBeaconUrl} from "./infura";
 import {testCachePath} from "../cache";
-import {MutableVector} from "@chainsafe/persistent-ts";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;
@@ -99,7 +106,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   if (!phase0CachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    phase0CachedState23637 = allForks.createCachedBeaconState(config, state, {
+    phase0CachedState23637 = createCachedBeaconState(config, state, {
       pubkey2index,
       index2pubkey,
       skipSyncPubkeys: true,
@@ -136,7 +143,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
   if (!altairCachedState23637) {
     const state = origState.clone();
     state.slot -= 1;
-    altairCachedState23637 = allForks.createCachedBeaconState(altairConfig, state, {
+    altairCachedState23637 = createCachedBeaconState(altairConfig, state, {
       pubkey2index,
       index2pubkey,
       skipSyncPubkeys: true,
@@ -180,8 +187,10 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): TreeB
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2) as List<ParticipationFlags>;
     const epoch = computeEpochAtSlot(state.slot);
     const activeValidatorIndices = getActiveValidatorIndices(state, epoch);
-    const effectiveBalances = MutableVector.from(Array.from(state.validators).map((v) => v.effectiveBalance));
-    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalances);
+    const effectiveBalanceIncrements = new Uint8Array(
+      Array.from(state.validators).map((v) => v.effectiveBalance / EFFECTIVE_BALANCE_INCREMENT)
+    );
+    const syncCommittee = getNextSyncCommittee(state, activeValidatorIndices, effectiveBalanceIncrements);
     state.currentSyncCommittee = syncCommittee;
     state.nextSyncCommittee = syncCommittee;
     altairState = ssz.altair.BeaconState.createTreeBackedFromStruct(state);
@@ -386,7 +395,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
   state.balances = Array.from({length: pubkeys.length}, () => 31217089836) as List<number>;
   state.randaoMixes = Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i));
 
-  return allForks.createCachedBeaconState(config, state as TreeBacked<allForks.BeaconState>, {
+  return createCachedBeaconState(config, state as TreeBacked<allForks.BeaconState>, {
     pubkey2index,
     index2pubkey,
     skipSyncPubkeys: true,

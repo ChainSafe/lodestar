@@ -9,6 +9,7 @@
 <!-- If applicable, add screenshots to help explain your solution -->
 
 <!-- Link to issues: Resolves #111, Resolves #222 -->
+
 Closes #issue_number
 
 **Steps to test or reproduce**

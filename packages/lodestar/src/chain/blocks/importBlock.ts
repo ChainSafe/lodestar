@@ -3,8 +3,9 @@ import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
-  getEffectiveBalances,
+  getEffectiveBalanceIncrementsZeroInactive,
   bellatrix,
   altair,
   computeEpochAtSlot,
@@ -93,7 +94,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
-    onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
+    onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
   }
 
   if (
@@ -231,7 +232,11 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Use block's syncAggregate
   if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
     try {
-      chain.lightClientServer.onImportBlock(block.message as altair.BeaconBlock, postState, parentBlock);
+      chain.lightClientServer.onImportBlock(
+        block.message as altair.BeaconBlock,
+        postState as CachedBeaconStateAltair,
+        parentBlock
+      );
     } catch (e) {
       chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
     }

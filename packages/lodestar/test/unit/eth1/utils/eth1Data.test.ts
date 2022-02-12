@@ -12,17 +12,18 @@ import {
 } from "../../../../src/eth1/utils/eth1Data";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {Eth1ErrorCode} from "../../../../src/eth1/errors";
+import {Eth1Block} from "../../../../src/eth1/interface";
 
 chai.use(chaiAsPromised);
 
 describe("eth1 / util / getEth1DataForBlocks", function () {
   interface ITestCase {
     id: string;
-    blocks: phase0.Eth1Block[];
+    blocks: Eth1Block[];
     deposits: phase0.DepositEvent[];
     depositRootTree: TreeBacked<List<Root>>;
     lastProcessedDepositBlockNumber: number;
-    expectedEth1Data?: Partial<phase0.Eth1Data & phase0.Eth1Block>[];
+    expectedEth1Data?: Partial<phase0.Eth1Data & Eth1Block>[];
     error?: Eth1ErrorCode;
   }
 
@@ -260,7 +261,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   }
 });
 
-function getMockBlock({blockNumber}: {blockNumber: number}): phase0.Eth1Block {
+function getMockBlock({blockNumber}: {blockNumber: number}): Eth1Block {
   return {
     blockNumber,
     blockHash: Buffer.alloc(32, blockNumber),

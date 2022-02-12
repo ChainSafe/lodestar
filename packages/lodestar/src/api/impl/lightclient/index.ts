@@ -1,4 +1,3 @@
-import {altair, ssz} from "@chainsafe/lodestar-types";
 import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
@@ -20,14 +19,16 @@ export function getLightclientApi(
   return {
     async getStateProof(stateId, paths) {
       const state = await resolveStateId(config, chain, db, stateId);
-      const stateTreeBacked = ssz.altair.BeaconState.createTreeBackedFromStruct(state as altair.BeaconState);
+      // eslint-disable-next-line @typescript-eslint/naming-convention
+      const BeaconState = config.getForkTypes(state.slot).BeaconState;
+      const stateTreeBacked = BeaconState.createTreeBackedFromStruct(state);
       const tree = stateTreeBacked.tree;
 
       const gindicesSet = new Set<bigint>();
 
       for (const path of paths) {
         // Logic from TreeBacked#createProof is (mostly) copied here to expose the # of gindices in the proof
-        const {type, gindex} = ssz.altair.BeaconState.getPathInfo(path);
+        const {type, gindex} = BeaconState.getPathInfo(path);
         if (!isCompositeType(type)) {
           gindicesSet.add(gindex);
         } else {

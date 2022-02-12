@@ -9,7 +9,7 @@ import {
 } from "@chainsafe/lodestar-params";
 
 import {decreaseBalance} from "../../util";
-import {CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAllForks, EpochProcess} from "../../types";
 
 /**
  * Update validator registry for validators that activate + exit
@@ -23,7 +23,7 @@ import {CachedBeaconStateAllForks, IEpochProcess} from "../../types";
 export function processSlashingsAllForks(
   fork: ForkName,
   state: CachedBeaconStateAllForks,
-  process: IEpochProcess
+  process: EpochProcess
 ): void {
   // No need to compute totalSlashings if there no index to slash
   if (process.indicesToSlash.length === 0) {
@@ -41,13 +41,13 @@ export function processSlashingsAllForks(
       ? PROPORTIONAL_SLASHING_MULTIPLIER_ALTAIR
       : PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX;
 
+  const {effectiveBalanceIncrements} = state.epochCtx;
   const adjustedTotalSlashingBalance = bigIntMin(totalSlashings * BigInt(proportionalSlashingMultiplier), totalBalance);
   const increment = EFFECTIVE_BALANCE_INCREMENT;
   for (const index of process.indicesToSlash) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const effectiveBalance = state.epochCtx.effectiveBalances.get(index)!;
-    const penaltyNumerator = BigInt(effectiveBalance / increment) * adjustedTotalSlashingBalance;
-    const penalty = (penaltyNumerator / totalBalance) * BigInt(increment);
-    decreaseBalance(state, index, Number(penalty));
+    const effectiveBalanceIncrement = effectiveBalanceIncrements[index];
+    const penaltyNumerator = BigInt(effectiveBalanceIncrement) * adjustedTotalSlashingBalance;
+    const penalty = Number(penaltyNumerator / totalBalance) * increment;
+    decreaseBalance(state, index, penalty);
   }
 }

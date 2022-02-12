@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {Number64} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
-import * as attesterStatusUtil from "../../allForks/util/attesterStatus";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
+import * as attesterStatusUtil from "../../util/attesterStatus";
 import {isInInactivityLeak} from "../../util";
 
 /**
@@ -18,7 +18,7 @@ import {isInInactivityLeak} from "../../util";
  *
  * TODO: Compute from altair testnet inactivityScores updates on average
  */
-export function processInactivityUpdates(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
+export function processInactivityUpdates(state: CachedBeaconStateAltair, epochProcess: EpochProcess): void {
   if (state.currentShuffling.epoch === GENESIS_EPOCH) {
     return;
   }

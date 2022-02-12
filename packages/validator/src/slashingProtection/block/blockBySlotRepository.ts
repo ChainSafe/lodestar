@@ -64,7 +64,7 @@ export class BlockBySlotRepository {
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 
-  private encodeKey(pubkey: BLSPubkey, slot: Slot): Buffer {
+  private encodeKey(pubkey: BLSPubkey, slot: Slot): Uint8Array {
     return encodeKey(
       this.bucket,
       Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(slot), uintLen, "be")])

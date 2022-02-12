@@ -12,25 +12,25 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 
 import {IMetrics} from "../../metrics";
 import {
+  GossipJobQueues,
   GossipTopic,
   GossipTopicMap,
   GossipType,
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
-  ProcessRpcMessageFnsByType,
-  GossipJobQueues,
 } from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {GOSSIP_MAX_SIZE} from "../../constants";
-import {createProcessRpcMessageFnsByType, createValidatorFnsByType} from "./validation";
+import {createValidatorFnsByType} from "./validation";
 import {Map2d, Map2dArr} from "../../util/map";
 import pipe from "it-pipe";
 import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
 import BufferList from "bl";
+// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
 import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
@@ -77,8 +77,6 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly msgIdCache = new WeakMap<InMessage, Uint8Array>();
 
   private readonly validatorFnsByType: ValidatorFnsByType;
-  // this wraps processRpcMessage() function in lodestar gossip queues
-  private readonly processRpcMessageFnsByType: ProcessRpcMessageFnsByType;
 
   constructor(modules: IGossipsubModules) {
     // Gossipsub parameters defined here:
@@ -101,21 +99,14 @@ export class Eth2Gossipsub extends Gossipsub {
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
     // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
     // TODO: Force to ensure there's a validatorFunction attached to every received topic.
-    this.validatorFnsByType = createValidatorFnsByType(gossipHandlers, {
+    const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
       config,
       logger,
       uncompressCache: this.uncompressCache,
       metrics,
       signal,
     });
-    // this.processRpcMessageFnsByType has the same logic to libp2p-gossipsub Gossipsub._processRpcMessage
-    // except that it wraps that logic in a queue
-    const {processRpcMessagesFnByType, jobQueues} = createProcessRpcMessageFnsByType(
-      super._processRpcMessage.bind(this),
-      signal,
-      metrics
-    );
-    this.processRpcMessageFnsByType = processRpcMessagesFnByType;
+    this.validatorFnsByType = validatorFnsByType;
     this.jobQueues = jobQueues;
 
     if (metrics) {
@@ -219,36 +210,20 @@ export class Eth2Gossipsub extends Gossipsub {
     return true;
   }
 
-  /**
-   * The same logic to libp2p-gossipsub Gossipsub._processRpcMessage() but we wrap its logic in queues,
-   * this is the entry point for lodestar gossip queue implementation, see the constructor for how we create the queue.
-   * libp2p-gossipsub Gossipsub._processRpcMessage() will then call libp2p-interface
-   * PubsubBaseProtocol._processRpcMessage()
-   * See https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.11.1/ts/index.ts#L417
-   * which call lodestar Eth2Gossipsub.validate() in the end
-   * See https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L442
-   */
-  async _processRpcMessage(message: InMessage): Promise<void> {
-    // messages must have a single topicID
-    const topicStr = Array.isArray(message.topicIDs) ? message.topicIDs[0] : undefined;
-    if (!topicStr) {
-      // no need to send this to a queue
-      // the validate() function will handle message error
-      return super.validate(message);
-    }
-
-    // Execute the _processRpcMessage in a queue
-    const topic = this.gossipTopicCache.getTopic(topicStr);
-    await this.processRpcMessageFnsByType[topic.type](topic, message);
-  }
+  // // Snippet of _processRpcMessage from https://github.com/libp2p/js-libp2p-interfaces/blob/92245d66b0073f0a72fed9f7abcf4b533102f1fd/packages/interfaces/src/pubsub/index.js#L442
+  // async _processRpcMessage(msg: InMessage): Promise<void> {
+  //   try {
+  //     await this.validate(msg);
+  //   } catch (err) {
+  //     this.log("Message is invalid, dropping it. %O", err);
+  //     return;
+  //   }
+  // }
 
   /**
-   * This is called from libp2p-interface PubsubBaseProtocol._processRpcMessage()
-   * See https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L449
-   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%401.0.1/packages/interfaces/src/pubsub/index.js#L567
-   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/v0.11.1/ts/index.ts#L436
-   * Note: this runs inside queues (see _processRpcMessage() above) and does not call super.
-   * All logic is re-implemented below.
+   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
+   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
+   * Note: this does not call super. All logic is re-implemented below
    */
   async validate(message: InMessage): Promise<void> {
     try {

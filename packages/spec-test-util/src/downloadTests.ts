@@ -4,8 +4,8 @@ import path from "node:path";
 import rimraf from "rimraf";
 import axios from "axios";
 import tar from "tar";
-import stream from "stream";
-import {promisify} from "util";
+import stream from "node:stream";
+import {promisify} from "node:util";
 import retry from "async-retry";
 
 export type TestToDownload = "general" | "mainnet" | "minimal";

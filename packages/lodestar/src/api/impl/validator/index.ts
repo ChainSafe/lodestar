@@ -11,8 +11,7 @@ import {
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
-  SYNC_COMMITTEE_SIZE,
-  SYNC_COMMITTEE_SUBNET_COUNT,
+  SYNC_COMMITTEE_SUBNET_SIZE,
 } from "@chainsafe/lodestar-params";
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
@@ -27,7 +26,7 @@ import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices, getSyncComitteeValidatorIndexMap} from "./utils";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
@@ -389,7 +388,8 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Check that all validatorIndex belong to the state before calling getCommitteeAssignments()
       const pubkeys = getPubkeysForIndices(state.validators, validatorIndices);
       // Ensures `epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD <= current_epoch // EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1`
-      const syncComitteeValidatorIndexMap = getSyncComitteeValidatorIndexMap(state, epoch);
+      const syncCommitteeCache = state.epochCtx.getIndexedSyncCommitteeAtEpoch(epoch);
+      const syncComitteeValidatorIndexMap = syncCommitteeCache.validatorIndexMap;
 
       const duties: routes.validator.SyncDuty[] = [];
       for (let i = 0, len = validatorIndices.length; i < len; i++) {
@@ -501,8 +501,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         contributionAndProofs.map(async (contributionAndProof, i) => {
           try {
             // TODO: Validate in batch
-            await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
-            chain.syncContributionAndProofPool.add(contributionAndProof.message);
+            const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+              chain,
+              contributionAndProof
+            );
+            chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
             await network.gossip.publishContributionAndProof(contributionAndProof);
           } catch (e) {
             errors.push(e as Error);
@@ -510,7 +513,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               `Error on publishContributionAndProofs [${i}]`,
               {
                 slot: contributionAndProof.message.contribution.slot,
-                subCommitteeIndex: contributionAndProof.message.contribution.subCommitteeIndex,
+                subcommitteeIndex: contributionAndProof.message.contribution.subcommitteeIndex,
               },
               e as Error
             );
@@ -568,9 +571,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      */
     async prepareSyncCommitteeSubnets(subscriptions) {
       notWhileSyncing();
-
-      // TODO: Cache this value
-      const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
       // A `validatorIndex` can be in multiple subnets, so compute the CommitteeSubscription with double for loop
       const subs: CommitteeSubscription[] = [];

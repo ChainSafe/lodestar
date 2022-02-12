@@ -1,6 +1,6 @@
 import {List} from "@chainsafe/ssz";
 import {CommitteeIndex, Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
-import crypto from "crypto";
+import crypto from "node:crypto";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";

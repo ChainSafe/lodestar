@@ -1,3 +1,4 @@
+import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
 import {IVoteTracker, HEX_ZERO_HASH} from "./interface";
 import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 
@@ -13,8 +14,8 @@ import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
 export function computeDeltas(
   indices: Map<string, number>,
   votes: IVoteTracker[],
-  oldBalances: number[],
-  newBalances: number[]
+  oldBalances: EffectiveBalanceIncrements,
+  newBalances: EffectiveBalanceIncrements
 ): number[] {
   const deltas = Array.from({length: indices.size}, () => 0);
   const zeroHash = HEX_ZERO_HASH;

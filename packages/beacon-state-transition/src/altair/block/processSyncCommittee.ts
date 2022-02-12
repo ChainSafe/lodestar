@@ -93,13 +93,13 @@ export function getSyncCommitteeSignatureSet(
 
 /** Get participant indices for a sync committee. */
 function getParticipantIndices(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): number[] {
-  const committeeIndices = state.currentSyncCommittee.validatorIndices;
+  const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
   return zipIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
 
 /** Return [0] as participant indices and [1] as unparticipant indices for a sync committee. */
 function getParticipantInfo(state: CachedBeaconStateAltair, syncAggregate: altair.SyncAggregate): [number[], number[]] {
-  const committeeIndices = state.currentSyncCommittee.validatorIndices;
+  const committeeIndices = state.epochCtx.currentSyncCommitteeIndexed.validatorIndices;
   return zipAllIndexesSyncCommitteeBits(committeeIndices, syncAggregate.syncCommitteeBits);
 }
 

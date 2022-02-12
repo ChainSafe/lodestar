@@ -1,5 +1,5 @@
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
+import {altair, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -25,7 +25,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("SyncCommittees proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state as TreeBacked<allForks.BeaconState>);
+    const syncCommitteesWitness = getSyncCommitteesWitness(state);
     const syncCommitteesLeaf = hash(
       syncCommitteesWitness.currentSyncCommitteeRoot,
       syncCommitteesWitness.nextSyncCommitteeRoot
@@ -42,7 +42,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("currentSyncCommittee proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state as TreeBacked<allForks.BeaconState>);
+    const syncCommitteesWitness = getSyncCommitteesWitness(state);
     const currentSyncCommitteeBranch = [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 
     expect(
@@ -56,7 +56,7 @@ describe("chain / lightclient / proof", () => {
   });
 
   it("nextSyncCommittee proof", () => {
-    const syncCommitteesWitness = getSyncCommitteesWitness(state as TreeBacked<allForks.BeaconState>);
+    const syncCommitteesWitness = getSyncCommitteesWitness(state);
     const nextSyncCommitteeBranch = getNextSyncCommitteeBranch(syncCommitteesWitness);
 
     expect(

@@ -8,7 +8,6 @@
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-
 Lodestar defines all constants and presets defined in the [Ethereum Consensus / Eth2 spec](https://github.com/ethereum/eth2.0-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
 
 ## Installation
@@ -53,7 +52,7 @@ import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
 
 ### Presets
 
-Presets are "constants"-ish defined in the spec that can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is `mainnet`.  The only other preset defined is `minimal`, used only in testing environments.
+Presets are "constants"-ish defined in the spec that can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is `mainnet`. The only other preset defined is `minimal`, used only in testing environments.
 
 The active preset is exported under the `ACTIVE_PRESET` named export.
 

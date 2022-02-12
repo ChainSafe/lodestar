@@ -24,7 +24,7 @@ describe("encodeKey", () => {
     it(`should properly encode ${type}`, () => {
       let expected;
       if (type === "Buffer") {
-        expected = Buffer.concat([intToBytes(bucket, BUCKET_LENGTH, "le"), key as Buffer]);
+        expected = Buffer.concat([intToBytes(bucket, BUCKET_LENGTH, "le"), key as Uint8Array]);
       } else if (typeof key === "string") {
         expected = Buffer.concat([intToBytes(bucket, BUCKET_LENGTH, "le"), Buffer.from(key)]);
       } else if (typeof key === "number" || typeof key === "bigint") {

@@ -12,6 +12,7 @@ import {
   phase0,
   CachedBeaconStateAllForks,
   createCachedBeaconState,
+  getEffectiveBalanceIncrementsZeroed,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 import {List, toHexString, TreeBacked} from "@chainsafe/ssz";
@@ -34,6 +35,12 @@ describe("LodestarForkChoice", function () {
     },
     config
   );
+
+  // 3 validators involved
+  const justifiedBalances = getEffectiveBalanceIncrementsZeroed(3);
+  justifiedBalances[0] = 1;
+  justifiedBalances[1] = 2;
+  justifiedBalances[2] = 3;
 
   const hashBlock = (block: phase0.BeaconBlock): string => toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(block));
 
@@ -71,8 +78,7 @@ describe("LodestarForkChoice", function () {
       // forkchoice tie-break condition is based on root hex
       expect(orphanedBlockHex > parentBlockHex).to.be.true;
       forkChoice.updateTime(childBlock.message.slot);
-      // 3 validators involved
-      const justifiedBalances = [1, 2, 3];
+
       forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       let head = forkChoice.getHead();
@@ -132,8 +138,7 @@ describe("LodestarForkChoice", function () {
         epoch: 3,
       };
       forkChoice.updateTime(128);
-      // 3 validators involved
-      const justifiedBalances = [1, 2, 3];
+
       forkChoice.onBlock(block08.message, state08, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(block12.message, state12, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(block16.message, state16, {justifiedBalances, blockDelaySec: 0});
@@ -184,8 +189,7 @@ describe("LodestarForkChoice", function () {
       const {block: parentBlock, state: parentState} = makeChild({block: targetBlock, state: targetState}, 34);
       const {block: childBlock, state: childState} = makeChild({block: parentBlock, state: parentState}, 35);
       forkChoice.updateTime(35);
-      // 3 validators involved
-      const justifiedBalances = [1, 2, 3];
+
       forkChoice.onBlock(targetBlock.message, targetState, {justifiedBalances, blockDelaySec: 0});
       forkChoice.onBlock(orphanedBlock.message, orphanedState);
       forkChoice.onBlock(parentBlock.message, parentState);

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import rimraf from "rimraf";
-import {Writable} from "stream";
+import {Writable} from "node:stream";
 import {expect} from "chai";
 import {Context, LodestarError, LogFormat, logFormats, LogLevel, sleep, WinstonLogger} from "../../../src";
 import {TransportType} from "../../../src/logger/transport";

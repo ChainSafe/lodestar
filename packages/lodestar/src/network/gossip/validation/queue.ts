@@ -3,7 +3,7 @@ import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";
-import {GossipJobQueues, GossipTopic, GossipType, ProcessRpcMessageFn} from "../interface";
+import {GossipJobQueues, GossipTopic, GossipType, ValidatorFnsByType} from "../interface";
 
 /**
  * Numbers from https://github.com/sigp/lighthouse/blob/b34a79dc0b02e04441ba01fd0f304d1e203d877d/beacon_node/network/src/beacon_processor/mod.rs#L69
@@ -22,10 +22,10 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
 };
 
 /**
- * Wraps a _processRpcMessage() function with a queue, to limit the processing of gossip objects by type.
+ * Wraps a GossipValidatorFn with a queue, to limit the processing of gossip objects by type.
  *
  * A queue here is essential to protect against DOS attacks, where a peer may send many messages at once.
- * Queues also protect the node against overloading. If the node gets busy with an expensive epoch transition,
+ * Queues also protect the node against overloading. If the node gets bussy with an expensive epoch transition,
  * it may buffer too many gossip objects causing an Out of memory (OOM) error. With a queue the node will reject
  * new objects to fit its current throughput.
  *
@@ -37,14 +37,15 @@ const gossipQueueOpts: {[K in GossipType]: Pick<JobQueueOpts, "maxLength" | "typ
  * By topic is too specific, so by type groups all similar objects in the same queue. All in the same won't allow
  * to customize different queue behaviours per object type (see `gossipQueueOpts`).
  */
-export function createProcessRpcMessageQueues(
-  processRpcMsgFn: ProcessRpcMessageFn,
+export function createValidationQueues(
+  gossipValidatorFns: ValidatorFnsByType,
   signal: AbortSignal,
   metrics: IMetrics | null
 ): GossipJobQueues {
   return mapValues(gossipQueueOpts, (opts, type) => {
-    return new JobItemQueue<[GossipTopic, InMessage], void>(
-      (topic, message) => processRpcMsgFn(message),
+    const gossipValidatorFn = gossipValidatorFns[type];
+    return new JobItemQueue<[GossipTopic, InMessage, number], void>(
+      (topic, message, seenTimestampsMs) => gossipValidatorFn(topic, message, seenTimestampsMs),
       {signal, ...opts},
       metrics
         ? {

@@ -118,13 +118,7 @@ export type GossipValidatorFn = (topic: GossipTopic, message: InMessage, seenTim
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
-export type ProcessRpcMessageTopicFn = (topic: GossipTopic, message: InMessage) => Promise<void>;
-
-export type ProcessRpcMessageFn = (message: InMessage) => Promise<void>;
-
-export type ProcessRpcMessageFnsByType = {[K in GossipType]: ProcessRpcMessageTopicFn};
-
-export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage], void>};
+export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage, number], void>};
 
 export type GossipHandlerFn = (
   object: GossipTypeMap[GossipType],

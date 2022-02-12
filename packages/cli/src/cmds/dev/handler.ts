@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {promisify} from "util";
+import {promisify} from "node:util";
 import rimraf from "rimraf";
 import path from "node:path";
 import {fromHexString} from "@chainsafe/ssz";

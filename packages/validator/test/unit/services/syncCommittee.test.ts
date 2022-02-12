@@ -72,7 +72,7 @@ describe("SyncCommitteeService", function () {
           validatorIndex: 0,
           validatorSyncCommitteeIndices: [7],
         },
-        selectionProofs: [{selectionProof: ZERO_HASH, subCommitteeIndex: 0}],
+        selectionProofs: [{selectionProof: ZERO_HASH, subcommitteeIndex: 0}],
       },
     ];
 
