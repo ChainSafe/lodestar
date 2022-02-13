@@ -83,8 +83,6 @@ export class ValidatorStore {
     this.validators.set(getSignerPubkeyHex(signer), signer);
   }
 
-  // TODO [DA] revisit naming?
-  //  Maybe a name that makes it clear the signer is removed via its pubkey
   removeSigner(signer: string | PubkeyHex): boolean {
     const pubkeyHex = typeof signer === "string" ? signer : toHexString(signer);
     return this.validators.delete(pubkeyHex);

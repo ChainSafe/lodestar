@@ -53,7 +53,6 @@ export class AttestationDutiesService {
         if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
           attDutiesAtEpoch.dutiesByIndex.delete(parseInt(vIndex as string));
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
-            // TODO [DA] confirm if its okay to remove the epoch entry if there is no dutiesByIndex at that epoch
             this.dutiesByIndexByEpoch.delete(parseInt(epoch as string));
           }
         }

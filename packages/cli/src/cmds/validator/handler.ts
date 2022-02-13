@@ -74,8 +74,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         });
       }
 
-      // TODO [DA] revisit this
-      onGracefulShutdownCbs.push(() => secretKeysInfo.pop()?.unlockSecretKeys?.());
+      secretKeysInfo.forEach((secretKeysInfo) => {
+        if (secretKeysInfo?.unlockSecretKeys) {
+          onGracefulShutdownCbs.push(() => secretKeysInfo?.unlockSecretKeys?.());
+        }
+      });
     }
   }
 

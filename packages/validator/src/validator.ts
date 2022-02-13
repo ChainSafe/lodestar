@@ -31,7 +31,6 @@ export type SecretKeyInfo = {
   unlockSecretKeys?: () => void;
 };
 
-// TODO [DA] is this the best place to put the keystores key?
 // Combined the two new keys
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;

@@ -12,6 +12,7 @@ import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 import {fromHexString} from "@chainsafe/ssz";
 import {externalSignerGetKeys, SecretKeyInfo} from "@chainsafe/lodestar-validator";
+import {SignerRemote, SignerType} from "@chainsafe/lodestar-validator";
 
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
@@ -86,24 +87,6 @@ export async function getLocalSecretKeys(args: IValidatorCliArgs & IGlobalArgs):
 }
 
 /**
- * TODO [DA] there is this type definition in
- * packages/validator/src/services/validatorStore.ts
- *
- * export type SignerRemote = {
- *   type: SignerType.Remote;
- *   externalSignerUrl: string;
- *   pubkeyHex: PubkeyHex;
- * };
- *
- * See why that cannot be re-used here?
-
- */
-export type SignerRemote = {
-  externalSignerUrl: string;
-  pubkeyHex: string;
-};
-
-/**
  * Gets SignerRemote objects from CLI args
  */
 export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs): Promise<SignerRemote[]> {
@@ -120,7 +103,7 @@ export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs):
 
     assertValidPubkeysHex(args.externalSignerPublicKeys);
     assertValidExternalSignerUrl(externalSignerUrl);
-    return args.externalSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
+    return args.externalSignerPublicKeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
   }
 
   if (args.externalSignerFetchPubkeys) {
@@ -132,7 +115,7 @@ export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs):
     const fetchedPubkeys = await externalSignerGetKeys(externalSignerUrl);
 
     assertValidPubkeysHex(fetchedPubkeys);
-    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
+    return fetchedPubkeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
   }
 
   return [];
