@@ -65,7 +65,7 @@ export class JobItemQueue<Args extends any[], R> {
   }
 
   dropAllJobs = (): void => {
-    this.jobs.prune();
+    this.jobs.clear();
   };
 
   private runJob = async (): Promise<void> => {

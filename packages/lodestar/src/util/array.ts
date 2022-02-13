@@ -95,7 +95,7 @@ export class LinkedList<T> {
     return oldHead.data;
   }
 
-  prune(): void {
+  clear(): void {
     this.head = this.tail = null;
     this._length = 0;
   }

@@ -67,7 +67,7 @@ describe("LinkedList", () => {
     const count = 100;
     for (let i = 0; i < count; i++) list.push(i);
 
-    list.prune();
+    list.clear();
 
     expect(list.toArray()).to.be.deep.equal([]);
     expect(list.length).to.be.equal(0);
