@@ -60,7 +60,6 @@ export class KeymanagerServer {
 
       void initToken();
     } else {
-      // TODO [DA] Log a warning
       this.apiTokenPath = "";
       this.bearerToken = "";
     }
@@ -118,6 +117,10 @@ export class KeymanagerServer {
     this.opts = opts;
     this.server = server;
     this.logger = modules.logger;
+
+    if (!opts.auth) {
+      this.logger.warn("keymanager server started without authentication");
+    }
   }
 
   /**
