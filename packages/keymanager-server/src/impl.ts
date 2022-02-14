@@ -15,11 +15,13 @@ import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
 import {SecretKeyInfo} from "@chainsafe/lodestar-validator";
 import lockfile from "lockfile";
+import {ILogger} from "@chainsafe/lodestar-utils";
 
 export const LOCK_FILE_EXT = ".lock";
 
 export class KeymanagerApi implements Api {
   constructor(
+    private readonly logger: ILogger,
     private readonly validator: Validator,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
@@ -182,7 +184,7 @@ export class KeymanagerApi implements Api {
               try {
                 await unlink(secretKeyInfo?.keystorePath);
               } catch (e) {
-                // TODO [DA] log some info
+                this.logger.error("Error deleting keystorePath", {}, e as Error);
               }
             }
           }

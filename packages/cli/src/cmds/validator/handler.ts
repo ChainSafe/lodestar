@@ -107,6 +107,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Start keymanager API backend
   if (args.keymanagerEnabled) {
     const keymanagerApi = new KeymanagerApi(
+      logger,
       validator,
       slashingProtection,
       validator.genesis.genesisValidatorsRoot,

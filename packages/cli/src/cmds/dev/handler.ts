@@ -164,6 +164,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
     // Start keymanager API backend
     if (args.keymanagerEnabled) {
       const keymanagerApi = new KeymanagerApi(
+        logger,
         validator,
         slashingProtection,
         validator.genesis.genesisValidatorsRoot,

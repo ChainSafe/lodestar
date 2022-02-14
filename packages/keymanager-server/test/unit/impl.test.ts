@@ -10,6 +10,7 @@ import {PublicKey, SecretKey} from "@chainsafe/bls";
 import {IInterchangeV5} from "@chainsafe/lodestar-validator/src/slashingProtection/interchange/formats/v5";
 import {Keystore} from "@chainsafe/bls-keystore";
 import lockfile from "lockfile";
+import {testLogger} from "@chainsafe/lodestar-validator/test/utils/logger";
 
 describe("keymanager", () => {
   let validatorSub: Sinon.SinonStubbedInstance<Validator>;
@@ -43,6 +44,7 @@ describe("keymanager", () => {
     (validatorSub as any).validatorStore = validatorStoreSub;
 
     const km = new KeymanagerApi(
+      testLogger(),
       (validatorSub as unknown) as Validator,
       slashingProtectionStub,
       genesisValidatorRootStub,
@@ -68,6 +70,7 @@ describe("keymanager", () => {
       (validatorSub as any).validatorStore = validatorStoreSub;
 
       const km = new KeymanagerApi(
+        testLogger(),
         (validatorSub as unknown) as Validator,
         slashingProtectionStub,
         genesisValidatorRootStub
@@ -104,6 +107,7 @@ describe("keymanager", () => {
         });
 
       const km = new KeymanagerApi(
+        testLogger(),
         (validatorSub as unknown) as Validator,
         slashingProtectionStub,
         genesisValidatorRootStub,
@@ -138,6 +142,7 @@ describe("keymanager", () => {
         });
 
       const km = new KeymanagerApi(
+        testLogger(),
         (validatorSub as unknown) as Validator,
         slashingProtectionStub,
         genesisValidatorRootStub
@@ -208,6 +213,7 @@ describe("keymanager", () => {
       ];
 
       const km = new KeymanagerApi(
+        testLogger(),
         (validatorSub as unknown) as Validator,
         slashingProtectionStub,
         genesisValidatorRootStub,
@@ -259,6 +265,7 @@ describe("keymanager", () => {
       ];
 
       const km = new KeymanagerApi(
+        testLogger(),
         (validatorSub as unknown) as Validator,
         slashingProtectionStub,
         genesisValidatorRootStub,
