@@ -2,10 +2,10 @@ import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodes
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getAndInitValidatorsWithKeystoreOne, getAndInitValidatorsWithKeystoreTwo} from "../../utils/node/validator";
-import {KeymanagerApi, KeymanagerServer, SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server";
+import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getKeymanagerClient, HttpClient} from "@chainsafe/lodestar-api/src";
-import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {ISlashingProtection, SecretKeyInfo, Validator} from "@chainsafe/lodestar-validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import fs from "node:fs";
