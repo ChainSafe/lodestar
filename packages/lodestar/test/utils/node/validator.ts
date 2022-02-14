@@ -2,15 +2,21 @@ import tmp, {DirResult, FileResult} from "tmp";
 import fs from "node:fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
-import {SlashingProtection, Validator, Signer, SignerType, ISlashingProtection} from "@chainsafe/lodestar-validator";
+import {
+  SlashingProtection,
+  Validator,
+  Signer,
+  SignerType,
+  ISlashingProtection,
+  SecretKeyInfo,
+  SignerLocal,
+} from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 import {SecretKey} from "@chainsafe/bls";
 import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
-import {SecretKeyInfo} from "@chainsafe/lodestar-validator";
-import {SignerLocal} from "@chainsafe/lodestar-validator/src";
 
 function getFirstKeystoreContent(): string {
   return JSON.stringify({
