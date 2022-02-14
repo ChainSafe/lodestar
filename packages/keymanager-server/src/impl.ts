@@ -76,7 +76,6 @@ export class KeymanagerApi implements Api {
       message?: string;
     }[];
   }> {
-    // TODO [DA] look into the deserialization infra and if this can be deserialized right away into Interchange
     const interchange = (slashingProtectionStr as unknown) as Interchange;
     await this.slashingProtection.importInterchange(interchange, this.genesisValidatorRoot);
 
