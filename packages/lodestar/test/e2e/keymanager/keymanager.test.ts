@@ -183,6 +183,7 @@ function createKeymanager(
   logger: WinstonLogger
 ): KeymanagerServer {
   const keymanagerApi = new KeymanagerApi(
+    logger,
     vc,
     slashingProtection,
     vc.genesis.genesisValidatorsRoot,
