@@ -14,24 +14,24 @@ export type WSSOptions =
       weakSubjectivityCheckpoint: string | undefined;
     };
 export interface IWSSArgs {
-  "wss.weakSubjectivityStateFile": string;
-  "wss.weakSubjectivitySyncLatest": boolean;
-  "wss.weakSubjectivityCheckpoint": string;
-  "wss.weakSubjectivityServerUrl": string;
+  "weakSubjectivity.stateFile": string;
+  "weakSubjectivity.syncLatest": boolean;
+  "weakSubjectivity.checkpoint": string;
+  "weakSubjectivity.serverUrl": string;
 }
 
 export function parseWSSArgs(args: IWSSArgs): WSSOptions | null {
   const {
-    "wss.weakSubjectivityStateFile": weakSubjectivityStateFile,
-    "wss.weakSubjectivitySyncLatest": weakSubjectivitySyncLatest,
-    "wss.weakSubjectivityCheckpoint": weakSubjectivityCheckpoint,
-    "wss.weakSubjectivityServerUrl": weakSubjectivityServerUrl,
+    "weakSubjectivity.stateFile": weakSubjectivityStateFile,
+    "weakSubjectivity.syncLatest": weakSubjectivitySyncLatest,
+    "weakSubjectivity.checkpoint": weakSubjectivityCheckpoint,
+    "weakSubjectivity.serverUrl": weakSubjectivityServerUrl,
   } = args;
   if (weakSubjectivityStateFile) {
     return {weakSubjectivityStateFile, weakSubjectivityCheckpoint} as WSSOptions;
   } else if (weakSubjectivitySyncLatest) {
     if (!weakSubjectivityServerUrl) {
-      throw Error("Must set arg --weakSubjectivityServerUrl for wss sync");
+      throw Error("Must set arg --weakSubjectivity.serverUrl for wss sync");
     }
     return {weakSubjectivitySyncLatest, weakSubjectivityServerUrl, weakSubjectivityCheckpoint} as WSSOptions;
   } else {
@@ -40,30 +40,30 @@ export function parseWSSArgs(args: IWSSArgs): WSSOptions | null {
 }
 
 export const wssOptions: ICliCommandOptions<IWSSArgs> = {
-  "wss.weakSubjectivityStateFile": {
+  "weakSubjectivity.stateFile": {
     description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
     type: "string",
-    group: "wss",
+    group: "weakSubjectivity",
   },
 
-  "wss.weakSubjectivitySyncLatest": {
+  "weakSubjectivity.syncLatest": {
     description:
-      "Enable fetching of a weak subjectivity state via --weakSubjectivityServerUrl.  If an argument is provided to --weakSubjectivityCheckpoint, fetch the state at that checkpoint.  Else, fetch the latest finalized state.",
+      "Sync and start from a weak subjectivity state at --weakSubjectivity.checkpoint (if provided, else fetches the latest finalized) via the --weakSubjectivity.serverUrl",
     type: "boolean",
-    group: "wss",
+    group: "weakSubjectivity",
   },
 
-  "wss.weakSubjectivityCheckpoint": {
+  "weakSubjectivity.checkpoint": {
     description:
-      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockRoot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
+      "To fetch and start beacon node off a state at the provided weakSubjectivity checkpoint, to be supplied in <blockRoot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.",
     type: "string",
-    group: "wss",
+    group: "weakSubjectivity",
   },
 
-  "wss.weakSubjectivityServerUrl": {
+  "weakSubjectivity.serverUrl": {
     description:
-      "Pass in a server hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivitySyncLatest or --weakSubjectivityCheckpoint sync.",
+      "Pass in a server url hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivity.syncLatest or --weakSubjectivity.checkpoint.",
     type: "string",
-    group: "wss",
+    group: "weakSubjectivity",
   },
 };
