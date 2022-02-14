@@ -9,7 +9,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
-import {SecretKeyInfo} from "@chainsafe/lodestar-keymanager-server";
+import {SecretKeyInfo} from "@chainsafe/lodestar-validator";
 import {SignerLocal} from "@chainsafe/lodestar-validator/src";
 
 function getFirstKeystoreContent(): string {
