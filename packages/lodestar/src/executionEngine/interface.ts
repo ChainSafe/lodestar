@@ -26,6 +26,8 @@ export enum ExecutePayloadStatus {
   ELERROR = "ELERROR",
   /** EL unavailable */
   UNAVAILABLE = "UNAVAILABLE",
+  /** EL replied with SYNCING or ACCEPTED when its not safe to import optimistic blocks */
+  UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
 export type ExecutePayloadResponse =

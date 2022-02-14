@@ -2,6 +2,7 @@ import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipActionError} from "./gossipValidation";
+import {ExecutePayloadStatus} from "../../executionEngine/interface";
 
 export enum BlockErrorCode {
   /** The prestate cannot be fetched */
@@ -55,11 +56,14 @@ export enum BlockErrorCode {
   SAME_PARENT_HASH = "BLOCK_ERROR_SAME_PARENT_HASH",
   /** Total size of executionPayload.transactions exceed a sane limit to prevent DOS attacks */
   TRANSACTIONS_TOO_BIG = "BLOCK_ERROR_TRANSACTIONS_TOO_BIG",
-  /** Execution engine returned not valid after notifyNewPayload() call */
-  EXECUTION_PAYLOAD_NOT_VALID = "BLOCK_ERROR_EXECUTION_PAYLOAD_NOT_VALID",
   /** Execution engine is unavailable, syncing, or api call errored. Peers must not be downscored on this code */
   EXECUTION_ENGINE_ERROR = "BLOCK_ERROR_EXECUTION_ERROR",
 }
+
+type ExecutionErrorStatus = Exclude<
+  ExecutePayloadStatus,
+  ExecutePayloadStatus.VALID | ExecutePayloadStatus.ACCEPTED | ExecutePayloadStatus.SYNCING
+>;
 
 export type BlockErrorType =
   | {code: BlockErrorCode.PRESTATE_MISSING; error: Error}
@@ -91,8 +95,7 @@ export type BlockErrorType =
   | {code: BlockErrorCode.TOO_MUCH_GAS_USED; gasUsed: number; gasLimit: number}
   | {code: BlockErrorCode.SAME_PARENT_HASH; blockHash: RootHex}
   | {code: BlockErrorCode.TRANSACTIONS_TOO_BIG; size: number; max: number}
-  | {code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID; errorMessage: string}
-  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; errorMessage: string};
+  | {code: BlockErrorCode.EXECUTION_ENGINE_ERROR; execStatus: ExecutionErrorStatus; errorMessage: string};
 
 export class BlockGossipError extends GossipActionError<BlockErrorType> {}
 
