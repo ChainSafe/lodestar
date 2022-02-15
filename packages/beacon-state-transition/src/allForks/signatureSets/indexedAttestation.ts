@@ -50,11 +50,7 @@ export function getAttestationsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  const signatureSets: ISignatureSet[] = [];
-
-  for (const attestation of signedBlock.message.body.attestations) {
-    signatureSets.push(getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation)));
-  }
-
-  return signatureSets;
+  return signedBlock.message.body.attestations.map((attestation) =>
+    getIndexedAttestationSignatureSet(state, state.epochCtx.getIndexedAttestation(attestation))
+  );
 }

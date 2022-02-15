@@ -39,11 +39,7 @@ export function getVoluntaryExitsSignatureSets(
   state: CachedBeaconStateAllForks,
   signedBlock: allForks.SignedBeaconBlock
 ): ISignatureSet[] {
-  const signatureSets: ISignatureSet[] = [];
-
-  for (const voluntaryExit of signedBlock.message.body.voluntaryExits) {
-    signatureSets.push(getVoluntaryExitSignatureSet(state, voluntaryExit));
-  }
-
-  return signatureSets;
+  return signedBlock.message.body.voluntaryExits.map((voluntaryExit) =>
+    getVoluntaryExitSignatureSet(state, voluntaryExit)
+  );
 }
