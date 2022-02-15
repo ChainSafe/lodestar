@@ -102,7 +102,7 @@ describe("altair processBlock", () => {
   for (const {id, opts} of testCases) {
     for (const hashState of [false, true]) {
       itBench<StateBlock, StateBlock>({
-        id: `altair processBlock - ${perfStateId} ${id}` + hashState ? " hashState" : "",
+        id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
           const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
           const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
