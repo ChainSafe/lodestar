@@ -47,7 +47,7 @@ export function processJustificationAndFinalization(
       epoch: currentEpoch,
       root: getBlockRoot(state, currentEpoch),
     });
-    bits[1] = true;
+    bits[0] = true;
   }
 
   state.justificationBits = ssz.phase0.JustificationBits.toViewDU(BitArray.fromBoolArray(bits));
