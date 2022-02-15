@@ -1,5 +1,5 @@
+import {zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {ssz} from "@chainsafe/lodestar-types";
-import {newZeroedArray} from "../../util";
 import {CachedBeaconStateAltair} from "../../types";
 
 /**
@@ -13,8 +13,15 @@ export function processParticipationFlagUpdates(state: CachedBeaconStateAltair):
   // Set view and tree from currentEpochParticipation to previousEpochParticipation
   state.previousEpochParticipation = state.currentEpochParticipation;
 
-  // Wipe currentEpochParticipation with an empty value
-  const currentEpochParticipationArr = newZeroedArray(state.currentEpochParticipation.length);
-  // TODO: Benchmark the cost of transforming to .toViewDU()
-  state.currentEpochParticipation = ssz.altair.EpochParticipation.toViewDU(currentEpochParticipationArr);
+  // We need to replace the node of currentEpochParticipation with a node that represents and empty list of some length.
+  // SSZ represents a list as = new BranchNode(chunksNode, lengthNode).
+  // Since the chunks represent all zero'ed data we can re-use the pre-compouted zeroNode at chunkDepth to skip any
+  // data transformation and create the required tree almost for free.
+  const currentEpochParticipationNode = ssz.altair.EpochParticipation.tree_setChunksNode(
+    state.currentEpochParticipation.node,
+    zeroNode(ssz.altair.EpochParticipation.chunkDepth),
+    state.currentEpochParticipation.length
+  );
+
+  state.currentEpochParticipation = ssz.altair.EpochParticipation.getViewDU(currentEpochParticipationNode);
 }
