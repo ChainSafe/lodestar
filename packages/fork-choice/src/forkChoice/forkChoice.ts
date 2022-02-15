@@ -621,7 +621,11 @@ export class ForkChoice implements IForkChoice {
   }
 
   getCanonicalBlockAtSlot(slot: Slot): IProtoBlock | null {
-    if (slot >= this.head.slot) {
+    if (slot > this.head.slot) {
+      return null;
+    }
+
+    if (slot === this.head.slot) {
       return this.head;
     }
 
