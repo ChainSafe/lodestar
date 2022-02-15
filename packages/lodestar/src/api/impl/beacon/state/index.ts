@@ -3,7 +3,6 @@ import {routes} from "@chainsafe/lodestar-api";
 import {Api as IBeaconStateApi} from "@chainsafe/lodestar-api/lib/routes/beacon/state";
 import {
   BeaconStateAllForks,
-  CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   getCurrentEpoch,

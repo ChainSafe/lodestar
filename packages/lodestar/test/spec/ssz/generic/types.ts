@@ -126,7 +126,8 @@ export function getTestType(testType: string, testCase: string): Type<unknown> {
     // {limit}: the list limit, in bits, of the bitlist.
     case "bitlist": {
       // Consider case `bitlist_no_delimiter_empty`
-      const limit = testCase.includes("no_delimiter") ? 0 : parseSecondNum(testCase, "limit");
+      // Set bitLen to a random big value. 0 is invalid and will throw at the constructor
+      const limit = testCase.includes("no_delimiter") ? 1024 : parseSecondNum(testCase, "limit");
       // TODO: memoize
       return new BitListType(limit);
     }
