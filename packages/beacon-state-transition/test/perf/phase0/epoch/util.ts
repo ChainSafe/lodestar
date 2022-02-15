@@ -1,4 +1,4 @@
-import {AttesterFlags, IAttesterStatus, toAttesterFlags} from "../../../../src";
+import {AttesterFlags, FLAG_ELIGIBLE_ATTESTER, hasMarkers, IAttesterStatus, toAttesterFlags} from "../../../../src";
 import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../../src/types";
 
 /**
@@ -13,8 +13,17 @@ export function generateBalanceDeltasEpochProcess(
 ): EpochProcess {
   const vc = state.validators.length;
 
+  const statuses = generateStatuses(state.validators.length, flagFactors);
+  const eligibleValidatorIndices: number[] = [];
+  for (let i = 0; i < statuses.length; i++) {
+    if (hasMarkers(statuses[i].flags, FLAG_ELIGIBLE_ATTESTER)) {
+      eligibleValidatorIndices.push(i);
+    }
+  }
+
   const epochProcess: Partial<EpochProcess> = {
-    statuses: generateStatuses(state.validators.length, flagFactors),
+    statuses,
+    eligibleValidatorIndices,
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
     prevEpochUnslashedStake: {
@@ -32,17 +41,17 @@ export type FlagFactors = Record<keyof AttesterFlags, number> | number;
 
 function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus[] {
   const totalProposers = 32;
-  const statuses: IAttesterStatus[] = [];
+  const statuses = new Array<IAttesterStatus>(vc);
 
   for (let i = 0; i < vc; i++) {
     // Set to number to set all validators to the same value
     if (typeof flagFactors === "number") {
-      statuses.push({
+      statuses[i] = {
         flags: flagFactors,
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
         active: true,
-      });
+      };
     } else {
       // Use a factor to set some validators to this flag
       const flagsObj: AttesterFlags = {
@@ -55,12 +64,12 @@ function generateStatuses(vc: number, flagFactors: FlagFactors): IAttesterStatus
         unslashed: i < vc * flagFactors.unslashed, // 6
         eligibleAttester: i < vc * flagFactors.eligibleAttester, // 7
       };
-      statuses.push({
+      statuses[i] = {
         flags: toAttesterFlags(flagsObj),
         proposerIndex: i % totalProposers,
         inclusionDelay: 1 + (i % 4),
         active: true,
-      });
+      };
     }
   }
 
