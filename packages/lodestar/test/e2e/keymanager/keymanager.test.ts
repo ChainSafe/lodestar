@@ -240,8 +240,8 @@ describe("keymanager delete and import test", async function () {
 
       // clean up
       await Promise.all(validators.map((v) => v.stop()));
-      await bn.close();
       await keymanagerServer.close();
+      await bn.close();
     }
   });
 });
