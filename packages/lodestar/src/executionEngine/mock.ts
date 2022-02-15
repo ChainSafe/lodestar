@@ -33,7 +33,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       parentHash: ZERO_HASH,
       feeRecipient: Buffer.alloc(20, 0),
       stateRoot: ZERO_HASH,
-      receiptsRoot: ZERO_HASH,
+      receiptRoot: ZERO_HASH,
       logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
       random: ZERO_HASH,
       blockNumber: 0,
