@@ -80,13 +80,13 @@ If you have a synced beacon node handy (your friend's or an infrastructure provi
 
 Just supply these **extra args** to your beacon node command:
 ```bash
---weakSubjectivity.syncLatest --weakSubjectivity.serverUrl <synced node url> [--weakSubjectivity.checkpoint <trusted checkpoint in root:epoch format>]
+--weakSubjectivitySyncLatest --weakSubjectivityServerUrl <synced node url> [--weakSubjectivityCheckpoint <trusted checkpoint in root:epoch format>]
 ```
-In case you really trust `weakSubjectivity.serverUrl` then you may skip providing `weakSubjectivity.checkpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
+In case you really trust `weakSubjectivityServerUrl` then you may skip providing `weakSubjectivityCheckpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
 
 #### PS
 Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you loosing your funds by social engineering. 
-If possible validate your `weakSubjectivity.checkpoint` from multiple places like different client distributions, or from any other trusted sources. This will highly reduce the risk of starting off on a wrong chain.
+If possible validate your `weakSubjectivityCheckpoint` from multiple places like different client distributions, or from any other trusted sources. This will highly reduce the risk of starting off on a wrong chain.
 
 ## Run a validator
 
