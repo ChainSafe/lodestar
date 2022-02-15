@@ -204,15 +204,17 @@ describe("keymanager delete and import test", async function () {
         validators[0].genesis.genesisValidatorsRoot
       );
 
+      const kmPort = 10003;
+
       // by default auth is on
       const keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: 10002, cors: "*", tokenDir: "."},
+        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: "."},
         {config, logger: loggerNodeA, api: keymanagerApi}
       );
 
       await keymanagerServer.listen();
 
-      const client = getKeymanagerClient(config, new HttpClient({baseUrl: "http://127.0.0.1:9667"}));
+      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
 
       // Listing keys is denied
       try {
