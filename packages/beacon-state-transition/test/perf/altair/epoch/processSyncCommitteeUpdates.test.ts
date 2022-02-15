@@ -14,16 +14,17 @@ describe("altair processSyncCommitteeUpdates", () => {
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
     before: () => generatePerfTestCachedStateAltair({goBackOneSlot: true}),
     beforeEach: (state) => {
-      if ((state.epochCtx.epoch + 1) % EPOCHS_PER_SYNC_COMMITTEE_PERIOD === 0) {
-        // OK will run
-      } else {
-        throw Error("processSyncCommitteeUpdates will not rotate syncCommittees");
-      }
-
-      return state.clone();
+      const stateCloned = state.clone();
+      // Force processSyncCommitteeUpdates to run
+      state.epochCtx.epoch = EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1;
+      return stateCloned;
     },
     fn: (state) => {
+      const nextSyncCommitteeBefore = state.nextSyncCommittee;
       processSyncCommitteeUpdates(state);
+      if (state.nextSyncCommittee === nextSyncCommitteeBefore) {
+        throw Error("nextSyncCommittee instance has not changed");
+      }
     },
   });
 });
