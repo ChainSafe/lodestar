@@ -12,6 +12,6 @@ export function processEth1DataReset(state: CachedBeaconStateAllForks, epochProc
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = ssz.phase0.Eth1DataVotes.defaultViewDU;
+    state.eth1DataVotes = ssz.phase0.Eth1DataVotes.toViewDU([]);
   }
 }
