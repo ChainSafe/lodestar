@@ -108,7 +108,10 @@ describe("Start from WSS", function () {
 
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
-      options: {api: {rest: {enabled: true, port: 9587} as RestApiOptions}, sync: {isSingleNode: true}},
+      options: {
+        api: {rest: {enabled: true, port: 9587} as RestApiOptions},
+        sync: {isSingleNode: true, backfillBatchSize: 64},
+      },
       validatorCount: 32,
       logger: loggerNodeB,
       genesisTime,
@@ -120,6 +123,7 @@ describe("Start from WSS", function () {
     const head = bn.chain.forkChoice.getHead();
     // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     if (!head) throw Error("First beacon node has no head block");
+    if (!bnStartingFromWSS.backfillSync) throw Error("Backfill sync not started");
     const waitForSynced = waitForEvent<Slot>(
       bnStartingFromWSS.backfillSync,
       BackfillSyncEvent.completed,
