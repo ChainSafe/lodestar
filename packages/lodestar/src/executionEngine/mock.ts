@@ -107,7 +107,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       parentHash: headBlockHash,
       feeRecipient: payloadAttributes.suggestedFeeRecipient,
       stateRoot: crypto.randomBytes(32),
-      receiptsRoot: crypto.randomBytes(32),
+      receiptRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
       random: payloadAttributes.random,
       blockNumber: parentPayload.blockNumber + 1,
