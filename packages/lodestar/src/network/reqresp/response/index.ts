@@ -7,7 +7,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
-import {onChunk, renderRequestBody} from "../utils";
+import {renderRequestBody} from "../utils";
 import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
