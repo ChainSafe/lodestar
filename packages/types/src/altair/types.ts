@@ -100,7 +100,7 @@ export interface LightClientUpdate {
   finalizedHeader: phase0.BeaconBlockHeader;
   finalityBranch: Vector<Bytes32>;
   /** Sync committee aggregate signature */
-  syncCommitteeAggregate: SyncAggregate;
+  syncAggregate: SyncAggregate;
   /** Fork version for the aggregate signature */
   forkVersion: Version;
 }

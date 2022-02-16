@@ -81,7 +81,7 @@ describe("validateLightClientUpdate", () => {
       nextSyncCommitteeBranch: nextSyncCommitteeBranch,
       finalizedHeader: finalizedHeader,
       finalityBranch: finalityBranch,
-      syncCommitteeAggregate: syncAggregate,
+      syncAggregate,
       forkVersion,
     };
 

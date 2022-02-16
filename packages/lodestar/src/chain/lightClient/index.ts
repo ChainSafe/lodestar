@@ -282,7 +282,7 @@ export class LightClientServer {
         nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
         finalizedHeader: partialUpdate.finalizedHeader,
         finalityBranch: partialUpdate.finalityBranch,
-        syncCommitteeAggregate: partialUpdate.syncCommitteeAggregate,
+        syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     } else {
@@ -292,7 +292,7 @@ export class LightClientServer {
         nextSyncCommitteeBranch: getNextSyncCommitteeBranch(syncCommitteeWitness),
         finalizedHeader: this.zero.finalizedHeader,
         finalityBranch: this.zero.finalityBranch,
-        syncCommitteeAggregate: partialUpdate.syncCommitteeAggregate,
+        syncAggregate: partialUpdate.syncAggregate,
         forkVersion: this.config.getForkVersion(partialUpdate.attestedHeader.slot),
       };
     }
@@ -472,11 +472,11 @@ export class LightClientServer {
       ? {
           ...attestedData,
           finalizedHeader: await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array),
-          syncCommitteeAggregate: syncAggregate,
+          syncAggregate,
         }
       : {
           ...attestedData,
-          syncCommitteeAggregate: syncAggregate,
+          syncAggregate,
         };
 
     await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
@@ -537,7 +537,7 @@ export function isBetterUpdate(
   }
 
   // Higher bit count
-  const prevBitCount = sumBits(prevUpdate.syncCommitteeAggregate.syncCommitteeBits);
+  const prevBitCount = sumBits(prevUpdate.syncAggregate.syncCommitteeBits);
   if (prevBitCount > nextBitCount) return false;
   if (prevBitCount < nextBitCount) return true;
 
