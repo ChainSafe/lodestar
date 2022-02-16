@@ -127,30 +127,6 @@ export class ChainSegmentError extends LodestarError<BlockErrorType> {
 
 export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
   switch (type.code) {
-    case BlockErrorCode.PARENT_UNKNOWN:
-    case BlockErrorCode.FUTURE_SLOT:
-    case BlockErrorCode.STATE_ROOT_MISMATCH:
-    case BlockErrorCode.GENESIS_BLOCK:
-    case BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT:
-    case BlockErrorCode.ALREADY_KNOWN:
-    case BlockErrorCode.REPEAT_PROPOSAL:
-    case BlockErrorCode.BLOCK_SLOT_LIMIT_REACHED:
-    case BlockErrorCode.INCORRECT_PROPOSER:
-    case BlockErrorCode.PROPOSAL_SIGNATURE_INVALID:
-    case BlockErrorCode.UNKNOWN_PROPOSER:
-    case BlockErrorCode.NOT_FINALIZED_DESCENDANT:
-    case BlockErrorCode.NOT_LATER_THAN_PARENT:
-    case BlockErrorCode.NON_LINEAR_PARENT_ROOTS:
-    case BlockErrorCode.NON_LINEAR_SLOTS:
-    case BlockErrorCode.KNOWN_BAD_BLOCK:
-    case BlockErrorCode.INCORRECT_TIMESTAMP:
-    case BlockErrorCode.TOO_MUCH_GAS_USED:
-    case BlockErrorCode.SAME_PARENT_HASH:
-    case BlockErrorCode.TRANSACTIONS_TOO_BIG:
-    case BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID:
-    case BlockErrorCode.EXECUTION_ENGINE_ERROR:
-      return type;
-
     case BlockErrorCode.PRESTATE_MISSING:
     case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
     case BlockErrorCode.BEACON_CHAIN_ERROR:
@@ -166,5 +142,8 @@ export function renderBlockErrorType(type: BlockErrorType): Record<string, strin
         root: toHexString(type.root),
         expectedRoot: toHexString(type.expectedRoot),
       };
+
+    default:
+      return type;
   }
 }

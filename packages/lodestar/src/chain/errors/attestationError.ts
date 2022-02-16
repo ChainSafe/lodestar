@@ -159,40 +159,14 @@ export class AttestationError extends GossipActionError<AttestationErrorType> {
   getMetadata(): Record<string, string | number | null> {
     const type = this.type;
     switch (type.code) {
-      case AttestationErrorCode.TARGET_STATE_MISSING:
-      case AttestationErrorCode.FUTURE_SLOT:
-      case AttestationErrorCode.PAST_SLOT:
-      case AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD:
-      case AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE:
-      case AttestationErrorCode.AGGREGATOR_PUBKEY_UNKNOWN:
-      case AttestationErrorCode.ATTESTATION_ALREADY_KNOWN:
-      case AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN:
-      case AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH:
-      case AttestationErrorCode.BAD_TARGET_EPOCH:
-      case AttestationErrorCode.HEAD_NOT_TARGET_DESCENDANT:
-      case AttestationErrorCode.INVALID_SIGNATURE:
-      case AttestationErrorCode.NO_COMMITTEE_FOR_SLOT_AND_INDEX:
-      case AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET:
-      case AttestationErrorCode.PRIOR_ATTESTATION_KNOWN:
-      case AttestationErrorCode.FUTURE_EPOCH:
-      case AttestationErrorCode.PAST_EPOCH:
-      case AttestationErrorCode.ATTESTS_TO_FUTURE_BLOCK:
-      case AttestationErrorCode.INVALID_SUBNET_ID:
-      case AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS:
-      case AttestationErrorCode.KNOWN_BAD_BLOCK:
-      case AttestationErrorCode.INVALID_TARGET_ROOT:
-      case AttestationErrorCode.TARGET_BLOCK_NOT_AN_ANCESTOR_OF_LMD_BLOCK:
-      case AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE:
-      case AttestationErrorCode.INVALID_AGGREGATOR:
-      case AttestationErrorCode.INVALID_INDEXED_ATTESTATION:
-      case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-        return type;
-
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
         return {code: type.code, root: toHexString(type.root)};
       case AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE:
         // TODO: The stack trace gets lost here
         return {code: type.code, error: type.error.message};
+
+      default:
+        return type;
     }
   }
 }
