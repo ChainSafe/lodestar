@@ -70,8 +70,7 @@ export function processLightClientUpdate(
   // Note that (2) means that the current light client design needs finality.
   // It may be changed to re-organizable light client design. See the on-going issue eth2.0-specs#2182.
   if (
-    sumBits(update.syncAggregate.syncCommitteeBits) * 3 >=
-      update.syncAggregate.syncCommitteeBits.length * 2 &&
+    sumBits(update.syncAggregate.syncCommitteeBits) * 3 >= update.syncAggregate.syncCommitteeBits.length * 2 &&
     !isEmptyHeader(update.finalizedHeader)
   ) {
     applyLightClientUpdate(store.snapshot, update);
@@ -114,8 +113,5 @@ export function applyLightClientUpdate(snapshot: LightClientSnapshotFast, update
  * ```
  */
 export function isBetterUpdate(prevUpdate: altair.LightClientUpdate, newUpdate: altair.LightClientUpdate): boolean {
-  return (
-    sumBits(newUpdate.syncAggregate.syncCommitteeBits) >=
-    sumBits(prevUpdate.syncAggregate.syncCommitteeBits)
-  );
+  return sumBits(newUpdate.syncAggregate.syncCommitteeBits) >= sumBits(prevUpdate.syncAggregate.syncCommitteeBits);
 }
