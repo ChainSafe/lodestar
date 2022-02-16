@@ -1,7 +1,7 @@
 import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipActionError} from "./gossipValidation";
 
 export enum BlockErrorCode {
@@ -80,8 +80,8 @@ export type BlockErrorType =
       code: BlockErrorCode.INVALID_STATE_ROOT;
       root: Uint8Array;
       expectedRoot: Uint8Array;
-      preState: CachedBeaconState<allForks.BeaconState>;
-      postState: CachedBeaconState<allForks.BeaconState>;
+      preState: CachedBeaconStateAllForks;
+      postState: CachedBeaconStateAllForks;
     }
   | {code: BlockErrorCode.NOT_FINALIZED_DESCENDANT; parentRoot: RootHex}
   | {code: BlockErrorCode.NOT_LATER_THAN_PARENT; parentSlot: Slot; slot: Slot}

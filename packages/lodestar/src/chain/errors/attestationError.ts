@@ -185,10 +185,9 @@ export class AttestationError extends GossipActionError<AttestationErrorType> {
       case AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE:
       case AttestationErrorCode.INVALID_AGGREGATOR:
       case AttestationErrorCode.INVALID_INDEXED_ATTESTATION:
+      case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
         return type;
 
-      case AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT:
-        return {code: type.code, root: toHexString(type.root)};
       case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
         return {code: type.code, root: toHexString(type.root)};
       case AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE:

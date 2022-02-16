@@ -2,8 +2,8 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
+import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
-import {ErrorAborted, TimeoutError, toJson, toString} from "@chainsafe/lodestar-utils";
 
 /**
  * Limits the amount of response text printed with RPC or parsing errors
@@ -191,7 +191,7 @@ export class ErrorJsonRpcResponse<P> extends Error {
         ? res.error.message
         : typeof res.error.code === "number"
         ? parseJsonRpcErrorCode(res.error.code)
-        : toString(toJson(res.error))
+        : res.error.message
       : "no result";
 
     super(`JSON RPC error: ${errorMessage}, ${payload.method}`);

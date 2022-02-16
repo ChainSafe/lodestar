@@ -1,7 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {LodestarError, logCtxToJson, logCtxToString} from "../../src";
+import {LodestarError} from "../../../src";
+import {logCtxToJson, logCtxToString} from "../../../src/logger/json";
 
 describe("Json helper", () => {
   const circularReference = {};

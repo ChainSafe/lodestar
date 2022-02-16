@@ -1,6 +1,6 @@
 import {format} from "winston";
-import {logCtxToJson, logCtxToString} from "../json";
-import {Context, ILoggerOptions, TimestampFormatCode} from "./interface";
+import {logCtxToJson, logCtxToString, LogData} from "./json";
+import {ILoggerOptions, TimestampFormatCode} from "./interface";
 import {formatEpochSlotTime} from "./util";
 
 type Format = ReturnType<typeof format.combine>;
@@ -11,9 +11,8 @@ interface IWinstonInfoArg {
   message: string;
   module?: string;
   namespace?: string;
-  timestamp?: string;
-  durationMs?: string;
-  context: Context;
+  timestamp: string;
+  context: LogData;
   error: Error;
 }
 
@@ -80,15 +79,14 @@ function humanReadableTemplateFn(_info: {[key: string]: any; level: string; mess
   const infoString = info.module || info.namespace || "";
   const infoPad = paddingBetweenInfo - infoString.length;
 
-  const logParts: (string | undefined)[] = [
-    info.timestamp,
-    `[${infoString.toUpperCase()}]`,
-    `${info.level.padStart(infoPad)}:`,
-    info.message,
-    info.context !== undefined ? logCtxToString(info.context) : undefined,
-    info.error !== undefined ? logCtxToString(info.error) : undefined,
-    info.durationMs && ` - duration=${info.durationMs}ms`,
-  ];
+  let str = "";
 
-  return logParts.filter((s) => s).join(" ");
+  if (info.timestamp) str += info.timestamp;
+
+  str += `[${infoString.toUpperCase()}] ${info.level.padStart(infoPad)}: ${info.message}`;
+
+  if (info.context !== undefined) str += " " + logCtxToString(info.context);
+  if (info.error !== undefined) str += " " + logCtxToString(info.error);
+
+  return str;
 }

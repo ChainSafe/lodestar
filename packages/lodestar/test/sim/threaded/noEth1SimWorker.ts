@@ -49,7 +49,7 @@ async function runWorker(): Promise<void> {
   loggerNode.info("Thread started", {
     now: Math.floor(Date.now() / 1000),
     genesisTime: options.genesisTime,
-    localMultiaddrs: options.options.network?.localMultiaddrs || [],
+    localMultiaddrs: (options.options.network?.localMultiaddrs || []).join(","),
   });
 
   const node = await getDevBeaconNode({

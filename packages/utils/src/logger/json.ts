@@ -1,6 +1,12 @@
-import {toHexString} from "./bytes";
-import {LodestarError} from "./errors";
-import {mapValues} from "./objects";
+import {toHexString} from "../bytes";
+import {LodestarError} from "../errors";
+import {mapValues} from "../objects";
+
+const MAX_DEPTH = 0;
+
+type LogDataBasic = string | number | bigint | boolean | null | undefined;
+
+export type LogData = LogDataBasic | Record<string, LogDataBasic> | LogDataBasic[] | Record<string, LogDataBasic>[];
 
 /**
  * Renders any log Context to JSON up to one level of depth.
@@ -8,7 +14,7 @@ import {mapValues} from "./objects";
  * By limiting recursiveness, it renders limited content while ensuring safer logging.
  * Consumers of the logger should ensure to send pre-formated data if they require nesting.
  */
-export function logCtxToJson(arg: unknown, recursive = false, fromError = false): Json {
+export function logCtxToJson(arg: unknown, depth = 0, fromError = false): LogData {
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -25,7 +31,7 @@ export function logCtxToJson(arg: unknown, recursive = false, fromError = false)
       // For any type that may include recursiveness break early at the first level
       // - Prevent recursive loops
       // - Ensures Error with deep complex metadata won't leak into the logs and cause bugs
-      if (recursive) {
+      if (depth > MAX_DEPTH) {
         return "[object]";
       }
 
@@ -35,28 +41,31 @@ export function logCtxToJson(arg: unknown, recursive = false, fromError = false)
           if (fromError) {
             return "[LodestarErrorCircular]";
           } else {
-            metadata = logCtxToJson(arg.getMetadata(), false, true) as Record<string, unknown>;
+            // Allow one extra depth level for LodestarError
+            metadata = logCtxToJson(arg.getMetadata(), depth - 1, true) as Record<string, unknown>;
           }
         } else {
           metadata = {message: arg.message};
         }
         if (arg.stack) metadata.stack = arg.stack;
-        return metadata as Json;
+        return metadata as LogData;
       }
 
       if (Array.isArray(arg)) {
-        return arg.map((item) => logCtxToJson(item, true));
+        return arg.map((item) => logCtxToJson(item, depth + 1)) as LogData;
       }
 
-      return mapValues(arg as Record<string, unknown>, (item) => logCtxToJson(item, true));
+      return mapValues(arg as Record<string, unknown>, (item) => logCtxToJson(item, depth + 1)) as LogData;
 
     // Already valid JSON
     case "number":
     case "string":
     case "undefined":
     case "boolean":
-    default:
       return arg;
+
+    default:
+      return String(arg);
   }
 }
 
@@ -66,7 +75,7 @@ export function logCtxToJson(arg: unknown, recursive = false, fromError = false)
  * By limiting recursiveness, it renders limited content while ensuring safer logging.
  * Consumers of the logger should ensure to send pre-formated data if they require nesting.
  */
-export function logCtxToString(arg: unknown, recursive = false, fromError = false): string {
+export function logCtxToString(arg: unknown, depth = 0, fromError = false): string {
   switch (typeof arg) {
     case "bigint":
     case "symbol":
@@ -83,7 +92,7 @@ export function logCtxToString(arg: unknown, recursive = false, fromError = fals
       // For any type that may include recursiveness break early at the first level
       // - Prevent recursive loops
       // - Ensures Error with deep complex metadata won't leak into the logs and cause bugs
-      if (recursive) {
+      if (depth > MAX_DEPTH) {
         return "[object]";
       }
 
@@ -93,20 +102,21 @@ export function logCtxToString(arg: unknown, recursive = false, fromError = fals
           if (fromError) {
             return "[LodestarErrorCircular]";
           } else {
-            metadata = logCtxToString(arg.getMetadata(), false, true);
+            // Allow one extra depth level for LodestarError
+            metadata = logCtxToString(arg.getMetadata(), depth - 1, true);
           }
         } else {
           metadata = arg.message;
         }
-        return `${metadata} ${arg.stack || ""}`;
+        return `${metadata}\n${arg.stack || ""}`;
       }
 
       if (Array.isArray(arg)) {
-        return arg.map((item) => logCtxToString(item, true)).join(", ");
+        return arg.map((item) => logCtxToString(item, depth + 1)).join(", ");
       }
 
       return Object.entries(arg)
-        .map(([key, value]) => `${key}=${logCtxToString(value, true)}`)
+        .map(([key, value]) => `${key}=${logCtxToString(value, depth + 1)}`)
         .join(", ");
 
     case "number":
