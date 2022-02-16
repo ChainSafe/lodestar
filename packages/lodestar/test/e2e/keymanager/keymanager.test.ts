@@ -1,6 +1,7 @@
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
+import {ssz} from "@chainsafe/lodestar-types";
 import {
   getAndInitDevValidators,
   getAndInitValidatorsWithKeystoreOne,
@@ -13,7 +14,7 @@ import {ISlashingProtection, SecretKeyInfo, Validator} from "@chainsafe/lodestar
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import fs from "node:fs";
-import sinon from "sinon";
+import {ByteVector, fromHexString} from "@chainsafe/ssz";
 
 describe("keymanager delete and import test", async function () {
   const validatorCount = 1;
@@ -142,13 +143,23 @@ describe("keymanager delete and import test", async function () {
 
     // 3. IMPORT PUBKEY K1 to SECOND VALIDATOR CLIENT
 
+    // 3.a Confirmation before import, that signing with k1 on vc2 throws
+    expect(async () => {
+      await vc2Info.validator.validatorStore.signAttestation(
+        createAttesterDuty(fromHexString(key1), 0, 0, 1),
+        ssz.phase0.AttestationData.defaultValue(),
+        1
+      );
+    }).to.throw;
+
+    // Import k1 to vc2
     const importResult = await clientKM2.importKeystores(
       [vc1Info.keystoreContent],
       ["test123!"],
       JSON.parse(km1DeleteKeyResult.slashingProtection)
     );
 
-    // 3.a. COMFIRM IMPORT RESPONSE
+    // 3.b. COMFIRM IMPORT RESPONSE
     expect(importResult.data[0].status).to.be.equal("imported");
 
     // 4 CONFIRM PRESENCE OF IMPORTED KEY IN SECOND VALIDATOR CLIENT.
@@ -161,6 +172,24 @@ describe("keymanager delete and import test", async function () {
 
     // 4.b Confirm imported and previous key still exist via file system
     expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1, key2])).to.be.true;
+
+    // 4.c Confirm vc1 cannot sign with k1
+    expect(async () => {
+      await vc1Info.validator.validatorStore.signAttestation(
+        createAttesterDuty(fromHexString(key1), 0, 0, 1),
+        ssz.phase0.AttestationData.defaultValue(),
+        1
+      );
+    }).to.throw;
+
+    // 4.d Confirm vc2 can now sign with k1
+    expect(async () => {
+      await vc2Info.validator.validatorStore.signAttestation(
+        createAttesterDuty(fromHexString(key1), 0, 0, 1),
+        ssz.phase0.AttestationData.defaultValue(),
+        1
+      );
+    }).to.not.throw;
 
     // 5. CLEAN UP
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
@@ -269,6 +298,19 @@ function dirContainFileWithContent(dir: string, contents: string[]): boolean {
       })
     );
   });
+}
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function createAttesterDuty(pubkey: ByteVector, slot: number, committeeIndex: number, validatorIndex: number) {
+  return {
+    slot: slot,
+    committeeIndex: committeeIndex,
+    committeeLength: 120,
+    committeesAtSlot: 120,
+    validatorCommitteeIndex: 1,
+    validatorIndex: validatorIndex,
+    pubkey: pubkey,
+  };
 }
 
 function createKeymanager(
