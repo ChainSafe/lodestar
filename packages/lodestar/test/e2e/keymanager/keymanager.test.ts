@@ -13,6 +13,7 @@ import {ISlashingProtection, SecretKeyInfo, Validator} from "@chainsafe/lodestar
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import fs from "node:fs";
+import sinon from "sinon";
 
 describe("keymanager delete and import test", async function () {
   const validatorCount = 1;
@@ -24,6 +25,14 @@ describe("keymanager delete and import test", async function () {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: SECONDS_PER_SLOT,
   };
+
+  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
 
   it("should migrate validator from one VC to another", async function () {
     this.timeout("10 min");
@@ -96,33 +105,32 @@ describe("keymanager delete and import test", async function () {
 
     // confirm pubkey key1 in first validator client
     let km1ListKeyResult = await clientKM1.listKeys();
-    expect(km1ListKeyResult.data.length).to.equal(1);
-    expect(km1ListKeyResult.data[0].validatingPubkey).to.equal(key1);
-    expect(km1ListKeyResult.data[0].validatingPubkey).to.not.equal(key2);
+    expect(km1ListKeyResult.data.map((d) => d.validatingPubkey)).to.deep.equal(
+      [key1],
+      "confirm pubkey key1 in first validator client"
+    );
 
     // confirm pubkey key2 in second validator client
     let km2ListKeyResult = await clientKM2.listKeys();
-    expect(km2ListKeyResult.data.length).to.equal(1);
-    expect(km2ListKeyResult.data[0].validatingPubkey).to.equal(key2);
-    expect(km2ListKeyResult.data[0].validatingPubkey).to.not.equal(key1);
+    expect(km2ListKeyResult.data.map((d) => d.validatingPubkey)).to.deep.equal(
+      [key2],
+      "confirm pubkey key2 in second validator client"
+    );
 
     // 1.b. CONFIRM PRESENCE OF KEYS VIA FILE SYSTEM
 
     // confirm keystore for k1 exist on file
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
-    const keystoreFile1 = vc1Info.secretKeysInfo[0].keystorePath;
-    expect(fs.existsSync(keystoreFile1 as string)).to.be.true;
-    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, key1)).to.be.true;
-    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, key2)).to.be.false;
+    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key1])).to.be.true;
+    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key2])).to.be.false;
     // confirm keystore for k2 exist on file
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
-    const keystoreFile2 = vc1Info.secretKeysInfo[0].keystorePath;
-    expect(fs.existsSync(keystoreFile2 as string)).to.be.true;
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, key2)).to.be.true;
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, key1)).to.be.false;
+    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key2])).to.be.true;
+    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1])).to.be.false;
 
     // 2. DELETE PUBKEY K1 from first validator client
     // delete pubkey key1 in vc1Info
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
+    const keystoreFile1 = vc1Info.secretKeysInfo[0].keystorePath;
     const km1DeleteKeyResult = await clientKM1.deleteKeystores([key1]);
 
     // 2.a CONFIRM DELETION OF K1 from first validator client USING API AND FILESYSTEM
@@ -146,27 +154,28 @@ describe("keymanager delete and import test", async function () {
     // 4 CONFIRM PRESENCE OF IMPORTED KEY IN SECOND VALIDATOR CLIENT.
     // 4.a Confirm via api
     km2ListKeyResult = await clientKM2.listKeys();
-    expect(km2ListKeyResult.data.length).to.equal(2);
-    expect(km2ListKeyResult.data.some((key) => key.validatingPubkey === key1)).to.true;
-    expect(km2ListKeyResult.data.some((key) => key.validatingPubkey === key2)).to.true;
+    expect(km2ListKeyResult.data.map((d) => d.validatingPubkey)).to.deep.equal(
+      [key2, key1],
+      "confirm imported keys in vc 2"
+    );
 
-    // 4.b Confirm via file system
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, key1)).to.be.true;
-    // previous key also still exist on file system
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, key2)).to.be.true;
+    // 4.b Confirm imported and previous key still exist via file system
+    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1, key2])).to.be.true;
 
     // 5. CLEAN UP
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-    await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
-    await bn.close();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-    await keymanagerServerForVC1.close();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-    await keymanagerServerForVC2.close();
-    vc1Info.tempDirs.keystoreDir.removeCallback();
-    vc1Info.tempDirs.passwordFile.removeCallback();
-    vc2Info.tempDirs.keystoreDir.removeCallback();
-    vc2Info.tempDirs.passwordFile.removeCallback();
+    afterEachCallbacks.push(async () => {
+      await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
+      await bn.close();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      await keymanagerServerForVC1.close();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      await keymanagerServerForVC2.close();
+      vc1Info.tempDirs.keystoreDir.removeCallback();
+      vc1Info.tempDirs.passwordFile.removeCallback();
+      vc2Info.tempDirs.keystoreDir.removeCallback();
+      vc2Info.tempDirs.passwordFile.removeCallback();
+    });
   });
 
   it("should deny request if authentication is on and no bearer token is provided", async function () {
@@ -241,17 +250,24 @@ describe("keymanager delete and import test", async function () {
       }
 
       // clean up
-      await Promise.all(validators.map((v) => v.stop()));
-      await keymanagerServer.close();
-      await bn.close();
+      afterEachCallbacks.push(async () => {
+        await Promise.all(validators.map((v) => v.stop()));
+        await keymanagerServer.close();
+        await bn.close();
+      });
     }
   });
 });
 
-function dirContainFileWithContent(dir: string, content: string): boolean {
+function dirContainFileWithContent(dir: string, contents: string[]): boolean {
   return fs.readdirSync(dir).some((name) => {
     const fileContent = fs.readFileSync(`${dir}/${name}`, {encoding: "utf8"});
-    return fileContent !== "" && fileContent.indexOf(content.substring(2)) !== -1;
+    return (
+      fileContent !== "" &&
+      contents.some((content) => {
+        return fileContent.indexOf(content.substring(2)) !== -1;
+      })
+    );
   });
 }
 
