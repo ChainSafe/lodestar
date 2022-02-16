@@ -191,7 +191,7 @@ export class ErrorJsonRpcResponse<P> extends Error {
         ? res.error.message
         : typeof res.error.code === "number"
         ? parseJsonRpcErrorCode(res.error.code)
-        : res.error.message
+        : JSON.stringify(res.error)
       : "no result";
 
     super(`JSON RPC error: ${errorMessage}, ${payload.method}`);
