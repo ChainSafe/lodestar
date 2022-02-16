@@ -1,13 +1,11 @@
 import {assert} from "chai";
 import sinon from "sinon";
 import {KeymanagerApi} from "../../src";
-import {Interchange, Validator, ValidatorStore, SecretKeyInfo} from "@chainsafe/lodestar-validator";
+import {Interchange, Validator, ValidatorStore} from "@chainsafe/lodestar-validator";
 import {Root} from "@chainsafe/lodestar-types";
 import Sinon from "sinon";
 import {SlashingProtection} from "@chainsafe/lodestar-validator/src";
 import fs from "node:fs";
-import {PublicKey, SecretKey} from "@chainsafe/bls";
-import {IInterchangeV5} from "@chainsafe/lodestar-validator/src/slashingProtection/interchange/formats/v5";
 import {Keystore} from "@chainsafe/bls-keystore";
 import lockfile from "lockfile";
 import {testLogger} from "@chainsafe/lodestar-validator/test/utils/logger";
@@ -33,32 +31,6 @@ describe("keymanager", () => {
 
   afterEach(() => {
     sinon.restore();
-  });
-
-  it("should list keys", async () => {
-    const importKeystoresPath: string[] = [];
-    const secretKeysInfo: SecretKeyInfo[] = [];
-    const testPubKey = "0xfff";
-    validatorStoreSub.votingPubkeys.returns([testPubKey]);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    (validatorSub as any).validatorStore = validatorStoreSub;
-
-    const km = new KeymanagerApi(
-      testLogger(),
-      (validatorSub as unknown) as Validator,
-      slashingProtectionStub,
-      genesisValidatorRootStub,
-      importKeystoresPath,
-      secretKeysInfo
-    );
-
-    const keys = await km.listKeys();
-
-    assert.equal(validatorStoreSub.votingPubkeys.called, true);
-    assert.equal(keys.data.length, 1);
-    assert.equal(keys.data[0].validatingPubkey, testPubKey);
-    assert.equal(keys.data[0].derivationPath, "");
-    assert.equal(keys.data[0].readonly, false);
   });
 
   describe("Keymanager / importKeystores", () => {
@@ -156,134 +128,6 @@ describe("keymanager", () => {
       assert.equal(result.data[0].status, "imported");
     });
   });
-
-  describe("Keymanager / deleteKeystores", () => {
-    let secretKeyStub: Sinon.SinonStubbedInstance<SecretKey>;
-    let publicKeyStub: Sinon.SinonStubbedInstance<PublicKey>;
-
-    beforeEach(() => {
-      secretKeyStub = sinon.createStubInstance(SecretKey);
-      publicKeyStub = sinon.createStubInstance(PublicKey);
-    });
-
-    afterEach(() => {
-      sinon.restore();
-    });
-
-    const unlockSecretKeys = sinon.fake();
-    const keystorePath = "/path/keystore.json";
-
-    it("should delete keystore", async () => {
-      const pubkeyToDelete = [
-        "8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970",
-      ];
-
-      const interchangeStub = makeinterchangeStubFromPubkey(pubkeyToDelete);
-
-      slashingProtectionStub.exportInterchange
-        .withArgs(sinon.match.any, sinon.match.any, sinon.match.any)
-        .resolves(interchangeStub);
-
-      publicKeyStub.toHex.returns(pubkeyToDelete[0]);
-      secretKeyStub.toPublicKey.returns(publicKeyStub);
-      validatorStoreSub.removeSigner.withArgs(pubkeyToDelete[0]).returns(true);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      (validatorSub as any).validatorStore = validatorStoreSub;
-
-      const fsStub = sinon.stub(fs.promises, "unlink").withArgs(sinon.match.any).resolves();
-
-      const notDeletedPubKeyStub = sinon.createStubInstance(PublicKey);
-      notDeletedPubKeyStub.toHex.returns("x0ff");
-
-      const notDeletedSecretKeyStub = sinon.createStubInstance(SecretKey);
-      notDeletedSecretKeyStub.toPublicKey.returns(notDeletedPubKeyStub);
-      const secondKeyFile = "not_deleted.json";
-
-      const secretKeyInfos: SecretKeyInfo[] = [
-        {
-          secretKey: secretKeyStub,
-          keystorePath,
-          unlockSecretKeys,
-        },
-        {
-          secretKey: notDeletedSecretKeyStub,
-          keystorePath: secondKeyFile,
-          unlockSecretKeys,
-        },
-      ];
-
-      const km = new KeymanagerApi(
-        testLogger(),
-        (validatorSub as unknown) as Validator,
-        slashingProtectionStub,
-        genesisValidatorRootStub,
-        [],
-        secretKeyInfos
-      );
-
-      const result = await km.deleteKeystores(pubkeyToDelete);
-      assert.equal(validatorStoreSub.removeSigner.called, true);
-      assert.equal(secretKeyStub.toPublicKey.called, true);
-      assert.equal(publicKeyStub.toHex.called, true);
-      assert.equal(unlockSecretKeys.called, true);
-      assert.equal(fsStub.called, true);
-      assert.equal(result.data[0].status, "deleted");
-      assert.equal(secretKeyInfos.length, 1);
-      assert.equal(
-        secretKeyInfos.some((x) => x.keystorePath === secondKeyFile),
-        true
-      );
-      // eslint-disable-next-line
-      assert.equal(result.slashingProtection, "{\"data\":[{\"pubkey\":\"8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970\",\"signed_blocks\":[],\"signed_attestations\":[]}]}");
-    });
-
-    it("should delete not active keystore", async () => {
-      const pubkeyToDelete = [
-        "8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970",
-      ];
-
-      const interchangeStub = makeinterchangeStubFromPubkey(pubkeyToDelete);
-
-      slashingProtectionStub.exportInterchange
-        .withArgs(sinon.match.any, sinon.match.any, sinon.match.any)
-        .resolves(interchangeStub);
-
-      publicKeyStub.toHex.returns(pubkeyToDelete[0]);
-      secretKeyStub.toPublicKey.returns(publicKeyStub);
-      validatorStoreSub.removeSigner.withArgs(pubkeyToDelete[0]).returns(false);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      (validatorSub as any).validatorStore = validatorStoreSub;
-
-      const fsStub = sinon.stub(fs.promises, "unlink").withArgs(sinon.match.any).resolves();
-
-      const secretKeyInfos: SecretKeyInfo[] = [
-        {
-          secretKey: secretKeyStub,
-          keystorePath,
-          unlockSecretKeys,
-        },
-      ];
-
-      const km = new KeymanagerApi(
-        testLogger(),
-        (validatorSub as unknown) as Validator,
-        slashingProtectionStub,
-        genesisValidatorRootStub,
-        [],
-        secretKeyInfos
-      );
-
-      const result = await km.deleteKeystores(pubkeyToDelete);
-      assert.equal(validatorStoreSub.removeSigner.called, true);
-      assert.equal(secretKeyStub.toPublicKey.called, true);
-      assert.equal(publicKeyStub.toHex.called, true);
-      assert.equal(unlockSecretKeys.called, true);
-      assert.equal(fsStub.called, true);
-      assert.equal(result.data[0].status, "not_active");
-      // eslint-disable-next-line
-      assert.equal(result.slashingProtection, "{\"data\":[{\"pubkey\":\"8cd1ea594e011cbdae67c583206aef8661f74a800082079e4edf96b86eb631fff236fcf6b87b57153c26d76c65bc7970\",\"signed_blocks\":[],\"signed_attestations\":[]}]}");
-    });
-  });
 });
 
 function subKeyStore(keystore: Sinon.SinonStubbedInstance<Keystore>): void {
@@ -292,19 +136,4 @@ function subKeyStore(keystore: Sinon.SinonStubbedInstance<Keystore>): void {
   });
 
   keystore.decrypt.withArgs(sinon.match.any).resolves(Buffer.alloc(32, 1));
-}
-
-function makeinterchangeStubFromPubkey(pubkeys: string[]): IInterchangeV5 {
-  const interchangeStub = <IInterchangeV5>{};
-
-  interchangeStub.data = pubkeys.map((pubkey) => {
-    return {
-      pubkey,
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      signed_blocks: [],
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      signed_attestations: [],
-    };
-  });
-  return interchangeStub;
 }

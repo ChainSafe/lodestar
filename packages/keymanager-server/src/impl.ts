@@ -8,12 +8,10 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {SignerType} from "@chainsafe/lodestar-validator";
+import {Interchange, ISlashingProtection, SecretKeyInfo, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
 import {unlink, writeFile} from "fs/promises";
-import {SecretKeyInfo} from "@chainsafe/lodestar-validator";
 import lockfile from "lockfile";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -48,7 +46,8 @@ export class KeymanagerApi implements Api {
       data: pubkeys.map((pubkey) => ({
         validatingPubkey: pubkey,
         derivationPath: "",
-        readonly: false,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+        readonly: this.validator.validatorStore.getSigner(pubkey)?.type !== SignerType.Local,
       })),
     };
   }
@@ -163,15 +162,25 @@ export class KeymanagerApi implements Api {
     for (let i = 0; i < pubkeysHex.length; i++) {
       const pubkeyHex = pubkeysHex[i];
 
-      // Remove key from live signer
-      const deleted = this.validator.validatorStore.removeSigner(pubkeyHex);
+      // Skip unknown keys or remote signers
+      if (
+        !this.validator.validatorStore.getSigner(pubkeyHex) ||
+        this.validator.validatorStore.getSigner(pubkeyHex)?.type === SignerType.Remote
+      ) {
+        continue;
+      }
+
+      // Remove key from live local signer
+      const deleted =
+        this.validator.validatorStore.getSigner(pubkeyHex)?.type === SignerType.Local &&
+        this.validator.validatorStore.removeSigner(pubkeyHex);
       deletedKey[i] = deleted;
 
       // Remove key from blockduties
       // Remove from attestation duties
       // Remove from Sync committee duties
       // Remove from indices
-      this.validator?.removeSignerFromDutiesAndIndices(pubkeyHex);
+      this.validator.removeSignerFromDutiesAndIndices(pubkeyHex);
 
       // Remove key from persistent storage
       if (this.secretKeysInfo) {

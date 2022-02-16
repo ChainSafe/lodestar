@@ -16,6 +16,7 @@ import {expect} from "chai";
 import fs from "node:fs";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
 
+/* eslint-disable @typescript-eslint/naming-convention */
 describe("keymanager delete and import test", async function () {
   const validatorCount = 1;
   const SECONDS_PER_SLOT = 2;
@@ -23,7 +24,6 @@ describe("keymanager delete and import test", async function () {
   const key1 = "0x97b1b00d3c1888b5715c2c88bf1df7b0ad715388079de211bdc153697b69b868c671af3b2d86c5cdfbade48d03888ab4";
   const key2 = "0xa74e11fd129b9bafc2d6afad4944cd289c238139130a7abafe7b28dde1923a0e4833ad776f9e0d7aaaecd9f0acbfedd3";
   const beaconParams: Partial<IChainConfig> = {
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: SECONDS_PER_SLOT,
   };
 
@@ -38,7 +38,6 @@ describe("keymanager delete and import test", async function () {
   it("should migrate validator from one VC to another", async function () {
     this.timeout("10 min");
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
     const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -72,7 +71,6 @@ describe("keymanager delete and import test", async function () {
     const portKM1 = 10000;
     const portKM2 = 10001;
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const keymanagerServerForVC1 = createKeymanager(
       vc1Info.validator,
       vc1Info.slashingProtection,
@@ -82,7 +80,6 @@ describe("keymanager delete and import test", async function () {
       config,
       loggerNodeA
     );
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const keymanagerServerForVC2 = createKeymanager(
       vc2Info.validator,
       vc2Info.slashingProtection,
@@ -93,9 +90,7 @@ describe("keymanager delete and import test", async function () {
       loggerNodeA
     );
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     await keymanagerServerForVC1.listen();
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     await keymanagerServerForVC2.listen();
 
     // 1. CONFIRM KEYS BEFORE DELETION AND IMPORT
@@ -277,6 +272,75 @@ describe("keymanager delete and import test", async function () {
         // prettier-ignore
         expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}");
       }
+
+      // clean up
+      afterEachCallbacks.push(async () => {
+        await Promise.all(validators.map((v) => v.stop()));
+        await keymanagerServer.close();
+        await bn.close();
+      });
+    }
+  });
+
+  it("should not delete external signers", async function () {
+    this.timeout("10 min");
+
+    const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+    const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+    const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+    const bn = await getDevBeaconNode({
+      params: beaconParams,
+      options: {sync: {isSingleNode: true}},
+      validatorCount,
+      logger: loggerNodeA,
+    });
+
+    const externalSignerPort = 38000;
+    const externalSignerUrl = `http://localhost:${externalSignerPort}`;
+
+    const {validators, secretKeys, keymanagerOps} = await getAndInitDevValidators({
+      node: bn,
+      validatorsPerClient: 1,
+      validatorClientCount: 1,
+      startIndex: 0,
+      // At least one sim test must use the REST API for beacon <-> validator comms
+      useRestApi: true,
+      testLoggerOpts,
+      externalSignerUrl: externalSignerUrl,
+    });
+
+    if (keymanagerOps) {
+      const keymanagerApi = new KeymanagerApi(
+        loggerNodeA,
+        validators[0],
+        keymanagerOps[0],
+        validators[0].genesis.genesisValidatorsRoot
+      );
+
+      const kmPort = 10003;
+
+      const keymanagerServer = new KeymanagerServer(
+        {host: "127.0.0.1", port: kmPort, cors: "*", auth: false, tokenDir: "."},
+        {config, logger: loggerNodeA, api: keymanagerApi}
+      );
+
+      await keymanagerServer.listen();
+
+      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+
+      expect((await client.listKeys()).data).to.be.deep.equal([
+        {
+          validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
+          derivationPath: "",
+          readonly: true,
+        },
+      ]);
+
+      expect((await client.deleteKeystores([key1])).data).to.deep.equal([{status: "not_active"}]);
 
       // clean up
       afterEachCallbacks.push(async () => {

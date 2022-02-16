@@ -83,6 +83,10 @@ export class ValidatorStore {
     this.validators.set(getSignerPubkeyHex(signer), signer);
   }
 
+  getSigner(signer: string | PubkeyHex): Signer | undefined {
+    return this.validators.get(signer);
+  }
+
   removeSigner(signer: string | PubkeyHex): boolean {
     const pubkeyHex = typeof signer === "string" ? signer : toHexString(signer);
     return this.validators.delete(pubkeyHex);
