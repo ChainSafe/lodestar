@@ -1,5 +1,6 @@
 import {allForks, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {GossipActionError} from "./gossipValidation";
 
@@ -77,6 +78,8 @@ export type BlockErrorType =
   | {code: BlockErrorCode.INVALID_SIGNATURE; state: CachedBeaconStateAllForks}
   | {
       code: BlockErrorCode.INVALID_STATE_ROOT;
+      root: Uint8Array;
+      expectedRoot: Uint8Array;
       preState: CachedBeaconStateAllForks;
       postState: CachedBeaconStateAllForks;
     }
@@ -100,6 +103,10 @@ export class BlockError extends LodestarError<BlockErrorType> {
   constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType) {
     super(type);
   }
+
+  getMetadata(): Record<string, string | number | null> {
+    return renderBlockErrorType(this.type);
+  }
 }
 
 export class ChainSegmentError extends LodestarError<BlockErrorType> {
@@ -111,5 +118,32 @@ export class ChainSegmentError extends LodestarError<BlockErrorType> {
   constructor(readonly signedBlock: allForks.SignedBeaconBlock, type: BlockErrorType, importedBlocks: number) {
     super(type);
     this.importedBlocks = importedBlocks;
+  }
+
+  getMetadata(): Record<string, string | number | null> {
+    return renderBlockErrorType(this.type);
+  }
+}
+
+export function renderBlockErrorType(type: BlockErrorType): Record<string, string | number | null> {
+  switch (type.code) {
+    case BlockErrorCode.PRESTATE_MISSING:
+    case BlockErrorCode.PER_BLOCK_PROCESSING_ERROR:
+    case BlockErrorCode.BEACON_CHAIN_ERROR:
+      return {
+        error: type.error.message,
+      };
+
+    case BlockErrorCode.INVALID_SIGNATURE:
+      return {};
+
+    case BlockErrorCode.INVALID_STATE_ROOT:
+      return {
+        root: toHexString(type.root),
+        expectedRoot: toHexString(type.expectedRoot),
+      };
+
+    default:
+      return type;
   }
 }
