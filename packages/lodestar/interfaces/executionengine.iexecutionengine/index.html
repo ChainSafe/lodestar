@@ -8,9 +8,9 @@
 <meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/executionengine.iexecutionengine/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.1.11" name="generator"/>
+<meta content="mkdocs-1.2.3, mkdocs-material-8.2.1" name="generator"/>
 <title>Executionengine.iexecutionengine - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.50e68009.min.css" rel="stylesheet"/>
+<link href="../../../../assets/stylesheets/main.e8d9bf0c.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,400i,700%7CRoboto+Mono&amp;display=fallback" rel="stylesheet"/>
@@ -323,7 +323,7 @@
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getpayload">getPayload<a class="headerlink" href="#getpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPayload</strong>(<code>payloadId</code>: <a href="../../modules/executionengine/#payloadid">PayloadId</a>): <em>Promise‹bellatrix.ExecutionPayload›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e274b21/packages/lodestar/src/executionEngine/interface.ts#L110">packages/lodestar/src/executionEngine/interface.ts:110</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69e55f0/packages/lodestar/src/executionEngine/interface.ts#L110">packages/lodestar/src/executionEngine/interface.ts:110</a></em></p>
 <p>Given the payload_id, get_payload returns the most recent version of the execution payload that has been built
 since the corresponding call to prepare_payload method.</p>
 <p>Required for block producing
@@ -347,7 +347,7 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/validator.md#ge
 <hr/>
 <h3 id="notifyforkchoiceupdate">notifyForkchoiceUpdate<a class="headerlink" href="#notifyforkchoiceupdate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>notifyForkchoiceUpdate</strong>(<code>headBlockHash</code>: Root | RootHex, <code>finalizedBlockHash</code>: RootHex, <code>payloadAttributes?</code>: <a href="../../modules/executionengine/#payloadattributes">PayloadAttributes</a>): <em>Promise‹<a href="../../modules/executionengine/#payloadid">PayloadId</a> | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e274b21/packages/lodestar/src/executionEngine/interface.ts#L97">packages/lodestar/src/executionEngine/interface.ts:97</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69e55f0/packages/lodestar/src/executionEngine/interface.ts#L97">packages/lodestar/src/executionEngine/interface.ts:97</a></em></p>
 <p>Signal fork choice updates
 This function performs two actions atomically:
 - Re-organizes the execution payload chain and corresponding state to make head_block_hash the head.
@@ -383,7 +383,7 @@ https://github.com/ethereum/consensus-specs/blob/dev/specs/merge/fork-choice.md#
 <hr/>
 <h3 id="notifynewpayload">notifyNewPayload<a class="headerlink" href="#notifynewpayload" title="Permanent link">¶</a></h3>
 <p>▸ <strong>notifyNewPayload</strong>(<code>executionPayload</code>: bellatrix.ExecutionPayload): <em>Promise‹<a href="../../modules/executionengine/#executepayloadresponse">ExecutePayloadResponse</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e274b21/packages/lodestar/src/executionEngine/interface.ts#L83">packages/lodestar/src/executionEngine/interface.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/69e55f0/packages/lodestar/src/executionEngine/interface.ts#L83">packages/lodestar/src/executionEngine/interface.ts:83</a></em></p>
 <p>A state transition function which applies changes to the self.execution_state.
 Returns <code>True</code> iff <code>execution_payload</code> is valid with respect to <code>self.execution_state</code>.</p>
 <p>Required for block processing in the beacon state transition function.
@@ -441,7 +441,7 @@ https://github.com/ethereum/consensus-specs/blob/0eb0a934a3/specs/merge/beacon-c
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.092fa1f6.min.js"}</script>
-<script src="../../../../assets/javascripts/bundle.5a9542cf.min.js"></script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.bd0b6b67.min.js"}</script>
+<script src="../../../../assets/javascripts/bundle.8aa65030.min.js"></script>
 </body>
 </html>
