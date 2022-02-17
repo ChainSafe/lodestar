@@ -1,7 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
-import {Context, ILogger} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {
   BeaconStateAllForks,

@@ -266,10 +266,10 @@ export async function verifyBlockStateTransition(
   }
 
   // Check state root matches
-  if (!byteArrayEquals(block.message.stateRoot, postState.tree.root)) {
+  if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
     throw new BlockError(block, {
       code: BlockErrorCode.INVALID_STATE_ROOT,
-      root: postState.tree.root,
+      root: postState.hashTreeRoot(),
       expectedRoot: block.message.stateRoot,
       preState,
       postState,
