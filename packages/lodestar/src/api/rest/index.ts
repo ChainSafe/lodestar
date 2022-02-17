@@ -115,7 +115,7 @@ export class RestApi {
 
     try {
       const address = await this.server.listen(this.opts.port, this.opts.host);
-      this.logger.info("Started REST api server", {address, namespaces: this.opts.api});
+      this.logger.info("Started REST api server", {address, namespaces: this.opts.api.join(",")});
     } catch (e) {
       this.logger.error("Error starting REST api server", {host: this.opts.host, port: this.opts.port}, e as Error);
       throw e;

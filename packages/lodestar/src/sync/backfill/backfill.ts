@@ -20,9 +20,6 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "../../util/bytes";
 import {computeAnchorCheckpoint} from "../../chain/initState";
 
-/** Default batch size. Same as range sync (2 epochs) */
-const BATCH_SIZE = 64;
-
 export type BackfillSyncModules = {
   chain: IBeaconChain;
   db: IBeaconDb;
@@ -43,7 +40,7 @@ type BackfillModules = BackfillSyncModules & {
 };
 
 export type BackfillSyncOpts = {
-  batchSize: number;
+  backfillBatchSize: number;
 };
 
 export enum BackfillSyncEvent {
@@ -150,7 +147,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
   private peers = new PeerSet();
   private status: BackfillSyncStatus = BackfillSyncStatus.pending;
 
-  constructor(modules: BackfillModules, opts?: BackfillSyncOpts) {
+  constructor(opts: BackfillSyncOpts, modules: BackfillModules) {
     super();
 
     this.syncAnchor = modules.syncAnchor;
@@ -166,7 +163,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     this.logger = modules.logger;
     this.metrics = modules.metrics;
 
-    this.opts = opts ?? {batchSize: BATCH_SIZE};
+    this.opts = opts;
     this.network.events.on(NetworkEvent.peerConnected, this.addPeer);
     this.network.events.on(NetworkEvent.peerDisconnected, this.removePeer);
 
@@ -224,8 +221,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
    * or wsCheckpoints identifiable as the keys of backfill sync.
    */
   static async init<T extends BackfillSync = BackfillSync>(
-    modules: BackfillSyncModules,
-    opts?: BackfillSyncOpts
+    opts: BackfillSyncOpts,
+    modules: BackfillSyncModules
   ): Promise<T> {
     const {config, anchorState, db, wsCheckpoint, logger} = modules;
 
@@ -255,17 +252,14 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     // Load a previous finalized or wsCheckpoint slot from DB below anchorSlot
     const prevFinalizedCheckpointBlock = await extractPreviousFinOrWsCheckpoint(config, db, anchorSlot, logger);
 
-    return new this(
-      {
-        syncAnchor,
-        backfillStartFromSlot,
-        backfillRangeWrittenSlot,
-        wsCheckpointHeader,
-        prevFinalizedCheckpointBlock,
-        ...modules,
-      },
-      opts
-    ) as T;
+    return new this(opts, {
+      syncAnchor,
+      backfillStartFromSlot,
+      backfillRangeWrittenSlot,
+      wsCheckpointHeader,
+      prevFinalizedCheckpointBlock,
+      ...modules,
+    }) as T;
   }
 
   /** Throw / return all AsyncGenerators */
@@ -666,7 +660,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     let isPrevFinWsConfirmedAnchorParent = false;
     while (
-      backCount !== this.opts.batchSize &&
+      backCount !== this.opts.backfillBatchSize &&
       (parentBlock = await this.db.blockArchive.getByRoot(anchorBlock.message.parentRoot))
     ) {
       // Before moving anchorBlock back, we need check for prevFinalizedCheckpointBlock
@@ -762,7 +756,11 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
     }
 
     const toSlot = this.syncAnchor.anchorBlock.message.slot;
-    const fromSlot = Math.max(toSlot - this.opts.batchSize, this.prevFinalizedCheckpointBlock.slot, GENESIS_SLOT);
+    const fromSlot = Math.max(
+      toSlot - this.opts.backfillBatchSize,
+      this.prevFinalizedCheckpointBlock.slot,
+      GENESIS_SLOT
+    );
     const blocks = await this.network.reqResp.beaconBlocksByRange(peer, {
       startSlot: fromSlot,
       count: toSlot - fromSlot,

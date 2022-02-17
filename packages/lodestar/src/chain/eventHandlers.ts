@@ -12,6 +12,7 @@ import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
+import {toCheckpointHex} from "./stateCache";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -100,11 +101,11 @@ export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
-  this.logger.verbose("New fork version", {version: ssz.Version.toJson(version) as string});
+  this.logger.verbose("New fork version", toHexString(version));
 }
 
 export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-  this.logger.verbose("Checkpoint processed", ssz.phase0.Checkpoint.toJson(cp) as Context);
+  this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
   this.metrics?.currentValidators.set({status: "active"}, state.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = this.forkChoice.getBlock(state.latestBlockHeader.parentRoot);
@@ -126,13 +127,13 @@ export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: Ca
 }
 
 export function onJustified(this: BeaconChain, cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
-  this.logger.verbose("Checkpoint justified", ssz.phase0.Checkpoint.toJson(cp) as Context);
+  this.logger.verbose("Checkpoint justified", toCheckpointHex(cp));
   this.metrics?.previousJustifiedEpoch.set(state.previousJustifiedCheckpoint.epoch);
   this.metrics?.currentJustifiedEpoch.set(cp.epoch);
 }
 
 export async function onFinalized(this: BeaconChain, cp: phase0.Checkpoint): Promise<void> {
-  this.logger.verbose("Checkpoint finalized", ssz.phase0.Checkpoint.toJson(cp) as Context);
+  this.logger.verbose("Checkpoint finalized", toCheckpointHex(cp));
   this.metrics?.finalizedEpoch.set(cp.epoch);
 }
 
@@ -170,8 +171,8 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
     slot: attestation.data.slot,
     index: attestation.data.index,
     targetRoot: toHexString(attestation.data.target.root),
-    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits),
-  } as Context);
+    aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
+  });
 }
 
 export async function onBlock(

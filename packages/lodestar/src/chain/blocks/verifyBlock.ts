@@ -266,8 +266,14 @@ export async function verifyBlockStateTransition(
   }
 
   // Check state root matches
-  if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
-    throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+  if (!byteArrayEquals(block.message.stateRoot, postState.tree.root)) {
+    throw new BlockError(block, {
+      code: BlockErrorCode.INVALID_STATE_ROOT,
+      root: postState.tree.root,
+      expectedRoot: block.message.stateRoot,
+      preState,
+      postState,
+    });
   }
 
   return {postState, executionStatus};
