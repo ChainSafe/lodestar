@@ -1,6 +1,14 @@
 import {Options} from "yargs";
 import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
-import {beaconNodeOptions, paramsOptions, IBeaconNodeArgs, IENRArgs, enrOptions} from "../../options";
+import {
+  beaconNodeOptions,
+  paramsOptions,
+  IBeaconNodeArgs,
+  IENRArgs,
+  enrOptions,
+  IWSSArgs,
+  wssOptions,
+} from "../../options";
 import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {ICliCommandOptions, ILogArgs} from "../../util";
 
@@ -9,10 +17,6 @@ interface IBeaconExtraArgs {
   discoveryPort?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
-  weakSubjectivityStateFile?: string;
-  weakSubjectivityCheckpoint?: string;
-  weakSubjectivityServerUrl?: string;
-  weakSubjectivitySyncLatest?: string;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -36,30 +40,6 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
 
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
-    type: "string",
-  },
-
-  weakSubjectivityStateFile: {
-    description: "Path or URL to download a weak subjectivity state file in ssz-encoded format",
-    type: "string",
-  },
-
-  weakSubjectivitySyncLatest: {
-    description:
-      "Enable fetching of a weak subjectivity state via --weakSubjectivityServerUrl.  If an argument is provided to --weakSubjectivityCheckpoint, fetch the state at that checkpoint.  Else, fetch the latest finalized state.",
-    type: "boolean",
-    default: false,
-  },
-
-  weakSubjectivityCheckpoint: {
-    description:
-      "Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockRoot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.",
-    type: "string",
-  },
-
-  weakSubjectivityServerUrl: {
-    description:
-      "Pass in a server hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivitySyncLatest or --weakSubjectivityCheckpoint sync.",
     type: "string",
   },
 };
@@ -162,7 +142,7 @@ export const beaconPathsOptions: ICliCommandOptions<IBeaconPaths> = {
   },
 };
 
-export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs;
+export type IBeaconArgs = IBeaconExtraArgs & ILogArgs & IBeaconPaths & IBeaconNodeArgs & IENRArgs & IWSSArgs;
 
 export const beaconOptions: {[k: string]: Options} = {
   ...beaconExtraOptions,
@@ -171,4 +151,5 @@ export const beaconOptions: {[k: string]: Options} = {
   ...beaconNodeOptions,
   ...paramsOptions,
   ...enrOptions,
+  ...wssOptions,
 };
