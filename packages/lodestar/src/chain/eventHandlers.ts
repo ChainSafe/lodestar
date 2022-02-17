@@ -232,14 +232,14 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     const preStatePath = this.persistInvalidSszObject(
       "state",
       preState.serialize(),
-      `${preState.slot}_invalid_state_root_preState_${invalidRoot}`
+      `${blockSlot}_invalid_state_root_preState_${invalidRoot}`
     );
     const postStatePath = this.persistInvalidSszObject(
       "state",
       postState.serialize(),
-      `${postState.slot}_invalid_state_root_postState_${invalidRoot}`
+      `${blockSlot}_invalid_state_root_postState_${invalidRoot}`
     );
-    this.logger.debug("Invalid signature block and state were written to disc", {
+    this.logger.debug("Invalid state root block and states were written to disc", {
       blockPath,
       preStatePath,
       postStatePath,
