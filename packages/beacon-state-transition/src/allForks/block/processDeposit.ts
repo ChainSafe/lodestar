@@ -76,11 +76,15 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
     });
     state.balanceList.push(Number(amount));
 
+    const validatorIndex = validators.length - 1;
     // Updating here is better than updating at once on epoch transition
     // - Simplify genesis fn applyDeposits(): effectiveBalanceIncrements is populated immediately
     // - Keep related code together to reduce risk of breaking this cache
     // - Should have equal performance since it sets a value in a flat array
-    epochCtx.effectiveBalanceIncrementsSet(validators.length, effectiveBalance);
+    epochCtx.effectiveBalanceIncrementsSet(validatorIndex, effectiveBalance);
+
+    // now that there is a new validator, update the epoch context with the new pubkey
+    epochCtx.addPubkey(validatorIndex, pubkey);
 
     // add participation caches
     state.previousEpochParticipation.push(0);
@@ -90,9 +94,6 @@ export function processDeposit(fork: ForkName, state: CachedBeaconStateAllForks,
     if (fork !== ForkName.phase0) {
       (state as CachedBeaconStateAltair).inactivityScores.push(0);
     }
-
-    // now that there is a new validator, update the epoch context with the new pubkey
-    epochCtx.addPubkey(validators.length - 1, pubkey);
   } else {
     // increase balance by deposit amount
     increaseBalance(state, cachedIndex, Number(amount));
