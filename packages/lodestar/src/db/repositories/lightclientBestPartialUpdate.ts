@@ -24,7 +24,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
       finalityBranch: new VectorType<Uint8Array[]>({length: FINALIZED_ROOT_DEPTH, elementType: ssz.Root}),
       finalizedCheckpoint: ssz.phase0.Checkpoint,
       finalizedHeader: ssz.phase0.BeaconBlockHeader,
-      syncCommitteeAggregate: ssz.altair.SyncAggregate,
+      syncAggregate: ssz.altair.SyncAggregate,
     },
     casingMap: {
       isFinalized: "is_finalized",
@@ -33,7 +33,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
       finalityBranch: "finality_branch",
       finalizedCheckpoint: "finalized_checkpoint",
       finalizedHeader: "finalized_header",
-      syncCommitteeAggregate: "sync_committee_aggregate",
+      syncAggregate: "sync_aggregate",
     },
   });
 
@@ -43,13 +43,13 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
       isFinalized: booleanType,
       attestedHeader: ssz.phase0.BeaconBlockHeader,
       blockRoot: ssz.Root,
-      syncCommitteeAggregate: ssz.altair.SyncAggregate,
+      syncAggregate: ssz.altair.SyncAggregate,
     },
     casingMap: {
       isFinalized: "is_finalized",
       attestedHeader: "attested_header",
       blockRoot: "block_root",
-      syncCommitteeAggregate: "sync_committee_aggregate",
+      syncAggregate: "sync_aggregate",
     },
   });
 

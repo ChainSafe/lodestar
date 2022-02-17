@@ -254,7 +254,7 @@ export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
     }),
     finalizedHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorType({elementType: Bytes32, length: FINALIZED_ROOT_DEPTH}),
-    syncCommitteeAggregate: SyncAggregate,
+    syncAggregate: SyncAggregate,
     forkVersion: Version,
   },
   casingMap: {
@@ -263,7 +263,7 @@ export const LightClientUpdate = new ContainerType<altair.LightClientUpdate>({
     nextSyncCommitteeBranch: "next_sync_committee_branch",
     finalizedHeader: "finalized_header",
     finalityBranch: "finality_branch",
-    syncCommitteeAggregate: "sync_committee_aggregate",
+    syncAggregate: "sync_aggregate",
     forkVersion: "fork_version",
   },
 });

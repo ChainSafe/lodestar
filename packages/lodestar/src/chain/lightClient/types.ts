@@ -43,7 +43,7 @@ export type PartialLightClientUpdateFinalized = {
   finalityBranch: Uint8Array[];
   finalizedCheckpoint: phase0.Checkpoint;
   finalizedHeader: phase0.BeaconBlockHeader;
-  syncCommitteeAggregate: altair.SyncAggregate;
+  syncAggregate: altair.SyncAggregate;
 };
 
 export type PartialLightClientUpdateNonFinalized = {
@@ -52,7 +52,7 @@ export type PartialLightClientUpdateNonFinalized = {
   /** Precomputed root to prevent re-hashing */
   blockRoot: Uint8Array;
   // Finalized data
-  syncCommitteeAggregate: altair.SyncAggregate;
+  syncAggregate: altair.SyncAggregate;
 };
 
 export type PartialLightClientUpdate = PartialLightClientUpdateFinalized | PartialLightClientUpdateNonFinalized;
