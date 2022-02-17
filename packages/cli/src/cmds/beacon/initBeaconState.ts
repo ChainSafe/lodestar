@@ -98,7 +98,7 @@ export async function initBeaconState(
     const genesisStateFile = args.genesisStateFile || getGenesisFileUrl(args.network || defaultNetwork);
     if (genesisStateFile && !args.forceGenesis) {
       const stateBytes = await downloadOrLoadFile(genesisStateFile);
-      let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).createTreeBackedFromBytes(stateBytes);
+      let anchorState = getStateTypeFromBytes(chainForkConfig, stateBytes).deserializeToViewDU(stateBytes);
       const config = createIBeaconConfig(chainForkConfig, anchorState.genesisValidatorsRoot);
       anchorState = await initStateFromAnchorState(config, db, logger, anchorState);
       return {anchorState};
@@ -128,7 +128,7 @@ async function initFromWSState(
     const store = lastDbState ?? wsState;
     const checkpoint = weakSubjectivityCheckpoint
       ? getCheckpointFromArg(weakSubjectivityCheckpoint)
-      : getCheckpointFromState(config, wsState);
+      : getCheckpointFromState(wsState);
     return initAndVerifyWeakSubjectivityState(config, db, logger, store, wsState, checkpoint);
   } else if (wssOpts.weakSubjectivitySyncLatest) {
     // weak subjectivity sync from a state that needs to be fetched:
