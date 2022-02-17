@@ -446,6 +446,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options.iwssargs/</loc>
+         <lastmod>2022-02-17</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/options_beaconnodeoptions.iapiargs/</loc>
          <lastmod>2022-02-17</lastmod>
          <changefreq>daily</changefreq>

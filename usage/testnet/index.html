@@ -176,6 +176,24 @@
 <a class="md-nav__link" href="#run-a-beacon-node">
     Run a beacon node
   </a>
+<nav aria-label="Run a beacon node" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#weak-subjectivity">
+    Weak Subjectivity
+  </a>
+<nav aria-label="Weak Subjectivity" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ps">
+    PS
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#run-a-validator">
@@ -276,6 +294,24 @@
 <a class="md-nav__link" href="#run-a-beacon-node">
     Run a beacon node
   </a>
+<nav aria-label="Run a beacon node" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#weak-subjectivity">
+    Weak Subjectivity
+  </a>
+<nav aria-label="Weak Subjectivity" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#ps">
+    PS
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#run-a-validator">
@@ -339,6 +375,17 @@ Jul-09 <span class="m">17</span>:34:54.278 <span class="o">[]</span>            
 </div>
 <!-- prettier-ignore-end -->
 <p>A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a <a href="https://github.com/ChainSafe/lodestar/issues/new">Github issue</a> or reach out to us in <a href="https://discord.gg/yjyvFRP">Discord</a>. Just by reporting anomalities you are helping accelerate the progress of Eth2.0, thanks for contributing!</p>
+<h3 id="weak-subjectivity">Weak Subjectivity<a class="headerlink" href="#weak-subjectivity" title="Permanent link">¶</a></h3>
+<p>If you are starting your node from blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to something called "long range attacks".
+<a href="https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/">Read Vitalik's illuminating post on the same</a></p>
+<p>If you have a synced beacon node handy (your friend's or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!</p>
+<p>Just supply these <strong>extra args</strong> to your beacon node command:
+<div class="highlight"><pre><span></span><code>--weakSubjectivitySyncLatest --weakSubjectivityServerUrl &lt;synced node url&gt; <span class="o">[</span>--weakSubjectivityCheckpoint &lt;trusted checkpoint <span class="k">in</span> root:epoch format&gt;<span class="o">]</span>
+</code></pre></div>
+In case you really trust <code>weakSubjectivityServerUrl</code> then you may skip providing <code>weakSubjectivityCheckpoint</code>, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.</p>
+<h4 id="ps">PS<a class="headerlink" href="#ps" title="Permanent link">¶</a></h4>
+<p>Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you loosing your funds by social engineering. 
+If possible validate your <code>weakSubjectivityCheckpoint</code> from multiple places like different client distributions, or from any other trusted sources. This will highly reduce the risk of starting off on a wrong chain.</p>
 <h2 id="run-a-validator">Run a validator<a class="headerlink" href="#run-a-validator" title="Permanent link">¶</a></h2>
 <p>To start a Lodestar validator run the command:</p>
 <div class="highlight"><pre><span></span><code>./lodestar validator --network <span class="nv">$NETWORK_NAME</span>

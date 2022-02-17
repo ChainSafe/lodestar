@@ -587,30 +587,6 @@
 <td></td>
 </tr>
 <tr>
-<td><code>--weakSubjectivityStateFile</code></td>
-<td>string</td>
-<td>Path or URL to download a weak subjectivity state file in ssz-encoded format</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--weakSubjectivitySyncLatest</code></td>
-<td>boolean</td>
-<td>Enable fetching of a weak subjectivity state via --weakSubjectivityServerUrl.  If an argument is provided to --weakSubjectivityCheckpoint, fetch the state at that checkpoint.  Else, fetch the latest finalized state.</td>
-<td></td>
-</tr>
-<tr>
-<td><code>--weakSubjectivityCheckpoint</code></td>
-<td>string</td>
-<td>Tell the beacon node to fetch a weak subjectivity state at the specified checkpoint. The string arg must be in the form <blockroot>:<epoch>. For example, 0x1234:100 would ask for the weak subjectivity state at checkpoint of epoch 100 with block root 0x1234.</epoch></blockroot></td>
-<td></td>
-</tr>
-<tr>
-<td><code>--weakSubjectivityServerUrl</code></td>
-<td>string</td>
-<td>Pass in a server hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivitySyncLatest or --weakSubjectivityCheckpoint sync.</td>
-<td></td>
-</tr>
-<tr>
 <td><code>--logLevel</code></td>
 <td>string</td>
 <td>Logging verbosity level</td>
@@ -860,6 +836,30 @@
 <td><code>--enr.udp6</code></td>
 <td>number</td>
 <td>Override ENR (IPv6-specific) UDP entry</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--weakSubjectivityStateFile</code></td>
+<td>string</td>
+<td>Path or URL to download a weak subjectivity state file in ssz-encoded format</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--weakSubjectivitySyncLatest</code></td>
+<td>boolean</td>
+<td>Sync and start from a weak subjectivity state at --weakSubjectivityCheckpoint (if provided, else fetches the latest finalized) via the --weakSubjectivityServerUrl</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--weakSubjectivityServerUrl</code></td>
+<td>string</td>
+<td>Pass in a server url hosting Beacon Node APIs from which to fetch weak subjectivity state, required in conjunction with --weakSubjectivitySyncLatest or --weakSubjectivityCheckpoint.</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--weakSubjectivityCheckpoint</code></td>
+<td>string</td>
+<td>To fetch and start beacon node off a state at the provided weakSubjectivity checkpoint, to be supplied in <blockroot>:<epoch> format. For example, 0x1234:100 will sync and start off from the weakSubjectivity state at checkpoint of epoch 100 with block root 0x1234.</epoch></blockroot></td>
 <td></td>
 </tr>
 </tbody>
