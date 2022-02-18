@@ -235,6 +235,7 @@ describe("SyncCommitteeDutiesService", function () {
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
     // then remove signer with pubkeys[0]
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     dutiesService.remove(toHexString(pubkeys[0]));
 
     // Removed public key should be removed from duties for this and next epoch should be persisted

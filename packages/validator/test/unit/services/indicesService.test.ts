@@ -40,11 +40,21 @@ describe("IndicesService", function () {
     indicesService.pubkey2index.set(pubkey2, secondValidatorIndex);
 
     // remove pubkey2
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     indicesService.remove(pubkey2);
 
-    expect(Array.from(indicesService.index2pubkey.values()).includes(pubkey2)).to.be.false;
-    expect(Array.from(indicesService.pubkey2index.keys()).includes(pubkey2)).to.be.false;
-    expect(Array.from(indicesService.index2pubkey.values()).includes(pubkey1)).to.be.true;
-    expect(Array.from(indicesService.pubkey2index.keys()).includes(pubkey1)).to.be.true;
+    expect(Object.fromEntries(indicesService.index2pubkey)).to.deep.equal(
+      {
+        "0": `${pubkey1}`,
+      },
+      "Wrong indicesService.index2pubkey Map"
+    );
+
+    expect(Object.fromEntries(indicesService.pubkey2index)).to.deep.equal(
+      {
+        [`${pubkey1}`]: 0,
+      },
+      "Wrong indicesService.pubkey2index Map"
+    );
   });
 });

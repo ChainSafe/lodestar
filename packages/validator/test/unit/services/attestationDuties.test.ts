@@ -181,14 +181,12 @@ describe("AttestationDutiesService", function () {
       "Wrong dutiesService.attesters Map at current epoch"
     );
     // then remove
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     dutiesService.remove(toHexString(pubkeys[0]));
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(0)?.dutiesByIndex || new Map())).to.deep.equal(
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"]) || new Map()).to.deep.equal(
       {},
-      "Wrong dutiesService.attesters Map at current epoch"
-    );
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(1)?.dutiesByIndex || new Map())).to.deep.equal(
-      {},
-      "Wrong dutiesService.attesters Map at current epoch"
+      "Wrong dutiesService.attesters Map at current epoch after removal"
     );
   });
 });

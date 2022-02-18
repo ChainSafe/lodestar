@@ -92,9 +92,7 @@ export class SyncCommitteeDutiesService {
             this.dutiesByIndexByPeriod.delete(parseInt(syncPeriod as string));
           }
         }
-        return dutyAtPeriod;
       });
-      return validatorDutyAtPeriodMap;
     });
   }
 

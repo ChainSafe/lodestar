@@ -149,6 +149,7 @@ describe("BlockDutiesService", function () {
     );
 
     // then remove a signers public key
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     dutiesService.remove(toHexString(pubkeys[0]));
 
     // confirm that the duties no longer contain the signers public key

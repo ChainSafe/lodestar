@@ -56,10 +56,7 @@ export class AttestationDutiesService {
             this.dutiesByIndexByEpoch.delete(parseInt(epoch as string));
           }
         }
-        return attDutyAndProof;
       });
-
-      return attDutiesAtEpoch;
     });
   }
 

@@ -65,7 +65,6 @@ export class BlockDutiesService {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
         return toHexString(proposer.pubkey) !== signer;
       });
-      return blockDutyAtEpoch;
     });
   }
 
