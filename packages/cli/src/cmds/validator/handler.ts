@@ -74,7 +74,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         });
 
         if (secretKeyInfo.unlockSecretKeys) {
-          onGracefulShutdownCbs.push(() => secretKeyInfo.unlockSecretKeys());
+          onGracefulShutdownCbs.push(() => secretKeyInfo?.unlockSecretKeys?.());
         }
       }
     }
