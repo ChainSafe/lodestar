@@ -119,7 +119,7 @@ export class KeymanagerServer {
     this.logger = modules.logger;
 
     if (!opts.auth) {
-      this.logger.warn("keymanager server started without authentication");
+      this.logger.warn("Keymanager server started without authentication");
     }
   }
 
@@ -129,7 +129,7 @@ export class KeymanagerServer {
   async listen(): Promise<void> {
     try {
       const address = await this.server.listen(this.opts.port, this.opts.host);
-      this.logger.info("Started Keymanager api server", {address});
+      this.logger.info("Started keymanager api server", {address});
       if (this.opts.auth) {
         this.logger.info("Keymanager bearer access token located at:", this.apiTokenPath);
       }
