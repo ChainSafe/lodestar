@@ -1,4 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import { ssz } from "@chainsafe/lodestar-types";
+import { prettyBytes } from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {GossipType, GossipTypeMap, GossipTopicTypeMap} from "../interface";
 
@@ -29,6 +31,7 @@ export const getGossipAcceptMetadataByType: GetGossipAcceptMetadataFns = {
     return {
       slot: data.slot,
       index: data.index,
+      root: prettyBytes(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(aggregateAndProof)),
     };
   },
   [GossipType.beacon_attestation]: (config, attestation, topic) => ({
