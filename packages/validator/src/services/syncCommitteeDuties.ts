@@ -15,7 +15,7 @@ import {ValidatorStore} from "./validatorStore";
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
 /** Epochs prior to `ALTAIR_FORK_EPOCH` to start fetching duties */
-const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 1;
+const ALTAIR_FORK_LOOKAHEAD_EPOCHS = 0;
 /** How many epochs prior from a subscription starting, ask the node to subscribe */
 const SUBSCRIPTIONS_LOOKAHEAD_EPOCHS = 2;
 
