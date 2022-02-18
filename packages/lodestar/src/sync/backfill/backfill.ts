@@ -235,7 +235,6 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
       anchorSlot,
       lastBackSyncedBlock: null,
     };
-    const backfillStartFromSlot = anchorState.slot;
     modules.logger.info("BackfillSync - initializing from Checkpoint", {
       root: toHexString(anchorCp.root),
       epoch: anchorCp.epoch,
@@ -244,6 +243,7 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
     // Load the previous written to slot for the key  backfillStartFromSlot
     // in backfilledRanges
+    const backfillStartFromSlot = anchorSlot;
     const backfillRangeWrittenSlot = await db.backfilledRanges.get(backfillStartFromSlot);
 
     // wsCheckpointHeader is where the checkpoint can actually be validated
@@ -512,7 +512,8 @@ export class BackfillSync extends (EventEmitter as {new (): BackfillSyncEmitter}
 
         // TODO: one can verify the child of wsDbCheckpointBlock is at
         // slot > wsCheckpointHeader
-        wsDbCheckpointBlock.message.slot > this.wsCheckpointHeader.slot
+        // Note: next epoch is at wsCheckpointHeader.slot + SLOTS_PER_EPOCH
+        wsDbCheckpointBlock.message.slot >= this.wsCheckpointHeader.slot + SLOTS_PER_EPOCH
       )
         // TODO: explode and stop the entire node
         throw new Error(
