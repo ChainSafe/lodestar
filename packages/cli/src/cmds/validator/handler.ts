@@ -72,13 +72,11 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
           type: SignerType.Local,
           secretKey: secretKeyInfo.secretKey,
         });
-      }
 
-      secretKeysInfo.forEach((secretKeysInfo) => {
-        if (secretKeysInfo?.unlockSecretKeys) {
-          onGracefulShutdownCbs.push(() => secretKeysInfo?.unlockSecretKeys?.());
+        if (secretKeyInfo.unlockSecretKeys) {
+          onGracefulShutdownCbs.push(() => secretKeyInfo.unlockSecretKeys());
         }
-      });
+      }
     }
   }
 
