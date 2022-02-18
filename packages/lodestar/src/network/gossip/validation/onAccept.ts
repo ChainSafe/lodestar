@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import { ssz } from "@chainsafe/lodestar-types";
-import { prettyBytes } from "@chainsafe/lodestar-utils";
+import {ssz} from "@chainsafe/lodestar-types";
+import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {GossipType, GossipTypeMap, GossipTopicTypeMap} from "../interface";
 
