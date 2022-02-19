@@ -4,12 +4,14 @@ import {ICliCommandOptions} from "../../util";
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
   "execution.timeout": number;
+  "jwt-secret"?: string;
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
+    jwtSecret: args["jwt-secret"],
   };
 }
 
@@ -27,6 +29,12 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
     type: "number",
     defaultDescription:
       defaultOptions.executionEngine.mode === "http" ? String(defaultOptions.executionEngine.timeout) : "",
+    group: "execution",
+  },
+
+  "jwt-secret": {
+    description: "Shared jwt secret which EL will use to authenticate engine api calls",
+    type: "string",
     group: "execution",
   },
 };

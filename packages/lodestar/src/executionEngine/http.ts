@@ -26,6 +26,7 @@ import {
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   timeout?: number;
+  jwtSecret?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -50,7 +51,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
         signal,
-        timeout: opts.timeout,
+        ...opts,
       });
   }
 

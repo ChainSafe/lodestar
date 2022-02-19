@@ -2,6 +2,9 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
+import {encode, TAlgorithm} from "jwt-simple";
+const algorithm: TAlgorithm = "HS256";
+
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
 
@@ -39,6 +42,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
+      jwtSecret?: string;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -121,10 +125,20 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     }
 
     try {
+      let headers;
+      if (this.opts?.jwtSecret) {
+        /** ELs have a tight +-5 second freshness check on token's iat i.e. issued at */
+        const token = encode({iat: Math.floor(new Date().getTime() / 1000)}, this.opts?.jwtSecret, algorithm);
+        // eslint-disable-next-line @typescript-eslint/naming-convention
+        headers = {"Content-Type": "application/json", Authorization: `Bearer ${token}`};
+      } else {
+        headers = {"Content-Type": "application/json"};
+      }
+
       const res = await fetch(url, {
         method: "post",
         body: JSON.stringify(json),
-        headers: {"Content-Type": "application/json"},
+        headers,
         signal: controller.signal,
       }).finally(() => {
         clearTimeout(timeout);
