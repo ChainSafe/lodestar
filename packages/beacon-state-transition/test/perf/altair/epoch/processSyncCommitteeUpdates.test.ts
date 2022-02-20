@@ -16,7 +16,7 @@ describe("altair processSyncCommitteeUpdates", () => {
     beforeEach: (state) => {
       const stateCloned = state.clone();
       // Force processSyncCommitteeUpdates to run
-      state.epochCtx.epoch = EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1;
+      stateCloned.epochCtx.epoch = EPOCHS_PER_SYNC_COMMITTEE_PERIOD - 1;
       return stateCloned;
     },
     fn: (state) => {
