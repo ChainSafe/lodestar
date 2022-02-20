@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
@@ -8,10 +9,19 @@ export type ExecutionEngineArgs = {
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
+  let jwtSecret;
+  if (args["jwt-secret"]) {
+    const jwtSecretContents = fs.readFileSync(args["jwt-secret"], "utf-8").trim();
+    const hexPattern = new RegExp(/^(0x|0X)?(?<jwtSecret>[a-fA-F0-9]+)$/, "g");
+    jwtSecret = hexPattern.exec(jwtSecretContents)?.groups?.jwtSecret;
+    if (!jwtSecret || jwtSecret.length != 64) {
+      throw Error("Need a valid 256 bit hex encoded secret");
+    }
+  }
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
-    jwtSecret: args["jwt-secret"],
+    jwtSecret,
   };
 }
 
