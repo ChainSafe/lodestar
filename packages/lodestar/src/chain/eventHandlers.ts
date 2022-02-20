@@ -231,37 +231,19 @@ export async function onErrorBlock(this: BeaconChain, err: BlockError): Promise<
     const {signedBlock} = err;
     const blockSlot = signedBlock.message.slot;
     const {state} = err.type;
-    const blockPath = this.persistInvalidSszObject(
-      "signedBlock",
-      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
-      `${blockSlot}_invalid_signature`
-    );
-    const statePath = this.persistInvalidSszObject("state", state.serialize(), `${state.slot}_invalid_signature`);
-    this.logger.debug("Invalid signature block and state were written to disc", {blockPath, statePath});
+    const forkTypes = this.config.getForkTypes(blockSlot);
+    this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, `${blockSlot}_invalid_signature`);
+    this.persistInvalidSszView(state, `${state.slot}_invalid_signature`);
   } else if (err.type.code === BlockErrorCode.INVALID_STATE_ROOT) {
     const {signedBlock} = err;
     const blockSlot = signedBlock.message.slot;
     const {preState, postState} = err.type;
+    const forkTypes = this.config.getForkTypes(blockSlot);
     const invalidRoot = toHexString(postState.hashTreeRoot());
-    const blockPath = this.persistInvalidSszObject(
-      "signedBlock",
-      this.config.getForkTypes(blockSlot).SignedBeaconBlock.serialize(signedBlock),
-      `${blockSlot}_invalid_state_root_${invalidRoot}`
-    );
-    const preStatePath = this.persistInvalidSszObject(
-      "state",
-      preState.serialize(),
-      `${blockSlot}_invalid_state_root_preState_${invalidRoot}`
-    );
-    const postStatePath = this.persistInvalidSszObject(
-      "state",
-      postState.serialize(),
-      `${blockSlot}_invalid_state_root_postState_${invalidRoot}`
-    );
-    this.logger.debug("Invalid state root block and states were written to disc", {
-      blockPath,
-      preStatePath,
-      postStatePath,
-    });
+
+    const suffix = `slot_${blockSlot}_invalid_state_root_${invalidRoot}`;
+    this.persistInvalidSszValue(forkTypes.SignedBeaconBlock, signedBlock, suffix);
+    this.persistInvalidSszView(preState, `${suffix}_preState`);
+    this.persistInvalidSszView(postState, `${suffix}_postState`);
   }
 }

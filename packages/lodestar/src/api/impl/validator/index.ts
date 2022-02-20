@@ -16,7 +16,7 @@ import {
 import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
-import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {assembleBlock} from "../../../chain/factory/block/index.js";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors/index.js";
 import {validateGossipAggregateAndProof} from "../../../chain/validation/index.js";
@@ -466,12 +466,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               e as Error
             );
             if (e instanceof AttestationError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "signedAggregatedAndProof",
-                ssz.phase0.SignedAggregateAndProof.serialize(signedAggregateAndProof),
-                toHexString(ssz.phase0.SignedAggregateAndProof.hashTreeRoot(signedAggregateAndProof))
-              );
-              logger.debug("The submitted signed aggregate and proof was written to", archivedPath);
+              chain.persistInvalidSszValue(ssz.phase0.SignedAggregateAndProof, signedAggregateAndProof, "api_reject");
             }
           }
         })
@@ -517,12 +512,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               e as Error
             );
             if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
-              const archivedPath = chain.persistInvalidSszObject(
-                "contributionAndProof",
-                ssz.altair.SignedContributionAndProof.serialize(contributionAndProof),
-                toHexString(ssz.altair.SignedContributionAndProof.hashTreeRoot(contributionAndProof))
-              );
-              logger.debug("The submitted contribution adn proof was written to", archivedPath);
+              chain.persistInvalidSszValue(ssz.altair.SignedContributionAndProof, contributionAndProof, "api_reject");
             }
           }
         })
