@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment
 , @typescript-eslint/no-explicit-any */
 
-// #######################################
-// # MUST NOT IMPORT FROM @chainsafe/ssz #
-// #######################################
 import {
   Type,
   UintNumberType,

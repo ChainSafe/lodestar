@@ -67,11 +67,11 @@ export async function assembleBody(
     randaoReveal,
     graffiti,
     eth1Data,
-    proposerSlashings: proposerSlashings,
-    attesterSlashings: attesterSlashings,
-    attestations: attestations,
-    deposits: deposits,
-    voluntaryExits: voluntaryExits,
+    proposerSlashings,
+    attesterSlashings,
+    attestations,
+    deposits,
+    voluntaryExits,
   };
 
   const blockEpoch = computeEpochAtSlot(blockSlot);

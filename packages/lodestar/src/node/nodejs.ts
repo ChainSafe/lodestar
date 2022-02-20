@@ -10,6 +10,7 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
@@ -22,7 +23,6 @@ import {initializeExecutionEngine} from "../executionEngine";
 import {initializeEth1ForBlockProduction} from "../eth1";
 import {IBeaconNodeOptions} from "./options";
 import {runNodeNotifier} from "./notifier";
-import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 export * from "./options";
 

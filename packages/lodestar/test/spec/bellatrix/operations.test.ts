@@ -67,9 +67,7 @@ operations<CachedBeaconStateBellatrix>(ForkName.bellatrix, {
     processExecutionPayload(
       (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
       testCase.execution_payload,
-      {
-        notifyNewPayload: () => testCase.execution.execution_valid,
-      }
+      {notifyNewPayload: () => testCase.execution.execution_valid}
     );
   },
 });

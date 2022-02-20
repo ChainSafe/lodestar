@@ -14,11 +14,6 @@ for (const testType of fs.readdirSync(rootGenericSszPath)) {
   describe(`${testType} invalid`, () => {
     const invalidCasesPath = path.join(testTypePath, "invalid");
     for (const invalidCase of fs.readdirSync(invalidCasesPath)) {
-      const onlyId = process.env.ONLY_ID;
-      if (onlyId && !invalidCase.includes(onlyId)) {
-        continue;
-      }
-
       it(invalidCase, () => {
         // TODO: Strong type errors and assert that the entire it() throws known errors
         if (invalidCase.endsWith("_0")) {
@@ -50,11 +45,6 @@ for (const testType of fs.readdirSync(rootGenericSszPath)) {
       // where deserialized .d value is D: '0x00'. However the tests guide mark that field as D: Bytes[256].
       // Those test won't be fixed since most implementations staticly compile types.
       if (validCase.startsWith("ComplexTestStruct")) {
-        continue;
-      }
-
-      const onlyId = process.env.ONLY_ID;
-      if (onlyId && !validCase.includes(onlyId)) {
         continue;
       }
 

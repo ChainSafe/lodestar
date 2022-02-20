@@ -171,9 +171,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 function countAttBits(atts: phase0.PendingAttestation[]): number {
   let totalBits = 0;
   for (const att of atts) {
-    const indexes = Array.from({length: att.aggregationBits.bitLen}, () => 0);
-    const yesCount = att.aggregationBits.intersectValues(indexes).length;
-    totalBits += yesCount;
+    totalBits += att.aggregationBits.getTrueBitIndexes().length;
   }
   return totalBits / atts.length;
 }

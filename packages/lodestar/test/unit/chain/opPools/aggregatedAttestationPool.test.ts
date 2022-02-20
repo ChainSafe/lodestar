@@ -1,4 +1,5 @@
 import {bls, SecretKey} from "@chainsafe/bls";
+import {BitArray} from "@chainsafe/ssz";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
@@ -15,7 +16,6 @@ import {generateAttestation, generateEmptyAttestation} from "../../../utils/atte
 import {generateCachedState} from "../../../utils/state";
 import {renderBitArray} from "../../../utils/render";
 import sinon from "sinon";
-import {BitArray} from "@chainsafe/ssz";
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;

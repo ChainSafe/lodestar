@@ -7,7 +7,7 @@ import {
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {BitArray} from "@chainsafe/ssz";
-import {allForks, altair, Root, ssz} from "@chainsafe/lodestar-types";
+import {allForks, altair, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -78,20 +78,20 @@ export function generateState(
     },
     blockRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
     stateRoots: Array.from({length: SLOTS_PER_HISTORICAL_ROOT}, () => ZERO_HASH),
-    historicalRoots: [] as Root[],
+    historicalRoots: [],
     eth1Data: {
       depositRoot: Buffer.alloc(32),
       blockHash: Buffer.alloc(32),
       depositCount: 0,
     },
-    eth1DataVotes: [] as phase0.Eth1Data[],
+    eth1DataVotes: [],
     eth1DepositIndex: 0,
     validators: validators,
     balances: Array.from({length: numValidators}, () => MAX_EFFECTIVE_BALANCE),
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, () => ZERO_HASH),
     slashings: Array.from({length: EPOCHS_PER_SLASHINGS_VECTOR}, () => BigInt(0)),
-    previousEpochAttestations: [] as phase0.PendingAttestation[],
-    currentEpochAttestations: [] as phase0.PendingAttestation[],
+    previousEpochAttestations: [],
+    currentEpochAttestations: [],
     justificationBits: BitArray.fromBitLen(4),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,

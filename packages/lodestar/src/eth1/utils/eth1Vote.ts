@@ -126,7 +126,7 @@ function getEth1DataKey(eth1Data: phase0.Eth1Data): string {
 }
 
 /**
- * Returns the array of keys with max value. May return 0, 1 or more keys
+ * Serialize eth1Data types to a unique string ID. It is only used for comparison.
  */
 export function fastSerializeEth1Data(eth1Data: phase0.Eth1Data): string {
   return toHex(eth1Data.blockHash) + eth1Data.depositCount.toString(16) + toHex(eth1Data.depositRoot);

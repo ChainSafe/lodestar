@@ -23,11 +23,11 @@ export function generateEmptyBlock(): phase0.BeaconBlock {
         depositCount: 0,
       },
       graffiti: Buffer.alloc(32),
-      proposerSlashings: [] as phase0.ProposerSlashing[],
-      attesterSlashings: [] as phase0.AttesterSlashing[],
-      attestations: [] as phase0.Attestation[],
-      deposits: [] as phase0.Deposit[],
-      voluntaryExits: [] as phase0.SignedVoluntaryExit[],
+      proposerSlashings: [],
+      attesterSlashings: [],
+      attestations: [],
+      deposits: [],
+      voluntaryExits: [],
     },
   };
 }
