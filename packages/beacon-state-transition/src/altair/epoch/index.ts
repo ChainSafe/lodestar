@@ -1,4 +1,4 @@
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
+import {CachedBeaconStateAltair, EpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
