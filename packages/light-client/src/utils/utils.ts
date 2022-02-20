@@ -5,13 +5,7 @@ import {BitArray} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../types";
 
 export function sumBits(bits: BitArray): number {
-  // TODO: Optimize
-  const indexes: number[] = [];
-  for (let i = 0; i < bits.bitLen; i++) {
-    indexes.push(0);
-  }
-
-  return bits.intersectValues(indexes).length;
+  return bits.getTrueBitIndexes().length;
 }
 
 export function isZeroHash(root: Root): boolean {
@@ -39,10 +33,7 @@ export function assertZeroHashes(rootArray: Root[], expectedLength: number, erro
  * Util to guarantee that all bits have a corresponding pubkey
  */
 export function getParticipantPubkeys<T>(pubkeys: T[], bits: BitArray): T[] {
-  if (bits.bitLen > pubkeys.length) {
-    throw Error(`syncCommittee bitLen ${bits.bitLen} > pubkeys.length ${pubkeys.length}`);
-  }
-
+  // BitArray.intersectValues() checks the length is correct
   return bits.intersectValues(pubkeys);
 }
 
