@@ -14,14 +14,14 @@ import {ValidatorStore} from "./validatorStore";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
-/** 
- * Epochs prior to `ALTAIR_FORK_EPOCH` to start fetching duties 
- * 
- * UPDATE: Setting it to 0 from 1, because looking ahead caused an "Empty SyncCommitteeCache" 
+/**
+ * Epochs prior to `ALTAIR_FORK_EPOCH` to start fetching duties
+ *
+ * UPDATE: Setting it to 0 from 1, because looking ahead caused an "Empty SyncCommitteeCache"
  * error (https://github.com/ChainSafe/lodestar/issues/3752) as currently the lodestar
  * beacon's pre-altair placeholder object SyncCommitteeCacheEmpty just throws on
  * any getter.
- * This can be updated back to 1, once SyncCommitteeCacheEmpty supports the duties 
+ * This can be updated back to 1, once SyncCommitteeCacheEmpty supports the duties
  * look-ahead. It can also be later turned as a cli param to interface with another
  * client's beacon, which supports look-ahead of duties.
  */
