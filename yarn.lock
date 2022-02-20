@@ -488,10 +488,10 @@
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/persistent-merkle-tree@^0.3.7":
+"@chainsafe/persistent-merkle-tree@https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2":
   version "0.3.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.3.7.tgz#d257674fcacf1770e54df1e7e476bb55efcb3ed4"
-  integrity sha512-UXXzvCN8P4eQWCsaTaHRrNa+2sTwY3NB0Vf+uWgM4cU1qf8LOsTU7aU2CeXFAGJag5W/xEQfVGNh463kXTYAgg==
+  uid "089475892f3e5aae15f767c9f360b2e23af65638"
+  resolved "https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2#089475892f3e5aae15f767c9f360b2e23af65638"
   dependencies:
     "@chainsafe/as-sha256" "^0.2.3"
 
@@ -512,13 +512,12 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.8.20":
+"@chainsafe/ssz@https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2":
   version "0.8.20"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.20.tgz#2c8e70e173a2540c8e4e0bad7c44fd836b8b256b"
-  integrity sha512-SjD/GqkByWbC5JC2W4cvaFjok6kfZeZDLLzr9k0Kn4sIOZPBfuRTumvV6ihqgn7ItOFpZRXMz0u4DgH+lr28WQ==
+  resolved "https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2#dd44c159620efafcd31a0aecfd257f57bdc085d8"
   dependencies:
     "@chainsafe/as-sha256" "^0.2.4"
-    "@chainsafe/persistent-merkle-tree" "^0.3.7"
+    "@chainsafe/persistent-merkle-tree" "https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2"
     case "^1.6.3"
 
 "@cspotcode/source-map-consumer@0.8.0":

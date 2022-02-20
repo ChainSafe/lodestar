@@ -76,7 +76,7 @@
     "@chainsafe/lodestar-validator": "^0.35.0",
     "@chainsafe/persistent-merkle-tree": "https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2",
     "@chainsafe/snappy-stream": "5.0.0",
-    "@chainsafe/ssz": "https://gitpkg.now.sh/dapplion/ssz/packages/ssz?dapplion/v2",
+    "@chainsafe/ssz": "https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^3.0.0",
     "bl": "^5.0.0",
