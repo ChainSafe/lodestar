@@ -10,7 +10,7 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src";
+import {allForks, CachedBeaconStateAltair} from "../../../../src";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateBlock} from "../../types";
@@ -104,7 +104,7 @@ describe("altair processBlock", () => {
       itBench<StateBlock, StateBlock>({
         id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
         before: () => {
-          const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
+          const state = generatePerfTestCachedStateAltair();
           const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
           // Populate permanent root caches of the block
           ssz.altair.BeaconBlock.hashTreeRoot(block.message);

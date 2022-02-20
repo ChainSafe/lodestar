@@ -157,7 +157,7 @@ export async function initStateFromDb(
     stateRoot: toHexString(state.hashTreeRoot()),
   });
 
-  return state as BeaconStateAllForks;
+  return state;
 }
 
 /**

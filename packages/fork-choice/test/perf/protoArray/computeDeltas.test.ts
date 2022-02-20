@@ -30,9 +30,7 @@ describe("computeDeltas", () => {
   before(function () {
     this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
 
-    originalState = (generatePerfTestCachedStateAltair({
-      goBackOneSlot: true,
-    }) as unknown) as CachedBeaconStateAltair;
+    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
 
     const previousEpochParticipationArr = originalState.previousEpochParticipation.getAll();
     const currentEpochParticipationArr = originalState.currentEpochParticipation.getAll();

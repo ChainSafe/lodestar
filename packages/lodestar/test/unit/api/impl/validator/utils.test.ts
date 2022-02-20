@@ -11,7 +11,7 @@ describe("api / impl / validator / utils", () => {
   const indexes: ValidatorIndex[] = [];
   let state: BeaconStateAllForks;
   before("Prepare state", () => {
-    state = ssz.phase0.BeaconState.defaultViewDU as BeaconStateAllForks;
+    state = ssz.phase0.BeaconState.defaultViewDU;
     const validator = ssz.phase0.Validator.defaultValue;
     const validators = state.validators;
     for (let i = 0; i < vc; i++) {

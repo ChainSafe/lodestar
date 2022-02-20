@@ -64,7 +64,7 @@ describe("AttnetsService", function () {
       genesisTime: Math.floor(Date.now() / 1000),
       chainId: 0,
       networkId: BigInt(0),
-      state: state as BeaconStateAllForks,
+      state,
       config,
     });
     // load getCurrentSlot first, vscode not able to debug without this

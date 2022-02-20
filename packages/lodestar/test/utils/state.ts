@@ -144,7 +144,7 @@ export function generateCachedState(
     // This is a performance test, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  }) as CachedBeaconStateAllForks;
+  });
 }
 
 /**

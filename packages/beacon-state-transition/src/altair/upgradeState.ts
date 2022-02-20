@@ -1,5 +1,5 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../types";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../types";
 import {newZeroedArray} from "../util";
 import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation";
 import {getNextSyncCommittee} from "../util/syncCommittee";
@@ -102,7 +102,7 @@ function translateParticipation(
   pendingAttesations: CompositeViewDU<typeof ssz.phase0.EpochAttestations>
 ): void {
   const {epochCtx} = state;
-  const rootCache = new RootCache(state as CachedBeaconStateAllForks);
+  const rootCache = new RootCache(state);
   const epochParticipation = state.previousEpochParticipation;
 
   for (const attestation of pendingAttesations.getAllReadonly()) {

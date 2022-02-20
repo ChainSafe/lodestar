@@ -28,7 +28,7 @@ describe(`altair processEpoch - ${stateId}`, () => {
   itBench({
     id: `altair processEpoch - ${stateId}`,
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
-    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAllForks,
+    beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
       const epochProcess = beforeProcessEpoch(state);
       altair.processEpoch(state as CachedBeaconStateAltair, epochProcess);

@@ -59,7 +59,7 @@ describe("altair processAttestation", () => {
     itBench<StateAttestations, StateAttestations>({
       id: `altair processAttestation - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
+        const state = generatePerfTestCachedStateAltair();
         const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
         return {state, attestations: block.message.body.attestations as phase0.Attestation[]};
       },

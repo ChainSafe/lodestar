@@ -1,5 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
-import {CachedBeaconStateAllForks, beforeProcessEpoch} from "../../../../src";
+import {beforeProcessEpoch} from "../../../../src";
 import {StateEpoch} from "../../types";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
@@ -13,7 +13,7 @@ describe("phase0 afterProcessEpoch", () => {
     before: () => {
       const state = generatePerfTestCachedStatePhase0({goBackOneSlot: true});
       const epochProcess = beforeProcessEpoch(state);
-      return {state: state as CachedBeaconStateAllForks, epochProcess};
+      return {state: state, epochProcess};
     },
     beforeEach: ({state, epochProcess}) => ({state: state.clone(), epochProcess}),
     fn: ({state, epochProcess}) => {

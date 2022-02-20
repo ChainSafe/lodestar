@@ -15,7 +15,7 @@ describe("epochCtx.getCommitteeAssignments", () => {
 
   before(function () {
     this.timeout(60 * 1000);
-    state = generatePerfTestCachedStatePhase0() as CachedBeaconStateAllForks;
+    state = generatePerfTestCachedStatePhase0();
     epoch = computeEpochAtSlot(state.slot);
 
     // Sanity check to ensure numValidators doesn't go stale

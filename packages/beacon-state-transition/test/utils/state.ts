@@ -96,7 +96,7 @@ export function generateCachedState(
     // This is a test state, there's no need to have a global shared cache of keys
     pubkey2index: new PubkeyIndexMap(),
     index2pubkey: [],
-  }) as CachedBeaconStateAllForks;
+  });
 }
 
 export function createCachedBeaconStateTest<T extends BeaconStateAllForks>(

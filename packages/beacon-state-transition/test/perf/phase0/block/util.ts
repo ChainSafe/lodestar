@@ -162,7 +162,7 @@ export function getBlockPhase0(
  */
 export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAltairOpts): altair.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
-  const phase0Block = getBlockPhase0(preState as CachedBeaconStateAllForks, opts);
+  const phase0Block = getBlockPhase0(preState, opts);
   const stateEpoch = computeEpochAtSlot(preState.slot);
   for (const attestation of phase0Block.message.body.attestations) {
     const attEpoch = computeEpochAtSlot(attestation.data.slot);

@@ -74,11 +74,11 @@ function getEffectiveBalanceTestData(
   stateTree.commit();
 
   const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
-  const epochProcess = beforeProcessEpoch(cachedBeaconState as CachedBeaconStateAllForks);
+  const epochProcess = beforeProcessEpoch(cachedBeaconState);
   epochProcess.balances = balances;
 
   return {
-    state: cachedBeaconState as CachedBeaconStateAllForks,
+    state: cachedBeaconState,
     epochProcess: epochProcess,
   };
 }

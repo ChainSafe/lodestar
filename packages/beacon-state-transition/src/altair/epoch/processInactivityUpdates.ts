@@ -25,7 +25,7 @@ export function processInactivityUpdates(state: CachedBeaconStateAltair, epochPr
   const {config, inactivityScores} = state;
   const {INACTIVITY_SCORE_BIAS, INACTIVITY_SCORE_RECOVERY_RATE} = config;
   const {statuses, eligibleValidatorIndices} = epochProcess;
-  const inActivityLeak = isInInactivityLeak(state as CachedBeaconStateAllForks);
+  const inActivityLeak = isInInactivityLeak(state);
 
   // this avoids importing FLAG_ELIGIBLE_ATTESTER inside the for loop, check the compiled code
   const {FLAG_PREV_TARGET_ATTESTER_UNSLASHED, hasMarkers} = attesterStatusUtil;

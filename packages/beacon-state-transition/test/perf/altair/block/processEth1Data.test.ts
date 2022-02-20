@@ -26,7 +26,7 @@ describe("altair processEth1Data", () => {
     itBench<StateEth1Data, StateEth1Data>({
       id: `altair processEth1Data - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
+        const state = generatePerfTestCachedStateAltair();
         const block = getBlockAltair(state as CachedBeaconStateAltair, {
           proposerSlashingLen: 0,
           attesterSlashingLen: 0,

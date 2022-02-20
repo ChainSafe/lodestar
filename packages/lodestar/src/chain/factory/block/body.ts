@@ -61,7 +61,7 @@ export async function assembleBody(
 
   const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
   const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
-  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState as CachedBeaconStateAllForks);
+  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState);
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,

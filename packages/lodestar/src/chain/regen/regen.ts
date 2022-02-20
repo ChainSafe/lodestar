@@ -192,7 +192,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return state as CachedBeaconStateAllForks;
+    return state;
   }
 
   private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {

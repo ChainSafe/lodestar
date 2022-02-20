@@ -3,11 +3,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {
-  BeaconStateAllForks,
-  CachedBeaconStateAllForks,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -148,7 +144,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   // TODO: Improve using regen here
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
   if (headState) {
-    this.opPool.pruneAll(headState as BeaconStateAllForks);
+    this.opPool.pruneAll(headState);
   }
 }
 

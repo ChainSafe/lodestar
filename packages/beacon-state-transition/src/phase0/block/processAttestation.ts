@@ -22,7 +22,7 @@ export function processAttestation(
   const slot = state.slot;
   const data = attestation.data;
 
-  validateAttestation(state as CachedBeaconStateAllForks, attestation);
+  validateAttestation(state, attestation);
 
   const pendingAttestation = ssz.phase0.PendingAttestation.toViewDU({
     data: data,
@@ -51,13 +51,7 @@ export function processAttestation(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (
-    !isValidIndexedAttestation(
-      state as CachedBeaconStateAllForks,
-      epochCtx.getIndexedAttestation(attestation),
-      verifySignature
-    )
-  ) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }

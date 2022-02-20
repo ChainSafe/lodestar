@@ -2,7 +2,6 @@ import {itBench} from "@dapplion/benchmark";
 import {expect} from "chai";
 import {
   CachedBeaconStateAltair,
-  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
@@ -27,9 +26,7 @@ describe("getAttestationsForBlock", () => {
   before(function () {
     this.timeout(2 * 60 * 1000); // Generating the states for the first time is very slow
 
-    originalState = (generatePerfTestCachedStateAltair({
-      goBackOneSlot: true,
-    }) as unknown) as CachedBeaconStateAltair;
+    originalState = generatePerfTestCachedStateAltair({goBackOneSlot: true});
 
     const previousEpochParticipationArr = originalState.previousEpochParticipation.getAll();
     const currentEpochParticipationArr = originalState.currentEpochParticipation.getAll();
@@ -46,7 +43,7 @@ describe("getAttestationsForBlock", () => {
     beforeEach: () => getAggregatedAttestationPool(originalState),
     fn: (pool) => {
       // logger.info("Number of attestations in pool", pool.getAll().length);
-      pool.getAttestationsForBlock(originalState as CachedBeaconStateAllForks);
+      pool.getAttestationsForBlock(originalState);
     },
   });
 });

@@ -3,12 +3,12 @@ import {DOMAIN_SYNC_COMMITTEE} from "@chainsafe/lodestar-params";
 import {byteArrayEquals} from "@chainsafe/ssz";
 
 import {computeSigningRoot, getBlockRootAtSlot, ISignatureSet, SignatureSetType, verifySignatureSet} from "../../util";
-import {CachedBeaconStateAltair} from "../../types";
+import {CachedBeaconStateAllForks} from "../../types";
 import {G2_POINT_AT_INFINITY} from "../../constants";
 import {getUnparticipantValues} from "../../util/array";
 
 export function processSyncAggregate(
-  state: CachedBeaconStateAltair,
+  state: CachedBeaconStateAllForks,
   block: altair.BeaconBlock,
   verifySignatures = true
 ): void {
@@ -45,7 +45,7 @@ export function processSyncAggregate(
 }
 
 export function getSyncCommitteeSignatureSet(
-  state: CachedBeaconStateAltair,
+  state: CachedBeaconStateAllForks,
   block: altair.BeaconBlock,
   /** Optional parameter to prevent computing it twice */
   participantIndices?: number[]

@@ -15,7 +15,7 @@ describe("epoch shufflings", () => {
 
   before(function () {
     this.timeout(60 * 1000);
-    state = generatePerfTestCachedStatePhase0() as CachedBeaconStateAllForks;
+    state = generatePerfTestCachedStatePhase0();
     nextEpoch = computeEpochAtSlot(state.slot) + 1;
 
     // Sanity check to ensure numValidators doesn't go stale

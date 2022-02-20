@@ -21,7 +21,6 @@ import {
   CachedBeaconStateAltair,
   BeaconStatePhase0,
   BeaconStateAltair,
-  BeaconStateAllForks,
 } from "../../src/types";
 import {profilerLogger} from "../utils/logger";
 import {interopPubkeysCached} from "../utils/interop";
@@ -202,7 +201,7 @@ export function generatePerfTestCachedStatePhase0(opts?: {goBackOneSlot: boolean
   }
   if (!phase0CachedState23638) {
     phase0CachedState23638 = allForks.processSlots(
-      phase0CachedState23637 as CachedBeaconStateAllForks,
+      phase0CachedState23637,
       phase0CachedState23637.slot + 1
     ) as CachedBeaconStatePhase0;
     phase0CachedState23638.slot += 1;
@@ -243,7 +242,7 @@ export function generatePerfTestCachedStateAltair(opts?: {goBackOneSlot: boolean
   }
   if (!altairCachedState23638) {
     altairCachedState23638 = allForks.processSlots(
-      altairCachedState23637 as CachedBeaconStateAllForks,
+      altairCachedState23637,
       altairCachedState23637.slot + 1
     ) as CachedBeaconStateAltair;
     altairCachedState23638.slot += 1;
@@ -445,7 +444,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     config: createIBeaconConfig(config, state.genesisValidatorsRoot),
     pubkey2index,
     index2pubkey,
-  }) as CachedBeaconStateAllForks;
+  });
 }
 
 const initialValue = null;
@@ -518,5 +517,5 @@ export async function getNetworkCachedState(
   }
 
   const stateView = config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz);
-  return createCachedBeaconStateTest(stateView as BeaconStateAllForks, config) as CachedBeaconStateAllForks;
+  return createCachedBeaconStateTest(stateView, config);
 }

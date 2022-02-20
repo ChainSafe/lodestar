@@ -8,7 +8,6 @@ import {
   allForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  CachedBeaconStateAllForks,
   AttesterFlags,
   beforeProcessEpoch,
   parseAttesterFlags,
@@ -101,7 +100,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const postState = createCachedBeaconStateTest(stateTB, config);
 
     const epochProcess = beforeProcessEpoch(postState);
-    allForks.processSlots(postState as CachedBeaconStateAllForks, nextEpochSlot, null);
+    allForks.processSlots(postState, nextEpochSlot, null);
 
     const validatorCount = state.validators.length;
 

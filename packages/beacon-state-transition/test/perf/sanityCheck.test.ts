@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@chainsafe/lodestar-params";
-import {beforeProcessEpoch, CachedBeaconStateAllForks} from "../../src";
+import {beforeProcessEpoch} from "../../src";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
 describe("Perf test sanity check", function () {
@@ -30,7 +30,7 @@ describe("Perf test sanity check", function () {
 
   it("targetStake is in the same range", () => {
     const phase0State = generatePerfTestCachedStatePhase0();
-    const epochProcess = beforeProcessEpoch(phase0State as CachedBeaconStateAllForks);
+    const epochProcess = beforeProcessEpoch(phase0State);
     expect(
       BigInt(epochProcess.prevEpochUnslashedStake.targetStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT) >
         targetStake

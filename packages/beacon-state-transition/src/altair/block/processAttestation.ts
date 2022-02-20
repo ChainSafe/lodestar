@@ -41,7 +41,7 @@ export function processAttestations(
   for (const attestation of attestations) {
     const data = attestation.data;
 
-    validateAttestation(state as CachedBeaconStateAllForks, attestation);
+    validateAttestation(state, attestation);
 
     // Retrieve the validator indices from the attestation participation bitfield
     const committeeIndices = epochCtx.getBeaconCommittee(data.slot, data.index);
@@ -51,11 +51,7 @@ export function processAttestations(
     // TODO: Why should we verify an indexed attestation that we just created? If it's just for the signature
     // we can verify only that and nothing else.
     if (verifySignature) {
-      const sigSet = getAttestationWithIndicesSignatureSet(
-        state as CachedBeaconStateAllForks,
-        attestation,
-        attestingIndices
-      );
+      const sigSet = getAttestationWithIndicesSignatureSet(state, attestation, attestingIndices);
       if (!verifySignatureSet(sigSet)) {
         throw new Error("Attestation signature is not valid");
       }

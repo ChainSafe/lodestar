@@ -50,7 +50,7 @@ export function sanityBlock(fork: ForkName, testPath: string): void {
     `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
     join(SPEC_TEST_LOCATION, testPath),
     (testcase) => {
-      const stateTB = testcase.pre as BeaconStateAllForks;
+      const stateTB = testcase.pre;
       let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {

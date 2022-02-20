@@ -9,7 +9,6 @@ import {
   ZERO_HASH,
   bellatrix,
   EffectiveBalanceIncrements,
-  BeaconStateBellatrix,
   BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -331,9 +330,9 @@ export class ForkChoice implements IForkChoice {
 
     if (
       preCachedData?.isMergeTransitionBlock ||
-      (bellatrix.isBellatrixStateType(state as BeaconStateBellatrix) &&
+      (bellatrix.isBellatrixStateType(state) &&
         bellatrix.isBellatrixBlockBodyType(block.body) &&
-        bellatrix.isMergeTransitionBlock(state as BeaconStateBellatrix, block.body))
+        bellatrix.isMergeTransitionBlock(state, block.body))
     )
       assertValidTerminalPowBlock(this.config, (block as unknown) as bellatrix.BeaconBlock, preCachedData);
 
@@ -415,8 +414,8 @@ export class ForkChoice implements IForkChoice {
       finalizedRoot: toHexString(state.finalizedCheckpoint.root),
 
       ...(bellatrix.isBellatrixBlockBodyType(block.body) &&
-      bellatrix.isBellatrixStateType(state as BeaconStateBellatrix) &&
-      bellatrix.isExecutionEnabled(state as BeaconStateBellatrix, block.body)
+      bellatrix.isBellatrixStateType(state) &&
+      bellatrix.isExecutionEnabled(state, block.body)
         ? {
             executionPayloadBlockHash: toHexString(block.body.executionPayload.blockHash),
             executionStatus: this.getPostMergeExecStatus(preCachedData),
