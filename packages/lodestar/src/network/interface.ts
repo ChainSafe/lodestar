@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import {INetworkEventBus} from "./events";
 import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
-import {IPeerRpcScoreStore, IPeerMetadataStore, PeerAction} from "./peers";
+import {IPeerMetadataStore, PeerAction} from "./peers";
 import {IReqResp} from "./reqresp";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets";
 
@@ -25,7 +25,6 @@ export interface INetwork {
   gossip: Eth2Gossipsub;
   discv5?: Discv5;
   metadata: MetadataController;
-  peerRpcScores: IPeerRpcScoreStore;
   peerMetadata: IPeerMetadataStore;
   /** Our network identity */
   peerId: PeerId;
