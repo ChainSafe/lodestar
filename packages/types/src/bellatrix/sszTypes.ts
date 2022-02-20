@@ -31,7 +31,7 @@ const executionPayloadFields = {
   parentHash: Root,
   feeRecipient: Bytes20,
   stateRoot: Bytes32,
-  receiptRoot: Bytes32,
+  receiptsRoot: Bytes32,
   logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),
   random: Bytes32,
   blockNumber: UintNum64,

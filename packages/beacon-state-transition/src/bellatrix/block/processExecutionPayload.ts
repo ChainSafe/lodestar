@@ -55,7 +55,7 @@ export function processExecutionPayload(
     parentHash: payload.parentHash,
     feeRecipient: payload.feeRecipient,
     stateRoot: payload.stateRoot,
-    receiptRoot: payload.receiptRoot,
+    receiptsRoot: payload.receiptsRoot,
     logsBloom: payload.logsBloom,
     random: payload.random,
     blockNumber: payload.blockNumber,
