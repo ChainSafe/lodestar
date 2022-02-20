@@ -15,7 +15,7 @@ nethermindImage=$NETHERMIND_IMAGE
 if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ]) 
 then
   echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "example: ./setup.sh --dataDir devnet4-data --elClient nethermind --devnetVars ./devnet4.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   exit;
 fi
 
@@ -69,31 +69,38 @@ fi;
 
 
 bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
+bootNode=($bootNode)
+bootNode=$(IFS=, ; echo "${bootNode[*]}")
 if [ "$elClient" == "geth" ]
 then
   echo "gethImage: $GETH_IMAGE"
   $dockerExec pull $GETH_IMAGE
+
   elName="$DEVNET_NAME-geth"
   if [ ! -n "$(ls -A $dataDir/geth)" ]
   then 
     echo "setting up geth directory"
-    $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --catalyst --datadir /data init /config/genesis.json
+    $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --datadir /data init /config/genesis.json
   fi;
   elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
   $dockerExec pull $NETHERMIND_IMAGE
+
   elName="$DEVNET_NAME-nethermind"
   elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
 $dockerExec pull $LODESTAR_IMAGE
-bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
-clName="$DEVNET_NAME-lodestar"
-clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.discv5.bootEnrs $bootEnr --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.disableEth1DepositDataTracker true $LODESTAR_EXTRA_ARGS"
 
+bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
+#bootEnr=($bootEnr)
+#bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
+depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
+clName="$DEVNET_NAME-lodestar"
+clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
 
 run_cmd "$elCmd"
 elPid=$!

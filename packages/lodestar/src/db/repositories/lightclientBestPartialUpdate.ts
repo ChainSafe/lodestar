@@ -19,7 +19,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
     finalityBranch: new VectorCompositeType(ssz.Root, FINALIZED_ROOT_DEPTH),
     finalizedCheckpoint: ssz.phase0.Checkpoint,
     finalizedHeader: ssz.phase0.BeaconBlockHeader,
-    syncCommitteeAggregate: ssz.altair.SyncAggregate,
+    syncAggregate: ssz.altair.SyncAggregate,
   });
 
   typeNonFinalized = new ContainerType({
@@ -27,7 +27,7 @@ export class BestPartialLightClientUpdateRepository extends Repository<SyncPerio
     isFinalized: new BooleanType(),
     attestedHeader: ssz.phase0.BeaconBlockHeader,
     blockRoot: ssz.Root,
-    syncCommitteeAggregate: ssz.altair.SyncAggregate,
+    syncAggregate: ssz.altair.SyncAggregate,
   });
 
   constructor(config: IChainForkConfig, db: IDatabaseController<Uint8Array, Uint8Array>, metrics?: IDbMetrics) {

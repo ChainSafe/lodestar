@@ -304,8 +304,12 @@ export class BeaconChain implements IBeaconChain {
     if (!fs.existsSync(byDate)) {
       fs.mkdirSync(byDate, {recursive: true});
     }
-    const fileName = `${byDate}/${type}_${suffix}_${Date.now()}.ssz`;
-    fs.writeFileSync(fileName, bytes);
+    const fileName = `${byDate}/${type}_${suffix}.ssz`;
+    // as of Feb 17 2022 there are a lot of duplicate files stored with different date suffixes
+    // remove date suffixes in file name, and check duplicate to avoid redundant persistence
+    if (!fs.existsSync(fileName)) {
+      fs.writeFileSync(fileName, bytes);
+    }
     return fileName;
   }
 }

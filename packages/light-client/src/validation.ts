@@ -47,7 +47,7 @@ export function assertValidLightClientUpdate(
 
   const {attestedHeader} = update;
   const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
-  assertValidSignedHeader(config, syncCommittee, update.syncCommitteeAggregate, headerBlockRoot, attestedHeader.slot);
+  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.slot);
 }
 
 /**

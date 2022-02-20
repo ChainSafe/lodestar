@@ -113,7 +113,7 @@ export async function prepareUpdateNaive(
     nextSyncCommitteeBranch: nextSyncCommitteeBranch,
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,
-    syncCommitteeAggregate: syncAggregate,
+    syncAggregate,
     forkVersion: syncAttestedForkVersion,
   };
 }

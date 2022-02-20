@@ -464,7 +464,7 @@ export class Lightclient {
     const existingNextSyncCommittee = this.syncCommitteeByPeriod.get(nextPeriod);
     const newNextSyncCommitteeStats: LightclientUpdateStats = {
       isFinalized: !isEmptyHeader(update.finalizedHeader),
-      participation: sumBits(update.syncCommitteeAggregate.syncCommitteeBits),
+      participation: sumBits(update.syncAggregate.syncCommitteeBits),
       slot: updateSlot,
     };
 

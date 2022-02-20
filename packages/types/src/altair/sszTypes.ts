@@ -199,7 +199,7 @@ export const LightClientUpdate = new ContainerType(
     nextSyncCommitteeBranch: new VectorCompositeType(Bytes32, NEXT_SYNC_COMMITTEE_DEPTH),
     finalizedHeader: phase0Ssz.BeaconBlockHeader,
     finalityBranch: new VectorCompositeType(Bytes32, FINALIZED_ROOT_DEPTH),
-    syncCommitteeAggregate: SyncAggregate,
+    syncAggregate: SyncAggregate,
     forkVersion: Version,
   },
   {typeName: "LightClientUpdate", jsonCase: "eth2"}
