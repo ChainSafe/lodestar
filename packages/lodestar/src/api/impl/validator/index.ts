@@ -16,7 +16,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
 } from "@chainsafe/lodestar-params";
-import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {assembleBlock} from "../../../chain/factory/block";
@@ -33,6 +33,7 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition/src";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -61,6 +62,7 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  */
 export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
   let genesisBlockRoot: Root | null = null;
+  const nextEpochProposerDutyCache = new Map<Epoch, ValidatorIndex[]>();
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -167,6 +169,20 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
       );
+  }
+
+  function computeProposersForEpoch(state: CachedBeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
+    const effectiveBalanceIncrementsWithLen: EffectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(
+      state.validators.length
+    );
+
+    for (let i = 0; i < state.validators.length; i++) {
+      effectiveBalanceIncrementsWithLen[i] = Math.floor(
+        state.validators[i].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+      );
+    }
+
+    return computeProposers(state.clone(), state.getShufflingAtEpoch(epoch), effectiveBalanceIncrementsWithLen);
   }
 
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
@@ -278,36 +294,44 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       notWhileSyncing();
 
       const startSlot = computeStartSlotAtEpoch(epoch);
-      // await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
-      await waitForNextClosestEpoch();
+      await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
+      const nextEpoch = chain.clock.currentEpoch + 1;
       const state = await chain.getHeadStateAtCurrentEpoch();
       const duties: routes.validator.ProposerDuty[] = [];
       const indexes: ValidatorIndex[] = [];
 
-      if (epoch > chain.clock.currentEpoch) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment
-        const effectiveBalanceIncrementsWithLen = getEffectiveBalanceIncrementsWithLen(state.validators.length);
-        for (let i = 0; i < state.validators.length; i++) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-          effectiveBalanceIncrementsWithLen[i] = Math.floor(
-            state.validators[i].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
-          );
-        }
+      // We allow requesting proposal duties only one epoch in the future
+      // Note: There is a small probability that returned validators differs
+      // than what is returned when the epoch is reached.
+      if (epoch === nextEpoch) {
+        const cachedDutiesForEpoch = nextEpochProposerDutyCache.get(nextEpoch);
 
-        // TODO [DA] this computation is expensive, find a way to cache it.
-        // Either cache it in here?
-        // Or move the implemation into the state and cache it there?
-        // or there is other ways to go about it?
-        indexes.push(
-          ...computeProposers(state.clone(), state.getShufflingAtEpoch(epoch), effectiveBalanceIncrementsWithLen)
-        );
+        if (cachedDutiesForEpoch) {
+          indexes.push(...cachedDutiesForEpoch);
+        } else {
+          const futureProposers = computeProposersForEpoch(state, nextEpoch);
+
+          indexes.push(...futureProposers);
+
+          // Do not keep previous future proposal duties, so clear cache
+          // before setting a new value.
+          nextEpochProposerDutyCache.clear();
+          nextEpochProposerDutyCache.set(nextEpoch, futureProposers);
+        }
       } else {
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
           // getBeaconProposer ensures the requested epoch is correct
           const validatorIndex = state.getBeaconProposer(startSlot + i);
           indexes.push(validatorIndex);
+        }
+
+        for (const cachedEpoch of nextEpochProposerDutyCache.keys()) {
+          // Do not keep past cached future proposal duties.
+          if (cachedEpoch < epoch) {
+            nextEpochProposerDutyCache.delete(cachedEpoch);
+          }
         }
       }
 

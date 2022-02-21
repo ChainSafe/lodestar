@@ -72,8 +72,61 @@ describe("get proposers api impl", function () {
     );
     const cachedState = createCachedBeaconState(config, state);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.returns(1);
     const {data: result} = await api.getProposerDuties(0);
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
+    expect(stubGetBeaconProposer.called).to.be.true;
+  });
+
+  it("should get proposers for next epoch", async function () {
+    syncStub.isSynced.returns(true);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: generateInitialMaxBalances(config, 25),
+      },
+      config
+    );
+    const cachedState = createCachedBeaconState(config, state);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.returns(1);
+    const {data: result} = await api.getProposerDuties(1);
+    expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
+    expect(stubGetBeaconProposer.called).to.be.false;
+  });
+
+  it("should not get proposers for more than one epoch in the future", async function () {
+    syncStub.isSynced.returns(true);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: generateInitialMaxBalances(config, 25),
+      },
+      config
+    );
+    const cachedState = createCachedBeaconState(config, state);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.returns(1);
+    expect(await api.getProposerDuties(2)).to.throw;
+    expect(stubGetBeaconProposer.called).to.be.true;
   });
 });
