@@ -361,6 +361,8 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
+      // to decay score
+      this.peerRpcScores.update(peer);
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
