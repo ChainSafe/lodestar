@@ -24,4 +24,8 @@ export {EpochContext} from "./cache/epochContext";
 export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess";
 export {PubkeyIndexMap, Index2PubkeyCache} from "./cache/pubkeyCache";
 
-export {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "./cache/effectiveBalanceIncrements";
+export {
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroed,
+  getEffectiveBalanceIncrementsWithLen,
+} from "./cache/effectiveBalanceIncrements";

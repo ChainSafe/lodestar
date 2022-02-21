@@ -6,8 +6,11 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
+  computeProposers,
+  getEffectiveBalanceIncrementsWithLen,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
+  EFFECTIVE_BALANCE_INCREMENT,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -85,7 +88,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   async function waitForSlot(slot: Slot): Promise<void> {
     const slotStartSec = chain.genesisTime + slot * config.SECONDS_PER_SLOT;
     const msToSlot = slotStartSec * 1000 - Date.now();
-    if (msToSlot > 0 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
+    if (msToSlot > config.SECONDS_PER_SLOT * 2 && msToSlot < MAX_API_CLOCK_DISPARITY_MS) {
       await chain.clock.waitForSlot(slot);
     }
   }
@@ -275,18 +278,37 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       notWhileSyncing();
 
       const startSlot = computeStartSlotAtEpoch(epoch);
-      await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
+      // await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
+      await waitForNextClosestEpoch();
 
       const state = await chain.getHeadStateAtCurrentEpoch();
-
       const duties: routes.validator.ProposerDuty[] = [];
       const indexes: ValidatorIndex[] = [];
 
-      // Gather indexes to get pubkeys in batch (performance optimization)
-      for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-        // getBeaconProposer ensures the requested epoch is correct
-        const validatorIndex = state.getBeaconProposer(startSlot + i);
-        indexes.push(validatorIndex);
+      if (epoch > chain.clock.currentEpoch) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment
+        const effectiveBalanceIncrementsWithLen = getEffectiveBalanceIncrementsWithLen(state.validators.length);
+        for (let i = 0; i < state.validators.length; i++) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          effectiveBalanceIncrementsWithLen[i] = Math.floor(
+            state.validators[i].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
+          );
+        }
+
+        // TODO [DA] this computation is expensive, find a way to cache it.
+        // Either cache it in here?
+        // Or move the implemation into the state and cache it there?
+        // or there is other ways to go about it?
+        indexes.push(
+          ...computeProposers(state.clone(), state.getShufflingAtEpoch(epoch), effectiveBalanceIncrementsWithLen)
+        );
+      } else {
+        // Gather indexes to get pubkeys in batch (performance optimization)
+        for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
+          // getBeaconProposer ensures the requested epoch is correct
+          const validatorIndex = state.getBeaconProposer(startSlot + i);
+          indexes.push(validatorIndex);
+        }
       }
 
       // NOTE: this is the fastest way of getting compressed pubkeys.
