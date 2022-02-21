@@ -34,6 +34,7 @@ export interface IJsonRpcHttpClient {
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
+  private jwtSecret?: Uint8Array;
 
   constructor(
     private readonly urls: string[],
@@ -42,7 +43,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
-      jwtSecret?: string;
+      jwtSecretHex?: string;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -53,6 +54,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       if (!url) {
         throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
       }
+    }
+    if (this.opts?.jwtSecretHex) {
+      this.jwtSecret = Buffer.from(this.opts.jwtSecretHex, "hex");
     }
   }
 
@@ -126,9 +130,15 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
 
     try {
       let headers;
-      if (this.opts?.jwtSecret) {
+      if (this.jwtSecret) {
         /** ELs have a tight +-5 second freshness check on token's iat i.e. issued at */
-        const token = encode({iat: Math.floor(new Date().getTime() / 1000)}, this.opts?.jwtSecret, algorithm);
+        const token = encode(
+          {iat: Math.floor(new Date().getTime() / 1000)},
+          // Note: This type casting is required as even though jwt-simple accepts a buffer as a
+          //       secret types definitions exposed by @types/jwt-simple only takes a string
+          (this.jwtSecret as unknown) as string,
+          algorithm
+        );
         // eslint-disable-next-line @typescript-eslint/naming-convention
         headers = {"Content-Type": "application/json", Authorization: `Bearer ${token}`};
       } else {

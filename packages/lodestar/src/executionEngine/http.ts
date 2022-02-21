@@ -26,7 +26,7 @@ import {
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   timeout?: number;
-  jwtSecret?: string;
+  jwtSecretHex?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
