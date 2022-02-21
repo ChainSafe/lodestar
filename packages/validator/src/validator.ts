@@ -31,7 +31,6 @@ export type SecretKeyInfo = {
   unlockSecretKeys?: () => void;
 };
 
-// Combined the two new keys
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
