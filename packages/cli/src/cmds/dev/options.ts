@@ -3,7 +3,7 @@ import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/beaconNodeOptions/keymanager";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;

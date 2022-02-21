@@ -1,4 +1,4 @@
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions} from "../util";
 import {restApiOptionsDefault} from "@chainsafe/lodestar-keymanager-server";
 
 export type KeymanagerArgs = {

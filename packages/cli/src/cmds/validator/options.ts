@@ -3,7 +3,7 @@ import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/beaconNodeOptions/keymanager";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
