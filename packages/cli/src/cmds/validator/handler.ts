@@ -102,6 +102,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller.signal
   );
 
+  onGracefulShutdownCbs.push(async () => await validator.stop());
+  await validator.start();
+
   // Start keymanager API backend
   if (args.keymanagerEnabled) {
     const keymanagerApi = new KeymanagerApi(
@@ -123,10 +126,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       },
       {config, logger, api: keymanagerApi}
     );
-    await keymanagerServer.listen();
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
+    await keymanagerServer.listen();
   }
-
-  onGracefulShutdownCbs.push(() => validator.stop());
-  await validator.start();
 }
