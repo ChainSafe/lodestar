@@ -47,7 +47,6 @@
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.3",
-    "@chainsafe/bls-keystore": "^2.0.0",
     "@chainsafe/lodestar-api": "^0.35.0",
     "@chainsafe/lodestar-beacon-state-transition": "^0.35.0",
     "@chainsafe/lodestar-config": "^0.35.0",
