@@ -147,7 +147,7 @@ export class KeymanagerApi implements Api {
     slashingProtection: SlashingProtectionData;
   }> {
     const deletedKey: boolean[] = [];
-    const statuses: {status: DeletionStatus; message?: string}[] = [];
+    const statuses = new Array<{status: DeletionStatus; message?: string}>(pubkeysHex.length);
 
     for (let i = 0; i < pubkeysHex.length; i++) {
       try {
