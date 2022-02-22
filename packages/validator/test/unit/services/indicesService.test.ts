@@ -40,7 +40,6 @@ describe("IndicesService", function () {
     indicesService.pubkey2index.set(pubkey2, secondValidatorIndex);
 
     // remove pubkey2
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     indicesService.remove(pubkey2);
 
     expect(Object.fromEntries(indicesService.index2pubkey)).to.deep.equal(

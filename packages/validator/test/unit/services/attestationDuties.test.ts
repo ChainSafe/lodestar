@@ -181,10 +181,8 @@ describe("AttestationDutiesService", function () {
       "Wrong dutiesService.attesters Map at current epoch"
     );
     // then remove
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     dutiesService.remove(toHexString(pubkeys[0]));
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
-    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"]) || new Map()).to.deep.equal(
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"] || new Map())).to.deep.equal(
       {},
       "Wrong dutiesService.attesters Map at current epoch after removal"
     );
