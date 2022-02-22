@@ -2,12 +2,10 @@
 // Note: isomorphic-fetch is not well mantained and does not support abort signals
 import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
-import {encode, TAlgorithm} from "jwt-simple";
-const algorithm: TAlgorithm = "HS256";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
-
+import {encodeJwtToken} from "../../util/jwt";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -132,13 +130,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       let headers;
       if (this.jwtSecret) {
         /** ELs have a tight +-5 second freshness check on token's iat i.e. issued at */
-        const token = encode(
-          {iat: Math.floor(new Date().getTime() / 1000)},
-          // Note: This type casting is required as even though jwt-simple accepts a buffer as a
-          //       secret types definitions exposed by @types/jwt-simple only takes a string
-          (this.jwtSecret as unknown) as string,
-          algorithm
-        );
+        const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
         // eslint-disable-next-line @typescript-eslint/naming-convention
         headers = {"Content-Type": "application/json", Authorization: `Bearer ${token}`};
       } else {

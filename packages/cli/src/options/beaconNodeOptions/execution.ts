@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
-import {ICliCommandOptions} from "../../util";
+import {ICliCommandOptions, extractJwtHexSecret} from "../../util";
 
 export type ExecutionEngineArgs = {
   "execution.urls": string[];
@@ -11,12 +11,7 @@ export type ExecutionEngineArgs = {
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
   let jwtSecretHex;
   if (args["jwt-secret"]) {
-    const jwtSecretContents = fs.readFileSync(args["jwt-secret"], "utf-8").trim();
-    const hexPattern = new RegExp(/^(0x|0X)?(?<jwtSecret>[a-fA-F0-9]+)$/, "g");
-    jwtSecretHex = hexPattern.exec(jwtSecretContents)?.groups?.jwtSecret;
-    if (!jwtSecretHex || jwtSecretHex.length != 64) {
-      throw Error("Need a valid 256 bit hex encoded secret");
-    }
+    jwtSecretHex = extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim());
   }
   return {
     urls: args["execution.urls"],
