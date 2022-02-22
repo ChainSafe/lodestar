@@ -2,12 +2,7 @@ import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodes
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {ssz} from "@chainsafe/lodestar-types";
-import {
-  getAndInitDevValidators,
-  getAndInitValidatorsWithKeystoreOne,
-  getKeystoreForPubKey1,
-  getKeystoreForPubKey2,
-} from "../../utils/node/validator";
+import {getAndInitDevValidators, getAndInitValidatorsWithKeystoreOne} from "../../utils/node/validator";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getKeymanagerClient, HttpClient} from "@chainsafe/lodestar-api/src";
@@ -17,6 +12,7 @@ import {expect} from "chai";
 import fs from "node:fs";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
 import {join} from "node:path";
+import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("keymanager delete and import test", async function () {
