@@ -4,6 +4,7 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
+import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile, LOCK_FILE_EXT} from "../../util/lockfile";
@@ -11,11 +12,12 @@ import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
 import {IValidatorCliArgs} from "./options";
 import {fromHexString} from "@chainsafe/ssz";
-import {externalSignerGetKeys, SignerRemote, SignerType, SecretKeyInfo} from "@chainsafe/lodestar-validator";
 
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);
 
-export async function getLocalSecretKeys(args: IValidatorCliArgs & IGlobalArgs): Promise<SecretKeyInfo[]> {
+export async function getLocalSecretKeys(
+  args: IValidatorCliArgs & IGlobalArgs
+): Promise<{secretKeys: SecretKey[]; unlockSecretKeys?: () => void}> {
   // UNSAFE - ONLY USE FOR TESTNETS. Derive keys directly from a mnemonic
   if (args.fromMnemonic) {
     if (args.network === defaultNetwork) {
@@ -27,20 +29,22 @@ export async function getLocalSecretKeys(args: IValidatorCliArgs & IGlobalArgs):
 
     const masterSK = deriveKeyFromMnemonic(args.fromMnemonic);
     const indexes = parseRange(args.mnemonicIndexes);
+    return {
+      secretKeys: indexes.map((index) => {
+        const {signing} = deriveEth2ValidatorKeys(masterSK, index);
+        return SecretKey.fromBytes(signing);
+      }),
+    };
+  }
 
-    return indexes.map((index) => {
-      const {signing} = deriveEth2ValidatorKeys(masterSK, index);
-      return {secretKey: SecretKey.fromBytes(signing)};
-    });
-  } else if (args.interopIndexes) {
-    // Derive interop keys
+  // Derive interop keys
+  else if (args.interopIndexes) {
     const indexes = parseRange(args.interopIndexes);
+    return {secretKeys: indexes.map((index) => interopSecretKey(index))};
+  }
 
-    return indexes.map((index) => {
-      return {secretKey: interopSecretKey(index)};
-    });
-  } else if (args.importKeystoresPath) {
-    // Import JSON keystores and run
+  // Import JSON keystores and run
+  else if (args.importKeystoresPath) {
     if (!args.importKeystoresPassword) {
       throw new YargsError("Must specify importKeystoresPassword with importKeystoresPath");
     }
@@ -58,32 +62,34 @@ export async function getLocalSecretKeys(args: IValidatorCliArgs & IGlobalArgs):
       lockFile.lockSync(lockFilePath);
     }
 
-    const secretKeysInfo: SecretKeyInfo[] = await Promise.all(
-      keystorePaths.map(async (keystorePath) => {
-        const secretKey = SecretKey.fromBytes(
-          await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase)
-        );
-        return {
-          secretKey,
-          keystorePath,
-          unlockSecretKeys: () => {
-            lockFile.unlockSync(keystorePath + LOCK_FILE_EXT);
-          },
-        };
-      })
+    const secretKeys = await Promise.all(
+      keystorePaths.map(async (keystorePath) =>
+        SecretKey.fromBytes(await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase))
+      )
     );
 
-    return secretKeysInfo;
-  } else {
-    // Read keys from local account manager
+    return {
+      secretKeys,
+      unlockSecretKeys: () => {
+        for (const lockFilePath of lockFilePaths) {
+          lockFile.unlockSync(lockFilePath);
+        }
+      },
+    };
+  }
+
+  // Read keys from local account manager
+  else {
     const accountPaths = getAccountPaths(args);
     const validatorDirManager = new ValidatorDirManager(accountPaths);
-    const secretKeys: SecretKey[] = await validatorDirManager.decryptAllValidators({force: args.force});
-    return secretKeys.map((secretKey) => {
-      return {secretKey};
-    });
+    return {secretKeys: await validatorDirManager.decryptAllValidators({force: args.force})};
   }
 }
+
+export type SignerRemote = {
+  externalSignerUrl: string;
+  pubkeyHex: string;
+};
 
 /**
  * Gets SignerRemote objects from CLI args
@@ -102,7 +108,7 @@ export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs):
 
     assertValidPubkeysHex(args.externalSignerPublicKeys);
     assertValidExternalSignerUrl(externalSignerUrl);
-    return args.externalSignerPublicKeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
+    return args.externalSignerPublicKeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
   }
 
   if (args.externalSignerFetchPubkeys) {
@@ -114,7 +120,7 @@ export async function getExternalSigners(args: IValidatorCliArgs & IGlobalArgs):
     const fetchedPubkeys = await externalSignerGetKeys(externalSignerUrl);
 
     assertValidPubkeysHex(fetchedPubkeys);
-    return fetchedPubkeys.map((pubkeyHex) => ({type: SignerType.Remote, pubkeyHex, externalSignerUrl}));
+    return fetchedPubkeys.map((pubkeyHex) => ({pubkeyHex, externalSignerUrl}));
   }
 
   return [];

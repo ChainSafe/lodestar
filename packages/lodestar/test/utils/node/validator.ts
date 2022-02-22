@@ -8,7 +8,6 @@ import {
   Signer,
   SignerType,
   ISlashingProtection,
-  SecretKeyInfo,
   SignerLocal,
 } from "@chainsafe/lodestar-validator";
 import {BeaconNode} from "../../../src/node";
@@ -17,8 +16,9 @@ import {SecretKey} from "@chainsafe/bls";
 import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
+import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server/src";
 
-function getFirstKeystoreContent(): string {
+export function getKeystoreForPubKey1(): string {
   return JSON.stringify({
     crypto: {
       kdf: {
@@ -53,7 +53,7 @@ function getFirstKeystoreContent(): string {
   }).trim();
 }
 
-function getSecondKeystoreContent(): string {
+export function getKeystoreForPubKey2(): string {
   return JSON.stringify({
     crypto: {
       kdf: {
@@ -90,17 +90,21 @@ function getSecondKeystoreContent(): string {
 
 export async function getAndInitValidatorsWithKeystoreOne({
   node,
+  keystorePubKey,
+  keystoreContent,
   useRestApi,
   testLoggerOpts,
 }: {
   node: BeaconNode;
+  keystorePubKey: string;
+  keystoreContent: string;
   validatorsPerClient: number;
   validatorClientCount: number;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
 }): Promise<{
   validator: Validator;
-  secretKeysInfo: SecretKeyInfo[];
+  secretKeys: SecretKey[];
   signers: SignerLocal[];
   slashingProtection: ISlashingProtection;
   keystoreContent: string;
@@ -111,7 +115,8 @@ export async function getAndInitValidatorsWithKeystoreOne({
 }> {
   return getAndInitValidatorsWithKeystore({
     node,
-    keystoreContent: getFirstKeystoreContent(),
+    keystoreContent,
+    keystorePubKey,
     useRestApi,
     testLoggerOpts,
   });
@@ -119,17 +124,19 @@ export async function getAndInitValidatorsWithKeystoreOne({
 
 export async function getAndInitValidatorsWithKeystoreTwo({
   node,
+  keystorePubKey,
   useRestApi,
   testLoggerOpts,
 }: {
   node: BeaconNode;
+  keystorePubKey: string;
   validatorsPerClient: number;
   validatorClientCount: number;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
 }): Promise<{
   validator: Validator;
-  secretKeysInfo: SecretKeyInfo[];
+  secretKeys: SecretKey[];
   signers: SignerLocal[];
   slashingProtection: ISlashingProtection;
   tempDirs: {
@@ -139,7 +146,8 @@ export async function getAndInitValidatorsWithKeystoreTwo({
 }> {
   return getAndInitValidatorsWithKeystore({
     node,
-    keystoreContent: getSecondKeystoreContent(),
+    keystoreContent: getKeystoreForPubKey2(),
+    keystorePubKey,
     useRestApi,
     testLoggerOpts,
   });
@@ -148,16 +156,18 @@ export async function getAndInitValidatorsWithKeystoreTwo({
 async function getAndInitValidatorsWithKeystore({
   node,
   keystoreContent,
+  keystorePubKey,
   useRestApi,
   testLoggerOpts,
 }: {
   node: BeaconNode;
   keystoreContent: string;
+  keystorePubKey: string;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
 }): Promise<{
   validator: Validator;
-  secretKeysInfo: SecretKeyInfo[];
+  secretKeys: SecretKey[];
   keystoreContent: string;
   signers: SignerLocal[];
   slashingProtection: ISlashingProtection;
@@ -167,7 +177,7 @@ async function getAndInitValidatorsWithKeystore({
   };
 }> {
   const keystoreDir = tmp.dirSync({unsafeCleanup: true});
-  const keystoreFile = `${keystoreDir.name}/keys_test_${Date.now().toString()}.json`;
+  const keystoreFile = `${keystoreDir.name}/${KEY_IMPORTED_PREFIX}_${keystorePubKey}.json`;
 
   fs.writeFileSync(keystoreFile, keystoreContent, {encoding: "utf8", flag: "wx"});
 
@@ -195,15 +205,17 @@ async function getAndInitValidatorsWithKeystore({
 
   const signers: SignerLocal[] = [];
 
-  const secretKeysInfo = await getLocalSecretKeys((vcConfig as unknown) as IValidatorCliArgs & IGlobalArgs);
-  if (secretKeysInfo.length > 0) {
+  const {secretKeys, unlockSecretKeys: _unlockSecretKeys} = await getLocalSecretKeys(
+    (vcConfig as unknown) as IValidatorCliArgs & IGlobalArgs
+  );
+  if (secretKeys.length > 0) {
     // Log pubkeys for auditing
-    logger.info(`Decrypted ${secretKeysInfo.length} local keystores`);
-    for (const secretKeyInfo of secretKeysInfo) {
-      logger.info(secretKeyInfo.secretKey.toPublicKey().toHex());
+    logger.info(`Decrypted ${secretKeys.length} local keystores`);
+    for (const secretKey of secretKeys) {
+      logger.info(secretKey.toPublicKey().toHex());
       signers.push({
         type: SignerType.Local,
-        secretKey: secretKeyInfo.secretKey,
+        secretKey,
       });
     }
   }
@@ -213,13 +225,12 @@ async function getAndInitValidatorsWithKeystore({
     api: useRestApi ? getNodeApiUrl(node) : node.api,
     slashingProtection,
     logger,
-    secretKeysInfo,
     signers,
   });
 
   return {
     validator,
-    secretKeysInfo,
+    secretKeys,
     keystoreContent,
     signers,
     slashingProtection,

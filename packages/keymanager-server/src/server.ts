@@ -3,15 +3,15 @@ import fastifyCors from "fastify-cors";
 import bearerAuthPlugin from "fastify-bearer-auth";
 import querystring from "querystring";
 import {IncomingMessage} from "node:http";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import {toHexString} from "@chainsafe/ssz";
+export {allNamespaces} from "@chainsafe/lodestar-api";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
 import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import crypto from "node:crypto";
-import {unlink, writeFile} from "fs/promises";
-import {toHexString} from "@chainsafe/ssz";
-export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {
   host: string;
@@ -55,7 +55,7 @@ export class KeymanagerServer {
       this.bearerToken = `api-token-${toHexString(crypto.randomBytes(32))}`;
 
       const initToken = async (): Promise<void> => {
-        await writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
+        await fs.promises.writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
       };
 
       void initToken();
@@ -156,7 +156,7 @@ export class KeymanagerServer {
       req.destroy(Error("Closing"));
     }
     if (this.opts.auth && this.apiTokenPath !== "") {
-      await unlink(this.apiTokenPath);
+      await fs.promises.unlink(this.apiTokenPath);
     }
     await this.server.close();
   }

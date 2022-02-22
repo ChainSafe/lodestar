@@ -19,24 +19,16 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {SecretKey} from "@chainsafe/bls";
 import {BlockDutiesService} from "./services/blockDuties";
 import {AttestationDutiesService} from "./services/attestationDuties";
 import {SyncCommitteeDutiesService} from "./services/syncCommitteeDuties";
 import {PubkeyHex} from "./types";
-
-export type SecretKeyInfo = {
-  secretKey: SecretKey;
-  keystorePath?: string;
-  unlockSecretKeys?: () => void;
-};
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
   dbOps: IDatabaseApiOptions;
   api: Api | string;
   signers: Signer[];
-  secretKeysInfo?: SecretKeyInfo[];
   logger: ILogger;
   graffiti?: string;
 };

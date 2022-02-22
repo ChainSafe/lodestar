@@ -5,16 +5,18 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {
   getAndInitDevValidators,
   getAndInitValidatorsWithKeystoreOne,
-  getAndInitValidatorsWithKeystoreTwo,
+  getKeystoreForPubKey1,
+  getKeystoreForPubKey2,
 } from "../../utils/node/validator";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getKeymanagerClient, HttpClient} from "@chainsafe/lodestar-api/src";
-import {ISlashingProtection, SecretKeyInfo, Validator} from "@chainsafe/lodestar-validator";
+import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import fs from "node:fs";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
+import {join} from "node:path";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("keymanager delete and import test", async function () {
@@ -54,14 +56,18 @@ describe("keymanager delete and import test", async function () {
 
     const vc1Info = await getAndInitValidatorsWithKeystoreOne({
       node: bn,
+      keystorePubKey: key1,
+      keystoreContent: getKeystoreForPubKey1(),
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       useRestApi: false,
       testLoggerOpts,
     });
 
-    const vc2Info = await getAndInitValidatorsWithKeystoreTwo({
+    const vc2Info = await getAndInitValidatorsWithKeystoreOne({
       node: bn,
+      keystorePubKey: key2,
+      keystoreContent: getKeystoreForPubKey2(),
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
       useRestApi: false,
@@ -74,21 +80,35 @@ describe("keymanager delete and import test", async function () {
     const keymanagerServerForVC1 = createKeymanager(
       vc1Info.validator,
       vc1Info.slashingProtection,
-      [vc1Info.tempDirs.keystoreDir.name],
-      vc1Info.secretKeysInfo,
+      vc1Info.tempDirs.keystoreDir.name,
       portKM1,
       config,
       loggerNodeA
     );
+
     const keymanagerServerForVC2 = createKeymanager(
       vc2Info.validator,
       vc2Info.slashingProtection,
-      [vc2Info.tempDirs.keystoreDir.name],
-      vc2Info.secretKeysInfo,
+      vc2Info.tempDirs.keystoreDir.name,
       portKM2,
       config,
       loggerNodeA
     );
+
+    // Register clean up
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+    afterEachCallbacks.push(async () => {
+      await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
+      await bn.close();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      await keymanagerServerForVC1.close();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+      await keymanagerServerForVC2.close();
+      vc1Info.tempDirs.keystoreDir.removeCallback();
+      vc1Info.tempDirs.passwordFile.removeCallback();
+      vc2Info.tempDirs.keystoreDir.removeCallback();
+      vc2Info.tempDirs.passwordFile.removeCallback();
+    });
 
     await keymanagerServerForVC1.listen();
     await keymanagerServerForVC2.listen();
@@ -119,14 +139,11 @@ describe("keymanager delete and import test", async function () {
     expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key1])).to.be.true;
     expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key2])).to.be.false;
     // confirm keystore for k2 exist on file
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
     expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key2])).to.be.true;
     expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1])).to.be.false;
 
     // 2. DELETE PUBKEY K1 from first validator client
     // delete pubkey key1 in vc1Info
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
-    const keystoreFile1 = vc1Info.secretKeysInfo[0].keystorePath;
     const km1DeleteKeyResult = await clientKM1.deleteKeystores([key1]);
 
     // 2.a CONFIRM DELETION OF K1 from first validator client USING API AND FILESYSTEM
@@ -134,7 +151,7 @@ describe("keymanager delete and import test", async function () {
     km1ListKeyResult = await clientKM1.listKeys();
     expect(km1ListKeyResult.data.length).to.equal(0);
     // confirm keystore for k1 no longer exist on file
-    expect(fs.existsSync(keystoreFile1 as string)).to.be.false;
+    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key1])).to.be.false;
 
     // 3. IMPORT PUBKEY K1 to SECOND VALIDATOR CLIENT
 
@@ -185,27 +202,11 @@ describe("keymanager delete and import test", async function () {
         1
       );
     }).to.not.throw;
-
-    // 5. CLEAN UP
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-    afterEachCallbacks.push(async () => {
-      await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
-      await bn.close();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      await keymanagerServerForVC1.close();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      await keymanagerServerForVC2.close();
-      vc1Info.tempDirs.keystoreDir.removeCallback();
-      vc1Info.tempDirs.passwordFile.removeCallback();
-      vc2Info.tempDirs.keystoreDir.removeCallback();
-      vc2Info.tempDirs.passwordFile.removeCallback();
-    });
   });
 
   it("should deny request if authentication is on and no bearer token is provided", async function () {
     this.timeout("10 min");
 
-    // eslint-disable-next-line @typescript-eslint/naming-convention
     const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
     const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
     const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
@@ -234,7 +235,8 @@ describe("keymanager delete and import test", async function () {
         loggerNodeA,
         validators[0],
         keymanagerOps[0],
-        validators[0].genesis.genesisValidatorsRoot
+        validators[0].genesis.genesisValidatorsRoot,
+        "/test/path"
       );
 
       const kmPort = 10003;
@@ -244,6 +246,13 @@ describe("keymanager delete and import test", async function () {
         {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: "."},
         {config, logger: loggerNodeA, api: keymanagerApi}
       );
+
+      // clean up
+      afterEachCallbacks.push(async () => {
+        await Promise.all(validators.map((v) => v.stop()));
+        await keymanagerServer.close();
+        await bn.close();
+      });
 
       await keymanagerServer.listen();
 
@@ -272,13 +281,6 @@ describe("keymanager delete and import test", async function () {
         // prettier-ignore
         expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}");
       }
-
-      // clean up
-      afterEachCallbacks.push(async () => {
-        await Promise.all(validators.map((v) => v.stop()));
-        await keymanagerServer.close();
-        await bn.close();
-      });
     }
   });
 
@@ -318,7 +320,8 @@ describe("keymanager delete and import test", async function () {
         loggerNodeA,
         validators[0],
         keymanagerOps[0],
-        validators[0].genesis.genesisValidatorsRoot
+        validators[0].genesis.genesisValidatorsRoot,
+        "/test/path"
       );
 
       const kmPort = 10003;
@@ -354,7 +357,7 @@ describe("keymanager delete and import test", async function () {
 
 function dirContainFileWithContent(dir: string, contents: string[]): boolean {
   return fs.readdirSync(dir).some((name) => {
-    const fileContent = fs.readFileSync(`${dir}/${name}`, {encoding: "utf8"});
+    const fileContent = fs.readFileSync(join(dir, name), {encoding: "utf8"});
     return (
       fileContent !== "" &&
       contents.some((content) => {
@@ -380,8 +383,7 @@ function createAttesterDuty(pubkey: ByteVector, slot: number, committeeIndex: nu
 function createKeymanager(
   vc: Validator,
   slashingProtection: ISlashingProtection,
-  importKeystoresPath: string[],
-  secretKeysInfo: SecretKeyInfo[],
+  importKeystoresPath: string,
   port: number,
   config: IBeaconConfig,
   logger: WinstonLogger
@@ -391,8 +393,7 @@ function createKeymanager(
     vc,
     slashingProtection,
     vc.genesis.genesisValidatorsRoot,
-    importKeystoresPath,
-    secretKeysInfo
+    importKeystoresPath
   );
 
   return new KeymanagerServer(

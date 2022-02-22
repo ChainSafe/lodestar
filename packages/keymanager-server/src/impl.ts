@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import lockfile from "lockfile";
+import {join} from "node:path";
 import {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -8,14 +11,13 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection, SecretKeyInfo, SignerType, Validator} from "@chainsafe/lodestar-validator";
+import {Interchange, ISlashingProtection, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {Root} from "@chainsafe/lodestar-types";
-import {unlink, writeFile} from "fs/promises";
-import lockfile from "lockfile";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export const LOCK_FILE_EXT = ".lock";
+export const KEY_IMPORTED_PREFIX = "key_imported";
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -23,8 +25,7 @@ export class KeymanagerApi implements Api {
     private readonly validator: Validator,
     private readonly slashingProtection: ISlashingProtection,
     private readonly genesisValidatorRoot: Uint8Array | Root,
-    private readonly importKeystoresPath?: string[],
-    private readonly secretKeysInfo?: SecretKeyInfo[]
+    private readonly importKeystoresPath: string
   ) {}
 
   /**
@@ -46,7 +47,6 @@ export class KeymanagerApi implements Api {
       data: pubkeys.map((pubkey) => ({
         validatingPubkey: pubkey,
         derivationPath: "",
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
         readonly: this.validator.validatorStore.getSigner(pubkey)?.type !== SignerType.Local,
       })),
     };
@@ -97,26 +97,15 @@ export class KeymanagerApi implements Api {
         }
 
         const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
-
+        const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        const importKeystoresPath = this.importKeystoresPath?.[0];
-        const keystorePath = `${importKeystoresPath}/key_imported_${Date.now()}.json`;
+        const keystorePath = join(this.importKeystoresPath, `${KEY_IMPORTED_PREFIX}_${pubKey}.json`);
         const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
 
         // Persist keys for latter restarts
-        if (importKeystoresPath) {
-          await writeFile(keystorePath, keystoreStr, {encoding: "utf8"});
-          lockfile.lockSync(lockFilePath);
-        }
-
-        this.secretKeysInfo?.push({
-          secretKey,
-          keystorePath,
-          unlockSecretKeys: () => {
-            lockfile.unlockSync(lockFilePath);
-          },
-        });
+        await fs.promises.writeFile(keystorePath, keystoreStr, {encoding: "utf8"});
+        lockfile.lockSync(lockFilePath);
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -158,45 +147,38 @@ export class KeymanagerApi implements Api {
     slashingProtection: SlashingProtectionData;
   }> {
     const deletedKey: boolean[] = [];
+    const statuses: {status: DeletionStatus; message?: string}[] = [];
 
     for (let i = 0; i < pubkeysHex.length; i++) {
-      const pubkeyHex = pubkeysHex[i];
+      try {
+        const pubkeyHex = pubkeysHex[i];
 
-      // Skip unknown keys or remote signers
-      if (
-        !this.validator.validatorStore.getSigner(pubkeyHex) ||
-        this.validator.validatorStore.getSigner(pubkeyHex)?.type === SignerType.Remote
-      ) {
-        continue;
-      }
+        // Skip unknown keys or remote signers
+        const signer = this.validator.validatorStore.getSigner(pubkeyHex);
+        if (!signer || signer?.type === SignerType.Remote) {
+          continue;
+        }
 
-      // Remove key from live local signer
-      const deleted =
-        this.validator.validatorStore.getSigner(pubkeyHex)?.type === SignerType.Local &&
-        this.validator.validatorStore.removeSigner(pubkeyHex);
-      deletedKey[i] = deleted;
+        // Remove key from live local signer
+        deletedKey[i] = signer?.type === SignerType.Local && this.validator.validatorStore.removeSigner(pubkeyHex);
 
-      // Remove key from blockduties
-      // Remove from attestation duties
-      // Remove from Sync committee duties
-      // Remove from indices
-      this.validator.removeSignerFromDutiesAndIndices(pubkeyHex);
+        // Remove key from blockduties
+        // Remove from attestation duties
+        // Remove from Sync committee duties
+        // Remove from indices
+        this.validator.removeSignerFromDutiesAndIndices(pubkeyHex);
 
-      // Remove key from persistent storage
-      if (this.secretKeysInfo) {
-        for (const [key, secretKeyInfo] of this.secretKeysInfo.entries()) {
-          if (secretKeyInfo.secretKey.toPublicKey().toHex() === pubkeyHex) {
-            this.secretKeysInfo.splice(key, 1);
-            secretKeyInfo?.unlockSecretKeys?.();
-            if (secretKeyInfo?.keystorePath) {
-              try {
-                await unlink(secretKeyInfo?.keystorePath);
-              } catch (e) {
-                this.logger.error("Error deleting keystorePath", {}, e as Error);
-              }
-            }
+        // Remove key from persistent storage
+        for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {
+          if (keystoreFile === `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`) {
+            const keystorePath = join(this.importKeystoresPath, `key_imported_${pubkeyHex}.json`);
+            const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
+            await fs.promises.unlink(lockFilePath);
+            await fs.promises.unlink(keystorePath);
           }
         }
+      } catch (e) {
+        statuses[i] = {status: DeletionStatus.error, message: (e as Error).message};
       }
     }
 
@@ -208,8 +190,10 @@ export class KeymanagerApi implements Api {
 
     // After exporting slashing protection data in bulk, render the status
     const pubkeysWithSlashingProtectionData = new Set(interchangeV5.data.map((data) => data.pubkey));
-    const statuses: {status: DeletionStatus; message?: string}[] = [];
     for (let i = 0; i < pubkeysHex.length; i++) {
+      if (statuses[i].status === DeletionStatus.error) {
+        continue;
+      }
       const status = deletedKey[i]
         ? DeletionStatus.deleted
         : pubkeysWithSlashingProtectionData.has(pubkeysHex[i])

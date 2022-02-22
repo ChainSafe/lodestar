@@ -10,7 +10,7 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
-import {SignerType, Signer, SlashingProtection, Validator, SecretKeyInfo} from "@chainsafe/lodestar-validator";
+import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 
 /**
@@ -39,7 +39,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   }, logger.info.bind(logger));
 
   const signers: Signer[] = [];
-  let secretKeysInfo: SecretKeyInfo[] = [];
 
   // Read remote keys
   const externalSigners = await getExternalSigners(args);
@@ -60,23 +59,23 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
         logger.info(pubkeyHex);
       }
     }
-  } else {
-    // Read local keys
-    secretKeysInfo = await getLocalSecretKeys(args);
-    if (secretKeysInfo.length > 0) {
+  }
+
+  // Read local keys
+  else {
+    const {secretKeys, unlockSecretKeys} = await getLocalSecretKeys(args);
+    if (secretKeys.length > 0) {
       // Log pubkeys for auditing
-      logger.info(`Decrypted ${secretKeysInfo.length} local keystores`);
-      for (const secretKeyInfo of secretKeysInfo) {
-        logger.info(secretKeyInfo.secretKey.toPublicKey().toHex());
+      logger.info(`Decrypted ${secretKeys.length} local keystores`);
+      for (const secretKey of secretKeys) {
+        logger.info(secretKey.toPublicKey().toHex());
         signers.push({
           type: SignerType.Local,
-          secretKey: secretKeyInfo.secretKey,
+          secretKey,
         });
-
-        if (secretKeyInfo.unlockSecretKeys) {
-          onGracefulShutdownCbs.push(() => secretKeyInfo?.unlockSecretKeys?.());
-        }
       }
+
+      onGracefulShutdownCbs.push(() => unlockSecretKeys?.());
     }
   }
 
@@ -96,9 +95,9 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
-  const importKeystoresPath = args.importKeystoresPath;
+
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, signers, secretKeysInfo, graffiti},
+    {dbOps, slashingProtection, api, logger, signers, graffiti},
     controller.signal
   );
 
@@ -106,14 +105,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   await validator.start();
 
   // Start keymanager API backend
-  if (args.keymanagerEnabled) {
+  // Only if keymanagerEnabled flag is set to true and at least one keystore path is supplied
+  const firstImportKeystorePath = args.importKeystoresPath?.[0];
+  if (args.keymanagerEnabled && firstImportKeystorePath) {
     const keymanagerApi = new KeymanagerApi(
       logger,
       validator,
       slashingProtection,
       validator.genesis.genesisValidatorsRoot,
-      importKeystoresPath,
-      secretKeysInfo
+      firstImportKeystorePath
     );
 
     const keymanagerServer = new KeymanagerServer(
