@@ -1,20 +1,23 @@
+import chaiAsPromised from "chai-as-promised";
+import chai, {expect} from "chai";
+import fs from "node:fs";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {ssz} from "@chainsafe/lodestar-types";
-import {getAndInitDevValidators, getAndInitValidatorsWithKeystoreOne} from "../../utils/node/validator";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getKeymanagerClient, HttpClient} from "@chainsafe/lodestar-api/src";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
-import fs from "node:fs";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
-import {join} from "node:path";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
+import {ssz} from "@chainsafe/lodestar-types";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
+import {getDevBeaconNode} from "../../utils/node/beacon";
+import {getAndInitDevValidators, getAndInitValidatorsWithKeystoreOne} from "../../utils/node/validator";
 import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager";
-
+import {logFilesDir} from "../../sim/params";
 /* eslint-disable @typescript-eslint/naming-convention */
+
+chai.use(chaiAsPromised);
+
 describe("keymanager delete and import test", async function () {
   const validatorCount = 1;
   const SECONDS_PER_SLOT = 2;
@@ -132,11 +135,23 @@ describe("keymanager delete and import test", async function () {
     // 1.b. CONFIRM PRESENCE OF KEYS VIA FILE SYSTEM
 
     // confirm keystore for k1 exist on file
-    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key1])).to.be.true;
-    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key2])).to.be.false;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc1Info.tempDirs.keystoreDir.name, [key1]),
+      "key1 should exist on file for vc1"
+    ).to.be.true;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc1Info.tempDirs.keystoreDir.name, [key2]),
+      "key2 should not exist on file for vc1"
+    ).to.be.false;
     // confirm keystore for k2 exist on file
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key2])).to.be.true;
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1])).to.be.false;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc2Info.tempDirs.keystoreDir.name, [key2]),
+      "key2 should exist on file for vc2"
+    ).to.be.true;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc2Info.tempDirs.keystoreDir.name, [key1]),
+      "Key1 should not exist on file for vc2"
+    ).to.be.false;
 
     // 2. DELETE PUBKEY K1 from first validator client
     // delete pubkey key1 in vc1Info
@@ -145,20 +160,23 @@ describe("keymanager delete and import test", async function () {
     // 2.a CONFIRM DELETION OF K1 from first validator client USING API AND FILESYSTEM
     // confirm pubkey key1 is no longer in vc1Info
     km1ListKeyResult = await clientKM1.listKeys();
-    expect(km1ListKeyResult.data.length).to.equal(0);
+    expect(km1ListKeyResult.data.length).to.equal(0, "key1 is no longer in vc1");
     // confirm keystore for k1 no longer exist on file
-    expect(dirContainFileWithContent(vc1Info.tempDirs.keystoreDir.name, [key1])).to.be.false;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc1Info.tempDirs.keystoreDir.name, [key1]),
+      "keystore for k1 no longer exist on file for vc1"
+    ).to.be.false;
 
     // 3. IMPORT PUBKEY K1 to SECOND VALIDATOR CLIENT
 
-    // 3.a Confirmation before import, that signing with k1 on vc2 throws
-    expect(async () => {
-      await vc2Info.validator.validatorStore.signAttestation(
+    expect(
+      vc2Info.validator.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(key1), 0, 0, 1),
         ssz.phase0.AttestationData.defaultValue(),
         1
-      );
-    }).to.throw;
+      ),
+      "3.a Confirmation before import, that signing with k1 on vc2 throws"
+    ).to.eventually.throw;
 
     // Import k1 to vc2
     const importResult = await clientKM2.importKeystores(
@@ -168,36 +186,38 @@ describe("keymanager delete and import test", async function () {
     );
 
     // 3.b. COMFIRM IMPORT RESPONSE
-    expect(importResult.data[0].status).to.be.equal("imported");
+    expect(importResult.data[0].status).to.be.equal("imported", "3.b. confirm import response");
 
     // 4 CONFIRM PRESENCE OF IMPORTED KEY IN SECOND VALIDATOR CLIENT.
-    // 4.a Confirm via api
+
     km2ListKeyResult = await clientKM2.listKeys();
     expect(km2ListKeyResult.data.map((d) => d.validatingPubkey)).to.deep.equal(
       [key2, key1],
-      "confirm imported keys in vc 2"
+      "4.a confirm imported keys in vc 2"
     );
 
-    // 4.b Confirm imported and previous key still exist via file system
-    expect(dirContainFileWithContent(vc2Info.tempDirs.keystoreDir.name, [key1, key2])).to.be.true;
+    expect(
+      dirContainFileWithPubkeyInFilename(vc2Info.tempDirs.keystoreDir.name, [key1, key2]),
+      "4.b Confirm imported and previous key still exist via file system"
+    ).to.be.true;
 
-    // 4.c Confirm vc1 cannot sign with k1
-    expect(async () => {
-      await vc1Info.validator.validatorStore.signAttestation(
+    expect(
+      vc1Info.validator.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(key1), 0, 0, 1),
         ssz.phase0.AttestationData.defaultValue(),
         1
-      );
-    }).to.throw;
+      ),
+      "4.c Confirm vc1 cannot sign with k1"
+    ).to.eventually.throw;
 
-    // 4.d Confirm vc2 can now sign with k1
-    expect(async () => {
-      await vc2Info.validator.validatorStore.signAttestation(
+    expect(
+      vc2Info.validator.validatorStore.signAttestation(
         createAttesterDuty(fromHexString(key1), 0, 0, 1),
         ssz.phase0.AttestationData.defaultValue(),
         1
-      );
-    }).to.not.throw;
+      ),
+      "4.d Confirm vc2 can now sign with k1"
+    ).to.eventually.not.throw;
   });
 
   it("should deny request if authentication is on and no bearer token is provided", async function () {
@@ -239,7 +259,7 @@ describe("keymanager delete and import test", async function () {
 
       // by default auth is on
       const keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: "."},
+        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: logFilesDir},
         {config, logger: loggerNodeA, api: keymanagerApi}
       );
 
@@ -259,7 +279,7 @@ describe("keymanager delete and import test", async function () {
         await client.listKeys();
       } catch (e) {
         // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}");
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect list request to be denied");
       }
 
       // Deleting keys is denied
@@ -267,7 +287,7 @@ describe("keymanager delete and import test", async function () {
         await client.deleteKeystores([key1]);
       } catch (e) {
         // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}");
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect delete request to be denied");
       }
 
       // importing keys is denied
@@ -275,7 +295,7 @@ describe("keymanager delete and import test", async function () {
         await client.importKeystores(["some keystore string"], ["some password"], "some slashing protecting)");
       } catch (e) {
         // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}");
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect import request to be denied");
       }
     }
   });
@@ -323,43 +343,42 @@ describe("keymanager delete and import test", async function () {
       const kmPort = 10003;
 
       const keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: kmPort, cors: "*", auth: false, tokenDir: "."},
+        {host: "127.0.0.1", port: kmPort, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
         {config, logger: loggerNodeA, api: keymanagerApi}
       );
 
-      await keymanagerServer.listen();
-
-      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
-
-      expect((await client.listKeys()).data).to.be.deep.equal([
-        {
-          validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
-          derivationPath: "",
-          readonly: true,
-        },
-      ]);
-
-      expect((await client.deleteKeystores([key1])).data).to.deep.equal([{status: "not_active"}]);
-
-      // clean up
       afterEachCallbacks.push(async () => {
         await Promise.all(validators.map((v) => v.stop()));
         await keymanagerServer.close();
         await bn.close();
       });
+
+      await keymanagerServer.listen();
+
+      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+
+      expect((await client.listKeys()).data).to.be.deep.equal(
+        [
+          {
+            validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
+            derivationPath: "",
+            readonly: true,
+          },
+        ],
+        "listKeys should return key that is readonly"
+      );
+
+      expect((await client.deleteKeystores([key1])).data).to.deep.equal(
+        [{status: "not_active"}],
+        "deleteKeystores should not delete readonly key"
+      );
     }
   });
 });
 
-function dirContainFileWithContent(dir: string, contents: string[]): boolean {
+function dirContainFileWithPubkeyInFilename(dir: string, pubkeys: string[]): boolean {
   return fs.readdirSync(dir).some((name) => {
-    const fileContent = fs.readFileSync(join(dir, name), {encoding: "utf8"});
-    return (
-      fileContent !== "" &&
-      contents.some((content) => {
-        return fileContent.indexOf(content.substring(2)) !== -1;
-      })
-    );
+    return pubkeys.some((pubkey) => name.indexOf(pubkey) !== -1);
   });
 }
 
@@ -393,7 +412,7 @@ function createKeymanager(
   );
 
   return new KeymanagerServer(
-    {host: "127.0.0.1", port, cors: "*", auth: false, tokenDir: "."},
+    {host: "127.0.0.1", port, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
     {config, logger: logger, api: keymanagerApi}
   );
 }

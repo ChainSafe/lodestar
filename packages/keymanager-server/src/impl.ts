@@ -191,7 +191,7 @@ export class KeymanagerApi implements Api {
     // After exporting slashing protection data in bulk, render the status
     const pubkeysWithSlashingProtectionData = new Set(interchangeV5.data.map((data) => data.pubkey));
     for (let i = 0; i < pubkeysHex.length; i++) {
-      if (statuses[i].status === DeletionStatus.error) {
+      if (statuses[i]?.status === DeletionStatus.error) {
         continue;
       }
       const status = deletedKey[i]

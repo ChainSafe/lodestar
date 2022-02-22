@@ -12,12 +12,13 @@ import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {join} from "node:path";
 
 export type RestApiOptions = {
   host: string;
   cors: string;
   port: number;
-  auth: boolean;
+  isAuthEnabled: boolean;
   tokenDir?: string;
 };
 
@@ -25,7 +26,7 @@ export const restApiOptionsDefault: RestApiOptions = {
   host: "127.0.0.1",
   port: 5062,
   cors: "*",
-  auth: true,
+  isAuthEnabled: true,
 };
 
 export interface IRestApiModules {
@@ -41,27 +42,28 @@ export class KeymanagerServer {
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
   private readonly activeRequests = new Set<IncomingMessage>();
-  private readonly apiTokenPath: string;
-  private readonly bearerToken: string;
+  private readonly apiTokenPath: string | undefined;
+  private readonly bearerToken: string | undefined;
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
+    this.logger = modules.logger;
     // Apply opts defaults
     const opts = {
       ...restApiOptionsDefault,
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
-    if (opts.auth) {
-      this.apiTokenPath = `${optsArg.tokenDir}/${apiTokenFileName}`;
-      this.bearerToken = `api-token-${toHexString(crypto.randomBytes(32))}`;
 
-      const initToken = async (): Promise<void> => {
-        await fs.promises.writeFile(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
-      };
-
-      void initToken();
+    if (opts.isAuthEnabled && opts.tokenDir) {
+      this.apiTokenPath = join(opts.tokenDir, apiTokenFileName);
+      // Generate a new token if token file does not exist or file do exist, but is empty
+      if (!fs.existsSync(this.apiTokenPath) || fs.readFileSync(this.apiTokenPath, "utf8").trim().length === 0) {
+        this.bearerToken = `api-token-${toHexString(crypto.randomBytes(32))}`;
+        fs.writeFileSync(this.apiTokenPath, this.bearerToken, {encoding: "utf8"});
+      } else {
+        this.bearerToken = fs.readFileSync(this.apiTokenPath, "utf8").trim();
+      }
     } else {
-      this.apiTokenPath = "";
-      this.bearerToken = "";
+      this.logger.warn("Keymanager server started without authentication");
     }
 
     const server = fastify({
@@ -87,9 +89,10 @@ export class KeymanagerServer {
       void server.register(fastifyCors, {origin: opts.cors});
     }
 
-    if (opts.auth && this.bearerToken !== "") {
+    if (opts.isAuthEnabled && this.bearerToken) {
       void server.register(bearerAuthPlugin, {keys: new Set([this.bearerToken])});
     }
+
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
     server.addHook("onRequest", async (req) => {
@@ -116,11 +119,6 @@ export class KeymanagerServer {
 
     this.opts = opts;
     this.server = server;
-    this.logger = modules.logger;
-
-    if (!opts.auth) {
-      this.logger.warn("Keymanager server started without authentication");
-    }
   }
 
   /**
@@ -130,7 +128,7 @@ export class KeymanagerServer {
     try {
       const address = await this.server.listen(this.opts.port, this.opts.host);
       this.logger.info("Started keymanager api server", {address});
-      if (this.opts.auth) {
+      if (this.apiTokenPath) {
         this.logger.info("Keymanager bearer access token located at:", this.apiTokenPath);
       }
     } catch (e) {
@@ -155,9 +153,7 @@ export class KeymanagerServer {
     for (const req of this.activeRequests) {
       req.destroy(Error("Closing"));
     }
-    if (this.opts.auth && this.apiTokenPath !== "") {
-      await fs.promises.unlink(this.apiTokenPath);
-    }
+
     await this.server.close();
   }
 }
