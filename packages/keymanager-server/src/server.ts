@@ -23,7 +23,7 @@ export type RestApiOptions = {
 
 export const restApiOptionsDefault: RestApiOptions = {
   host: "127.0.0.1",
-  port: 9597,
+  port: 5062,
   cors: "*",
   auth: true,
 };
