@@ -8,6 +8,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
+import {PeerAction} from "../../network/peers";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -23,11 +24,15 @@ export async function validateGossipBlock(
   // appropriate slot).
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.FUTURE_SLOT,
-      currentSlot: currentSlotWithGossipDisparity,
-      blockSlot,
-    });
+    throw new BlockGossipError(
+      GossipAction.IGNORE,
+      {
+        code: BlockErrorCode.FUTURE_SLOT,
+        currentSlot: currentSlotWithGossipDisparity,
+        blockSlot,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // [IGNORE] The block is from a slot greater than the latest finalized slot -- i.e. validate that
@@ -35,11 +40,15 @@ export async function validateGossipBlock(
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (blockSlot <= finalizedSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
-      blockSlot,
-      finalizedSlot,
-    });
+    throw new BlockGossipError(
+      GossipAction.IGNORE,
+      {
+        code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
+        blockSlot,
+        finalizedSlot,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // Check if the block is already known. We know it is post-finalization, so it is sufficient to check the fork choice.
@@ -82,11 +91,15 @@ export async function validateGossipBlock(
 
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
-      code: BlockErrorCode.NOT_LATER_THAN_PARENT,
-      parentSlot: parentBlock.slot,
-      slot: blockSlot,
-    });
+    throw new BlockGossipError(
+      GossipAction.IGNORE,
+      {
+        code: BlockErrorCode.NOT_LATER_THAN_PARENT,
+        parentSlot: parentBlock.slot,
+        slot: blockSlot,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
@@ -108,12 +121,16 @@ export async function validateGossipBlock(
     const executionPayload = block.body.executionPayload;
     if (bellatrix.isBellatrixStateType(blockState) && bellatrix.isExecutionEnabled(blockState, block.body)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
-      if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
-        throw new BlockGossipError(GossipAction.REJECT, {
-          code: BlockErrorCode.INCORRECT_TIMESTAMP,
-          timestamp: executionPayload.timestamp,
-          expectedTimestamp,
-        });
+      if (executionPayload.timestamp !== expectedTimestamp) {
+        throw new BlockGossipError(
+          GossipAction.REJECT,
+          {
+            code: BlockErrorCode.INCORRECT_TIMESTAMP,
+            timestamp: executionPayload.timestamp,
+            expectedTimestamp,
+          },
+          PeerAction.LowToleranceError
+        );
       }
     }
   }
@@ -122,7 +139,11 @@ export async function validateGossipBlock(
   const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
+    throw new BlockGossipError(
+      GossipAction.REJECT,
+      {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID},
+      PeerAction.LowToleranceError
+    );
   }
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
@@ -130,7 +151,11 @@ export async function validateGossipBlock(
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
   if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+    throw new BlockGossipError(
+      GossipAction.REJECT,
+      {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex},
+      PeerAction.LowToleranceError
+    );
   }
 
   // Check again in case there two blocks are processed concurrently

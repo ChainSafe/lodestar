@@ -1,6 +1,7 @@
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
+import {PeerAction} from "../../network/peers";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
@@ -59,9 +60,13 @@ export async function validateSyncCommitteeSigOnly(
 ): Promise<void> {
   const signatureSet = getSyncCommitteeSignatureSet(headState, syncCommittee);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
-    throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
-    });
+    throw new SyncCommitteeError(
+      GossipAction.REJECT,
+      {
+        code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 }
 
@@ -77,6 +82,7 @@ export function validateGossipSyncCommitteeExceptSig(
   const {slot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
+  // don't apply any peer actions for now
   if (!chain.clock.isCurrentSlotGivenGossipDisparity(slot)) {
     throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.NOT_CURRENT_SLOT,
@@ -87,20 +93,28 @@ export function validateGossipSyncCommitteeExceptSig(
 
   // [REJECT] The subcommittee index is in the allowed range, i.e. contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT.
   if (subnet >= SYNC_COMMITTEE_SUBNET_COUNT) {
-    throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX,
-      subcommitteeIndex: subnet,
-    });
+    throw new SyncCommitteeError(
+      GossipAction.REJECT,
+      {
+        code: SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX,
+        subcommitteeIndex: subnet,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
   const indexInSubcommittee = getIndexInSubcommittee(headState, subnet, data);
   if (indexInSubcommittee === null) {
-    throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
-      validatorIndex,
-    });
+    throw new SyncCommitteeError(
+      GossipAction.REJECT,
+      {
+        code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
+        validatorIndex,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   return indexInSubcommittee;

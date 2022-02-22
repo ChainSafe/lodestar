@@ -15,6 +15,7 @@ import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
 import {RegenCaller} from "../regen";
+import {PeerAction} from "../../network";
 
 const {getIndexedAttestationSignatureSet} = allForks;
 
@@ -41,9 +42,13 @@ export async function validateGossipAttestation(
 
   // [REJECT] The attestation's epoch matches its target -- i.e. attestation.data.target.epoch == compute_epoch_at_slot(attestation.data.slot)
   if (targetEpoch !== attEpoch) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.BAD_TARGET_EPOCH,
-    });
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {
+        code: AttestationErrorCode.BAD_TARGET_EPOCH,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // [IGNORE] attestation.data.slot is within the last ATTESTATION_PROPAGATION_SLOT_RANGE slots (within a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
@@ -60,7 +65,11 @@ export async function validateGossipAttestation(
     bitIndex = getSingleBitIndex(aggregationBits);
   } catch (e) {
     if (e instanceof AggregationBitsError && e.type.code === AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET) {
-      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET});
+      throw new AttestationError(
+        GossipAction.REJECT,
+        {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET},
+        PeerAction.LowToleranceError
+      );
     } else {
       throw e;
     }
@@ -105,7 +114,11 @@ export async function validateGossipAttestation(
   // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
   // > TODO: Is this necessary? Lighthouse does not do this check
   if (aggregationBits.length !== committeeIndices.length) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS});
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS},
+      PeerAction.LowToleranceError
+    );
   }
 
   // LH > verify_middle_checks
@@ -119,11 +132,15 @@ export async function validateGossipAttestation(
   // which may be pre-computed along with the committee information for the signature check.
   const expectedSubnet = computeSubnetForSlot(attHeadState, attSlot, attIndex);
   if (subnet !== null && subnet !== expectedSubnet) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_SUBNET_ID,
-      received: subnet,
-      expected: expectedSubnet,
-    });
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {
+        code: AttestationErrorCode.INVALID_SUBNET_ID,
+        received: subnet,
+        expected: expectedSubnet,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 
   // [IGNORE] There has been no other valid attestation seen on an attestation subnet that has an
@@ -144,7 +161,11 @@ export async function validateGossipAttestation(
   };
   const signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {code: AttestationErrorCode.INVALID_SIGNATURE},
+      PeerAction.LowToleranceError
+    );
   }
 
   // Now that the attestation has been fully verified, store that we have received a valid attestation from this validator.
@@ -182,18 +203,26 @@ export function verifyPropagationSlotRange(chain: IBeaconChain, attestationSlot:
     0
   );
   if (attestationSlot < earliestPermissibleSlot) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.PAST_SLOT,
-      earliestPermissibleSlot,
-      attestationSlot,
-    });
+    throw new AttestationError(
+      GossipAction.IGNORE,
+      {
+        code: AttestationErrorCode.PAST_SLOT,
+        earliestPermissibleSlot,
+        attestationSlot,
+      },
+      PeerAction.LowToleranceError
+    );
   }
   if (attestationSlot > latestPermissibleSlot) {
-    throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.FUTURE_SLOT,
-      latestPermissibleSlot,
-      attestationSlot,
-    });
+    throw new AttestationError(
+      GossipAction.IGNORE,
+      {
+        code: AttestationErrorCode.FUTURE_SLOT,
+        latestPermissibleSlot,
+        attestationSlot,
+      },
+      PeerAction.LowToleranceError
+    );
   }
 }
 
@@ -258,11 +287,15 @@ function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, a
     //
     // Reference:
     // https://github.com/ethereum/eth2.0-specs/pull/2001#issuecomment-699246659
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.INVALID_TARGET_ROOT,
-      targetRoot: toHexString(targetRoot),
-      expected: null,
-    });
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {
+        code: AttestationErrorCode.INVALID_TARGET_ROOT,
+        targetRoot: toHexString(targetRoot),
+        expected: null,
+      },
+      PeerAction.LowToleranceError
+    );
   } else {
     const expectedTargetRoot =
       headBlockEpoch === attestationEpoch
@@ -278,11 +311,15 @@ function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, a
     // TODO: Do a fast comparision to convert and compare byte by byte
     if (expectedTargetRoot !== toHexString(targetRoot)) {
       // Reject any attestation with an invalid target root.
-      throw new AttestationError(GossipAction.REJECT, {
-        code: AttestationErrorCode.INVALID_TARGET_ROOT,
-        targetRoot: toHexString(targetRoot),
-        expected: expectedTargetRoot,
-      });
+      throw new AttestationError(
+        GossipAction.REJECT,
+        {
+          code: AttestationErrorCode.INVALID_TARGET_ROOT,
+          targetRoot: toHexString(targetRoot),
+          expected: expectedTargetRoot,
+        },
+        PeerAction.LowToleranceError
+      );
     }
   }
 }
@@ -296,10 +333,14 @@ export function getCommitteeIndices(
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
   if (attestationIndex >= slotCommittees.length) {
-    throw new AttestationError(GossipAction.REJECT, {
-      code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
-      index: attestationIndex,
-    });
+    throw new AttestationError(
+      GossipAction.REJECT,
+      {
+        code: AttestationErrorCode.COMMITTEE_INDEX_OUT_OF_RANGE,
+        index: attestationIndex,
+      },
+      PeerAction.LowToleranceError
+    );
   }
   return slotCommittees[attestationIndex];
 }
