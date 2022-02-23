@@ -18,41 +18,7 @@ import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/opti
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server/src";
 
-export async function getAndInitValidatorsWithKeystoreOne({
-  node,
-  keystorePubKey,
-  keystoreContent,
-  useRestApi,
-  testLoggerOpts,
-}: {
-  node: BeaconNode;
-  keystorePubKey: string;
-  keystoreContent: string;
-  validatorsPerClient: number;
-  validatorClientCount: number;
-  useRestApi?: boolean;
-  testLoggerOpts?: TestLoggerOpts;
-}): Promise<{
-  validator: Validator;
-  secretKeys: SecretKey[];
-  signers: SignerLocal[];
-  slashingProtection: ISlashingProtection;
-  keystoreContent: string;
-  tempDirs: {
-    keystoreDir: DirResult;
-    passwordFile: FileResult;
-  };
-}> {
-  return getAndInitValidatorsWithKeystore({
-    node,
-    keystoreContent,
-    keystorePubKey,
-    useRestApi,
-    testLoggerOpts,
-  });
-}
-
-async function getAndInitValidatorsWithKeystore({
+export async function getAndInitValidatorsWithKeystore({
   node,
   keystoreContent,
   keystorePubKey,

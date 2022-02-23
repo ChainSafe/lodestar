@@ -11,7 +11,7 @@ import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators, getAndInitValidatorsWithKeystoreOne} from "../../utils/node/validator";
+import {getAndInitDevValidators, getAndInitValidatorsWithKeystore} from "../../utils/node/validator";
 import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager";
 import {logFilesDir} from "../../sim/params";
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -53,22 +53,18 @@ describe("keymanager delete and import test", async function () {
       logger: loggerNodeA,
     });
 
-    const vc1Info = await getAndInitValidatorsWithKeystoreOne({
+    const vc1Info = await getAndInitValidatorsWithKeystore({
       node: bn,
-      keystorePubKey: key1,
       keystoreContent: getKeystoreForPubKey1(),
-      validatorsPerClient: validatorCount,
-      validatorClientCount: 1,
+      keystorePubKey: key1,
       useRestApi: false,
       testLoggerOpts,
     });
 
-    const vc2Info = await getAndInitValidatorsWithKeystoreOne({
+    const vc2Info = await getAndInitValidatorsWithKeystore({
       node: bn,
-      keystorePubKey: key2,
       keystoreContent: getKeystoreForPubKey2(),
-      validatorsPerClient: validatorCount,
-      validatorClientCount: 1,
+      keystorePubKey: key2,
       useRestApi: false,
       testLoggerOpts,
     });
