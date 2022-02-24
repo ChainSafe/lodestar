@@ -12,7 +12,6 @@ import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {PubkeyHex} from "../types";
-import {mapValues} from "@chainsafe/lodestar-utils";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -84,12 +83,12 @@ export class SyncCommitteeDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.dutiesByIndexByPeriod), (validatorDutyAtPeriodMap, syncPeriod) => {
-      mapValues(Object.fromEntries(validatorDutyAtPeriodMap), (dutyAtPeriod, validatorIndex) => {
+    this.dutiesByIndexByPeriod.forEach((validatorDutyAtPeriodMap, syncPeriod) => {
+      validatorDutyAtPeriodMap.forEach((dutyAtPeriod, validatorIndex) => {
         if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
-          validatorDutyAtPeriodMap.delete(parseInt(validatorIndex as string));
+          validatorDutyAtPeriodMap.delete(validatorIndex);
           if (validatorDutyAtPeriodMap.size === 0) {
-            this.dutiesByIndexByPeriod.delete(parseInt(syncPeriod as string));
+            this.dutiesByIndexByPeriod.delete(syncPeriod);
           }
         }
       });

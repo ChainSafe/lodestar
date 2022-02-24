@@ -1,5 +1,5 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
@@ -54,11 +54,12 @@ export class IndicesService {
   }
 
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.index2pubkey), (value, key) => {
+    this.index2pubkey.forEach((value, key) => {
       if (value === signer) {
-        this.index2pubkey.delete(parseInt(key as string));
+        this.index2pubkey.delete(key);
       }
     });
+
     this.pubkey2index.delete(signer);
   }
 

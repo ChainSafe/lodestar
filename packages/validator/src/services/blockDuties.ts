@@ -5,7 +5,6 @@ import {Api, routes} from "@chainsafe/lodestar-api";
 import {IClock, extendError, differenceHex, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {PubkeyHex} from "../types";
-import {mapValues} from "@chainsafe/lodestar-utils";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -61,7 +60,7 @@ export class BlockDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.proposers), (blockDutyAtEpoch, _epoch) => {
+    this.proposers.forEach((blockDutyAtEpoch) => {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
         return toHexString(proposer.pubkey) !== signer;
       });

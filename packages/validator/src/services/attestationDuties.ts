@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {mapValues, sleep} from "@chainsafe/lodestar-utils";
+import {sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
@@ -48,12 +48,12 @@ export class AttestationDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    mapValues(Object.fromEntries(this.dutiesByIndexByEpoch), (attDutiesAtEpoch, epoch) => {
-      mapValues(Object.fromEntries(attDutiesAtEpoch.dutiesByIndex), (attDutyAndProof, vIndex) => {
+    this.dutiesByIndexByEpoch.forEach((attDutiesAtEpoch, epoch) => {
+      attDutiesAtEpoch.dutiesByIndex.forEach((attDutyAndProof, vIndex) => {
         if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
-          attDutiesAtEpoch.dutiesByIndex.delete(parseInt(vIndex as string));
+          attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
-            this.dutiesByIndexByEpoch.delete(parseInt(epoch as string));
+            this.dutiesByIndexByEpoch.delete(epoch);
           }
         }
       });
