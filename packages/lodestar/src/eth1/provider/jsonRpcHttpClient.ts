@@ -5,7 +5,7 @@ import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
-import {encodeJwtToken} from "../../util/jwt";
+import {encodeJwtToken} from "./jwt";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */
@@ -41,7 +41,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
-      jwtSecretHex?: string;
+      jwtSecret?: Uint8Array;
     }
   ) {
     // Sanity check for all URLs to be properly defined. Otherwise it will error in loop on fetch
@@ -53,9 +53,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
         throw Error(`JsonRpcHttpClient.urls[${i}] is empty or undefined: ${url}`);
       }
     }
-    if (this.opts?.jwtSecretHex) {
-      this.jwtSecret = Buffer.from(this.opts.jwtSecretHex, "hex");
-    }
+    this.jwtSecret = opts?.jwtSecret;
   }
 
   /**
@@ -127,14 +125,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     }
 
     try {
-      let headers;
+      const headers = {"Content-Type": "application/json"};
       if (this.jwtSecret) {
         /** ELs have a tight +-5 second freshness check on token's iat i.e. issued at */
         const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
         // eslint-disable-next-line @typescript-eslint/naming-convention
-        headers = {"Content-Type": "application/json", Authorization: `Bearer ${token}`};
-      } else {
-        headers = {"Content-Type": "application/json"};
+        Object.assign(headers, {Authorization: `Bearer ${token}`});
       }
 
       const res = await fetch(url, {

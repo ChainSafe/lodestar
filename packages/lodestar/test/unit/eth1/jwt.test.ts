@@ -1,5 +1,6 @@
 import {expect} from "chai";
-import {encodeJwtToken, decodeJwtToken} from "../../../src/util/jwt";
+import {encodeJwtToken, decodeJwtToken} from "../../../src/eth1/provider/jwt";
+
 describe("ExecutionEngine / jwt", () => {
   it("encode/decode correctly", () => {
     const jwtSecret = Buffer.from(Array.from({length: 32}, () => Math.round(Math.random() * 255)));

@@ -91,7 +91,7 @@
     "interface-datastore": "^5.1.2",
     "it-all": "^1.0.2",
     "it-pipe": "^1.1.0",
-    "jwt-simple": "^0.5.6",
+    "jwt-simple": "0.5.6",
     "libp2p": "^0.32.4",
     "libp2p-bootstrap": "^0.13.0",
     "libp2p-gossipsub": "^0.11.1",

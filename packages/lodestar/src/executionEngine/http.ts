@@ -26,7 +26,8 @@ import {
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   timeout?: number;
-  jwtSecretHex?: string;
+  /** 256 bit jwt secret in hex format without the leading 0x */
+  jwtSecret?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -51,7 +52,8 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
         signal,
-        ...opts,
+        timeout: opts.timeout,
+        jwtSecret: opts.jwtSecret ? Buffer.from(opts.jwtSecret, "hex") : undefined,
       });
   }
 
