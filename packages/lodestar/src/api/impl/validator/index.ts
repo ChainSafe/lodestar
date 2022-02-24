@@ -172,17 +172,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
   }
 
   function computeProposersForEpoch(state: CachedBeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
-    const effectiveBalanceIncrementsWithLen: EffectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(
-      state.validators.length
-    );
-
-    for (let i = 0; i < state.validators.length; i++) {
-      effectiveBalanceIncrementsWithLen[i] = Math.floor(
-        state.validators[i].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT
-      );
-    }
-
-    return computeProposers(state.clone(), state.getShufflingAtEpoch(epoch), effectiveBalanceIncrementsWithLen);
+    return computeProposers(state, state.getShufflingAtEpoch(epoch), state.effectiveBalanceIncrements);
   }
 
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
