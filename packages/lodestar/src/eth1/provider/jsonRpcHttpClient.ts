@@ -32,8 +32,8 @@ export interface IJsonRpcHttpClient {
 
 export class JsonRpcHttpClient implements IJsonRpcHttpClient {
   private id = 1;
-  /** 
-   * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the 
+  /**
+   * Optional: If provided, use this jwt secret to HS256 encode and add a jwt token in the
    * request header which can be authenticated by the RPC server to provide access.
    * A fresh token is generated on each requests as EL spec mandates the ELs to check
    * the token freshness +-5 seconds (via `iat` property of the token claim)
@@ -47,9 +47,9 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
       timeout?: number;
       /** If returns true, do not fallback to other urls and throw early */
       shouldNotFallback?: (error: Error) => boolean;
-      /** 
-       * If provided, the requests to the RPC server will be bundled with a HS256 encoded 
-       * token using this secret. Otherwise the requests to the RPC server will be unauthorized 
+      /**
+       * If provided, the requests to the RPC server will be bundled with a HS256 encoded
+       * token using this secret. Otherwise the requests to the RPC server will be unauthorized
        * and it might deny responses to the RPC requests.
        */
       jwtSecret?: Uint8Array;
@@ -138,12 +138,12 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     try {
       const headers = {"Content-Type": "application/json"};
       if (this.jwtSecret) {
-        /** 
+        /**
          * ELs have a tight +-5 second freshness check on token's iat i.e. issued at
-         * so its better to generate a new token each time. Currently iat is the only claim 
+         * so its better to generate a new token each time. Currently iat is the only claim
          * we are encoding but potentially we can encode more claims.
          * Also currently the algorithm for the token generation is mandated to HS256
-         * 
+         *
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
         const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
