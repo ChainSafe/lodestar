@@ -26,7 +26,12 @@ import {
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   timeout?: number;
-  /** 256 bit jwt secret in hex format without the leading 0x */
+  /** 
+   * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
+   * rpc requests will be bundled by an authorization header having a fresh jwt token on each
+   * request, as the EL auth specs mandate the fresh of the token (iat) to be checked within
+   * +-5 seconds interval.
+   */
   jwtSecret?: string;
 };
 

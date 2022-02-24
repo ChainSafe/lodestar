@@ -38,7 +38,8 @@ export const options: ICliCommandOptions<ExecutionEngineArgs> = {
   },
 
   "jwt-secret": {
-    description: "Shared jwt secret which EL will use to authenticate engine api calls",
+    description:
+      "File path to a shared hex-encoded jwt secret which will be used to generate and bundle HS256 encoded jwt tokens for authentication with the EL client's rpc server hosting engine apis. Secret to be exactly same as the one used by the corresponding EL client.",
     type: "string",
     group: "execution",
   },
