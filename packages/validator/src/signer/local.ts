@@ -14,7 +14,7 @@ export interface ISigner {
 
 /**
  * Signs messages while hidding secret keys from consumers.
- * Does not use ES6 classes to implement really private properties, enforced at runtime.
+ * Uses a closure to implement really private properties, enforced at runtime.
  */
 export function getSignerLocal(): ISigner {
   const secretKeyMap = new Map<PubkeyHex, SecretKey>();
