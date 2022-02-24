@@ -56,6 +56,20 @@ export type PayloadAttributes = {
   suggestedFeeRecipient: Uint8Array | ByteVector;
 };
 
+export type TransitionConfig = {
+  terminalTotalDifficulty: bigint;
+  terminalBlockHash: Uint8Array | ByteVector;
+  terminalBlockNumber: number;
+};
+
+export type TransitionConfigOpts = {transitionConfig: TransitionConfig; heartBeatInSec?: number};
+
+export type ApiTransitionConfig = {
+  terminalTotalDifficulty: QUANTITY;
+  terminalBlockHash: DATA;
+  terminalBlockNumber: QUANTITY;
+};
+
 export type ApiPayloadAttributes = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
   timestamp: QUANTITY;

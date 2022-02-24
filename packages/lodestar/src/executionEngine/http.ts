@@ -21,6 +21,9 @@ import {
   PayloadId,
   PayloadAttributes,
   ApiPayloadAttributes,
+  TransitionConfigOpts,
+  ApiTransitionConfig,
+  TransitionConfig,
 } from "./interface";
 
 export type ExecutionEngineHttpOpts = {
@@ -44,14 +47,65 @@ export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
  */
 export class ExecutionEngineHttp implements IExecutionEngine {
   private readonly rpc: IJsonRpcHttpClient;
+  private readonly transitionConfig: ApiTransitionConfig;
+  private readonly heartBeatInSec?: number;
+  private lastHeartBeatAt = 0;
 
-  constructor(opts: ExecutionEngineHttpOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
+  constructor(opts: ExecutionEngineHttpOpts & TransitionConfigOpts, signal: AbortSignal, rpc?: IJsonRpcHttpClient) {
+    this.transitionConfig = serializeTransitionConfig(opts.transitionConfig);
+    this.heartBeatInSec = opts.heartBeatInSec;
     this.rpc =
       rpc ??
       new JsonRpcHttpClient(opts.urls, {
         signal,
         timeout: opts.timeout,
       });
+    void this.exchangeTransitionConfiguration();
+  }
+
+  /**
+   * `engine_exchangeTransitionConfigurationV1`
+   * From: https://github.com/ethereum/execution-apis/blob/v1.0.0-alpha.7/src/engine/specification.md#engine_exchangetransitionconfigurationv1
+   *
+   * 1. Execution Layer client software MUST respond with configurable setting values that
+   *    are set according to the Client software configuration section of EIP-3675.
+   *
+   * 2. Execution Layer client software SHOULD surface an error to the user if local
+   *   configuration settings mismatch corresponding values received in the call of this
+   *   method, with exception for terminalBlockNumber value.
+   *
+   * 3. Consensus Layer client software SHOULD surface an error to the user if local
+   *    configuration settings mismatch corresponding values obtained from the response
+   *    to the call of this method.
+   */
+  async exchangeTransitionConfiguration(): Promise<ApiTransitionConfig> {
+    const method = "engine_exchangeTransitionConfigurationV1";
+    const transitionConfig = await this.rpc.fetch<
+      EngineApiRpcReturnTypes[typeof method],
+      EngineApiRpcParamTypes[typeof method]
+    >({
+      method,
+      params: [this.transitionConfig],
+    });
+    // TODO: determine the throw condition, also identify how to update terminal blocktracker hash
+    // and the terminal number depending upon
+    // 1. eth1 tracker 2. the terminal block received
+    // as per spec, this must not be dynamic
+    if (
+      transitionConfig.terminalTotalDifficulty !== this.transitionConfig.terminalTotalDifficulty ||
+      transitionConfig.terminalBlockHash !== this.transitionConfig.terminalBlockHash ||
+      transitionConfig.terminalBlockNumber !== this.transitionConfig.terminalBlockNumber
+    ) {
+      throw Error(
+        `Transition config mismatch, actual=${JSON.stringify(transitionConfig)}, expected=${JSON.stringify(
+          this.transitionConfig
+        )}`
+      );
+    }
+    // Use this lastHeartBeatAt in the actual engine api calls to identify if this needs to
+    // be called again
+    this.lastHeartBeatAt = Math.floor(new Date().getTime() / 1000);
+    return transitionConfig;
   }
 
   /**
@@ -263,6 +317,9 @@ export class ExecutionEngineHttp implements IExecutionEngine {
 
 type EngineApiRpcParamTypes = {
   /**
+   */
+  engine_exchangeTransitionConfigurationV1: [ApiTransitionConfig];
+  /**
    * 1. Object - Instance of ExecutionPayload
    */
   engine_newPayloadV1: [ExecutionPayloadRpc];
@@ -282,6 +339,10 @@ type EngineApiRpcParamTypes = {
 };
 
 type EngineApiRpcReturnTypes = {
+  /**
+   *
+   */
+  engine_exchangeTransitionConfigurationV1: ApiTransitionConfig;
   /**
    * Object - Response object:
    * - status: String - the result of the payload execution:
@@ -353,5 +414,13 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.Exec
     baseFeePerGas: quantityToBigint(data.baseFeePerGas),
     blockHash: dataToBytes(data.blockHash, 32),
     transactions: data.transactions.map((tran) => dataToBytes(tran)),
+  };
+}
+
+export function serializeTransitionConfig(transitionConfig: TransitionConfig): ApiTransitionConfig {
+  return {
+    terminalTotalDifficulty: numToQuantity(transitionConfig.terminalTotalDifficulty),
+    terminalBlockHash: bytesToData(transitionConfig.terminalBlockHash),
+    terminalBlockNumber: numToQuantity(transitionConfig.terminalBlockNumber),
   };
 }

@@ -2,7 +2,14 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {fastify} from "fastify";
 import {AbortController} from "@chainsafe/abort-controller";
-import {ExecutionEngineHttp, parseExecutionPayload, serializeExecutionPayload} from "../../../src/executionEngine/http";
+import {
+  ExecutionEngineHttp,
+  parseExecutionPayload,
+  serializeExecutionPayload,
+  serializeTransitionConfig,
+} from "../../../src/executionEngine/http";
+import {TransitionConfig} from "../../../src/executionEngine/interface";
+import {ZERO_HASH} from "../../../src/constants";
 
 chai.use(chaiAsPromised);
 
@@ -18,6 +25,7 @@ describe("ExecutionEngine / http", () => {
   let executionEngine: ExecutionEngineHttp;
   let returnValue: unknown = {};
   let reqJsonRpcPayload: unknown = {};
+  let transitionConfig: TransitionConfig;
 
   before("Prepare server", async () => {
     const controller = new AbortController();
@@ -35,8 +43,36 @@ describe("ExecutionEngine / http", () => {
     });
 
     const baseUrl = await server.listen(0);
+    transitionConfig = {terminalTotalDifficulty: BigInt(0), terminalBlockHash: ZERO_HASH, terminalBlockNumber: 0};
 
-    executionEngine = new ExecutionEngineHttp({urls: [baseUrl]}, controller.signal);
+    executionEngine = new ExecutionEngineHttp({urls: [baseUrl], transitionConfig}, controller.signal);
+  });
+
+  it("exchangeTransitionConfiguration", async () => {
+    /**
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_exchangeTransitionConfigurationV1","params":[{"terminalTotalDifficulty":"0x0","terminalBlockHash":"0x0000000000000000000000000000000000000000000000000000000000000000","terminalBlockNumber":"0x0"}],"id":67}' http://localhost:8550
+     */
+
+    const request = {
+      jsonrpc: "2.0",
+      method: "engine_exchangeTransitionConfigurationV1",
+      params: [serializeTransitionConfig(transitionConfig)],
+    };
+    const response = {
+      jsonrpc: "2.0",
+      id: 67,
+      result: {
+        terminalTotalDifficulty: "0x0",
+        terminalBlockHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        terminalBlockNumber: "0x0",
+      },
+    };
+    returnValue = response;
+
+    const elConfig = await executionEngine.exchangeTransitionConfiguration();
+
+    expect(elConfig).to.deep.equal(response.result, "Transition config mismatch");
+    expect(reqJsonRpcPayload).to.deep.equal(request, "Wrong request JSON RPC payload");
   });
 
   it("getPayload", async () => {

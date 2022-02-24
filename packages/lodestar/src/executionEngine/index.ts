@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IExecutionEngine} from "./interface";
+import {IExecutionEngine, TransitionConfigOpts} from "./interface";
 import {ExecutionEngineDisabled} from "./disabled";
 import {ExecutionEngineHttp, ExecutionEngineHttpOpts, defaultExecutionEngineHttpOpts} from "./http";
 import {ExecutionEngineMock, ExecutionEngineMockOpts} from "./mock";
@@ -13,7 +13,10 @@ export type ExecutionEngineOpts =
 
 export const defaultExecutionEngineOpts: ExecutionEngineOpts = defaultExecutionEngineHttpOpts;
 
-export function initializeExecutionEngine(opts: ExecutionEngineOpts, signal: AbortSignal): IExecutionEngine {
+export function initializeExecutionEngine(
+  opts: ExecutionEngineOpts & TransitionConfigOpts,
+  signal: AbortSignal
+): IExecutionEngine {
   switch (opts.mode) {
     case "mock":
       return new ExecutionEngineMock(opts);

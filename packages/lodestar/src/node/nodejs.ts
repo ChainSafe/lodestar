@@ -133,6 +133,13 @@ export class BeaconNode {
       initBeaconMetrics(metrics, anchorState);
     }
 
+    const transitionConfig = {
+      terminalTotalDifficulty: config.TERMINAL_TOTAL_DIFFICULTY,
+      terminalBlockHash: config.TERMINAL_BLOCK_HASH,
+      /** terminalBlockNumber has to be set to zero for now as per specs */
+      terminalBlockNumber: 0,
+    };
+
     const chain = new BeaconChain(opts.chain, {
       config,
       db,
@@ -144,7 +151,13 @@ export class BeaconNode {
         {config, db, logger: logger.child(opts.logger.eth1), signal},
         anchorState
       ),
-      executionEngine: initializeExecutionEngine(opts.executionEngine, signal),
+      executionEngine: initializeExecutionEngine(
+        {
+          ...opts.executionEngine,
+          transitionConfig,
+        },
+        signal
+      ),
     });
 
     // Load persisted data from disk to in-memory caches
