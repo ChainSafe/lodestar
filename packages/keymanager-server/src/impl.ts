@@ -166,7 +166,7 @@ export class KeymanagerApi implements Api {
         // Remove from attestation duties
         // Remove from Sync committee duties
         // Remove from indices
-        this.validator.removeSignerFromDutiesAndIndices(pubkeyHex);
+        this.validator.removeDutiesForKey(pubkeyHex);
 
         // Remove key from persistent storage
         for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {

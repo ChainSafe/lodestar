@@ -10,6 +10,7 @@ import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuti
 import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
 import {ChainHeaderTracker} from "./chainHeaderTracker";
+import {PubkeyHex} from "../types";
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -30,6 +31,10 @@ export class SyncCommitteeService {
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
     clock.runEverySlot(this.runSyncCommitteeTasks);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.dutiesService.remove(pubkey);
   }
 
   private runSyncCommitteeTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {

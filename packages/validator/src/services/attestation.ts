@@ -11,6 +11,7 @@ import {IndicesService} from "./indices";
 import {toHexString} from "@chainsafe/ssz";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
+import {PubkeyHex} from "../types";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -38,6 +39,10 @@ export class AttestationService {
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
     clock.runEverySlot(this.runAttestationTasks);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.dutiesService.remove(pubkey);
   }
 
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {

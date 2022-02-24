@@ -59,10 +59,10 @@ export class BlockDutiesService {
     return Array.from(publicKeys.values());
   }
 
-  remove(signer: PubkeyHex): void {
+  remove(pubkey: PubkeyHex): void {
     this.proposers.forEach((blockDutyAtEpoch) => {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
-        return toHexString(proposer.pubkey) !== signer;
+        return toHexString(proposer.pubkey) !== pubkey;
       });
     });
   }

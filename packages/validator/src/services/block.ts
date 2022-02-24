@@ -7,6 +7,7 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
+import {PubkeyHex} from "../types";
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -23,6 +24,10 @@ export class BlockProposingService {
     private readonly graffiti?: string
   ) {
     this.dutiesService = new BlockDutiesService(logger, api, clock, validatorStore, this.notifyBlockProductionFn);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.dutiesService.remove(pubkey);
   }
 
   /**

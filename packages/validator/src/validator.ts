@@ -19,9 +19,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {BlockDutiesService} from "./services/blockDuties";
-import {AttestationDutiesService} from "./services/attestationDuties";
-import {SyncCommitteeDutiesService} from "./services/syncCommitteeDuties";
 import {PubkeyHex} from "./types";
 
 export type ValidatorOptions = {
@@ -49,9 +46,9 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  */
 export class Validator {
   readonly validatorStore: ValidatorStore;
-  private readonly blockDutiesService: BlockDutiesService;
-  private readonly attestationDutiesService: AttestationDutiesService;
-  private readonly syncCommitteeDutiesService: SyncCommitteeDutiesService;
+  private readonly blockProposingService: BlockProposingService;
+  private readonly attestationService: AttestationService;
+  private readonly syncCommitteeService: SyncCommitteeService;
   private readonly indicesService: IndicesService;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
@@ -82,16 +79,9 @@ export class Validator {
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
 
-    this.blockDutiesService = new BlockProposingService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      graffiti
-    ).dutiesService;
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
 
-    this.attestationDutiesService = new AttestationService(
+    this.attestationService = new AttestationService(
       loggerVc,
       api,
       clock,
@@ -99,9 +89,9 @@ export class Validator {
       this.emitter,
       this.indicesService,
       this.chainHeaderTracker
-    ).dutiesService;
+    );
 
-    this.syncCommitteeDutiesService = new SyncCommitteeService(
+    this.syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
       api,
@@ -109,7 +99,7 @@ export class Validator {
       validatorStore,
       this.chainHeaderTracker,
       this.indicesService
-    ).dutiesService;
+    );
 
     this.config = config;
     this.logger = logger;
@@ -141,11 +131,11 @@ export class Validator {
     return new Validator(opts, genesis);
   }
 
-  removeSignerFromDutiesAndIndices(signer: PubkeyHex): void {
-    this.indicesService.remove(signer);
-    this.blockDutiesService.remove(signer);
-    this.attestationDutiesService.remove(signer);
-    this.syncCommitteeDutiesService.remove(signer);
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.indicesService.remove(pubkey);
+    this.blockProposingService.removeDutiesForKey(pubkey);
+    this.attestationService.removeDutiesForKey(pubkey);
+    this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 
   /**
