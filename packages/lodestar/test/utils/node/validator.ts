@@ -122,10 +122,9 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
-}): Promise<{validators: Validator[]; secretKeys: SecretKey[]; keymanagerOps?: Record<string, ISlashingProtection>}> {
+}): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
-  const keymanagerOps: Record<string, ISlashingProtection> = {};
 
   for (let i = 0; i < validatorClientCount; i++) {
     const startIndexVc = startIndex + i * validatorClientCount;
@@ -165,15 +164,12 @@ export async function getAndInitDevValidators({
         signers,
       })
     );
-
-    keymanagerOps[i] = slashingProtection;
   }
 
   return {
     validators: await Promise.all(validators),
     // Return secretKeys to start the externalSigner
     secretKeys,
-    keymanagerOps,
   };
 }
 

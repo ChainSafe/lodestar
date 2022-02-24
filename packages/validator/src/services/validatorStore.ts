@@ -30,7 +30,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {ISlashingProtection} from "../slashingProtection";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
@@ -102,6 +102,14 @@ export class ValidatorStore {
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.validators.has(pubkeyHex);
+  }
+
+  async importInterchange(interchange: Interchange): Promise<void> {
+    return this.slashingProtection.importInterchange(interchange, this.genesisValidatorsRoot);
+  }
+
+  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
+    return this.slashingProtection.exportInterchange(this.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   async signBlock(

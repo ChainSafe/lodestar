@@ -108,13 +108,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // Only if keymanagerEnabled flag is set to true and at least one keystore path is supplied
   const firstImportKeystorePath = args.importKeystoresPath?.[0];
   if (args.keymanagerEnabled && firstImportKeystorePath) {
-    const keymanagerApi = new KeymanagerApi(
-      logger,
-      validator,
-      slashingProtection,
-      validator.genesis.genesisValidatorsRoot,
-      firstImportKeystorePath
-    );
+    const keymanagerApi = new KeymanagerApi(logger, validator, firstImportKeystorePath);
 
     const keymanagerServer = new KeymanagerServer(
       {

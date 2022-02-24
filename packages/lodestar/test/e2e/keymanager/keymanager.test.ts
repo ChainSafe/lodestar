@@ -233,7 +233,7 @@ describe("keymanager delete and import test", async function () {
       logger: loggerNodeA,
     });
 
-    const {validators, secretKeys: _secretKeys, keymanagerOps} = await getAndInitDevValidators({
+    const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
       validatorClientCount: 1,
@@ -242,57 +242,49 @@ describe("keymanager delete and import test", async function () {
       testLoggerOpts,
     });
 
-    if (keymanagerOps) {
-      const keymanagerApi = new KeymanagerApi(
-        loggerNodeA,
-        validators[0],
-        keymanagerOps[0],
-        validators[0].genesis.genesisValidatorsRoot,
-        "/test/path"
-      );
+    const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
 
-      const kmPort = 10003;
+    const kmPort = 10003;
 
-      // by default auth is on
-      const keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: logFilesDir},
-        {config, logger: loggerNodeA, api: keymanagerApi}
-      );
+    // by default auth is on
+    const keymanagerServer = new KeymanagerServer(
+      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: logFilesDir},
+      {config, logger: loggerNodeA, api: keymanagerApi}
+    );
 
-      // clean up
-      afterEachCallbacks.push(async () => {
-        await Promise.all(validators.map((v) => v.stop()));
-        await keymanagerServer.close();
-        await bn.close();
-      });
+    // clean up
+    afterEachCallbacks.push(async () => {
+      await Promise.all(validators.map((v) => v.stop()));
+      await keymanagerServer.close();
+      await bn.close();
+    });
 
-      await keymanagerServer.listen();
+    await keymanagerServer.listen();
 
-      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+    const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
 
-      // Listing keys is denied
-      try {
-        await client.listKeys();
-      } catch (e) {
-        // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect list request to be denied");
-      }
+    // Listing keys is denied
+    try {
+      await client.listKeys();
+    } catch (e) {
+      // prettier-ignore
+      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect list request to be denied");
+    }
 
-      // Deleting keys is denied
-      try {
-        await client.deleteKeystores([key1]);
-      } catch (e) {
-        // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect delete request to be denied");
-      }
+    // Deleting keys is denied
+    try {
+      await client.deleteKeystores([key1]);
+    } catch (e) {
+      // prettier-ignore
+      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect delete request to be denied");
+    }
 
-      // importing keys is denied
-      try {
-        await client.importKeystores(["some keystore string"], ["some password"], "some slashing protecting)");
-      } catch (e) {
-        // prettier-ignore
-        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect import request to be denied");
-      }
+    // importing keys is denied
+    try {
+      await client.importKeystores(["some keystore string"], ["some password"], "some slashing protecting)");
+    } catch (e) {
+      // prettier-ignore
+      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect import request to be denied");
     }
   });
 
@@ -316,7 +308,7 @@ describe("keymanager delete and import test", async function () {
     const externalSignerPort = 38000;
     const externalSignerUrl = `http://localhost:${externalSignerPort}`;
 
-    const {validators, secretKeys, keymanagerOps} = await getAndInitDevValidators({
+    const {validators, secretKeys} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: 1,
       validatorClientCount: 1,
@@ -327,48 +319,40 @@ describe("keymanager delete and import test", async function () {
       externalSignerUrl: externalSignerUrl,
     });
 
-    if (keymanagerOps) {
-      const keymanagerApi = new KeymanagerApi(
-        loggerNodeA,
-        validators[0],
-        keymanagerOps[0],
-        validators[0].genesis.genesisValidatorsRoot,
-        "/test/path"
-      );
+    const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
 
-      const kmPort = 10003;
+    const kmPort = 10003;
 
-      const keymanagerServer = new KeymanagerServer(
-        {host: "127.0.0.1", port: kmPort, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
-        {config, logger: loggerNodeA, api: keymanagerApi}
-      );
+    const keymanagerServer = new KeymanagerServer(
+      {host: "127.0.0.1", port: kmPort, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},
+      {config, logger: loggerNodeA, api: keymanagerApi}
+    );
 
-      afterEachCallbacks.push(async () => {
-        await Promise.all(validators.map((v) => v.stop()));
-        await keymanagerServer.close();
-        await bn.close();
-      });
+    afterEachCallbacks.push(async () => {
+      await Promise.all(validators.map((v) => v.stop()));
+      await keymanagerServer.close();
+      await bn.close();
+    });
 
-      await keymanagerServer.listen();
+    await keymanagerServer.listen();
 
-      const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+    const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
 
-      expect((await client.listKeys()).data).to.be.deep.equal(
-        [
-          {
-            validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
-            derivationPath: "",
-            readonly: true,
-          },
-        ],
-        "listKeys should return key that is readonly"
-      );
+    expect((await client.listKeys()).data).to.be.deep.equal(
+      [
+        {
+          validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
+          derivationPath: "",
+          readonly: true,
+        },
+      ],
+      "listKeys should return key that is readonly"
+    );
 
-      expect((await client.deleteKeystores([key1])).data).to.deep.equal(
-        [{status: "not_active"}],
-        "deleteKeystores should not delete readonly key"
-      );
-    }
+    expect((await client.deleteKeystores([key1])).data).to.deep.equal(
+      [{status: "not_active"}],
+      "deleteKeystores should not delete readonly key"
+    );
   });
 });
 
@@ -399,13 +383,7 @@ function createKeymanager(
   config: IBeaconConfig,
   logger: WinstonLogger
 ): KeymanagerServer {
-  const keymanagerApi = new KeymanagerApi(
-    logger,
-    vc,
-    slashingProtection,
-    vc.genesis.genesisValidatorsRoot,
-    importKeystoresPath
-  );
+  const keymanagerApi = new KeymanagerApi(logger, vc, importKeystoresPath);
 
   return new KeymanagerServer(
     {host: "127.0.0.1", port, cors: "*", isAuthEnabled: false, tokenDir: logFilesDir},

@@ -11,9 +11,8 @@ import {
   SlashingProtectionData,
 } from "@chainsafe/lodestar-api/keymanager";
 import {fromHexString} from "@chainsafe/ssz";
-import {Interchange, ISlashingProtection, SignerType, Validator} from "@chainsafe/lodestar-validator";
+import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
-import {Root} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 export const LOCK_FILE_EXT = ".lock";
@@ -23,8 +22,6 @@ export class KeymanagerApi implements Api {
   constructor(
     private readonly logger: ILogger,
     private readonly validator: Validator,
-    private readonly slashingProtection: ISlashingProtection,
-    private readonly genesisValidatorRoot: Uint8Array | Root,
     private readonly importKeystoresPath: string
   ) {}
 
@@ -76,7 +73,7 @@ export class KeymanagerApi implements Api {
     }[];
   }> {
     const interchange = (slashingProtectionStr as unknown) as Interchange;
-    await this.slashingProtection.importInterchange(interchange, this.genesisValidatorRoot);
+    await this.validator.validatorStore.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
 
@@ -184,7 +181,7 @@ export class KeymanagerApi implements Api {
 
     const pubkeysBytes = pubkeysHex.map((pubkeyHex) => fromHexString(pubkeyHex));
 
-    const interchangeV5 = await this.slashingProtection.exportInterchange(this.genesisValidatorRoot, pubkeysBytes, {
+    const interchangeV5 = await this.validator.validatorStore.exportInterchange(pubkeysBytes, {
       version: "5",
     });
 
