@@ -48,16 +48,16 @@ export class AttestationDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    this.dutiesByIndexByEpoch.forEach((attDutiesAtEpoch, epoch) => {
-      attDutiesAtEpoch.dutiesByIndex.forEach((attDutyAndProof, vIndex) => {
+    for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
+      for (const [vIndex, attDutyAndProof] of attDutiesAtEpoch.dutiesByIndex) {
         if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
           attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
             this.dutiesByIndexByEpoch.delete(epoch);
           }
         }
-      });
-    });
+      }
+    }
   }
 
   /** Returns all `ValidatorDuty` for the given `slot` */

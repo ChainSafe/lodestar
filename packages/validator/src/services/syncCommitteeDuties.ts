@@ -83,16 +83,16 @@ export class SyncCommitteeDutiesService {
   }
 
   remove(signer: PubkeyHex): void {
-    this.dutiesByIndexByPeriod.forEach((validatorDutyAtPeriodMap, syncPeriod) => {
-      validatorDutyAtPeriodMap.forEach((dutyAtPeriod, validatorIndex) => {
+    for (const [syncPeriod, validatorDutyAtPeriodMap] of this.dutiesByIndexByPeriod) {
+      for (const [validatorIndex, dutyAtPeriod] of validatorDutyAtPeriodMap) {
         if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
           validatorDutyAtPeriodMap.delete(validatorIndex);
           if (validatorDutyAtPeriodMap.size === 0) {
             this.dutiesByIndexByPeriod.delete(syncPeriod);
           }
         }
-      });
-    });
+      }
+    }
   }
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {

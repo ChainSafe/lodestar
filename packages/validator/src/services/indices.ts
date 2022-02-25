@@ -54,11 +54,11 @@ export class IndicesService {
   }
 
   remove(signer: PubkeyHex): void {
-    this.index2pubkey.forEach((value, key) => {
+    for (const [key, value] of this.index2pubkey) {
       if (value === signer) {
         this.index2pubkey.delete(key);
       }
-    });
+    }
 
     this.pubkey2index.delete(signer);
   }

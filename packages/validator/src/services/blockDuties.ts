@@ -60,11 +60,11 @@ export class BlockDutiesService {
   }
 
   remove(pubkey: PubkeyHex): void {
-    this.proposers.forEach((blockDutyAtEpoch) => {
+    for (const blockDutyAtEpoch of this.proposers.values()) {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
         return toHexString(proposer.pubkey) !== pubkey;
       });
-    });
+    }
   }
 
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
