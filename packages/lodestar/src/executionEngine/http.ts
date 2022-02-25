@@ -194,7 +194,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
-          random: bytesToData(payloadAttributes.random),
+          prevRandao: bytesToData(payloadAttributes.prevRandao),
           suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
         }
       : undefined;
@@ -316,7 +316,7 @@ type ExecutionPayloadRpc = {
   stateRoot: DATA; // 32 bytes
   receiptsRoot: DATA; // 32 bytes
   logsBloom: DATA; // 256 bytes
-  random: DATA; // 32 bytes
+  prevRandao: DATA; // 32 bytes
   blockNumber: QUANTITY;
   gasLimit: QUANTITY;
   gasUsed: QUANTITY;
@@ -334,7 +334,7 @@ export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): Exe
     stateRoot: bytesToData(data.stateRoot),
     receiptsRoot: bytesToData(data.receiptsRoot),
     logsBloom: bytesToData(data.logsBloom),
-    random: bytesToData(data.random),
+    prevRandao: bytesToData(data.prevRandao),
     blockNumber: numToQuantity(data.blockNumber),
     gasLimit: numToQuantity(data.gasLimit),
     gasUsed: numToQuantity(data.gasUsed),
@@ -353,7 +353,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.Exec
     stateRoot: dataToBytes(data.stateRoot, 32),
     receiptsRoot: dataToBytes(data.receiptsRoot, 32),
     logsBloom: dataToBytes(data.logsBloom, BYTES_PER_LOGS_BLOOM),
-    random: dataToBytes(data.random, 32),
+    prevRandao: dataToBytes(data.prevRandao, 32),
     blockNumber: quantityToNum(data.blockNumber),
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),
