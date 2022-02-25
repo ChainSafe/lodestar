@@ -2,9 +2,9 @@
  * @module network
  */
 import {Connection} from "libp2p";
-import {Discv5, ENR} from "@chainsafe/discv5";
 import {Multiaddr} from "multiaddr";
 import PeerId from "peer-id";
+import {Discv5, ENR} from "@chainsafe/discv5";
 import {INetworkEventBus} from "./events";
 import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";

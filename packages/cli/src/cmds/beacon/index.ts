@@ -1,7 +1,7 @@
-import {ICliCommand, ICliCommandOptions} from "../../util";
-import {IGlobalArgs} from "../../options";
 import {beaconOptions, IBeaconArgs} from "./options";
 import {beaconHandler} from "./handler";
+import {ICliCommand, ICliCommandOptions} from "../../util";
+import {IGlobalArgs} from "../../options";
 
 export const beacon: ICliCommand<IBeaconArgs, IGlobalArgs> = {
   command: "beacon",

@@ -1,5 +1,5 @@
-import {CachedBeaconStateAltair, CachedBeaconStatePhase0, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {ForkName, GENESIS_EPOCH} from "@chainsafe/lodestar-params";
+import {CachedBeaconStateAltair, CachedBeaconStatePhase0, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {getAttestationDeltas as getAttestationDeltasPhase0} from "../../phase0/epoch/getAttestationDeltas";
 import {getRewardsAndPenalties as getRewardsPenaltiesAltair} from "../../altair/epoch/getRewardsAndPenalties";
 

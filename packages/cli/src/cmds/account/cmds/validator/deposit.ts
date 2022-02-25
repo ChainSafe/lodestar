@@ -1,5 +1,5 @@
-import {YargsError, ICliCommand} from "../../../../util";
 import {IAccountValidatorArgs} from "./options";
+import {YargsError, ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 
 const deprecatedDescription =

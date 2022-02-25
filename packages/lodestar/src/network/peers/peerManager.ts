@@ -4,13 +4,6 @@ import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
-import {IMetrics} from "../../metrics";
-import {NetworkEvent, INetworkEventBus} from "../events";
-import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
-import {ISubnetsService} from "../subnets";
 import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
@@ -21,6 +14,13 @@ import {
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils";
+import {IBeaconChain} from "../../chain";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
+import {IMetrics} from "../../metrics";
+import {NetworkEvent, INetworkEventBus} from "../events";
+import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
+import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
+import {ISubnetsService} from "../subnets";
 import {SubnetType} from "../metadata";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */

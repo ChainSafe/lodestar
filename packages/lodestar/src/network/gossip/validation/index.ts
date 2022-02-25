@@ -2,6 +2,8 @@ import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gos
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {createValidationQueues} from "./queue";
+import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
 import {
@@ -15,9 +17,7 @@ import {
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {decodeMessageData, UncompressCache} from "../encoding";
-import {createValidationQueues} from "./queue";
 import {DEFAULT_ENCODING} from "../constants";
-import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;

@@ -4,9 +4,9 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
+import {IClock, extendError, ILoggerVc} from "../util";
 
 /**
  * Service that sets up and handles validator block proposal duties.

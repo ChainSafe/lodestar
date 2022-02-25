@@ -1,11 +1,11 @@
 /**
  * @module metrics
  */
+import {collectDefaultMetrics, Counter, Registry} from "prom-client";
+import gcStats from "prometheus-gc-stats";
 import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {allForks} from "@chainsafe/lodestar-types";
-import {collectDefaultMetrics, Counter, Registry} from "prom-client";
-import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
 import {createLodestarMetrics, ILodestarMetrics} from "./metrics/lodestar";

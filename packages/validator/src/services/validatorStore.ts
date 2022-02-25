@@ -30,9 +30,9 @@ import {
 } from "@chainsafe/lodestar-types";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
+import {getAggregationBits} from "./utils";
 import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
-import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
 
 export enum SignerType {

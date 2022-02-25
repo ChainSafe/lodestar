@@ -5,9 +5,9 @@ import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lod
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices";
-import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
+import {IClock, extendError, ILoggerVc} from "../util";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;

@@ -1,7 +1,5 @@
 import {altair} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
-import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processAttestations, RootCache} from "./processAttestation";
 import {processAttesterSlashing} from "./processAttesterSlashing";
@@ -9,6 +7,8 @@ import {processDeposit} from "./processDeposit";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
 import {processSyncAggregate} from "./processSyncCommittee";
+import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 
 export {
   processOperations,

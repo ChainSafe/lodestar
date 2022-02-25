@@ -14,10 +14,10 @@ import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodesta
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {EpochContext, EpochContextOpts} from "./epochContext";
 import {BalanceList} from "./balanceList";
 import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./cachedEpochParticipation";
-import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 import {newFilledArray} from "../util/array";
 

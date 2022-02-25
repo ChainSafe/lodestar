@@ -1,10 +1,10 @@
 import {altair, ParticipationFlags, phase0, ssz, Uint8} from "@chainsafe/lodestar-types";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../types";
-import {createCachedBeaconState} from "../cache/cachedBeaconState";
-import {newZeroedArray} from "../util";
 import {List, TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {getAttestationParticipationStatus, RootCache} from "./block/processAttestation";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../types";
+import {createCachedBeaconState} from "../cache/cachedBeaconState";
+import {newZeroedArray} from "../util";
 import {getNextSyncCommittee} from "../util/syncCommittee";
 
 /**

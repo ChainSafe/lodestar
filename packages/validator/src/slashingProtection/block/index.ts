@@ -1,7 +1,7 @@
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import {isEqualNonZeroRoot} from "../utils";
 import {InvalidBlockError, InvalidBlockErrorCode} from "./errors";
 import {BlockBySlotRepository} from "./blockBySlotRepository";
+import {isEqualNonZeroRoot} from "../utils";
 import {SlashingProtectionBlock} from "../types";
 export {BlockBySlotRepository, InvalidBlockError, InvalidBlockErrorCode};
 

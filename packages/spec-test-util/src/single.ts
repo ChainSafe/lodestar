@@ -1,8 +1,8 @@
-import {expect} from "chai";
 import fs, {readdirSync, readFileSync, existsSync} from "node:fs";
 import {basename, join, parse} from "node:path";
-import {Type, CompositeType} from "@chainsafe/ssz";
+import {expect} from "chai";
 import {uncompress} from "snappyjs";
+import {Type, CompositeType} from "@chainsafe/ssz";
 import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable

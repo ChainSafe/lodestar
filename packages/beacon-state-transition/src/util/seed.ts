@@ -17,9 +17,9 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 import {computeStartSlotAtEpoch} from "./epoch";
-import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 import {IEpochShuffling} from "./epochShuffling";
 import {computeEpochAtSlot} from "./epoch";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 
 /**
  * Compute proposer indices for an epoch

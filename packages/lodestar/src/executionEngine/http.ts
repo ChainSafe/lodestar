@@ -2,6 +2,15 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 
+import {
+  ExecutePayloadStatus,
+  ExecutePayloadResponse,
+  ForkChoiceUpdateStatus,
+  IExecutionEngine,
+  PayloadId,
+  PayloadAttributes,
+  ApiPayloadAttributes,
+} from "./interface";
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
   bytesToData,
@@ -13,15 +22,6 @@ import {
   quantityToBigint,
 } from "../eth1/provider/utils";
 import {IJsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
-import {
-  ExecutePayloadStatus,
-  ExecutePayloadResponse,
-  ForkChoiceUpdateStatus,
-  IExecutionEngine,
-  PayloadId,
-  PayloadAttributes,
-  ApiPayloadAttributes,
-} from "./interface";
 
 export type ExecutionEngineHttpOpts = {
   urls: string[];

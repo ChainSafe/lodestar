@@ -2,9 +2,9 @@
 import worker from "worker_threads";
 import {expose} from "threads/worker";
 import {bls, init, CoordType} from "@chainsafe/bls";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch";
 import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types";
 import {chunkifyMaximizeChunkSize} from "./utils";
+import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch";
 
 /**
  * Split batchable sets in chunks of minimum size 16.

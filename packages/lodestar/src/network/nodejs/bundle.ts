@@ -5,11 +5,11 @@
 import LibP2p from "libp2p";
 import TCP from "libp2p-tcp";
 import Mplex from "libp2p-mplex";
-import {NOISE} from "@chainsafe/libp2p-noise";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
 import PeerId from "peer-id";
 import {Datastore} from "interface-datastore";
+import {NOISE} from "@chainsafe/libp2p-noise";
 
 export interface ILibp2pOptions {
   peerId: PeerId;

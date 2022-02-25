@@ -1,22 +1,22 @@
 import * as fs from "node:fs";
-import {add0xPrefix, ICliCommand, initBLS, randomPassword} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
 import inquirer from "inquirer";
 import {validateMnemonic} from "bip39";
-import {ValidatorDirBuilder} from "../../../../validatorDir";
-import {getAccountPaths} from "../../paths";
+import {mapValues, values} from "lodash";
 import {
   deriveEth2ValidatorKeys,
   deriveKeyFromMnemonic,
   eth2ValidatorPaths,
   IEth2ValidatorKeys,
 } from "@chainsafe/bls-keygen";
-import {IValidatorCreateArgs, validatorCreateOptions} from "./create";
-import {mapValues, values} from "lodash";
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {getBeaconConfigFromArgs} from "../../../../config";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {IValidatorCreateArgs, validatorCreateOptions} from "./create";
+import {getBeaconConfigFromArgs} from "../../../../config";
+import {getAccountPaths} from "../../paths";
+import {ValidatorDirBuilder} from "../../../../validatorDir";
+import {IGlobalArgs} from "../../../../options";
+import {add0xPrefix, ICliCommand, initBLS, randomPassword} from "../../../../util";
 
 /* eslint-disable no-console */
 

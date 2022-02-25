@@ -23,6 +23,15 @@ import {
 } from "@chainsafe/lodestar-params";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
+import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
+import {
+  computeSyncCommitteeCache,
+  getSyncCommitteeCache,
+  SyncCommitteeCache,
+  SyncCommitteeCacheEmpty,
+} from "./syncCommitteeCache";
+import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
@@ -34,15 +43,6 @@ import {
   zipIndexesCommitteeBits,
   computeSyncPeriodAtEpoch,
 } from "../util";
-import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
-import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
-import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
-import {
-  computeSyncCommitteeCache,
-  getSyncCommitteeCache,
-  SyncCommitteeCache,
-  SyncCommitteeCacheEmpty,
-} from "./syncCommitteeCache";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */

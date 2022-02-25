@@ -1,6 +1,6 @@
 import fs from "node:fs";
-import {loadYaml} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-call,

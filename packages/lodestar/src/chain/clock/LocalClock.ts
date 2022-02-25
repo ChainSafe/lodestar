@@ -4,9 +4,9 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ErrorAborted} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, computeTimeAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
+import {IBeaconClock} from "./interface";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 
-import {IBeaconClock} from "./interface";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 
 /**

@@ -3,9 +3,9 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodes
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair, Root, Slot, SubcommitteeIndex} from "@chainsafe/lodestar-types";
 import {BitList, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 import {pruneBySlot} from "./utils";
+import {MapDef} from "../../util/map";
 
 /**
  * SyncCommittee signatures are only useful during a single slot according to our peer's clocks

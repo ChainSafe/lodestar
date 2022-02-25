@@ -1,11 +1,11 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ArrayLike, Type} from "@chainsafe/ssz";
-import {BUCKET_LENGTH} from ".";
 import {IFilterOptions, IKeyValue} from "./controller";
 import {Db} from "./controller/interface";
 import {DbMetricCounter, IDbMetrics} from "./metrics";
 import {Bucket, encodeKey as _encodeKey} from "./schema";
 import {getBucketNameByValue} from "./util";
+import {BUCKET_LENGTH} from ".";
 
 export type Id = Uint8Array | string | number | bigint;
 

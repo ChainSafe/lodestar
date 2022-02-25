@@ -1,5 +1,5 @@
-import {ILogger} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {MapDef} from "../../../util/map";
 import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";

@@ -1,5 +1,5 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {JobItemQueue, JobQueueOpts, QueueType} from "../../../util/queue";

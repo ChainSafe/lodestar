@@ -1,9 +1,10 @@
 import PeerId from "peer-id";
 import pipe from "it-pipe";
-import {AbortSignal} from "@chainsafe/abort-controller";
 import {Libp2p} from "libp2p/src/connection-manager";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ResponseError} from "./errors";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
@@ -11,7 +12,6 @@ import {renderRequestBody} from "../utils";
 import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
-import {ResponseError} from "./errors";
 
 export {ResponseError};
 

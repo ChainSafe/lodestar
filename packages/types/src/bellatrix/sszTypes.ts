@@ -7,10 +7,10 @@ import {
   MAX_EXTRA_DATA_BYTES,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
+import * as bellatrix from "./types";
 import {ssz as primitiveSsz, ts as primitive} from "../primitive";
 import {ssz as phase0Ssz, ts as phase0} from "../phase0";
 import {ssz as altairSsz} from "../altair";
-import * as bellatrix from "./types";
 import {LazyVariable} from "../utils/lazyVar";
 import {Uint256} from "../primitive/sszTypes";
 

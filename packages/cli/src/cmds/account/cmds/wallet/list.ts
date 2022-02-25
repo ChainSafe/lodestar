@@ -1,8 +1,8 @@
+import {IAccountWalletArgs} from "./options";
 import {ICliCommand} from "../../../../util";
 import {WalletManager} from "../../../../wallet";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
-import {IAccountWalletArgs} from "./options";
 
 export type ReturnType = string[];
 

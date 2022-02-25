@@ -11,11 +11,11 @@ import {
   EPOCHS_PER_HISTORICAL_VECTOR,
   EPOCHS_PER_SLASHINGS_VECTOR,
 } from "@chainsafe/lodestar-params";
+import * as altair from "./types";
 import {Root} from "../primitive/types";
 import {ssz as phase0Ssz, ts as phase0Types} from "../phase0";
 import {ssz as primitiveSsz} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
-import * as altair from "./types";
 
 const {
   Bytes32,

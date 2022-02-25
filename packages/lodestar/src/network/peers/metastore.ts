@@ -1,8 +1,8 @@
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import PeerId from "peer-id";
 import {altair, ssz} from "@chainsafe/lodestar-types";
-import {ReqRespEncoding} from "../reqresp";
 import {Type} from "@chainsafe/ssz";
+import {ReqRespEncoding} from "../reqresp";
 
 /**
  * Get/set data about peers.

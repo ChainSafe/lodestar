@@ -2,14 +2,14 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
 import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {getValidatorPaths} from "./paths";
+import {IValidatorCliArgs} from "./options";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
 import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
-import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs} from "./options";
-import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
 
 /**

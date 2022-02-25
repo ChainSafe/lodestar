@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
+import {toHexString} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";

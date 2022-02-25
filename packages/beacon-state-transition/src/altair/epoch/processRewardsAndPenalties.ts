@@ -1,5 +1,5 @@
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {processRewardsAndPenaltiesAllForks} from "../../allForks/epoch/processRewardsAndPenalties";
 
 /**

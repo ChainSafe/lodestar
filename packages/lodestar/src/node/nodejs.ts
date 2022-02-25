@@ -2,9 +2,9 @@
  * @module node
  */
 
-import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -12,6 +12,8 @@ import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 
+import {IBeaconNodeOptions} from "./options";
+import {runNodeNotifier} from "./notifier";
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
 import {BeaconSync, IBeaconSync} from "../sync";
@@ -21,8 +23,6 @@ import {createMetrics, IMetrics, HttpMetricsServer} from "../metrics";
 import {getApi, RestApi} from "../api";
 import {initializeExecutionEngine} from "../executionEngine";
 import {initializeEth1ForBlockProduction} from "../eth1";
-import {IBeaconNodeOptions} from "./options";
-import {runNodeNotifier} from "./notifier";
 
 export * from "./options";
 

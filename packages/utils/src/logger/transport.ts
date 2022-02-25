@@ -1,7 +1,7 @@
 import {transports} from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
-import {LogLevel} from "./interface";
 import TransportStream from "winston-transport";
+import {LogLevel} from "./interface";
 
 export enum TransportType {
   console = "console",

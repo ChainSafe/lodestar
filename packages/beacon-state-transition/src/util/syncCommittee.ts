@@ -9,8 +9,8 @@ import {
 } from "@chainsafe/lodestar-params";
 import {allForks, altair, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
-import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 import {getNextSyncCommitteeIndices} from "./seed";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 
 /**
  * Return the sync committee for a given state and epoch.

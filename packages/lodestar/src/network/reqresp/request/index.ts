@@ -1,17 +1,9 @@
-import {AbortSignal} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {Libp2p} from "libp2p/src/connection-manager";
+import {AbortSignal} from "@chainsafe/abort-controller";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
-import {timeoutOptions} from "../../../constants";
-import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
-import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
-import {formatProtocolId, renderRequestBody} from "../utils";
-import {ResponseError} from "../response";
-import {requestEncode} from "../encoders/requestEncode";
-import {responseDecode} from "../encoders/responseDecode";
-import {Libp2pConnection} from "../interface";
 import {collectResponses} from "./collectResponses";
 import {maxTotalResponseTimeout, responseTimeoutsHandler} from "./responseTimeoutsHandler";
 import {
@@ -21,6 +13,14 @@ import {
   IRequestErrorMetadata,
   responseStatusErrorToRequestError,
 } from "./errors";
+import {timeoutOptions} from "../../../constants";
+import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
+import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
+import {formatProtocolId, renderRequestBody} from "../utils";
+import {ResponseError} from "../response";
+import {requestEncode} from "../encoders/requestEncode";
+import {responseDecode} from "../encoders/responseDecode";
+import {Libp2pConnection} from "../interface";
 
 export {RequestError, RequestErrorCode};
 

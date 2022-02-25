@@ -1,7 +1,5 @@
 import {CachedBeaconStateAltair, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
 import {altair} from "@chainsafe/lodestar-types";
-import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
-import {IBeaconChain} from "../interface";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee";
 import {
   getSyncCommitteeSelectionProofSignatureSet,
@@ -9,6 +7,8 @@ import {
   getSyncCommitteeContributionSignatureSet,
   getContributionPubkeys,
 } from "./signatureSets";
+import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
+import {IBeaconChain} from "../interface";
 
 /**
  * Spec v1.1.0-beta.2

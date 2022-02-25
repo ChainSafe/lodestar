@@ -3,6 +3,11 @@ import Gossipsub from "libp2p-gossipsub";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
+import pipe from "it-pipe";
+import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
+import BufferList from "bl";
+import {RPC} from "libp2p-gossipsub/src/message/rpc";
+import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -10,7 +15,6 @@ import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IMetrics} from "../../metrics";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -24,16 +28,7 @@ import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic"
 import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
-import {GOSSIP_MAX_SIZE} from "../../constants";
 import {createValidatorFnsByType} from "./validation";
-import {Map2d, Map2dArr} from "../../util/map";
-import pipe from "it-pipe";
-import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
-import BufferList from "bl";
-// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
-
 import {
   computeGossipPeerScoreParams,
   gossipScoreThresholds,
@@ -41,6 +36,11 @@ import {
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
 } from "./scoringParameters";
+import {GOSSIP_MAX_SIZE} from "../../constants";
+import {Map2d, Map2dArr} from "../../util/map";
+// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
+
+import {IMetrics} from "../../metrics";
 import {Eth2Context} from "../../chain";
 
 export interface IGossipsubModules {

@@ -5,13 +5,13 @@ import {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
+import {fromHexString} from "@chainsafe/ssz";
+import {IValidatorCliArgs} from "./options";
 import {defaultNetwork, IGlobalArgs} from "../../options";
 import {parseRange, stripOffNewlines, YargsError} from "../../util";
 import {getLockFile} from "../../util/lockfile";
 import {ValidatorDirManager} from "../../validatorDir";
 import {getAccountPaths} from "../account/paths";
-import {IValidatorCliArgs} from "./options";
-import {fromHexString} from "@chainsafe/ssz";
 
 const LOCK_FILE_EXT = ".lock";
 const depositDataPattern = new RegExp(/^deposit_data-\d+\.json$/gi);

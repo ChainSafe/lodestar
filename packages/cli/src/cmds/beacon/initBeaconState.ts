@@ -14,8 +14,8 @@ import {IBeaconDb, IBeaconNodeOptions, initStateFromAnchorState, initStateFromEt
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 
-import {downloadOrLoadFile} from "../../util";
 import {IBeaconArgs} from "./options";
+import {downloadOrLoadFile} from "../../util";
 import {defaultNetwork, IGlobalArgs} from "../../options/globalOptions";
 import {parseWSSArgs, WSSOptions} from "../../options/wssOptions";
 import {fetchWeakSubjectivityState, getGenesisFileUrl, getCheckpointFromArg} from "../../networks";

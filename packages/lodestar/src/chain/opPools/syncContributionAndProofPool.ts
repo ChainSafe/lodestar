@@ -3,9 +3,9 @@ import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodes
 import {altair, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import {newFilledArray, G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
 import {readonlyValues, toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 import {pruneBySlot} from "./utils";
+import {MapDef} from "../../util/map";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.

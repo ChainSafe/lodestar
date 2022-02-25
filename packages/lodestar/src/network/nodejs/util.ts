@@ -4,11 +4,11 @@
 
 import PeerId from "peer-id";
 import LibP2p from "libp2p";
+import LevelDatastore from "datastore-level";
+import {ENR} from "@chainsafe/discv5";
 import {NodejsNode} from "./bundle";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
-import {ENR} from "@chainsafe/discv5";
-import LevelDatastore from "datastore-level";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;

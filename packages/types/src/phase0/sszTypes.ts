@@ -28,9 +28,9 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
+import * as phase0 from "./types";
 import {ssz as primitiveSsz, ts as primitiveTs} from "../primitive";
 import {LazyVariable} from "../utils/lazyVar";
-import * as phase0 from "./types";
 
 const {
   Boolean,

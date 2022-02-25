@@ -1,11 +1,11 @@
-import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {interopDeposits} from "./interop/deposits";
-import {getInteropState, InteropStateOpts} from "./interop/state";
 import {mkdirSync, writeFileSync} from "node:fs";
 import {dirname} from "node:path";
-import {IBeaconDb} from "../../db";
+import {IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
+import {interopDeposits} from "./interop/deposits";
+import {getInteropState, InteropStateOpts} from "./interop/state";
+import {IBeaconDb} from "../../db";
 import {GENESIS_SLOT} from "../../constants";
 
 export async function initDevState(

@@ -1,5 +1,5 @@
-import {IGlobalArgs} from "../options";
 import {getDefaultRootDir} from "./rootDir";
+import {IGlobalArgs} from "../options";
 
 export interface IGlobalPaths {
   rootDir: string;

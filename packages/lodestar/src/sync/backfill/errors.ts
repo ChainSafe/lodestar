@@ -1,5 +1,5 @@
-import {LodestarError} from "@chainsafe/lodestar-utils";
 import PeerId from "peer-id";
+import {LodestarError} from "@chainsafe/lodestar-utils";
 import {Root} from "@chainsafe/lodestar-types";
 
 export enum BackfillSyncErrorCode {

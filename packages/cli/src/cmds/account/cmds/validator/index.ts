@@ -1,5 +1,3 @@
-import {ICliCommand} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
 import {accountValidatorOptions, IAccountValidatorArgs} from "./options";
 import {create} from "./create";
 import {deposit} from "./deposit";
@@ -8,6 +6,8 @@ import {list} from "./list";
 import {slashingProtection} from "./slashingProtection";
 import {voluntaryExit} from "./voluntaryExit";
 import {recover} from "./recover";
+import {IGlobalArgs} from "../../../../options";
+import {ICliCommand} from "../../../../util";
 
 export const validator: ICliCommand<IAccountValidatorArgs, IGlobalArgs> = {
   command: "validator <command>",

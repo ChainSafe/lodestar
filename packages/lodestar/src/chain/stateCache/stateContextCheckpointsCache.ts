@@ -2,8 +2,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {phase0, Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
-import {IMetrics} from "../../metrics";
 import {MapTracker} from "./mapMetrics";
+import {IMetrics} from "../../metrics";
 import {MapDef} from "../../util/map";
 
 type CheckpointHex = {epoch: Epoch; rootHex: RootHex};

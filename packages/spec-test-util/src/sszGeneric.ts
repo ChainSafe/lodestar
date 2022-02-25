@@ -1,8 +1,8 @@
 import path, {join} from "node:path";
 import fs, {readFileSync, readdirSync} from "node:fs";
+import {uncompress} from "snappyjs";
 import {Json, Type} from "@chainsafe/ssz";
 import {loadYaml, objectToExpectedCase} from "@chainsafe/lodestar-utils";
-import {uncompress} from "snappyjs";
 
 export interface IValidTestcase<T> {
   root: string;

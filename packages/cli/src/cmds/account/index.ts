@@ -1,7 +1,7 @@
-import {ICliCommand} from "../../util";
-import {IGlobalArgs} from "../../options";
 import {validator} from "./cmds/validator";
 import {wallet} from "./cmds/wallet";
+import {ICliCommand} from "../../util";
+import {IGlobalArgs} from "../../options";
 
 export const account: ICliCommand<Record<never, never>, IGlobalArgs> = {
   command: "account <command>",

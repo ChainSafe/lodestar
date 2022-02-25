@@ -1,5 +1,5 @@
-import {ICliCommandOptions, ILogArgs} from "../../util";
 import {defaultValidatorPaths} from "./paths";
+import {ICliCommandOptions, ILogArgs} from "../../util";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";

@@ -1,6 +1,7 @@
 import {compress, uncompress} from "snappyjs";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/ssz";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {
   DEFAULT_ENCODING,
   GOSSIP_MSGID_LENGTH,
@@ -8,7 +9,6 @@ import {
   MESSAGE_DOMAIN_VALID_SNAPPY,
 } from "./constants";
 import {GossipEncoding, GossipTopic} from "./interface";
-import {ForkName} from "@chainsafe/lodestar-params";
 
 export interface IUncompressCache {
   uncompress(input: Uint8Array): Uint8Array;

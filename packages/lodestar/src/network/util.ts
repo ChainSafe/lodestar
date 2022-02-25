@@ -3,11 +3,11 @@
  * @module network
  */
 
+import {networkInterfaces} from "node:os";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import {networkInterfaces} from "node:os";
-import {ENR} from "@chainsafe/discv5";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
+import {ENR} from "@chainsafe/discv5";
 import {clientFromAgentVersion, ClientKind} from "./peers/client";
 
 // peers

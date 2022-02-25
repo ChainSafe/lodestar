@@ -5,6 +5,8 @@ import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {getClient, Api} from "@chainsafe/lodestar-api";
+import {toHexString} from "@chainsafe/ssz";
+import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Clock, IClock} from "./util/clock";
 import {waitForGenesis} from "./genesis";
 import {BlockProposingService} from "./services/block";
@@ -14,11 +16,9 @@ import {SyncCommitteeService} from "./services/syncCommittee";
 import {ISlashingProtection} from "./slashingProtection";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker";
-import {MetaDataRepository} from ".";
-import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
-import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {MetaDataRepository} from ".";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;

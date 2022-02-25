@@ -3,7 +3,6 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {IBeaconDb} from "../db";
 import {Eth1DepositsCache} from "./eth1DepositsCache";
 import {Eth1DataCache} from "./eth1DataCache";
 import {getEth1VotesToConsider, pickEth1Vote} from "./utils/eth1Vote";
@@ -12,6 +11,7 @@ import {Eth1DataAndDeposits, IEth1Provider} from "./interface";
 import {Eth1Options} from "./options";
 import {HttpRpcError} from "./provider/jsonRpcHttpClient";
 import {parseEth1Block} from "./provider/eth1Provider";
+import {IBeaconDb} from "../db";
 
 const MAX_BLOCKS_PER_BLOCK_QUERY = 1000;
 const MAX_BLOCKS_PER_LOG_QUERY = 1000;

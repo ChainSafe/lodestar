@@ -7,10 +7,10 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Bytes96, ExecutionAddress, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 
+import {assembleBody} from "./body";
 import {ZERO_HASH} from "../../../constants";
 import {IMetrics} from "../../../metrics";
 import {IBeaconChain} from "../../interface";
-import {assembleBody} from "./body";
 import {RegenCaller} from "../../regen";
 
 type AssembleBlockModules = {

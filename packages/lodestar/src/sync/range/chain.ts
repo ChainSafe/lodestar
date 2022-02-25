@@ -4,14 +4,6 @@ import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transiti
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {toHexString} from "@chainsafe/ssz";
-import {PeerAction} from "../../network";
-import {ChainSegmentError} from "../../chain/errors";
-import {ItTrigger} from "../../util/itTrigger";
-import {byteArrayEquals} from "../../util/bytes";
-import {PeerMap} from "../../util/peerMap";
-import {wrapError} from "../../util/wrapError";
-import {RangeSyncType} from "../utils/remoteSyncType";
-import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants";
 import {Batch, BatchError, BatchErrorCode, BatchMetadata, BatchOpts, BatchStatus} from "./batch";
 import {
   validateBatchesStatus,
@@ -22,6 +14,14 @@ import {
   ChainPeersBalancer,
   computeMostCommonTarget,
 } from "./utils";
+import {PeerAction} from "../../network";
+import {ChainSegmentError} from "../../chain/errors";
+import {ItTrigger} from "../../util/itTrigger";
+import {byteArrayEquals} from "../../util/bytes";
+import {PeerMap} from "../../util/peerMap";
+import {wrapError} from "../../util/wrapError";
+import {RangeSyncType} from "../utils/remoteSyncType";
+import {BATCH_BUFFER_SIZE, EPOCHS_PER_BATCH, BATCH_SLOT_OFFSET} from "../constants";
 
 export type SyncChainOpts = Partial<BatchOpts>;
 

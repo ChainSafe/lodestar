@@ -1,7 +1,7 @@
 import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
-import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
+import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 
 export type CheckpointHex = {
   epoch: Epoch;

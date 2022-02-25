@@ -9,8 +9,8 @@ import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chai
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
-import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {IClock, extendError, ILoggerVc} from "../util";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;

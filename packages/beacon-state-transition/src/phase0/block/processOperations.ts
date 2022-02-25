@@ -2,12 +2,12 @@ import {List, readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {CachedBeaconStatePhase0} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
+import {CachedBeaconStatePhase0} from "../../types";
 
 type Operation =
   | phase0.ProposerSlashing

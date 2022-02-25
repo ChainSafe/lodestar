@@ -1,8 +1,8 @@
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {createCachedBeaconState} from "../cache/cachedBeaconState";
-import {CachedBeaconStateAltair, CachedBeaconStateBellatrix} from "../types";
 import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {createCachedBeaconState} from "../cache/cachedBeaconState";
+import {CachedBeaconStateAltair, CachedBeaconStateBellatrix} from "../types";
 
 /**
  * Upgrade a state from altair to bellatrix.
