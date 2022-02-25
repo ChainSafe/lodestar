@@ -3,7 +3,7 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: a9a6c7727b0e3ce0a764a0d2dca54c284d0d1324
+  GETH_COMMIT: 6f4b155c41a81ed9f76dac529d8a2c0d468a12fc
   NETHERMIND_COMMIT: 95e347491f35da307554d0c2306b03c09d4011f3
 
 jobs:
