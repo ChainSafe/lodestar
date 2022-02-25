@@ -52,7 +52,7 @@ export async function verifyBlockProposerSignature(
     return sigs;
   }, []);
 
-  if (!(await bls.verifySignatureSets(signatures))) {
+  if (!(await bls.verifySignatureSets(signatures, {batchable: true}))) {
     throw new BackfillSyncError({code: BackfillSyncErrorCode.INVALID_SIGNATURE});
   }
 }
