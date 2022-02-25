@@ -7,10 +7,8 @@ import {
   getBlockRootAtSlot,
   computeEpochAtSlot,
   computeProposers,
-  getEffectiveBalanceIncrementsWithLen,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
-  EFFECTIVE_BALANCE_INCREMENT,
   GENESIS_SLOT,
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
@@ -33,7 +31,6 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition/src";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
