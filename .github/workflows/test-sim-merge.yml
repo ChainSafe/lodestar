@@ -3,7 +3,7 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: 0569213dc4032da83abed44fab7f65794a526f21
+  GETH_COMMIT: a9a6c7727b0e3ce0a764a0d2dca54c284d0d1324
   NETHERMIND_COMMIT: 95e347491f35da307554d0c2306b03c09d4011f3
 
 jobs:
@@ -36,20 +36,20 @@ jobs:
       # </common-build>
 
       # Install Geth merge interop
-      # - uses: actions/setup-go@v2
-      # - name: Clone Geth merge interop branch
-      #   run: git clone -b merge-kiln https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
-      # - name: Build Geth
-      #   run: cd go-ethereum && make
+      - uses: actions/setup-go@v2
+      - name: Clone Geth merge interop branch
+        run: git clone -b merge-kiln-v2 https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+      - name: Build Geth
+        run: cd go-ethereum && make
 
-      # - name: Test Lodestar <> Geth interop
-      #   run: yarn test:sim:merge-interop
-      #   working-directory: packages/lodestar
-      #   env:
-      #     EL_BINARY_DIR: ../../go-ethereum/build/bin
-      #     EL_SCRIPT_DIR: kiln/geth
-      #     EL_PORT: 8545
-      #     TX_SCENARIOS: simple
+      - name: Test Lodestar <> Geth interop
+        run: yarn test:sim:merge-interop
+        working-directory: packages/lodestar
+        env:
+          EL_BINARY_DIR: ../../go-ethereum/build/bin
+          EL_SCRIPT_DIR: kiln/geth
+          EL_PORT: 8545
+          TX_SCENARIOS: simple
 
       # Install Nethermind merge interop
       - uses: actions/setup-dotnet@v1
