@@ -469,8 +469,7 @@ export class EpochContext {
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
-    // disallow retrieving proposer for past epochs and epochs more than 1 epoch in the future
-    if (epoch < this.currentShuffling.epoch || epoch > this.currentShuffling.epoch + 1) {
+    if (epoch !== this.currentShuffling.epoch) {
       throw new Error(
         `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
