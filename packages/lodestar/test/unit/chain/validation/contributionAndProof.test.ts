@@ -2,6 +2,7 @@ import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {defaultChainConfig} from "@chainsafe/lodestar-config";
+// eslint-disable-next-line no-restricted-imports
 import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
@@ -11,7 +12,6 @@ import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommittee
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateSignedContributionAndProof} from "../../../utils/contributionAndProof";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
-// eslint-disable-next-line no-restricted-imports
 import {SinonStubFn} from "../../../utils/types";
 import {generateCachedStateWithPubkeys} from "../../../utils/state";
 import {SeenContributionAndProof} from "../../../../src/chain/seenCache";

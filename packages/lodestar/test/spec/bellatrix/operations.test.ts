@@ -8,10 +8,10 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
+// eslint-disable-next-line no-restricted-imports
 import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/bellatrix/block/processExecutionPayload";
 import {IBaseSpecTest, shouldVerify} from "../type";
 import {operations, BlockProcessFn} from "../allForks/operations";
-// eslint-disable-next-line no-restricted-imports
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
