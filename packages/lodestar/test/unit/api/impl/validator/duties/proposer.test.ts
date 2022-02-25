@@ -75,8 +75,8 @@ describe("get proposers api impl", function () {
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetBeaconProposer.returns(1);
     const {data: result} = await api.getProposerDuties(0);
-    expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
-    expect(stubGetBeaconProposer.called).to.be.true;
+    expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.true;
   });
 
   it("should get proposers for next epoch", async function () {
@@ -101,8 +101,8 @@ describe("get proposers api impl", function () {
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetBeaconProposer.returns(1);
     const {data: result} = await api.getProposerDuties(1);
-    expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
-    expect(stubGetBeaconProposer.called).to.be.false;
+    expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.false;
   });
 
   it("should not get proposers for more than one epoch in the future", async function () {
@@ -125,8 +125,7 @@ describe("get proposers api impl", function () {
     const cachedState = createCachedBeaconState(config, state);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
-    stubGetBeaconProposer.returns(1);
-    expect(await api.getProposerDuties(2)).to.throw;
-    expect(stubGetBeaconProposer.called).to.be.true;
+    stubGetBeaconProposer.throws();
+    expect(api.getProposerDuties(2), "calling getProposerDuties should throw").to.eventually.throws;
   });
 });
