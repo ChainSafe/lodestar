@@ -39,7 +39,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
   if (chain.seenContributionAndProof.isKnown(slot, subcommitteeIndex, aggregatorIndex)) {
-    throw new SyncCommitteeError(GossipAction.IGNORE, {
+    throw new SyncCommitteeError(GossipAction.IGNORE, null, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
     });
   }
@@ -47,26 +47,18 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits)
   const pubkeys = getContributionPubkeys(headState as CachedBeaconStateAltair, contribution);
   if (!pubkeys.length) {
-    throw new SyncCommitteeError(
-      GossipAction.REJECT,
-      {
-        code: SyncCommitteeErrorCode.NO_PARTICIPANT,
-      },
-      PeerAction.LowToleranceError
-    );
+    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+      code: SyncCommitteeErrorCode.NO_PARTICIPANT,
+    });
   }
 
   // [REJECT] contribution_and_proof.selection_proof selects the validator as an aggregator for the slot --
   // i.e. is_sync_committee_aggregator(contribution_and_proof.selection_proof) returns True.
   if (!isSyncCommitteeAggregator(contributionAndProof.selectionProof)) {
-    throw new SyncCommitteeError(
-      GossipAction.REJECT,
-      {
-        code: SyncCommitteeErrorCode.INVALID_AGGREGATOR,
-        aggregatorIndex: contributionAndProof.aggregatorIndex,
-      },
-      PeerAction.LowToleranceError
-    );
+    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+      code: SyncCommitteeErrorCode.INVALID_AGGREGATOR,
+      aggregatorIndex: contributionAndProof.aggregatorIndex,
+    });
   }
 
   // [REJECT] The aggregator's validator index is in the declared subcommittee of the current sync committee --
@@ -87,13 +79,9 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new SyncCommitteeError(
-      GossipAction.REJECT,
-      {
-        code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
-      },
-      PeerAction.LowToleranceError
-    );
+    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+      code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
+    });
   }
 
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that

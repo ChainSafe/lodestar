@@ -18,7 +18,7 @@ import {decodeMessageData, UncompressCache} from "../encoding";
 import {createValidationQueues} from "./queue";
 import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
-import {IPeerRpcScoreStore} from "../../peers/score";
+import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";
 import PeerId from "peer-id";
 
 type ValidatorFnModules = {
@@ -96,7 +96,7 @@ function getGossipValidatorFn<K extends GossipType>(
             : sszType.deserialize(messageData);
       } catch (e) {
         // TODO: Log the error or do something better with it
-        throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
+        throw new GossipActionError(GossipAction.REJECT, PeerAction.LowToleranceError, {code: (e as Error).message});
       }
 
       await (gossipHandler as GossipHandlerFn)(gossipObject, topic, receivedFrom, seenTimestampSec);

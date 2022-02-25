@@ -10,7 +10,7 @@ export async function validateGossipProposerSlashing(
   // [IGNORE] The proposer slashing is the first valid proposer slashing received for the proposer with index
   // proposer_slashing.signed_header_1.message.proposer_index.
   if (chain.opPool.hasSeenProposerSlashing(proposerSlashing.signedHeader1.message.proposerIndex)) {
-    throw new ProposerSlashingError(GossipAction.IGNORE, {
+    throw new ProposerSlashingError(GossipAction.IGNORE, null, {
       code: ProposerSlashingErrorCode.ALREADY_EXISTS,
     });
   }
@@ -22,25 +22,17 @@ export async function validateGossipProposerSlashing(
     // verifySignature = false, verified in batch below
     allForks.assertValidProposerSlashing(state, proposerSlashing, false);
   } catch (e) {
-    throw new ProposerSlashingError(
-      GossipAction.REJECT,
-      {
-        code: ProposerSlashingErrorCode.INVALID,
-        error: e as Error,
-      },
-      PeerAction.HighToleranceError
-    );
+    throw new ProposerSlashingError(GossipAction.REJECT, PeerAction.HighToleranceError, {
+      code: ProposerSlashingErrorCode.INVALID,
+      error: e as Error,
+    });
   }
 
   const signatureSets = allForks.getProposerSlashingSignatureSets(state, proposerSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new ProposerSlashingError(
-      GossipAction.REJECT,
-      {
-        code: ProposerSlashingErrorCode.INVALID,
-        error: Error("Invalid signature"),
-      },
-      PeerAction.HighToleranceError
-    );
+    throw new ProposerSlashingError(GossipAction.REJECT, PeerAction.HighToleranceError, {
+      code: ProposerSlashingErrorCode.INVALID,
+      error: Error("Invalid signature"),
+    });
   }
 }

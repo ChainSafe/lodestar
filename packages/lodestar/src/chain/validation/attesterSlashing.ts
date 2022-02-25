@@ -13,7 +13,7 @@ export async function validateGossipAttesterSlashing(
   // ), verify if any(attester_slashed_indices.difference(prior_seen_attester_slashed_indices))).
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
   if (chain.opPool.hasSeenAttesterSlashing(intersectingIndices)) {
-    throw new AttesterSlashingError(GossipAction.IGNORE, {
+    throw new AttesterSlashingError(GossipAction.IGNORE, null, {
       code: AttesterSlashingErrorCode.ALREADY_EXISTS,
     });
   }
@@ -25,25 +25,17 @@ export async function validateGossipAttesterSlashing(
     // verifySignature = false, verified in batch below
     allForks.assertValidAttesterSlashing(state, attesterSlashing, false);
   } catch (e) {
-    throw new AttesterSlashingError(
-      GossipAction.REJECT,
-      {
-        code: AttesterSlashingErrorCode.INVALID,
-        error: e as Error,
-      },
-      PeerAction.HighToleranceError
-    );
+    throw new AttesterSlashingError(GossipAction.REJECT, PeerAction.HighToleranceError, {
+      code: AttesterSlashingErrorCode.INVALID,
+      error: e as Error,
+    });
   }
 
   const signatureSets = allForks.getAttesterSlashingSignatureSets(state, attesterSlashing);
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new AttesterSlashingError(
-      GossipAction.REJECT,
-      {
-        code: AttesterSlashingErrorCode.INVALID,
-        error: Error("Invalid signature"),
-      },
-      PeerAction.HighToleranceError
-    );
+    throw new AttesterSlashingError(GossipAction.REJECT, PeerAction.HighToleranceError, {
+      code: AttesterSlashingErrorCode.INVALID,
+      error: Error("Invalid signature"),
+    });
   }
 }
