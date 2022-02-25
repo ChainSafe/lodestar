@@ -65,7 +65,7 @@ describe("network / gossip / validation", function () {
   it("should throw on failed validation", async () => {
     const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
-        throw new GossipActionError(GossipAction.REJECT, {code: "TEST_ERROR"});
+        throw new GossipActionError(GossipAction.REJECT, null, {code: "TEST_ERROR"});
       },
     };
 
