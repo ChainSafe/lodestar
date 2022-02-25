@@ -1,14 +1,14 @@
+import assert from "assert";
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {fromHexString} from "@chainsafe/ssz";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
-import assert from "assert";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
 import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {fromHexString} from "@chainsafe/ssz";
 
 describe("sync / finalized sync", function () {
   const validatorCount = 8;

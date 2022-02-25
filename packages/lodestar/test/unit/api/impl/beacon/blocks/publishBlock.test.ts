@@ -1,11 +1,11 @@
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {allForks} from "@chainsafe/lodestar-types";
 import {getBeaconBlockApi} from "../../../../../../src/api/impl/beacon/blocks";
 import {BeaconChain} from "../../../../../../src/chain";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
-import {allForks} from "@chainsafe/lodestar-types";
 import {BeaconSync} from "../../../../../../src/sync";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 

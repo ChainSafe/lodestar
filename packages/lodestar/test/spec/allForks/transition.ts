@@ -5,10 +5,10 @@ import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
 import {TreeBacked} from "@chainsafe/ssz";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
-import {bnToNum} from "@chainsafe/lodestar-utils";
 
 type CreateTreeBackedSignedBlock = (block: allForks.SignedBeaconBlock) => TreeBacked<allForks.SignedBeaconBlock>;
 const createTreeBackedSignedBlockByFork: Record<ForkName, CreateTreeBackedSignedBlock> = {

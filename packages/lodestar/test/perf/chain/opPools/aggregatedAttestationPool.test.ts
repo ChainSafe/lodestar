@@ -6,11 +6,11 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {AggregatedAttestationPool, flagIsTimelySource} from "../../../../src/chain/opPools/aggregatedAttestationPool";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {ssz} from "@chainsafe/lodestar-types";
+import {AggregatedAttestationPool, flagIsTimelySource} from "../../../../src/chain/opPools/aggregatedAttestationPool";
 
 // Aug 11 2021
 // getAttestationsForBlock

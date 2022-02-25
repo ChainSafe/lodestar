@@ -1,6 +1,6 @@
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {LeafNode, toGindex, Tree, zeroNode} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
-import {itBench, setBenchOpts} from "@dapplion/benchmark";
 
 // Understand the cost of each array-ish data structure to:
 // - Get one element

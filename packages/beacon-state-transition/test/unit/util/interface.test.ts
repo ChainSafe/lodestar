@@ -1,7 +1,7 @@
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ssz} from "@chainsafe/lodestar-types";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {phase0, CachedBeaconStatePhase0, createCachedBeaconState} from "../../../src";
 import {generateState} from "../../utils/state";
 

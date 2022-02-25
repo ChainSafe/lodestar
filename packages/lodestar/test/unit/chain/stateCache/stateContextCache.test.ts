@@ -1,10 +1,10 @@
 import {expect} from "chai";
 import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition";
+import {ByteVector, toHexString} from "@chainsafe/ssz";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {StateContextCache} from "../../../../src/chain/stateCache";
 import {generateCachedState} from "../../../utils/state";
 import {ZERO_HASH} from "../../../../src/constants";
-import {ByteVector, toHexString} from "@chainsafe/ssz";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 describe("StateContextCache", function () {
   let cache: StateContextCache;

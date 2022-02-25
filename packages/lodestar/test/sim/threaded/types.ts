@@ -1,8 +1,8 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {Json} from "@chainsafe/ssz";
 import {ChainEvent} from "../../../src/chain";
 import {IBeaconNodeOptions} from "../../../src/node/options";
-import {Json} from "@chainsafe/ssz";
 
 export type NodeWorkerOptions = {
   params: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH">;

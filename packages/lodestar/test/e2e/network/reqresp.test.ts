@@ -1,7 +1,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {AbortController} from "@chainsafe/abort-controller";
 import PeerId from "peer-id";
+import {AbortController} from "@chainsafe/abort-controller";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";

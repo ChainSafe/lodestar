@@ -1,9 +1,9 @@
+import {expect} from "chai";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {hash} from "@chainsafe/persistent-merkle-tree";
 import {TreeBacked} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs";
 
 const currentSyncCommitteeGindex = 54;

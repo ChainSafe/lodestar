@@ -4,6 +4,7 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
+import {List} from "@chainsafe/ssz";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedChain} from "../../../utils/stub";
 import {generateCachedState} from "../../../utils/state";
@@ -11,7 +12,6 @@ import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/a
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {List} from "@chainsafe/ssz";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();

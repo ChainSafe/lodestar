@@ -1,10 +1,11 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import {expect} from "chai";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {config as mainnetConfig} from "@chainsafe/lodestar-config/default";
+import {ssz} from "@chainsafe/lodestar-types";
 import {SyncCommitteeService} from "../../../src/services/syncCommittee";
 import {SyncDutyAndProofs} from "../../../src/services/syncCommitteeDuties";
 import {ValidatorStore} from "../../../src/services/validatorStore";
@@ -12,7 +13,6 @@ import {getApiClientStub} from "../../utils/apiStub";
 import {loggerVc, testLogger} from "../../utils/logger";
 import {ClockMock} from "../../utils/clock";
 import {IndicesService} from "../../../src/services/indices";
-import {ssz} from "@chainsafe/lodestar-types";
 import {ChainHeaderTracker} from "../../../src/services/chainHeaderTracker";
 
 /* eslint-disable @typescript-eslint/naming-convention */

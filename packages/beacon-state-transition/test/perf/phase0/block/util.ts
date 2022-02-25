@@ -3,6 +3,7 @@ import {SecretKey} from "@chainsafe/blst";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {List} from "@chainsafe/ssz";
+import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 import {
   computeDomain,
   computeEpochAtSlot,
@@ -10,7 +11,6 @@ import {
   ZERO_HASH,
   CachedBeaconStateAllForks,
 } from "../../../../src";
-import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 import {getBlockRoot, getBlockRootAtSlot} from "../../../../src";
 
 export type BlockOpts = {

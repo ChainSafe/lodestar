@@ -11,11 +11,11 @@ import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-pa
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {toHexString} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src";
 import {ChainEvent} from "../../../src/chain";
 import {linspace} from "../../../src/util/numpy";
 import {RegenCaller} from "../../../src/chain/regen";
-import {toHexString} from "@chainsafe/ssz";
 
 /* eslint-disable no-console */
 

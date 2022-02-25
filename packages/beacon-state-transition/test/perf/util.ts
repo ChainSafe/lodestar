@@ -4,20 +4,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair, ParticipationFlags} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {fromHexString, List, TreeBacked} from "@chainsafe/ssz";
-import {
-  allForks,
-  interopSecretKey,
-  computeEpochAtSlot,
-  getActiveValidatorIndices,
-  PubkeyIndexMap,
-  createCachedBeaconState,
-  getNextSyncCommittee,
-  computeCommitteeCount,
-} from "../../src";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/types";
-import {profilerLogger} from "../utils/logger";
-import {interopPubkeysCached} from "../utils/interop";
 import {PendingAttestation} from "@chainsafe/lodestar-types/phase0";
 import {intDiv} from "@chainsafe/lodestar-utils";
 import {
@@ -35,6 +22,19 @@ import {
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {getClient} from "@chainsafe/lodestar-api";
 import {getInfuraBeaconUrl} from "./infura";
+import {interopPubkeysCached} from "../utils/interop";
+import {profilerLogger} from "../utils/logger";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src/types";
+import {
+  allForks,
+  interopSecretKey,
+  computeEpochAtSlot,
+  getActiveValidatorIndices,
+  PubkeyIndexMap,
+  createCachedBeaconState,
+  getNextSyncCommittee,
+  computeCommitteeCount,
+} from "../../src";
 import {testCachePath} from "../cache";
 
 let phase0State: TreeBacked<phase0.BeaconState> | null = null;

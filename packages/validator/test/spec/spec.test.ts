@@ -8,6 +8,7 @@ import {LevelDbController} from "@chainsafe/lodestar-db";
 import {LogLevel, WinstonLogger} from "@chainsafe/lodestar-utils";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
+import {SPEC_TEST_LOCATION} from "./params";
 import {
   SlashingProtection,
   InterchangeError,
@@ -16,7 +17,6 @@ import {
   SlashingProtectionBlock,
   SlashingProtectionAttestation,
 } from "../../src/slashingProtection";
-import {SPEC_TEST_LOCATION} from "./params";
 
 chai.use(chaiAsPromised);
 

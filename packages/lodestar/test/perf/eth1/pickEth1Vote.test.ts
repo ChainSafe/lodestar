@@ -1,7 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote";
 import {ContainerType, ListType} from "@chainsafe/ssz";
+import {fastSerializeEth1Data, pickEth1Vote} from "../../../src/eth1/utils/eth1Vote";
 
 describe("eth1 / pickEth1Vote", () => {
   const ETH1_FOLLOW_DISTANCE_MAINNET = 2048;

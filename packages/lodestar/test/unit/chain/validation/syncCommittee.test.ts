@@ -1,6 +1,9 @@
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {Epoch} from "@chainsafe/lodestar-types";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError";
@@ -8,9 +11,6 @@ import {validateGossipSyncCommittee} from "../../../../src/chain/validation/sync
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateCachedState} from "../../../utils/state";
 import {generateSyncCommitteeSignature} from "../../../utils/syncCommittee";
-import {Epoch} from "@chainsafe/lodestar-types";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {SeenSyncCommitteeMessages} from "../../../../src/chain/seenCache";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md

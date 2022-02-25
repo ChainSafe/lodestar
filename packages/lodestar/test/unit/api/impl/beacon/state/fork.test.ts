@@ -1,9 +1,9 @@
-import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
-import {config} from "@chainsafe/lodestar-config/default";
 import sinon, {SinonStubbedMember} from "sinon";
+import {expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/default";
+import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateCachedState} from "../../../../../utils/state";
-import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 
 describe("beacon api impl - state - get fork", function () {

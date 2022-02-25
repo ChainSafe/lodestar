@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
-import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {getAttestationValidData} from "../../../utils/validationData/attestation";
 
 describe("validate gossip attestation", () => {

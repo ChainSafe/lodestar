@@ -1,6 +1,6 @@
+import {expect} from "chai";
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {List, toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {Libp2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
 

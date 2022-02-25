@@ -1,8 +1,8 @@
 import sinon from "sinon";
-import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
-import {ssz} from "@chainsafe/lodestar-types";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
+import {ssz} from "@chainsafe/lodestar-types";
+import * as blockUtils from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {SinonStubFn} from "../../../../../utils/types";

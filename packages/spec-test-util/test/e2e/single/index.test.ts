@@ -4,8 +4,8 @@ import {join} from "node:path";
 
 import {ContainerType, Type, Json} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "../../../src/single";
 import {loadYaml} from "@chainsafe/lodestar-utils";
+import {describeDirectorySpecTest, InputType} from "../../../src/single";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

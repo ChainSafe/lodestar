@@ -1,7 +1,7 @@
+import {expect} from "chai";
 import {MAX_VALIDATORS_PER_COMMITTEE, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {
   getUint8ByteToBitBooleanArray,
   bitsToUint8Array,

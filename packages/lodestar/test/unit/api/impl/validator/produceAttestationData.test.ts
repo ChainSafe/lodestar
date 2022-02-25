@@ -1,13 +1,13 @@
+import sinon, {SinonStubbedInstance} from "sinon";
+import chaiAsPromised from "chai-as-promised";
+import {use, expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import sinon, {SinonStubbedInstance} from "sinon";
 import {IBeaconSync, SyncState} from "../../../../../src/sync/interface";
 import {ApiModules} from "../../../../../src/api/impl/types";
 import {getValidatorApi} from "../../../../../src/api/impl/validator";
 import {LocalClock} from "../../../../../src/chain/clock";
 import {testLogger} from "../../../../utils/logger";
-import chaiAsPromised from "chai-as-promised";
-import {use, expect} from "chai";
 import {ApiImplTestModules, setupApiImplTestServer} from "../index.test";
 
 use(chaiAsPromised);

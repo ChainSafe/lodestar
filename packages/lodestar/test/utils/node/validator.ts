@@ -2,9 +2,9 @@ import tmp from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {SlashingProtection, Validator, Signer, SignerType} from "@chainsafe/lodestar-validator";
+import {SecretKey} from "@chainsafe/bls";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
-import {SecretKey} from "@chainsafe/bls";
 
 export async function getAndInitDevValidators({
   node,

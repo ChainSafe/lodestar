@@ -1,7 +1,10 @@
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
-import {defaultChainConfig} from "@chainsafe/lodestar-config";
 import sinon from "sinon";
 import {SinonStubbedInstance} from "sinon";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {defaultChainConfig} from "@chainsafe/lodestar-config";
+import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {SyncCommitteeErrorCode} from "../../../../src/chain/errors/syncCommitteeError";
@@ -9,11 +12,8 @@ import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateSignedContributionAndProof} from "../../../utils/contributionAndProof";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../../src/chain/validation/syncCommitteeContributionAndProof";
 // eslint-disable-next-line no-restricted-imports
-import * as syncCommitteeUtils from "@chainsafe/lodestar-beacon-state-transition/lib/util/aggregator";
 import {SinonStubFn} from "../../../utils/types";
 import {generateCachedStateWithPubkeys} from "../../../utils/state";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {SeenContributionAndProof} from "../../../../src/chain/seenCache";
 
 // https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.3/specs/altair/p2p-interface.md

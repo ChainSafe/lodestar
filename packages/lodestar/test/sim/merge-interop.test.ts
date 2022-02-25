@@ -10,12 +10,12 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
+import {shell} from "./shell";
+import {logFilesDir} from "./params";
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
-import {shell} from "./shell";
 import {ChainEvent} from "../../src/chain";
 import {testLogger, TestLoggerOpts} from "../utils/logger";
-import {logFilesDir} from "./params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {RestApiOptions} from "../../src/api";
 import {simTestInfoTracker} from "../utils/node/simTest";

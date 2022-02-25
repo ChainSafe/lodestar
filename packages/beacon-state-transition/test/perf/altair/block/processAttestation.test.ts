@@ -10,11 +10,11 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
+import {ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
 import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateAltair, StateAttestations} from "../../types";
-import {ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
 import {updateEpochParticipants} from "../../../../src/altair/block/processAttestation";
 
 // Most of the cost of processAttestation in altair is for updating participation flag tree

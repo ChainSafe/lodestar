@@ -1,11 +1,11 @@
-import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 import sinon, {SinonStub, SinonStubbedInstance} from "sinon";
-import {ReqRespEncoding} from "../../../../src/network/reqresp";
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import MetadataBook from "libp2p/src/peer-store/metadata-book";
 import ProtoBook from "libp2p/src/peer-store/proto-book";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {ReqRespEncoding} from "../../../../src/network/reqresp";
+import {Libp2pPeerMetadataStore} from "../../../../src/network/peers/metastore";
 
 describe("Libp2pPeerMetadataStore", function () {
   let metabookStub: SinonStubbedInstance<MetadataBook> & MetadataBook;

@@ -4,11 +4,11 @@ import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {processLightClientUpdate} from "../naive/update";
 import {prepareUpdateNaive, IBeaconChainLc} from "../prepareUpdateNaive";
 import {getInteropSyncCommittee, getSyncAggregateSigningRoot, SyncCommitteeKeys} from "../utils";
 import {LightClientStoreFast} from "../../src/types";
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

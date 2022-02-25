@@ -1,8 +1,11 @@
-import {Connection} from "libp2p";
 import {EventEmitter} from "events";
+import {Connection} from "libp2p";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
+import {sleep} from "@chainsafe/lodestar-utils";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager, Libp2pPeerMetadataStore} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
@@ -10,13 +13,10 @@ import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
 import {generateState} from "../../../utils/state";
-import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {testLogger} from "../../../utils/logger";
 import {getValidPeerId} from "../../../utils/peer";
 import {IAttnetsService} from "../../../../src/network/subnets";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 
 const logger = testLogger();
 

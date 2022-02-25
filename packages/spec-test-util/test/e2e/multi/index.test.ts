@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
-import {IBaseCase, describeMultiSpec} from "../../../src";
 import path from "node:path";
+import {IBaseCase, describeMultiSpec} from "../../../src";
 
 interface IBulkTestCase extends IBaseCase {
   input: string;

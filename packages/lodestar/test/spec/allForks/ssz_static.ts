@@ -1,12 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import {expect} from "chai";
 import {describeDirectorySpecTest, InputType, safeType} from "@chainsafe/lodestar-spec-test-util";
 import {Bytes32, ssz} from "@chainsafe/lodestar-types";
-import {expect} from "chai";
 import {CompositeType, ContainerType, Type} from "@chainsafe/ssz";
+import {ACTIVE_PRESET, ForkName, PresetName} from "@chainsafe/lodestar-params";
 import {IBaseSSZStaticTestCase} from "../ssz/type";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {ACTIVE_PRESET, ForkName, PresetName} from "@chainsafe/lodestar-params";
 
 /* eslint-disable @typescript-eslint/naming-convention, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, no-console */
 

@@ -5,10 +5,10 @@ import {TreeBacked} from "@chainsafe/ssz";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {bnToNum} from "@chainsafe/lodestar-utils";
+import {getConfig} from "./util";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest, shouldVerify} from "../type";
-import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

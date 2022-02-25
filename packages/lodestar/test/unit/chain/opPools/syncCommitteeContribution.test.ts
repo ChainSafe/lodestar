@@ -1,9 +1,10 @@
+import {expect} from "chai";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {expect} from "chai";
+import bls, {SecretKey} from "@chainsafe/bls";
 import {
   aggregate,
   contributionToFast,
@@ -13,7 +14,6 @@ import {
 } from "../../../../src/chain/opPools/syncContributionAndProofPool";
 import {generateContributionAndProof, generateEmptyContribution} from "../../../utils/contributionAndProof";
 import {InsertOutcome} from "../../../../src/chain/opPools/types";
-import bls, {SecretKey} from "@chainsafe/bls";
 
 describe("chain / opPools / SyncContributionAndProofPool", function () {
   let cache: SyncContributionAndProofPool;

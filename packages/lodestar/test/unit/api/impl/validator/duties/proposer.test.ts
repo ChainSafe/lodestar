@@ -5,6 +5,8 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 
+import {ssz} from "@chainsafe/lodestar-types";
+import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IBeaconChain} from "../../../../../../src/chain";
 import {LocalClock} from "../../../../../../src/chain/clock";
 import {FAR_FUTURE_EPOCH} from "../../../../../../src/constants";
@@ -17,8 +19,6 @@ import {generateValidators} from "../../../../../utils/validator";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {testLogger} from "../../../../../utils/logger";
-import {ssz} from "@chainsafe/lodestar-types";
-import {MAX_EFFECTIVE_BALANCE, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 use(chaiAsPromised);
 

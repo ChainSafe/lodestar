@@ -1,5 +1,8 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {SinonStubbedInstance} from "sinon";
+import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {List} from "@chainsafe/ssz";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 import {Network} from "../../../../../../src/network/network";
 import {
@@ -7,14 +10,11 @@ import {
   generateAttestationData,
   generateEmptySignedVoluntaryExit,
 } from "../../../../../utils/attestation";
-import {SinonStubbedInstance} from "sinon";
 import {IBeaconChain} from "../../../../../../src/chain";
 import * as attesterSlashingValidation from "../../../../../../src/chain/validation/attesterSlashing";
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
 
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";

@@ -7,22 +7,22 @@ import {
 import {IProtoBlock, IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {DOMAIN_BEACON_ATTESTER} from "@chainsafe/lodestar-params";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
-import {IBeaconChain} from "../../../src/chain";
-import {IStateRegenerator} from "../../../src/chain/regen";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants";
 import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {toHexString} from "@chainsafe/ssz";
+import {config} from "@chainsafe/lodestar-config/default";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {IBeaconChain} from "../../../src/chain";
+import {IStateRegenerator} from "../../../src/chain/regen";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../src/constants";
 import {SeenAttesters} from "../../../src/chain/seenCache";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls";
 import {computeSubnetForSlot} from "../../../src/chain/validation";
 import {signCached} from "../cache";
 import {ClockStatic} from "../clock";
 import {toSingleBit} from "../aggregationBits";
-import {toHexString} from "@chainsafe/ssz";
-import {config} from "@chainsafe/lodestar-config/default";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 export type AttestationValidDataOpts = {
   currentSlot?: Slot;

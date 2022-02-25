@@ -24,9 +24,9 @@ import {CheckpointWithHex, ForkChoiceError, ForkChoiceErrorCode, IForkChoice} fr
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
+import {getConfig} from "./util";
 import {testLogger} from "../../utils/logger";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

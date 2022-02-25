@@ -4,10 +4,10 @@ import {allForks, phase0, createCachedBeaconState} from "@chainsafe/lodestar-bea
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
+import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
-import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 
 export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exclude<ForkName, ForkName.phase0>): void {
   const testConfig = createIChainForkConfig(forkConfig);

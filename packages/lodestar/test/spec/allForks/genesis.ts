@@ -6,10 +6,10 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {initializeBeaconStateFromEth1, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
+import {getConfig} from "./util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {expectEqualBeaconState} from "../util";
 import {IBaseSpecTest} from "../type";
-import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

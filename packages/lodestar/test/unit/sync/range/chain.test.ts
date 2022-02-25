@@ -1,10 +1,10 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Epoch, phase0, Slot} from "@chainsafe/lodestar-types";
+import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {linspace} from "../../../../src/util/numpy";
 import {generateEmptyBlock, generateEmptySignedBlock} from "../../../utils/block";
 import {SyncChain, SyncChainFns, ChainTarget} from "../../../../src/sync/range/chain";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {RangeSyncType} from "../../../../src/sync/utils/remoteSyncType";
 import {ZERO_HASH} from "../../../../src/constants";
 import {testLogger} from "../../../utils/logger";

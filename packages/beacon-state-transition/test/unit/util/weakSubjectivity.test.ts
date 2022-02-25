@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/default";
 import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity";
 import {getChurnLimit} from "../../../src/util/validator";
 

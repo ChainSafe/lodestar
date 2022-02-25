@@ -1,9 +1,9 @@
-import {config} from "@chainsafe/lodestar-config/default";
-import {CachedBeaconStateAllForks, PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition";
-import {List, toHexString} from "@chainsafe/ssz";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import sinon, {SinonStubbedInstance, SinonStubbedMember} from "sinon";
+import {config} from "@chainsafe/lodestar-config/default";
+import {CachedBeaconStateAllForks, PubkeyIndexMap} from "@chainsafe/lodestar-beacon-state-transition";
+import {List, toHexString} from "@chainsafe/ssz";
 import {getBeaconStateApi} from "../../../../../../src/api/impl/beacon/state";
 import * as stateApiUtils from "../../../../../../src/api/impl/beacon/state/utils";
 import {generateState} from "../../../../../utils/state";

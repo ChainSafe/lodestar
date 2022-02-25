@@ -1,14 +1,14 @@
 import crypto from "node:crypto";
+import {expect} from "chai";
 import bls from "@chainsafe/bls";
 import {BitList, List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ValidatorIndex, BLSSignature, ssz} from "@chainsafe/lodestar-types";
+import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {ZERO_HASH} from "../../../src/constants";
 import {generateState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
-import {expect} from "chai";
 import {phase0, createCachedBeaconState, allForks} from "../../../src";
-import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 describe("signatureSets", () => {
   it("should aggregate all signatures from a block", () => {
