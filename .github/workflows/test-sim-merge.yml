@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: 815a414312db9a922c5a34ac034fb7aa8861f2e7
-  NETHERMIND_COMMIT: 78ae2353be5d05a285d6aaa1826910489d381a3e
+  GETH_COMMIT: 0569213dc4032da83abed44fab7f65794a526f21
+  NETHERMIND_COMMIT: 95e347491f35da307554d0c2306b03c09d4011f3
 
 jobs:
   sim-merge-tests:
@@ -36,30 +36,27 @@ jobs:
       # </common-build>
 
       # Install Geth merge interop
-      - uses: actions/setup-go@v2
-        with:
-          go-version: '1.17'
-      - name: Clone Geth merge interop branch
-        run: git clone -b merge-kiln-jwt https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
-      - name: Build Geth
-        run: cd go-ethereum && make
+      # - uses: actions/setup-go@v2
+      # - name: Clone Geth merge interop branch
+      #   run: git clone -b merge-kiln https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+      # - name: Build Geth
+      #   run: cd go-ethereum && make
 
-      - name: Test Lodestar <> Geth interop
-        run: yarn test:sim:merge-interop
-        working-directory: packages/lodestar
-        env:
-          EL_BINARY_DIR: ../../go-ethereum/build/bin
-          EL_SCRIPT_DIR: kiln/geth
-          EL_PORT: 8545
-          ENGINE_PORT: 8551
-          TX_SCENARIOS: simple
+      # - name: Test Lodestar <> Geth interop
+      #   run: yarn test:sim:merge-interop
+      #   working-directory: packages/lodestar
+      #   env:
+      #     EL_BINARY_DIR: ../../go-ethereum/build/bin
+      #     EL_SCRIPT_DIR: kiln/geth
+      #     EL_PORT: 8545
+      #     TX_SCENARIOS: simple
 
       # Install Nethermind merge interop
       - uses: actions/setup-dotnet@v1
         with:
           dotnet-version: "6.0.x"
       - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b kiln_processing https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 
