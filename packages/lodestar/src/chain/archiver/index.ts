@@ -1,5 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {Slot} from "@chainsafe/lodestar-types";
 
 import {IBeaconDb} from "../../db";
 import {ChainEvent, ChainEventEmitter} from "..";
@@ -8,6 +9,7 @@ import {StatesArchiver} from "./archiveStates";
 import {JobItemQueue} from "../../util/queue";
 import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
+import {LightClientServer} from "../lightClient";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
@@ -25,8 +27,10 @@ export class Archiver {
     private readonly forkChoice: IForkChoice,
     private readonly checkpointStateCache: CheckpointStateCache,
     private readonly stateCache: StateContextCache,
+    private readonly lightclientServer: LightClientServer,
     private readonly emitter: ChainEventEmitter,
     private readonly logger: ILogger,
+    private readonly anchorStateLatestBlockSlot: Slot,
     signal: AbortSignal
   ) {
     this.statesArchiver = new StatesArchiver(this.checkpointStateCache, db, logger);
@@ -72,7 +76,7 @@ export class Archiver {
     try {
       const finalizedEpoch = finalized.epoch;
       this.logger.verbose("Start processing finalized checkpoint", {epoch: finalizedEpoch});
-      await archiveBlocks(this.db, this.forkChoice, this.logger, finalized);
+      await archiveBlocks(this.db, this.forkChoice, this.lightclientServer, this.logger, finalized);
 
       // should be after ArchiveBlocksTask to handle restart cleanly
       await this.statesArchiver.maybeArchiveState(finalized);
@@ -104,22 +108,22 @@ export class Archiver {
     try {
       // Mark the sequence in backfill db from finalized block's slot till anchor slot as
       // filled.
-      const finalizedBlockFC = this.chain.forkChoice.getBlockHex(finalized.rootHex);
-      if (finalizedBlockFC && finalizedBlockFC.slot > this.chain.anchorStateLatestBlockSlot) {
-        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.chain.anchorStateLatestBlockSlot);
+      const finalizedBlockFC = this.forkChoice.getBlockHex(finalized.rootHex);
+      if (finalizedBlockFC && finalizedBlockFC.slot > this.anchorStateLatestBlockSlot) {
+        await this.db.backfilledRanges.put(finalizedBlockFC.slot, this.anchorStateLatestBlockSlot);
 
         // Clear previously marked sequence till anchorStateLatestBlockSlot, without
         // touching backfill sync process sequence which are at
         // <=anchorStateLatestBlockSlot i.e. clear >anchorStateLatestBlockSlot
         // and < currentSlot
         const filteredSeqs = await this.db.backfilledRanges.keys({
-          gt: this.chain.anchorStateLatestBlockSlot,
+          gt: this.anchorStateLatestBlockSlot,
           lt: finalizedBlockFC.slot,
         });
         await this.db.backfilledRanges.batchDelete(filteredSeqs);
         this.logger.debug("Updated backfilledRanges", {
           key: finalizedBlockFC.slot,
-          value: this.chain.anchorStateLatestBlockSlot,
+          value: this.anchorStateLatestBlockSlot,
         });
       }
     } catch (e) {

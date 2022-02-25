@@ -2,7 +2,6 @@ import {ValidatorIndex} from "@chainsafe/lodestar-types";
 import {List} from "@chainsafe/ssz";
 import {
   phase0,
-  allForks,
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
   zipIndexesCommitteeBits,
@@ -10,7 +9,12 @@ import {
 import {IBeaconChain} from "..";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
-import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
+import {
+  getCommitteeIndicesFromShuffling,
+  verifyHeadBlockAndTargetRoot,
+  verifyPropagationSlotRange,
+  getAttestationWithIndicesSignatureSet,
+} from "./attestation";
 import {RegenCaller} from "../regen";
 
 export async function validateGossipAggregateAndProof(
@@ -55,14 +59,13 @@ export async function validateGossipAggregateAndProof(
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
   // [REJECT] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
-
-  const attHeadState = await chain.regen
-    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAggregateAndProof)
+  const epochShuffling = await chain.regen
+    .getAttesterShuffling(attTarget, RegenCaller.validateGossipAggregateAndProof)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
@@ -70,7 +73,7 @@ export async function validateGossipAggregateAndProof(
       });
     });
 
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attData.index);
+  const committeeIndices = getCommitteeIndicesFromShuffling(epochShuffling, attSlot, attData.index);
   const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregate.aggregationBits);
   const indexedAttestation: phase0.IndexedAttestation = {
     attestingIndices: attestingIndices as List<number>,
@@ -98,15 +101,18 @@ export async function validateGossipAggregateAndProof(
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.AGGREGATOR_NOT_IN_COMMITTEE});
   }
 
+  // TODO: Get index2pubkey cache from chain instead of from the state
+  const anyState = chain.getHeadState();
+
   // [REJECT] The aggregate_and_proof.selection_proof is a valid signature of the aggregate.data.slot
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = attHeadState.index2pubkey[aggregateAndProof.aggregatorIndex];
+  const aggregator = anyState.index2pubkey[aggregateAndProof.aggregatorIndex];
   const signatureSets = [
-    getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
-    getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),
-    allForks.getIndexedAttestationSignatureSet(attHeadState, indexedAttestation),
+    getSelectionProofSignatureSet(anyState, attSlot, aggregator, signedAggregateAndProof),
+    getAggregateAndProofSignatureSet(anyState, attEpoch, aggregator, signedAggregateAndProof),
+    getAttestationWithIndicesSignatureSet(chain.config, anyState.index2pubkey, aggregate, attestingIndices),
   ];
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});

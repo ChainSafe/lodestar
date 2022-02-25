@@ -1,5 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
+import {routes} from "@chainsafe/lodestar-api";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
@@ -142,20 +143,17 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
 
   // TODO: Improve using regen here
-  const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
+  const headState = this.regen.getHeadState();
   if (headState) {
     this.opPool.pruneAll(headState);
   }
 }
 
-export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
-  this.logger.verbose("New chain head", {
-    headSlot: head.slot,
-    headRoot: head.blockRoot,
-  });
-  this.syncContributionAndProofPool.prune(head.slot);
-  this.seenContributionAndProof.prune(head.slot);
-  this.metrics?.headSlot.set(head.slot);
+export function onForkChoiceHead(this: BeaconChain, data: routes.events.EventData[routes.events.EventType.head]): void {
+  this.logger.verbose("New chain head", {slot: data.slot, block: data.block});
+  this.syncContributionAndProofPool.prune(data.slot);
+  this.seenContributionAndProof.prune(data.slot);
+  this.metrics?.headSlot.set(data.slot);
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {

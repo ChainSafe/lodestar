@@ -277,7 +277,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.regen.getHeadStateAtEpoch(chain.clock.currentEpoch);
 
       const duties: routes.validator.ProposerDuty[] = [];
       const indexes: ValidatorIndex[] = [];
@@ -325,7 +325,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         throw new ApiError(400, "Cannot get duties for epoch more than one ahead");
       }
 
-      const state = await chain.getHeadStateAtCurrentEpoch();
+      const state = await chain.regen.getHeadStateAtEpoch(chain.clock.currentEpoch);
 
       // TODO: Determine what the current epoch would be if we fast-forward our system clock by
       // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`.

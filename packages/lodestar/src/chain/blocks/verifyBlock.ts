@@ -15,7 +15,7 @@ import {IExecutionEngine} from "../../executionEngine";
 import {BlockError, BlockErrorCode} from "../errors";
 import {IBeaconClock} from "../clock";
 import {BlockProcessOpts} from "../options";
-import {IStateRegenerator, RegenCaller} from "../regen";
+import {IStateCacheRegen, RegenCaller} from "../regen";
 import {IBlsVerifier} from "../bls";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
@@ -23,7 +23,7 @@ import {ExecutePayloadStatus} from "../../executionEngine/interface";
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
   executionEngine: IExecutionEngine;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   clock: IBeaconClock;
   logger: ILogger;
   forkChoice: IForkChoice;

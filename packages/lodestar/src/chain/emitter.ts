@@ -115,7 +115,7 @@ export interface IChainEvents {
   [ChainEvent.clockSlot]: (slot: Slot) => void;
   [ChainEvent.clockEpoch]: (epoch: Epoch) => void;
 
-  [ChainEvent.forkChoiceHead]: (head: IProtoBlock) => void;
+  [ChainEvent.forkChoiceHead]: (data: routes.events.EventData[routes.events.EventType.head]) => void;
   [ChainEvent.forkChoiceReorg]: (head: IProtoBlock, oldHead: IProtoBlock, depth: number) => void;
   [ChainEvent.forkChoiceJustified]: (checkpoint: CheckpointWithHex) => void;
   [ChainEvent.forkChoiceFinalized]: (checkpoint: CheckpointWithHex) => void;

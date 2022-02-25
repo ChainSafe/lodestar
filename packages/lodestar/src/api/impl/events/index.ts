@@ -1,8 +1,4 @@
-import {
-  computeEpochAtSlot,
-  computeStartSlotAtEpoch,
-  getBlockRootAtSlot,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {ApiModules} from "../types";
 import {ChainEvent, IChainEvents} from "../../../chain";
 import {routes} from "@chainsafe/lodestar-api";
@@ -31,28 +27,7 @@ export function getEventsApi({chain, config}: Pick<ApiModules, "chain" | "config
       ...args: Parameters<IChainEvents[typeof chainEventMap[K]]>
     ) => routes.events.EventData[K][];
   } = {
-    [routes.events.EventType.head]: (head) => {
-      const state = chain.stateCache.get(head.stateRoot);
-      if (!state) {
-        throw Error("cannot get state for head " + head.stateRoot);
-      }
-
-      const currentEpoch = state.currentShuffling.epoch;
-      const [previousDutyDependentRoot, currentDutyDependentRoot] = [currentEpoch - 1, currentEpoch].map((epoch) =>
-        toHexString(getBlockRootAtSlot(state, Math.max(computeStartSlotAtEpoch(epoch) - 1, 0)))
-      );
-
-      return [
-        {
-          block: head.blockRoot,
-          epochTransition: computeStartSlotAtEpoch(computeEpochAtSlot(head.slot)) === head.slot,
-          slot: head.slot,
-          state: head.stateRoot,
-          previousDutyDependentRoot,
-          currentDutyDependentRoot,
-        },
-      ];
-    },
+    [routes.events.EventType.head]: (data) => [data],
     [routes.events.EventType.block]: (block) => [
       {
         block: toHexString(config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message)),

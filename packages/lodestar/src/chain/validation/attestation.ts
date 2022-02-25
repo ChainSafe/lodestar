@@ -1,22 +1,26 @@
-import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {ATTESTATION_SUBNET_COUNT, DOMAIN_BEACON_ATTESTER, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List, toHexString} from "@chainsafe/ssz";
 import {
-  allForks,
   phase0,
   computeEpochAtSlot,
   getSingleBitIndex,
   AggregationBitsError,
   AggregationBitsErrorCode,
   CachedBeaconStateAllForks,
+  IEpochShuffling,
+  Index2PubkeyCache,
+  ISignatureSet,
+  computeStartSlotAtEpoch,
+  SignatureSetType,
+  computeSigningRoot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
 import {RegenCaller} from "../regen";
-
-const {getIndexedAttestationSignatureSet} = allForks;
 
 export async function validateGossipAttestation(
   chain: IBeaconChain,
@@ -73,7 +77,7 @@ export async function validateGossipAttestation(
 
   // [IGNORE] The block being voted for (attestation.data.beacon_block_root) has been seen (via both gossip
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
-  const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
+  verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
   // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
@@ -86,8 +90,8 @@ export async function validateGossipAttestation(
   //  --i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(attestation.data.target.epoch)) == attestation.data.target.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  const attHeadState = await chain.regen
-    .getState(attHeadBlock.stateRoot, RegenCaller.validateGossipAttestation)
+  const epochShuffling = await chain.regen
+    .getAttesterShuffling(attTarget, RegenCaller.validateGossipAttestation)
     .catch((e: Error) => {
       throw new AttestationError(GossipAction.REJECT, {
         code: AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE,
@@ -98,7 +102,7 @@ export async function validateGossipAttestation(
   // [REJECT] The committee index is within the expected range
   // -- i.e. data.index < get_committee_count_per_slot(state, data.target.epoch)
   const attIndex = attData.index;
-  const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attIndex);
+  const committeeIndices = getCommitteeIndicesFromShuffling(epochShuffling, attSlot, attIndex);
   const validatorIndex = committeeIndices[bitIndex];
 
   // [REJECT] The number of aggregation bits matches the committee size
@@ -117,7 +121,7 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  const expectedSubnet = computeSubnetForSlot(attHeadState, attSlot, attIndex);
+  const expectedSubnet = computeSubnetForSlot(epochShuffling, attSlot, attIndex);
   if (subnet !== null && subnet !== expectedSubnet) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -136,13 +140,13 @@ export async function validateGossipAttestation(
     });
   }
 
+  // TODO: Get index2pubkey cache from chain instead of from the state
+  const anyState = chain.getHeadState();
+
   // [REJECT] The signature of attestation is valid.
-  const indexedAttestation: phase0.IndexedAttestation = {
-    attestingIndices: [validatorIndex] as List<number>,
-    data: attData,
-    signature: attestation.signature,
-  };
-  const signatureSet = getIndexedAttestationSignatureSet(attHeadState, indexedAttestation);
+  const signatureSet = getAttestationWithIndicesSignatureSet(chain.config, anyState.index2pubkey, attestation, [
+    validatorIndex,
+  ]);
   if (!(await chain.bls.verifySignatureSets([signatureSet], {batchable: true}))) {
     throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.INVALID_SIGNATURE});
   }
@@ -162,6 +166,12 @@ export async function validateGossipAttestation(
 
   chain.seenAttesters.add(targetEpoch, validatorIndex);
 
+  // Is it necessary to return a full IndexedAttestation? Or only the validatorIndex?
+  const indexedAttestation: phase0.IndexedAttestation = {
+    attestingIndices: [validatorIndex] as List<number>,
+    data: attData,
+    signature: attestation.signature,
+  };
   return {indexedAttestation, subnet: expectedSubnet};
 }
 
@@ -292,7 +302,19 @@ export function getCommitteeIndices(
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {
-  const {committees} = attestationTargetState.getShufflingAtSlot(attestationSlot);
+  return getCommitteeIndicesFromShuffling(
+    attestationTargetState.getShufflingAtSlot(attestationSlot),
+    attestationSlot,
+    attestationIndex
+  );
+}
+
+export function getCommitteeIndicesFromShuffling(
+  epochShuffling: IEpochShuffling,
+  attestationSlot: Slot,
+  attestationIndex: number
+): number[] {
+  const {committees} = epochShuffling;
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
   if (attestationIndex >= slotCommittees.length) {
@@ -307,9 +329,26 @@ export function getCommitteeIndices(
 /**
  * Compute the correct subnet for a slot/committee index
  */
-export function computeSubnetForSlot(state: CachedBeaconStateAllForks, slot: number, committeeIndex: number): number {
+export function computeSubnetForSlot(epochShuffling: IEpochShuffling, slot: number, committeeIndex: number): number {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-  const committeesPerSlot = state.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
-  const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+  const committeesSinceEpochStart = epochShuffling.committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+}
+
+// TODO: Upstream to beacon-state-transition-function
+export function getAttestationWithIndicesSignatureSet(
+  config: IBeaconConfig,
+  index2pubkey: Index2PubkeyCache,
+  attestation: Pick<phase0.Attestation, "data" | "signature">,
+  indices: number[]
+): ISignatureSet {
+  const slot = computeStartSlotAtEpoch(attestation.data.target.epoch);
+  const domain = config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+
+  return {
+    type: SignatureSetType.aggregate,
+    pubkeys: indices.map((i) => index2pubkey[i]),
+    signingRoot: computeSigningRoot(ssz.phase0.AttestationData, attestation.data, domain),
+    signature: attestation.signature.valueOf() as Uint8Array,
+  };
 }

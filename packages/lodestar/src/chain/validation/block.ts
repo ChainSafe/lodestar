@@ -2,12 +2,13 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {computeStartSlotAtEpoch, computeTimeAtSlot, bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {ForkName} from "@chainsafe/lodestar-params";
+import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {ssz} from "@chainsafe/lodestar-types";
+import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
-import {RegenCaller} from "../regen";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -64,6 +65,9 @@ export async function validateGossipBlock(
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
   // get_ancestor(store, block.parent_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
+  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources)
+  // (a client MAY queue blocks for processing once the parent block is retrieved).
+  // [REJECT] The block's parent (defined by block.parent_root) passes validation.
   const parentRoot = toHexString(block.parentRoot);
   const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
   if (parentBlock === null) {
@@ -89,24 +93,20 @@ export async function validateGossipBlock(
     });
   }
 
-  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
-  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
-  // this is something we should change this in the future to make the code airtight to the spec.
-  // [IGNORE] The block's parent (defined by block.parent_root) has been seen (via both gossip and non-gossip sources) (a client MAY queue blocks for processing once the parent block is retrieved).
-  // [REJECT] The block's parent (defined by block.parent_root) passes validation.
-  const blockState = await chain.regen
-    .getBlockSlotState(parentRoot, blockSlot, RegenCaller.validateGossipBlock)
-    .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
-    });
-
   // Extra conditions for merge fork blocks
   // [REJECT] The block's execution payload timestamp is correct with respect to the slot
   // -- i.e. execution_payload.timestamp == compute_timestamp_at_slot(state, block.slot).
   if (fork === ForkName.bellatrix) {
-    if (!bellatrix.isBellatrixBlockBodyType(block.body)) throw Error("Not merge block type");
-    const executionPayload = block.body.executionPayload;
-    if (bellatrix.isBellatrixStateType(blockState) && bellatrix.isExecutionEnabled(blockState, block.body)) {
+    const executionPayload = (block as bellatrix.BeaconBlock).body.executionPayload;
+
+    // Equivalent to isExecutionEnabled() but without requiring a state
+    // > Execution enabled = merge is done.
+    // > When (A) state has execution data OR (B) block has execution data
+    if (
+      parentBlock.executionStatus !== ExecutionStatus.PreMerge ||
+      // TODO: Don't precompute defaultValue() every time
+      !ssz.bellatrix.ExecutionPayload.equals(executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
+    ) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
       if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
         throw new BlockGossipError(GossipAction.REJECT, {
@@ -118,8 +118,11 @@ export async function validateGossipBlock(
     }
   }
 
+  // TODO: Get index2pubkey cache from chain instead of from the state
+  const anyState = chain.getHeadState();
+
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
-  const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
+  const signatureSet = allForks.getProposerSignatureSet(anyState, signedBlock);
   // Don't batch so verification is not delayed
   if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
@@ -129,7 +132,15 @@ export async function validateGossipBlock(
   // shuffling (defined by parent_root/slot). If the proposer_index cannot immediately be verified against the expected
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
-  if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
+
+  // TODO: old comment below
+  // getBlockSlotState also checks for whether the current finalized checkpoint is an ancestor of the block.
+  // As a result, we throw an IGNORE (whereas the spec says we should REJECT for this scenario).
+  // this is something we should change this in the future to make the code airtight to the spec.
+  const proposerShuffling = await chain.regen.getProposerShuffling(parentBlock, block.slot).catch(() => {
+    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+  });
+  if (proposerShuffling[blockSlot % SLOTS_PER_EPOCH] !== proposerIndex) {
     throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
   }
 

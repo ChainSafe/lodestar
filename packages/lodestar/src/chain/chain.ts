@@ -3,7 +3,7 @@
  */
 
 import fs from "node:fs";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
@@ -20,7 +20,7 @@ import {ChainEventEmitter} from "./emitter";
 import {handleChainEvents} from "./eventHandlers";
 import {IBeaconChain, SSZObjectType} from "./interface";
 import {IChainOptions} from "./options";
-import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
+import {IStateCacheRegen, StateCacheRegen} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
 import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
@@ -58,7 +58,7 @@ export class BeaconChain implements IBeaconChain {
   forkChoice: IForkChoice;
   clock: IBeaconClock;
   emitter: ChainEventEmitter;
-  regen: IStateRegenerator;
+  regen: IStateCacheRegen;
   readonly lightClientServer: LightClientServer;
   readonly reprocessController: ReprocessController;
 
@@ -133,7 +133,7 @@ export class BeaconChain implements IBeaconChain {
       opts.proposerBoostEnabled,
       metrics
     );
-    const regen = new QueuedStateRegenerator({
+    const regen = new StateCacheRegen({
       config,
       forkChoice,
       stateCache,
@@ -154,9 +154,7 @@ export class BeaconChain implements IBeaconChain {
     // On start, the initial anchor state is added to the state cache + the forkchoice.
     // Since this state and its block is the only one in the forkchoice, it becomes the head.
     const head = forkChoice.getHead();
-    regen.setHead(head, cachedState).catch((e) => {
-      this.logger.error("Error setting head state on start", {slot: head.slot, stateRoot: head.stateRoot}, e);
-    });
+    regen.setHead(head, cachedState);
 
     this.blockProcessor = new BlockProcessor(
       {
@@ -183,7 +181,17 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, forkChoice, checkpointStateCache, stateCache, emitter, logger, signal);
+    this.archiver = new Archiver(
+      db,
+      forkChoice,
+      checkpointStateCache,
+      stateCache,
+      lightClientServer,
+      emitter,
+      logger,
+      this.anchorStateLatestBlockSlot,
+      signal
+    );
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);
@@ -208,17 +216,10 @@ export class BeaconChain implements IBeaconChain {
     return this.genesisTime;
   }
 
-  getHeadState(): CachedBeaconState<allForks.BeaconState> {
+  getHeadState(): CachedBeaconStateAllForks {
     const headState = this.regen.getHeadState();
-    if (!headState) throw Error("headState not available");
+    if (headState === null) throw Error("headState not available");
     return headState;
-  }
-
-  async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
-    const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
-    const head = this.forkChoice.getHead();
-    const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {

@@ -680,6 +680,59 @@ export class ForkChoice implements IForkChoice {
   }
 
   /**
+   * A dependant root is the block root of the last block before the state transition that decided a specific shuffling.
+   *
+   * For proposer shuffling with 0 epochs of lookahead = previous immediate epoch transition
+   * For attester shuffling with 1 epochs of lookahead = last epoch's epoch transition
+   *
+   * ```
+   *         epoch: 0       1       2       3       4
+   *                |-------|-------|=======|-------|
+   * dependant root A -----^
+   * dependant root B -------------^
+   * ```
+   * - proposer shuffling for a block in epoch 2: dependant root A
+   * - attester shuffling for a block in epoch 2: dependant root B
+   */
+  getDependantRoot(block: IProtoBlock, atEpochDiff: Epoch): RootHex {
+    // The navigation at the end of the while loop will always progress backwards,
+    // jumping to a block with a strictly less slot number. So the condition `blockEpoch < atEpoch`
+    // is guaranteed to happen. Given the use of target blocks for faster navigation, it will take
+    // at most `2 * (blockEpoch - atEpoch + 1)` iterations to find the dependant root.
+
+    const atSlot = block.slot - (block.slot % SLOTS_PER_EPOCH) - atEpochDiff * SLOTS_PER_EPOCH;
+
+    // Special case close to genesis block, return the genesis block root
+    if (atSlot <= 0) {
+      const finalizedBlock = this.protoArray.getBlockReadonly(this.fcStore.finalizedCheckpoint.rootHex);
+      if (finalizedBlock.slot !== 0) {
+        throw Error("Genesis block not available");
+      }
+      return finalizedBlock.blockRoot;
+    }
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // Dependant root must be in epoch less than `atEpoch`
+      if (block.slot < atSlot) {
+        return block.blockRoot;
+      }
+
+      // Skip one last jump if there's no skipped slot at first slot of the epoch
+      if (block.slot === atSlot) {
+        return block.parentRoot;
+      }
+
+      block =
+        block.blockRoot === block.targetRoot
+          ? // For the first slot of the epoch, a block is it's own target
+            this.protoArray.getBlockReadonly(block.parentRoot)
+          : // else we can navigate much faster jumping to the target block
+            this.protoArray.getBlockReadonly(block.targetRoot);
+    }
+  }
+
+  /**
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidate till hash provided
    * TODO: implementation:
    * 1. verify is_merge_block if the mergeblock has not yet been validated

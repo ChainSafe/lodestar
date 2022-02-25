@@ -1,7 +1,11 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, allForks, RootHex} from "@chainsafe/lodestar-types";
 import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconState, computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconState,
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointHex, CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {IMetrics} from "../../metrics";
 import {JobItemQueue} from "../../util/queue";
@@ -159,6 +163,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
       .catch((e) => {
         throw Error(`Head state slot ${head.slot} root ${head.stateRoot} not available in caches`);
       });
+
     // TODO: Use regen to get the state if not available
     if (!this.headState) throw Error(`Head state slot ${head.slot} root ${head.stateRoot} not available in caches`);
   }

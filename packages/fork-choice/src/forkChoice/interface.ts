@@ -137,6 +137,8 @@ export interface IForkChoice {
    * Optimistic sync validate till validated latest hash, invalidate any decendant branch if invalidated branch decendant provided
    */
   validateLatestHash(latestValidHash: RootHex, invalidateTillHash: RootHex | null): void;
+
+  getDependantRoot(block: IProtoBlock, atEpochDiff: Epoch): RootHex;
 }
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
