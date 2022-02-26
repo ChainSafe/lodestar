@@ -23,7 +23,7 @@ import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
-import {IBlsVerifier, BlsSingleThreadVerifier} from "./bls";
+import {IBlsVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
   SeenAttesters,
   SeenAggregators,
@@ -120,10 +120,10 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    const bls = opts.useSingleThreadVerifier
-      ? new BlsSingleThreadVerifier()
-      : // : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
-        new BlsMixedVerifier({logger, metrics, signal: this.abortController.signal});
+    const blsModules = {logger, metrics, signal: this.abortController.signal};
+    const bls = opts.useMultiThreadVerifier
+      ? new BlsMultiThreadWorkerPool(blsModules)
+      : new BlsMixedVerifier(blsModules);
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});

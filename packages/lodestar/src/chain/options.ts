@@ -4,7 +4,7 @@ import {ForkChoiceOpts} from "./forkChoice";
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &
   ForkChoiceOpts & {
-    useSingleThreadVerifier?: boolean;
+    useMultiThreadVerifier?: boolean;
     persistInvalidSszObjects?: boolean;
     persistInvalidSszObjectsDir: string;
   };
@@ -22,7 +22,7 @@ export type BlockProcessOpts = {
 };
 
 export const defaultChainOptions: IChainOptions = {
-  useSingleThreadVerifier: false,
+  useMultiThreadVerifier: false,
   disableBlsBatchVerify: false,
   persistInvalidSszObjects: true,
   persistInvalidSszObjectsDir: "",
