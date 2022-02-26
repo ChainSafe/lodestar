@@ -77,7 +77,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "iteration": 1645857689467,
+  "iteration": 1645857689470,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -641,7 +641,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "process_start_time_seconds{scrape_location=\"beacon\"}*1000",
           "instant": false,
           "interval": "",
@@ -1100,7 +1100,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1116,7 +1117,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 17
+            "y": 2
           },
           "id": 102,
           "options": {
@@ -1210,7 +1211,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1226,7 +1228,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 17
+            "y": 2
           },
           "id": 172,
           "options": {
@@ -1296,7 +1298,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1312,7 +1315,7 @@
             "h": 6,
             "w": 12,
             "x": 0,
-            "y": 23
+            "y": 8
           },
           "id": 171,
           "options": {
@@ -1346,7 +1349,7 @@
             "h": 6,
             "w": 12,
             "x": 12,
-            "y": 23
+            "y": 8
           },
           "id": 99,
           "options": {
@@ -1422,7 +1425,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1505,7 +1509,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1588,7 +1593,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1626,7 +1632,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "process_heap_bytes",
               "interval": "",
               "legendFormat": "",
@@ -1675,7 +1681,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1757,7 +1764,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1840,7 +1848,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -1923,7 +1932,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2006,7 +2016,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2105,7 +2116,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2187,7 +2199,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2284,7 +2297,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2404,7 +2418,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2442,7 +2457,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "avg_over_time(scrape_duration_seconds[$__rate_interval])",
               "interval": "",
               "intervalFactor": 1,
@@ -2508,7 +2523,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2562,7 +2578,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "1-up",
               "interval": "",
               "legendFormat": "{{scrape_location}}",
@@ -2613,7 +2629,8 @@
                 "mode": "absolute",
                 "steps": [
                   {
-                    "color": "green"
+                    "color": "green",
+                    "value": null
                   },
                   {
                     "color": "red",
@@ -2651,7 +2668,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_metrics_scrape_seconds_sum[$__rate_interval])/rate(lodestar_metrics_scrape_seconds_count[$__rate_interval])",
               "interval": "",
               "intervalFactor": 1,
@@ -2681,7 +2698,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_metrics_scrape_seconds_sum[$__rate_interval])/rate(lodestar_metrics_scrape_seconds_count[$__rate_interval])",
               "interval": "",
               "intervalFactor": 1,
@@ -2730,7 +2747,7 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 7,
+            "h": 8,
             "w": 6,
             "x": 0,
             "y": 5
@@ -2814,7 +2831,7 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 7,
+            "h": 8,
             "w": 6,
             "x": 6,
             "y": 5
@@ -2943,7 +2960,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "avg(\n  delta(validator_monitor_prev_epoch_on_chain_balance_total[$__rate_interval])\n)",
               "interval": "",
               "legendFormat": "aggregates",
@@ -3010,13 +3027,13 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 12
+            "y": 13
           },
           "id": 311,
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "hidden",
               "placement": "bottom"
             },
             "tooltip": {
@@ -3033,7 +3050,7 @@
               "exemplar": false,
               "expr": "1-avg(validator_monitor_prev_epoch_on_chain_attester_correct_head_total)",
               "interval": "",
-              "legendFormat": "Percent of correct head attestations",
+              "legendFormat": "ratio",
               "refId": "A"
             }
           ],
@@ -3102,7 +3119,7 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "hidden",
               "placement": "bottom"
             },
             "tooltip": {
@@ -3113,9 +3130,14 @@
           "pluginVersion": "8.4.0-beta1",
           "targets": [
             {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "exemplar": false,
               "expr": "avg(validator_monitor_prev_epoch_on_chain_inclusion_distance)",
               "interval": "",
-              "legendFormat": "{{index}}",
+              "legendFormat": "inclusion distance",
               "refId": "A"
             }
           ],
@@ -3179,7 +3201,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 20
+            "y": 21
           },
           "id": 196,
           "options": {
@@ -3201,7 +3223,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_hit_total[$__rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_attester_miss_total[$__rate_interval]))\n)",
               "interval": "",
               "legendFormat": "attester",
@@ -3212,7 +3234,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$__rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_hit_total[$__rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_target_attester_miss_total[$__rate_interval]))\n)",
               "hide": false,
               "interval": "",
@@ -3224,7 +3246,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval]))\n/\n(\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_hit_total[$__rate_interval]))\n  +\n  sum(delta(validator_monitor_prev_epoch_on_chain_head_attester_miss_total[$__rate_interval]))\n)",
               "hide": false,
               "interval": "",
@@ -3313,7 +3335,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_attestations_min_delay_seconds_sum[$__rate_interval]))\n/\nsum(delta(validator_monitor_prev_epoch_attestations_min_delay_seconds_count[$__rate_interval]))",
               "hide": false,
               "interval": "",
@@ -3325,7 +3347,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_aggregates_min_delay_seconds_sum[$__rate_interval]))\n/\nsum(delta(validator_monitor_prev_epoch_aggregates_min_delay_seconds_count[$__rate_interval]))",
               "interval": "",
               "legendFormat": "aggregates",
@@ -3336,7 +3358,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(delta(validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds_sum[$__rate_interval]))\n/\nsum(delta(validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds_count[$__rate_interval]))",
               "hide": false,
               "interval": "",
@@ -3404,7 +3426,7 @@
             "h": 8,
             "w": 12,
             "x": 0,
-            "y": 28
+            "y": 29
           },
           "id": 204,
           "options": {
@@ -3425,7 +3447,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(validator_monitor_prev_epoch_attestations_total)/sum(validator_monitor_validators_total)",
               "interval": "",
               "legendFormat": "attestations_sent",
@@ -3436,7 +3458,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "avg(validator_monitor_prev_epoch_attestation_block_inclusions_total)",
               "hide": false,
               "interval": "",
@@ -3448,7 +3470,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "avg(validator_monitor_prev_epoch_attestation_aggregate_inclusions_total)",
               "hide": false,
               "interval": "",
@@ -3791,7 +3813,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_stfn_epoch_transition_seconds_sum[13m])",
               "interval": "",
               "legendFormat": "process block time",
@@ -3887,7 +3909,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_stfn_process_block_seconds_sum[6m])",
               "interval": "",
               "legendFormat": "process block time",
@@ -4080,7 +4102,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(lodestar_stfn_process_block_seconds_count[6m])",
               "interval": "",
               "legendFormat": "process block time",
@@ -4930,7 +4952,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(lodestar_bls_thread_pool_latency_to_worker_sum[6m])/delta(lodestar_bls_thread_pool_latency_to_worker_count[6m])",
               "interval": "",
               "legendFormat": "to worker",
@@ -4941,7 +4963,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(lodestar_bls_thread_pool_latency_from_worker_sum[6m])/delta(lodestar_bls_thread_pool_latency_from_worker_count[6m])",
               "hide": false,
               "interval": "",
@@ -5323,7 +5345,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(lodestar_block_processor_queue_job_time_seconds_count[6m])",
               "instant": false,
               "interval": "",
@@ -6489,7 +6511,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12*rate(beacon_fork_choice_requests_total[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -6765,7 +6787,7 @@
           "options": {
             "legend": {
               "calcs": [],
-              "displayMode": "list",
+              "displayMode": "hidden",
               "placement": "bottom"
             },
             "tooltip": {
@@ -6783,7 +6805,7 @@
               "exemplar": false,
               "expr": "beacon_fork_choice_reorg_total",
               "interval": "",
-              "legendFormat": "",
+              "legendFormat": "reorg count",
               "refId": "A"
             }
           ],
@@ -7394,7 +7416,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "delta(lodestar_gossip_block_elappsed_time_till_processed_sum[$__rate_interval])\n/\ndelta(lodestar_gossip_block_elappsed_time_till_processed_count[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -8211,7 +8233,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "increase(lodestar_peers_requested_total_to_disconnect[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -8513,7 +8535,7 @@
               "refId": "A"
             }
           ],
-          "title": "Mesh peers",
+          "title": "Mesh peers count",
           "type": "timeseries"
         },
         {
@@ -8596,7 +8618,7 @@
               "refId": "A"
             }
           ],
-          "title": "Topic peers",
+          "title": "Topic peers count",
           "type": "timeseries"
         },
         {
@@ -8832,7 +8854,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_gossip_score_avg_min_max_avg",
               "hide": false,
               "interval": "",
@@ -8844,7 +8866,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_gossip_score_avg_min_max_min",
               "hide": false,
               "interval": "",
@@ -8852,7 +8874,7 @@
               "refId": "min"
             }
           ],
-          "title": "Topic peers",
+          "title": "Gossip score avg / min / max",
           "type": "timeseries"
         },
         {
@@ -8951,7 +8973,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_gossip_topic_peers_by_type_count{type!~\"beacon_attestation\"}",
               "format": "time_series",
               "interval": "",
@@ -12664,7 +12686,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12 * rate(lodestar_sync_unknown_block_processed_blocks_success_total[6m])",
               "hide": false,
               "interval": "",
@@ -12676,7 +12698,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12 * rate(lodestar_sync_unknown_block_downloaded_blocks_success_total[6m])",
               "hide": false,
               "interval": "",
@@ -12773,7 +12795,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_sync_unknown_block_known_bad_blocks_size",
               "hide": false,
               "interval": "",
@@ -12901,7 +12923,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "12 * rate(lodestar_sync_unknown_block_downloaded_blocks_error_total[6m])",
               "hide": false,
               "interval": "",
@@ -13327,7 +13349,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "sum(rate(lodestar_precompute_next_epoch_transition_result_total{result=\"error\"}[13m]))\n/\nsum(rate(lodestar_precompute_next_epoch_transition_result_total[13m]))",
               "hide": false,
               "interval": "",
