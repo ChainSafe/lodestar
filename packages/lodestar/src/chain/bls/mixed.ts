@@ -18,10 +18,10 @@ export class BlsMixedVerifier implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
-    if (opts.batchable) {
-      return this.multiThreadBls.verifySignatureSets(sets, opts);
-    } else {
+    if (opts?.useMainThread) {
       return this.singleThreadBls.verifySignatureSets(sets);
+    } else {
+      return this.multiThreadBls.verifySignatureSets(sets, opts);
     }
   }
 }
