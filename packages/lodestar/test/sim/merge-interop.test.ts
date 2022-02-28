@@ -29,25 +29,31 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to
 // execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
+// ENGINE_PORT: Specify the port on which an jwt auth protected engine api is being hosted,
+//   typically by default at 8551 for geth. Some ELs could host it as same port as eth_ apis,
+//   but just with the engine_ methods protected. In that case this param can be skipped
 // TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
 // Example:
 // ```
-// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 TX_SCENARIOS=simple ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
+//   EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
+//   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
 // BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
-const terminalTotalDifficultyPreMerge = 20;
+const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
+const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
   const jsonRpcPort = process.env.EL_PORT;
-  const enginePort = process.env.EL_PORT;
+  const enginePort = process.env.ENGINE_PORT ?? jsonRpcPort;
   const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
   const engineApiUrl = `http://localhost:${enginePort}`;
 
@@ -73,6 +79,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         ...process.env,
         TTD,
         DATA_DIR,
+        JWT_SECRET_HEX: `${jwtSecretHex}`,
       },
     });
 
@@ -149,7 +156,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl]}, controller.signal);
+    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl], jwtSecretHex}, controller.signal);
 
     // 1. Prepare a payload
 
@@ -313,7 +320,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         sync: {isSingleNode: true},
         network: {discv5: null},
         eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
-        executionEngine: {urls: [engineApiUrl]},
+        executionEngine: {urls: [engineApiUrl], jwtSecretHex},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,
