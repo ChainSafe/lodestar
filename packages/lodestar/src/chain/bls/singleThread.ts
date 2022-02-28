@@ -12,18 +12,17 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
-    const startNs = process.hrtime.bigint();
-    const isValid = verifySignatureSetsMaybeBatch(
-      sets.map((set) => ({
-        publicKey: getAggregatedPubkey(set),
-        message: set.signingRoot.valueOf() as Uint8Array,
-        signature: set.signature,
-      }))
-    );
-
-    const endNs = process.hrtime.bigint();
-    this.metrics?.blsTime.singleThreadDuration.observe(Number(endNs - startNs) / 1e9);
-
-    return isValid;
+    const timer = this.metrics?.blsTime.mainThreadDurationInThreadPool.startTimer();
+    try {
+      return verifySignatureSetsMaybeBatch(
+        sets.map((set) => ({
+          publicKey: getAggregatedPubkey(set),
+          message: set.signingRoot.valueOf() as Uint8Array,
+          signature: set.signature,
+        }))
+      );
+    } finally {
+      if (timer) timer();
+    }
   }
 }

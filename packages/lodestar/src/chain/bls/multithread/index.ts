@@ -144,19 +144,18 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
     if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
-      const startNs = process.hrtime.bigint();
-      const isValid = verifySignatureSetsMaybeBatch(
-        sets.map((set) => ({
-          publicKey: getAggregatedPubkey(set),
-          message: set.signingRoot.valueOf() as Uint8Array,
-          signature: set.signature,
-        }))
-      );
-
-      const endNs = process.hrtime.bigint();
-      this.metrics?.blsTime.mainThreadDurationInThreadPool.observe(Number(endNs - startNs) / 1e9);
-
-      return isValid;
+      const timer = this.metrics?.blsTime.mainThreadDurationInThreadPool.startTimer();
+      try {
+        return verifySignatureSetsMaybeBatch(
+          sets.map((set) => ({
+            publicKey: getAggregatedPubkey(set),
+            message: set.signingRoot.valueOf() as Uint8Array,
+            signature: set.signature,
+          }))
+        );
+      } finally {
+        if (timer) timer();
+      }
     }
 
     // Split large array of sets into smaller.
