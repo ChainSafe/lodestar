@@ -13,7 +13,7 @@ import {PubkeyHex} from "../types";
  * Service that sets up and handles validator block proposal duties.
  */
 export class BlockProposingService {
-  readonly dutiesService: BlockDutiesService;
+  private readonly dutiesService: BlockDutiesService;
 
   constructor(
     private readonly config: IChainForkConfig,

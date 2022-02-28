@@ -17,7 +17,7 @@ import {PubkeyHex} from "../types";
  * Service that sets up and handles validator attester duties.
  */
 export class AttestationService {
-  readonly dutiesService: AttestationDutiesService;
+  private readonly dutiesService: AttestationDutiesService;
 
   constructor(
     private readonly logger: ILoggerVc,

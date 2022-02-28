@@ -16,7 +16,7 @@ import {PubkeyHex} from "../types";
  * Service that sets up and handles validator sync duties.
  */
 export class SyncCommitteeService {
-  readonly dutiesService: SyncCommitteeDutiesService;
+  private readonly dutiesService: SyncCommitteeDutiesService;
 
   constructor(
     private readonly config: IChainForkConfig,
