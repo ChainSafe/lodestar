@@ -53,13 +53,13 @@
     "@chainsafe/lodestar-utils": "^0.35.0",
     "@chainsafe/lodestar-validator": "^0.35.0",
     "@chainsafe/ssz": "^0.8.20",
-    "@types/lockfile": "^1.0.1",
     "lockfile": "^1.0.4",
     "fastify": "3.15.1",
     "fastify-cors": "^6.0.1",
     "fastify-bearer-auth": "6.1.0"
   },
   "devDependencies": {
-    "bigint-buffer": "^1.1.5"
+    "bigint-buffer": "^1.1.5",
+    "@types/lockfile": "^1.0.1"
   }
 }
