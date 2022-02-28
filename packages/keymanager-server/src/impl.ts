@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import lockfile from "lockfile";
-import {join} from "node:path";
+import path from "node:path";
 import {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -97,7 +97,7 @@ export class KeymanagerApi implements Api {
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        const keystorePath = join(this.importKeystoresPath, `${KEY_IMPORTED_PREFIX}_${pubKey}.json`);
+        const keystorePath = path.join(this.importKeystoresPath, `${KEY_IMPORTED_PREFIX}_${pubKey}.json`);
         const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
 
         // Persist keys for latter restarts
@@ -168,7 +168,7 @@ export class KeymanagerApi implements Api {
         // Remove key from persistent storage
         for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {
           if (keystoreFile === `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`) {
-            const keystorePath = join(this.importKeystoresPath, `key_imported_${pubkeyHex}.json`);
+            const keystorePath = path.join(this.importKeystoresPath, `key_imported_${pubkeyHex}.json`);
             const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
             await fs.promises.unlink(lockFilePath);
             await fs.promises.unlink(keystorePath);
