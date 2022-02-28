@@ -735,5 +735,13 @@ export function createLodestarMetrics(
         help: "Time to wait for unknown block before being rejected",
       }),
     },
+
+    lightclientServer: {
+      persistedUpdates: register.gauge<"type">({
+        name: "lodestar_lightclient_server_persisted_updates_total",
+        help: "Total number of persisted updates by finalized type",
+        labelNames: ["type"],
+      }),
+    },
   };
 }

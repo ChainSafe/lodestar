@@ -9,6 +9,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
+import {IMetrics} from "../../metrics";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {
@@ -40,17 +41,13 @@ type SyncAttestedData = {
     }
 );
 
-type GenesisData = {
-  genesisTime: number;
-  genesisValidatorsRoot: Uint8Array;
-};
-
-interface ILightClientIniterModules {
+type LightClientServerModules = {
   config: IChainForkConfig;
   db: IBeaconDb;
+  metrics: IMetrics | null;
   emitter: ChainEventEmitter;
   logger: ILogger;
-}
+};
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
 const MAX_PREV_HEAD_DATA = 32;
@@ -158,6 +155,7 @@ const MAX_PREV_HEAD_DATA = 32;
 export class LightClientServer {
   private readonly db: IBeaconDb;
   private readonly config: IChainForkConfig;
+  private readonly metrics: IMetrics | null;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: ILogger;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
@@ -172,11 +170,13 @@ export class LightClientServer {
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
 
-  constructor(modules: ILightClientIniterModules, private readonly genesisData: GenesisData) {
-    this.config = modules.config;
-    this.db = modules.db;
-    this.emitter = modules.emitter;
-    this.logger = modules.logger;
+  constructor(modules: LightClientServerModules) {
+    const {config, db, metrics, emitter, logger} = modules;
+    this.config = config;
+    this.db = db;
+    this.metrics = metrics;
+    this.emitter = emitter;
+    this.logger = logger;
 
     this.zero = {
       finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
@@ -491,6 +491,12 @@ export class LightClientServer {
       period,
       isFinalized: attestedData.isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
+    });
+
+    // Count total persisted updates per type. DB metrics don't diff between each type.
+    // The frequency of finalized vs non-finalized is critical to debug if finalizedHeader is not available
+    this.metrics?.lightclientServer.persistedUpdates.inc({
+      type: newPartialUpdate.isFinalized ? "finalized" : "non-finalized",
     });
   }
 
