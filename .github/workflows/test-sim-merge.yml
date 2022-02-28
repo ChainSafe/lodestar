@@ -50,6 +50,7 @@ jobs:
         env:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
           EL_SCRIPT_DIR: kiln/geth
+          ENGINE_PORT: 8551
           EL_PORT: 8545
           TX_SCENARIOS: simple
 
