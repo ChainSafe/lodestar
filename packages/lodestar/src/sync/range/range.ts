@@ -195,7 +195,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // We won't attest to this block so it's okay to ignore a SYNCING message from execution layer
       fromRangeSync: true,
       // When syncing, we should verify signatures in worker threads
-      blsVerifyMainThread: false,
+      blsVerifyOnMainThread: false,
     };
 
     if (this.opts?.disableProcessAsChainSegment) {

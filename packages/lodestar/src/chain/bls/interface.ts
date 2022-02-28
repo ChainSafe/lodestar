@@ -14,7 +14,7 @@ export type VerifySignatureOpts = {
    * Use main thread to verify signatures, use this with care.
    * Ignore the batchable option if this is true.
    */
-  useMainThread?: boolean;
+  verifyOnMainThread?: boolean;
 };
 
 export interface IBlsVerifier {

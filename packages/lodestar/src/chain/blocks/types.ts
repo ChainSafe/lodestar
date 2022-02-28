@@ -41,7 +41,7 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
   /**
    * Verify signatures on main thread or not.
    */
-  blsVerifyMainThread?: boolean;
+  blsVerifyOnMainThread?: boolean;
 };
 
 /**

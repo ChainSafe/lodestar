@@ -166,7 +166,7 @@ export async function verifyBlockStateTransition(
     if (
       signatureSets.length > 0 &&
       !(await chain.bls.verifySignatureSets(signatureSets, {
-        useMainThread: partiallyVerifiedBlock?.blsVerifyMainThread,
+        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
       }))
     ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});

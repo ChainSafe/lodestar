@@ -143,7 +143,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
-    if (opts.useMainThread && !this.blsVerifyAllMultiThread) {
+    if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
       const startNs = process.hrtime.bigint();
       const isValid = verifySignatureSetsMaybeBatch(
         sets.map((set) => ({

@@ -165,7 +165,7 @@ export class UnknownBlockSync {
 
     pendingBlock.status = PendingBlockStatus.processing;
     const res = await wrapError(
-      this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true, blsVerifyMainThread: true})
+      this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
     );
     pendingBlock.status = PendingBlockStatus.pending;
 
