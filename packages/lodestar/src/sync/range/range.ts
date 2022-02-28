@@ -8,7 +8,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {IMetrics} from "../../metrics";
-import {RangeSyncType, getRangeSyncType} from "../utils/remoteSyncType";
+import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType";
 import {updateChains, shouldRemoveChain} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
 import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
@@ -86,12 +86,17 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
   constructor(modules: RangeSyncModules, opts?: RangeSyncOpts) {
     super();
-    this.chain = modules.chain;
-    this.network = modules.network;
-    this.metrics = modules.metrics;
-    this.config = modules.config;
-    this.logger = modules.logger;
+    const {chain, network, metrics, config, logger} = modules;
+    this.chain = chain;
+    this.network = network;
+    this.metrics = metrics;
+    this.config = config;
+    this.logger = logger;
     this.opts = opts;
+
+    if (metrics) {
+      metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
+    }
   }
 
   /** Throw / return all AsyncGenerators inside every SyncChain instance */
@@ -215,10 +220,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   };
 
   /** Convenience method for `SyncChain` */
-  private onSyncChainEnd: SyncChainFns["onEnd"] = () => {
-    const localStatus = this.chain.getStatus();
-    this.update(localStatus.finalizedEpoch);
+  private onSyncChainEnd: SyncChainFns["onEnd"] = (err, target) => {
+    this.update(this.chain.forkChoice.getFinalizedCheckpoint().epoch);
     this.emit(RangeSyncEvent.completedChain);
+
+    if (err === null && target !== null) {
+      this.metrics?.syncRange.syncChainHighestTargetSlotCompleted.set(target.slot);
+    }
   };
 
   private addPeerOrCreateChain(startEpoch: Epoch, target: ChainTarget, peer: PeerId, syncType: RangeSyncType): void {
@@ -237,7 +245,8 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         this.opts
       );
       this.chains.set(syncType, syncChain);
-      this.logger.verbose("New syncChain", {syncType});
+      this.logger.verbose("Added syncChain", {syncType});
+      this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "add"});
     }
 
     syncChain.addPeer(peer, target);
@@ -252,6 +261,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
         syncChain.remove();
         this.chains.delete(id);
         this.logger.debug("Removed syncChain", {id: syncChain.logId});
+        this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "remove"});
 
         // Re-status peers from successful chain. Potentially trigger a Head sync
         this.network.reStatusPeers(syncChain.getPeers());
@@ -262,11 +272,38 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     for (const syncChain of toStop) {
       syncChain.stopSyncing();
+      if (syncChain.isSyncing) {
+        this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "stop"});
+      }
     }
 
     for (const syncChain of toStart) {
       syncChain.startSyncing(localFinalizedEpoch);
-      if (!syncChain.isSyncing) this.metrics?.syncChainsStarted.inc({syncType: syncChain.syncType});
+      if (!syncChain.isSyncing) {
+        this.metrics?.syncRange.syncChainsEvents.inc({syncType: syncChain.syncType, event: "start"});
+      }
+    }
+  }
+
+  private scrapeMetrics(metrics: IMetrics): void {
+    const syncChainsByType: Record<RangeSyncType, number> = {
+      [RangeSyncType.Finalized]: 0,
+      [RangeSyncType.Head]: 0,
+    };
+
+    const peersByTypeArr: Record<RangeSyncType, number[]> = {
+      [RangeSyncType.Finalized]: [],
+      [RangeSyncType.Head]: [],
+    };
+
+    for (const chain of this.chains.values()) {
+      peersByTypeArr[chain.syncType].push(chain.peers);
+      syncChainsByType[chain.syncType]++;
+    }
+
+    for (const syncType of rangeSyncTypes) {
+      metrics.syncRange.syncChains.set({syncType}, syncChainsByType[syncType]);
+      metrics.syncRange.syncChainsPeers.set({syncType}, peersByTypeArr[syncType]);
     }
   }
 }

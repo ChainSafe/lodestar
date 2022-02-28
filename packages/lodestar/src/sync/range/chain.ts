@@ -44,7 +44,7 @@ export type SyncChainFns = {
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
-  onEnd: (err?: Error) => void;
+  onEnd: (err: Error | null, target: ChainTarget | null) => void;
 };
 
 /**
@@ -86,7 +86,10 @@ export class SyncChain {
   /** Short string id to identify this SyncChain in logs */
   readonly logId: string;
   readonly syncType: RangeSyncType;
-  /** Should sync up until this slot, then stop */
+  /**
+   * Should sync up until this slot, then stop.
+   * Finalized SyncChains have a dynamic target, so if this chain has no peers the target can become null
+   */
   target: ChainTarget | null = null;
 
   /** Number of validated epochs. For the SyncRange to prevent switching chains too fast */
@@ -128,8 +131,8 @@ export class SyncChain {
 
     // Trigger event on parent class
     this.sync().then(
-      () => fns.onEnd(),
-      (e) => fns.onEnd(e)
+      () => fns.onEnd(null, this.target),
+      (e) => fns.onEnd(e, null)
     );
   }
 
