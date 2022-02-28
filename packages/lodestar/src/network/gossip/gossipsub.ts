@@ -230,6 +230,11 @@ export class Eth2Gossipsub extends Gossipsub {
    */
   async validate(message: InMessage): Promise<void> {
     try {
+      // Resolve IWANT promise before sending message to the queue. Attestations and aggregates can remain in the
+      // validation queue for > 1 min. Metrics show that peers are severly penalized with P7 due to broken promises,
+      // which they fullfil but _publish() is not called in time.
+      await this.gossipTracer.deliverMessage(message);
+
       // messages must have a single topicID
       const topicStr = Array.isArray(message.topicIDs) ? message.topicIDs[0] : undefined;
 
