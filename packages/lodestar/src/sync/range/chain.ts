@@ -35,7 +35,7 @@ export type SyncChainFns = {
    * Must return if ALL blocks are processed successfully
    * If SOME blocks are processed must throw BlockProcessorError()
    */
-  processChainSegment: (blocks: allForks.SignedBeaconBlock[]) => Promise<void>;
+  processChainSegment: (blocks: allForks.SignedBeaconBlock[], syncType: RangeSyncType) => Promise<void>;
   /** Must download blocks, and validate their range */
   downloadBeaconBlocksByRange: (
     peer: PeerId,
@@ -44,7 +44,7 @@ export type SyncChainFns = {
   /** Report peer for negative actions. Decouples from the full network instance */
   reportPeer: (peer: PeerId, action: PeerAction, actionName: string) => void;
   /** Hook called when Chain state completes */
-  onEnd: (err?: Error) => void;
+  onEnd: (err: Error | null, target: ChainTarget | null) => void;
 };
 
 /**
@@ -133,8 +133,8 @@ export class SyncChain {
 
     // Trigger event on parent class
     this.sync().then(
-      () => fns.onEnd(),
-      (e) => fns.onEnd(e)
+      () => fns.onEnd(null, this.target),
+      (e) => fns.onEnd(e, null)
     );
   }
 
@@ -421,7 +421,7 @@ export class SyncChain {
     const blocks = batch.startProcessing();
 
     // wrapError ensures to never call both batch success() and batch error()
-    const res = await wrapError(this.processChainSegment(blocks));
+    const res = await wrapError(this.processChainSegment(blocks, this.syncType));
 
     if (!res.err) {
       batch.processingSuccess();

@@ -369,15 +369,43 @@ export function createLodestarMetrics(
 
     // Sync
 
-    syncChainsStarted: register.gauge<"syncType">({
-      name: "lodestar_sync_chains_started_total",
-      help: "Total number of sync chains started events, labeled by syncType",
-      labelNames: ["syncType"],
-    }),
     syncStatus: register.gauge({
       name: "lodestar_sync_status",
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
     }),
+    syncPeersBySyncType: register.gauge<"syncType">({
+      name: "lodestar_sync_range_sync_peers",
+      help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
+      labelNames: ["syncType"],
+    }),
+    syncSwitchGossipSubscriptions: register.gauge<"action">({
+      name: "lodestar_sync_switch_gossip_subscriptions",
+      help: "Sync switched gossip subscriptions on/off",
+      labelNames: ["action"],
+    }),
+
+    syncRange: {
+      syncChainsEvents: register.gauge<"syncType" | "event">({
+        name: "lodestar_sync_chains_events_total",
+        help: "Total number of sync chains events events, labeled by syncType",
+        labelNames: ["syncType", "event"],
+      }),
+      syncChains: register.gauge<"syncType">({
+        name: "lodestar_sync_chains_count",
+        help: "Count of sync chains by syncType",
+        labelNames: ["syncType"],
+      }),
+      syncChainsPeers: register.avgMinMax<"syncType">({
+        name: "lodestar_sync_chains_peer_count_by_type",
+        help: "Count of sync chain peers by syncType",
+        labelNames: ["syncType"],
+      }),
+      syncChainHighestTargetSlotCompleted: register.gauge({
+        name: "lodestar_sync_chain_highest_target_slot_completed",
+        help: "Highest target slot completed by a sync chain",
+      }),
+    },
+
     syncUnknownBlock: {
       requests: register.gauge({
         name: "lodestar_sync_unknown_block_requests_total",
