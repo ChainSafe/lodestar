@@ -1961,11 +1961,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_lightclient.ilightclientinitermodules/</loc>
-         <lastmod>2022-02-28</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/chain_oppools.attestationwithindex/</loc>
          <lastmod>2022-02-28</lastmod>
          <changefreq>daily</changefreq>
