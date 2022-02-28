@@ -25,7 +25,7 @@ export type BlsMultiThreadWorkerPoolModules = {
 };
 
 export type BlsMultiThreadWorkerPoolOptions = {
-  blsVerifyAllMultiThread: boolean;
+  blsVerifyAllMultiThread?: boolean;
 };
 
 /**
@@ -116,7 +116,7 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     this.logger = logger;
     this.metrics = metrics;
     this.signal = signal;
-    this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread;
+    this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
     // TODO: Allow to customize implementation
     const implementation = bls.implementation;
@@ -144,13 +144,19 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
     if (opts.useMainThread && !this.blsVerifyAllMultiThread) {
-      return verifySignatureSetsMaybeBatch(
+      const startNs = process.hrtime.bigint();
+      const isValid = verifySignatureSetsMaybeBatch(
         sets.map((set) => ({
           publicKey: getAggregatedPubkey(set),
           message: set.signingRoot.valueOf() as Uint8Array,
           signature: set.signature,
         }))
       );
+
+      const endNs = process.hrtime.bigint();
+      this.metrics?.blsTime.mainThreadDurationInThreadPool.observe(Number(endNs - startNs) / 1e9);
+
+      return isValid;
     }
 
     // Split large array of sets into smaller.

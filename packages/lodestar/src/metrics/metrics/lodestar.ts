@@ -367,6 +367,20 @@ export function createLodestarMetrics(
       }),
     },
 
+    // BLS time
+    blsTime: {
+      singleThreadDuration: register.histogram({
+        name: "lodestar_bls_single_thread_time_seconds",
+        help: "Time to verify signatures with single thread mode",
+        buckets: [0.1, 1],
+      }),
+      mainThreadDurationInThreadPool: register.histogram({
+        name: "lodestar_bls_thread_pool_main_thread_time_seconds",
+        help: "Time to verify signatures in main thread with thread pool mode",
+        buckets: [0.1, 1],
+      }),
+    },
+
     // Sync
 
     syncChainsStarted: register.gauge<"syncType">({
