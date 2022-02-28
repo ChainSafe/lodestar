@@ -1,0 +1,77 @@
+name: Scheduled kurtosis run
+# This workflow is triggered on pushes to the repository.
+on:
+ workflow_dispatch:
+ schedule:
+   - cron: '0 3 * * *'
+
+env:
+    TEKU_IMAGE: "consensys/teku"
+    NIMBUS_IMAGE: "parithoshj/nimbus"
+    PRYSM_BEACON_IMAGE: "gcr.io/prysmaticlabs/prysm/beacon-chain"
+    PRYSM_VALIDATOR_IMAGE: "gcr.io/prysmaticlabs/prysm/validator"
+    LIGHTHOUSE_IMAGE: "sigp/lighthouse:latest-unstable"
+    LODESTAR_IMAGE: "chainsafe/lodestar:next"
+    GETH_IMAGE: "g11tech/geth:kilnv1"
+    NETHERMIND_IMAGE: "nethermindeth/nethermind"
+jobs:
+  kurtosis:
+    name: kurtosis
+    runs-on: kurtosis
+    # Increase timeout if we add more difficult tests that take longer!
+    timeout-minutes: 10
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@master
+      - name: Update kurtosis to latest and set metrics choice
+        shell: bash
+        run: |
+            sudo apt update
+            sudo apt upgrade kurtosis-cli
+      - name: fetch image name
+        id: fetch_image_name
+        shell: bash
+        run: |
+          echo "::set-output name=teku_image::consensys/teku@sha256:304541717f009efe3ed4ec04db3958aed0e119013d30312ec4d6cd05d0c95942"
+          echo "::set-output name=nimbus_image::$(./fetch-latest-image-tags.sh ${{ env.NIMBUS_IMAGE }})"
+          echo "::set-output name=prysm_beacon_image::gcr.io/prysmaticlabs/prysm/beacon-chain:kiln-1e32cd"
+          echo "::set-output name=prysm_validator_image::gcr.io/prysmaticlabs/prysm/validator:kiln-a424f5"
+          echo "::set-output name=lighthouse_image::sigp/lighthouse:latest-unstable"
+          echo "::set-output name=lodestar_image::chainsafe/lodestar:next"
+          echo "::set-output name=geth_image::$(./fetch-latest-image-tags.sh ${{ env.GETH_IMAGE }})"
+          echo "::set-output name=nethermind_image::nethermindeth/nethermind:kiln_0.2"
+      - name: Image digest
+        run: echo ${{ steps.fetch_image_name.outputs.teku_image }}
+      - name: Image digest
+        run: echo ${{ steps.fetch_image_name.outputs.nimbus_image }}
+      - name: Render Deployment YAML
+        uses: nowactions/envsubst@v1
+        with:
+          input: ./kurtosis/config.json.tmpl
+          output: ./config.json
+        env:
+            TEKU_IMAGE: ${{ steps.fetch_image_name.outputs.teku_image }}
+            NIMBUS_IMAGE: ${{ steps.fetch_image_name.outputs.nimbus_image }}
+            PRYSM_BEACON_IMAGE: ${{ steps.fetch_image_name.outputs.prysm_beacon_image }}
+            PRYSM_VALIDATOR_IMAGE: ${{ steps.fetch_image_name.outputs.prysm_validator_image }}
+            LIGHTHOUSE_IMAGE: ${{ steps.fetch_image_name.outputs.lighthouse_image }}
+            LODESTAR_IMAGE: ${{ steps.fetch_image_name.outputs.lodestar_image }}
+            GETH_IMAGE: ${{ steps.fetch_image_name.outputs.geth_image }}
+            NETHERMIND_IMAGE: ${{ steps.fetch_image_name.outputs.nethermind_image }}
+      - name: Run kurtosis with the config
+        run: kurtosis module exec --enclave-id newname kurtosistech/eth2-merge-kurtosis-module  --execute-params "$(cat ./config.json)"
+      - name: Run kurtosis with the config
+        if: always()
+        run: kurtosis enclave dump newname dumped_logs
+      - uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          name: dumped_logs
+          path: ./dumped_logs
+  cleanup:
+    runs-on: kurtosis
+    needs: [kurtosis]
+    if: always()
+    steps:
+      - name: Cleanup
+        run: kurtosis enclave rm newname --force
