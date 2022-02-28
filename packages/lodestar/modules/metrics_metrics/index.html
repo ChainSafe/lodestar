@@ -369,6 +369,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#syncrange-object">
+    syncRange: object
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#syncunknownblock-object">
     syncUnknownBlock: object
   </a>
@@ -407,15 +412,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e175d12/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr/>
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e175d12/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e175d12/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/eth2.0-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -695,7 +700,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr/>
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata</code>: IMetricsOptions["metadata"], <code>anchorState?</code>: allForks.BeaconState): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e175d12/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -905,9 +910,9 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
     })</p>
 </li>
 <li>
-<p><strong>syncChainsStarted</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"syncType"›</em> = register.gauge&lt;"syncType"&gt;({
-      name: "lodestar_sync_chains_started_total",
-      help: "Total number of sync chains started events, labeled by syncType",
+<p><strong>syncPeersBySyncType</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"syncType"›</em> = register.gauge&lt;"syncType"&gt;({
+      name: "lodestar_sync_range_sync_peers",
+      help: "Count of peers by sync type [FullySynced, Advanced, Behind]",
       labelNames: ["syncType"],
     })</p>
 </li>
@@ -915,6 +920,13 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <p><strong>syncStatus</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
       name: "lodestar_sync_status",
       help: "Range sync status: [Stalled, SyncingFinalized, SyncingHead, Synced]",
+    })</p>
+</li>
+<li>
+<p><strong>syncSwitchGossipSubscriptions</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"action"›</em> = register.gauge&lt;"action"&gt;({
+      name: "lodestar_sync_switch_gossip_subscriptions",
+      help: "Sync switched gossip subscriptions on/off",
+      labelNames: ["action"],
     })</p>
 </li>
 <li>
@@ -1419,6 +1431,36 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <p><strong>size</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
         name: "lodestar_state_cache_size",
         help: "State cache size",
+      })</p>
+</li>
+<li>
+<h3 id="syncrange-object"><strong>syncRange</strong>: <em>object</em><a class="headerlink" href="#syncrange-object" title="Permanent link">¶</a></h3>
+</li>
+<li>
+<p><strong>syncChainHighestTargetSlotCompleted</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_sync_chain_highest_target_slot_completed",
+        help: "Highest target slot completed by a sync chain",
+      })</p>
+</li>
+<li>
+<p><strong>syncChains</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"syncType"›</em> = register.gauge&lt;"syncType"&gt;({
+        name: "lodestar_sync_chains_count",
+        help: "Count of sync chains by syncType",
+        labelNames: ["syncType"],
+      })</p>
+</li>
+<li>
+<p><strong>syncChainsEvents</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"syncType" | "event"›</em> = register.gauge&lt;"syncType" | "event"&gt;({
+        name: "lodestar_sync_chains_events_total",
+        help: "Total number of sync chains events events, labeled by syncType",
+        labelNames: ["syncType", "event"],
+      })</p>
+</li>
+<li>
+<p><strong>syncChainsPeers</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹"syncType"›</em> = register.avgMinMax&lt;"syncType"&gt;({
+        name: "lodestar_sync_chains_peer_count_by_type",
+        help: "Count of sync chain peers by syncType",
+        labelNames: ["syncType"],
       })</p>
 </li>
 <li>
