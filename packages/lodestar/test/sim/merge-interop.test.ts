@@ -46,7 +46,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
 const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
-const jwtSecret = "dc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
@@ -79,7 +79,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         ...process.env,
         TTD,
         DATA_DIR,
-        JWT_SECRET_HEX: `0x${jwtSecret}`,
+        JWT_SECRET_HEX: `${jwtSecretHex}`,
       },
     });
 
@@ -156,7 +156,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl], jwtSecret}, controller.signal);
+    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl], jwtSecretHex}, controller.signal);
 
     // 1. Prepare a payload
 
@@ -320,7 +320,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         sync: {isSingleNode: true},
         network: {discv5: null},
         eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
-        executionEngine: {urls: [engineApiUrl], jwtSecret},
+        executionEngine: {urls: [engineApiUrl], jwtSecretHex},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,

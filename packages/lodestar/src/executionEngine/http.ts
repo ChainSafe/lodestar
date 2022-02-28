@@ -1,6 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {fromHex} from "@chainsafe/lodestar-utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
@@ -32,7 +33,7 @@ export type ExecutionEngineHttpOpts = {
    * request, as the EL auth specs mandate the fresh of the token (iat) to be checked within
    * +-5 seconds interval.
    */
-  jwtSecret?: string;
+  jwtSecretHex?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -58,7 +59,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       new JsonRpcHttpClient(opts.urls, {
         signal,
         timeout: opts.timeout,
-        jwtSecret: opts.jwtSecret ? Buffer.from(opts.jwtSecret, "hex") : undefined,
+        jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       });
   }
 

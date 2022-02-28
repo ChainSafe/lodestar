@@ -5,5 +5,6 @@ export function extractJwtHexSecret(jwtSecretContents: string): string {
   if (!jwtSecret || jwtSecret.length != 64) {
     throw Error(`Need a valid 256 bit hex encoded secret ${jwtSecret} ${jwtSecretContents}`);
   }
-  return jwtSecret;
+  // Return the secret in proper hex format
+  return `0x${jwtSecret}`;
 }

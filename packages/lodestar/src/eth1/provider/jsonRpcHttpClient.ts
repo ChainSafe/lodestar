@@ -136,7 +136,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
     }
 
     try {
-      const headers = {"Content-Type": "application/json"};
+      const headers: Record<string, string> = {"Content-Type": "application/json"};
       if (this.jwtSecret) {
         /**
          * ELs have a tight +-5 second freshness check on token's iat i.e. issued at
@@ -147,8 +147,7 @@ export class JsonRpcHttpClient implements IJsonRpcHttpClient {
          * Jwt auth spec: https://github.com/ethereum/execution-apis/pull/167
          */
         const token = encodeJwtToken({iat: Math.floor(new Date().getTime() / 1000)}, this.jwtSecret);
-        // eslint-disable-next-line @typescript-eslint/naming-convention
-        Object.assign(headers, {Authorization: `Bearer ${token}`});
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
       const res = await fetch(url, {

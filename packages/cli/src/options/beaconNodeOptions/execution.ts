@@ -9,14 +9,12 @@ export type ExecutionEngineArgs = {
 };
 
 export function parseArgs(args: ExecutionEngineArgs): IBeaconNodeOptions["executionEngine"] {
-  let jwtSecret;
-  if (args["jwt-secret"]) {
-    jwtSecret = extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim());
-  }
   return {
     urls: args["execution.urls"],
     timeout: args["execution.timeout"],
-    jwtSecret,
+    jwtSecretHex: args["jwt-secret"]
+      ? extractJwtHexSecret(fs.readFileSync(args["jwt-secret"], "utf-8").trim())
+      : undefined,
   };
 }
 
