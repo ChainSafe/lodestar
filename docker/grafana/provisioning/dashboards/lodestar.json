@@ -12579,7 +12579,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_peers_sync_count - sum(lodestar_sync_range_sync_peers)",
               "hide": false,
               "interval": "",
@@ -12778,7 +12778,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_sync_chains_count",
               "interval": "",
               "legendFormat": "{{syncType}}",
@@ -12863,7 +12863,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(lodestar_sync_chains_events_total[$__rate_interval])",
               "interval": "",
               "legendFormat": "{{event}}",
@@ -12948,7 +12948,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "lodestar_sync_chains_peer_count_by_type_sum",
               "interval": "",
               "legendFormat": "{{syncType}}",
@@ -13033,7 +13033,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(lodestar_sync_chain_highest_target_slot_completed > 0) - beacon_head_slot",
               "interval": "",
               "legendFormat": "highest_target_slot",
@@ -13044,7 +13044,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "32*beacon_finalized_epoch - beacon_head_slot",
               "hide": false,
               "interval": "",
