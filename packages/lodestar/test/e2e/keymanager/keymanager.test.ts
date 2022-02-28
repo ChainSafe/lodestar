@@ -9,6 +9,7 @@ import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
+import {DERIVATION_PATH} from "@chainsafe/lodestar-keymanager-server";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getAndInitDevValidators, getAndInitValidatorsWithKeystore} from "../../utils/node/validator";
@@ -342,7 +343,7 @@ describe("keymanager delete and import test", async function () {
       [
         {
           validatingPubkey: `${secretKeys[0].toPublicKey().toHex()}`,
-          derivationPath: "",
+          derivationPath: DERIVATION_PATH,
           readonly: true,
         },
       ],

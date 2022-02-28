@@ -16,7 +16,7 @@ import {SecretKey} from "@chainsafe/bls";
 import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
-import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server/src";
+import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
 
 export async function getAndInitValidatorsWithKeystore({
   node,

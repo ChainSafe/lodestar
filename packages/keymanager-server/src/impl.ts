@@ -17,7 +17,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 
 export const LOCK_FILE_EXT = ".lock";
 export const KEY_IMPORTED_PREFIX = "key_imported";
-const DERIVATION_PATH = "m/12381/3600/0/0/0";
+export const DERIVATION_PATH = "m/12381/3600/0/0/0";
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -25,6 +25,15 @@ export class KeymanagerApi implements Api {
     private readonly validator: Validator,
     private readonly importKeystoresPath: string
   ) {}
+
+  getKeystorePathInfoForKey = (pubkey: string): {keystoreFilePath: string; lockFilePath: string} => {
+    const keystoreFilename = `${KEY_IMPORTED_PREFIX}_${pubkey}.json`;
+    const keystoreFilePath = path.join(this.importKeystoresPath, keystoreFilename);
+    return {
+      keystoreFilePath,
+      lockFilePath: `${keystoreFilePath}${LOCK_FILE_EXT}`,
+    };
+  };
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -98,12 +107,11 @@ export class KeymanagerApi implements Api {
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        const keystorePath = path.join(this.importKeystoresPath, `${KEY_IMPORTED_PREFIX}_${pubKey}.json`);
-        const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
+        const keystorePathInfo = this.getKeystorePathInfoForKey(pubKey);
 
         // Persist keys for latter restarts
-        await fs.promises.writeFile(keystorePath, keystoreStr, {encoding: "utf8"});
-        lockfile.lockSync(lockFilePath);
+        await fs.promises.writeFile(keystorePathInfo.keystoreFilePath, keystoreStr, {encoding: "utf8"});
+        lockfile.lockSync(keystorePathInfo.lockFilePath);
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -165,14 +173,12 @@ export class KeymanagerApi implements Api {
         // Remove from Sync committee duties
         // Remove from indices
         this.validator.removeDutiesForKey(pubkeyHex);
-
+        const keystorePathInfo = this.getKeystorePathInfoForKey(pubkeyHex);
         // Remove key from persistent storage
         for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {
-          if (keystoreFile === `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`) {
-            const keystorePath = path.join(this.importKeystoresPath, `key_imported_${pubkeyHex}.json`);
-            const lockFilePath = `${keystorePath}${LOCK_FILE_EXT}`;
-            await fs.promises.unlink(lockFilePath);
-            await fs.promises.unlink(keystorePath);
+          if (keystoreFile.indexOf(pubkeyHex) !== -1) {
+            await fs.promises.unlink(keystorePathInfo.keystoreFilePath);
+            await fs.promises.unlink(keystorePathInfo.lockFilePath);
           }
         }
       } catch (e) {
