@@ -105,15 +105,21 @@ export class Archiver {
         // touching backfill sync process sequence which are at
         // <=anchorStateLatestBlockSlot i.e. clear >anchorStateLatestBlockSlot
         // and < currentSlot
-        const filteredSeqs = await this.db.backfilledRanges.keys({
+        const filteredSeqs = await this.db.backfilledRanges.entries({
           gt: this.chain.anchorStateLatestBlockSlot,
           lt: finalizedBlockFC.slot,
         });
-        await this.db.backfilledRanges.batchDelete(filteredSeqs);
-        this.logger.debug("Updated backfilledRanges", {
+        this.logger.debug("updated backfilledRanges", {
           key: finalizedBlockFC.slot,
           value: this.chain.anchorStateLatestBlockSlot,
         });
+        if (filteredSeqs.length > 0) {
+          await this.db.backfilledRanges.batchDelete(filteredSeqs.map((entry) => entry.key));
+          this.logger.debug(
+            `Forward Sync - cleaned up backfilledRanges between ${finalizedBlockFC.slot},${this.chain.anchorStateLatestBlockSlot}`,
+            {seqs: JSON.stringify(filteredSeqs)}
+          );
+        }
       }
     } catch (e) {
       this.logger.error("Error updating backfilledRanges on finalization", {epoch: finalized.epoch}, e as Error);
