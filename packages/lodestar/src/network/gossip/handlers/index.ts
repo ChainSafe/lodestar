@@ -111,7 +111,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // `validProposerSignature = true`, in gossip validation the proposer signature is checked
       chain
-        .processBlock(signedBlock, {validProposerSignature: true})
+        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
