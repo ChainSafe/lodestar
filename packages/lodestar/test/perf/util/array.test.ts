@@ -1,4 +1,4 @@
-import {itBench} from "@dapplion/benchmark";
+import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {LinkedList} from "../../../src/util/array";
 
 /**
@@ -8,6 +8,8 @@ import {LinkedList} from "../../../src/util/array";
  *               push then pop - LinkedList is >10x faster than regular array
  */
 describe("LinkedList vs Regular Array", () => {
+  setBenchOpts({noThreshold: true});
+
   const arrayLengths = [16_000, 24_000];
 
   for (const length of arrayLengths) {
