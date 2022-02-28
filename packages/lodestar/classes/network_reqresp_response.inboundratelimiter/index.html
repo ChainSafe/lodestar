@@ -425,7 +425,7 @@ and a block count rate tracker for all peers (this is lodestar specific).</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new InboundRateLimiter</strong>(<code>opts</code>: <a href="../../modules/network_reqresp_response/#ratelimiteropts">RateLimiterOpts</a>, <code>modules</code>: <a href="../../interfaces/network_reqresp_response.iratelimitermodules/">IRateLimiterModules</a>): <em><a href="./">InboundRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L68">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:68</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L68">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:68</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -449,44 +449,44 @@ and a block count rate tracker for all peers (this is lodestar specific).</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-blockcounttotaltracker"><code>Private</code> blockCountTotalTracker<a class="headerlink" href="#private-blockcounttotaltracker" title="Permanent link">¶</a></h3>
 <p>• <strong>blockCountTotalTracker</strong>: <em><a href="../network_reqresp.ratetracker/">RateTracker</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L63">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:63</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L63">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:63</a></em></p>
 <p>This rate tracker is specific to lodestar, we don't want to serve too many blocks for peers at the
 same time, even through we limit block count per peer as in blockCountTrackersByPeer</p>
 <hr/>
 <h3 id="private-blockcounttrackersbypeer"><code>Private</code> blockCountTrackersByPeer<a class="headerlink" href="#private-blockcounttrackersbypeer" title="Permanent link">¶</a></h3>
 <p>• <strong>blockCountTrackersByPeer</strong>: <em><a href="../util.mapdef/">MapDef</a>‹string, <a href="../network_reqresp.ratetracker/">RateTracker</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L64">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L64">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:64</a></em></p>
 <hr/>
 <h3 id="private-cleanupinterval"><code>Private</code> cleanupInterval<a class="headerlink" href="#private-cleanupinterval" title="Permanent link">¶</a></h3>
 <p>• <strong>cleanupInterval</strong>: <em>Timeout | undefined</em> = undefined</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L68">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:68</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L68">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:68</a></em></p>
 <p>Interval to check lastSeenMessagesByPeer</p>
 <hr/>
 <h3 id="private-lastseenrequestsbypeer"><code>Private</code> lastSeenRequestsByPeer<a class="headerlink" href="#private-lastseenrequestsbypeer" title="Permanent link">¶</a></h3>
 <p>• <strong>lastSeenRequestsByPeer</strong>: <em><a href="../util.mapdef/#static-map">Map</a>‹string, number›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L66">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:66</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L66">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:66</a></em></p>
 <p>Periodically check this to remove tracker of disconnected peers</p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L55">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L55">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:55</a></em></p>
 <hr/>
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">¶</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L57">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L57">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:57</a></em></p>
 <hr/>
 <h3 id="private-readonly-peerrpcscores"><code>Private</code> <code>Readonly</code> peerRpcScores<a class="headerlink" href="#private-readonly-peerrpcscores" title="Permanent link">¶</a></h3>
 <p>• <strong>peerRpcScores</strong>: <em><a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L56">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L56">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:56</a></em></p>
 <hr/>
 <h3 id="private-requestcounttrackersbypeer"><code>Private</code> requestCountTrackersByPeer<a class="headerlink" href="#private-requestcounttrackersbypeer" title="Permanent link">¶</a></h3>
 <p>• <strong>requestCountTrackersByPeer</strong>: <em><a href="../util.mapdef/">MapDef</a>‹string, <a href="../network_reqresp.ratetracker/">RateTracker</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L58">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L58">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:58</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="allowrequest">allowRequest<a class="headerlink" href="#allowrequest" title="Permanent link">¶</a></h3>
 <p>▸ <strong>allowRequest</strong>(<code>peerId</code>: PeerId, <code>requestTyped</code>: <a href="../../modules/network_reqresp/#requesttypedcontainer">RequestTypedContainer</a>): <em>boolean</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.iratelimiter/">IRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L100">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:100</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L100">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:100</a></em></p>
 <p>Tracks a request from a peer and returns whether to allow the request based on the configured rate limit params.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -511,13 +511,13 @@ same time, even through we limit block count per peer as in blockCountTrackersBy
 <hr/>
 <h3 id="private-checkdisconnectedpeers"><code>Private</code> checkDisconnectedPeers<a class="headerlink" href="#private-checkdisconnectedpeers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>checkDisconnectedPeers</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L167">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:167</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L167">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:167</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prune</strong>(<code>peerId</code>: PeerId): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.iratelimiter/">IRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L156">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:156</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L156">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:156</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -537,7 +537,7 @@ same time, even through we limit block count per peer as in blockCountTrackersBy
 <hr/>
 <h3 id="private-prunebypeeridstr"><code>Private</code> pruneByPeerIdStr<a class="headerlink" href="#private-prunebypeeridstr" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneByPeerIdStr</strong>(<code>peerIdStr</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L161">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:161</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L161">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:161</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -558,13 +558,13 @@ same time, even through we limit block count per peer as in blockCountTrackersBy
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.iratelimiter/">IRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L87">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:87</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L87">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:87</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stop</strong>(): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_reqresp.iratelimiter/">IRateLimiter</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0efbf1d/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L91">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:91</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/62b2092/packages/lodestar/src/network/reqresp/response/rateLimiter.ts#L91">packages/lodestar/src/network/reqresp/response/rateLimiter.ts:91</a></em></p>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
 </div>
