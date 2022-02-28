@@ -1,5 +1,6 @@
 import tmp, {DirResult, FileResult} from "tmp";
 import fs from "node:fs";
+import path from "node:path";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {
@@ -42,7 +43,7 @@ export async function getAndInitValidatorsWithKeystore({
   };
 }> {
   const keystoreDir = tmp.dirSync({unsafeCleanup: true});
-  const keystoreFile = `${keystoreDir.name}/${KEY_IMPORTED_PREFIX}_${keystorePubKey}.json`;
+  const keystoreFile = path.join(`${keystoreDir.name}`, `${KEY_IMPORTED_PREFIX}_${keystorePubKey}.json`);
 
   fs.writeFileSync(keystoreFile, keystoreContent, {encoding: "utf8", flag: "wx"});
 
