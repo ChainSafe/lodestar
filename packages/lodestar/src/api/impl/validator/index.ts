@@ -6,7 +6,6 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
-  computeProposers,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -14,7 +13,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   SYNC_COMMITTEE_SUBNET_SIZE,
 } from "@chainsafe/lodestar-params";
-import {Root, Slot, ValidatorIndex, ssz, Epoch} from "@chainsafe/lodestar-types";
+import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {assembleBlock} from "../../../chain/factory/block";
@@ -59,7 +58,6 @@ const SYNC_TOLERANCE_EPOCHS = 1;
  */
 export function getValidatorApi({chain, config, logger, metrics, network, sync}: ApiModules): routes.validator.Api {
   let genesisBlockRoot: Root | null = null;
-  const nextEpochProposerDutyCache = new Map<Epoch, ValidatorIndex[]>();
 
   /** Compute and cache the genesis block root */
   async function getGenesisBlockRoot(state: CachedBeaconStateAllForks): Promise<Root> {
@@ -166,10 +164,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       throw new NodeIsSyncing(
         `Block's execution payload not yet validated, executionPayloadBlockHash=${protoBeaconBlock.executionPayloadBlockHash}`
       );
-  }
-
-  function computeProposersForEpoch(state: CachedBeaconStateAllForks, epoch: Epoch): ValidatorIndex[] {
-    return computeProposers(state, state.getShufflingAtEpoch(epoch), state.effectiveBalanceIncrements);
   }
 
   const produceBlock: routes.validator.Api["produceBlockV2"] = async function produceBlock(
@@ -292,20 +286,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Note: There is a small probability that returned validators differs
       // than what is returned when the epoch is reached.
       if (epoch === nextEpoch) {
-        const cachedDutiesForEpoch = nextEpochProposerDutyCache.get(nextEpoch);
-
-        if (cachedDutiesForEpoch) {
-          indexes.push(...cachedDutiesForEpoch);
-        } else {
-          const futureProposers = computeProposersForEpoch(state, nextEpoch);
-
-          indexes.push(...futureProposers);
-
-          // Do not keep previous future proposal duties, so clear cache
-          // before setting a new value.
-          nextEpochProposerDutyCache.clear();
-          nextEpochProposerDutyCache.set(nextEpoch, futureProposers);
-        }
+        indexes.push(...(await chain.getNextEpochProposerDuty()));
       } else {
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
@@ -314,10 +295,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           indexes.push(validatorIndex);
         }
 
-        for (const cachedEpoch of nextEpochProposerDutyCache.keys()) {
+        for (const cachedEpoch of chain.nextEpochProposerDutyCache.keys()) {
           // Do not keep past cached future proposal duties.
           if (cachedEpoch < epoch) {
-            nextEpochProposerDutyCache.delete(cachedEpoch);
+            chain.nextEpochProposerDutyCache.delete(cachedEpoch);
           }
         }
       }

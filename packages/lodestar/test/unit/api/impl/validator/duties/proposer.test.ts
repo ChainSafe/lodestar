@@ -40,6 +40,8 @@ describe("get proposers api impl", function () {
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (chainStub as any).nextEpochProposerDutyCache = new Map();
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,
@@ -98,6 +100,7 @@ describe("get proposers api impl", function () {
     );
     const cachedState = createCachedBeaconState(config, state);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    chainStub.getNextEpochProposerDuty.resolves(new Array(SLOTS_PER_EPOCH));
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetBeaconProposer.returns(1);
     const {data: result} = await api.getProposerDuties(1);

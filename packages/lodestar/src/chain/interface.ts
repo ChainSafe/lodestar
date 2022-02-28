@@ -1,4 +1,4 @@
-import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, RootHex, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -68,6 +68,9 @@ export interface IBeaconChain {
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
 
+  // caches computed proposers for epoch N+1
+  readonly nextEpochProposerDutyCache: Map<Epoch, ValidatorIndex[]>;
+
   /** Stop beacon chain processing */
   close(): void;
   /** Populate in-memory caches with persisted data. Call at least once on startup */
@@ -78,6 +81,11 @@ export interface IBeaconChain {
 
   getHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks>;
+
+  /** We allow requesting proposal duties only one epoch in the future
+  Note: There is a small probability that returned validators differs
+  than what is returned when the epoch is reached.**/
+  getNextEpochProposerDuty(): Promise<ValidatorIndex[]>;
 
   /**
    * Since we can have multiple parallel chains,
