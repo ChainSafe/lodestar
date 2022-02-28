@@ -44,7 +44,6 @@ import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
-import {BlsMixedVerifier} from "./bls/mixed";
 import {BlsSingleThreadVerifier} from "../chain/bls";
 
 export class BeaconChain implements IBeaconChain {
@@ -122,11 +121,12 @@ export class BeaconChain implements IBeaconChain {
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     const blsModules = {logger, metrics, signal: this.abortController.signal};
-    const bls = opts.blsVerifyAllMultiThread
-      ? new BlsMultiThreadWorkerPool(blsModules)
-      : opts.blsVerifyAllMainThread
+    const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier()
-      : new BlsMixedVerifier(blsModules);
+      : opts.blsVerifyAllMultiThread
+      ? new BlsMultiThreadWorkerPool({blsVerifyAllMultiThread: true}, blsModules)
+      : // by default, verify signatures on both main threads and worker threads
+        new BlsMultiThreadWorkerPool({blsVerifyAllMultiThread: false}, blsModules);
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
