@@ -9,6 +9,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitVector, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
+import {IMetrics} from "../../metrics";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {
@@ -40,17 +41,13 @@ type SyncAttestedData = {
     }
 );
 
-type GenesisData = {
-  genesisTime: number;
-  genesisValidatorsRoot: Uint8Array;
-};
-
-interface ILightClientIniterModules {
+type LightClientServerModules = {
   config: IChainForkConfig;
   db: IBeaconDb;
+  metrics: IMetrics | null;
   emitter: ChainEventEmitter;
   logger: ILogger;
-}
+};
 
 const MAX_CACHED_FINALIZED_HEADERS = 3;
 const MAX_PREV_HEAD_DATA = 32;
@@ -158,6 +155,7 @@ const MAX_PREV_HEAD_DATA = 32;
 export class LightClientServer {
   private readonly db: IBeaconDb;
   private readonly config: IChainForkConfig;
+  private readonly metrics: IMetrics | null;
   private readonly emitter: ChainEventEmitter;
   private readonly logger: ILogger;
   private readonly knownSyncCommittee = new MapDef<SyncPeriod, Set<DependantRootHex>>(() => new Set());
@@ -172,11 +170,13 @@ export class LightClientServer {
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
 
-  constructor(modules: ILightClientIniterModules, private readonly genesisData: GenesisData) {
-    this.config = modules.config;
-    this.db = modules.db;
-    this.emitter = modules.emitter;
-    this.logger = modules.logger;
+  constructor(modules: LightClientServerModules) {
+    const {config, db, metrics, emitter, logger} = modules;
+    this.config = config;
+    this.db = db;
+    this.metrics = metrics;
+    this.emitter = emitter;
+    this.logger = logger;
 
     this.zero = {
       finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
@@ -468,22 +468,35 @@ export class LightClientServer {
       return;
     }
 
-    const newPartialUpdate: PartialLightClientUpdate = attestedData.isFinalized
-      ? {
-          ...attestedData,
-          finalizedHeader: await this.getFinalizedHeader(attestedData.finalizedCheckpoint.root as Uint8Array),
-          syncAggregate,
-        }
-      : {
-          ...attestedData,
-          syncAggregate,
-        };
+    let newPartialUpdate: PartialLightClientUpdate;
+
+    if (attestedData.isFinalized) {
+      // If update if finalized retrieve the previously stored header from DB.
+      // Only checkpoint candidates are stored, and not all headers are guaranteed to be available
+      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
+      const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+      if (finalizedHeader) {
+        // If finalizedHeader is available (should be most times) create a finalized update
+        newPartialUpdate = {...attestedData, finalizedHeader, syncAggregate};
+      } else {
+        // If finalizedHeader is not available (happens on startup) create a non-finalized update
+        newPartialUpdate = {...attestedData, isFinalized: false, syncAggregate};
+      }
+    } else {
+      newPartialUpdate = {...attestedData, syncAggregate};
+    }
 
     await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
     this.logger.debug("Stored new PartialLightClientUpdate", {
       period,
       isFinalized: attestedData.isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
+    });
+
+    // Count total persisted updates per type. DB metrics don't diff between each type.
+    // The frequency of finalized vs non-finalized is critical to debug if finalizedHeader is not available
+    this.metrics?.lightclientServer.persistedUpdates.inc({
+      type: newPartialUpdate.isFinalized ? "finalized" : "non-finalized",
     });
   }
 
@@ -497,7 +510,7 @@ export class LightClientServer {
   /**
    * Get finalized header from db. Keeps a small in-memory cache to speed up most of the lookups
    */
-  private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<phase0.BeaconBlockHeader> {
+  private async getFinalizedHeader(finalizedBlockRoot: Uint8Array): Promise<phase0.BeaconBlockHeader | null> {
     const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
     const cachedFinalizedHeader = this.checkpointHeaders.get(finalizedBlockRootHex);
     if (cachedFinalizedHeader) {
@@ -506,7 +519,12 @@ export class LightClientServer {
 
     const finalizedHeader = await this.db.checkpointHeader.get(finalizedBlockRoot);
     if (!finalizedHeader) {
-      throw Error(`finalityHeader not available ${toHexString(finalizedBlockRoot)}`);
+      // finalityHeader is not available during sync, since started after the finalized checkpoint.
+      // See https://github.com/ChainSafe/lodestar/issues/3495
+      // To prevent excesive logging this condition is not considered an error, but the lightclient updater
+      // will just create a non-finalized update.
+      this.logger.debug("finalizedHeader not available", {root: finalizedBlockRootHex});
+      return null;
     }
 
     this.checkpointHeaders.set(finalizedBlockRootHex, finalizedHeader);
