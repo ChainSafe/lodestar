@@ -183,11 +183,13 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   }
 
   /** Convenience method for `SyncChain` */
-  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks) => {
+  private processChainSegment: SyncChainFns["processChainSegment"] = async (blocks, syncType) => {
     // Not trusted, verify signatures
     const flags: PartiallyVerifiedBlockFlags = {
+      // Only skip importing attestations for finalized sync. For head sync attestation are valuable.
+      // Importing attestations also triggers a head update, see https://github.com/ChainSafe/lodestar/issues/3804
       // TODO: Review if this is okay, can we prevent some attacks by importing attestations?
-      skipImportingAttestations: true,
+      skipImportingAttestations: syncType === RangeSyncType.Finalized,
       // Ignores ALREADY_KNOWN or GENESIS_BLOCK errors, and continues with the next block in chain segment
       ignoreIfKnown: true,
       // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
