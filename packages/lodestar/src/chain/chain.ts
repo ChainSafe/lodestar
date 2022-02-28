@@ -45,6 +45,7 @@ import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
 import {BlsMixedVerifier} from "./bls/mixed";
+import {BlsSingleThreadVerifier} from "../chain/bls";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
@@ -121,8 +122,10 @@ export class BeaconChain implements IBeaconChain {
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
     const blsModules = {logger, metrics, signal: this.abortController.signal};
-    const bls = opts.useMultiThreadVerifier
+    const bls = opts.blsVerifyAllMultiThread
       ? new BlsMultiThreadWorkerPool(blsModules)
+      : opts.blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier()
       : new BlsMixedVerifier(blsModules);
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
