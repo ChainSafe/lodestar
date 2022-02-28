@@ -12,7 +12,7 @@ export class BlsSingleThreadVerifier implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[]): Promise<boolean> {
-    const timer = this.metrics?.blsTime.mainThreadDurationInThreadPool.startTimer();
+    const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
     try {
       return verifySignatureSetsMaybeBatch(
         sets.map((set) => ({
