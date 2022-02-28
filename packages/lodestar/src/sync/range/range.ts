@@ -159,7 +159,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   get state(): RangeSyncState {
     const syncingHeadTargets: ChainTarget[] = [];
     for (const chain of this.chains.values()) {
-      if (chain.isSyncing && chain.target) {
+      if (chain.isSyncing) {
         if (chain.syncType === RangeSyncType.Finalized) {
           return {status: RangeSyncStatus.Finalized, target: chain.target};
         } else {
@@ -226,6 +226,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     if (!syncChain) {
       syncChain = new SyncChain(
         startEpoch,
+        target,
         syncType,
         {
           processChainSegment: this.processChainSegment,

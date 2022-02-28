@@ -10,9 +10,9 @@ export type ChainTarget = {
   root: Root;
 };
 
-export function computeMostCommonTarget(targets: ChainTarget[]): ChainTarget | null {
+export function computeMostCommonTarget(targets: ChainTarget[]): ChainTarget {
   if (targets.length === 0) {
-    return null;
+    throw Error("Must provide at least one target");
   }
 
   const countById = new Map<string, number>();
