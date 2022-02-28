@@ -149,7 +149,7 @@ describe("BlockDutiesService", function () {
     );
 
     // then remove a signers public key
-    dutiesService.remove(toHexString(pubkeys[0]));
+    dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
 
     // confirm that the duties no longer contain the signers public key
     expect(Object.fromEntries(dutiesService["proposers"])).to.deep.equal(

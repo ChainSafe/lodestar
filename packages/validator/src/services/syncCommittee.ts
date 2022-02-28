@@ -34,7 +34,7 @@ export class SyncCommitteeService {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.dutiesService.remove(pubkey);
+    this.dutiesService.removeDutiesForKey(pubkey);
   }
 
   private runSyncCommitteeTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {

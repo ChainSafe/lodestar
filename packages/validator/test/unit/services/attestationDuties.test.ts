@@ -181,7 +181,7 @@ describe("AttestationDutiesService", function () {
       "Wrong dutiesService.attesters Map at current epoch"
     );
     // then remove
-    dutiesService.remove(toHexString(pubkeys[0]));
+    dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).to.deep.equal(
       {},
       "Wrong dutiesService.attesters Map at current epoch after removal"

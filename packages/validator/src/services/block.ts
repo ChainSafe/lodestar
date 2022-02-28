@@ -27,7 +27,7 @@ export class BlockProposingService {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.dutiesService.remove(pubkey);
+    this.dutiesService.removeDutiesForKey(pubkey);
   }
 
   /**

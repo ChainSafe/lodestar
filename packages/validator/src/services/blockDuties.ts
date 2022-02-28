@@ -59,7 +59,7 @@ export class BlockDutiesService {
     return Array.from(publicKeys.values());
   }
 
-  remove(pubkey: PubkeyHex): void {
+  removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const blockDutyAtEpoch of this.proposers.values()) {
       blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
         return toHexString(proposer.pubkey) !== pubkey;

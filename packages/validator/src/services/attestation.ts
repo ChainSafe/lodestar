@@ -42,7 +42,7 @@ export class AttestationService {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.dutiesService.remove(pubkey);
+    this.dutiesService.removeDutiesForKey(pubkey);
   }
 
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {

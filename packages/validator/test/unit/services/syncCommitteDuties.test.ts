@@ -235,7 +235,7 @@ describe("SyncCommitteeDutiesService", function () {
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
     // then remove signer with pubkeys[0]
-    dutiesService.remove(toHexString(pubkeys[0]));
+    dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
 
     // Removed public key should be removed from duties for this and next epoch should be persisted
     const dutiesByIndexByPeriodObjAfterRemoval = Object.fromEntries(

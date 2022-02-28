@@ -132,7 +132,7 @@ export class Validator {
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
-    this.indicesService.remove(pubkey);
+    this.indicesService.removeDutiesForKey(pubkey);
     this.blockProposingService.removeDutiesForKey(pubkey);
     this.attestationService.removeDutiesForKey(pubkey);
     this.syncCommitteeService.removeDutiesForKey(pubkey);

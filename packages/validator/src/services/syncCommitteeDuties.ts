@@ -82,10 +82,10 @@ export class SyncCommitteeDutiesService {
     return duties;
   }
 
-  remove(signer: PubkeyHex): void {
+  removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const [syncPeriod, validatorDutyAtPeriodMap] of this.dutiesByIndexByPeriod) {
       for (const [validatorIndex, dutyAtPeriod] of validatorDutyAtPeriodMap) {
-        if (toHexString(dutyAtPeriod.duty.pubkey) === signer) {
+        if (toHexString(dutyAtPeriod.duty.pubkey) === pubkey) {
           validatorDutyAtPeriodMap.delete(validatorIndex);
           if (validatorDutyAtPeriodMap.size === 0) {
             this.dutiesByIndexByPeriod.delete(syncPeriod);

@@ -47,10 +47,10 @@ export class AttestationDutiesService {
     chainHeadTracker.runOnNewHead(this.onNewHead);
   }
 
-  remove(signer: PubkeyHex): void {
+  removeDutiesForKey(pubkey: PubkeyHex): void {
     for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
       for (const [vIndex, attDutyAndProof] of attDutiesAtEpoch.dutiesByIndex) {
-        if (toHexString(attDutyAndProof.duty.pubkey) === signer) {
+        if (toHexString(attDutyAndProof.duty.pubkey) === pubkey) {
           attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
           if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
             this.dutiesByIndexByEpoch.delete(epoch);
