@@ -412,15 +412,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e7442db/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3f5f1de/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr/>
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e7442db/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3f5f1de/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e7442db/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3f5f1de/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/eth2.0-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -700,7 +700,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr/>
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata</code>: IMetricsOptions["metadata"], <code>anchorState?</code>: allForks.BeaconState): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e7442db/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3f5f1de/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -733,7 +733,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
       help: "Time to fullfill a request to the REST api labeled by operationId",
       labelNames: ["operationId"],
       // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 0.5, 1, 5, 10],
+      buckets: [0.01, 0.1, 1],
     })</p>
 </li>
 <li>
@@ -1529,6 +1529,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_aggregated_attestation_delay_seconds",
         help: "The delay between then the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1543,6 +1544,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_attestation_in_aggregate_delay_seconds",
         help: "The delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1557,6 +1559,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1571,6 +1574,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1585,6 +1589,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_prev_epoch_aggregates_min_delay_seconds",
         help: "The min delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1620,6 +1625,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_prev_epoch_attestations_min_delay_seconds",
         help: "The min delay between when the validator should send the attestation and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1634,6 +1640,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds",
         help: "The min delay between when the validator should send the block and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
@@ -1713,6 +1720,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "validator_monitor_unaggregated_attestation_delay_seconds",
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       })</p>
 </li>
 <li>
