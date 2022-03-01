@@ -291,7 +291,7 @@ export function createLodestarMetrics(
       help: "Time to fullfill a request to the REST api labeled by operationId",
       labelNames: ["operationId"],
       // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 0.5, 1, 5, 10],
+      buckets: [0.01, 0.1, 1],
     }),
 
     // Beacon state transition metrics
@@ -545,6 +545,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_attestations_min_delay_seconds",
         help: "The min delay between when the validator should send the attestation and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       prevEpochAttestationAggregateInclusions: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions_total",
@@ -570,6 +571,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds",
         help: "The min delay between when the validator should send the block and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       prevEpochAggregatesTotal: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_aggregates_total",
@@ -580,6 +582,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_aggregates_min_delay_seconds",
         help: "The min delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
 
       // Validator Monitor Metrics (real-time)
@@ -593,6 +596,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_unaggregated_attestation_delay_seconds",
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",
@@ -603,6 +607,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_aggregated_attestation_delay_seconds",
         help: "The delay between then the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       attestationInAggregateTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_attestation_in_aggregate_total",
@@ -613,6 +618,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_aggregate_delay_seconds",
         help: "The delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       attestationInBlockTotal: register.gauge<"index">({
         name: "validator_monitor_attestation_in_block_total",
@@ -623,6 +629,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       beaconBlockTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_beacon_block_total",
@@ -633,6 +640,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
     },
 
