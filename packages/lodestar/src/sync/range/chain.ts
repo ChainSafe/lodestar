@@ -90,7 +90,7 @@ export class SyncChain {
    * Should sync up until this slot, then stop.
    * Finalized SyncChains have a dynamic target, so if this chain has no peers the target can become null
    */
-  target: ChainTarget | null = null;
+  target: ChainTarget;
 
   /** Number of validated epochs. For the SyncRange to prevent switching chains too fast */
   validatedEpochs = 0;
@@ -114,12 +114,14 @@ export class SyncChain {
 
   constructor(
     startEpoch: Epoch,
+    initialTarget: ChainTarget,
     syncType: RangeSyncType,
     fns: SyncChainFns,
     modules: SyncChainModules,
     opts?: SyncChainOpts
   ) {
     this.startEpoch = startEpoch;
+    this.target = initialTarget;
     this.syncType = syncType;
     this.processChainSegment = fns.processChainSegment;
     this.downloadBeaconBlocksByRange = fns.downloadBeaconBlocksByRange;
@@ -227,8 +229,8 @@ export class SyncChain {
   /** Full debug state for lodestar API */
   getDebugState(): SyncChainDebugState {
     return {
-      targetRoot: this.target && toHexString(this.target.root),
-      targetSlot: this.target && this.target.slot,
+      targetRoot: toHexString(this.target.root),
+      targetSlot: this.target.slot,
       syncType: this.syncType,
       status: this.status,
       startEpoch: this.startEpoch,
@@ -238,8 +240,10 @@ export class SyncChain {
   }
 
   private computeTarget(): void {
-    const targets = this.peerset.values();
-    this.target = computeMostCommonTarget(targets);
+    if (this.peerset.size > 0) {
+      const targets = this.peerset.values();
+      this.target = computeMostCommonTarget(targets);
+    }
   }
 
   /**
@@ -259,7 +263,7 @@ export class SyncChain {
 
         // If startEpoch of the next batch to be processed > targetEpoch -> Done
         const toBeProcessedEpoch = toBeProcessedStartEpoch(toArr(this.batches), this.startEpoch, this.opts);
-        if (this.target && computeStartSlotAtEpoch(toBeProcessedEpoch) >= this.target.slot) {
+        if (computeStartSlotAtEpoch(toBeProcessedEpoch) >= this.target.slot) {
           break;
         }
 
@@ -367,7 +371,7 @@ export class SyncChain {
     const toBeDownloadedSlot = computeStartSlotAtEpoch(startEpoch) + BATCH_SLOT_OFFSET;
 
     // Don't request batches beyond the target head slot
-    if (this.target && toBeDownloadedSlot > this.target.slot) {
+    if (toBeDownloadedSlot > this.target.slot) {
       return null;
     }
 

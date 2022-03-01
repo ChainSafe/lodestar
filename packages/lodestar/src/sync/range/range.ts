@@ -9,7 +9,7 @@ import {IBeaconChain} from "../../chain";
 import {INetwork} from "../../network";
 import {IMetrics} from "../../metrics";
 import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSyncType";
-import {updateChains, shouldRemoveChain} from "./utils";
+import {updateChains} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
 import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
 
@@ -164,7 +164,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
   get state(): RangeSyncState {
     const syncingHeadTargets: ChainTarget[] = [];
     for (const chain of this.chains.values()) {
-      if (chain.isSyncing && chain.target) {
+      if (chain.isSyncing) {
         if (chain.syncType === RangeSyncType.Finalized) {
           return {status: RangeSyncStatus.Finalized, target: chain.target};
         } else {
@@ -236,6 +236,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
     if (!syncChain) {
       syncChain = new SyncChain(
         startEpoch,
+        target,
         syncType,
         {
           processChainSegment: this.processChainSegment,
@@ -259,7 +260,16 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
 
     // Remove chains that are out-dated, peer-empty, completed or failed
     for (const [id, syncChain] of this.chains.entries()) {
-      if (shouldRemoveChain(syncChain, localFinalizedSlot, this.chain)) {
+      // Checks if a Finalized or Head chain should be removed
+      if (
+        // Sync chain has completed syncing or encountered an error
+        syncChain.isRemovable ||
+        // Sync chain has no more peers to download from
+        syncChain.peers === 0 ||
+        // Outdated: our chain has progressed beyond this sync chain
+        syncChain.target.slot < localFinalizedSlot ||
+        this.chain.forkChoice.hasBlock(syncChain.target.root)
+      ) {
         syncChain.remove();
         this.chains.delete(id);
         this.logger.debug("Removed syncChain", {id: syncChain.logId});

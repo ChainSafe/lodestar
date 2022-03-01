@@ -10,22 +10,25 @@ export type ChainTarget = {
   root: Root;
 };
 
-export function computeMostCommonTarget(targets: ChainTarget[]): ChainTarget | null {
-  const targetsById = new Map<string, ChainTarget>();
+export function computeMostCommonTarget(targets: ChainTarget[]): ChainTarget {
+  if (targets.length === 0) {
+    throw Error("Must provide at least one target");
+  }
+
   const countById = new Map<string, number>();
+
+  let mostCommonTarget = targets[0];
+  let mostCommonCount = 0;
 
   for (const target of targets) {
     const targetId = `${target.slot}-${toHexString(target.root)}`;
-    targetsById.set(targetId, target);
-    countById.set(targetId, 1 + (countById.get(targetId) ?? 0));
-  }
-
-  let mostCommon: {count: number; targetId: string} | null = null;
-  for (const [targetId, count] of countById.entries()) {
-    if (!mostCommon || count > mostCommon.count) {
-      mostCommon = {count, targetId};
+    const count = 1 + (countById.get(targetId) ?? 0);
+    countById.set(targetId, count);
+    if (count > mostCommonCount) {
+      mostCommonCount = count;
+      mostCommonTarget = target;
     }
   }
 
-  return mostCommon && (targetsById.get(mostCommon.targetId) ?? null);
+  return mostCommonTarget;
 }
