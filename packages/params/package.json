@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-params",
-  "version": "0.35.0",
+  "version": "0.36.0",
   "description": "Chain parameters required for lodestar",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
