@@ -291,13 +291,14 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
           // getBeaconProposer ensures the requested epoch is correct
+          // Epoch should be equal to current epoch, if not the getBeaconProposer call throws an error
           const validatorIndex = state.getBeaconProposer(startSlot + i);
           indexes.push(validatorIndex);
         }
 
         for (const cachedEpoch of chain.nextEpochProposerDutyCache.keys()) {
           // Do not keep past cached future proposal duties.
-          if (cachedEpoch < epoch) {
+          if (cachedEpoch <= epoch) {
             chain.nextEpochProposerDutyCache.delete(cachedEpoch);
           }
         }
