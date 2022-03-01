@@ -41,10 +41,16 @@ jobs:
           path: packages/validator/spec-tests
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
+      # Misc sanity checks
       - name: Lint Grafana Dashboard
         run: yarn validate-gdash
       - name: Test root binary exists
         run: ./lodestar --version
+      - name: Reject yarn.lock changes
+        run: .github/workflows/scripts/reject_yarn_lock_changes.sh
+        # Run only on forks
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+
       - name: Check Types
         run: yarn run check-types
       - name: README check
