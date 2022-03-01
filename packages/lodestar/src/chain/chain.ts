@@ -23,7 +23,7 @@ import {IChainOptions} from "./options";
 import {IStateRegenerator, QueuedStateRegenerator, RegenCaller} from "./regen";
 import {initializeForkChoice} from "./forkChoice";
 import {restoreStateCaches} from "./initState";
-import {IBlsVerifier, BlsMultiThreadWorkerPool} from "./bls";
+import {IBlsVerifier, BlsSingleThreadVerifier, BlsMultiThreadWorkerPool} from "./bls";
 import {
   SeenAttesters,
   SeenAggregators,
@@ -44,7 +44,6 @@ import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
-import {BlsSingleThreadVerifier} from "../chain/bls";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: Number64;
@@ -120,11 +119,11 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    const blsModules = {logger, metrics, signal: this.abortController.signal};
     // by default, verify signatures on both main threads and worker threads
     const bls = opts.blsVerifyAllMainThread
       ? new BlsSingleThreadVerifier({metrics})
-      : new BlsMultiThreadWorkerPool(opts, blsModules);
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, signal: this.abortController.signal});
+
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
     const checkpointStateCache = new CheckpointStateCache({metrics});
