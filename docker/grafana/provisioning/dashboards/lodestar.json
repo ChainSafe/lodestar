@@ -2614,7 +2614,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "rate(node_disk_written_bytes_total[$__rate_interval])",
               "hide": false,
               "interval": "",
@@ -3085,7 +3085,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "node_memory_MemTotal_bytes",
               "format": "time_series",
               "hide": false,
@@ -3100,7 +3100,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "node_memory_MemTotal_bytes - node_memory_MemFree_bytes - (node_memory_Cached_bytes + node_memory_Buffers_bytes)",
               "format": "time_series",
               "hide": false,
@@ -3115,7 +3115,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "node_memory_Cached_bytes + node_memory_Buffers_bytes",
               "format": "time_series",
               "interval": "",
@@ -3129,7 +3129,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "node_memory_MemFree_bytes",
               "format": "time_series",
               "interval": "",
@@ -3143,7 +3143,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "(node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes)",
               "format": "time_series",
               "interval": "",
@@ -3243,7 +3243,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "-rate(node_network_transmit_bytes_total[6m])",
               "hide": false,
               "interval": "",
@@ -3358,7 +3358,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "node_filesystem_avail_bytes{device!~\"tmpfs\"} > 1000000000",
               "hide": false,
               "interval": "",
@@ -3456,7 +3456,7 @@
                 "type": "prometheus",
                 "uid": "${DS_PROMETHEUS}"
               },
-              "exemplar": true,
+              "exemplar": false,
               "expr": "-rate(node_netstat_Udp_OutDatagrams[6m])",
               "hide": false,
               "interval": "",
