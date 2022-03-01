@@ -4,7 +4,8 @@ import fs from "node:fs";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
-import {getKeymanagerClient, HttpClient} from "@chainsafe/lodestar-api/src";
+import {HttpClient} from "@chainsafe/lodestar-api/src";
+import {getClient} from "@chainsafe/lodestar-api/src/keymanager/client";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {ByteVector, fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
@@ -110,8 +111,8 @@ describe("keymanager delete and import test", async function () {
     await keymanagerServerForVC2.listen();
 
     // 1. CONFIRM KEYS BEFORE DELETION AND IMPORT
-    const clientKM1 = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${portKM1}`}));
-    const clientKM2 = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${portKM2}`}));
+    const clientKM1 = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${portKM1}`}));
+    const clientKM2 = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${portKM2}`}));
 
     // 1.a. CONFIRM PRESENCE KEYS VIA API
 
@@ -262,7 +263,7 @@ describe("keymanager delete and import test", async function () {
 
     await keymanagerServer.listen();
 
-    const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+    const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
 
     // Listing keys is denied
     try {
@@ -337,7 +338,7 @@ describe("keymanager delete and import test", async function () {
 
     await keymanagerServer.listen();
 
-    const client = getKeymanagerClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+    const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
 
     expect((await client.listKeys()).data).to.be.deep.equal(
       [
