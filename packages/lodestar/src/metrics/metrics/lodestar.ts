@@ -370,6 +370,20 @@ export function createLodestarMetrics(
         help: "Time from the worker sending the result and the main thread receiving it",
         buckets: [0.1],
       }),
+      mainThreadDurationInThreadPool: register.histogram({
+        name: "lodestar_bls_thread_pool_main_thread_time_seconds",
+        help: "Time to verify signatures in main thread with thread pool mode",
+        buckets: [0.1, 1],
+      }),
+    },
+
+    // BLS time on single thread mode
+    blsSingleThread: {
+      singleThreadDuration: register.histogram({
+        name: "lodestar_bls_single_thread_time_seconds",
+        help: "Time to verify signatures with single thread mode",
+        buckets: [0.1, 1],
+      }),
     },
 
     // Sync

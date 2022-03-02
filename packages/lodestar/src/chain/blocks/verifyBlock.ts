@@ -163,7 +163,12 @@ export async function verifyBlockStateTransition(
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
       : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
 
-    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+    if (
+      signatureSets.length > 0 &&
+      !(await chain.bls.verifySignatureSets(signatureSets, {
+        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
+      }))
+    ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
     }
   }
