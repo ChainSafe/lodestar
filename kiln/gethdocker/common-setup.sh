@@ -17,5 +17,5 @@ pubKey="0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"
 # echo a hex encoded 256 bit secret into a file
 echo $JWT_SECRET_HEX> $DATA_DIR/jwtsecret
 
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR geth --datadir /data init /data/genesis.json
-docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR geth  --datadir /data account import /data/sk.json --password /data/password.txt
+docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR --datadir /data init /data/genesis.json
+docker run --rm -u $(id -u ${USER}):$(id -g ${USER}) -v $currentDir/$DATA_DIR:/data $EL_BINARY_DIR  --datadir /data account import /data/sk.json --password /data/password.txt

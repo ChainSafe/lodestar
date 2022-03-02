@@ -1,6 +1,7 @@
 # Geth Docker setup for running the sim merge tests on local machine
 
 ###### Build geth docker image
+Or directly use a compatible pre-build image (checkout `./Dockerfile` for the compatible branch of `geth`)
 
 ```bash
 cd kiln/gethdocker
