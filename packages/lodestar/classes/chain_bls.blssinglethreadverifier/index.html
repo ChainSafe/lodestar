@@ -256,8 +256,46 @@
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#constructors">
+    Constructors
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#properties">
+    Properties
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#methods">
     Methods
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructors_1">
+    Constructors
+  </a>
+<nav aria-label="Constructors" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#constructor">
+    constructor
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#properties_1">
+    Properties
+  </a>
+<nav aria-label="Properties" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#private-readonly-metrics">
+    Private Readonly metrics
   </a>
 </li>
 </ul>
@@ -298,14 +336,49 @@
 <li><a href="../../interfaces/chain_bls.iblsverifier/">IBlsVerifier</a></li>
 </ul>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
+<h3 id="constructors">Constructors<a class="headerlink" href="#constructors" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#constructor">constructor</a></li>
+</ul>
+<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#private-readonly-metrics">metrics</a></li>
+</ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#verifysignaturesets">verifySignatureSets</a></li>
 </ul>
+<h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
+<h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
+<p>+ <strong>new BlsSingleThreadVerifier</strong>(<code>__namedParameters</code>: object): <em><a href="./">BlsSingleThreadVerifier</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bbe818d/packages/lodestar/src/chain/bls/singleThread.ts#L8">packages/lodestar/src/chain/bls/singleThread.ts:8</a></em></p>
+<p><strong>Parameters:</strong></p>
+<p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>metrics</code></td>
+<td>null | <a href="../../modules/metrics/#imetrics">IMetrics</a></td>
+<td>null</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em><a href="./">BlsSingleThreadVerifier</a></em></p>
+<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
+<h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">¶</a></h3>
+<p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bbe818d/packages/lodestar/src/chain/bls/singleThread.ts#L8">packages/lodestar/src/chain/bls/singleThread.ts:8</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="verifysignaturesets">verifySignatureSets<a class="headerlink" href="#verifysignaturesets" title="Permanent link">¶</a></h3>
 <p>▸ <strong>verifySignatureSets</strong>(<code>sets</code>: ISignatureSet[]): <em>Promise‹boolean›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f63ae9d/packages/lodestar/src/chain/bls/singleThread.ts#L7">packages/lodestar/src/chain/bls/singleThread.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bbe818d/packages/lodestar/src/chain/bls/singleThread.ts#L14">packages/lodestar/src/chain/bls/singleThread.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
