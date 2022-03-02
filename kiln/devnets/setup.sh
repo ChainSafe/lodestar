@@ -16,6 +16,8 @@ if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] &
 then
   echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
   echo "example: ./setup.sh --dataDir devnet4-data --elClient nethermind --devnetVars ./devnet4.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
+  echo "example: ./setup.sh --dataDir devnet4-data --elClient geth --devnetVars ./devnet4.vars"
   exit;
 fi
 
@@ -67,7 +69,7 @@ then
   dockerCmd="$dockerCmd -it" 
 fi;
 
-
+platform=$(uname)
 bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
 bootNode=($bootNode)
 bootNode=$(IFS=, ; echo "${bootNode[*]}")
@@ -82,14 +84,25 @@ then
     echo "setting up geth directory"
     $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --datadir /data init /config/genesis.json
   fi;
-  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
+  if [ $platform == 'Darwin' ]
+  then
+    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
+  else
+    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
+  fi
 elif [ "$elClient" == "nethermind" ] 
 then
   echo "nethermindImage: $NETHERMIND_IMAGE"
   $dockerExec pull $NETHERMIND_IMAGE
 
   elName="$DEVNET_NAME-nethermind"
-  elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+
+  if [ $platform == 'Darwin' ]
+  then
+    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+  else
+    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+  fi
 fi
 
 echo "lodestarImage: $LODESTAR_IMAGE"
@@ -100,12 +113,23 @@ bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
 #bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
 depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
 clName="$DEVNET_NAME-lodestar"
-clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
+
+if [ $platform == 'Darwin' ]
+then
+  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
+else
+  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
+fi
 
 run_cmd "$elCmd"
 elPid=$!
 echo "elPid= $elPid"
 
+if [ $platform == 'Darwin' ]
+then
+   # hack to allow network stack of EL to be up before starting the CL on macOs. Waiting on pid does not work
+   sleep 5
+fi
 
 run_cmd "$clCmd"
 clPid=$!
@@ -127,7 +151,13 @@ then
 	echo "you can watch observe the client logs at the respective terminals"
 	echo "use ctl + c on any of these three (including this) terminals to stop the process"
 	echo "waiting ..."
-	wait -n $elPid $clPid
+	if [ $platform == 'Darwin' ]
+	then # macOs ships with an old version of bash with wait that does not have the -n flag
+	  wait $elPid
+	  wait $clPid
+	else
+	  wait -n $elPid $clPid
+	fi
   echo "one of the el or cl process exited, stopping and cleanup"
 	cleanup
 fi;

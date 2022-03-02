@@ -4,9 +4,10 @@ import {INetwork, NetworkEvent} from "../network";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
+import {IMetrics} from "../metrics";
 import {ChainEvent, IBeaconChain} from "../chain";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
-import {getPeerSyncType, PeerSyncType} from "./utils/remoteSyncType";
+import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType";
 import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {SyncOptions} from "./options";
@@ -16,10 +17,14 @@ export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;
   private readonly network: INetwork;
   private readonly chain: IBeaconChain;
+  private readonly metrics: IMetrics | null;
   private readonly opts: SyncOptions;
 
   private readonly rangeSync: RangeSync;
   private readonly unknownBlockSync: UnknownBlockSync;
+
+  /** For metrics only */
+  private readonly peerSyncType = new Map<string, PeerSyncType>();
 
   /**
    * The number of slots ahead of us that is allowed before starting a RangeSync
@@ -36,6 +41,7 @@ export class BeaconSync implements IBeaconSync {
     this.opts = opts;
     this.network = network;
     this.chain = chain;
+    this.metrics = metrics;
     this.logger = logger;
     this.rangeSync = new RangeSync(modules, opts);
     this.unknownBlockSync = new UnknownBlockSync(config, network, chain, logger, metrics, opts);
@@ -51,7 +57,7 @@ export class BeaconSync implements IBeaconSync {
     this.chain.emitter.on(ChainEvent.clockEpoch, this.onClockEpoch);
 
     if (metrics) {
-      metrics.syncStatus.addCollect(() => metrics.syncStatus.set(syncStateMetric[this.state]));
+      metrics.syncStatus.addCollect(() => this.scrapeMetrics(metrics));
     }
   }
 
@@ -144,6 +150,9 @@ export class BeaconSync implements IBeaconSync {
     const localStatus = this.chain.getStatus();
     const syncType = getPeerSyncType(localStatus, peerStatus, this.chain.forkChoice, this.slotImportTolerance);
 
+    // For metrics only
+    this.peerSyncType.set(peerId.toB58String(), syncType);
+
     if (syncType === PeerSyncType.Advanced) {
       this.rangeSync.addPeer(peerId, localStatus, peerStatus);
     }
@@ -156,6 +165,8 @@ export class BeaconSync implements IBeaconSync {
    */
   private removePeer = (peerId: PeerId): void => {
     this.rangeSync.removePeer(peerId);
+
+    this.peerSyncType.delete(peerId.toB58String());
   };
 
   /**
@@ -171,6 +182,7 @@ export class BeaconSync implements IBeaconSync {
       this.chain.clock.currentSlot >= MIN_EPOCH_TO_START_GOSSIP
     ) {
       this.network.subscribeGossipCoreTopics();
+      this.metrics?.syncSwitchGossipSubscriptions.inc({action: "subscribed"});
       this.logger.info("Subscribed gossip core topics");
     }
 
@@ -180,6 +192,7 @@ export class BeaconSync implements IBeaconSync {
       if (syncDiff > this.slotImportTolerance * 2) {
         this.logger.warn(`Node sync has fallen behind by ${syncDiff} slots`);
         this.network.unsubscribeGossipCoreTopics();
+        this.metrics?.syncSwitchGossipSubscriptions.inc({action: "unsubscribed"});
         this.logger.info("Un-subscribed gossip core topics");
       }
     }
@@ -192,4 +205,23 @@ export class BeaconSync implements IBeaconSync {
     // by realizing it's way behind and turning gossip off.
     this.updateSyncState();
   };
+
+  private scrapeMetrics(metrics: IMetrics): void {
+    // Compute current sync state
+    metrics.syncStatus.set(syncStateMetric[this.state]);
+
+    // Count peers by syncType
+    const peerCountByType: Record<PeerSyncType, number> = {
+      [PeerSyncType.Advanced]: 0,
+      [PeerSyncType.FullySynced]: 0,
+      [PeerSyncType.Behind]: 0,
+    };
+    for (const syncType of this.peerSyncType.values()) {
+      peerCountByType[syncType]++;
+    }
+
+    for (const syncType of peerSyncTypes) {
+      metrics.syncPeersBySyncType.set({syncType}, peerCountByType[syncType]);
+    }
+  }
 }

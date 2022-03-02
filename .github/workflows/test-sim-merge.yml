@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: 0569213dc4032da83abed44fab7f65794a526f21
-  NETHERMIND_COMMIT: 78ae2353be5d05a285d6aaa1826910489d381a3e
+  GETH_COMMIT: e44f96d1d31bdc405f2653709df53bab4596f66b
+  NETHERMIND_COMMIT: f1fe9d3cb200772c9fd0b8b3935212d93d0f90fe
 
 jobs:
   sim-merge-tests:
@@ -37,8 +37,10 @@ jobs:
 
       # Install Geth merge interop
       - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
       - name: Clone Geth merge interop branch
-        run: git clone -b merge-kiln https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+        run: git clone -b merge-kiln-v2 https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
       - name: Build Geth
         run: cd go-ethereum && make
 
@@ -48,6 +50,7 @@ jobs:
         env:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
           EL_SCRIPT_DIR: kiln/geth
+          ENGINE_PORT: 8551
           EL_PORT: 8545
           TX_SCENARIOS: simple
 
@@ -56,7 +59,7 @@ jobs:
         with:
           dotnet-version: "6.0.x"
       - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b kiln_processing https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 

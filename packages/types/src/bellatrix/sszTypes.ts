@@ -33,7 +33,7 @@ const executionPayloadFields = {
   stateRoot: Bytes32,
   receiptsRoot: Bytes32,
   logsBloom: new ByteVectorType(BYTES_PER_LOGS_BLOOM),
-  random: Bytes32,
+  prevRandao: Bytes32,
   blockNumber: UintNum64,
   gasLimit: UintNum64,
   gasUsed: UintNum64,

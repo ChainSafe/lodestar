@@ -179,7 +179,8 @@ export class BeaconNode {
             network,
             wsCheckpoint,
             anchorState,
-            logger: logger.child(opts.logger.sync),
+            logger: logger.child(opts.logger.backfill),
+            signal,
           })
         : null;
 

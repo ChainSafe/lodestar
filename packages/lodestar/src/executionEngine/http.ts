@@ -1,6 +1,7 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {fromHex} from "@chainsafe/lodestar-utils";
 
 import {ErrorJsonRpcResponse, HttpRpcError, JsonRpcHttpClient} from "../eth1/provider/jsonRpcHttpClient";
 import {
@@ -26,6 +27,13 @@ import {
 export type ExecutionEngineHttpOpts = {
   urls: string[];
   timeout?: number;
+  /**
+   * 256 bit jwt secret in hex format without the leading 0x. If provided, the execution engine
+   * rpc requests will be bundled by an authorization header having a fresh jwt token on each
+   * request, as the EL auth specs mandate the fresh of the token (iat) to be checked within
+   * +-5 seconds interval.
+   */
+  jwtSecretHex?: string;
 };
 
 export const defaultExecutionEngineHttpOpts: ExecutionEngineHttpOpts = {
@@ -51,6 +59,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
       new JsonRpcHttpClient(opts.urls, {
         signal,
         timeout: opts.timeout,
+        jwtSecret: opts.jwtSecretHex ? fromHex(opts.jwtSecretHex) : undefined,
       });
   }
 
@@ -185,7 +194,7 @@ export class ExecutionEngineHttp implements IExecutionEngine {
     const apiPayloadAttributes: ApiPayloadAttributes | undefined = payloadAttributes
       ? {
           timestamp: numToQuantity(payloadAttributes.timestamp),
-          random: bytesToData(payloadAttributes.random),
+          prevRandao: bytesToData(payloadAttributes.prevRandao),
           suggestedFeeRecipient: bytesToData(payloadAttributes.suggestedFeeRecipient),
         }
       : undefined;
@@ -307,7 +316,7 @@ type ExecutionPayloadRpc = {
   stateRoot: DATA; // 32 bytes
   receiptsRoot: DATA; // 32 bytes
   logsBloom: DATA; // 256 bytes
-  random: DATA; // 32 bytes
+  prevRandao: DATA; // 32 bytes
   blockNumber: QUANTITY;
   gasLimit: QUANTITY;
   gasUsed: QUANTITY;
@@ -325,7 +334,7 @@ export function serializeExecutionPayload(data: bellatrix.ExecutionPayload): Exe
     stateRoot: bytesToData(data.stateRoot),
     receiptsRoot: bytesToData(data.receiptsRoot),
     logsBloom: bytesToData(data.logsBloom),
-    random: bytesToData(data.random),
+    prevRandao: bytesToData(data.prevRandao),
     blockNumber: numToQuantity(data.blockNumber),
     gasLimit: numToQuantity(data.gasLimit),
     gasUsed: numToQuantity(data.gasUsed),
@@ -344,7 +353,7 @@ export function parseExecutionPayload(data: ExecutionPayloadRpc): bellatrix.Exec
     stateRoot: dataToBytes(data.stateRoot, 32),
     receiptsRoot: dataToBytes(data.receiptsRoot, 32),
     logsBloom: dataToBytes(data.logsBloom, BYTES_PER_LOGS_BLOOM),
-    random: dataToBytes(data.random, 32),
+    prevRandao: dataToBytes(data.prevRandao, 32),
     blockNumber: quantityToNum(data.blockNumber),
     gasLimit: quantityToNum(data.gasLimit),
     gasUsed: quantityToNum(data.gasUsed),

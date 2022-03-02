@@ -16,11 +16,16 @@ import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types";
 import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
 import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {getAggregatedPubkey} from "../utils";
+import {verifySignatureSetsMaybeBatch} from "../maybeBatch";
 
 export type BlsMultiThreadWorkerPoolModules = {
   logger: ILogger;
   metrics: IMetrics | null;
   signal: AbortSignal;
+};
+
+export type BlsMultiThreadWorkerPoolOptions = {
+  blsVerifyAllMultiThread?: boolean;
 };
 
 /**
@@ -104,12 +109,14 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
     firstPush: number;
     timeout: NodeJS.Timeout;
   } | null = null;
+  private blsVerifyAllMultiThread: boolean;
 
-  constructor(modules: BlsMultiThreadWorkerPoolModules) {
+  constructor(options: BlsMultiThreadWorkerPoolOptions, modules: BlsMultiThreadWorkerPoolModules) {
     const {logger, metrics, signal} = modules;
     this.logger = logger;
     this.metrics = metrics;
     this.signal = signal;
+    this.blsVerifyAllMultiThread = options.blsVerifyAllMultiThread ?? false;
 
     // TODO: Allow to customize implementation
     const implementation = bls.implementation;
@@ -136,6 +143,21 @@ export class BlsMultiThreadWorkerPool implements IBlsVerifier {
   }
 
   async verifySignatureSets(sets: ISignatureSet[], opts: VerifySignatureOpts = {}): Promise<boolean> {
+    if (opts.verifyOnMainThread && !this.blsVerifyAllMultiThread) {
+      const timer = this.metrics?.blsThreadPool.mainThreadDurationInThreadPool.startTimer();
+      try {
+        return verifySignatureSetsMaybeBatch(
+          sets.map((set) => ({
+            publicKey: getAggregatedPubkey(set),
+            message: set.signingRoot.valueOf() as Uint8Array,
+            signature: set.signature,
+          }))
+        );
+      } finally {
+        if (timer) timer();
+      }
+    }
+
     // Split large array of sets into smaller.
     // Very helpful when syncing finalized, sync may submit +1000 sets so chunkify allows to distribute to many workers
     const results = await Promise.all(

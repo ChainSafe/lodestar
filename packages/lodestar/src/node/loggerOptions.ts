@@ -7,6 +7,7 @@ export interface IBeaconLoggerOptions {
   node: ILoggerOptions;
   network: ILoggerOptions;
   sync: ILoggerOptions;
+  backfill: ILoggerOptions;
   api: ILoggerOptions;
   metrics: ILoggerOptions;
 }
@@ -39,6 +40,10 @@ export const defaultLoggerOptions: IBeaconLoggerOptions = {
   sync: {
     level: LogLevel[defaultLogLevel],
     module: "sync",
+  },
+  backfill: {
+    level: LogLevel[defaultLogLevel],
+    module: "backfill",
   },
   api: {
     level: LogLevel[defaultLogLevel],

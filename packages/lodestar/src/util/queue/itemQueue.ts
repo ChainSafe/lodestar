@@ -56,7 +56,9 @@ export class JobItemQueue<Args extends any[], R> {
 
     return new Promise<R>((resolve, reject) => {
       this.jobs.push({args, resolve, reject, addedTimeMs: Date.now()});
-      setTimeout(this.runJob, 0);
+      if (this.runningJobs < this.opts.maxConcurrency) {
+        setTimeout(this.runJob, 0);
+      }
     });
   }
 
