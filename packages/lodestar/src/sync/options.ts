@@ -14,9 +14,17 @@ export type SyncOptions = {
   disableRangeSync?: boolean;
   /** USE FOR TESTING ONLY. Disable range sync completely */
   disableUnknownBlockSync?: boolean;
+  /**
+   * The batch size of slots for backfill sync can attempt to sync/process before yielding
+   * to sync loop. This number can be increased or decreased to make a suitable resource
+   * allocation to backfill sync. The default of 0 would mean backfill sync will be skipped
+   */
+  backfillBatchSize: number;
 };
 
 export const defaultSyncOptions: SyncOptions = {
   isSingleNode: false,
   disableProcessAsChainSegment: false,
+  /** By default skip the backfill sync */
+  backfillBatchSize: 0,
 };

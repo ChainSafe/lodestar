@@ -14,10 +14,12 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.host": "127.0.0.1",
       "api.rest.port": 7654,
 
-      "chain.useSingleThreadVerifier": true,
+      "chain.blsVerifyAllMultiThread": true,
+      "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
+      "safe-slots-to-import-optimistically": 256,
 
       "eth1.enabled": true,
       "eth1.providerUrl": "http://my.node:8545",
@@ -55,6 +57,7 @@ describe("options / beaconNodeOptions", () => {
       "network.dontSendGossipAttestationsToForkchoice": true,
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
+      "sync.backfillBatchSize": 64,
     } as IBeaconNodeArgs;
 
     const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
@@ -69,10 +72,12 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
-        useSingleThreadVerifier: true,
+        blsVerifyAllMultiThread: true,
+        blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,
+        safeSlotsToImportOptimistically: 256,
       },
       eth1: {
         enabled: true,
@@ -119,6 +124,7 @@ describe("options / beaconNodeOptions", () => {
       sync: {
         isSingleNode: true,
         disableProcessAsChainSegment: true,
+        backfillBatchSize: 64,
       },
     };
 

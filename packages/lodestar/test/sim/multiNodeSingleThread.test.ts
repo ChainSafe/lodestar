@@ -36,7 +36,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
   ];
 
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
-  afterEach("Stop nodes and validators", async function() {
+  afterEach("Stop nodes and validators", async function () {
     this.timeout("10 min");
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();

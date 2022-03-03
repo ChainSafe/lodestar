@@ -1,4 +1,5 @@
-FROM grafana/grafana:latest
+# Same version as our ansible deployments, to minimize the diff in the dashboard on export
+FROM grafana/grafana:8.4.2
 
 COPY provisioning/ /etc/grafana/provisioning/
 COPY provisioning/dashboards/*.json /provisioning/dashboards/

@@ -29,25 +29,31 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to
 // execute post-merge/pre-merge EL scenario scripts
 // EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
+// ENGINE_PORT: Specify the port on which an jwt auth protected engine api is being hosted,
+//   typically by default at 8551 for geth. Some ELs could host it as same port as eth_ apis,
+//   but just with the engine_ methods protected. In that case this param can be skipped
 // TX_SCENARIOS: comma seprated transaction scenarios this EL client build supports
 // Example:
 // ```
-// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 TX_SCENARIOS=simple ../../node_modules/.bin/mocha test/sim/merge.test.ts
+// $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
+//   EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
+//   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention, quotes */
 
 // BELLATRIX_EPOCH will happen at 2 sec * 8 slots = 16 sec
 // 10 ttd / 2 difficulty per block = 5 blocks * 5 sec = 25 sec
-const terminalTotalDifficultyPreMerge = 20;
+const terminalTotalDifficultyPreMerge = 10;
 const TX_SCENARIOS = process.env.TX_SCENARIOS?.split(",") || [];
+const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
 
 describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
   const jsonRpcPort = process.env.EL_PORT;
-  const enginePort = process.env.EL_PORT;
+  const enginePort = process.env.ENGINE_PORT ?? jsonRpcPort;
   const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
   const engineApiUrl = `http://localhost:${enginePort}`;
 
@@ -73,6 +79,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         ...process.env,
         TTD,
         DATA_DIR,
+        JWT_SECRET_HEX: `${jwtSecretHex}`,
       },
     });
 
@@ -149,18 +156,18 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     }
 
     const controller = new AbortController();
-    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl]}, controller.signal);
+    const executionEngine = new ExecutionEngineHttp({urls: [engineApiUrl], jwtSecretHex}, controller.signal);
 
     // 1. Prepare a payload
 
     /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "safeBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "finalizedBlockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}, {"timestamp":"0x5", "random":"0x0000000000000000000000000000000000000000000000000000000000000000", "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}],"id":67}' http://localhost:8550
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_forkchoiceUpdatedV1","params":[{"headBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "safeBlockHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a", "finalizedBlockHash":"0x0000000000000000000000000000000000000000000000000000000000000000"}, {"timestamp":"0x5", "prevRandao":"0x0000000000000000000000000000000000000000000000000000000000000000", "feeRecipient":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"}],"id":67}' http://localhost:8550
      **/
 
     const preparePayloadParams = {
       // Note: this is created with a pre-defined genesis.json
       timestamp: quantityToNum("0x5"),
-      random: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"),
+      prevRandao: dataToBytes("0x0000000000000000000000000000000000000000000000000000000000000000"),
       suggestedFeeRecipient: dataToBytes("0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b"),
     };
 
@@ -189,7 +196,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // 3. Execute the payload
     /**
-     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_newPayloadV1","params":[{"parentHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a","coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b","stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45","receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","random":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":"0x1","gasLimit":"0x1c9c380","gasUsed":"0x0","timestamp":"0x5","extraData":"0x","baseFeePerGas":"0x7","blockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858","transactions":[]}],"id":67}' http://localhost:8550
+     * curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"engine_newPayloadV1","params":[{"parentHash":"0x3b8fb240d288781d4aac94d3fd16809ee413bc99294a085798a589dae51ddd4a","coinbase":"0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b","stateRoot":"0xca3149fa9e37db08d1cd49c9061db1002ef1cd58db2210f2115c8c989b2bdf45","receiptRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","prevRandao":"0x0000000000000000000000000000000000000000000000000000000000000000","blockNumber":"0x1","gasLimit":"0x1c9c380","gasUsed":"0x0","timestamp":"0x5","extraData":"0x","baseFeePerGas":"0x7","blockHash":"0x3559e851470f6e7bbed1db474980683e8c315bfce99b2a6ef47c057c04de7858","transactions":[]}],"id":67}' http://localhost:8550
      **/
 
     const payloadResult = await executionEngine.notifyNewPayload(payload);
@@ -313,7 +320,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         sync: {isSingleNode: true},
         network: {discv5: null},
         eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
-        executionEngine: {urls: [engineApiUrl]},
+        executionEngine: {urls: [engineApiUrl], jwtSecretHex},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
       logger: loggerNodeA,

@@ -2,12 +2,12 @@ import PeerId from "peer-id";
 import pipe from "it-pipe";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Libp2p} from "libp2p/src/connection-manager";
-import {Context, ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
+import {ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
-import {onChunk} from "../utils";
+import {renderRequestBody} from "../utils";
 import {Libp2pStream} from "../interface";
 import {requestDecode} from "../encoders/requestDecode";
 import {responseEncodeError, responseEncodeSuccess} from "../encoders/responseEncode";
@@ -68,12 +68,13 @@ export async function handleRequest(
           }
         });
 
-        logger.debug("Resp received request", {...logCtx, requestBody} as Context);
+        logger.debug("Resp received request", {...logCtx, body: renderRequestBody(protocol.method, requestBody)});
 
         yield* pipe(
           performRequestHandler(protocol, requestBody, peerId),
           // NOTE: Do not log the resp chunk contents, logs get extremely cluttered
-          onChunk(() => logger.debug("Resp sending chunk", logCtx)),
+          // Note: Not logging on each chunk since after 1 year it hasn't add any value when debugging
+          // onChunk(() => logger.debug("Resp sending chunk", logCtx)),
           responseEncodeSuccess(config, protocol)
         );
       } catch (e) {

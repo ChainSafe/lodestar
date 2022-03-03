@@ -46,7 +46,7 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   peerMetadata: IPeerMetadataStore;
-  peerRpcScores: IPeerRpcScoreStore;
+  private readonly peerRpcScores: IPeerRpcScoreStore;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
@@ -91,6 +91,7 @@ export class Network implements INetwork {
       config,
       libp2p,
       logger,
+      peerRpcScores,
       metrics,
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),

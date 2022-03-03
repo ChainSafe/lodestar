@@ -159,7 +159,7 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     nextSyncCommitteeBranch,
     finalizedHeader,
     finalityBranch,
-    syncCommitteeAggregate: syncAggregate,
+    syncAggregate,
     forkVersion,
   };
 }
@@ -258,8 +258,8 @@ export function committeeUpdateToHeadUpdate(
   return {
     attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {
-      syncCommitteeBits: committeeUpdate.syncCommitteeAggregate.syncCommitteeBits,
-      syncCommitteeSignature: committeeUpdate.syncCommitteeAggregate.syncCommitteeSignature,
+      syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
+      syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
   };
 }

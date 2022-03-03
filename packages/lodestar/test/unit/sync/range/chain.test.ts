@@ -95,6 +95,7 @@ describe("sync / range / chain", () => {
         const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
         const initialSync = new SyncChain(
           startEpoch,
+          target,
           syncType,
           {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd},
           {config, logger}
@@ -126,6 +127,7 @@ describe("sync / range / chain", () => {
       const onEnd: SyncChainFns["onEnd"] = (err) => (err ? reject(err) : resolve());
       const initialSync = new SyncChain(
         startEpoch,
+        target,
         syncType,
         {processChainSegment, downloadBeaconBlocksByRange, reportPeer, onEnd},
         {config, logger}

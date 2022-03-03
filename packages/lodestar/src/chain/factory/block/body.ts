@@ -151,10 +151,10 @@ async function prepareExecutionPayload(
   }
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const random = getRandaoMix(state, state.currentShuffling.epoch);
+  const prevRandao = getRandaoMix(state, state.currentShuffling.epoch);
   const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
-    random,
+    prevRandao,
     suggestedFeeRecipient,
   });
   if (!payloadId) throw new Error("InvalidPayloadId: Null");

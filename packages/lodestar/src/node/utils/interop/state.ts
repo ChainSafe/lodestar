@@ -27,7 +27,7 @@ export function getInteropState(
   // TODO: when having different test options, consider modifying these values
   latestPayloadHeader.blockHash = eth1BlockHash;
   latestPayloadHeader.timestamp = eth1Timestamp;
-  latestPayloadHeader.random = eth1BlockHash;
+  latestPayloadHeader.prevRandao = eth1BlockHash;
   latestPayloadHeader.gasLimit = GENESIS_GAS_LIMIT;
   latestPayloadHeader.baseFeePerGas = GENESIS_BASE_FEE_PER_GAS;
   const state = initializeBeaconStateFromEth1(

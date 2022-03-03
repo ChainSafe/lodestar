@@ -8,6 +8,7 @@ import {MAXIMUM_GOSSIP_CLOCK_DISPARITY} from "../../constants";
 import {IBeaconChain} from "../interface";
 import {BlockGossipError, BlockErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
+import {PeerAction} from "../../network/peers";
 
 export async function validateGossipBlock(
   config: IChainForkConfig,
@@ -23,7 +24,7 @@ export async function validateGossipBlock(
   // appropriate slot).
   const currentSlotWithGossipDisparity = chain.clock.currentSlotWithGossipDisparity;
   if (currentSlotWithGossipDisparity < blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.IGNORE, PeerAction.LowToleranceError, {
       code: BlockErrorCode.FUTURE_SLOT,
       currentSlot: currentSlotWithGossipDisparity,
       blockSlot,
@@ -35,7 +36,7 @@ export async function validateGossipBlock(
   const finalizedCheckpoint = chain.forkChoice.getFinalizedCheckpoint();
   const finalizedSlot = computeStartSlotAtEpoch(finalizedCheckpoint.epoch);
   if (blockSlot <= finalizedSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.IGNORE, PeerAction.LowToleranceError, {
       code: BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT,
       blockSlot,
       finalizedSlot,
@@ -50,7 +51,7 @@ export async function validateGossipBlock(
   // already know this block.
   const blockRoot = toHexString(config.getForkTypes(blockSlot).BeaconBlock.hashTreeRoot(block));
   if (chain.forkChoice.getBlockHex(blockRoot) !== null) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
+    throw new BlockGossipError(GossipAction.IGNORE, null, {code: BlockErrorCode.ALREADY_KNOWN, root: blockRoot});
   }
 
   // No need to check for badBlock
@@ -59,7 +60,7 @@ export async function validateGossipBlock(
   // [IGNORE] The block is the first block with valid signature received for the proposer for the slot, signed_beacon_block.message.slot.
   const proposerIndex = block.proposerIndex;
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    throw new BlockGossipError(GossipAction.IGNORE, null, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
   // [REJECT] The current finalized_checkpoint is an ancestor of block -- i.e.
@@ -77,12 +78,12 @@ export async function validateGossipBlock(
     //    descend from the finalized root.
     // (Non-Lighthouse): Since we prune all blocks non-descendant from finalized checking the `db.block` database won't be useful to guard
     // against known bad fork blocks, so we throw PARENT_UNKNOWN for cases (1) and (2)
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+    throw new BlockGossipError(GossipAction.IGNORE, null, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
   }
 
   // [REJECT] The block is from a higher slot than its parent.
   if (parentBlock.slot >= blockSlot) {
-    throw new BlockGossipError(GossipAction.IGNORE, {
+    throw new BlockGossipError(GossipAction.IGNORE, PeerAction.LowToleranceError, {
       code: BlockErrorCode.NOT_LATER_THAN_PARENT,
       parentSlot: parentBlock.slot,
       slot: blockSlot,
@@ -97,7 +98,7 @@ export async function validateGossipBlock(
   const blockState = await chain.regen
     .getBlockSlotState(parentRoot, blockSlot, RegenCaller.validateGossipBlock)
     .catch(() => {
-      throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
+      throw new BlockGossipError(GossipAction.IGNORE, null, {code: BlockErrorCode.PARENT_UNKNOWN, parentRoot});
     });
 
   // Extra conditions for merge fork blocks
@@ -108,8 +109,8 @@ export async function validateGossipBlock(
     const executionPayload = block.body.executionPayload;
     if (bellatrix.isBellatrixStateType(blockState) && bellatrix.isExecutionEnabled(blockState, block.body)) {
       const expectedTimestamp = computeTimeAtSlot(config, blockSlot, chain.genesisTime);
-      if (executionPayload.timestamp !== computeTimeAtSlot(config, blockSlot, chain.genesisTime)) {
-        throw new BlockGossipError(GossipAction.REJECT, {
+      if (executionPayload.timestamp !== expectedTimestamp) {
+        throw new BlockGossipError(GossipAction.REJECT, PeerAction.LowToleranceError, {
           code: BlockErrorCode.INCORRECT_TIMESTAMP,
           timestamp: executionPayload.timestamp,
           expectedTimestamp,
@@ -121,8 +122,10 @@ export async function validateGossipBlock(
   // [REJECT] The proposer signature, signed_beacon_block.signature, is valid with respect to the proposer_index pubkey.
   const signatureSet = allForks.getProposerSignatureSet(blockState, signedBlock);
   // Don't batch so verification is not delayed
-  if (!(await chain.bls.verifySignatureSets([signatureSet]))) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID});
+  if (!(await chain.bls.verifySignatureSets([signatureSet], {verifyOnMainThread: true}))) {
+    throw new BlockGossipError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+      code: BlockErrorCode.PROPOSAL_SIGNATURE_INVALID,
+    });
   }
 
   // [REJECT] The block is proposed by the expected proposer_index for the block's slot in the context of the current
@@ -130,12 +133,15 @@ export async function validateGossipBlock(
   // shuffling, the block MAY be queued for later processing while proposers for the block's branch are calculated --
   // in such a case do not REJECT, instead IGNORE this message.
   if (blockState.epochCtx.getBeaconProposer(blockSlot) !== proposerIndex) {
-    throw new BlockGossipError(GossipAction.REJECT, {code: BlockErrorCode.INCORRECT_PROPOSER, proposerIndex});
+    throw new BlockGossipError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+      code: BlockErrorCode.INCORRECT_PROPOSER,
+      proposerIndex,
+    });
   }
 
   // Check again in case there two blocks are processed concurrently
   if (chain.seenBlockProposers.isKnown(blockSlot, proposerIndex)) {
-    throw new BlockGossipError(GossipAction.IGNORE, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
+    throw new BlockGossipError(GossipAction.IGNORE, null, {code: BlockErrorCode.REPEAT_PROPOSAL, proposerIndex});
   }
 
   // Simple implementation of a pending block queue. Keeping the block here recycles the queue logic, and keeps the

@@ -1,5 +1,4 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -164,7 +163,12 @@ export async function verifyBlockStateTransition(
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
       : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
 
-    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+    if (
+      signatureSets.length > 0 &&
+      !(await chain.bls.verifySignatureSets(signatureSets, {
+        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
+      }))
+    ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
     }
   }
@@ -195,17 +199,11 @@ export async function verifyBlockStateTransition(
           parentHashHex !== execResult.latestValidHash ? parentHashHex : null
         );
         throw new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: execResult.status,
           errorMessage: execResult.validationError ?? "",
         });
       }
-
-      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
-      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
-        throw new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
-          errorMessage: execResult.validationError,
-        });
 
       // Accepted and Syncing have the same treatment, as final validation of block is pending
       case ExecutePayloadStatus.ACCEPTED:
@@ -235,11 +233,12 @@ export async function verifyBlockStateTransition(
 
         if (
           justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-          block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
+          block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-            errorMessage: `not safe to import not yet validated payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot, status=${execResult.status}`,
+            execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
+            errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot, status=${execResult.status}`,
           });
         }
 
@@ -247,7 +246,10 @@ export async function verifyBlockStateTransition(
         break;
       }
 
-      // There can be many reasons for which EL failed some of the observed ones are
+      // If the block has is not valid, or it referenced an invalid terminal block then the
+      // block is invalid, however it has no bearing on any forkChoice cleanup
+      //
+      // There can be other reasons for which EL failed some of the observed ones are
       // 1. Connection refused / can't connect to EL port
       // 2. EL Internal Error
       // 3. Geth sometimes gives invalid merkel root error which means invalid
@@ -260,10 +262,14 @@ export async function verifyBlockStateTransition(
       // For network/unreachable errors, an optimization can be added to replay these blocks
       // back. But for now, lets assume other mechanisms like unknown parent block of a future
       // child block will cause it to replay
+
+      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
       case ExecutePayloadStatus.ELERROR:
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: execResult.status,
           errorMessage: execResult.validationError,
         });
     }
@@ -274,7 +280,13 @@ export async function verifyBlockStateTransition(
 
   // Check state root matches
   if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
-    throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+    throw new BlockError(block, {
+      code: BlockErrorCode.INVALID_STATE_ROOT,
+      root: postState.tree.root,
+      expectedRoot: block.message.stateRoot.valueOf() as Uint8Array,
+      preState,
+      postState,
+    });
   }
 
   return {postState, executionStatus};

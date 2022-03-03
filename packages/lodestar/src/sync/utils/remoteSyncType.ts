@@ -11,6 +11,9 @@ export enum PeerSyncType {
   Behind = "Behind",
 }
 
+// Cache Object.keys iteration for faster loops in metrics
+export const peerSyncTypes = Object.keys(PeerSyncType) as PeerSyncType[];
+
 export function getPeerSyncType(
   local: phase0.Status,
   remote: phase0.Status,
@@ -72,6 +75,9 @@ export enum RangeSyncType {
   /** A head chain sync should be started with this peer */
   Head = "Head",
 }
+
+// Cache Object.keys iteration for faster loops in metrics
+export const rangeSyncTypes = Object.keys(RangeSyncType) as RangeSyncType[];
 
 /**
  * Check if a peer requires a finalized chain sync. Only if:

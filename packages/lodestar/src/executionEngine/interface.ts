@@ -26,6 +26,8 @@ export enum ExecutePayloadStatus {
   ELERROR = "ELERROR",
   /** EL unavailable */
   UNAVAILABLE = "UNAVAILABLE",
+  /** EL replied with SYNCING or ACCEPTED when its not safe to import optimistic blocks */
+  UNSAFE_OPTIMISTIC_STATUS = "UNSAFE_OPTIMISTIC_STATUS",
 }
 
 export type ExecutePayloadResponse =
@@ -50,15 +52,15 @@ export type ForkChoiceUpdateStatus =
 
 export type PayloadAttributes = {
   timestamp: number;
-  random: Uint8Array | ByteVector;
+  prevRandao: Uint8Array | ByteVector;
   suggestedFeeRecipient: Uint8Array | ByteVector;
 };
 
 export type ApiPayloadAttributes = {
   /** QUANTITY, 64 Bits - value for the timestamp field of the new payload */
   timestamp: QUANTITY;
-  /** DATA, 32 Bytes - value for the random field of the new payload */
-  random: DATA;
+  /** DATA, 32 Bytes - value for the prevRandao field of the new payload */
+  prevRandao: DATA;
   /** DATA, 20 Bytes - suggested value for the coinbase field of the new payload */
   suggestedFeeRecipient: DATA;
 };
