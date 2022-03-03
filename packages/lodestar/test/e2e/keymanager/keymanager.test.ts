@@ -1,6 +1,7 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import fs from "node:fs";
+import tmp from "tmp";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
@@ -222,7 +223,7 @@ describe("keymanager delete and import test", async function () {
     ).to.eventually.not.throw;
   });
 
-  it.skip("should deny request if authentication is on and no bearer token is provided", async function () {
+  it("should deny request if authentication is on and no bearer token is provided", async function () {
     this.timeout("10 min");
 
     const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
@@ -256,9 +257,12 @@ describe("keymanager delete and import test", async function () {
 
     const kmPort = 10003;
 
+    const tokenDir = tmp.dirSync({unsafeCleanup: true});
+    afterEachCallbacks.push(() => tokenDir.removeCallback());
+
     // by default auth is on
     const keymanagerServer = new KeymanagerServer(
-      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: logFilesDir},
+      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
       {config, logger: loggerNodeA, api: keymanagerApi}
     );
 
