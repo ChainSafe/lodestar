@@ -9,7 +9,7 @@ import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
 import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
-import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
+import {FileENR, overwriteEnrWithCliArgs} from "../../config";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
 import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
@@ -23,7 +23,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   await initBLS();
 
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
-  await persistOptionsAndConfig(args);
+  const {peerId} = await persistOptionsAndConfig(args);
 
   const version = getVersion();
   const gitData = getVersionGitData();
@@ -37,7 +37,6 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   beaconNodeOptions.set({api: {version: version}});
 
   // ENR setup
-  const peerId = await readPeerId(beaconPaths.peerIdFile);
   const enr = FileENR.initFromFile(beaconPaths.enrFile, peerId);
   const enrArgs = parseEnrArgs(args);
   overwriteEnrWithCliArgs(enr, enrArgs, beaconNodeOptions.getWithDefaults());

@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import PeerId from "peer-id";
 import {BeaconNodeOptions, getBeaconConfigFromArgs, initPeerId, initEnr, readPeerId, readEnr} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";
@@ -63,7 +64,7 @@ export async function initializeOptionsAndConfig(args: IBeaconArgs & IGlobalArgs
 /**
  * Write options and configs to disk
  */
-export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<void> {
+export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): Promise<{peerId: PeerId}> {
   const beaconPaths = getBeaconPaths(args);
 
   // initialize directories
@@ -71,8 +72,8 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
   mkdir(beaconPaths.beaconDir);
   mkdir(beaconPaths.dbDir);
 
-  // Initialize peerId if does not exist
-  if (!fs.existsSync(beaconPaths.peerIdFile)) {
+  // Initialize peerId if does not exist OR if persist is not set
+  if (!fs.existsSync(beaconPaths.peerIdFile) || !args.peerIdPersist) {
     await initPeerId(beaconPaths.peerIdFile);
   }
 
@@ -89,4 +90,6 @@ export async function persistOptionsAndConfig(args: IBeaconArgs & IGlobalArgs): 
       initEnr(beaconPaths.enrFile, peerId);
     }
   }
+
+  return {peerId};
 }

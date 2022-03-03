@@ -17,6 +17,7 @@ interface IBeaconExtraArgs {
   discoveryPort?: number;
   forceGenesis?: boolean;
   genesisStateFile?: string;
+  peerIdPersist?: boolean;
 }
 
 export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
@@ -41,6 +42,11 @@ export const beaconExtraOptions: ICliCommandOptions<IBeaconExtraArgs> = {
   genesisStateFile: {
     description: "Path or URL to download a genesis state file in ssz-encoded format",
     type: "string",
+  },
+
+  peerIdPersist: {
+    description: "Persist PeerID across sessions. If not set the node will create a new PeerID on each run",
+    type: "boolean",
   },
 };
 
