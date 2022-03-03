@@ -15,9 +15,9 @@ nethermindImage=$NETHERMIND_IMAGE
 if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ]) 
 then
   echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir devnet4-data --elClient nethermind --devnetVars ./devnet4.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "example: ./setup.sh --dataDir devnet5-data --elClient nethermind --devnetVars ./devnet5.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
-  echo "example: ./setup.sh --dataDir devnet4-data --elClient geth --devnetVars ./devnet4.vars"
+  echo "example: ./setup.sh --dataDir devnet5-data --elClient geth --devnetVars ./devnet5.vars"
   exit;
 fi
 
@@ -109,16 +109,17 @@ echo "lodestarImage: $LODESTAR_IMAGE"
 $dockerExec pull $LODESTAR_IMAGE
 
 bootEnr=$(cat $dataDir/$configGitDir/bootstrap_nodes.txt)
-#bootEnr=($bootEnr)
-#bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
+bootEnr=($bootEnr)
+bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
+
 depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
 clName="$DEVNET_NAME-lodestar"
 
 if [ $platform == 'Darwin' ]
 then
-  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
+  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs $bootEnr"
 else
-  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs ${bootEnr[0]}"
+  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs $bootEnr"
 fi
 
 run_cmd "$elCmd"
