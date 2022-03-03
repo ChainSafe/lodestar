@@ -30,7 +30,7 @@ describe("keymanager delete and import test", async function () {
     SECONDS_PER_SLOT: SECONDS_PER_SLOT,
   };
 
-  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
     while (afterEachCallbacks.length > 0) {
       const callback = afterEachCallbacks.pop();
@@ -55,6 +55,8 @@ describe("keymanager delete and import test", async function () {
       logger: loggerNodeA,
     });
 
+    afterEachCallbacks.push(() => bn.close());
+
     const vc1Info = await getAndInitValidatorsWithKeystore({
       node: bn,
       keystoreContent: getKeystoreForPubKey1(),
@@ -63,6 +65,8 @@ describe("keymanager delete and import test", async function () {
       testLoggerOpts,
     });
 
+    afterEachCallbacks.push(() => vc1Info.validator.stop());
+
     const vc2Info = await getAndInitValidatorsWithKeystore({
       node: bn,
       keystoreContent: getKeystoreForPubKey2(),
@@ -70,6 +74,8 @@ describe("keymanager delete and import test", async function () {
       useRestApi: false,
       testLoggerOpts,
     });
+
+    afterEachCallbacks.push(() => vc2Info.validator.stop());
 
     const portKM1 = 10000;
     const portKM2 = 10001;
@@ -83,6 +89,8 @@ describe("keymanager delete and import test", async function () {
       loggerNodeA
     );
 
+    afterEachCallbacks.push(() => keymanagerServerForVC1.close());
+
     const keymanagerServerForVC2 = createKeymanager(
       vc2Info.validator,
       vc2Info.slashingProtection,
@@ -92,15 +100,11 @@ describe("keymanager delete and import test", async function () {
       loggerNodeA
     );
 
+    afterEachCallbacks.push(() => keymanagerServerForVC1.close());
     // Register clean up
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     afterEachCallbacks.push(async () => {
       await Promise.all([vc1Info.validator.stop(), vc2Info.validator.stop()]);
-      await bn.close();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      await keymanagerServerForVC1.close();
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
-      await keymanagerServerForVC2.close();
       vc1Info.tempDirs.keystoreDir.removeCallback();
       vc1Info.tempDirs.passwordFile.removeCallback();
       vc2Info.tempDirs.keystoreDir.removeCallback();
@@ -235,6 +239,8 @@ describe("keymanager delete and import test", async function () {
       logger: loggerNodeA,
     });
 
+    afterEachCallbacks.push(() => bn.close());
+
     const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -243,6 +249,8 @@ describe("keymanager delete and import test", async function () {
       useRestApi: false,
       testLoggerOpts,
     });
+
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
 
     const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
 
@@ -254,12 +262,7 @@ describe("keymanager delete and import test", async function () {
       {config, logger: loggerNodeA, api: keymanagerApi}
     );
 
-    // clean up
-    afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
-      await keymanagerServer.close();
-      await bn.close();
-    });
+    afterEachCallbacks.push(() => keymanagerServer.close());
 
     await keymanagerServer.listen();
 
@@ -307,6 +310,8 @@ describe("keymanager delete and import test", async function () {
       logger: loggerNodeA,
     });
 
+    afterEachCallbacks.push(() => bn.close());
+
     const externalSignerPort = 38000;
     const externalSignerUrl = `http://localhost:${externalSignerPort}`;
 
@@ -321,6 +326,8 @@ describe("keymanager delete and import test", async function () {
       externalSignerUrl: externalSignerUrl,
     });
 
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+
     const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
 
     const kmPort = 10003;
@@ -330,11 +337,7 @@ describe("keymanager delete and import test", async function () {
       {config, logger: loggerNodeA, api: keymanagerApi}
     );
 
-    afterEachCallbacks.push(async () => {
-      await Promise.all(validators.map((v) => v.stop()));
-      await keymanagerServer.close();
-      await bn.close();
-    });
+    afterEachCallbacks.push(() => keymanagerServer.close());
 
     await keymanagerServer.listen();
 
