@@ -62,6 +62,7 @@ export async function getDevBeaconNode(
     defaultOptions,
     deepmerge(
       {
+        api: {rest: {port: 19596}},
         db: {name: tmpDir.name},
         eth1: {enabled: false, providerUrls: ["http://localhost:8545"]},
         metrics: {enabled: false},

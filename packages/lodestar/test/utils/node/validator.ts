@@ -176,6 +176,6 @@ export async function getAndInitDevValidators({
 
 function getNodeApiUrl(node: BeaconNode): string {
   const host = node.opts.api.rest.host || "127.0.0.1";
-  const port = node.opts.api.rest.port || 9596;
+  const port = node.opts.api.rest.port || 19596;
   return `http://${host}:${port}`;
 }
