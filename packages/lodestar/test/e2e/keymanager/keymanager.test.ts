@@ -222,7 +222,7 @@ describe("keymanager delete and import test", async function () {
     ).to.eventually.not.throw;
   });
 
-  it("should deny request if authentication is on and no bearer token is provided", async function () {
+  it.skip("should deny request if authentication is on and no bearer token is provided", async function () {
     this.timeout("10 min");
 
     const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
