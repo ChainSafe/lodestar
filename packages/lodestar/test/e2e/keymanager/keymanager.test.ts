@@ -20,7 +20,7 @@ import {logFilesDir} from "../../sim/params";
 
 chai.use(chaiAsPromised);
 
-describe.skip("keymanager delete and import test", async function () {
+describe("keymanager delete and import test", async function () {
   const validatorCount = 1;
   const SECONDS_PER_SLOT = 2;
   const ALTAIR_FORK_EPOCH = 0;
