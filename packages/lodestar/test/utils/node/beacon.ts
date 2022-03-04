@@ -18,6 +18,7 @@ import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export async function getDevBeaconNode(
   opts: {
@@ -68,7 +69,11 @@ export async function getDevBeaconNode(
         network: {discv5: null},
       } as Partial<IBeaconNodeOptions>,
       options
-    )
+    ),
+    {
+      arrayMerge: overwriteTargetArrayIfItems,
+      isMergeableObject: isPlainObject,
+    }
   );
 
   const state = opts.anchorState || (await initDevState(config, db, validatorCount, opts));
@@ -82,4 +87,11 @@ export async function getDevBeaconNode(
     anchorState: state,
     wsCheckpoint: opts.wsCheckpoint,
   });
+}
+
+function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {
+  if (source.length === 0) {
+    return target;
+  }
+  return source;
 }
