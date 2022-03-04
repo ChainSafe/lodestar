@@ -1,5 +1,6 @@
 #!/bin/bash -x
 
+scriptDir=$(dirname $0)
 . $scriptDir/common-setup.sh
 
 cd $EL_BINARY_DIR
