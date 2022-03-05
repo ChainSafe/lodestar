@@ -1,6 +1,7 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import fs from "node:fs";
+import path from "node:path";
 import tmp from "tmp";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
@@ -223,80 +224,6 @@ describe("keymanager delete and import test", async function () {
     ).to.eventually.not.throw;
   });
 
-  it("should deny request if authentication is on and no bearer token is provided", async function () {
-    this.timeout("10 min");
-
-    const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
-    const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
-    const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
-
-    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
-    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
-
-    const bn = await getDevBeaconNode({
-      params: beaconParams,
-      options: {sync: {isSingleNode: true}},
-      validatorCount,
-      logger: loggerNodeA,
-    });
-
-    afterEachCallbacks.push(() => bn.close());
-
-    const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
-      node: bn,
-      validatorsPerClient: validatorCount,
-      validatorClientCount: 1,
-      startIndex: 0,
-      useRestApi: false,
-      testLoggerOpts,
-    });
-
-    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
-
-    const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
-
-    const kmPort = 10003;
-
-    const tokenDir = tmp.dirSync({unsafeCleanup: true});
-    afterEachCallbacks.push(() => tokenDir.removeCallback());
-
-    // by default auth is on
-    const keymanagerServer = new KeymanagerServer(
-      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
-      {config, logger: loggerNodeA, api: keymanagerApi}
-    );
-
-    afterEachCallbacks.push(() => keymanagerServer.close());
-
-    await keymanagerServer.listen();
-
-    const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
-
-    // Listing keys is denied
-    try {
-      await client.listKeys();
-    } catch (e) {
-      // prettier-ignore
-      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect list request to be denied");
-    }
-
-    // Deleting keys is denied
-    try {
-      await client.deleteKeystores([key1]);
-    } catch (e) {
-      // prettier-ignore
-      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect delete request to be denied");
-    }
-
-    // importing keys is denied
-    try {
-      await client.importKeystores(["some keystore string"], ["some password"], "some slashing protecting)");
-    } catch (e) {
-      // prettier-ignore
-      expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect import request to be denied");
-    }
-  });
-
   it("should not delete external signers", async function () {
     this.timeout("10 min");
 
@@ -362,6 +289,191 @@ describe("keymanager delete and import test", async function () {
       [{status: "not_active"}],
       "deleteKeystores should not delete readonly key"
     );
+  });
+
+  describe("Authentication tests", async function () {
+    it("should deny request if authentication is on and no bearer token is provided", async function () {
+      this.timeout("10 min");
+
+      const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+      const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+      const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+      const bn = await getDevBeaconNode({
+        params: beaconParams,
+        options: {sync: {isSingleNode: true}},
+        validatorCount,
+        logger: loggerNodeA,
+      });
+
+      afterEachCallbacks.push(() => bn.close());
+
+      const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
+        node: bn,
+        validatorsPerClient: validatorCount,
+        validatorClientCount: 1,
+        startIndex: 0,
+        useRestApi: false,
+        testLoggerOpts,
+      });
+
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+
+      const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
+
+      const kmPort = 10003;
+
+      const tokenDir = tmp.dirSync({unsafeCleanup: true});
+      afterEachCallbacks.push(() => tokenDir.removeCallback());
+
+      // by default auth is on
+      const keymanagerServer = new KeymanagerServer(
+        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
+        {config, logger: loggerNodeA, api: keymanagerApi}
+      );
+
+      afterEachCallbacks.push(() => keymanagerServer.close());
+
+      await keymanagerServer.listen();
+
+      const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${kmPort}`}));
+
+      // Listing keys is denied
+      try {
+        await client.listKeys();
+      } catch (e) {
+        // prettier-ignore
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect list request to be denied");
+      }
+
+      // Deleting keys is denied
+      try {
+        await client.deleteKeystores([key1]);
+      } catch (e) {
+        // prettier-ignore
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect delete request to be denied");
+      }
+
+      // importing keys is denied
+      try {
+        await client.importKeystores(["some keystore string"], ["some password"], "some slashing protecting)");
+      } catch (e) {
+        // prettier-ignore
+        expect((e as Error).message).to.equal("Unauthorized: {\"error\":\"missing authorization header\"}", "Expect import request to be denied");
+      }
+    });
+
+    it("should generate bearer token if auth is on and no bearer token file exist", async function () {
+      this.timeout("10 min");
+
+      const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+      const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+      const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+      const bn = await getDevBeaconNode({
+        params: beaconParams,
+        options: {sync: {isSingleNode: true}},
+        validatorCount,
+        logger: loggerNodeA,
+      });
+
+      afterEachCallbacks.push(() => bn.close());
+
+      const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
+        node: bn,
+        validatorsPerClient: validatorCount,
+        validatorClientCount: 1,
+        startIndex: 0,
+        useRestApi: false,
+        testLoggerOpts,
+      });
+
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+
+      const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
+
+      const kmPort = 10003;
+
+      const tokenDir = tmp.dirSync({unsafeCleanup: true});
+      afterEachCallbacks.push(() => tokenDir.removeCallback());
+
+      expect(() => {
+        fs.readFileSync(path.join(tokenDir.name, "api-token.txt"));
+      }, "api.token should not be present before keymanager server is started").to.throw();
+
+      // by default auth is on
+      new KeymanagerServer(
+        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
+        {config, logger: loggerNodeA, api: keymanagerApi}
+      );
+
+      expect(
+        fs.readFileSync(path.join(tokenDir.name, "api-token.txt")),
+        "api.token should be present and not be empty after keymanager server is started"
+      ).to.not.be.undefined;
+    });
+
+    it("should generate bearer token if auth is on and empty bearer token file exist", async function () {
+      this.timeout("10 min");
+
+      const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
+      const genesisValidatorsRoot = Buffer.alloc(32, 0xaa);
+      const config = createIBeaconConfig(chainConfig, genesisValidatorsRoot);
+
+      const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+      const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+      const bn = await getDevBeaconNode({
+        params: beaconParams,
+        options: {sync: {isSingleNode: true}},
+        validatorCount,
+        logger: loggerNodeA,
+      });
+
+      afterEachCallbacks.push(() => bn.close());
+
+      const {validators, secretKeys: _secretKeys} = await getAndInitDevValidators({
+        node: bn,
+        validatorsPerClient: validatorCount,
+        validatorClientCount: 1,
+        startIndex: 0,
+        useRestApi: false,
+        testLoggerOpts,
+      });
+
+      afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
+
+      const keymanagerApi = new KeymanagerApi(loggerNodeA, validators[0], "/test/path");
+
+      const kmPort = 10003;
+
+      const tokenDir = tmp.dirSync({unsafeCleanup: true});
+      afterEachCallbacks.push(() => tokenDir.removeCallback());
+
+      // create an empty api-token.txt
+      fs.closeSync(fs.openSync(path.join(tokenDir.name, "api-token.txt"), "w"));
+      expect(fs.readFileSync(path.join(tokenDir.name, "api-token.txt")).length).to.equal(
+        0,
+        "api.token.txt should be empty before keymanager is started"
+      );
+
+      // by default auth is on
+      new KeymanagerServer(
+        {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
+        {config, logger: loggerNodeA, api: keymanagerApi}
+      );
+
+      expect(fs.readFileSync(path.join(tokenDir.name, "api-token.txt")).length).to.be.greaterThan(
+        0,
+        "api.token.txt should not be empty after keymanager is started"
+      );
+    });
   });
 });
 
