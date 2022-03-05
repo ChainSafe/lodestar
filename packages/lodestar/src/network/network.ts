@@ -91,7 +91,6 @@ export class Network implements INetwork {
       config,
       libp2p,
       logger,
-      peerRpcScores,
       metrics,
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
