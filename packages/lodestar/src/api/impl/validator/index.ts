@@ -286,7 +286,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Note: There is a small probability that returned validators differs
       // than what is returned when the epoch is reached.
       if (epoch === nextEpoch) {
-        indexes.push(...(await chain.getNextEpochProposerDuty()));
+        indexes.push(...(await state.getNextEpochBeaconProposer()));
       } else {
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
@@ -294,13 +294,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           // Epoch should be equal to current epoch, if not the getBeaconProposer call throws an error
           const validatorIndex = state.getBeaconProposer(startSlot + i);
           indexes.push(validatorIndex);
-        }
-
-        for (const cachedEpoch of chain.nextEpochProposerDutyCache.keys()) {
-          // Do not keep past cached future proposal duties.
-          if (cachedEpoch <= epoch) {
-            chain.nextEpochProposerDutyCache.delete(cachedEpoch);
-          }
         }
       }
 

@@ -2,7 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
 
 import {toHexString, TreeBacked} from "@chainsafe/ssz";
-import {allForks, Epoch, Number64, Root, Slot, ssz, Uint16, Uint64, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, Slot, ssz, Uint16, Uint64} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
@@ -80,8 +80,6 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
-
-  readonly nextEpochProposerDutyCache = new Map<Epoch, ValidatorIndex[]>();
 
   private state: TreeBacked<allForks.BeaconState>;
   private abortController: AbortController;
@@ -180,10 +178,6 @@ export class MockBeaconChain implements IBeaconChain {
 
   persistInvalidSszObject(): string | null {
     return null;
-  }
-
-  getNextEpochProposerDuty(): Promise<ValidatorIndex[]> {
-    return Promise.resolve([]);
   }
 }
 

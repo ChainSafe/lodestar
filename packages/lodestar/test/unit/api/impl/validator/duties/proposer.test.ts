@@ -100,12 +100,37 @@ describe("get proposers api impl", function () {
     );
     const cachedState = createCachedBeaconState(config, state);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    chainStub.getNextEpochProposerDuty.resolves(new Array(SLOTS_PER_EPOCH));
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetBeaconProposer.returns(1);
     const {data: result} = await api.getProposerDuties(1);
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
     expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.false;
+  });
+
+  it("should have different proposer for current and next epoch", async function () {
+    syncStub.isSynced.returns(true);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: generateInitialMaxBalances(config, 25),
+      },
+      config
+    );
+    const cachedState = createCachedBeaconState(config, state);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.returns(1);
+    const {data: currentProposers} = await api.getProposerDuties(0);
+    const {data: nextProposers} = await api.getProposerDuties(1);
+    expect(currentProposers).to.not.deep.equal(nextProposers, "current proposer and next proposer should be different");
   });
 
   it("should not get proposers for more than one epoch in the future", async function () {

@@ -3,14 +3,10 @@
  */
 
 import fs from "node:fs";
-import {
-  CachedBeaconStateAllForks,
-  computeProposers,
-  computeStartSlotAtEpoch,
-} from "@chainsafe/lodestar-beacon-state-transition";
+import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
-import {allForks, Number64, Root, phase0, Slot, RootHex, ValidatorIndex, Epoch} from "@chainsafe/lodestar-types";
+import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
@@ -81,9 +77,6 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
-
-  // caches computed proposers for epoch N+1 in the future
-  readonly nextEpochProposerDutyCache = new Map<Epoch, ValidatorIndex[]>();
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
@@ -222,28 +215,6 @@ export class BeaconChain implements IBeaconChain {
       this.checkpointStateCache.getLatest(head.blockRoot, Infinity) || this.stateCache.get(head.stateRoot);
     if (!headState) throw Error("headState does not exist");
     return headState;
-  }
-
-  async getNextEpochProposerDuty(): Promise<ValidatorIndex[]> {
-    const nextEpoch = this.clock.currentEpoch + 1;
-    const cachedDutiesForEpoch = this.nextEpochProposerDutyCache.get(nextEpoch);
-
-    if (cachedDutiesForEpoch) {
-      return cachedDutiesForEpoch;
-    } else {
-      const state = await this.getHeadStateAtCurrentEpoch();
-      const futureProposers = computeProposers(
-        state,
-        state.getShufflingAtEpoch(nextEpoch),
-        state.effectiveBalanceIncrements
-      );
-
-      // Do not keep previous future proposal duties, so clear cache
-      // before setting a new value.
-      this.nextEpochProposerDutyCache.clear();
-      this.nextEpochProposerDutyCache.set(nextEpoch, futureProposers);
-      return futureProposers;
-    }
   }
 
   async getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks> {
