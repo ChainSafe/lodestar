@@ -18,6 +18,7 @@ import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
 import {TreeBacked} from "@chainsafe/ssz";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export async function getDevBeaconNode(
   opts: {
@@ -59,16 +60,24 @@ export async function getDevBeaconNode(
   );
 
   options = deepmerge(
+    // This deepmerge should NOT merge the array with the defaults but overwrite them
     defaultOptions,
     deepmerge(
+      // This deepmerge should merge all the array elements of the api options with the
+      // dev defaults that we wish, especially for the api options
       {
         db: {name: tmpDir.name},
-        eth1: {enabled: false, providerUrls: ["http://localhost:8545"]},
+        eth1: {enabled: false},
+        api: {rest: {api: ["beacon", "config", "events", "node", "validator"]}},
         metrics: {enabled: false},
         network: {discv5: null},
       } as Partial<IBeaconNodeOptions>,
       options
-    )
+    ),
+    {
+      arrayMerge: overwriteTargetArrayIfItems,
+      isMergeableObject: isPlainObject,
+    }
   );
 
   const state = opts.anchorState || (await initDevState(config, db, validatorCount, opts));
@@ -82,4 +91,11 @@ export async function getDevBeaconNode(
     anchorState: state,
     wsCheckpoint: opts.wsCheckpoint,
   });
+}
+
+function overwriteTargetArrayIfItems(target: unknown[], source: unknown[]): unknown[] {
+  if (source.length === 0) {
+    return target;
+  }
+  return source;
 }
