@@ -57,6 +57,12 @@ export interface IGossipsubModules {
 }
 
 /**
+ * Cache message id right in message so that we don't have to compute it twice.
+ * When we send messages to other peers, protobuf will just ignore `msgId` field.
+ */
+type Eth2InMessage = InMessage & {msgId?: Uint8Array};
+
+/**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
  * - Emits `GossipObject`, not `InMessage`
@@ -77,7 +83,6 @@ export class Eth2Gossipsub extends Gossipsub {
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
   private readonly uncompressCache = new UncompressCache();
-  private readonly msgIdCache = new WeakMap<InMessage, Uint8Array>();
 
   private readonly validatorFnsByType: ValidatorFnsByType;
 
@@ -134,14 +139,16 @@ export class Eth2Gossipsub extends Gossipsub {
 
   /**
    * @override Use eth2 msg id and cache results to the msg
+   * The cached msgId inside the message will be ignored when we send messages to other peers
+   * since we don't have this field in protobuf.
    */
-  getMsgId(msg: InMessage): Uint8Array {
-    let msgId = this.msgIdCache.get(msg);
+  getMsgId(msg: Eth2InMessage): Uint8Array {
+    let msgId = msg.msgId;
     if (!msgId) {
       const topicStr = msg.topicIDs[0];
       const topic = this.gossipTopicCache.getTopic(topicStr);
       msgId = computeMsgId(topic, topicStr, msg.data, this.uncompressCache);
-      this.msgIdCache.set(msg, msgId);
+      msg.msgId = msgId;
     }
     return msgId;
   }
