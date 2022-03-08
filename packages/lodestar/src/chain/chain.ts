@@ -293,7 +293,7 @@ export class BeaconChain implements IBeaconChain {
 
   async notifyForkchoiceUpdate(): Promise<void> {
     const head = this.forkChoice.getHead();
-    if (head.executionStatus != ExecutionStatus.PreMerge) {
+    if (head.executionStatus !== ExecutionStatus.PreMerge) {
       const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash;
       const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
       if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
