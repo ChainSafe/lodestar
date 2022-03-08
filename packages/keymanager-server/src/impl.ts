@@ -16,7 +16,6 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile";
 
 export const KEY_IMPORTED_PREFIX = "key_imported";
-export const DERIVATION_PATH = "m/12381/3600/0/0/0";
 
 export class KeymanagerApi implements Api {
   constructor(
@@ -52,7 +51,7 @@ export class KeymanagerApi implements Api {
     return {
       data: pubkeys.map((pubkey) => ({
         validatingPubkey: pubkey,
-        derivationPath: DERIVATION_PATH,
+        derivationPath: "",
         readonly: this.validator.validatorStore.getSigner(pubkey)?.type !== SignerType.Local,
       })),
     };
