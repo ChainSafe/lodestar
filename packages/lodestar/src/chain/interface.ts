@@ -98,6 +98,9 @@ export interface IBeaconChain {
 
   /** Persist bad items to persistInvalidSszObjectsDir dir, for example invalid state, attestations etc. */
   persistInvalidSszObject(type: SSZObjectType, bytes: Uint8Array, suffix: string): string | null;
+
+  /** Notify execution engine about the head of the forkChoice via fcU api of execution engine */
+  notifyForkchoiceUpdate(): Promise<void>;
 }
 
 export type SSZObjectType =

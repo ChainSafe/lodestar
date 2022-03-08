@@ -179,6 +179,10 @@ export class MockBeaconChain implements IBeaconChain {
   persistInvalidSszObject(): string | null {
     return null;
   }
+
+  async notifyForkchoiceUpdate(): Promise<void> {
+    return;
+  }
 }
 
 function mockForkChoice(): IForkChoice {
