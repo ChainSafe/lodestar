@@ -43,7 +43,7 @@ describe("simple block provider score tracking", function () {
       const {scoreStore} = mockStore();
       scoreStore["scores"].set(peer.toB58String(), MIN_SCORE);
       scoreStore["lastUpdate"].set(peer.toB58String(), Date.now() - timeToDecay * factorForJsBadMath);
-      scoreStore.update(peer);
+      scoreStore.update();
       expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
     });
 
