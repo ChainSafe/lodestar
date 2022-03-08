@@ -533,6 +533,7 @@ export class PeerManager {
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
     const longLivedSubnets: number[] = [];
+    const scores: number[] = [];
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
       if (openCnx) {
@@ -542,6 +543,7 @@ export class PeerManager {
         const client = getClientFromPeerStore(peerId, this.libp2p.peerStore.metadataBook);
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
         longLivedSubnets.push(countAttnets(this.peerMetadata, peerId));
+        scores.push(this.peerRpcScores.getScore(peerId));
         total++;
       }
     }
@@ -564,6 +566,7 @@ export class PeerManager {
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
     metrics.peerLongLivedSubnets.set(longLivedSubnets);
+    metrics.peerScore.set(scores);
   }
 }
 
