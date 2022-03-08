@@ -49,6 +49,10 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
+    peerLongLivedSubnets: register.avgMinMax({
+      name: "lodestar_peers_long_lived_subnets_avg_min_max",
+      help: "Avg min max of amount of long lived subnets of peers",
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",

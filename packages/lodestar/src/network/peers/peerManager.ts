@@ -22,6 +22,7 @@ import {
   renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -531,13 +532,16 @@ export class PeerManager {
     let total = 0;
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
+    const longLivedSubnets: number[] = [];
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
-        const client = getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+        const peerId = openCnx.remotePeer;
+        const client = getClientFromPeerStore(peerId, this.libp2p.peerStore.metadataBook);
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
+        longLivedSubnets.push(countAttnets(this.peerMetadata, peerId));
         total++;
       }
     }
@@ -559,5 +563,18 @@ export class PeerManager {
 
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
+    metrics.peerLongLivedSubnets.set(longLivedSubnets);
   }
+}
+
+function countAttnets(peerMetadata: Libp2pPeerMetadataStore, peerId: PeerId): number {
+  const attNets = peerMetadata.metadata.get(peerId)?.attnets;
+  if (!attNets) return 0;
+
+  let count = 0;
+  for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
+    if (attNets[i]) count++;
+  }
+
+  return count;
 }
