@@ -20,7 +20,6 @@ import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
 import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip";
 import {MetadataController} from "./metadata";
 import {getActiveForks, FORK_EPOCH_LOOKAHEAD} from "./forks";
-import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
@@ -45,7 +44,6 @@ export class Network implements INetwork {
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
-  peerMetadata: IPeerMetadataStore;
   private readonly peerRpcScores: IPeerRpcScoreStore;
 
   private readonly peerManager: PeerManager;
@@ -66,24 +64,12 @@ export class Network implements INetwork {
     this.chain = chain;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
-    const peerMetadata = new Libp2pPeerMetadataStore(libp2p.peerStore.metadataBook);
-    const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
+    const peerRpcScores = new PeerRpcScoreStore();
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
-    this.peerMetadata = peerMetadata;
     this.reqResp = new ReqResp(
-      {
-        config,
-        libp2p,
-        reqRespHandlers,
-        peerMetadata,
-        metadata,
-        peerRpcScores,
-        logger,
-        networkEventBus,
-        metrics,
-      },
+      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics},
       opts
     );
 
@@ -114,7 +100,6 @@ export class Network implements INetwork {
         metrics,
         chain,
         config,
-        peerMetadata,
         peerRpcScores,
         networkEventBus,
       },

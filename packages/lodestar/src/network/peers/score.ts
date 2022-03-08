@@ -1,5 +1,4 @@
 import PeerId from "peer-id";
-import {IPeerMetadataStore} from "./metastore";
 
 /** The default score for new peers */
 const DEFAULT_SCORE = 0;
@@ -15,7 +14,7 @@ const MIN_SCORE = -100;
 const SCORE_HALFLIFE_MS = 10 * 60 * 1000;
 const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
 /** The number of miliseconds we ban a peer for before their score begins to decay */
-const BANNED_BEFORE_DECAY_MS = 1800 * 1000;
+const BANNED_BEFORE_DECAY_MS = 30 * 60 * 1000;
 
 export enum PeerAction {
   /** Immediately ban peer */
@@ -72,14 +71,13 @@ export interface IPeerRpcScoreStore {
  * The decay rate applies equally to positive and negative scores.
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
-  private readonly store: IPeerMetadataStore;
+  private readonly scores = new Map<string, number>();
+  private readonly lastUpdate = new Map<string, number>();
 
-  constructor(store: IPeerMetadataStore) {
-    this.store = store;
-  }
+  // TODO: Persist scores, at least BANNED status to disk
 
   getScore(peer: PeerId): number {
-    return this.store.rpcScore.get(peer) ?? DEFAULT_SCORE;
+    return this.scores.get(peer.toB58String()) ?? DEFAULT_SCORE;
   }
 
   getScoreState(peer: PeerId): ScoreState {
@@ -99,14 +97,14 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
 
   private decayScore(peer: PeerId, prevScore: number): number {
     const nowMs = Date.now();
-    const lastUpdate = this.store.rpcScoreLastUpdate.get(peer) ?? nowMs;
+    const lastUpdate = this.lastUpdate.get(peer.toB58String()) ?? nowMs;
 
     // Decay the current score
     // Using exponential decay based on a constant half life.
     const sinceLastUpdateMs = nowMs - lastUpdate;
     // If peer was banned, lastUpdate will be in the future
     if (sinceLastUpdateMs > 0 && prevScore !== 0) {
-      this.store.rpcScoreLastUpdate.set(peer, nowMs);
+      this.lastUpdate.set(peer.toB58String(), nowMs);
       // e^(-ln(2)/HL*t)
       const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
       return prevScore * decayFactor;
@@ -126,9 +124,9 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     const newState = scoreToState(newScore);
     if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
       // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
-      this.store.rpcScoreLastUpdate.set(peer, Date.now() + BANNED_BEFORE_DECAY_MS);
+      this.lastUpdate.set(peer.toB58String(), Date.now() + BANNED_BEFORE_DECAY_MS);
     }
 
-    this.store.rpcScore.set(peer, newScore);
+    this.scores.set(peer.toB58String(), newScore);
   }
 }
