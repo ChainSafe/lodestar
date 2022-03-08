@@ -297,9 +297,11 @@ export class BeaconChain implements IBeaconChain {
       const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash;
       const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
       if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
-        this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
-          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-        });
+        await this.executionEngine
+          .notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX)
+          .catch((e) => {
+            this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+          });
       }
     }
   }
