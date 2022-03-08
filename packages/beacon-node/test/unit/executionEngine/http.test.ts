@@ -5,6 +5,7 @@ import {
   ExecutionEngineHttp,
   parseExecutionPayload,
   serializeExecutionPayload,
+  defaultExecutionEngineHttpOpts,
 } from "../../../src/execution/engine/http.js";
 
 chai.use(chaiAsPromised);
@@ -39,7 +40,14 @@ describe("ExecutionEngine / http", () => {
 
     const baseUrl = await server.listen(0);
 
-    executionEngine = new ExecutionEngineHttp({urls: [baseUrl]}, controller.signal);
+    executionEngine = new ExecutionEngineHttp(
+      {
+        urls: [baseUrl],
+        retryAttempts: defaultExecutionEngineHttpOpts.retryAttempts,
+        retryDelay: defaultExecutionEngineHttpOpts.retryDelay,
+      },
+      {signal: controller.signal}
+    );
   });
 
   it("getPayload", async () => {
@@ -140,7 +148,6 @@ describe("ExecutionEngine / http", () => {
 
     await executionEngine.notifyForkchoiceUpdate(
       forkChoiceHeadData.headBlockHash,
-      forkChoiceHeadData.safeBlockHash,
       forkChoiceHeadData.finalizedBlockHash
     );
 

@@ -28,7 +28,7 @@ export async function retry<A>(fn: (attempt: number) => A | Promise<A>, opts?: R
   const shouldRetry = opts?.shouldRetry;
 
   let lastError: Error = Error("RetryError");
-  for (let i = 1; i <= maxRetries; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn(i);
     } catch (e) {
