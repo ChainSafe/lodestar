@@ -384,7 +384,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new PeerRpcScoreStore</strong>(<code>store</code>: <a href="../../interfaces/network_peers.ipeermetadatastore/">IPeerMetadataStore</a>): <em><a href="./">PeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L75">packages/lodestar/src/network/peers/score.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L75">packages/lodestar/src/network/peers/score.ts:75</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -404,11 +404,11 @@ The decay rate applies equally to positive and negative scores.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-store"><code>Private</code> <code>Readonly</code> store<a class="headerlink" href="#private-readonly-store" title="Permanent link">¶</a></h3>
 <p>• <strong>store</strong>: <em><a href="../../interfaces/network_peers.ipeermetadatastore/">IPeerMetadataStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L75">packages/lodestar/src/network/peers/score.ts:75</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L75">packages/lodestar/src/network/peers/score.ts:75</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-add"><code>Private</code> add<a class="headerlink" href="#private-add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>peer</code>: PeerId, <code>scoreDelta</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L118">packages/lodestar/src/network/peers/score.ts:118</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L118">packages/lodestar/src/network/peers/score.ts:118</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -433,7 +433,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <h3 id="applyaction">applyAction<a class="headerlink" href="#applyaction" title="Permanent link">¶</a></h3>
 <p>▸ <strong>applyAction</strong>(<code>peer</code>: PeerId, <code>action</code>: <a href="../../modules/network_peers/#peeraction">PeerAction</a>, <code>actionName?</code>: undefined | string): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L89">packages/lodestar/src/network/peers/score.ts:89</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L89">packages/lodestar/src/network/peers/score.ts:89</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -461,7 +461,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <hr/>
 <h3 id="private-decayscore"><code>Private</code> decayScore<a class="headerlink" href="#private-decayscore" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decayScore</strong>(<code>peer</code>: PeerId, <code>prevScore</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L100">packages/lodestar/src/network/peers/score.ts:100</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L100">packages/lodestar/src/network/peers/score.ts:100</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -486,7 +486,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <h3 id="getscore">getScore<a class="headerlink" href="#getscore" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getScore</strong>(<code>peer</code>: PeerId): <em>number</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L81">packages/lodestar/src/network/peers/score.ts:81</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L81">packages/lodestar/src/network/peers/score.ts:81</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -507,7 +507,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <h3 id="getscorestate">getScoreState<a class="headerlink" href="#getscorestate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getScoreState</strong>(<code>peer</code>: PeerId): <em><a href="../../modules/network_peers/#scorestate">ScoreState</a></em></p>
 <p><em>Implementation of <a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L85">packages/lodestar/src/network/peers/score.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L85">packages/lodestar/src/network/peers/score.ts:85</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -528,7 +528,7 @@ The decay rate applies equally to positive and negative scores.</p>
 <h3 id="update">update<a class="headerlink" href="#update" title="Permanent link">¶</a></h3>
 <p>▸ <strong>update</strong>(<code>peer</code>: PeerId): <em>void</em></p>
 <p><em>Implementation of <a href="../../interfaces/network_peers.ipeerrpcscorestore/">IPeerRpcScoreStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/network/peers/score.ts#L96">packages/lodestar/src/network/peers/score.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6d539c3/packages/lodestar/src/network/peers/score.ts#L96">packages/lodestar/src/network/peers/score.ts:96</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
