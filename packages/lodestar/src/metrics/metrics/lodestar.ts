@@ -80,6 +80,11 @@ export function createLodestarMetrics(
       help: "Total number of goodbye received, labeled by reason",
       labelNames: ["reason"],
     }),
+    peerLongConnectionDisconnect: register.gauge<"reason">({
+      name: "lodestar_peer_long_connection_disconnect_total",
+      help: "For peers with long connection, track disconnect reason",
+      labelNames: ["reason"],
+    }),
     peerGoodbyeSent: register.gauge<"reason">({
       name: "lodestar_peer_goodbye_sent_total",
       help: "Total number of goodbye sent, labeled by reason",

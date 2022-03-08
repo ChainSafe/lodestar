@@ -35,6 +35,8 @@ const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 /** Internal interval to check PING and STATUS timeouts */
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
+/** A peer is considered long connection if it's >= 1 day */
+const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
 
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
@@ -272,6 +274,11 @@ export class PeerManager {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
     this.logger.verbose("Received goodbye request", {peer: prettyPrintPeerId(peer), goodbye, reason});
     this.metrics?.peerGoodbyeReceived.inc({reason});
+
+    const conn = this.libp2p.connectionManager.get(peer);
+    if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+      this.metrics?.peerLongConnectionDisconnect.inc({reason});
+    }
 
     // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
 
@@ -518,7 +525,14 @@ export class PeerManager {
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     try {
-      this.metrics?.peerGoodbyeSent.inc({reason: GOODBYE_KNOWN_CODES[goodbye.toString()] || ""});
+      const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
+      this.metrics?.peerGoodbyeSent.inc({reason});
+
+      const conn = this.libp2p.connectionManager.get(peer);
+      if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+        this.metrics?.peerLongConnectionDisconnect.inc({reason});
+      }
+
       await this.reqResp.goodbye(peer, BigInt(goodbye));
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
