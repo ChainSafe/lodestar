@@ -294,11 +294,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#lodestaraction">
-    lodestarAction
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#message">
     message
   </a>
@@ -363,7 +358,6 @@
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#action">action</a></li>
-<li><a href="./#lodestaraction">lodestarAction</a></li>
 <li><a href="./#message">message</a></li>
 <li><a href="./#name">name</a></li>
 <li><a href="./#optional-stack">stack</a></li>
@@ -376,10 +370,10 @@
 </ul>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
-<p>+ <strong>new SyncCommitteeError</strong>(<code>action</code>: <a href="../../modules/chain_errors/#gossipaction">GossipAction</a>, <code>lodestarAction</code>: <a href="../../enums/network_peers.peeraction/">PeerAction</a> | null, <code>type</code>: <a href="../../modules/chain_errors/#synccommitteeerrortype">SyncCommitteeErrorType</a>): <em><a href="./">SyncCommitteeError</a></em></p>
+<p>+ <strong>new SyncCommitteeError</strong>(<code>action</code>: <a href="../../modules/chain_errors/#gossipaction">GossipAction</a>, <code>type</code>: <a href="../../modules/chain_errors/#synccommitteeerrortype">SyncCommitteeErrorType</a>): <em><a href="./">SyncCommitteeError</a></em></p>
 <p><em>Inherited from <a href="../chain_errors.gossipactionerror/">GossipActionError</a>.<a href="../chain_errors.gossipactionerror/#constructor">constructor</a></em></p>
 <p><em>Overrides <a href="../eth1.eth1error/">Eth1Error</a>.<a href="../eth1.eth1error/#constructor">constructor</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/chain/errors/gossipValidation.ts#L13">packages/lodestar/src/chain/errors/gossipValidation.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/chain/errors/gossipValidation.ts#L9">packages/lodestar/src/chain/errors/gossipValidation.ts:9</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -394,10 +388,6 @@
 <td><a href="../../modules/chain_errors/#gossipaction">GossipAction</a></td>
 </tr>
 <tr>
-<td><code>lodestarAction</code></td>
-<td><a href="../../enums/network_peers.peeraction/">PeerAction</a> | null</td>
-</tr>
-<tr>
 <td><code>type</code></td>
 <td><a href="../../modules/chain_errors/#synccommitteeerrortype">SyncCommitteeErrorType</a></td>
 </tr>
@@ -408,14 +398,7 @@
 <h3 id="action">action<a class="headerlink" href="#action" title="Permanent link">¶</a></h3>
 <p>• <strong>action</strong>: <em><a href="../../modules/chain_errors/#gossipaction">GossipAction</a></em></p>
 <p><em>Inherited from <a href="../chain_errors.gossipactionerror/">GossipActionError</a>.<a href="../chain_errors.gossipactionerror/#action">action</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/chain/errors/gossipValidation.ts#L11">packages/lodestar/src/chain/errors/gossipValidation.ts:11</a></em></p>
-<p>The action at gossipsub side</p>
-<hr/>
-<h3 id="lodestaraction">lodestarAction<a class="headerlink" href="#lodestaraction" title="Permanent link">¶</a></h3>
-<p>• <strong>lodestarAction</strong>: <em><a href="../../enums/network_peers.peeraction/">PeerAction</a> | null</em></p>
-<p><em>Inherited from <a href="../chain_errors.gossipactionerror/">GossipActionError</a>.<a href="../chain_errors.gossipactionerror/#lodestaraction">lodestarAction</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/chain/errors/gossipValidation.ts#L13">packages/lodestar/src/chain/errors/gossipValidation.ts:13</a></em></p>
-<p>The action at node side</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/chain/errors/gossipValidation.ts#L9">packages/lodestar/src/chain/errors/gossipValidation.ts:9</a></em></p>
 <hr/>
 <h3 id="message">message<a class="headerlink" href="#message" title="Permanent link">¶</a></h3>
 <p>• <strong>message</strong>: <em>string</em></p>

@@ -516,7 +516,7 @@ up to their head.
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new RangeSync</strong>(<code>modules</code>: <a href="../../modules/sync_range/#rangesyncmodules">RangeSyncModules</a>, <code>opts?</code>: <a href="../../modules/sync_range/#rangesyncopts">RangeSyncOpts</a>): <em><a href="./">RangeSync</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L85">packages/lodestar/src/sync/range/range.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L85">packages/lodestar/src/sync/range/range.ts:85</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -540,57 +540,57 @@ up to their head.
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="optional-_emittype"><code>Optional</code>  _emitType<a class="headerlink" href="#optional-_emittype" title="Permanent link">¶</a></h3>
 <p>• <strong> _emitType</strong>? : <em>V</em></p>
-<p><em>Inherited from <a href="../network.networkeventbus/">NetworkEventBus</a>.<a href="../network.networkeventbus/#optional--_emittype"> _emitType</a></em></p>
+<p><em>Inherited from <a href="../chain.chaineventemitter/">ChainEventEmitter</a>.<a href="../chain.chaineventemitter/#optional--_emittype"> _emitType</a></em></p>
 <p>Defined in node_modules/strict-event-emitter-types/types/src/index.d.ts:7</p>
 <hr/>
 <h3 id="optional-_emittertype"><code>Optional</code>  _emitterType<a class="headerlink" href="#optional-_emittertype" title="Permanent link">¶</a></h3>
 <p>• <strong> _emitterType</strong>? : <em>T</em></p>
-<p><em>Inherited from <a href="../network.networkeventbus/">NetworkEventBus</a>.<a href="../network.networkeventbus/#optional--_emittertype"> _emitterType</a></em></p>
+<p><em>Inherited from <a href="../chain.chaineventemitter/">ChainEventEmitter</a>.<a href="../chain.chaineventemitter/#optional--_emittertype"> _emitterType</a></em></p>
 <p>Defined in node_modules/strict-event-emitter-types/types/src/index.d.ts:5</p>
 <hr/>
 <h3 id="optional-_eventstype"><code>Optional</code>  _eventsType<a class="headerlink" href="#optional-_eventstype" title="Permanent link">¶</a></h3>
 <p>• <strong> _eventsType</strong>? : <em>U</em></p>
-<p><em>Inherited from <a href="../network.networkeventbus/">NetworkEventBus</a>.<a href="../network.networkeventbus/#optional--_eventstype"> _eventsType</a></em></p>
+<p><em>Inherited from <a href="../chain.chaineventemitter/">ChainEventEmitter</a>.<a href="../chain.chaineventemitter/#optional--_eventstype"> _eventsType</a></em></p>
 <p>Defined in node_modules/strict-event-emitter-types/types/src/index.d.ts:6</p>
 <hr/>
 <h3 id="private-readonly-chain"><code>Private</code> <code>Readonly</code> chain<a class="headerlink" href="#private-readonly-chain" title="Permanent link">¶</a></h3>
 <p>• <strong>chain</strong>: <em><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L77">packages/lodestar/src/sync/range/range.ts:77</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L77">packages/lodestar/src/sync/range/range.ts:77</a></em></p>
 <hr/>
 <h3 id="private-readonly-chains"><code>Private</code> <code>Readonly</code> chains<a class="headerlink" href="#private-readonly-chains" title="Permanent link">¶</a></h3>
-<p>• <strong>chains</strong>: <em><a href="../util.mapdef/#static-map">Map</a>‹<a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a>, <a href="../sync_range.syncchain/">SyncChain</a>‹››</em> = new Map<rangesynctype, syncchain="">()</rangesynctype,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L83">packages/lodestar/src/sync/range/range.ts:83</a></em></p>
+<p>• <strong>chains</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹<a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a>, <a href="../sync_range.syncchain/">SyncChain</a>‹››</em> = new Map<rangesynctype, syncchain="">()</rangesynctype,></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L83">packages/lodestar/src/sync/range/range.ts:83</a></em></p>
 <p>There is a single chain per type, 1 finalized sync, 1 head sync</p>
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L80">packages/lodestar/src/sync/range/range.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L80">packages/lodestar/src/sync/range/range.ts:80</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L81">packages/lodestar/src/sync/range/range.ts:81</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L81">packages/lodestar/src/sync/range/range.ts:81</a></em></p>
 <hr/>
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">¶</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L79">packages/lodestar/src/sync/range/range.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L79">packages/lodestar/src/sync/range/range.ts:79</a></em></p>
 <hr/>
 <h3 id="private-readonly-network"><code>Private</code> <code>Readonly</code> network<a class="headerlink" href="#private-readonly-network" title="Permanent link">¶</a></h3>
 <p>• <strong>network</strong>: <em><a href="../../interfaces/network.inetwork/">INetwork</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L78">packages/lodestar/src/sync/range/range.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L78">packages/lodestar/src/sync/range/range.ts:78</a></em></p>
 <hr/>
 <h3 id="private-optional-opts"><code>Private</code> <code>Optional</code> opts<a class="headerlink" href="#private-optional-opts" title="Permanent link">¶</a></h3>
 <p>• <strong>opts</strong>? : <em><a href="../../modules/sync_range/#rangesyncopts">RangeSyncOpts</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L85">packages/lodestar/src/sync/range/range.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L85">packages/lodestar/src/sync/range/range.ts:85</a></em></p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">¶</a></h2>
 <h3 id="state">state<a class="headerlink" href="#state" title="Permanent link">¶</a></h3>
 <p>• <strong>get state</strong>(): <em><a href="../../modules/sync_range/#rangesyncstate">RangeSyncState</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L164">packages/lodestar/src/sync/range/range.ts:164</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L164">packages/lodestar/src/sync/range/range.ts:164</a></em></p>
 <p>Compute the current RangeSync state, not cached</p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync_range/#rangesyncstate">RangeSyncState</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="addpeer">addPeer<a class="headerlink" href="#addpeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addPeer</strong>(<code>peerId</code>: PeerId, <code>localStatus</code>: Status, <code>peerStatus</code>: Status): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L113">packages/lodestar/src/sync/range/range.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L113">packages/lodestar/src/sync/range/range.ts:113</a></em></p>
 <p>A peer with a relevant STATUS message has been found, which also is advanced from us.
 Add this peer to an existing chain or create a new one. The update the chains status.</p>
 <p><strong>Parameters:</strong></p>
@@ -620,7 +620,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="private-addpeerorcreatechain"><code>Private</code> addPeerOrCreateChain<a class="headerlink" href="#private-addpeerorcreatechain" title="Permanent link">¶</a></h3>
 <p>▸ <strong>addPeerOrCreateChain</strong>(<code>startEpoch</code>: Epoch, <code>target</code>: <a href="../../modules/sync_range/#chaintarget">ChainTarget</a>, <code>peer</code>: PeerId, <code>syncType</code>: <a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L237">packages/lodestar/src/sync/range/range.ts:237</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L237">packages/lodestar/src/sync/range/range.ts:237</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -652,13 +652,13 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="close">close<a class="headerlink" href="#close" title="Permanent link">¶</a></h3>
 <p>▸ <strong>close</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L103">packages/lodestar/src/sync/range/range.ts:103</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L103">packages/lodestar/src/sync/range/range.ts:103</a></em></p>
 <p>Throw / return all AsyncGenerators inside every SyncChain instance</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="private-downloadbeaconblocksbyrange"><code>Private</code> downloadBeaconBlocksByRange<a class="headerlink" href="#private-downloadbeaconblocksbyrange" title="Permanent link">¶</a></h3>
 <p>▸ <strong>downloadBeaconBlocksByRange</strong>(<code>peerId</code>: PeerId‹›, <code>request</code>: BeaconBlocksByRangeRequest): <em>Promise‹SignedBeaconBlock[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L218">packages/lodestar/src/sync/range/range.ts:218</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L218">packages/lodestar/src/sync/range/range.ts:218</a></em></p>
 <p>Convenience method for <code>SyncChain</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -683,13 +683,13 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="getsyncchainsdebugstate">getSyncChainsDebugState<a class="headerlink" href="#getsyncchainsdebugstate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSyncChainsDebugState</strong>(): <em><a href="../../modules/sync_range/#syncchaindebugstate">SyncChainDebugState</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L184">packages/lodestar/src/sync/range/range.ts:184</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L184">packages/lodestar/src/sync/range/range.ts:184</a></em></p>
 <p>Full debug state for lodestar API</p>
 <p><strong>Returns:</strong> <em><a href="../../modules/sync_range/#syncchaindebugstate">SyncChainDebugState</a>[]</em></p>
 <hr/>
 <h3 id="private-onsyncchainend"><code>Private</code> onSyncChainEnd<a class="headerlink" href="#private-onsyncchainend" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onSyncChainEnd</strong>(<code>err</code>: null | <a href="../api_impl.apierror/#static-error">Error</a>, <code>target</code>: null | <a href="../../modules/sync_range/#chaintarget">ChainTarget</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L228">packages/lodestar/src/sync/range/range.ts:228</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L228">packages/lodestar/src/sync/range/range.ts:228</a></em></p>
 <p>Convenience method for <code>SyncChain</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -714,7 +714,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="private-processchainsegment"><code>Private</code> processChainSegment<a class="headerlink" href="#private-processchainsegment" title="Permanent link">¶</a></h3>
 <p>▸ <strong>processChainSegment</strong>(<code>blocks</code>: SignedBeaconBlock[], <code>syncType</code>: <a href="../../enums/sync_utils.rangesynctype/">RangeSyncType</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L191">packages/lodestar/src/sync/range/range.ts:191</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L191">packages/lodestar/src/sync/range/range.ts:191</a></em></p>
 <p>Convenience method for <code>SyncChain</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -739,7 +739,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="removepeer">removePeer<a class="headerlink" href="#removepeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>removePeer</strong>(<code>peerId</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L155">packages/lodestar/src/sync/range/range.ts:155</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L155">packages/lodestar/src/sync/range/range.ts:155</a></em></p>
 <p>Remove this peer from all head and finalized chains. A chain may become peer-empty and be dropped</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -760,7 +760,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="private-reportpeer"><code>Private</code> reportPeer<a class="headerlink" href="#private-reportpeer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>reportPeer</strong>(<code>peer</code>: PeerId‹›, <code>action</code>: <a href="../../enums/network_peers.peeraction/">PeerAction</a>, <code>actionName</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L223">packages/lodestar/src/sync/range/range.ts:223</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L223">packages/lodestar/src/sync/range/range.ts:223</a></em></p>
 <p>Convenience method for <code>SyncChain</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -789,7 +789,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="private-scrapemetrics"><code>Private</code> scrapeMetrics<a class="headerlink" href="#private-scrapemetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>scrapeMetrics</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L303">packages/lodestar/src/sync/range/range.ts:303</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L303">packages/lodestar/src/sync/range/range.ts:303</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -809,7 +809,7 @@ Add this peer to an existing chain or create a new one. The update the chains st
 <hr/>
 <h3 id="private-update"><code>Private</code> update<a class="headerlink" href="#private-update" title="Permanent link">¶</a></h3>
 <p>▸ <strong>update</strong>(<code>localFinalizedEpoch</code>: Epoch): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e52f24f/packages/lodestar/src/sync/range/range.ts#L261">packages/lodestar/src/sync/range/range.ts:261</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/b3ff40e/packages/lodestar/src/sync/range/range.ts#L261">packages/lodestar/src/sync/range/range.ts:261</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
