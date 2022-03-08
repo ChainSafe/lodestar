@@ -363,6 +363,9 @@ export class PeerManager {
   private heartbeat(): void {
     const connectedPeers = this.getConnectedPeerIds();
 
+    // Decay scores before reading them. Also prunes scores
+    this.peerRpcScores.update();
+
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
