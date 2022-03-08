@@ -42,13 +42,11 @@ import {
   GOSSIP_D_LOW,
 } from "./scoringParameters";
 import {Eth2Context} from "../../chain";
-import {IPeerRpcScoreStore} from "../peers";
 import {computeAllPeersScoreWeights} from "./scoreMetrics";
 
 export interface IGossipsubModules {
   config: IBeaconConfig;
   libp2p: Libp2p;
-  peerRpcScores: IPeerRpcScoreStore;
   logger: ILogger;
   metrics: IMetrics | null;
   signal: AbortSignal;
@@ -105,7 +103,6 @@ export class Eth2Gossipsub extends Gossipsub {
     const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
       config,
       logger,
-      peerRpcScores: modules.peerRpcScores,
       uncompressCache: this.uncompressCache,
       metrics,
       signal,
