@@ -124,7 +124,7 @@ export function getReqSerializers(config: IChainForkConfig): ReqSerializers<Api,
     schema: {params: {blockId: Schema.StringRequired}},
   };
 
-  // Compute block type from JSON payload. See https://github.com/ethereum/eth2.0-APIs/pull/142
+  // Compute block type from JSON payload. See https://github.com/ethereum/beacon-APIs/pull/142
   const getSignedBeaconBlockType = (data: allForks.SignedBeaconBlock): ContainerType<allForks.SignedBeaconBlock> =>
     config.getForkTypes(data.message.slot).SignedBeaconBlock;
   const AllForksSignedBeaconBlock: TypeJson<allForks.SignedBeaconBlock> = {

@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-fork-choice",
-  "description": "A Typescript implementation eth2 fork choice",
+  "description": "A Typescript implementation Ethereum Consensus fork choice",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -46,7 +46,7 @@
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ]

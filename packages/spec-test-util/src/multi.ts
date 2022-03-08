@@ -31,7 +31,7 @@ interface TestSpec<TestCase extends IBaseCase> {
 }
 
 /**
- * Run yaml Eth2.0 bulk spec tests (m) for a certain function
+ * Run yaml Ethereum Consensus bulk spec tests (m) for a certain function
  * Compares actual vs expected for all test cases
  * @param {string} testYamlPath - path to yaml spec test
  * @param {Function} testFunc - function to use to generate output

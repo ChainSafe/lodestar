@@ -257,7 +257,7 @@ function verifyAttestationTargetRoot(headBlock: IProtoBlock, targetRoot: Root, a
     // invalid in the spirit of the protocol. Here we choose safety over profit.
     //
     // Reference:
-    // https://github.com/ethereum/eth2.0-specs/pull/2001#issuecomment-699246659
+    // https://github.com/ethereum/consensus-specs/pull/2001#issuecomment-699246659
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_TARGET_ROOT,
       targetRoot: toHexString(targetRoot),

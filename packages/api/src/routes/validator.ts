@@ -36,7 +36,7 @@ export type BeaconCommitteeSubscription = {
 };
 
 /**
- * From https://github.com/ethereum/eth2.0-APIs/pull/136
+ * From https://github.com/ethereum/beacon-APIs/pull/136
  */
 export type SyncCommitteeSubscription = {
   validatorIndex: ValidatorIndex;
@@ -67,7 +67,7 @@ export type AttesterDuty = {
 };
 
 /**
- * From https://github.com/ethereum/eth2.0-APIs/pull/134
+ * From https://github.com/ethereum/beacon-APIs/pull/134
  */
 export type SyncDuty = {
   pubkey: BLSPubkey;

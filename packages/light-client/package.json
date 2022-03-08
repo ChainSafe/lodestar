@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-light-client",
-  "description": "A Typescript implementation of the eth2 light client",
+  "description": "A Typescript implementation of the Ethereum Consensus light client",
   "license": "Apache-2.0",
   "author": "ChainSafe Systems",
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
@@ -49,7 +49,7 @@
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "light-client",
     "blockchain"

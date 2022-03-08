@@ -67,7 +67,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - We do expensive processing on the object in the validator function that we need to re-use in the handler function.
  * - The validator function produces extra data that is needed for the handler function. Making this data available in
  *   the handler function scope is hard to achieve without very hacky strategies
- * - Eth2.0 gossipsub protocol strictly defined a single topic for message
+ * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;

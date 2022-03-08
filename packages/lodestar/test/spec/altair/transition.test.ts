@@ -57,7 +57,7 @@ describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
 type BlocksSZZTypeMapping = Record<string, typeof ssz[ForkName]["SignedBeaconBlock"]>;
 
 /**
- * https://github.com/ethereum/eth2.0-specs/tree/v1.1.0-alpha.5/tests/formats/transition
+ * https://github.com/ethereum/consensus-specs/tree/v1.1.10/tests/formats/transition
  */
 function generateBlocksSZZTypeMapping(meta: ITransitionTestCase["meta"]): BlocksSZZTypeMapping {
   if (meta === undefined) {

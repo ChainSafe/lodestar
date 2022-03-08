@@ -11,7 +11,7 @@ import {recover} from "./recover";
 
 export const validator: ICliCommand<IAccountValidatorArgs, IGlobalArgs> = {
   command: "validator <command>",
-  describe: "Provides commands for managing Eth2 validators.",
+  describe: "Provides commands for managing Ethereum Consensus validators.",
   options: accountValidatorOptions,
   subcommands: [create, deposit, importCmd, list, recover, slashingProtection, voluntaryExit],
 };

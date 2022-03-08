@@ -293,7 +293,7 @@ export function computeProposers(
 }
 
 /**
- * Same logic in https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#sync-committee-processing
+ * Same logic in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#sync-aggregate-processing
  */
 export function computeSyncParticipantReward(config: IBeaconConfig, totalActiveBalance: Gwei): number {
   // TODO: manage totalActiveBalance in eth

@@ -67,7 +67,7 @@ export function createProcessRpcMessageFnsByType(
 
 /**
  * Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
- * or more validation conditions from the eth2.0-specs#p2p-interface are not satisfied.
+ * or more validation conditions from the consensus-specs#p2p-interface are not satisfied.
  *
  * This function receives a string topic and a binary message `InMessage` and deserializes both using caches.
  * - The topic string should be known in advance and pre-computed

@@ -110,7 +110,7 @@ export function getBeaconPoolApi({
      * If a sync committee signature is validated successfully the node MUST publish that sync committee signature on all applicable subnets.
      * If one or more sync committee signatures fail validation the node MUST return a 400 error with details of which sync committee signatures have failed, and why.
      *
-     * https://github.com/ethereum/eth2.0-APIs/pull/135
+     * https://github.com/ethereum/beacon-APIs/pull/135
      */
     async submitPoolSyncCommitteeSignatures(signatures) {
       // Fetch states for all slots of the `signatures`

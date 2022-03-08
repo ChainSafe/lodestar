@@ -6,9 +6,9 @@ import {registerCommandToYargs} from "./util";
 import {getVersion} from "./util/version";
 
 const version = getVersion();
-const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum 2.0 Beacon Chain.
+const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
   * Version: ${version}
-  * by ChainSafe Systems, 2018-2021`;
+  * by ChainSafe Systems, 2018-2022`;
 const bottomBanner = `📖 For more information, check the CLI reference:
   * https://chainsafe.github.io/lodestar/reference/cli
 

@@ -64,7 +64,7 @@ export interface IGossipsubModules {
  *   - `handleTopic`
  *   - `unhandleTopic`
  *
- * See https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
+ * See https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
  */
 export class Eth2Gossipsub extends Gossipsub {
   readonly jobQueues: GossipJobQueues;
@@ -82,7 +82,7 @@ export class Eth2Gossipsub extends Gossipsub {
 
   constructor(modules: IGossipsubModules) {
     // Gossipsub parameters defined here:
-    // https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
+    // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: "StrictNoSign" as const,

@@ -42,7 +42,7 @@ function upgradeTreeBackedState(config: IBeaconConfig, state: CachedBeaconStateP
 }
 
 /**
- * Translate_participation in https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/fork.md
+ * Translate_participation in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/fork.md
  */
 function translateParticipation(state: CachedBeaconStateAltair, pendingAttesations: phase0.PendingAttestation[]): void {
   const {epochCtx} = state;
