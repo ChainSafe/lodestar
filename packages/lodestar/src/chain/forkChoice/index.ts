@@ -16,7 +16,6 @@ import {computeAnchorCheckpoint} from "../initState";
 import {ChainEventEmitter} from "../emitter";
 import {IMetrics} from "../../metrics";
 import {ChainEvent} from "../emitter";
-import {GENESIS_SLOT} from "../../constants";
 
 export type ForkChoiceOpts = {
   terminalTotalDifficulty?: bigint;
@@ -69,7 +68,9 @@ export function initializeForkChoice(
       ...(bellatrix.isBellatrixStateType(state) && bellatrix.isMergeTransitionComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
-            executionStatus: blockHeader.slot === GENESIS_SLOT ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+            // The state used to initialize the beacon node, can be assumed to have a Valid execution
+            // head (https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md#checkpoint-sync-weak-subjectivity-sync)
+            executionStatus: ExecutionStatus.Valid,
           }
         : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
     }),

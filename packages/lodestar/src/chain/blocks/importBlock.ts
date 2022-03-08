@@ -23,7 +23,6 @@ import {IMetrics} from "../../metrics";
 import {IEth1ForBlockProduction} from "../../eth1";
 import {IExecutionEngine} from "../../executionEngine";
 import {IBeaconDb} from "../../db";
-import {ZERO_HASH_HEX} from "../../constants";
 import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
@@ -50,6 +49,7 @@ export type ImportBlockModules = {
   config: IChainForkConfig;
   logger: ILogger;
   metrics: IMetrics | null;
+  notifyForkchoiceUpdate: () => void;
 };
 
 /**
@@ -216,25 +216,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // Notify execution layer of head and finalized updates
   const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
   if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
-    /**
-     * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
-     * The consensus clients must not send notifyForkchoiceUpdate before TTD since the execution client will error.
-     * So we must check that:
-     * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
-     * - `headBlockHash !== ZERO_HASH` -> Pre TTD
-     */
-    const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash;
-    /**
-     * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
-     * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
-     * zero block hash (pre TTD)
-     */
-    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
-    if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
-      chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
-        chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
-      });
-    }
+    chain.notifyForkchoiceUpdate();
   }
 
   // Emit ChainEvent.block event

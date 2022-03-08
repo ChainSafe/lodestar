@@ -5,12 +5,12 @@
 import fs from "node:fs";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString, TreeBacked} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
+import {GENESIS_EPOCH, ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {IBeaconDb} from "../db";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {IMetrics} from "../metrics";
@@ -167,6 +167,7 @@ export class BeaconChain implements IBeaconChain {
         config,
         logger,
         metrics,
+        notifyForkchoiceUpdate: this.notifyForkchoiceUpdate,
       },
       opts,
       signal
@@ -288,5 +289,18 @@ export class BeaconChain implements IBeaconChain {
       fs.writeFileSync(fileName, bytes);
     }
     return fileName;
+  }
+
+  async notifyForkchoiceUpdate(): Promise<void> {
+    const head = this.forkChoice.getHead();
+    if (head.executionStatus != ExecutionStatus.PreMerge) {
+      const headBlockHash = this.forkChoice.getHead().executionPayloadBlockHash;
+      const finalizedBlockHash = this.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+      if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
+        this.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+          this.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+        });
+      }
+    }
   }
 }

@@ -146,6 +146,9 @@ export class BeaconNode {
       ),
       executionEngine: initializeExecutionEngine(opts.executionEngine, signal),
     });
+    // Issue a notifyForkchoiceUpdate to the execution engine so that it may start its backfill
+    // sync if need to
+    await chain.notifyForkchoiceUpdate();
 
     // Load persisted data from disk to in-memory caches
     await chain.loadFromDisk();
