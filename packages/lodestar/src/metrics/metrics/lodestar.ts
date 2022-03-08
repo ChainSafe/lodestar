@@ -57,6 +57,10 @@ export function createLodestarMetrics(
       name: "lodestar_peer_score_avg_min_max",
       help: "Avg min max of peer score at lodestar side",
     }),
+    peerConnectionLength: register.avgMinMax({
+      name: "lodestar_peer_connection_seconds_avg_min_max",
+      help: "Avg min max of peer connection length in second",
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
