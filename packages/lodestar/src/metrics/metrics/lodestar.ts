@@ -99,6 +99,11 @@ export function createLodestarMetrics(
       help: "Priorization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
     }),
+    peersReportPeerCount: register.gauge<"reason">({
+      name: "lodestar_peers_report_peer_count",
+      help: "network.reportPeer count by reason",
+      labelNames: ["reason"],
+    }),
 
     discovery: {
       peersToConnect: register.gauge({

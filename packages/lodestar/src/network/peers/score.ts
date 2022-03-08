@@ -1,4 +1,5 @@
 import PeerId from "peer-id";
+import {IMetrics} from "../../metrics";
 import {IPeerMetadataStore} from "./metastore";
 
 /** The default score for new peers */
@@ -66,6 +67,10 @@ export interface IPeerRpcScoreStore {
   update(peer: PeerId): void;
 }
 
+export interface IPeerRpcScoreStoreModules {
+  metrics: IMetrics | null;
+}
+
 /**
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
@@ -73,9 +78,11 @@ export interface IPeerRpcScoreStore {
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly store: IPeerMetadataStore;
+  private readonly metrics: IMetrics | null;
 
-  constructor(store: IPeerMetadataStore) {
+  constructor(store: IPeerMetadataStore, metrics: IMetrics | null = null) {
     this.store = store;
+    this.metrics = metrics;
   }
 
   getScore(peer: PeerId): number {
@@ -89,8 +96,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
     this.add(peer, peerActionScore[action]);
 
-    // TODO: Log action to debug + do metrics
-    actionName;
+    this.metrics?.peersReportPeerCount.inc({reason: actionName});
   }
 
   update(peer: PeerId): void {
