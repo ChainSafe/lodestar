@@ -68,8 +68,8 @@ export function initializeForkChoice(
       ...(bellatrix.isBellatrixStateType(state) && bellatrix.isMergeTransitionComplete(state)
         ? {
             executionPayloadBlockHash: toHexString(state.latestExecutionPayloadHeader.blockHash),
-            // The state used to initialize the beacon node, can be assumed to have a Valid execution
-            // head (https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md#checkpoint-sync-weak-subjectivity-sync)
+            // The state used to initialize the beacon node, can be assumed to have a Valid execution head
+            // (https://github.com/ethereum/consensus-specs/blob/dev/sync/optimistic.md#checkpoint-sync-weak-subjectivity-sync)
             executionStatus: ExecutionStatus.Valid,
           }
         : {executionPayloadBlockHash: null, executionStatus: ExecutionStatus.PreMerge}),
