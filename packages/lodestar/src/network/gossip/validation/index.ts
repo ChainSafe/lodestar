@@ -14,16 +14,14 @@ import {
 } from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
-import {decodeMessageData, UncompressCache} from "../encoding";
 import {createValidationQueues} from "./queue";
-import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
+import {getUncompressedData} from "../encoding";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
   logger: ILogger;
   metrics: IMetrics | null;
-  uncompressCache: UncompressCache;
 };
 
 /**
@@ -72,19 +70,17 @@ function getGossipValidatorFn<K extends GossipType>(
   type: K,
   modules: ValidatorFnModules
 ): GossipValidatorFn {
-  const {config, logger, metrics, uncompressCache} = modules;
+  const {config, logger, metrics} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
   return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
     // Define in scope above try {} to be used in catch {} if object was parsed
     let gossipObject;
     try {
-      const encoding = topic.encoding ?? DEFAULT_ENCODING;
-
       // Deserialize object from bytes ONLY after being picked up from the validation queue
       try {
         const sszType = getGossipSSZType(topic);
-        const messageData = decodeMessageData(encoding, gossipMsg.data, uncompressCache);
+        const messageData = getUncompressedData(gossipMsg);
         gossipObject =
           // TODO: Review if it's really necessary to deserialize this as TreeBacked
           topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof

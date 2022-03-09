@@ -104,6 +104,15 @@ export interface IGossipModules {
 }
 
 /**
+ * Extend the standard InMessage with additional fields so that we don't have to compute them twice.
+ * When we send messages to other peers, protobuf will just ignore these fields.
+ */
+export type Eth2InMessage = InMessage & {
+  msgId?: Uint8Array;
+  uncompressedData?: Uint8Array;
+};
+
+/**
  * Contains various methods for validation of incoming gossip topic data.
  * The conditions for valid gossip topics and how they are handled are specified here:
  * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#global-topics
@@ -114,7 +123,7 @@ export interface IGossipModules {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipValidatorFn = (topic: GossipTopic, message: InMessage, seenTimestampSec: number) => Promise<void>;
+export type GossipValidatorFn = (topic: GossipTopic, message: Eth2InMessage, seenTimestampSec: number) => Promise<void>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 

@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Gossipsub from "libp2p-gossipsub";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -19,9 +18,10 @@ import {
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
+  Eth2InMessage,
 } from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
-import {computeMsgId, encodeMessageData, UncompressCache} from "./encoding";
+import {computeMsgId, encodeMessageData} from "./encoding";
 import {DEFAULT_ENCODING} from "./constants";
 import {GossipValidationError} from "./errors";
 import {GOSSIP_MAX_SIZE} from "../../constants";
@@ -30,7 +30,6 @@ import {Map2d, Map2dArr} from "../../util/map";
 import pipe from "it-pipe";
 import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
 import BufferList from "bl";
-// import {RPC} from "libp2p-interfaces/src/pubsub/message/rpc";
 import {RPC} from "libp2p-gossipsub/src/message/rpc";
 import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
@@ -55,12 +54,6 @@ export interface IGossipsubModules {
 }
 
 /**
- * Cache message id right in message so that we don't have to compute it twice.
- * When we send messages to other peers, protobuf will just ignore `msgId` field.
- */
-type Eth2InMessage = InMessage & {msgId?: Uint8Array};
-
-/**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
  * - Eth2 message id
  * - Emits `GossipObject`, not `InMessage`
@@ -80,7 +73,6 @@ export class Eth2Gossipsub extends Gossipsub {
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
-  private readonly uncompressCache = new UncompressCache();
 
   private readonly validatorFnsByType: ValidatorFnsByType;
 
@@ -108,7 +100,6 @@ export class Eth2Gossipsub extends Gossipsub {
     const {validatorFnsByType, jobQueues} = createValidatorFnsByType(gossipHandlers, {
       config,
       logger,
-      uncompressCache: this.uncompressCache,
       metrics,
       signal,
     });
@@ -144,7 +135,7 @@ export class Eth2Gossipsub extends Gossipsub {
     if (!msgId) {
       const topicStr = msg.topicIDs[0];
       const topic = this.gossipTopicCache.getTopic(topicStr);
-      msgId = computeMsgId(topic, topicStr, msg.data, this.uncompressCache);
+      msgId = computeMsgId(topic, topicStr, msg);
       msg.msgId = msgId;
     }
     return msgId;
@@ -233,7 +224,7 @@ export class Eth2Gossipsub extends Gossipsub {
    * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
    * Note: this does not call super. All logic is re-implemented below
    */
-  async validate(message: InMessage): Promise<void> {
+  async validate(message: Eth2InMessage): Promise<void> {
     try {
       // messages must have a single topicID
       const topicStr = Array.isArray(message.topicIDs) ? message.topicIDs[0] : undefined;
