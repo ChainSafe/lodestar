@@ -55,7 +55,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
-  const client = getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+  const client = await getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
   const logCtx = {method, encoding, client, peer, requestId};
 
   if (signal?.aborted) {

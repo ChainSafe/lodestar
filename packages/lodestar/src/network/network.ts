@@ -123,7 +123,7 @@ export class Network implements INetwork {
     this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
     await this.peerManager.start();
-    this.gossip.start();
+    await this.gossip.start();
     this.attnetsService.start();
     this.syncnetsService.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
@@ -134,11 +134,10 @@ export class Network implements INetwork {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
-    this.gossip.stop();
+    await this.gossip.stop();
     this.reqResp.stop();
     this.attnetsService.stop();
     this.syncnetsService.stop();
-    this.gossip.stop();
     await this.libp2p.stop();
   }
 
@@ -191,7 +190,7 @@ export class Network implements INetwork {
   }
 
   reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void {
-    this.peerRpcScores.applyAction(peer, action, actionName);
+    void this.peerRpcScores.applyAction(peer, action, actionName);
   }
 
   /**
@@ -229,7 +228,7 @@ export class Network implements INetwork {
   // Debug
 
   async connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
-    this.libp2p.peerStore.addressBook.add(peer, multiaddr);
+    await this.libp2p.peerStore.addressBook.add(peer, multiaddr);
     await this.libp2p.dial(peer);
   }
 

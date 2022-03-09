@@ -59,7 +59,6 @@ export class NodejsNode extends LibP2p {
       datastore: options.datastore,
       peerStore: {
         persistence: !!options.datastore,
-        threshold: 10,
       },
       config: {
         nat: {

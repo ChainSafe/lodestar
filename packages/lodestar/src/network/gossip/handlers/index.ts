@@ -132,7 +132,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.reportPeer(
+                void network.reportPeer(
                   PeerId.createFromB58String(peerIdStr),
                   PeerAction.LowToleranceError,
                   "BadGossipBlock"
