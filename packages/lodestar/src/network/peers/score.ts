@@ -87,12 +87,12 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     return this.scores.get(peer.toB58String()) ?? DEFAULT_SCORE;
   }
 
-  async getScoreState(peer: PeerId): Promise<ScoreState> {
-    return scoreToState(await this.getScore(peer));
+  getScoreState(peer: PeerId): ScoreState {
+    return scoreToState(this.getScore(peer));
   }
 
-  async applyAction(peer: PeerId, action: PeerAction, actionName?: string): Promise<void> {
-    await this.add(peer, peerActionScore[action]);
+  applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
+    this.add(peer, peerActionScore[action]);
 
     // TODO: Log action to debug + do metrics
     actionName;
@@ -137,8 +137,8 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     }
   }
 
-  private async add(peer: PeerId, scoreDelta: number): Promise<void> {
-    const prevScore = await this.getScore(peer);
+  private add(peer: PeerId, scoreDelta: number): void {
+    const prevScore = this.getScore(peer);
 
     let newScore = this.decayScore(peer.toB58String(), prevScore) + scoreDelta;
     if (newScore > MAX_SCORE) newScore = MAX_SCORE;

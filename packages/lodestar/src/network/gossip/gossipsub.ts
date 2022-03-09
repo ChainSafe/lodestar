@@ -153,8 +153,8 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Get cached message id string if we have it.
    */
-  getCachedMsgIdStr(msg: InMessage): string | undefined {
-    const cachedMsgId = this.msgIdCache.get(msg);
+  getCachedMsgIdStr(msg: Eth2InMessage): string | undefined {
+    const cachedMsgId = msg.msgId;
     return cachedMsgId ? messageIdToString(cachedMsgId) : undefined;
   }
 

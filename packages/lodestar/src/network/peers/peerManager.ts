@@ -241,7 +241,7 @@ export class PeerManager {
   /**
    * Handle a PING request + response (rpc handler responds with PONG automatically)
    */
-  private async onPing(peer: PeerId, seqNumber: phase0.Ping): Promise<void> {
+  private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
     const metadata = this.connectedPeers.get(peer.toB58String())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
@@ -369,9 +369,7 @@ export class PeerManager {
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
-      // to decay score
-      await this.peerRpcScores.update(peer);
-      switch (await this.peerRpcScores.getScoreState(peer)) {
+      switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
           break;

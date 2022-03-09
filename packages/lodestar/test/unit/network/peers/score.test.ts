@@ -11,9 +11,9 @@ describe("simple block provider score tracking", function () {
     return {scoreStore: new PeerRpcScoreStore()};
   }
 
-  it("Should return default score, without any previous action", async function () {
+  it("Should return default score, without any previous action", function () {
     const {scoreStore} = mockStore();
-    const score = await scoreStore.getScore(peer);
+    const score = scoreStore.getScore(peer);
     expect(score).to.be.equal(0);
   });
 
@@ -27,8 +27,8 @@ describe("simple block provider score tracking", function () {
   for (const [peerAction, times] of timesToBan)
     it(`Should ban peer after ${times} ${peerAction}`, async () => {
       const {scoreStore} = mockStore();
-      for (let i = 0; i < times; i++) await scoreStore.applyAction(peer, peerAction);
-      expect(await scoreStore.getScoreState(peer)).to.be.equal(ScoreState.Banned);
+      for (let i = 0; i < times; i++) scoreStore.applyAction(peer, peerAction);
+      expect(scoreStore.getScoreState(peer)).to.be.equal(ScoreState.Banned);
     });
 
   const factorForJsBadMath = 1.1;
@@ -47,10 +47,10 @@ describe("simple block provider score tracking", function () {
       expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
     });
 
-  it("should not go belove min score", async function () {
+  it("should not go belove min score", function () {
     const {scoreStore} = mockStore();
-    await scoreStore.applyAction(peer, PeerAction.Fatal);
-    await scoreStore.applyAction(peer, PeerAction.Fatal);
-    expect(await scoreStore.getScore(peer)).to.be.gte(MIN_SCORE);
+    scoreStore.applyAction(peer, PeerAction.Fatal);
+    scoreStore.applyAction(peer, PeerAction.Fatal);
+    expect(scoreStore.getScore(peer)).to.be.gte(MIN_SCORE);
   });
 });

@@ -178,7 +178,7 @@ export class ReqResp implements IReqResp {
       ) {
         this.metrics?.reqRespDialErrors.inc();
       }
-      if (peerAction !== null) await this.peerRpcScores.applyAction(peerId, peerAction);
+      if (peerAction !== null) this.peerRpcScores.applyAction(peerId, peerAction);
 
       throw e;
     }

@@ -286,7 +286,7 @@ export class PeerDiscovery {
       const peerId = await enr.peerId();
 
       // Check if peer is not banned or disconnected
-      if ((await this.peerRpcScores.getScoreState(peerId)) !== ScoreState.Healthy) {
+      if (this.peerRpcScores.getScoreState(peerId) !== ScoreState.Healthy) {
         return DiscoveredPeerStatus.bad_score;
       }
 
