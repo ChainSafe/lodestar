@@ -17,7 +17,7 @@ export TAG=v0.34.0-beta.0 && git tag -a $TAG 9fceb02 -m "$TAG" && git push origi
 4. The team creates a PR to bump `master` to the next version (in the example: `v0.35.0`) and continues releasing nightly builds.
 
 ```
-lerna version minor --no-git-tag-version
+lerna version minor --no-git-tag-version --force-publish
 ```
 
 After 3-5 days of testing:
@@ -25,7 +25,7 @@ After 3-5 days of testing:
 5. Tag final stable commit as `v0.34.0`, release and publish the stable release. This commit will be in `v0.34.x` branch and may note be on `master` if beta candidate required bug fixes.
 
 ```
-export TAG=v0.34.0 git && tag -a $TAG 9fceb02 -m "$TAG" && git push origin $TAG
+export TAG=v0.34.0 && git tag -a $TAG 9fceb02 -m "$TAG" && git push origin $TAG
 ```
 
 ## Pre-Releases
