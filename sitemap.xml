@@ -1381,11 +1381,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.uncompresscache/</loc>
-         <lastmod>2022-03-09</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_nodejs.nodejsnode/</loc>
          <lastmod>2022-03-09</lastmod>
          <changefreq>daily</changefreq>
@@ -2107,11 +2102,6 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.igossiptopiccache/</loc>
-         <lastmod>2022-03-09</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/network_gossip.iuncompresscache/</loc>
          <lastmod>2022-03-09</lastmod>
          <changefreq>daily</changefreq>
     </url>
