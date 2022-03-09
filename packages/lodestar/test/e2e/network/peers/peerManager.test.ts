@@ -109,7 +109,13 @@ describe("network / peers / PeerManager", function () {
   }
 
   it("Should request metadata on receivedPing of unknown peer", async () => {
-    const {reqResp, networkEventBus} = await mockModules();
+    const {reqResp, networkEventBus, peerManager} = await mockModules();
+
+    // Simulate connection so that PeerManager persists the metadata response
+    peerManager["onLibp2pPeerConnect"]({
+      stat: {direction: "inbound", status: "open"},
+      remotePeer: peerId1,
+    } as Connection);
 
     const seqNumber = BigInt(2);
     const metadata: phase0.Metadata = {seqNumber, attnets: []};
