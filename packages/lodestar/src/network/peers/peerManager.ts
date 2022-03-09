@@ -154,7 +154,7 @@ export class PeerManager {
     this.networkEventBus.on(NetworkEvent.reqRespRequest, this.onRequest);
 
     // On start-up will connected to existing peers in libp2p.peerStore, same as autoDial behaviour
-    await this.heartbeat();
+    this.heartbeat();
     this.intervals = [
       setInterval(this.pingAndStatusTimeouts.bind(this), CHECK_PING_STATUS_INTERVAL),
       setInterval(this.heartbeat.bind(this), HEARTBEAT_INTERVAL_MS),
@@ -198,7 +198,7 @@ export class PeerManager {
     // Only if the slot is more than epoch away, add an event to start looking for peers
 
     // Request to run heartbeat fn
-    void this.heartbeat();
+    this.heartbeat();
   }
 
   /**
@@ -218,7 +218,7 @@ export class PeerManager {
   /**
    * Must be called when network ReqResp receives incoming requests
    */
-  private onRequest = async (request: RequestTypedContainer, peer: PeerId): Promise<void> => {
+  private onRequest = (request: RequestTypedContainer, peer: PeerId): void => {
     try {
       const peerData = this.connectedPeers.get(peer.toB58String());
       if (peerData) {
@@ -252,7 +252,7 @@ export class PeerManager {
   /**
    * Handle a METADATA request + response (rpc handler responds with METADATA automatically)
    */
-  private async onMetadata(peer: PeerId, metadata: allForks.Metadata): Promise<void> {
+  private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
     const peerData = this.connectedPeers.get(peer.toB58String());
@@ -320,7 +320,7 @@ export class PeerManager {
 
   private async requestMetadata(peer: PeerId): Promise<void> {
     try {
-      await this.onMetadata(peer, await this.reqResp.metadata(peer));
+      this.onMetadata(peer, await this.reqResp.metadata(peer));
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
@@ -360,7 +360,7 @@ export class PeerManager {
    * It will request discovery queries if the peer count has not reached the desired number of peers.
    * NOTE: Discovery should only add a new query if one isn't already queued.
    */
-  private async heartbeat(): Promise<void> {
+  private heartbeat(): void {
     const connectedPeers = this.getConnectedPeerIds();
 
     // Decay scores before reading them. Also prunes scores

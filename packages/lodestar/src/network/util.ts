@@ -70,8 +70,8 @@ export function prettyPrintPeerId(peerId: PeerId): string {
   return `${id.substr(0, 2)}...${id.substr(id.length - 6, id.length)}`;
 }
 
-export async function getClientFromPeerStore(peerId: PeerId, mtadataBook: MetadataBook): Promise<ClientKind> {
-  const agentVersion = await getAgentVersionFromPeerStore(peerId, mtadataBook);
+export async function getClientFromPeerStore(peerId: PeerId, metadataBook: MetadataBook): Promise<ClientKind> {
+  const agentVersion = await getAgentVersionFromPeerStore(peerId, metadataBook);
   return clientFromAgentVersion(agentVersion);
 }
 

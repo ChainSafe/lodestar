@@ -108,7 +108,7 @@ export class InboundRateLimiter implements IRateLimiter {
         peerId: peerIdStr,
         requestsWithinWindow: requestCountPeerTracker.getRequestedObjectsWithinWindow(),
       });
-      void this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+      this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
       if (this.metrics) {
         this.metrics.reqRespRateLimitErrors.inc({tracker: "requestCountPeerTracker"});
       }
@@ -134,7 +134,7 @@ export class InboundRateLimiter implements IRateLimiter {
           blockCount: numBlock,
           requestsWithinWindow: blockCountPeerTracker.getRequestedObjectsWithinWindow(),
         });
-        void this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
+        this.peerRpcScores.applyAction(peerId, PeerAction.Fatal, "RateLimit");
         if (this.metrics) {
           this.metrics.reqRespRateLimitErrors.inc({tracker: "blockCountPeerTracker"});
         }

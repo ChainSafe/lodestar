@@ -205,7 +205,8 @@ export class Eth2Gossipsub extends Gossipsub {
 
   /**
    * Similar to gossipsub 0.13.0 except that no await
-   * TODO: make this change in gossipsub
+   * TODO: override getMsgIdIfNotSeen and add metric
+   * See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files
    */
   async _processRpcMessage(msg: InMessage): Promise<void> {
     let canonicalMsgIdStr;

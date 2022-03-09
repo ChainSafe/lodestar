@@ -190,7 +190,7 @@ export class Network implements INetwork {
   }
 
   reportPeer(peer: PeerId, action: PeerAction, actionName?: string): void {
-    void this.peerRpcScores.applyAction(peer, action, actionName);
+    this.peerRpcScores.applyAction(peer, action, actionName);
   }
 
   /**
