@@ -155,7 +155,6 @@ module.exports = {
       "node:child_process",
       "node:crypto",
       "node:fs",
-      "node:fs/promises",
       "node:http",
       "node:net",
       "node:os",

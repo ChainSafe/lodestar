@@ -1,4 +1,4 @@
-import {rename} from "node:fs/promises";
+import * as fs from "node:fs";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
@@ -32,7 +32,7 @@ export async function deleteOldPeerstorePreV036(peerStoreDir: string, logger: IL
     if (peerStoreDir.endsWith("/")) {
       peerStoreDir = peerStoreDir.slice(0, peerStoreDir.length - 1);
     }
-    await rename(peerStoreDir, peerStoreDir + ".pre-0.36.0.bak");
+    fs.renameSync(peerStoreDir, peerStoreDir + ".pre-0.36.0.bak");
     logger.info("Migrated old peerstore");
   }
 }
