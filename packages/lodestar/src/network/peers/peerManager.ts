@@ -9,10 +9,12 @@ import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constan
 import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
+import {prettyPrintPeerId} from "../util";
+import {NetworkGlobals, PeerData} from "../globals";
 import {ISubnetsService} from "../subnets";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
+import {clientFromAgentVersion, ClientKind} from "./client";
 import {
   getConnectedPeerIds,
   hasSomeConnectedPeer,
@@ -70,6 +72,7 @@ export type PeerManagerModules = {
   config: IBeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
+  networkGlobals: NetworkGlobals;
 };
 
 type PeerIdStr = string;
@@ -79,16 +82,6 @@ enum RelevantPeerStatus {
   relevant = "relevant",
   irrelevant = "irrelevant",
 }
-
-type PeerData = {
-  lastReceivedMsgUnixTsMs: number;
-  lastStatusUnixTsMs: number;
-  connectedUnixTsMs: number;
-  relevantStatus: RelevantPeerStatus;
-  direction: Connection["stat"]["direction"];
-  peerId: PeerId;
-  metadata: altair.Metadata | null;
-};
 
 /**
  * Performs all peer managment functionality in a single grouped class:
@@ -113,7 +106,7 @@ export class PeerManager {
   private networkEventBus: INetworkEventBus;
 
   // A single map of connected peers with all necessary data to handle PINGs, STATUS, and metrics
-  private connectedPeers = new Map<PeerIdStr, PeerData>();
+  private connectedPeers: Map<PeerIdStr, PeerData>;
 
   private opts: PeerManagerOpts;
   private intervals: NodeJS.Timeout[] = [];
@@ -129,6 +122,7 @@ export class PeerManager {
     this.config = modules.config;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.networkEventBus;
+    this.connectedPeers = modules.networkGlobals.connectedPeers;
     this.opts = opts;
 
     // opts.discv5 === null, discovery is disabled
@@ -446,6 +440,11 @@ export class PeerManager {
         }
       }
     }
+
+    // Sync peer agent version, for logging and metrics. libp2p gets this data via the identity protocol
+    // TODO: libp2p should emit new identity values to prevent having to poll from their data store
+    // Safe to void, try {} catch {} on each loop
+    void this.syncAgentVersions(Array.from(this.connectedPeers.values()));
   }
 
   private pingAndStatusTimeouts(): void {
@@ -494,7 +493,7 @@ export class PeerManager {
       // NOTE: libp2p may emit two "peer:connect" events: One for inbound, one for outbound
       // If that happens, it's okay. Only the "outbound" connection triggers immediate action
       const now = Date.now();
-      this.connectedPeers.set(peer.toB58String(), {
+      const peerData: PeerData = {
         lastReceivedMsgUnixTsMs: direction === "outbound" ? 0 : now,
         // If inbound, request after STATUS_INBOUND_GRACE_PERIOD
         lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
@@ -503,11 +502,18 @@ export class PeerManager {
         direction,
         peerId: peer,
         metadata: null,
-      });
+        agentVersion: null,
+        agentClient: null,
+        encodingPreference: null,
+      };
+      this.connectedPeers.set(peer.toB58String(), peerData);
 
       if (direction === "outbound") {
         this.pingAndStatusTimeouts();
       }
+
+      // Safe to void, try {} catch {} on each loop
+      void this.syncAgentVersions([peerData]);
     }
 
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
@@ -550,9 +556,30 @@ export class PeerManager {
     }
   }
 
+  /**
+   * Sync peer agent version, for logging and metrics. libp2p gets this data via the identity protocol
+   * TODO: libp2p should emit new identity values to prevent having to poll from their data store
+   */
+  private async syncAgentVersions(peerDatas: PeerData[]): Promise<void> {
+    for (const peerData of peerDatas) {
+      try {
+        const agentVersionBytes = this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+        if (agentVersionBytes) {
+          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+          peerData.agentVersion = agentVersion;
+          peerData.agentClient = clientFromAgentVersion(agentVersion);
+        }
+      } catch (e) {
+        this.logger.error("Error syncing AgentVersion", {peer: peerData.peerId.toB58String()}, e as Error);
+      }
+    }
+  }
+
   /** Register peer count metrics */
   private async runPeerCountMetrics(metrics: IMetrics): Promise<void> {
     let total = 0;
+
+    // TODO: Should we use here `this.connectedPeers`?
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {
@@ -560,8 +587,11 @@ export class PeerManager {
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
-        const client = await getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+
+        const peerData = this.connectedPeers.get(openCnx.remotePeer.toB58String());
+        const client = peerData?.agentClient ?? ClientKind.Unknown;
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
+
         total++;
       }
     }

@@ -24,6 +24,7 @@ import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
+import {NetworkGlobals} from "./globals";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -62,6 +63,7 @@ export class Network implements INetwork {
     this.config = config;
     this.clock = chain.clock;
     this.chain = chain;
+    const networkGlobals = new NetworkGlobals();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerRpcScores = new PeerRpcScoreStore();
@@ -69,7 +71,7 @@ export class Network implements INetwork {
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
     this.reqResp = new ReqResp(
-      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics},
+      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics, networkGlobals},
       opts
     );
 
@@ -102,6 +104,7 @@ export class Network implements INetwork {
         config,
         peerRpcScores,
         networkEventBus,
+        networkGlobals,
       },
       opts
     );

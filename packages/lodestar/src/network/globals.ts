@@ -1,0 +1,51 @@
+import {altair} from "@chainsafe/lodestar-types";
+import PeerId from "peer-id";
+import {ClientKind} from "./peers/client";
+import {Encoding} from "./reqresp/types";
+
+type PeerIdStr = string;
+
+export enum RelevantPeerStatus {
+  Unknown = "unknown",
+  relevant = "relevant",
+  irrelevant = "irrelevant",
+}
+
+export type PeerData = {
+  lastReceivedMsgUnixTsMs: number;
+  lastStatusUnixTsMs: number;
+  connectedUnixTsMs: number;
+  relevantStatus: RelevantPeerStatus;
+  direction: "inbound" | "outbound";
+  peerId: PeerId;
+  metadata: altair.Metadata | null;
+  agentVersion: string | null;
+  agentClient: ClientKind | null;
+  encodingPreference: Encoding | null;
+};
+
+/**
+ * Make data available to multiple components in the network stack.
+ * Due to class dependencies some modules have circular dependencies, like PeerManager - ReqResp.
+ * This third party class allows data to be available to both.
+ *
+ * The pruning and bounding of this class is handled by the PeerManager
+ */
+export class NetworkGlobals {
+  readonly connectedPeers = new Map<PeerIdStr, PeerData>();
+
+  getPeerKind(peerIdStr: string): ClientKind {
+    return this.connectedPeers.get(peerIdStr)?.agentClient ?? ClientKind.Unknown;
+  }
+
+  getEncodingPreference(peerIdStr: string): Encoding | null {
+    return this.connectedPeers.get(peerIdStr)?.encodingPreference ?? null;
+  }
+
+  setEncodingPreference(peerIdStr: string, encoding: Encoding): void {
+    const peerData = this.connectedPeers.get(peerIdStr);
+    if (peerData) {
+      peerData.encodingPreference = encoding;
+    }
+  }
+}

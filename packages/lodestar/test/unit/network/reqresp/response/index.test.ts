@@ -5,12 +5,12 @@ import {LodestarError} from "@chainsafe/lodestar-utils";
 import {RespStatus} from "../../../../../src/constants";
 import {Method, Encoding, Version} from "../../../../../src/network/reqresp/types";
 import {handleRequest, PerformRequestHandler} from "../../../../../src/network/reqresp/response";
+import {NetworkGlobals} from "../../../../../src/network/globals";
 import {expectRejectedWithLodestarError} from "../../../../utils/errors";
 import {expectEqualByteChunks, MockLibP2pStream} from "../utils";
 import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
 import {testLogger} from "../../../../utils/logger";
 import {getValidPeerId} from "../../../../utils/peer";
-import {createNode} from "../../../../utils/network";
 import {config} from "../../../../utils/config";
 
 chai.use(chaiAsPromised);
@@ -18,8 +18,7 @@ chai.use(chaiAsPromised);
 describe("network / reqresp / response / handleRequest", async () => {
   const logger = testLogger();
   const peerId = getValidPeerId();
-  const multiaddr = "/ip4/127.0.0.1/tcp/0";
-  const libp2p = await createNode(multiaddr);
+  const networkGlobals = new NetworkGlobals();
 
   let controller: AbortController;
   beforeEach(() => (controller = new AbortController()));
@@ -74,7 +73,7 @@ describe("network / reqresp / response / handleRequest", async () => {
       const stream = new MockLibP2pStream(requestChunks);
 
       const resultPromise = handleRequest(
-        {config, logger, libp2p},
+        {config, logger, networkGlobals},
         performRequestHandler,
         stream,
         peerId,

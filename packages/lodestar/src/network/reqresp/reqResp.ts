@@ -19,6 +19,7 @@ import {IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus, NetworkEvent} from "../events";
+import {NetworkGlobals} from "../globals";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
 import {RequestError, RequestErrorCode} from "./request";
@@ -45,6 +46,7 @@ export type IReqRespOptions = Partial<typeof timeoutOptions>;
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;
   private libp2p: LibP2p;
+  private readonly networkGlobals: NetworkGlobals;
   private logger: ILogger;
   private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
@@ -57,11 +59,10 @@ export class ReqResp implements IReqResp {
   private respCount = 0;
   private metrics: IMetrics | null;
 
-  private readonly encodingPreference = new Map<string, Encoding>();
-
   constructor(modules: IReqRespModules, options: IReqRespOptions & RateLimiterOpts) {
     this.config = modules.config;
     this.libp2p = modules.libp2p;
+    this.networkGlobals = modules.networkGlobals;
     this.logger = modules.logger;
     this.reqRespHandlers = modules.reqRespHandlers;
     this.metadataController = modules.metadata;
@@ -139,7 +140,6 @@ export class ReqResp implements IReqResp {
 
   pruneOnPeerDisconnect(peerId: PeerId): void {
     this.inboundRateLimiter.prune(peerId);
-    this.encodingPreference.delete(peerId.toB58String());
   }
 
   // Helper to reduce code duplication
@@ -153,9 +153,9 @@ export class ReqResp implements IReqResp {
     try {
       this.metrics?.reqRespOutgoingRequests.inc({method});
 
-      const encoding = this.encodingPreference.get(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
+      const encoding = this.networkGlobals.getEncodingPreference(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
-        {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p},
+        {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p, networkGlobals: this.networkGlobals},
         peerId,
         method,
         encoding,
@@ -191,14 +191,14 @@ export class ReqResp implements IReqResp {
       // TODO: Do we really need this now that there is only one encoding?
       // Remember the prefered encoding of this peer
       if (method === Method.Status) {
-        this.encodingPreference.set(peerId.toB58String(), encoding);
+        this.networkGlobals.setEncodingPreference(peerId.toB58String(), encoding);
       }
 
       try {
         this.metrics?.reqRespIncomingRequests.inc({method});
 
         await handleRequest(
-          {config: this.config, logger: this.logger, libp2p: this.libp2p},
+          {config: this.config, logger: this.logger, networkGlobals: this.networkGlobals},
           this.onRequest.bind(this),
           stream,
           peerId,
