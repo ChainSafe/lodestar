@@ -11,18 +11,18 @@ This is a setup to run and join the devnet with a single shell command. This scr
 ###### Just run the script with arguments
 
 ```bash
-cd kintsugi/devnets
-./setup.sh --dataDir kintsugi-data --elClient geth --devnetVars ./kintsugi.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --"]
+cd kiln/devnets
+./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --"]
 ```
 
 ###### Example scenarios
 
 1. Run with separate terminals launched & attached (best for testing in local) :
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
 2. Run _in-terminal_ attached with logs interleaved (best for testing in remote shell) :
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --dockerWithSudo`
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo`
 3. Run detached (best for leaving it to run, typically after testing 1 or 2):
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --detached --dockerWithSudo`
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --detached --dockerWithSudo`
 
 You can alternate between `geth` and `nethermind` to experiment with the ELs being out of sync ( and catching up) with `lodestar`.
 

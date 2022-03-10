@@ -5,7 +5,7 @@ import {chainConfig as mainnet} from "../presets/mainnet";
 
 /* eslint-disable max-len */
 
-export const kintsugiChainConfig: IChainConfig = {
+export const kilnChainConfig: IChainConfig = {
   ...mainnet,
 
   MIN_GENESIS_ACTIVE_VALIDATOR_COUNT: 72100,
