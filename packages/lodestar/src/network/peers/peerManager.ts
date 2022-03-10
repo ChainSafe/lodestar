@@ -440,11 +440,6 @@ export class PeerManager {
         }
       }
     }
-
-    // Sync peer agent version, for logging and metrics. libp2p gets this data via the identity protocol
-    // TODO: libp2p should emit new identity values to prevent having to poll from their data store
-    // Safe to void, try {} catch {} on each loop
-    void this.syncAgentVersions(Array.from(this.connectedPeers.values()));
   }
 
   private pingAndStatusTimeouts(): void {
@@ -512,8 +507,14 @@ export class PeerManager {
         this.pingAndStatusTimeouts();
       }
 
-      // Safe to void, try {} catch {} on each loop
-      void this.syncAgentVersions([peerData]);
+      // AgentVersion was set in libp2p handler of 'peer:connect' event
+      // we register our handler after libp2p so this data should be available
+      const agentVersionBytes = this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+      if (agentVersionBytes) {
+        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+        peerData.agentVersion = agentVersion;
+        peerData.agentClient = clientFromAgentVersion(agentVersion);
+      }
     }
 
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
@@ -553,25 +554,6 @@ export class PeerManager {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
     } finally {
       void this.disconnect(peer);
-    }
-  }
-
-  /**
-   * Sync peer agent version, for logging and metrics. libp2p gets this data via the identity protocol
-   * TODO: libp2p should emit new identity values to prevent having to poll from their data store
-   */
-  private async syncAgentVersions(peerDatas: PeerData[]): Promise<void> {
-    for (const peerData of peerDatas) {
-      try {
-        const agentVersionBytes = this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
-        if (agentVersionBytes) {
-          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-          peerData.agentVersion = agentVersion;
-          peerData.agentClient = clientFromAgentVersion(agentVersion);
-        }
-      } catch (e) {
-        this.logger.error("Error syncing AgentVersion", {peer: peerData.peerId.toB58String()}, e as Error);
-      }
     }
   }
 
