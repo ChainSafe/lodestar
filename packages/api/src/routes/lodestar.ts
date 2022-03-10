@@ -11,6 +11,7 @@ import {
   Schema,
   ArrayOf,
 } from "../utils";
+import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -53,6 +54,10 @@ export type StateCacheItem = {
   lastRead: number;
 };
 
+export type LodestarNodePeer = NodePeer & {
+  agentVersion: string;
+};
+
 export type Api = {
   /** TODO: description */
   getWtfNode(): Promise<{data: string}>;
@@ -81,6 +86,8 @@ export type Api = {
   connectPeer(peerId: string, multiaddrStrs: string[]): Promise<void>;
   /** Disconnect peer */
   disconnectPeer(peerId: string): Promise<void>;
+  /** Same to node api with new fields */
+  getPeers(filters?: FilterGetPeers): Promise<{data: LodestarNodePeer[]; meta: {count: number}}>;
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
@@ -103,6 +110,7 @@ export const routesData: RoutesData<Api> = {
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
+  getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
 };
 
@@ -120,6 +128,7 @@ export type ReqTypes = {
   dropStateCache: ReqEmpty;
   connectPeer: {query: {peerId: string; multiaddr: string[]}};
   disconnectPeer: {query: {peerId: string}};
+  getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
   discv5GetKadValues: ReqEmpty;
 };
 
@@ -154,6 +163,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({query}) => [query.peerId],
       schema: {query: {peerId: Schema.StringRequired}},
     },
+    getPeers: {
+      writeReq: (filters) => ({query: filters || {}}),
+      parseReq: ({query}) => [query],
+      schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
+    },
     discv5GetKadValues: reqEmpty,
   };
 }
@@ -187,6 +201,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockProcessorQueueItems: jsonType(),
     getStateCacheItems: jsonType(),
     getCheckpointStateCacheItems: jsonType(),
+    getPeers: jsonType(),
     discv5GetKadValues: jsonType(),
   };
 }

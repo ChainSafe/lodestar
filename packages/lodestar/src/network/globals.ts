@@ -34,6 +34,10 @@ export type PeerData = {
 export class NetworkGlobals {
   readonly connectedPeers = new Map<PeerIdStr, PeerData>();
 
+  getAgentVersion(peerIdStr: string): string {
+    return this.connectedPeers.get(peerIdStr)?.agentVersion ?? "NA";
+  }
+
   getPeerKind(peerIdStr: string): ClientKind {
     return this.connectedPeers.get(peerIdStr)?.agentClient ?? ClientKind.Unknown;
   }

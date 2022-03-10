@@ -46,6 +46,7 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
+  private readonly networkGlobals: NetworkGlobals;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
@@ -63,7 +64,7 @@ export class Network implements INetwork {
     this.config = config;
     this.clock = chain.clock;
     this.chain = chain;
-    const networkGlobals = new NetworkGlobals();
+    this.networkGlobals = new NetworkGlobals();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerRpcScores = new PeerRpcScoreStore();
@@ -71,7 +72,17 @@ export class Network implements INetwork {
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
     this.reqResp = new ReqResp(
-      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics, networkGlobals},
+      {
+        config,
+        libp2p,
+        reqRespHandlers,
+        metadata,
+        peerRpcScores,
+        logger,
+        networkEventBus,
+        metrics,
+        networkGlobals: this.networkGlobals,
+      },
       opts
     );
 
@@ -104,7 +115,7 @@ export class Network implements INetwork {
         config,
         peerRpcScores,
         networkEventBus,
-        networkGlobals,
+        networkGlobals: this.networkGlobals,
       },
       opts
     );
@@ -237,6 +248,10 @@ export class Network implements INetwork {
 
   async disconnectPeer(peer: PeerId): Promise<void> {
     await this.libp2p.hangUp(peer);
+  }
+
+  getAgentVersion(peerIdStr: string): string {
+    return this.networkGlobals.getAgentVersion(peerIdStr);
   }
 
   /**
