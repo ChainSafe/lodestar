@@ -571,6 +571,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/migrations/</loc>
+         <lastmod>2022-03-10</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/networks/</loc>
          <lastmod>2022-03-10</lastmod>
          <changefreq>daily</changefreq>
@@ -1382,6 +1387,11 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_nodejs.nodejsnode/</loc>
+         <lastmod>2022-03-10</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_peers.eth2peerdatastore/</loc>
          <lastmod>2022-03-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
