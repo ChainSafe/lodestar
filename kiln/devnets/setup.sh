@@ -15,9 +15,9 @@ nethermindImage=$NETHERMIND_IMAGE
 if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ]) 
 then
   echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir devnet5-data --elClient nethermind --devnetVars ./devnet5.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
-  echo "example: ./setup.sh --dataDir devnet5-data --elClient geth --devnetVars ./devnet5.vars"
+  echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
   exit;
 fi
 
