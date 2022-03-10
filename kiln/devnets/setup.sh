@@ -15,9 +15,9 @@ nethermindImage=$NETHERMIND_IMAGE
 if [ ! -n "$dataDir" ] || [ ! -n "$devnetVars" ] || ([ "$elClient" != "geth" ] && [ "$elClient" != "nethermind" ]) 
 then
   echo "usage: ./setup.sh --dataDir <data dir> --elClient <geth | nethermind> --devetVars <devnet vars file> [--dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\"]"
-  echo "example: ./setup.sh --dataDir devnet5-data --elClient nethermind --devnetVars ./devnet5.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
+  echo "example: ./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo --withTerminal \"gnome-terminal --disable-factory --\""
   echo "Note: if running on macOS where gnome-terminal is not available, remove the gnome-terminal related flags."
-  echo "example: ./setup.sh --dataDir devnet5-data --elClient geth --devnetVars ./devnet5.vars"
+  echo "example: ./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars"
   exit;
 fi
 
@@ -86,9 +86,9 @@ then
   fi;
   if [ $platform == 'Darwin' ]
   then
-    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
+    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
   else
-    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data $GETH_EXTRA_ARGS"
+    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
   fi
 elif [ "$elClient" == "nethermind" ] 
 then
@@ -99,9 +99,9 @@ then
 
   if [ $platform == 'Darwin' ]
   then
-    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
   else
-    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/nethermind:/data $NETHERMIND_IMAGE --datadir /data  --Init.ChainSpecPath=/config/nethermind_genesis.json $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
   fi
 fi
 
@@ -117,11 +117,12 @@ clName="$DEVNET_NAME-lodestar"
 
 if [ $platform == 'Darwin' ]
 then
-  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs $bootEnr"
+  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
 else
-  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/lodestar:/data $LODESTAR_IMAGE beacon --rootDir /data --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --network.discv5.bootEnrs $bootEnr"
+  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
 fi
 
+echo -n $JWT_SECRET > $dataDir/jwtsecret
 run_cmd "$elCmd"
 elPid=$!
 echo "elPid= $elPid"
