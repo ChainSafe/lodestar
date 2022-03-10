@@ -82,14 +82,14 @@ describe("getAgentVersionFromPeerStore", () => {
     // Write peers to peerStore
     for (let i = 0; i < numPeers; i++) {
       const peerId = await createPeerId();
-      libp2p.peerStore.metadataBook._setValue(peerId, "AgentVersion", testAgentVersion);
+      await libp2p.peerStore.metadataBook.setValue(peerId, "AgentVersion", testAgentVersion);
       peers.push(peerId);
     }
 
     // start the benchmark
     const start = Date.now();
     for (const peer of peers) {
-      const version = getAgentVersionFromPeerStore(peer, libp2p.peerStore.metadataBook);
+      const version = await getAgentVersionFromPeerStore(peer, libp2p.peerStore.metadataBook);
       expect(version).to.be.equal(new TextDecoder().decode(testAgentVersion));
     }
     const timeDiff = Date.now() - start;

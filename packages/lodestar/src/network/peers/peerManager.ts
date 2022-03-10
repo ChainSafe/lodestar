@@ -551,7 +551,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private runPeerCountMetrics(metrics: IMetrics): void {
+  private async runPeerCountMetrics(metrics: IMetrics): Promise<void> {
     let total = 0;
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
@@ -560,7 +560,7 @@ export class PeerManager {
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
-        const client = getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+        const client = await getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
         total++;
       }

@@ -72,10 +72,10 @@ export class ReqResp implements IReqResp {
     this.metrics = modules.metrics;
   }
 
-  start(): void {
+  async start(): Promise<void> {
     this.controller = new AbortController();
     for (const [method, version, encoding] of protocolsSupported) {
-      this.libp2p.handle(
+      await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
         (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
@@ -83,9 +83,9 @@ export class ReqResp implements IReqResp {
     this.inboundRateLimiter.start();
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     for (const [method, version, encoding] of protocolsSupported) {
-      this.libp2p.unhandle(formatProtocolId(method, version, encoding));
+      await this.libp2p.unhandle(formatProtocolId(method, version, encoding));
     }
     this.controller.abort();
     this.inboundRateLimiter.stop();

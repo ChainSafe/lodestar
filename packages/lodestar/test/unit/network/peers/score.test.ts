@@ -25,7 +25,7 @@ describe("simple block provider score tracking", function () {
   ];
 
   for (const [peerAction, times] of timesToBan)
-    it(`Should ban peer after ${times} ${peerAction}`, () => {
+    it(`Should ban peer after ${times} ${peerAction}`, async () => {
       const {scoreStore} = mockStore();
       for (let i = 0; i < times; i++) scoreStore.applyAction(peer, peerAction);
       expect(scoreStore.getScoreState(peer)).to.be.equal(ScoreState.Banned);

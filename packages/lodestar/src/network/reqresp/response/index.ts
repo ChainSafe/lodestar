@@ -46,7 +46,7 @@ export async function handleRequest(
   signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
-  const client = getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+  const client = await getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
   const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;
