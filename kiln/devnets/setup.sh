@@ -127,9 +127,9 @@ fi
 valName="$DEVNET_NAME-validator"
 if [ $platform == 'Darwin' ]
 then
-  valCmd="$dockerCmd --name $valName --net=container:$elName -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar $LODESTAR_VALIDATOR_ARGS"
+  valCmd="$dockerCmd --name $valName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
 else
-  valCmd="$dockerCmd --name $valName --network host -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar $LODESTAR_VALIDATOR_ARGS"
+  valCmd="$dockerCmd --name $valName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
 fi;
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
