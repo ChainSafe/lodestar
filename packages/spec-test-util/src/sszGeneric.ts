@@ -1,12 +1,11 @@
-import {join} from "path";
-import {readFileSync, readdirSync} from "fs";
-import {fromHexString, Json, Type} from "@chainsafe/ssz";
+import path, {join} from "node:path";
+import fs, {readFileSync, readdirSync} from "node:fs";
+import {Json, Type} from "@chainsafe/ssz";
+import {loadYaml, objectToExpectedCase} from "@chainsafe/lodestar-utils";
 import {uncompress} from "snappyjs";
-import {loadYamlFile} from "./util";
 
 export interface IValidTestcase<T> {
-  path: string;
-  root: Uint8Array;
+  root: string;
   serialized: Uint8Array;
   value: T;
 }
@@ -16,21 +15,24 @@ export interface IInvalidTestcase {
   serialized: Uint8Array;
 }
 
-export function parseValidTestcase<T>(path: string, type: Type<T>): IValidTestcase<T> {
+export function parseValidTestcase<T>(dirpath: string, type: Type<T>): IValidTestcase<T> {
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
-  const meta = loadYamlFile(join(path, "meta.yaml"));
-  const root = fromHexString(meta.root as string);
-
+  const metaStr = fs.readFileSync(path.join(dirpath, "meta.yaml"), "utf8");
+  const meta = loadYaml<{root: string}>(metaStr);
+  if (typeof meta.root !== "string") {
+    throw Error(`meta.root not a string: ${meta.root}\n${fs}`);
+  }
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompress<Uint8Array>(readFileSync(join(path, "serialized.ssz_snappy")));
+  const serialized = uncompress<Uint8Array>(readFileSync(join(dirpath, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
-  const value = type.fromJson(loadYamlFile(join(path, "value.yaml")) as Json) as T;
+  const yamlSnake = loadYaml(fs.readFileSync(join(dirpath, "value.yaml"), "utf8"));
+  const yamlCamel = objectToExpectedCase(yamlSnake, "camel");
+  const value = type.fromJson(yamlCamel as Json);
 
   return {
-    path,
-    root,
+    root: meta.root,
     serialized,
     value,
   };

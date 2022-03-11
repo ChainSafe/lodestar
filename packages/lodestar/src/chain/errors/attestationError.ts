@@ -1,4 +1,5 @@
 import {CommitteeIndex, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
 import {GossipActionError} from "./gossipValidation";
 
 export enum AttestationErrorCode {
@@ -90,14 +91,6 @@ export enum AttestationErrorCode {
    */
   INVALID_SUBNET_ID = "ATTESTATION_ERROR_INVALID_SUBNET_ID",
   /**
-   * The attestation failed the `state_processing` verification stage.
-   */
-  INVALID = "ATTESTATION_ERROR_INVALID",
-  /**
-   * There was an error whilst processing the attestation. It is not known if it is valid or invalid.
-   */
-  BEACON_CHAIN_ERROR = "ATTESTATION_ERROR_BEACON_CHAIN_ERROR",
-  /**
    * Number of aggregation bits does not match committee size
    */
   WRONG_NUMBER_OF_AGGREGATION_BITS = "ATTESTATION_ERROR_WRONG_NUMBER_OF_AGGREGATION_BITS",
@@ -153,8 +146,6 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.PAST_EPOCH; attestationEpoch: Epoch; currentEpoch: Epoch}
   | {code: AttestationErrorCode.ATTESTS_TO_FUTURE_BLOCK; block: Slot; attestation: Slot}
   | {code: AttestationErrorCode.INVALID_SUBNET_ID; received: number; expected: number}
-  | {code: AttestationErrorCode.INVALID; error: Error}
-  | {code: AttestationErrorCode.BEACON_CHAIN_ERROR; error: Error}
   | {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS}
   | {code: AttestationErrorCode.KNOWN_BAD_BLOCK}
   | {code: AttestationErrorCode.INVALID_TARGET_ROOT; targetRoot: RootHex; expected: string | null}
@@ -164,4 +155,18 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.INVALID_AGGREGATOR}
   | {code: AttestationErrorCode.INVALID_INDEXED_ATTESTATION};
 
-export class AttestationError extends GossipActionError<AttestationErrorType> {}
+export class AttestationError extends GossipActionError<AttestationErrorType> {
+  getMetadata(): Record<string, string | number | null> {
+    const type = this.type;
+    switch (type.code) {
+      case AttestationErrorCode.UNKNOWN_TARGET_ROOT:
+        return {code: type.code, root: toHexString(type.root)};
+      case AttestationErrorCode.MISSING_ATTESTATION_HEAD_STATE:
+        // TODO: The stack trace gets lost here
+        return {code: type.code, error: type.error.message};
+
+      default:
+        return type;
+    }
+  }
+}

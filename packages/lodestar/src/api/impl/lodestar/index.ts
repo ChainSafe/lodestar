@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -50,7 +50,7 @@ export function getLodestarApi({
         throw Error("Already writing heapdump");
       }
       // Lazily import NodeJS only modules
-      const fs = await import("fs");
+      const fs = await import("node:fs");
       const v8 = await import("v8");
       const snapshotStream = v8.getHeapSnapshot();
       // It's important that the filename end with `.heapsnapshot`,
@@ -73,7 +73,7 @@ export function getLodestarApi({
 
     async getLatestWeakSubjectivityCheckpointEpoch() {
       const state = chain.getHeadState();
-      return {data: allForks.getLatestWeakSubjectivityCheckpointEpoch(config, state)};
+      return {data: getLatestWeakSubjectivityCheckpointEpoch(config, state)};
     },
 
     async getSyncChainsDebugState() {

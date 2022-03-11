@@ -1,5 +1,4 @@
 import {ssz} from "@chainsafe/lodestar-types";
-import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -164,18 +163,23 @@ export async function verifyBlockStateTransition(
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
       : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
 
-    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+    if (
+      signatureSets.length > 0 &&
+      !(await chain.bls.verifySignatureSets(signatureSets, {
+        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
+      }))
+    ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
     }
   }
 
   let executionStatus: ExecutionStatus;
   if (executionPayloadEnabled) {
-    // TODO: Handle better executePayload() returning error is syncing
-    const execResult = await chain.executionEngine.executePayload(
+    // TODO: Handle better notifyNewPayload() returning error is syncing
+    const execResult = await chain.executionEngine.notifyNewPayload(
       // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
       // For clarity and since it's needed anyway, just send the struct representation at this level such that
-      // executePayload() can expect a regular JS object.
+      // notifyNewPayload() can expect a regular JS object.
       // TODO: If blocks are no longer TreeBacked, remove.
       executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
     );
@@ -195,11 +199,14 @@ export async function verifyBlockStateTransition(
           parentHashHex !== execResult.latestValidHash ? parentHashHex : null
         );
         throw new BlockError(block, {
-          code: BlockErrorCode.EXECUTION_PAYLOAD_NOT_VALID,
+          code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: execResult.status,
           errorMessage: execResult.validationError ?? "",
         });
       }
 
+      // Accepted and Syncing have the same treatment, as final validation of block is pending
+      case ExecutePayloadStatus.ACCEPTED:
       case ExecutePayloadStatus.SYNCING: {
         // It's okay to ignore SYNCING status as EL could switch into syncing
         // 1. On intial startup/restart
@@ -226,22 +233,23 @@ export async function verifyBlockStateTransition(
 
         if (
           justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-          block.message.slot + SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY > clockSlot
+          block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
-            errorMessage: `not safe to import SYNCING payload within ${SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} of currentSlot`,
+            execStatus: ExecutePayloadStatus.UNSAFE_OPTIMISTIC_STATUS,
+            errorMessage: `not safe to import ${execResult.status} payload within ${opts.safeSlotsToImportOptimistically} of currentSlot, status=${execResult.status}`,
           });
         }
 
         executionStatus = ExecutionStatus.Syncing;
-        if (execResult.latestValidHash) {
-          chain.forkChoice.validateLatestHash(execResult.latestValidHash, null);
-        }
         break;
       }
 
-      // There can be many reasons for which EL failed some of the observed ones are
+      // If the block has is not valid, or it referenced an invalid terminal block then the
+      // block is invalid, however it has no bearing on any forkChoice cleanup
+      //
+      // There can be other reasons for which EL failed some of the observed ones are
       // 1. Connection refused / can't connect to EL port
       // 2. EL Internal Error
       // 3. Geth sometimes gives invalid merkel root error which means invalid
@@ -254,10 +262,14 @@ export async function verifyBlockStateTransition(
       // For network/unreachable errors, an optimization can be added to replay these blocks
       // back. But for now, lets assume other mechanisms like unknown parent block of a future
       // child block will cause it to replay
+
+      case ExecutePayloadStatus.INVALID_BLOCK_HASH:
+      case ExecutePayloadStatus.INVALID_TERMINAL_BLOCK:
       case ExecutePayloadStatus.ELERROR:
       case ExecutePayloadStatus.UNAVAILABLE:
         throw new BlockError(block, {
           code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
+          execStatus: execResult.status,
           errorMessage: execResult.validationError,
         });
     }
@@ -268,7 +280,13 @@ export async function verifyBlockStateTransition(
 
   // Check state root matches
   if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
-    throw new BlockError(block, {code: BlockErrorCode.INVALID_STATE_ROOT, preState, postState});
+    throw new BlockError(block, {
+      code: BlockErrorCode.INVALID_STATE_ROOT,
+      root: postState.tree.root,
+      expectedRoot: block.message.stateRoot.valueOf() as Uint8Array,
+      preState,
+      postState,
+    });
   }
 
   return {postState, executionStatus};

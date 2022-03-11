@@ -6,8 +6,8 @@
 no-console
 */
 
-const {execSync} = require("child_process");
-const fs = require("fs");
+const {execSync} = require("node:child_process");
+const fs = require("node:fs");
 
 // Docs
 // [script] <fromTag> <toTag>
@@ -36,6 +36,9 @@ const knownAuthors = {
   "58883403+q9f@users.noreply.github.com": "q9f",
   "fredrik@ethereum.org": "fredriksvantes",
   "mpetrunic@users.noreply.github.com": "mpetrunic",
+  "ammar1lakho@gmail.com": "ammarlakho",
+  "dadepo@gmail.com": "dadepo",
+  "hi@enriqueortiz.dev": "Evalir",
 };
 
 const fromTag = process.argv[2];

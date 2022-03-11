@@ -1,7 +1,13 @@
-import {join} from "path";
-import fs from "fs";
+import {join} from "node:path";
+import fs from "node:fs";
 
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  allForks,
+  EpochProcess,
+  createCachedBeaconState,
+  beforeProcessEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {TreeBacked} from "@chainsafe/ssz";
@@ -11,8 +17,11 @@ import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
 import {getConfig} from "./util";
 import {IBaseSpecTest} from "../type";
 
-export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: allForks.IEpochProcess) => void;
+export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: EpochProcess) => void;
 
+/**
+ * https://github.com/ethereum/consensus-specs/blob/dev/tests/formats/epoch_processing/README.md
+ */
 type EpochProcessingStateTestCase = IBaseSpecTest & {
   pre: allForks.BeaconState;
   post: allForks.BeaconState;
@@ -35,8 +44,8 @@ export function epochProcessing(fork: ForkName, epochProcessFns: Record<string, 
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
         const stateTB = (testcase.pre as TreeBacked<allForks.BeaconState>).clone();
-        const state = allForks.createCachedBeaconState(getConfig(fork), stateTB);
-        const epochProcess = allForks.beforeProcessEpoch(state);
+        const state = createCachedBeaconState(getConfig(fork), stateTB);
+        const epochProcess = beforeProcessEpoch(state);
         epochProcessFn(state, epochProcess);
         return state;
       },

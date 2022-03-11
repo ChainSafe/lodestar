@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import {isUuid} from "uuidv4";
 import {Wallet, IWalletKeystoreJson} from "./Wallet";
 import {ensureDirExists, YargsError} from "../util";

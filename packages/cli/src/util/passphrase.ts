@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import {stripOffNewlines} from "./stripOffNewlines";
 import {writeFile600Perm} from "./fs";
 import {getValidatorPassphrasePath} from "../validatorDir/paths";

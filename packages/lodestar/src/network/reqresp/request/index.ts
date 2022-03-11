@@ -3,11 +3,11 @@ import pipe from "it-pipe";
 import PeerId from "peer-id";
 import {Libp2p} from "libp2p/src/connection-manager";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
-import {ErrorAborted, ILogger, Context, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../constants";
 import {getClientFromPeerStore, prettyPrintPeerId} from "../../util";
 import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
-import {formatProtocolId} from "../utils";
+import {formatProtocolId, renderRequestBody} from "../utils";
 import {ResponseError} from "../response";
 import {requestEncode} from "../encoders/requestEncode";
 import {responseDecode} from "../encoders/responseDecode";
@@ -55,7 +55,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
-  const client = getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
+  const client = await getClientFromPeerStore(peerId, libp2p.peerStore.metadataBook);
   const logCtx = {method, encoding, client, peer, requestId};
 
   if (signal?.aborted) {
@@ -108,7 +108,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
     const protocol = protocols.get(protocolId);
     if (!protocol) throw Error(`dialProtocol selected unknown protocolId ${protocolId}`);
 
-    logger.debug("Req  sending request", {...logCtx, requestBody} as Context);
+    logger.debug("Req  sending request", {...logCtx, body: renderRequestBody(method, requestBody)});
 
     // Spec: The requester MUST close the write side of the stream once it finishes writing the request message
     // Impl: stream.sink is closed automatically by js-libp2p-mplex when piped source is exhausted

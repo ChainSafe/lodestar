@@ -2,7 +2,8 @@
  * @module logger
  */
 
-import {Writable} from "stream";
+import {Writable} from "node:stream";
+import {LogData} from "./json";
 
 export enum LogLevel {
   error = "error",
@@ -60,18 +61,7 @@ export interface ILoggerOptions {
   timestampFormat?: TimestampFormat;
 }
 
-export type Context =
-  | string
-  | number
-  | boolean
-  | bigint
-  | null
-  | {
-      [property: string]: Context;
-    }
-  | Context[];
-
-export type LogHandler = (message: string, context?: Context, error?: Error) => void;
+export type LogHandler = (message: string, context?: LogData, error?: Error) => void;
 
 export interface ILogger {
   error: LogHandler;
@@ -81,7 +71,6 @@ export interface ILogger {
   verbose: LogHandler;
   debug: LogHandler;
   silly: LogHandler;
-  profile(message: string, option?: {level: string; message: string}): void;
   stream(): Writable;
   // custom
   child(options: ILoggerOptions): ILogger;

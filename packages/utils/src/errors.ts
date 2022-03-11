@@ -8,14 +8,14 @@ export class LodestarError<T extends {code: string}> extends Error {
     this.type = type;
   }
 
-  getMetadata(): Record<string, unknown> {
+  getMetadata(): Record<string, string | number | null> {
     return this.type;
   }
 
   /**
    * Get the metadata and the stacktrace for the error.
    */
-  toObject(): Record<string, unknown> {
+  toObject(): Record<string, string | number | null> {
     return {
       // Ignore message since it's just type.code
       ...this.getMetadata(),

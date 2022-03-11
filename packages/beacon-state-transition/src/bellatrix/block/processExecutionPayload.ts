@@ -25,9 +25,9 @@ export function processExecutionPayload(
 
   // Verify random
   const expectedRandom = getRandaoMix(state, state.currentShuffling.epoch);
-  if (!byteArrayEquals(payload.random as Uint8Array, expectedRandom as Uint8Array)) {
+  if (!byteArrayEquals(payload.prevRandao as Uint8Array, expectedRandom as Uint8Array)) {
     throw Error(
-      `Invalid execution payload random ${toHexString(payload.random)} expected=${toHexString(expectedRandom)}`
+      `Invalid execution payload random ${toHexString(payload.prevRandao)} expected=${toHexString(expectedRandom)}`
     );
   }
 
@@ -46,7 +46,7 @@ export function processExecutionPayload(
   // if executionEngine is null, executionEngine.onPayload MUST be called after running processBlock to get the
   // correct randao mix. Since executionEngine will be an async call in most cases it is called afterwards to keep
   // the state transition sync
-  if (executionEngine && !executionEngine.executePayload(payload)) {
+  if (executionEngine && !executionEngine.notifyNewPayload(payload)) {
     throw Error("Invalid execution payload");
   }
 
@@ -57,7 +57,7 @@ export function processExecutionPayload(
     stateRoot: payload.stateRoot,
     receiptsRoot: payload.receiptsRoot,
     logsBloom: payload.logsBloom,
-    random: payload.random,
+    prevRandao: payload.prevRandao,
     blockNumber: payload.blockNumber,
     gasLimit: payload.gasLimit,
     gasUsed: payload.gasUsed,

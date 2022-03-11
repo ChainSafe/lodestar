@@ -14,9 +14,9 @@ import {
   generateTestCachedBeaconStateOnlyValidators,
   getSecretKeyFromIndexCached,
 } from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {computeSubnetForSlot} from "@chainsafe/lodestar-beacon-state-transition/src/allForks";
 import {SeenAttesters} from "../../../src/chain/seenCache";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls";
+import {computeSubnetForSlot} from "../../../src/chain/validation";
 import {signCached} from "../cache";
 import {ClockStatic} from "../clock";
 import {toSingleBit} from "../aggregationBits";
@@ -119,7 +119,7 @@ export function getAttestationValidData(
     forkChoice,
     regen,
     seenAttesters: new SeenAttesters(),
-    bls: new BlsSingleThreadVerifier(),
+    bls: new BlsSingleThreadVerifier({metrics: null}),
     waitForBlockOfAttestation: () => Promise.resolve(false),
   } as Partial<IBeaconChain>) as IBeaconChain;
 

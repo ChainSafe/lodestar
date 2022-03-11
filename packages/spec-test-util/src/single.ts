@@ -1,9 +1,9 @@
 import {expect} from "chai";
-import {readdirSync, readFileSync, existsSync} from "fs";
-import {basename, join, parse} from "path";
+import fs, {readdirSync, readFileSync, existsSync} from "node:fs";
+import {basename, join, parse} from "node:path";
 import {Type, CompositeType} from "@chainsafe/ssz";
 import {uncompress} from "snappyjs";
-import {isDirectory, loadYamlFile} from "./util";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-assignment,
@@ -31,6 +31,10 @@ export function toExpandedInputType(inputType: InputType | ExpandedInputType): E
     type: inputType as InputType,
     treeBacked: false,
   };
+}
+
+function isDirectory(path: string): boolean {
+  return fs.lstatSync(path).isDirectory();
 }
 
 export interface ISpecTestOptions<TestCase extends {meta?: any}, Result> {
@@ -126,7 +130,7 @@ function generateTestCase<TestCase extends {meta?: any}, Result>(
     const metaFilePath = join(testCaseDirectoryPath, "meta.yaml");
     let meta: TestCase["meta"] = undefined;
     if (existsSync(metaFilePath)) {
-      meta = loadYamlFile(metaFilePath);
+      meta = loadYaml(fs.readFileSync(metaFilePath, "utf8"));
     }
     let testCase = loadInputFiles(testCaseDirectoryPath, options, meta);
     if (options.mapToTestCase) testCase = options.mapToTestCase(testCase);
@@ -209,7 +213,7 @@ function deserializeInputFile<TestCase extends {meta?: any}, Result>(
   meta?: TestCase["meta"]
 ): any {
   if (inputType === InputType.YAML) {
-    return loadYamlFile(file);
+    return loadYaml(fs.readFileSync(file, "utf8"));
   } else if (inputType === InputType.SSZ || inputType === InputType.SSZ_SNAPPY) {
     const sszTypes = options.getSszTypes ? options.getSszTypes(meta) : options.sszTypes;
     if (!sszTypes) throw Error("sszTypes is not defined");

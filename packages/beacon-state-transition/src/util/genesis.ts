@@ -23,8 +23,9 @@ import {
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
-import {getNextSyncCommittee} from "../altair/util/syncCommittee";
-import {createCachedBeaconState, processDeposit} from "../allForks";
+import {getNextSyncCommittee} from "../util/syncCommittee";
+import {processDeposit} from "../allForks";
+import {createCachedBeaconState} from "../cache/cachedBeaconState";
 import {CachedBeaconStateAllForks} from "../types";
 
 // TODO: Refactor to work with non-phase0 genesis state
@@ -89,7 +90,15 @@ export function getGenesisBeaconState(
   state.eth1Data = genesisEth1Data;
   state.randaoMixes = randaoMixes;
 
-  return createCachedBeaconState(config, state);
+  // We need a CachedBeaconState to run processDeposit() which uses various caches.
+  // However at this point the state's syncCommittees are not known.
+  // This function can be called by:
+  // - 1. genesis spec tests: Don't care about the committee cache
+  // - 2. genesis builder: Only supports starting from genesis at phase0 fork
+  // - 3. interop state: Only supports starting from genesis at phase0 fork
+  // So it's okay to skip syncing the sync committee cache here and expect it to be
+  // populated latter when the altair fork happens for cases 2, 3.
+  return createCachedBeaconState(config, state, {skipSyncCommitteeCache: true});
 }
 
 /**
@@ -174,7 +183,7 @@ export function applyDeposits(
     const balance = state.balanceList.get(index)!;
     const effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
     validator.effectiveBalance = effectiveBalance;
-    state.effectiveBalances.set(index, effectiveBalance);
+    state.effectiveBalanceIncrementsSet(index, effectiveBalance);
 
     if (validator.effectiveBalance === MAX_EFFECTIVE_BALANCE) {
       validator.activationEligibilityEpoch = GENESIS_EPOCH;
@@ -225,7 +234,7 @@ export function initializeBeaconStateFromEth1(
   const activeValidatorIndices = applyDeposits(config, state, deposits, fullDepositDataRootList);
 
   if (GENESIS_SLOT >= config.ALTAIR_FORK_EPOCH) {
-    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalances);
+    const syncCommittees = getNextSyncCommittee(state, activeValidatorIndices, state.effectiveBalanceIncrements);
     const stateAltair = state as TreeBacked<altair.BeaconState>;
     stateAltair.fork.previousVersion = config.ALTAIR_FORK_VERSION;
     stateAltair.fork.currentVersion = config.ALTAIR_FORK_VERSION;

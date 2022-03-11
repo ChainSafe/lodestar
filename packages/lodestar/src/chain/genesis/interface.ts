@@ -1,10 +1,11 @@
 import {TreeBacked, List} from "@chainsafe/ssz";
-import {allForks, phase0, Root} from "@chainsafe/lodestar-types";
+import {allForks, Root} from "@chainsafe/lodestar-types";
+import {Eth1Block} from "../../eth1/interface";
 
 export interface IGenesisResult {
   state: TreeBacked<allForks.BeaconState>;
   depositTree: TreeBacked<List<Root>>;
-  block: phase0.Eth1Block;
+  block: Eth1Block;
 }
 
 export interface IGenesisBuilder {

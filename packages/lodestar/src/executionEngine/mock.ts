@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
@@ -35,7 +35,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       stateRoot: ZERO_HASH,
       receiptsRoot: ZERO_HASH,
       logsBloom: Buffer.alloc(BYTES_PER_LOGS_BLOOM, 0),
-      random: ZERO_HASH,
+      prevRandao: ZERO_HASH,
       blockNumber: 0,
       gasLimit: INTEROP_GAS_LIMIT,
       gasUsed: 0,
@@ -48,7 +48,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
   }
 
   /**
-   * `engine_executePayload`
+   * `engine_newPayloadV1`
    *
    * 1. Client software MUST validate the payload according to the execution environment rule set with modifications to this rule set defined in the Block Validity section of EIP-3675 and respond with the validation result.
    * 2. Client software MUST defer persisting a valid payload until the corresponding engine_consensusValidated message deems the payload valid with respect to the proof-of-stake consensus rules.
@@ -58,7 +58,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
    * 6. If the parent block is a PoW block as per EIP-3675 definition, then all missing dependencies of the payload MUST be pulled from the network and validated accordingly. The call MUST be responded according to the validity of the payload and the chain of its ancestors.
    *    If the parent block is a PoS block as per EIP-3675 definition, then the call MAY be responded with SYNCING status and sync process SHOULD be initiated accordingly.
    */
-  async executePayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
+  async notifyNewPayload(executionPayload: bellatrix.ExecutionPayload): Promise<ExecutePayloadResponse> {
     // Only validate that parent is known
     if (!this.knownBlocks.has(toHexString(executionPayload.parentHash))) {
       return {status: ExecutePayloadStatus.INVALID, latestValidHash: this.headBlockRoot, validationError: null};
@@ -109,7 +109,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
       stateRoot: crypto.randomBytes(32),
       receiptsRoot: crypto.randomBytes(32),
       logsBloom: crypto.randomBytes(BYTES_PER_LOGS_BLOOM),
-      random: payloadAttributes.random,
+      prevRandao: payloadAttributes.prevRandao,
       blockNumber: parentPayload.blockNumber + 1,
       gasLimit: INTEROP_GAS_LIMIT,
       gasUsed: Math.floor(0.5 * INTEROP_GAS_LIMIT),

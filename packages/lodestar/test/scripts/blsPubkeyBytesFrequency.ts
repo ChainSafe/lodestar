@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {newZeroedArray} from "@chainsafe/lodestar-beacon-state-transition";

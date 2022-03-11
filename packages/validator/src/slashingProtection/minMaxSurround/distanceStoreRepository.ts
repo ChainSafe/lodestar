@@ -43,7 +43,7 @@ class SpanDistanceRepository {
     );
   }
 
-  private encodeKey(pubkey: BLSPubkey, epoch: Epoch): Buffer {
+  private encodeKey(pubkey: BLSPubkey, epoch: Epoch): Uint8Array {
     return encodeKey(
       this.bucket,
       Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(epoch), 8, "be")])

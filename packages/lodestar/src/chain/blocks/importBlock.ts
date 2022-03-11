@@ -3,8 +3,9 @@ import {readonlyValues, toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
-  getEffectiveBalances,
+  getEffectiveBalanceIncrementsZeroInactive,
   bellatrix,
   altair,
   computeEpochAtSlot,
@@ -31,6 +32,11 @@ import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
 // import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
+
+/**
+ * Fork-choice allows to import attestations from current (0) or past (1) epoch.
+ */
+const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
 
 export type ImportBlockModules = {
   db: IBeaconDb;
@@ -93,7 +99,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   };
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
-    onBlockPrecachedData.justifiedBalances = getEffectiveBalances(state);
+    onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
   }
 
   if (
@@ -121,12 +127,17 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Register state and block to the validator monitor
   // TODO
 
+  const currentEpoch = computeEpochAtSlot(chain.forkChoice.getTime());
+  const blockEpoch = computeEpochAtSlot(block.message.slot);
+
   // - For each attestation
   //   - Get indexed attestation
   //   - Register attestation with fork-choice
   //   - Register attestation with validator monitor (only after sync)
-  // Only process attestations in response to an non-prefinalized block
-  if (!skipImportingAttestations) {
+  // Only process attestations of blocks with relevant attestations for the fork-choice:
+  // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
+  // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
+  if (!skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
     const attestations = Array.from(readonlyValues(block.message.body.attestations));
     const rootCache = new altair.RootCache(postState);
     const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
@@ -135,10 +146,18 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     for (const attestation of attestations) {
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
-        chain.forkChoice.onAttestation(indexedAttestation);
+        const targetEpoch = attestation.data.target.epoch;
+
+        // Duplicated logic from fork-choice onAttestation validation logic.
+        // Attestations outside of this range will be dropped as Errors, so no need to import
+        if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
+          chain.forkChoice.onAttestation(indexedAttestation);
+        }
+
         if (parentSlot !== undefined) {
           chain.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
         }
+
         pendingEvents.push(ChainEvent.attestation, attestation);
       } catch (e) {
         // a block has a lot of attestations and it may has same error, we don't want to log all of them
@@ -231,7 +250,11 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Use block's syncAggregate
   if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
     try {
-      chain.lightClientServer.onImportBlock(block.message as altair.BeaconBlock, postState, parentBlock);
+      chain.lightClientServer.onImportBlock(
+        block.message as altair.BeaconBlock,
+        postState as CachedBeaconStateAltair,
+        parentBlock
+      );
     } catch (e) {
       chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
     }

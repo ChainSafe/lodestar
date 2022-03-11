@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {expect} from "chai";
 import {
   createCachedBeaconState,
@@ -7,31 +7,35 @@ import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   ZERO_HASH,
-  getEffectiveBalances,
+  getEffectiveBalanceIncrementsZeroInactive,
   computeStartSlotAtEpoch,
+  EffectiveBalanceIncrements,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-// eslint-disable-next-line no-restricted-imports
-import {initializeForkChoice} from "@chainsafe/lodestar/lib/chain/forkChoice";
-// eslint-disable-next-line no-restricted-imports
+import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
 import {
   CheckpointStateCache,
   toCheckpointHex,
-} from "@chainsafe/lodestar/lib/chain/stateCache/stateContextCheckpointsCache";
-// eslint-disable-next-line no-restricted-imports
-import {ChainEventEmitter} from "@chainsafe/lodestar/lib/chain/emitter";
+  toCheckpointKey,
+} from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
+import {ChainEventEmitter} from "@chainsafe/lodestar/src/chain/emitter";
 import {toHexString} from "@chainsafe/ssz";
-import {CheckpointWithHex, IForkChoice} from "@chainsafe/lodestar-fork-choice";
+import {CheckpointWithHex, ForkChoiceError, ForkChoiceErrorCode, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
+import {testLogger} from "../../utils/logger";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 const ANCHOR_STATE_FILE_NAME = "anchor_state";
 const ANCHOR_BLOCK_FILE_NAME = "anchor_block";
 const BLOCK_FILE_NAME = "^(block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
+
+const logger = testLogger("spec-test");
 
 export function forkChoiceTest(fork: ForkName): void {
   for (const testFolder of ["get_head", "on_block"]) {
@@ -57,7 +61,7 @@ export function forkChoiceTest(fork: ForkName): void {
 
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
-            tickTime = Number(step.tick);
+            tickTime = bnToNum(step.tick);
             forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT));
           }
 
@@ -84,52 +88,43 @@ export function forkChoiceTest(fork: ForkName): void {
 
           // checks step
           else if (isCheck(step)) {
-            const {
-              head: expectedHead,
-              time: expectedTime,
-              justifiedCheckpoint,
-              finalizedCheckpoint,
-              bestJustifiedCheckpoint,
-              proposerBoostRoot: expectedProposerBoostRoot,
-            } = step.checks;
-
             // Forkchoice head is computed lazily only on request
             const head = forkchoice.updateHead();
             const proposerBootRoot = forkchoice.getProposerBoostRoot();
 
-            if (expectedHead !== undefined) {
-              expect(head.slot).to.be.equal(Number(expectedHead.slot), `Invalid head slot at step ${i}`);
-              expect(head.blockRoot).to.be.equal(expectedHead.root, `Invalid head root at step ${i}`);
+            if (step.checks.head !== undefined) {
+              expect(head.slot).to.be.equal(bnToNum(step.checks.head.slot), `Invalid head slot at step ${i}`);
+              expect(head.blockRoot).to.be.equal(step.checks.head.root, `Invalid head root at step ${i}`);
             }
-            if (expectedProposerBoostRoot !== undefined) {
+            if (step.checks.proposer_boost_root !== undefined) {
               expect(proposerBootRoot).to.be.equal(
-                expectedProposerBoostRoot,
+                step.checks.proposer_boost_root,
                 `Invalid proposer boost root at step ${i}`
               );
             }
             // time in spec mapped to Slot in our forkchoice implementation.
             // Compare in slots because proposer boost steps doesn't always come on
             // slot boundary.
-            if (expectedTime !== undefined && expectedTime > 0)
+            if (step.checks.time !== undefined && step.checks.time > 0)
               expect(forkchoice.getTime()).to.be.equal(
-                Math.floor(Number(expectedTime) / config.SECONDS_PER_SLOT),
+                Math.floor(bnToNum(step.checks.time) / config.SECONDS_PER_SLOT),
                 `Invalid forkchoice time at step ${i}`
               );
-            if (justifiedCheckpoint) {
+            if (step.checks.justified_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getJustifiedCheckpoint())).to.be.deep.equal(
-                justifiedCheckpoint,
+                step.checks.justified_checkpoint,
                 `Invalid justified checkpoint at step ${i}`
               );
             }
-            if (finalizedCheckpoint) {
+            if (step.checks.finalized_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getFinalizedCheckpoint())).to.be.deep.equal(
-                finalizedCheckpoint,
+                step.checks.finalized_checkpoint,
                 `Invalid finalized checkpoint at step ${i}`
               );
             }
-            if (bestJustifiedCheckpoint) {
+            if (step.checks.best_justified_checkpoint) {
               expect(toSpecTestCheckpoint(forkchoice.getBestJustifiedCheckpoint())).to.be.deep.equal(
-                bestJustifiedCheckpoint,
+                step.checks.best_justified_checkpoint,
                 `Invalid best justified checkpoint at step ${i}`
               );
             }
@@ -208,16 +203,21 @@ function runStateTranstion(
     cacheCheckpointState(postState, checkpointCache);
   }
   // same logic like in state transition https://github.com/ChainSafe/lodestar/blob/f6778740075fe2b75edf94d1db0b5691039cb500/packages/lodestar/src/chain/blocks/stateTransition.ts#L101
-  let justifiedBalances: number[] = [];
-  const justifiedState = checkpointCache.get(toCheckpointHex(postState.currentJustifiedCheckpoint));
-  if (postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch) {
+  let justifiedBalances: EffectiveBalanceIncrements | undefined;
+  const checkpointHex = toCheckpointHex(postState.currentJustifiedCheckpoint);
+  const justifiedState = checkpointCache.get(checkpointHex);
+  if (
+    postState.currentJustifiedCheckpoint.epoch > forkchoice.getJustifiedCheckpoint().epoch ||
+    postState.finalizedCheckpoint.epoch > forkchoice.getFinalizedCheckpoint().epoch
+  ) {
     if (!justifiedState) {
-      const epoch = postState.currentJustifiedCheckpoint.epoch;
-      const root = toHexString(postState.currentJustifiedCheckpoint.root);
-      throw Error(`State not available for justified checkpoint ${epoch} ${root}`);
+      const checkpointHexKey = toCheckpointKey(checkpointHex);
+      const cachedCps = checkpointCache.dumpCheckpointKeys().join(", ");
+      throw Error(`No justifiedState for checkpoint ${checkpointHexKey}. Available: ${cachedCps}`);
     }
-    justifiedBalances = getEffectiveBalances(justifiedState);
+    justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(justifiedState);
   }
+
   try {
     forkchoice.onBlock(signedBlock.message, postState, {
       blockDelaySec,
@@ -227,11 +227,21 @@ function runStateTranstion(
       try {
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
         forkchoice.onAttestation(indexedAttestation);
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
+      } catch (e) {
+        if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_ATTESTATION) {
+          logger.debug("INVALID_ATTESTATION onAttestation", e.type.err);
+        } else {
+          logger.error("Error onAttestation", {}, e as Error);
+        }
+      }
     }
-    // eslint-disable-next-line no-empty
-  } catch (e) {}
+  } catch (e) {
+    if (e instanceof ForkChoiceError && e.type.code === ForkChoiceErrorCode.INVALID_BLOCK) {
+      logger.debug("INVALID_BLOCK onBlock", e.type.err);
+    } else {
+      logger.error("Error onBlock", {}, e as Error);
+    }
+  }
   return postState;
 }
 
@@ -277,7 +287,7 @@ type SpecTestCheckpoint = {epoch: BigInt; root: string};
 
 type OnTick = {
   /** to execute `on_tick(store, time)` */
-  tick: number;
+  tick: bigint;
   /** optional, default to `true`. */
   valid?: number;
 };
@@ -297,19 +307,22 @@ type OnBlock = {
 type Checks = {
   /** Value in the ForkChoice store to verify it's correct after being mutated by another step */
   checks: {
-    head: {slot: number; root: string};
-    time?: number;
-    justifiedCheckpoint?: SpecTestCheckpoint;
-    finalizedCheckpoint?: SpecTestCheckpoint;
-    bestJustifiedCheckpoint?: SpecTestCheckpoint;
-    proposerBoostRoot?: RootHex;
+    head?: {
+      slot: bigint;
+      root: string;
+    };
+    time?: bigint;
+    justified_checkpoint?: SpecTestCheckpoint;
+    finalized_checkpoint?: SpecTestCheckpoint;
+    best_justified_checkpoint?: SpecTestCheckpoint;
+    proposer_boost_root?: RootHex;
   };
 };
 
-interface IForkChoiceTestCase extends IBaseSpecTest {
+interface IForkChoiceTestCase {
   meta?: {
     description?: string;
-    blsSetting: BigInt;
+    bls_setting: BigInt;
   };
   anchorState: allForks.BeaconState;
   anchorBlock: allForks.BeaconBlock;

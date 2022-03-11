@@ -50,14 +50,14 @@ describe("validateLightClientUpdate", () => {
     const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
     // update.header must have stateRoot to finalizedCheckpointState
-    const header = defaultBeaconBlockHeader(updateHeaderSlot);
-    header.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedCheckpointState);
+    const finalizedHeader = defaultBeaconBlockHeader(updateHeaderSlot);
+    finalizedHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedCheckpointState);
 
     // syncAttestedState must have `header` as finalizedCheckpoint
     const syncAttestedState = ssz.altair.BeaconState.defaultTreeBacked();
     syncAttestedState.finalizedCheckpoint = {
       epoch: 0,
-      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+      root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
     };
     // Prove it
     const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
@@ -76,12 +76,12 @@ describe("validateLightClientUpdate", () => {
     };
 
     update = {
-      attestedHeader: header,
+      attestedHeader: syncAttestedBlockHeader,
       nextSyncCommittee: nextSyncCommittee,
       nextSyncCommitteeBranch: nextSyncCommitteeBranch,
-      finalizedHeader: syncAttestedBlockHeader,
+      finalizedHeader: finalizedHeader,
       finalityBranch: finalityBranch,
-      syncCommitteeAggregate: syncAggregate,
+      syncAggregate,
       forkVersion,
     };
 

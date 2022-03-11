@@ -1,6 +1,6 @@
-import path from "path";
-import util from "util";
-import * as child from "child_process";
+import path from "node:path";
+import util from "node:util";
+import child from "node:child_process";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 

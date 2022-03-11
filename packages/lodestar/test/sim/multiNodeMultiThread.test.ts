@@ -1,5 +1,5 @@
-import path from "path";
-import os from "os";
+import path from "node:path";
+import os from "node:os";
 import {Worker} from "worker_threads";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -87,7 +87,7 @@ function runMultiNodeMultiThreadTest({nodeCount, validatorsPerNode, event, altai
         params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
         options: {
           // Don't spawn workers from worker threads
-          chain: {useSingleThreadVerifier: true},
+          chain: {blsVerifyAllMainThread: true},
           network: {
             discv5: {bindAddr: `/ip4/127.0.0.1/udp/${p2pPort}`},
             localMultiaddrs: [`/ip4/127.0.0.1/tcp/${p2pPort}`],

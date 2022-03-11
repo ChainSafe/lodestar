@@ -126,7 +126,8 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     NEXT_SYNC_COMMITTEE_INDEX
   );
 
-  const header: phase0.BeaconBlockHeader = {
+  // finalized header's state root is used to to validate sync committee branch
+  const finalizedHeader: phase0.BeaconBlockHeader = {
     slot: updateSlot,
     proposerIndex: 0,
     parentRoot: SOME_HASH,
@@ -134,30 +135,31 @@ export function computeLightclientUpdate(config: IBeaconConfig, period: SyncPeri
     bodyRoot: SOME_HASH,
   };
 
-  const {root: finalityHeaderStateRoot, proof: finalityBranch} = computeMerkleBranch(
-    ssz.phase0.BeaconBlockHeader.hashTreeRoot(header),
+  const {root: stateRoot, proof: finalityBranch} = computeMerkleBranch(
+    ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
     FINALIZED_ROOT_DEPTH,
     FINALIZED_ROOT_INDEX
   );
 
-  const finalityHeader: phase0.BeaconBlockHeader = {
+  // attested header's state root is used to validate finality branch
+  const attestedHeader: phase0.BeaconBlockHeader = {
     slot: updateSlot,
     proposerIndex: 0,
     parentRoot: SOME_HASH,
-    stateRoot: finalityHeaderStateRoot,
+    stateRoot: stateRoot,
     bodyRoot: SOME_HASH,
   };
 
   const forkVersion = config.getForkVersion(updateSlot);
-  const syncAggregate = committee.signHeader(config, finalityHeader);
+  const syncAggregate = committee.signHeader(config, attestedHeader);
 
   return {
-    attestedHeader: header,
+    attestedHeader,
     nextSyncCommittee,
     nextSyncCommitteeBranch,
-    finalizedHeader: finalityHeader,
+    finalizedHeader,
     finalityBranch,
-    syncCommitteeAggregate: syncAggregate,
+    syncAggregate,
     forkVersion,
   };
 }
@@ -254,10 +256,10 @@ export function committeeUpdateToHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
 ): routes.lightclient.LightclientHeaderUpdate {
   return {
-    attestedHeader: committeeUpdate.finalizedHeader,
+    attestedHeader: committeeUpdate.attestedHeader,
     syncAggregate: {
-      syncCommitteeBits: committeeUpdate.syncCommitteeAggregate.syncCommitteeBits,
-      syncCommitteeSignature: committeeUpdate.syncCommitteeAggregate.syncCommitteeSignature,
+      syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
+      syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
     },
   };
 }

@@ -30,15 +30,15 @@ To start a Lodestar beacon run the command:
 ./lodestar beacon --network $NETWORK_NAME
 ```
 
-This will assume an eth1 client is available at the default location of `localhost:8545`. 
+This will assume an eth1 client is available at the default location of `localhost:8545`.
 
-In case eth1 clients are available at different locations, use `--eth1.providerUrls` to specify these locations in the command: 
+In case eth1 clients are available at different locations, use `--eth1.providerUrls` to specify these locations in the command:
 
 ```bash
 ./lodestar beacon --network $NETWORK_NAME --eth1.providerUrls eth1.url1 eth1.url2
 ```
 
-It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1.enabled` option in the command: 
+It is also possible to start a Lodestar beacon that does not follow the eth1 chain. For this, use the `eth1.enabled` option in the command:
 
 ```bash
 ./lodestar beacon --eth1.enabled false --network $NETWORK_NAME
@@ -70,6 +70,23 @@ Jul-09 17:34:54.278 []                 info: Syncing - 3 days left - 3.00 slots/
 <!-- prettier-ignore-end -->
 
 A young testnet should take a few hours to sync. If you see multiple or consistent errors in the logs, please open a [Github issue](https://github.com/ChainSafe/lodestar/issues/new) or reach out to us in [Discord](https://discord.gg/yjyvFRP). Just by reporting anomalities you are helping accelerate the progress of Ethereum Consensus, thanks for contributing!
+
+### Weak Subjectivity
+
+If you are starting your node from blank db/genesis (or from last saved state in db) in a network which is now far ahead, your node is susceptible to something called "long range attacks".
+[Read Vitalik's illuminating post on the same](https://blog.ethereum.org/2014/11/25/proof-stake-learned-love-weak-subjectivity/)
+
+If you have a synced beacon node handy (your friend's or an infrastructure provider) and a trusted checkpoint you can rely on, you can start off your beacon node in under a minute! And at the same time kicking the "long range attack" in its butt!
+
+Just supply these **extra args** to your beacon node command:
+```bash
+--weakSubjectivitySyncLatest --weakSubjectivityServerUrl <synced node url> [--weakSubjectivityCheckpoint <trusted checkpoint in root:epoch format>]
+```
+In case you really trust `weakSubjectivityServerUrl` then you may skip providing `weakSubjectivityCheckpoint`, which will then result into your beacon node syncing and starting off a finalized state from the trusted url.
+
+#### PS
+Please use this option very carefully (and at your own risk), a malicious server url can put you on a wrong chain with the danger of you loosing your funds by social engineering. 
+If possible validate your `weakSubjectivityCheckpoint` from multiple places like different client distributions, or from any other trusted sources. This will highly reduce the risk of starting off on a wrong chain.
 
 ## Run a validator
 

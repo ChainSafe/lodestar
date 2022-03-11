@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import path from "path";
-import fs from "fs";
+import path from "node:path";
+import fs from "node:fs";
 // eslint-disable-next-line no-restricted-imports
 import {parseInvalidTestcase, parseValidTestcase} from "@chainsafe/lodestar-spec-test-util/lib/sszGeneric";
 import {CompositeType, isCompositeType, toHexString, Type} from "@chainsafe/ssz";
@@ -58,7 +58,7 @@ for (const testType of fs.readdirSync(rootGenericSszPath)) {
 
         const testData = parseValidTestcase(path.join(validCasesPath, validCase), type);
         const testDataSerialized = toHexString(testData.serialized);
-        const testDataRoot = toHexString(testData.root);
+        const testDataRoot = testData.root;
 
         const serialized = wrapErr(() => type.serialize(testData.value), "type.serialize()");
         const value = wrapErr(() => type.deserialize(testData.serialized), "type.deserialize()");

@@ -1,4 +1,4 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
 import {ICliCommand, initBLS} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import inquirer from "inquirer";

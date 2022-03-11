@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import inquirer from "inquirer";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -22,6 +22,7 @@ import {IGlobalArgs} from "../../../../options";
 interface IValidatorImportArgs {
   keystore?: string;
   directory?: string;
+  passphraseFile?: string;
 }
 
 export const importCmd: ICliCommand<IValidatorImportArgs, IAccountValidatorArgs & IGlobalArgs> = {
@@ -35,7 +36,7 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "account validator import --network pyrmont --directory $HOME/eth2.0-deposit-cli/validator_keys",
+      command: "account validator import --network prater --directory $HOME/eth2.0-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
@@ -62,11 +63,18 @@ has the '.json' extension will be attempted to be imported.",
       conflicts: ["keystore"],
       type: "string",
     },
+
+    passphraseFile: {
+      description: "Path to a file that contains password that protects the keystore.",
+      describe: "Path to a file that contains password that protects the keystore.",
+      type: "string",
+    },
   },
 
   handler: async (args) => {
     const singleKeystorePath = args.keystore;
     const directoryPath = args.directory;
+    const passphraseFile = args.passphraseFile;
     const {keystoresDir, secretsDir} = getAccountPaths(args);
 
     const keystorePaths = singleKeystorePath
@@ -117,7 +125,7 @@ has the '.json' extension will be attempted to be imported.",
   - Public key: ${pubkey}
   - UUID: ${uuid}`);
 
-      const passphrase = await getKeystorePassphrase(keystore, passphrasePaths);
+      const passphrase = await getKeystorePassphrase(keystore, passphrasePaths, passphraseFile);
       fs.mkdirSync(secretsDir, {recursive: true});
       fs.mkdirSync(dir, {recursive: true});
       fs.writeFileSync(path.join(dir, VOTING_KEYSTORE_FILE), keystore.stringify());
@@ -145,11 +153,17 @@ has the '.json' extension will be attempted to be imported.",
  * Fetches the passphrase of an imported Kestore
  *
  * Paths that may contain valid passphrases
+ * @param keystore
  * @param passphrasePaths ["secrets/0x12341234"]
+ * @param passphraseFile
  */
-async function getKeystorePassphrase(keystore: Keystore, passphrasePaths: string[]): Promise<string> {
-  // First, try to find a passphrase file in the provided directory
-  const passphraseFile = passphrasePaths.find((filepath) => filepath.endsWith(keystore.pubkey));
+async function getKeystorePassphrase(
+  keystore: Keystore,
+  passphrasePaths: string[],
+  passphraseFile?: string
+): Promise<string> {
+  // First, try to use a passphrase file if provided, if not, find a passphrase file in the provided directory
+  passphraseFile = passphraseFile ?? passphrasePaths.find((filepath) => filepath.endsWith(keystore.pubkey));
   if (passphraseFile) {
     const passphrase = fs.readFileSync(passphraseFile, "utf8");
     try {

@@ -1,4 +1,4 @@
-import {CachedBeaconStatePhase0, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStatePhase0, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -15,7 +15,7 @@ import {processParticipationRecordUpdates} from "./processParticipationRecordUpd
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas};
 
-export function processEpoch(state: CachedBeaconStatePhase0, epochProcess: IEpochProcess): void {
+export function processEpoch(state: CachedBeaconStatePhase0, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state as CachedBeaconStateAllForks, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
   processRegistryUpdates(state as CachedBeaconStateAllForks, epochProcess);

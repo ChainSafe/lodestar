@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import bls from "@chainsafe/bls";
 import {BitList, List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";

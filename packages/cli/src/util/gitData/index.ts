@@ -1,4 +1,4 @@
-import {execSync} from "child_process";
+import {execSync} from "node:child_process";
 
 /**
  * This file is created in the build step and is distributed through NPM
@@ -68,7 +68,7 @@ export function readLodestarGitData(): GitData {
     }
 
     return {
-      semver: gitData?.semver || "N/A",
+      semver: gitData?.semver,
       branch: gitData?.branch || "N/A",
       commit: gitData?.commit || "N/A",
       numCommits: gitData?.numCommits || "",

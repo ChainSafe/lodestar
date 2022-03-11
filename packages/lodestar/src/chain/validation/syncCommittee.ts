@@ -1,11 +1,11 @@
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {SYNC_COMMITTEE_SUBNET_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {altair} from "@chainsafe/lodestar-types";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {getSyncCommitteeSignatureSet} from "./signatureSets";
 
-type IndexInSubCommittee = number;
+type IndexInSubcommittee = number;
 
 /**
  * Spec v1.1.0-alpha.8
@@ -14,11 +14,11 @@ export async function validateGossipSyncCommittee(
   chain: IBeaconChain,
   syncCommittee: altair.SyncCommitteeMessage,
   subnet: number
-): Promise<{indexInSubCommittee: IndexInSubCommittee}> {
+): Promise<{indexInSubcommittee: IndexInSubcommittee}> {
   const {slot, validatorIndex} = syncCommittee;
 
   const headState = chain.getHeadState();
-  const indexInSubCommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
+  const indexInSubcommittee = validateGossipSyncCommitteeExceptSig(chain, headState, subnet, syncCommittee);
 
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // > Checked in validateGossipSyncCommitteeExceptSig()
@@ -46,7 +46,7 @@ export async function validateGossipSyncCommittee(
   // Register this valid item as seen
   chain.seenSyncCommitteeMessages.add(slot, subnet, validatorIndex);
 
-  return {indexInSubCommittee};
+  return {indexInSubcommittee};
 }
 
 /**
@@ -73,7 +73,7 @@ export function validateGossipSyncCommitteeExceptSig(
   headState: CachedBeaconStateAllForks,
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
-): IndexInSubCommittee {
+): IndexInSubcommittee {
   const {slot, validatorIndex} = data;
   // [IGNORE] The signature's slot is for the current slot, i.e. sync_committee_signature.slot == current_slot.
   // (with a MAXIMUM_GOSSIP_CLOCK_DISPARITY allowance)
@@ -88,42 +88,39 @@ export function validateGossipSyncCommitteeExceptSig(
   // [REJECT] The subcommittee index is in the allowed range, i.e. contribution.subcommittee_index < SYNC_COMMITTEE_SUBNET_COUNT.
   if (subnet >= SYNC_COMMITTEE_SUBNET_COUNT) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
-      code: SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX,
-      subCommitteeIndex: subnet,
+      code: SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX,
+      subcommitteeIndex: subnet,
     });
   }
 
   // [REJECT] The subnet_id is valid for the given validator, i.e. subnet_id in compute_subnets_for_sync_committee(state, sync_committee_signature.validator_index).
   // Note this validation implies the validator is part of the broader current sync committee along with the correct subcommittee.
-  const indexInSubCommittee = getIndexInSubCommittee(headState, subnet, data);
-  if (indexInSubCommittee === null) {
+  const indexInSubcommittee = getIndexInSubcommittee(headState, subnet, data);
+  if (indexInSubcommittee === null) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.VALIDATOR_NOT_IN_SYNC_COMMITTEE,
       validatorIndex,
     });
   }
 
-  return indexInSubCommittee;
+  return indexInSubcommittee;
 }
 
 /**
- * Returns the IndexInSubCommittee of the given `subnet`.
+ * Returns the IndexInSubcommittee of the given `subnet`.
  * Returns `null` if not part of the sync committee or not part of the given `subnet`
  */
-function getIndexInSubCommittee(
+function getIndexInSubcommittee(
   headState: CachedBeaconStateAllForks,
   subnet: number,
   data: Pick<altair.SyncCommitteeMessage, "slot" | "validatorIndex">
-): IndexInSubCommittee | null {
-  const syncCommittee = allForks.getIndexedSyncCommittee(headState, data.slot);
+): IndexInSubcommittee | null {
+  const syncCommittee = headState.epochCtx.getIndexedSyncCommittee(data.slot);
   const indexesInCommittee = syncCommittee.validatorIndexMap.get(data.validatorIndex);
   if (indexesInCommittee === undefined) {
     // Not part of the sync committee
     return null;
   }
-
-  // TODO: Cache this value
-  const SYNC_COMMITTEE_SUBNET_SIZE = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
 
   for (const indexInCommittee of indexesInCommittee) {
     if (Math.floor(indexInCommittee / SYNC_COMMITTEE_SUBNET_SIZE) === subnet) {

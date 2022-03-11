@@ -33,8 +33,8 @@
 //   export default LibP2pMdns;
 // }
 
-declare module 'libp2p-mdns' {
-  import { PeerDiscoveryFactory } from 'libp2p-interfaces/src/peer-discovery/types';
+declare module "libp2p-mdns" {
+  import {PeerDiscoveryFactory} from "libp2p-interfaces/src/peer-discovery/types";
 
   const mdns: PeerDiscoveryFactory;
   export default mdns;

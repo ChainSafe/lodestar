@@ -59,9 +59,13 @@ export class NodejsNode extends LibP2p {
       datastore: options.datastore,
       peerStore: {
         persistence: !!options.datastore,
-        threshold: 10,
       },
       config: {
+        nat: {
+          // libp2p usage of nat-api is broken as shown in this issue. https://github.com/ChainSafe/lodestar/issues/2996
+          // Also, unnsolicited usage of UPnP is not great, and should be customizable with flags
+          enabled: false,
+        },
         relay: {
           enabled: false,
           hop: {

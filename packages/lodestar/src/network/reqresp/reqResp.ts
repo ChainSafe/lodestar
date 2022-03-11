@@ -15,7 +15,7 @@ import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface
 import {sendRequest} from "./request";
 import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
-import {IPeerMetadataStore, IPeerRpcScoreStore} from "../peers";
+import {IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus, NetworkEvent} from "../events";
@@ -48,7 +48,6 @@ export class ReqResp implements IReqResp {
   private logger: ILogger;
   private reqRespHandlers: ReqRespHandlers;
   private metadataController: MetadataController;
-  private peerMetadata: IPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
   private inboundRateLimiter: IRateLimiter;
   private networkEventBus: INetworkEventBus;
@@ -58,12 +57,13 @@ export class ReqResp implements IReqResp {
   private respCount = 0;
   private metrics: IMetrics | null;
 
+  private readonly encodingPreference = new Map<string, Encoding>();
+
   constructor(modules: IReqRespModules, options: IReqRespOptions & RateLimiterOpts) {
     this.config = modules.config;
     this.libp2p = modules.libp2p;
     this.logger = modules.logger;
     this.reqRespHandlers = modules.reqRespHandlers;
-    this.peerMetadata = modules.peerMetadata;
     this.metadataController = modules.metadata;
     this.peerRpcScores = modules.peerRpcScores;
     this.inboundRateLimiter = new InboundRateLimiter(options, {...modules});
@@ -72,10 +72,10 @@ export class ReqResp implements IReqResp {
     this.metrics = modules.metrics;
   }
 
-  start(): void {
+  async start(): Promise<void> {
     this.controller = new AbortController();
     for (const [method, version, encoding] of protocolsSupported) {
-      this.libp2p.handle(
+      await this.libp2p.handle(
         formatProtocolId(method, version, encoding),
         (this.getRequestHandler({method, version, encoding}) as unknown) as (props: HandlerProps) => void
       );
@@ -83,9 +83,9 @@ export class ReqResp implements IReqResp {
     this.inboundRateLimiter.start();
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     for (const [method, version, encoding] of protocolsSupported) {
-      this.libp2p.unhandle(formatProtocolId(method, version, encoding));
+      await this.libp2p.unhandle(formatProtocolId(method, version, encoding));
     }
     this.controller.abort();
     this.inboundRateLimiter.stop();
@@ -137,8 +137,9 @@ export class ReqResp implements IReqResp {
     );
   }
 
-  pruneRateLimiterData(peerId: PeerId): void {
+  pruneOnPeerDisconnect(peerId: PeerId): void {
     this.inboundRateLimiter.prune(peerId);
+    this.encodingPreference.delete(peerId.toB58String());
   }
 
   // Helper to reduce code duplication
@@ -152,7 +153,7 @@ export class ReqResp implements IReqResp {
     try {
       this.metrics?.reqRespOutgoingRequests.inc({method});
 
-      const encoding = this.peerMetadata.encoding.get(peerId) ?? Encoding.SSZ_SNAPPY;
+      const encoding = this.encodingPreference.get(peerId.toB58String()) ?? Encoding.SSZ_SNAPPY;
       const result = await sendRequest<T>(
         {forkDigestContext: this.config, logger: this.logger, libp2p: this.libp2p},
         peerId,
@@ -190,7 +191,7 @@ export class ReqResp implements IReqResp {
       // TODO: Do we really need this now that there is only one encoding?
       // Remember the prefered encoding of this peer
       if (method === Method.Status) {
-        this.peerMetadata.encoding.set(peerId, encoding);
+        this.encodingPreference.set(peerId.toB58String(), encoding);
       }
 
       try {

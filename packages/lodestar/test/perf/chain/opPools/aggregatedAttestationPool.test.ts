@@ -6,7 +6,7 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool";
+import {AggregatedAttestationPool, flagIsTimelySource} from "../../../../src/chain/opPools/aggregatedAttestationPool";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {List} from "@chainsafe/ssz";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
@@ -26,10 +26,10 @@ describe("getAttestationsForBlock", () => {
     }) as unknown) as CachedBeaconStateAllForks;
     const numPreviousEpochParticipation = originalState.previousEpochParticipation.persistent
       .toArray()
-      .filter((part) => part.timelySource).length;
+      .filter((flags) => flagIsTimelySource(flags)).length;
     const numCurrentEpochParticipation = originalState.currentEpochParticipation.persistent
       .toArray()
-      .filter((part) => part.timelySource).length;
+      .filter((flags) => flagIsTimelySource(flags)).length;
 
     expect(numPreviousEpochParticipation).to.equal(250000, "Wrong numPreviousEpochParticipation");
     expect(numCurrentEpochParticipation).to.equal(250000, "Wrong numCurrentEpochParticipation");

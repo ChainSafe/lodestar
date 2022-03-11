@@ -1,8 +1,8 @@
-import {AttesterFlags, IAttesterStatus, toAttesterFlags} from "../../../../src/allForks";
-import {CachedBeaconStatePhase0, CachedBeaconStateAltair, IEpochProcess} from "../../../../src/types";
+import {AttesterFlags, IAttesterStatus, toAttesterFlags} from "../../../../src";
+import {CachedBeaconStatePhase0, CachedBeaconStateAltair, EpochProcess} from "../../../../src/types";
 
 /**
- * Generate an incomplete IEpochProcess to simulate any network condition relevant to getAttestationDeltas
+ * Generate an incomplete EpochProcess to simulate any network condition relevant to getAttestationDeltas
  * @param isInInactivityLeak true if in inactivity leak
  * @param flagFactors factor (0,1) of validators that have that flag set to true
  */
@@ -10,10 +10,10 @@ export function generateBalanceDeltasEpochProcess(
   state: CachedBeaconStatePhase0 | CachedBeaconStateAltair,
   isInInactivityLeak: boolean,
   flagFactors: FlagFactors
-): IEpochProcess {
+): EpochProcess {
   const vc = state.validators.length;
 
-  const epochProcess: Partial<IEpochProcess> = {
+  const epochProcess: Partial<EpochProcess> = {
     statuses: generateStatuses(state.validators.length, flagFactors),
     totalActiveStakeByIncrement: vc,
     baseRewardPerIncrement: 726,
@@ -25,7 +25,7 @@ export function generateBalanceDeltasEpochProcess(
     prevEpoch: isInInactivityLeak ? state.finalizedCheckpoint.epoch - 500 : state.finalizedCheckpoint.epoch,
   };
 
-  return epochProcess as IEpochProcess;
+  return epochProcess as EpochProcess;
 }
 
 export type FlagFactors = Record<keyof AttesterFlags, number> | number;

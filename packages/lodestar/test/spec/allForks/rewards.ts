@@ -1,8 +1,15 @@
-import fs from "fs";
-import {join} from "path";
+import fs from "node:fs";
+import {join} from "node:path";
 import {expect} from "chai";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {altair, phase0, allForks, CachedBeaconStatePhase0} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  altair,
+  phase0,
+  allForks,
+  CachedBeaconStatePhase0,
+  createCachedBeaconState,
+  beforeProcessEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {TreeBacked, VectorType} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
@@ -35,8 +42,8 @@ export function rewardsPhase0(fork: ForkName): void {
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
         const config = getConfig(fork);
-        const wrappedState = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<allForks.BeaconState>);
-        const epochProcess = allForks.beforeProcessEpoch(wrappedState);
+        const wrappedState = createCachedBeaconState(config, testcase.pre as TreeBacked<allForks.BeaconState>);
+        const epochProcess = beforeProcessEpoch(wrappedState);
         return phase0.getAttestationDeltas(wrappedState as CachedBeaconStatePhase0, epochProcess);
       },
       {
@@ -74,8 +81,8 @@ export function rewardsAltair(fork: ForkName): void {
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
         const config = getConfig(fork);
-        const state = allForks.createCachedBeaconState(config, testcase.pre as TreeBacked<altair.BeaconState>);
-        const epochProcess = allForks.beforeProcessEpoch(state);
+        const state = createCachedBeaconState(config, testcase.pre as TreeBacked<altair.BeaconState>);
+        const epochProcess = beforeProcessEpoch(state);
         // To debug this test and get granular results you can tweak inputs to get more granular results
         //
         // TIMELY_HEAD_FLAG_INDEX -> FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED
@@ -88,7 +95,7 @@ export function rewardsAltair(fork: ForkName): void {
         //   + set all inactivityScores to zero
         // - To get inactivity_penalty_deltas set TIMELY_HEAD_FLAG_INDEX | TIMELY_SOURCE_FLAG_INDEX to false
         //   + set PARTICIPATION_FLAG_WEIGHTS[TIMELY_TARGET_FLAG_INDEX] to zero
-        return altair.getRewardsPenaltiesDeltas(state, epochProcess);
+        return altair.getRewardsAndPenalties(state, epochProcess);
       },
       {
         inputTypes: inputTypeSszTreeBacked,

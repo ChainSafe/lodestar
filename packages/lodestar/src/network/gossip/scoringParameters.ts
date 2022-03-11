@@ -1,5 +1,4 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeCommitteeCount} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
@@ -9,6 +8,8 @@ import {getActiveForks} from "../forks";
 import {IGossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
 import {stringifyGossipTopic} from "./topic";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export const GOSSIP_D = 8;
 export const GOSSIP_D_LOW = 6;
@@ -276,7 +277,7 @@ function scoreParameterDecayWithBase(decayTimeMs: number, decayIntervalMs: numbe
 function expectedAggregatorCountPerSlot(
   activeValidatorCount: number
 ): {aggregatorsPerslot: number; committeesPerSlot: number} {
-  const committeesPerSlot = allForks.computeCommitteeCount(activeValidatorCount);
+  const committeesPerSlot = computeCommitteeCount(activeValidatorCount);
   const committeesPerEpoch = committeesPerSlot * SLOTS_PER_EPOCH;
   const smallerCommitteeSize = Math.floor(activeValidatorCount / committeesPerEpoch);
   const largerCommiteeeSize = smallerCommitteeSize + 1;

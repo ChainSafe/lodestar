@@ -1,7 +1,7 @@
 import LibP2p from "libp2p";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import crypto from "crypto";
+import crypto from "node:crypto";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
@@ -22,6 +22,7 @@ export type PeerDiscoveryOpts = {
   maxPeers: number;
   discv5FirstQueryDelayMs: number;
   discv5: Omit<IDiscv5DiscoveryInputOptions, "metrics" | "searchInterval" | "enabled">;
+  connectToDiscv5Bootnodes?: boolean;
 };
 
 export type PeerDiscoveryModules = {
@@ -91,6 +92,8 @@ export class PeerDiscovery {
   private discv5StartMs: number;
   private discv5FirstQueryDelayMs: number;
 
+  private connectToDiscv5BootnodesOnStart: boolean | undefined = false;
+
   constructor(modules: PeerDiscoveryModules, opts: PeerDiscoveryOpts) {
     const {libp2p, peerRpcScores, metrics, logger, config} = modules;
     this.libp2p = libp2p;
@@ -101,6 +104,7 @@ export class PeerDiscovery {
     this.maxPeers = opts.maxPeers;
     this.discv5StartMs = 0;
     this.discv5FirstQueryDelayMs = opts.discv5FirstQueryDelayMs;
+    this.connectToDiscv5BootnodesOnStart = opts.connectToDiscv5Bootnodes;
 
     this.discv5 = Discv5.create({
       enr: opts.discv5.enr,
@@ -112,7 +116,6 @@ export class PeerDiscovery {
         [K in keyof IMetrics["discv5"]]: IDiscv5Metrics[keyof IDiscv5Metrics];
       },
     });
-
     opts.discv5.bootEnrs.forEach((bootEnr) => this.discv5.addEnr(bootEnr));
 
     if (metrics) {
@@ -127,6 +130,12 @@ export class PeerDiscovery {
     await this.discv5.start();
     this.discv5StartMs = Date.now();
     this.discv5.on("discovered", this.onDiscovered);
+    if (this.connectToDiscv5BootnodesOnStart) {
+      // In devnet scenarios, especially, we want more control over which peers we connect to.
+      // Only dial the discv5.bootEnrs if the option
+      // network.connectToDiscv5Bootnodes has been set to true.
+      this.discv5.kadValues().forEach((enr) => this.onDiscovered(enr));
+    }
   }
 
   async stop(): Promise<void> {
@@ -354,7 +363,7 @@ export class PeerDiscovery {
 
     // Must add the multiaddrs array to the address book before dialing
     // https://github.com/libp2p/js-libp2p/blob/aec8e3d3bb1b245051b60c2a890550d262d5b062/src/index.js#L638
-    this.libp2p.peerStore.addressBook.add(peerId, [multiaddrTCP]);
+    await this.libp2p.peerStore.addressBook.add(peerId, [multiaddrTCP]);
 
     // Note: PeerDiscovery adds the multiaddrTCP beforehand
     const peerIdShort = prettyPrintPeerId(peerId);

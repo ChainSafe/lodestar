@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Get tag
         id: get_tag
         run: echo ::set-output name=tag::${GITHUB_REF/refs\/tags\//}
@@ -26,13 +28,17 @@ jobs:
         id: get_prev_tag
         run: node scripts/get_prev_tag.js
         env:
-          CURRENT_TAG: ${{ steps.tag.outputs.tag }}
+          CURRENT_TAG: ${{ steps.get_tag.outputs.tag }}
           IGNORE_PATTERN: beta
+
+      - name: Assert tag == package.json version
+        run: .github/workflows/scripts/assert-same-package-version.sh
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
     outputs:
       is_beta: ${{ contains(github.ref, 'beta') }}
-      tag: ${{ steps.tag.outputs.tagname }}
+      tag: ${{ steps.get_tag.outputs.tag }}
       prev_tag: ${{ steps.get_prev_tag.outputs.prev_tag }}
-      version: ${{ steps.get_version.outputs.version }}
 
   npm:
     name: Publish to NPM Registry
@@ -43,6 +49,8 @@ jobs:
     steps:
       # <common-build> - Uses YAML anchors in the future
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0 # Needs full depth for changelog generation
       - uses: actions/setup-node@v2
         with:
           node-version: "lts/gallium"
@@ -107,14 +115,16 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: scripts/await-release.sh ${{ needs.tag.outputs.tag }} 900
+      # https://github.com/docker/setup-qemu-action
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      # https://github.com/docker/setup-buildx-action
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - run: docker build --tag chainsafe/lodestar:latest --build-arg VERSION=${{ needs.tag.outputs.tag }} .
-      - run: docker tag chainsafe/lodestar:latest chainsafe/lodestar:${{ needs.tag.outputs.tag }}
-      - run: |
-          docker tag chainsafe/lodestar:latest chainsafe/lodestar:${{ needs.tag.outputs.tag }}
-          docker push chainsafe/lodestar:latest
-          docker push chainsafe/lodestar:${{ needs.tag.outputs.tag }}
+      - run: docker buildx build --push --tag chainsafe/lodestar:latest --tag chainsafe/lodestar:${{ needs.tag.outputs.tag }} --platform linux/amd64 --build-arg VERSION=${{ needs.tag.outputs.tag }} .
+      - run: docker run chainsafe/lodestar:latest --help

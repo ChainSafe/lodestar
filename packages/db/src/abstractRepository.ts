@@ -11,8 +11,8 @@ export type Id = Uint8Array | string | number | bigint;
 
 /**
  * Repository is a high level kv storage
- * managing a Buffer to Buffer kv database
- * It translates typed keys and values to Buffers required by the underlying database
+ * managing a Uint8rray to Uint8rray kv database
+ * It translates typed keys and values to Uint8rrays required by the underlying database
  *
  * By default, SSZ-encoded values,
  * indexed by root
@@ -46,7 +46,7 @@ export abstract class Repository<I extends Id, T> {
     return this.type.deserialize(data);
   }
 
-  encodeKey(id: I): Buffer {
+  encodeKey(id: I): Uint8Array {
     return _encodeKey(this.bucket, id);
   }
 
@@ -77,7 +77,7 @@ export abstract class Repository<I extends Id, T> {
     await this.db.put(this.encodeKey(id), this.encodeValue(value));
   }
 
-  async putBinary(id: I, value: Buffer): Promise<void> {
+  async putBinary(id: I, value: Uint8Array): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.put(this.encodeKey(id), value);
   }
@@ -110,7 +110,7 @@ export abstract class Repository<I extends Id, T> {
     );
   }
 
-  // Similar to batchPut but we support value as Buffer
+  // Similar to batchPut but we support value as Uint8Array
   async batchPutBinary(items: ArrayLike<IKeyValue<I, Uint8Array>>): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.batchPut(
@@ -251,10 +251,10 @@ export abstract class Repository<I extends Id, T> {
   }
 
   /**
-   * Transforms opts from I to Buffer
+   * Transforms opts from I to Uint8Array
    */
   protected dbFilterOptions(opts?: IFilterOptions<I>): IFilterOptions<Uint8Array> {
-    const _opts: IFilterOptions<Buffer> = {
+    const _opts: IFilterOptions<Uint8Array> = {
       gte: _encodeKey(this.bucket, Buffer.alloc(0)),
       lt: _encodeKey(this.bucket + 1, Buffer.alloc(0)),
     };

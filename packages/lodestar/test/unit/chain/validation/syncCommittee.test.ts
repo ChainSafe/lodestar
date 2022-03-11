@@ -98,7 +98,7 @@ describe("Sync Committee Signature validation", function () {
     chain.getHeadState.returns(headState);
     await expectRejectedWithLodestarError(
       validateGossipSyncCommittee(chain, syncCommittee, 0),
-      SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
+      SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX
     );
   });
 

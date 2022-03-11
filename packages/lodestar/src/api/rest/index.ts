@@ -1,7 +1,7 @@
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
-import {IncomingMessage} from "http";
+import {IncomingMessage} from "node:http";
 import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
@@ -115,7 +115,7 @@ export class RestApi {
 
     try {
       const address = await this.server.listen(this.opts.port, this.opts.host);
-      this.logger.info("Started REST api server", {address, namespaces: this.opts.api});
+      this.logger.info("Started REST api server", {address, namespaces: this.opts.api.join(",")});
     } catch (e) {
       this.logger.error("Error starting REST api server", {host: this.opts.host, port: this.opts.port}, e as Error);
       throw e;

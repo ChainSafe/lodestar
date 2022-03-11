@@ -1,10 +1,10 @@
 import {routes} from "@chainsafe/lodestar-api";
-import {CommitteeIndex, SubCommitteeIndex} from "@chainsafe/lodestar-types";
+import {CommitteeIndex, SubcommitteeIndex} from "@chainsafe/lodestar-types";
 import {AttDutyAndProof} from "./attestationDuties";
 import {SyncDutyAndProofs, SyncSelectionProof} from "./syncCommitteeDuties";
 
 /** Sync committee duty associated to a single sub committee subnet */
-export type SubCommitteeDuty = {
+export type SubcommitteeDuty = {
   duty: routes.validator.SyncDuty;
   selectionProof: SyncSelectionProof["selectionProof"];
 };
@@ -29,21 +29,21 @@ export function groupAttDutiesByCommitteeIndex(duties: AttDutyAndProof[]): Map<C
   return dutiesByCommitteeIndex;
 }
 
-export function groupSyncDutiesBySubCommitteeIndex(
+export function groupSyncDutiesBySubcommitteeIndex(
   duties: SyncDutyAndProofs[]
-): Map<SubCommitteeIndex, SubCommitteeDuty[]> {
-  const dutiesBySubCommitteeIndex = new Map<SubCommitteeIndex, SubCommitteeDuty[]>();
+): Map<SubcommitteeIndex, SubcommitteeDuty[]> {
+  const dutiesBySubcommitteeIndex = new Map<SubcommitteeIndex, SubcommitteeDuty[]>();
 
   for (const validatorDuty of duties) {
-    for (const {selectionProof, subCommitteeIndex} of validatorDuty.selectionProofs) {
-      let dutyAndProofArr = dutiesBySubCommitteeIndex.get(subCommitteeIndex);
+    for (const {selectionProof, subcommitteeIndex} of validatorDuty.selectionProofs) {
+      let dutyAndProofArr = dutiesBySubcommitteeIndex.get(subcommitteeIndex);
       if (!dutyAndProofArr) {
         dutyAndProofArr = [];
-        dutiesBySubCommitteeIndex.set(subCommitteeIndex, dutyAndProofArr);
+        dutiesBySubcommitteeIndex.set(subcommitteeIndex, dutyAndProofArr);
       }
       dutyAndProofArr.push({duty: validatorDuty.duty, selectionProof: selectionProof});
     }
   }
 
-  return dutiesBySubCommitteeIndex;
+  return dutiesBySubcommitteeIndex;
 }

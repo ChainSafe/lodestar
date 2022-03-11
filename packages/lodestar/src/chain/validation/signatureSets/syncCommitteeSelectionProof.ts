@@ -16,7 +16,7 @@ export function getSyncCommitteeSelectionProofSignatureSet(
   const domain = config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
   const signingData: altair.SyncAggregatorSelectionData = {
     slot,
-    subCommitteeIndex: contributionAndProof.contribution.subCommitteeIndex,
+    subcommitteeIndex: contributionAndProof.contribution.subcommitteeIndex,
   };
   return {
     type: SignatureSetType.single,

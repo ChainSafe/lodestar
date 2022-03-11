@@ -164,7 +164,15 @@ export class UnknownBlockSync {
     }
 
     pendingBlock.status = PendingBlockStatus.processing;
-    const res = await wrapError(this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true}));
+    // At gossip time, it's critical to keep a good number of mesh peers.
+    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+    // Gossip Job Wait Time depends on the BLS Job Wait Time
+    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+    // See https://github.com/ChainSafe/lodestar/issues/3792
+    const res = await wrapError(
+      this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
+    );
     pendingBlock.status = PendingBlockStatus.pending;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
@@ -284,7 +292,7 @@ export class UnknownBlockSync {
       for (const peerIdStr of block.peerIdStrs) {
         // TODO: Refactor peerRpcScores to work with peerIdStr only
         const peer = PeerId.createFromB58String(peerIdStr);
-        this.network.peerRpcScores.applyAction(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
+        this.network.reportPeer(peer, PeerAction.LowToleranceError, "BadBlockByRoot");
       }
     }
 

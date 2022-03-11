@@ -1,5 +1,5 @@
 import {allForks, phase0, CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../src";
-import {IEpochProcess} from "../../src/types";
+import {EpochProcess} from "../../src/types";
 
 // Type aliases to typesafe itBench() calls
 
@@ -10,6 +10,6 @@ export type StateAttestations = {
   state: CachedBeaconStateAllForks;
   attestations: phase0.Attestation[];
 };
-export type StateEpoch = {state: CachedBeaconStateAllForks; epochProcess: IEpochProcess};
-export type StatePhase0Epoch = {state: CachedBeaconStatePhase0; epochProcess: IEpochProcess};
-export type StateAltairEpoch = {state: CachedBeaconStateAltair; epochProcess: IEpochProcess};
+export type StateEpoch = {state: CachedBeaconStateAllForks; epochProcess: EpochProcess};
+export type StatePhase0Epoch = {state: CachedBeaconStatePhase0; epochProcess: EpochProcess};
+export type StateAltairEpoch = {state: CachedBeaconStateAltair; epochProcess: EpochProcess};

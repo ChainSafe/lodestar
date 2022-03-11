@@ -1,2 +1,3 @@
 **/lib
-/packages/spec-test-runner/spec-tests
+**/.nyc_output
+/packages/*/spec-tests

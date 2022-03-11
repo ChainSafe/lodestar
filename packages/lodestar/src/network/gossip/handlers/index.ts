@@ -110,8 +110,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
 
       // `validProposerSignature = true`, in gossip validation the proposer signature is checked
+      // At gossip time, it's critical to keep a good number of mesh peers.
+      // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+      // Gossip Job Wait Time depends on the BLS Job Wait Time
+      // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+      // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+      // See https://github.com/ChainSafe/lodestar/issues/3792
       chain
-        .processBlock(signedBlock, {validProposerSignature: true})
+        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
@@ -126,7 +132,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
               case BlockErrorCode.EXECUTION_ENGINE_ERROR:
                 break;
               default:
-                network.peerRpcScores.applyAction(
+                network.reportPeer(
                   PeerId.createFromB58String(peerIdStr),
                   PeerAction.LowToleranceError,
                   "BadGossipBlock"
@@ -173,8 +179,8 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         try {
           chain.forkChoice.onAttestation(indexedAttestation);
         } catch (e) {
-          logger.error(
-            "Error adding aggregated attestation to forkchoice",
+          logger.debug(
+            "Error adding gossip aggregated attestation to forkchoice",
             {slot: aggregatedAttestation.data.slot},
             e as Error
           );
@@ -218,7 +224,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         try {
           chain.forkChoice.onAttestation(indexedAttestation);
         } catch (e) {
-          logger.error("Error adding unaggregated attestation to forkchoice", {subnet}, e as Error);
+          logger.debug("Error adding gossip unaggregated attestation to forkchoice", {subnet}, e as Error);
         }
       }
     },
@@ -260,9 +266,10 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     },
 
     [GossipType.sync_committee_contribution_and_proof]: async (contributionAndProof) => {
-      try {
-        await validateSyncCommitteeGossipContributionAndProof(chain, contributionAndProof);
-      } catch (e) {
+      const {syncCommitteeParticipants} = await validateSyncCommitteeGossipContributionAndProof(
+        chain,
+        contributionAndProof
+      ).catch((e) => {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
             "contributionAndProof",
@@ -272,21 +279,21 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
           logger.debug("The invalid gossip contribution and proof was written to", archivedPath);
         }
         throw e;
-      }
+      });
 
       // Handler
 
       try {
-        chain.syncContributionAndProofPool.add(contributionAndProof.message);
+        chain.syncContributionAndProofPool.add(contributionAndProof.message, syncCommitteeParticipants);
       } catch (e) {
         logger.error("Error adding to contributionAndProof pool", {}, e as Error);
       }
     },
 
     [GossipType.sync_committee]: async (syncCommittee, {subnet}) => {
-      let indexInSubCommittee = 0;
+      let indexInSubcommittee = 0;
       try {
-        indexInSubCommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubCommittee;
+        indexInSubcommittee = (await validateGossipSyncCommittee(chain, syncCommittee, subnet)).indexInSubcommittee;
       } catch (e) {
         if (e instanceof SyncCommitteeError && e.action === GossipAction.REJECT) {
           const archivedPath = chain.persistInvalidSszObject(
@@ -302,7 +309,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // Handler
 
       try {
-        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubCommittee);
+        chain.syncCommitteeMessagePool.add(subnet, syncCommittee, indexInSubcommittee);
       } catch (e) {
         logger.error("Error adding to syncCommittee pool", {subnet}, e as Error);
       }

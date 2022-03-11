@@ -1,8 +1,8 @@
 import {Epoch, phase0, ssz} from "@chainsafe/lodestar-types";
 import {List, readonlyValues} from "@chainsafe/ssz";
-import {IAttesterStatus} from "../../allForks";
 import {CachedBeaconStatePhase0} from "../../types";
 import {computeStartSlotAtEpoch, getBlockRootAtSlot, zipIndexesCommitteeBits} from "../../util";
+import {IAttesterStatus} from "../../util/attesterStatus";
 
 /**
  * Mutates `statuses` from all pending attestations.

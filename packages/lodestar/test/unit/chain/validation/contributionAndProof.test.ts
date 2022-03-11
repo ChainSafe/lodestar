@@ -59,14 +59,14 @@ describe("Sync Committee Contribution And Proof validation", function () {
     );
   });
 
-  it("should throw error - subCommitteeIndex is not in allowed range", async function () {
+  it("should throw error - subcommitteeIndex is not in allowed range", async function () {
     const signedContributionAndProof = generateSignedContributionAndProof({
-      contribution: {slot: currentSlot, subCommitteeIndex: 10000},
+      contribution: {slot: currentSlot, subcommitteeIndex: 10000},
     });
 
     await expectRejectedWithLodestarError(
       validateSyncCommitteeGossipContributionAndProof(chain, signedContributionAndProof),
-      SyncCommitteeErrorCode.INVALID_SUB_COMMITTEE_INDEX
+      SyncCommitteeErrorCode.INVALID_SUBCOMMITTEE_INDEX
     );
   });
 

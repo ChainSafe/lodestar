@@ -1,12 +1,19 @@
-import fs from "fs";
+import fs from "node:fs";
 import {init} from "@chainsafe/bls";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {NetworkName} from "@chainsafe/lodestar-config/networks";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {allForks, computeEpochAtSlot, computeStartSlotAtEpoch, CachedBeaconStateAllForks} from "../../src";
-import {parseAttesterFlags} from "../../lib/allForks";
-import {AttesterFlags} from "../../src/allForks";
+import {
+  allForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  CachedBeaconStateAllForks,
+  AttesterFlags,
+  createCachedBeaconState,
+  beforeProcessEpoch,
+  parseAttesterFlags,
+} from "../../src";
 import {Validator} from "../../lib/phase0";
 import {csvAppend, readCsv} from "./csv";
 import {getInfuraBeaconUrl} from "./infura";
@@ -91,9 +98,9 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
     const stateTB = ssz.phase0.BeaconState.createTreeBackedFromStruct(state as phase0.BeaconState);
-    const postState = allForks.createCachedBeaconState(config, stateTB);
+    const postState = createCachedBeaconState(config, stateTB);
 
-    const epochProcess = allForks.beforeProcessEpoch(postState);
+    const epochProcess = beforeProcessEpoch(postState);
     allForks.processSlots(postState as CachedBeaconStateAllForks, nextEpochSlot, null);
 
     const validatorCount = state.validators.length;

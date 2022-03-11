@@ -61,7 +61,7 @@ export class AttestationByTargetRepository {
     return uniqueVectorArr(keys.map((key) => this.decodeKey(key).pubkey));
   }
 
-  private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Buffer {
+  private encodeKey(pubkey: BLSPubkey, targetEpoch: Epoch): Uint8Array {
     return encodeKey(
       this.bucket,
       Buffer.concat([Buffer.from(pubkey as Uint8Array), intToBytes(BigInt(targetEpoch), uintLen, "be")])

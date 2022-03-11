@@ -11,8 +11,8 @@
 //
 // Outputs to output.prev_tag
 
-const {exec} = require("child_process");
-const {promisify} = require("util");
+const {exec} = require("node:child_process");
+const {promisify} = require("node:util");
 
 async function run() {
   const {CURRENT_TAG, IGNORE_PATTERN} = process.env;
@@ -30,7 +30,7 @@ async function run() {
   const tags = stdout.trim().split("\n");
   for (const tag of tags) {
     if (tag !== CURRENT_TAG && !tag.includes(IGNORE_PATTERN)) {
-      console.log(`echo ::set-output name=prev_tag::${tag}`);
+      console.log(`::set-output name=prev_tag::${tag}`);
       return;
     }
   }

@@ -2,7 +2,7 @@
  * @module chain
  */
 
-import fs from "fs";
+import fs from "node:fs";
 import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
@@ -119,9 +119,10 @@ export class BeaconChain implements IBeaconChain {
 
     const signal = this.abortController.signal;
     const emitter = new ChainEventEmitter();
-    const bls = opts.useSingleThreadVerifier
-      ? new BlsSingleThreadVerifier()
-      : new BlsMultiThreadWorkerPool({logger, metrics, signal: this.abortController.signal});
+    // by default, verify signatures on both main threads and worker threads
+    const bls = opts.blsVerifyAllMainThread
+      ? new BlsSingleThreadVerifier({metrics})
+      : new BlsMultiThreadWorkerPool(opts, {logger, metrics, signal: this.abortController.signal});
 
     const clock = new LocalClock({config, emitter, genesisTime: this.genesisTime, signal});
     const stateCache = new StateContextCache({metrics});
@@ -146,10 +147,7 @@ export class BeaconChain implements IBeaconChain {
       signal,
     });
 
-    const lightClientServer = new LightClientServer(
-      {config, db, emitter, logger},
-      {genesisTime: this.genesisTime, genesisValidatorsRoot: this.genesisValidatorsRoot as Uint8Array}
-    );
+    const lightClientServer = new LightClientServer({config, db, metrics, emitter, logger});
 
     this.reprocessController = new ReprocessController(this.metrics);
 
@@ -283,8 +281,12 @@ export class BeaconChain implements IBeaconChain {
     if (!fs.existsSync(byDate)) {
       fs.mkdirSync(byDate, {recursive: true});
     }
-    const fileName = `${byDate}/${type}_${suffix}_${Date.now()}.ssz`;
-    fs.writeFileSync(fileName, bytes);
+    const fileName = `${byDate}/${type}_${suffix}.ssz`;
+    // as of Feb 17 2022 there are a lot of duplicate files stored with different date suffixes
+    // remove date suffixes in file name, and check duplicate to avoid redundant persistence
+    if (!fs.existsSync(fileName)) {
+      fs.writeFileSync(fileName, bytes);
+    }
     return fileName;
   }
 }

@@ -15,6 +15,7 @@ import {IBeaconArgs} from "./options";
 import {getBeaconPaths} from "./paths";
 import {initBeaconState} from "./initBeaconState";
 import {getVersion, getVersionGitData} from "../../util/version";
+import {deleteOldPeerstorePreV036} from "../../migrations";
 
 /**
  * Runs a beacon node.
@@ -54,6 +55,9 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
 
   logger.info("Lodestar", {version: version, network: args.network});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
+
+  // peerstore migration
+  await deleteOldPeerstorePreV036(beaconPaths.peerStoreDir, logger);
 
   let dbMetrics: null | ReturnType<typeof createDbMetrics> = null;
   // additional metrics registries

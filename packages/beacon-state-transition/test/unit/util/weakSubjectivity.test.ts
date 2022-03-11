@@ -1,6 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
-import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/allForks/util/weakSubjectivity";
+import {computeWeakSubjectivityPeriodFromConstituents} from "../../../src/util/weakSubjectivity";
 import {getChurnLimit} from "../../../src/util/validator";
 
 describe("weak subjectivity tests", () => {

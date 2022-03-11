@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import bls from "@chainsafe/bls";
 // eslint-disable-next-line no-restricted-imports

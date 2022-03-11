@@ -1,4 +1,4 @@
-const path = require("path");
+const path = require("node:path");
 const {workerData} = require("worker_threads");
 
 require("ts-node").register();

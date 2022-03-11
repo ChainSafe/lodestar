@@ -1,5 +1,5 @@
 import {HttpError} from "@chainsafe/lodestar-api";
-import {Context, ILogger, isErrorAborted} from "@chainsafe/lodestar-utils";
+import {LogData, ILogger, isErrorAborted} from "@chainsafe/lodestar-utils";
 import {IClock} from "./clock";
 
 export type ILoggerVc = Pick<ILogger, "error" | "warn" | "info" | "verbose" | "debug"> & {
@@ -14,7 +14,7 @@ export function getLoggerVc(logger: ILogger, clock: IClock): ILoggerVc {
   });
 
   return {
-    error(message: string, context?: Context, e?: Error) {
+    error(message: string, context?: LogData, e?: Error) {
       if (e) {
         // Returns true if it's an network error with code 503 = Node is syncing
         // https://github.com/ethereum/beacon-APIs/blob/e68a954e1b6f6eb5421abf4532c171ce301c6b2e/types/http.yaml#L62

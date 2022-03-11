@@ -19,7 +19,7 @@ export const exportCmd: ICliCommand<IExportArgs, ISlashingProtectionArgs & IAcco
 
   examples: [
     {
-      command: "account validator slashing-protection export --network pyrmont --file interchange.json",
+      command: "account validator slashing-protection export --network prater --file interchange.json",
       description: "Export an interchange JSON file for all validators in the slashing protection DB",
     },
   ],

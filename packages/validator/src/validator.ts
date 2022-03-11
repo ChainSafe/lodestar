@@ -61,6 +61,7 @@ export class Validator {
       typeof opts.api === "string"
         ? getClient(config, {
             baseUrl: opts.api,
+            // Validator would need the beacon to respond within the slot
             timeoutMs: config.SECONDS_PER_SLOT * 1000,
             getAbortSignal: this.getAbortSignal,
           })
@@ -88,7 +89,9 @@ export class Validator {
     const {config} = opts.dbOps;
     const api =
       typeof opts.api === "string"
-        ? getClient(config, {baseUrl: opts.api, timeoutMs: 12000, getAbortSignal: () => signal})
+        ? // This new api instance can make do with default timeout as a faster timeout is
+          // not necessary since this instance won't be used for validator duties
+          getClient(config, {baseUrl: opts.api, getAbortSignal: () => signal})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);

@@ -5,7 +5,7 @@ import {
   HYSTERESIS_UPWARD_MULTIPLIER,
   MAX_EFFECTIVE_BALANCE,
 } from "@chainsafe/lodestar-params";
-import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
+import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
  * Update effective balances if validator.balance has changed enough
@@ -17,12 +17,12 @@ import {IEpochProcess, CachedBeaconStateAllForks} from "../../types";
  * - On normal mainnet conditions 0 validators change their effective balance
  * - In case of big innactivity event a medium portion of validators may have their effectiveBalance updated
  */
-export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, epochProcess: IEpochProcess): void {
+export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks, epochProcess: EpochProcess): void {
   const HYSTERESIS_INCREMENT = EFFECTIVE_BALANCE_INCREMENT / HYSTERESIS_QUOTIENT;
   const DOWNWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_DOWNWARD_MULTIPLIER;
   const UPWARD_THRESHOLD = HYSTERESIS_INCREMENT * HYSTERESIS_UPWARD_MULTIPLIER;
   const {validators, epochCtx} = state;
-  const {effectiveBalances} = epochCtx;
+  const {effectiveBalanceIncrements} = epochCtx;
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
@@ -34,9 +34,8 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
 
   for (let i = 0, len = epochProcess.balances.length; i < len; i++) {
     const balance = epochProcess.balances[i];
-    // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    let effectiveBalance = effectiveBalances.get(i)!;
+    let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
+    let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
@@ -49,11 +48,12 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
       // Also update the fast cached version
       // Should happen rarely, so it's fine to update the tree
       // TODO: Update all in batch after this loop
-      epochCtx.effectiveBalances.set(i, effectiveBalance);
+      effectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      effectiveBalanceIncrements[i] = effectiveBalanceIncrement;
     }
     if (epochProcess.isActiveNextEpoch[i]) {
       // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
-      nextEpochTotalActiveBalanceByIncrement += Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+      nextEpochTotalActiveBalanceByIncrement += effectiveBalanceIncrement;
     }
   }
 

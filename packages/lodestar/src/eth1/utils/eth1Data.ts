@@ -3,6 +3,7 @@ import {List, TreeBacked} from "@chainsafe/ssz";
 import {getTreeAtIndex} from "../../util/tree";
 import {binarySearchLte} from "../../util/binarySearch";
 import {Eth1Error, Eth1ErrorCode} from "../errors";
+import {Eth1Block} from "../interface";
 
 type BlockNumber = number;
 
@@ -11,11 +12,11 @@ type BlockNumber = number;
  * eth1 data deposit is inferred from sparse eth1 data obtained from the deposit logs
  */
 export async function getEth1DataForBlocks(
-  blocks: phase0.Eth1Block[],
+  blocks: Eth1Block[],
   depositDescendingStream: AsyncIterable<phase0.DepositEvent>,
   depositRootTree: TreeBacked<List<Root>>,
   lastProcessedDepositBlockNumber: BlockNumber | null
-): Promise<(phase0.Eth1Data & phase0.Eth1Block)[]> {
+): Promise<(phase0.Eth1Data & Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
   if (lastProcessedDepositBlockNumber !== null) {
     blocks = blocks.filter((block) => block.blockNumber <= lastProcessedDepositBlockNumber);
@@ -38,7 +39,7 @@ export async function getEth1DataForBlocks(
   const depositCounts = depositsByBlockNumber.map((event) => event.index + 1);
   const depositRootByDepositCount = getDepositRootByDepositCount(depositCounts, depositRootTree);
 
-  const eth1Datas: (phase0.Eth1Data & phase0.Eth1Block)[] = [];
+  const eth1Datas: (phase0.Eth1Data & Eth1Block)[] = [];
   for (const block of blocks) {
     const deposit = binarySearchLte(depositsByBlockNumber, block.blockNumber, (event) => event.blockNumber);
     const depositCount = deposit.index + 1;

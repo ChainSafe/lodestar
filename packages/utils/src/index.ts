@@ -10,6 +10,5 @@ export * from "./notNullish";
 export * from "./sleep";
 export * from "./sort";
 export * from "./timeout";
-export * from "./types";
+export {RecursivePartial, bnToNum} from "./types";
 export * from "./verifyMerkleBranch";
-export * from "./json";

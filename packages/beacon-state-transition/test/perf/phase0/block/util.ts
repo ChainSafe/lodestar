@@ -169,11 +169,7 @@ export function getBlockAltair(preState: CachedBeaconStateAllForks, opts: BlockA
       attEpoch === stateEpoch ? preState.currentEpochParticipation : preState.previousEpochParticipation;
     const attestingIndices = preState.getAttestingIndices(attestation.data, attestation.aggregationBits);
     for (const index of attestingIndices) {
-      epochParticipation.setStatus(index, {
-        timelyHead: false,
-        timelySource: false,
-        timelyTarget: false,
-      });
+      epochParticipation.set(index, 0);
     }
   }
   return {

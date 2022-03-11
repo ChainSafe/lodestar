@@ -1,7 +1,7 @@
-import fs from "fs";
-import {promisify} from "util";
+import fs from "node:fs";
+import {promisify} from "node:util";
 import rimraf from "rimraf";
-import path from "path";
+import path from "node:path";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
@@ -66,7 +66,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.logFormatGenesisTime === undefined) args.logFormatGenesisTime = genesisTime;
 
   // BeaconNode setup
-  const libp2p = await createNodeJsLibp2p(peerId, options.network);
+  const libp2p = await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir});
   const logger = getCliLogger(args, beaconPaths, config);
   logger.info("Lodestar", {version: getVersion(), network: args.network});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");

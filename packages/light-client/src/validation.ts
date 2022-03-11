@@ -1,4 +1,4 @@
-import {altair, Root, Slot, ssz} from "@chainsafe/lodestar-types";
+import {altair, phase0, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {PublicKey, Signature} from "@chainsafe/bls";
 import {
   FINALIZED_ROOT_INDEX,
@@ -34,7 +34,6 @@ export function assertValidLightClientUpdate(
 
   // Verify update header root is the finalized root of the finality header, if specified
   const isFinalized = !isEmptyHeader(update.finalizedHeader);
-  const signedHeader = isFinalized ? update.finalizedHeader : update.attestedHeader;
   if (isFinalized) {
     assertValidFinalityProof(update);
   } else {
@@ -46,8 +45,9 @@ export function assertValidLightClientUpdate(
   // An update may not increase the period but still be stored in validUpdates and be used latter
   assertValidSyncCommitteeProof(update);
 
-  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(signedHeader);
-  assertValidSignedHeader(config, syncCommittee, update.syncCommitteeAggregate, headerBlockRoot, signedHeader.slot);
+  const {attestedHeader} = update;
+  const headerBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(attestedHeader);
+  assertValidSignedHeader(config, syncCommittee, update.syncAggregate, headerBlockRoot, attestedHeader.slot);
 }
 
 /**
@@ -65,11 +65,11 @@ export function assertValidLightClientUpdate(
 export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
   if (
     !isValidMerkleBranch(
-      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.attestedHeader),
+      ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
       Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
       FINALIZED_ROOT_DEPTH,
       FINALIZED_ROOT_INDEX,
-      update.finalizedHeader.stateRoot.valueOf() as Uint8Array
+      update.attestedHeader.stateRoot.valueOf() as Uint8Array
     )
   ) {
     throw Error("Invalid finality header merkle branch");
@@ -99,11 +99,25 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
       Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      update.attestedHeader.stateRoot.valueOf() as Uint8Array
+      activeHeader(update).stateRoot.valueOf() as Uint8Array
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
   }
+}
+
+/**
+ * The "active header" is the header that the update is trying to convince us
+ * to accept. If a finalized header is present, it's the finalized header,
+ * otherwise it's the attested header
+ * @param update
+ */
+export function activeHeader(update: altair.LightClientUpdate): phase0.BeaconBlockHeader {
+  if (!isEmptyHeader(update.finalizedHeader)) {
+    return update.finalizedHeader;
+  }
+
+  return update.attestedHeader;
 }
 
 /**

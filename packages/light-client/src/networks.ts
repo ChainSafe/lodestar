@@ -3,7 +3,7 @@ import {RootHex} from "@chainsafe/lodestar-types";
 enum NetworkName {
   mainnet = "mainnet",
   prater = "prater",
-  pyrmont = "pyrmont",
+  kintsugi = "kintsugi",
 }
 
 export type GenesisDataHex = {
@@ -25,8 +25,8 @@ export const networkGenesis: Record<NetworkName, GenesisDataHex> = {
     genesisTime: 1616508000,
     genesisValidatorsRoot: "0x043db0d9a83813551ee2f33450d23797757d430911a9320530ad8a0eabc43efb",
   },
-  [NetworkName.pyrmont]: {
-    genesisTime: 1605700807,
-    genesisValidatorsRoot: "0x9436e8a630e3162b7ed4f449b12b8a5a368a4b95bc46b941ae65c11613bfa4c1",
+  [NetworkName.kintsugi]: {
+    genesisTime: 1639659900,
+    genesisValidatorsRoot: "0xff411ff2797afc5cb9cc3309533ccae59347f8154ef51661289270c06ab13383",
   },
 };

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import fs from "fs";
+import fs from "node:fs";
 import yaml from "js-yaml";
 import {toHexString} from "@chainsafe/ssz";
 import {getTestdirPath} from "../../utils";
@@ -7,10 +7,10 @@ import {getBeaconParams} from "../../../src/config";
 
 describe("config / beaconParams", () => {
   const GENESIS_FORK_VERSION_MAINNET = "0x00000000";
-  const GENESIS_FORK_VERSION_PYRMONT = "0x00002009";
+  const GENESIS_FORK_VERSION_PRATER = "0x00001020";
   const GENESIS_FORK_VERSION_FILE = "0x00009902";
   const GENESIS_FORK_VERSION_CLI = "0x00009903";
-  const networkName = "pyrmont";
+  const networkName = "prater";
   const paramsFilepath = getTestdirPath("./test-config.yaml");
 
   const testCases: {
@@ -34,7 +34,7 @@ describe("config / beaconParams", () => {
         additionalParamsCli: {},
       },
       // eslint-disable-next-line @typescript-eslint/naming-convention
-      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PYRMONT,
+      GENESIS_FORK_VERSION: GENESIS_FORK_VERSION_PRATER,
     },
     {
       id: "Params from network & file > returns file",

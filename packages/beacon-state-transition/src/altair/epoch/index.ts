@@ -1,4 +1,4 @@
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, IEpochProcess} from "../../types";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -15,7 +15,7 @@ import {processInactivityUpdates} from "./processInactivityUpdates";
 import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 
 // For spec tests
-export {getRewardsPenaltiesDeltas} from "./balance";
+export {getRewardsAndPenalties} from "./getRewardsAndPenalties";
 
 export {
   processInactivityUpdates,
@@ -25,7 +25,7 @@ export {
   processParticipationFlagUpdates,
 };
 
-export function processEpoch(state: CachedBeaconStateAltair, epochProcess: IEpochProcess): void {
+export function processEpoch(state: CachedBeaconStateAltair, epochProcess: EpochProcess): void {
   processJustificationAndFinalization(state as CachedBeaconStateAllForks, epochProcess);
   processInactivityUpdates(state, epochProcess);
   processRewardsAndPenalties(state, epochProcess);
@@ -37,5 +37,5 @@ export function processEpoch(state: CachedBeaconStateAltair, epochProcess: IEpoc
   processRandaoMixesReset(state as CachedBeaconStateAllForks, epochProcess);
   processHistoricalRootsUpdate(state as CachedBeaconStateAllForks, epochProcess);
   processParticipationFlagUpdates(state);
-  processSyncCommitteeUpdates(state, epochProcess);
+  processSyncCommitteeUpdates(state);
 }

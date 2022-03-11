@@ -8,15 +8,14 @@ import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
 import {TreeBacked} from "@chainsafe/ssz";
-import fs from "fs";
+import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet";
-import * as pyrmont from "./pyrmont";
 import * as prater from "./prater";
-import * as kintsugi from "./kintsugi";
+import * as kiln from "./kiln";
 
-export type NetworkName = "mainnet" | "pyrmont" | "prater" | "kintsugi" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "pyrmont", "prater", "kintsugi"];
+export type NetworkName = "mainnet" | "prater" | "kiln" | "dev";
+export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln"];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -35,12 +34,10 @@ function getNetworkData(
   switch (network) {
     case "mainnet":
       return mainnet;
-    case "pyrmont":
-      return pyrmont;
     case "prater":
       return prater;
-    case "kintsugi":
-      return kintsugi;
+    case "kiln":
+      return kiln;
     default:
       throw Error(`Network not supported: ${network}`);
   }

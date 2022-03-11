@@ -1,4 +1,4 @@
-import {join} from "path";
+import {join} from "node:path";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ProofType, SingleProof} from "@chainsafe/persistent-merkle-tree";
@@ -8,6 +8,8 @@ import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 export function merkle(fork: ForkName): void {
   describeDirectorySpecTest<IMerkleTestCase, IProof>(
@@ -19,16 +21,17 @@ export function merkle(fork: ForkName): void {
       const stateRoot = stateTB.hashTreeRoot();
       const leaf = fromHexString(specTestProof.leaf);
       const branch = specTestProof.branch.map((item) => fromHexString(item));
-      const depth = Math.floor(Math.log2(Number(specTestProof.leafIndex)));
-      const verified = verifyMerkleBranch(leaf, branch, depth, Number(specTestProof.leafIndex) % 2 ** depth, stateRoot);
+      const leafIndex = Number(specTestProof.leaf_index);
+      const depth = Math.floor(Math.log2(leafIndex));
+      const verified = verifyMerkleBranch(leaf, branch, depth, leafIndex % 2 ** depth, stateRoot);
       expect(verified, "cannot verify merkle branch").to.be.true;
       const lodestarProof = stateTB.tree.getProof({
-        gindex: specTestProof.leafIndex,
+        gindex: specTestProof.leaf_index,
         type: ProofType.single,
       }) as SingleProof;
       return {
         leaf: toHexString(lodestarProof.leaf),
-        leafIndex: lodestarProof.gindex,
+        leaf_index: lodestarProof.gindex,
         branch: lodestarProof.witnesses.map(toHexString),
       };
     },
@@ -57,7 +60,7 @@ export function merkle(fork: ForkName): void {
 
   interface IProof {
     leaf: string;
-    leafIndex: bigint;
+    leaf_index: bigint;
     branch: string[];
   }
 }

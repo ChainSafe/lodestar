@@ -1,5 +1,6 @@
+import fs from "node:fs";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {loadYamlFile} from "./util";
 
 /* eslint-disable
   @typescript-eslint/no-unsafe-call,
@@ -8,6 +9,7 @@ import {loadYamlFile} from "./util";
   @typescript-eslint/no-unsafe-assignment,
   @typescript-eslint/no-explicit-any,
   @typescript-eslint/no-unused-vars,
+  @typescript-eslint/naming-convention,
   func-names */
 
 export interface IBaseCase {
@@ -22,12 +24,12 @@ export interface IBaseCase {
 interface TestSpec<TestCase extends IBaseCase> {
   title: string;
   summary: string;
-  forksTimeline: string;
+  forks_timeline: string;
   forks: string;
   config: string;
   runner: string;
   handler: string;
-  testCases: TestCase[];
+  test_cases: TestCase[];
 }
 
 /**
@@ -59,13 +61,13 @@ export function describeMultiSpec<TestCase extends IBaseCase, Result>(
   expectFunc = (testCase: TestCase, expect: any, expected: any, actual: any) => expect(actual).to.be.equal(expected),
   timeout = 10 * 60 * 1000
 ): void {
-  const testSpec = (loadYamlFile(testYamlPath) as unknown) as TestSpec<TestCase>;
+  const testSpec = loadYaml<TestSpec<TestCase>>(fs.readFileSync(testYamlPath, "utf8"));
 
   const testSuiteName = `${testSpec.runner} - ${testSpec.handler} - ${testSpec.title} - ${testSpec.config}`;
 
   describe(testSuiteName, function () {
     this.timeout(timeout);
-    for (const [index, testCase] of testSpec.testCases.entries()) {
+    for (const [index, testCase] of testSpec.test_cases.entries()) {
       if (shouldSkip(testCase, index)) {
         continue;
       }

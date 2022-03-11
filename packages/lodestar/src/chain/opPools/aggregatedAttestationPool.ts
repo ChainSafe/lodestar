@@ -1,7 +1,12 @@
 import bls from "@chainsafe/bls";
-import {ForkName, MAX_ATTESTATIONS, MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  ForkName,
+  MAX_ATTESTATIONS,
+  MIN_ATTESTATION_INCLUSION_DELAY,
+  SLOTS_PER_EPOCH,
+  TIMELY_SOURCE_FLAG_INDEX,
+} from "@chainsafe/lodestar-params";
+import {Epoch, ParticipationFlags, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -10,7 +15,7 @@ import {
   phase0,
   zipIndexesCommitteeBits,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {List, readonlyValues, toHexString} from "@chainsafe/ssz";
+import {BitList, List, readonlyValues, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
@@ -34,6 +39,9 @@ const MAX_RETAINED_ATTESTATIONS_PER_GROUP = 4;
  * want to store more than 2 per group.
  */
 const MAX_ATTESTATIONS_PER_GROUP = 2;
+
+/** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
+const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;
 
 /**
  * Maintain a pool of aggregated attestations. Attestations can be retrieved for inclusion in a block
@@ -185,11 +193,10 @@ export class AggregatedAttestationPool {
   private getParticipationPhase0(state: CachedBeaconStateAllForks): GetParticipationFn {
     // check for phase0 block already
     const phase0State = state as CachedBeaconStatePhase0;
-    const {epochCtx} = phase0State;
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, epochCtx);
-    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, epochCtx);
+    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, state);
+    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, state);
 
     return (epoch: Epoch) => {
       return epoch === stateEpoch
@@ -220,7 +227,7 @@ export class AggregatedAttestationPool {
 
       const seenValidatorIndices = new Set<ValidatorIndex>();
       for (const validatorIndex of committee) {
-        if (participationStatus[validatorIndex]?.timelySource) {
+        if (flagIsTimelySource(participationStatus[validatorIndex])) {
           seenValidatorIndices.add(validatorIndex);
         }
       }
@@ -268,7 +275,7 @@ export class MatchingDataAttestationGroup {
           : intersection(attestingIndices, existingAttestingIndices);
       // no intersection
       if (numIntersection === 0) {
-        aggregateInto(existingAttestation, attestation, this.committee);
+        aggregateInto(existingAttestation, attestation);
         insertResult = InsertOutcome.Aggregated;
       } else if (numIntersection === attestingIndices.size) {
         // this new attestation is actually a subset of an existing one, don't want to add it
@@ -322,18 +329,13 @@ export class MatchingDataAttestationGroup {
   }
 }
 
-export function aggregateInto(
-  attestation1: AttestationWithIndex,
-  attestation2: AttestationWithIndex,
-  committee: ValidatorIndex[]
-): void {
+export function aggregateInto(attestation1: AttestationWithIndex, attestation2: AttestationWithIndex): void {
   for (const attIndex of attestation2.attestingIndices) {
     attestation1.attestingIndices.add(attIndex);
   }
 
-  attestation1.attestation.aggregationBits = Array.from({length: committee.length}, (_, i) =>
-    attestation1.attestingIndices.has(committee[i])
-  ) as List<boolean>;
+  // Merge bits of attestation2 into attestation1
+  bitArrayMergeOrWith(attestation1.attestation.aggregationBits, attestation2.attestation.aggregationBits);
 
   const signature1 = bls.Signature.fromBytes(
     attestation1.attestation.signature.valueOf() as Uint8Array,
@@ -350,8 +352,9 @@ export function aggregateInto(
 
 export function extractParticipation(
   attestations: List<phase0.PendingAttestation>,
-  epochCtx: allForks.EpochContext
+  state: CachedBeaconStateAllForks
 ): Set<ValidatorIndex> {
+  const {epochCtx} = state;
   const allParticipants = new Set<ValidatorIndex>();
   for (const att of readonlyValues(attestations)) {
     const aggregationBits = att.aggregationBits;
@@ -393,4 +396,19 @@ export function isValidAttestationData(
     justifiedCheckpoint = previousJustifiedCheckpoint;
   }
   return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
+}
+
+/**
+ * Returns true if the `TIMELY_SOURCE` bit in a `ParticipationFlags` is set
+ */
+export function flagIsTimelySource(flag: ParticipationFlags): boolean {
+  return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
+}
+
+function bitArrayMergeOrWith(bits1: BitList, bits2: BitList): void {
+  for (let i = 0; i < bits2.length; i++) {
+    if (bits2[i]) {
+      bits1[i] = true;
+    }
+  }
 }
