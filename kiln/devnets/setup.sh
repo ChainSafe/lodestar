@@ -74,8 +74,8 @@ fi;
 platform=$(uname)
 bootNode=$(cat $dataDir/$configGitDir/el_bootnode.txt)
 bootNode=($bootNode)
-bootNode=$(IFS=, ; echo "${bootNode[*]}")
 bootNodeWithSpace=$(IFS=" " ; echo "${bootNode[*]}")
+bootNode=$(IFS=, ; echo "${bootNode[*]}")
 
 if [ "$elClient" == "geth" ]
 then
