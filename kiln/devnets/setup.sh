@@ -37,15 +37,15 @@ run_cmd(){
   execCmd=$1;
   if [ -n "$detached" ]
   then
-    echo "running: $execCmd"
-    $execCmd
+    echo "running detached: $execCmd"
+    eval "$execCmd"
   else
     if [ -n "$withTerminal" ]
     then
       execCmd="$withTerminal $execCmd"
     fi;
     echo "running: $execCmd &"
-    $execCmd &
+    eval "$execCmd" &
   fi;
 }
 
@@ -61,7 +61,9 @@ dockerCmd="$dockerExec run"
 
 if [ -n "$detached" ]
 then 
-  dockerCmd="$dockerCmd --detach"
+  dockerCmd="$dockerCmd --detach --restart unless-stopped"
+else
+  dockerCmd="$dockerCmd --rm"
 fi;
 
 if [ -n "$withTerminal" ]
@@ -86,9 +88,9 @@ then
   fi;
   if [ $platform == 'Darwin' ]
   then
-    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
+    elCmd="$dockerCmd --name $elName -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
   else
-    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
+    elCmd="$dockerCmd --name $elName --network host -v $currentDir/$dataDir:/data $GETH_IMAGE --bootnodes $EXTRA_BOOTNODES$bootNode --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS"
   fi
 elif [ "$elClient" == "nethermind" ] 
 then
@@ -99,9 +101,9 @@ then
 
   if [ $platform == 'Darwin' ]
   then
-    elCmd="$dockerCmd --rm --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+    elCmd="$dockerCmd --name $elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
   else
-    elCmd="$dockerCmd --rm --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+    elCmd="$dockerCmd --name $elName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
   fi
 fi
 
@@ -117,15 +119,24 @@ clName="$DEVNET_NAME-lodestar"
 
 if [ $platform == 'Darwin' ]
 then
-  clCmd="$dockerCmd --rm --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clCmd="$dockerCmd --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
 else
-  clCmd="$dockerCmd --rm --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clCmd="$dockerCmd --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
 fi
+
+valName="$DEVNET_NAME-validator"
+if [ $platform == 'Darwin' ]
+then
+  valCmd="$dockerCmd --name $valName --net=container:$elName -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar $LODESTAR_VALIDATOR_ARGS"
+else
+  valCmd="$dockerCmd --name $valName --network host -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar $LODESTAR_VALIDATOR_ARGS"
+fi;
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
 run_cmd "$elCmd"
 elPid=$!
 echo "elPid= $elPid"
+terminalInfo="elPid= $elPid for $elName"
 
 if [ $platform == 'Darwin' ]
 then
@@ -136,43 +147,59 @@ fi
 run_cmd "$clCmd"
 clPid=$!
 echo "clPid= $clPid"
+terminalInfo="$terminalInfo, clPid= $clPid for $clName"
+
+if [ -n "$withValidator" ]
+then 
+  run_cmd "$valCmd"
+  valPid=$!
+  echo "valPid= $valPid"
+  terminalInfo="$terminalInfo, valPid= $valPid for $elName"
+else 
+   # hack to assign clPid to valPid for joint wait later
+   valPid=$clPid
+fi;
 
 cleanup() {
   echo "cleaning up"
   $dockerExec rm $elName -f
   $dockerExec rm $clName -f
+  $dockerExec rm $valName -f
   elPid=null
   clPid=null
+  valPid=null
 }
 
 trap "echo exit signal recived;cleanup" SIGINT SIGTERM
 
-if [ ! -n "$detached" ] && [ -n "$elPid" ] && [ -n "$clPid" ] 
+if [ ! -n "$detached" ] && [ -n "$elPid" ] && [ -n "$clPid" ] && ([ ! -n "$withValidator" ] || [ -n "$valPid" ] )
 then 
-	echo "launched two terminals for el and cl clients with elPid: $elPid clPid: $clPid"
+	echo "launched terminals for $terminalInfo"
 	echo "you can watch observe the client logs at the respective terminals"
-	echo "use ctl + c on any of these three (including this) terminals to stop the process"
+	echo "use ctl + c on any of these (including this) terminals to stop the process"
 	echo "waiting ..."
 	if [ $platform == 'Darwin' ]
 	then # macOs ships with an old version of bash with wait that does not have the -n flag
 	  wait $elPid
 	  wait $clPid
+    wait $valPid
 	else
-	  wait -n $elPid $clPid
+	  wait -n  $elPid $clPid $valPid 
 	fi
   echo "one of the el or cl process exited, stopping and cleanup"
 	cleanup
 fi;
 
-if [ ! -n "$detached" ] && [ -n "$elPid$clPid" ]
+# if its not detached and is here, it means one of the processes exited/didn't launch
+if [ ! -n "$detached" ] && [ -n "$elPid$clPid$valPid" ]
 then
-	echo "one of the el or cl processes didn't launch properly"
+	echo "one of the processes didn't launch properly"
 	cleanup
 fi;
 
 if [ -n "$detached" ]
-then 
-  echo "launched detached docker containers: $elName, $clName"
+then  
+  echo "launched detached containers: $terminalInfo"
 else 
   echo "exiting ..."
 fi;
