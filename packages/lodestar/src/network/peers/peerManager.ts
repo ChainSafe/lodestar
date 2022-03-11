@@ -477,7 +477,7 @@ export class PeerManager {
    * Registers a peer as connected. The `direction` parameter determines if the peer is being
    * dialed or connecting to us.
    */
-  private onLibp2pPeerConnect = (libp2pConnection: Connection): void => {
+  private onLibp2pPeerConnect = async (libp2pConnection: Connection): Promise<void> => {
     const {direction, status} = libp2pConnection.stat;
     const peer = libp2pConnection.remotePeer;
 
@@ -509,7 +509,7 @@ export class PeerManager {
 
       // AgentVersion was set in libp2p handler of 'peer:connect' event
       // we register our handler after libp2p so this data should be available
-      const agentVersionBytes = this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+      const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
       if (agentVersionBytes) {
         const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
         peerData.agentVersion = agentVersion;

@@ -114,7 +114,7 @@ describe("network / peers / PeerManager", function () {
     const {reqResp, networkEventBus, peerManager} = await mockModules();
 
     // Simulate connection so that PeerManager persists the metadata response
-    peerManager["onLibp2pPeerConnect"]({
+    await peerManager["onLibp2pPeerConnect"]({
       stat: {direction: "inbound", status: "open"},
       remotePeer: peerId1,
     } as Connection);
