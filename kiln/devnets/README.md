@@ -12,7 +12,7 @@ This is a setup to run and join the devnet with a single shell command. This scr
 
 ```bash
 cd kiln/devnets
-./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --"]
+./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
 ```
 
 ###### Example scenarios
@@ -35,5 +35,6 @@ You can alternate between `geth` and `nethermind` to experiment with the ELs bei
 5. `--withTerminal`(optional): Provide the terminal command prefix for CL and EL processes to run in your favourite terminal.
    You may use an alias or a terminal launching script as long as it waits for the command it runs till ends and then closes.If not provided, it will launch the docker processes in _in-terminal_ mode.
 6. `--detached`(optional): By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.
+7. `--withValidator` (optional): Launch a validator client using `LODESTAR_VALIDATOR_ARGS` as set in the devnet vars file.
 
 Only one of `--withTerminal` or `--detached` should be provided.

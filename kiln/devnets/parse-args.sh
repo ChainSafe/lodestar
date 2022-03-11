@@ -27,6 +27,10 @@ while [[ $# -gt 0 ]]; do
       dockerWithSudo=true
       shift # past argument
       ;;
+    --withValidator)
+      withValidator=true
+      shift # past argument
+      ;;
     --detached)
       detached=true
       shift # past argument
@@ -42,6 +46,7 @@ echo "dataDir = $dataDir"
 echo "devnetVars = $devnetVars"
 echo "withTerminal = $withTerminal"
 echo "dockerWithSudo = $dockerWithSudo"
+echo "withValidator = $withValidator"
 echo "detached = $detached"
 
 if [ -n "$withTerminal" ] && [ -n "$detached" ]
