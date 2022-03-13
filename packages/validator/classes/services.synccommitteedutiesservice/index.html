@@ -5,7 +5,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<meta content="Lodestar documentation - Typescript Eth2.0 client" name="description"/>
+<meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/validator/classes/services.synccommitteedutiesservice/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.2.3, mkdocs-material-8.2.5" name="generator"/>
@@ -404,7 +404,7 @@ However, the isAggregator role changes per slot.</p>
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new SyncCommitteeDutiesService</strong>(<code>config</code>: IChainForkConfig, <code>logger</code>: <a href="../../modules/util/#iloggervc">ILoggerVc</a>, <code>api</code>: Api, <code>clock</code>: <a href="../../interfaces/util.iclock/">IClock</a>, <code>validatorStore</code>: <a href="../services.validatorstore/">ValidatorStore</a>, <code>indicesService</code>: <a href="../services.indicesservice/">IndicesService</a>): <em><a href="./">SyncCommitteeDutiesService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L53">packages/validator/src/services/syncCommitteeDuties.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L53">packages/validator/src/services/syncCommitteeDuties.ts:53</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -444,37 +444,37 @@ However, the isAggregator role changes per slot.</p>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-api"><code>Private</code> <code>Readonly</code> api<a class="headerlink" href="#private-readonly-api" title="Permanent link">¶</a></h3>
 <p>• <strong>api</strong>: <em>Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L58">packages/validator/src/services/syncCommitteeDuties.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L58">packages/validator/src/services/syncCommitteeDuties.ts:58</a></em></p>
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L56">packages/validator/src/services/syncCommitteeDuties.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L56">packages/validator/src/services/syncCommitteeDuties.ts:56</a></em></p>
 <hr/>
 <h3 id="private-readonly-dutiesbyindexbyperiod"><code>Private</code> <code>Readonly</code> dutiesByIndexByPeriod<a class="headerlink" href="#private-readonly-dutiesbyindexbyperiod" title="Permanent link">¶</a></h3>
 <p>• <strong>dutiesByIndexByPeriod</strong>: <em>Map‹number, Map‹number, <a href="../../modules/services/#dutyatperiod">DutyAtPeriod</a>››</em> = new Map<syncperiod, dutyatperiod="" map\<validatorindex,="">&gt;()</syncperiod,></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L53">packages/validator/src/services/syncCommitteeDuties.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L53">packages/validator/src/services/syncCommitteeDuties.ts:53</a></em></p>
 <p>Maps a validator public key to their duties for each slot</p>
 <hr/>
 <h3 id="private-readonly-indicesservice"><code>Private</code> <code>Readonly</code> indicesService<a class="headerlink" href="#private-readonly-indicesservice" title="Permanent link">¶</a></h3>
 <p>• <strong>indicesService</strong>: <em><a href="../services.indicesservice/">IndicesService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L61">packages/validator/src/services/syncCommitteeDuties.ts:61</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L61">packages/validator/src/services/syncCommitteeDuties.ts:61</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em><a href="../../modules/util/#iloggervc">ILoggerVc</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L57">packages/validator/src/services/syncCommitteeDuties.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L57">packages/validator/src/services/syncCommitteeDuties.ts:57</a></em></p>
 <hr/>
 <h3 id="private-readonly-validatorstore"><code>Private</code> <code>Readonly</code> validatorStore<a class="headerlink" href="#private-readonly-validatorstore" title="Permanent link">¶</a></h3>
 <p>• <strong>validatorStore</strong>: <em><a href="../services.validatorstore/">ValidatorStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L60">packages/validator/src/services/syncCommitteeDuties.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L60">packages/validator/src/services/syncCommitteeDuties.ts:60</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getdutiesatslot">getDutiesAtSlot<a class="headerlink" href="#getdutiesatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDutiesAtSlot</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>Promise‹<a href="../../modules/services/#syncdutyandproofs">SyncDutyAndProofs</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L76">packages/validator/src/services/syncCommitteeDuties.ts:76</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L76">packages/validator/src/services/syncCommitteeDuties.ts:76</a></em></p>
 <p>Returns all <code>ValidatorDuty</code> for the given <code>slot</code></p>
 <p>Note: The range of slots a validator has to perform duties is off by one.
 The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
 100 to 200,then you would actually produce signatures in slot 99 - 199.
-https://github.com/ethereum/eth2.0-specs/pull/2400</p>
+https://github.com/ethereum/consensus-specs/pull/2400</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -494,7 +494,7 @@ https://github.com/ethereum/eth2.0-specs/pull/2400</p>
 <hr/>
 <h3 id="private-getselectionproofs"><code>Private</code> getSelectionProofs<a class="headerlink" href="#private-getselectionproofs" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSelectionProofs</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>, <code>duty</code>: routes.validator.SyncDuty): <em>Promise‹<a href="../../modules/services/#syncselectionproof">SyncSelectionProof</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L231">packages/validator/src/services/syncCommitteeDuties.ts:231</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L231">packages/validator/src/services/syncCommitteeDuties.ts:231</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -518,7 +518,7 @@ https://github.com/ethereum/eth2.0-specs/pull/2400</p>
 <hr/>
 <h3 id="private-pollsynccommittees"><code>Private</code> pollSyncCommittees<a class="headerlink" href="#private-pollsynccommittees" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pollSyncCommittees</strong>(<code>currentEpoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>, <code>indexArr</code>: ValidatorIndex[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L129">packages/validator/src/services/syncCommitteeDuties.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L129">packages/validator/src/services/syncCommitteeDuties.ts:129</a></em></p>
 <p>Query the beacon node for SyncDuties for any known validators.</p>
 <p>This function will perform (in the following order):</p>
 <ol>
@@ -550,7 +550,7 @@ https://github.com/ethereum/eth2.0-specs/pull/2400</p>
 <hr/>
 <h3 id="private-pollsynccommitteesforepoch"><code>Private</code> pollSyncCommitteesForEpoch<a class="headerlink" href="#private-pollsynccommitteesforepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pollSyncCommitteesForEpoch</strong>(<code>epoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>, <code>indexArr</code>: ValidatorIndex[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L185">packages/validator/src/services/syncCommitteeDuties.ts:185</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L185">packages/validator/src/services/syncCommitteeDuties.ts:185</a></em></p>
 <p>For the given <code>indexArr</code>, download the duties for the given <code>period</code> and store them in duties.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -575,7 +575,7 @@ https://github.com/ethereum/eth2.0-specs/pull/2400</p>
 <hr/>
 <h3 id="private-pruneoldduties"><code>Private</code> pruneOldDuties<a class="headerlink" href="#private-pruneoldduties" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneOldDuties</strong>(<code>currentEpoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L249">packages/validator/src/services/syncCommitteeDuties.ts:249</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L249">packages/validator/src/services/syncCommitteeDuties.ts:249</a></em></p>
 <p>Run at least once per period to prune duties map</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -596,7 +596,7 @@ https://github.com/ethereum/eth2.0-specs/pull/2400</p>
 <hr/>
 <h3 id="private-rundutiestasks"><code>Private</code> runDutiesTasks<a class="headerlink" href="#private-rundutiestasks" title="Permanent link">¶</a></h3>
 <p>▸ <strong>runDutiesTasks</strong>(<code>currentEpoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/f532758/packages/validator/src/services/syncCommitteeDuties.ts#L94">packages/validator/src/services/syncCommitteeDuties.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6bd0310/packages/validator/src/services/syncCommitteeDuties.ts#L94">packages/validator/src/services/syncCommitteeDuties.ts:94</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
