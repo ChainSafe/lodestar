@@ -38,9 +38,9 @@ import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter";
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 
 /**
- * Implementation of eth2 p2p Req/Resp domain.
+ * Implementation of Ethereum Consensus p2p Req/Resp domain.
  * For the spec that this code is based on, see:
- * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#the-reqresp-domain
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-reqresp-domain
  */
 export class ReqResp implements IReqResp {
   private config: IBeaconConfig;

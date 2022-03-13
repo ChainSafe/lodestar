@@ -5,8 +5,8 @@ import {readonlyValues, TreeBacked} from "@chainsafe/ssz";
 import {CachedBeaconStateAllForks} from "../../types";
 
 /**
- * Store vote counts for every eth1 block that has votes; if any eth1 block wins majority support within a 1024-slot
- * voting period, formally accept that eth1 block and set it as the official "latest known eth1 block" in the eth2 state.
+ * Store vote counts for every eth-execution block that has votes; if any eth-execution block wins majority support within a 1024-slot
+ * voting period, formally accept that eth-execution block and set it as the official "latest known eth-execution block" in the eth-consensus state.
  *
  * PERF: Processing cost depends on the current amount of votes.
  * - Best case: Vote is already decided, zero work. See becomesNewEth1Data conditions

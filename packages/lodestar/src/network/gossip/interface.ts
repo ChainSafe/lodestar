@@ -115,7 +115,7 @@ export type Eth2InMessage = InMessage & {
 /**
  * Contains various methods for validation of incoming gossip topic data.
  * The conditions for valid gossip topics and how they are handled are specified here:
- * https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/p2p-interface.md#global-topics
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#global-topics
  */
 
 /**

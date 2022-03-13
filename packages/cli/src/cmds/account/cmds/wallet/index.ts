@@ -7,7 +7,7 @@ import {recover} from "./recover";
 
 export const wallet: ICliCommand<IAccountWalletArgs, IGlobalArgs> = {
   command: "wallet <command>",
-  describe: "Provides commands for managing Eth2 wallets.",
+  describe: "Provides commands for managing Ethereum Consensus wallets.",
   options: accountWalletsOptions,
   subcommands: [create, list, recover],
 };

@@ -77,7 +77,7 @@ export function computeMsgIdPhase0(topic: GossipTopic, msg: Eth2InMessage): Uint
  *   snappy_decompress(message.data)
  * )[:20]
  * ```
- * https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.7/specs/altair/p2p-interface.md#topics-and-messages
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/p2p-interface.md#topics-and-messages
  */
 export function computeMsgIdAltair(topic: GossipTopic, topicStr: string, msg: Eth2InMessage): Uint8Array {
   switch (topic.encoding ?? DEFAULT_ENCODING) {

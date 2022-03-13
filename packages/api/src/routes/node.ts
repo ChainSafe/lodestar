@@ -22,7 +22,7 @@ export type NetworkIdentity = {
   enr: string;
   p2pAddresses: string[];
   discoveryAddresses: string[];
-  /** Based on eth2 [Metadata object](https://github.com/ethereum/eth2.0-specs/blob/v1.0.1/specs/phase0/p2p-interface.md#metadata) */
+  /** Based on Ethereum Consensus [Metadata object](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#metadata) */
   metadata: allForks.Metadata;
 };
 
