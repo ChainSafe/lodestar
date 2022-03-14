@@ -10,7 +10,7 @@ import {
   readonlyValues,
   TreeBacked,
 } from "@chainsafe/ssz";
-import {allForks, altair, Number64, ParticipationFlags} from "@chainsafe/lodestar-types";
+import {allForks, altair, Number64, ParticipationFlags, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {MutableVector} from "@chainsafe/persistent-ts";
@@ -20,6 +20,7 @@ import {CachedEpochParticipation, CachedEpochParticipationProxyHandler} from "./
 import {ForkName} from "@chainsafe/lodestar-params";
 import {CachedInactivityScoreList, CachedInactivityScoreListProxyHandler} from "./cachedInactivityScoreList";
 import {newFilledArray} from "../util/array";
+import {computeProposers} from "../util";
 
 /**
  * `BeaconState` with various caches
@@ -271,6 +272,22 @@ export class BeaconStateContext<T extends allForks.BeaconState> {
       ),
       (CachedBeaconStateProxyHandler as unknown) as ProxyHandler<BeaconStateContext<T>>
     ) as CachedBeaconState<T>;
+  }
+
+  getState(): allForks.BeaconState {
+    return this.type.createTreeBacked(this.tree);
+  }
+
+  getNextEpochBeaconProposer(): ValidatorIndex[] {
+    const nextShuffling = this.epochCtx.nextShuffling;
+    let nextProposers = this.epochCtx.nextEpochProposers.get(nextShuffling.epoch);
+    if (!nextProposers) {
+      nextProposers = computeProposers(this.getState(), nextShuffling, this.epochCtx.effectiveBalanceIncrements);
+      // Only keep proposers for one epoch in the future, so clear before setting new value
+      this.epochCtx.nextEpochProposers.clear();
+      this.epochCtx.nextEpochProposers.set(nextShuffling.epoch, nextProposers);
+    }
+    return nextProposers;
   }
 
   /**

@@ -105,7 +105,7 @@ export class EpochContext {
   proposers: ValidatorIndex[];
 
   /**
-   * Indexes of the block proposers for the next current epoch.
+   * Map of Indexes of the block proposers keyed by the next epoch.
    *
    * We allow requesting proposal duties only one epoch in the future
    * Note: There is a small probability that returned validators differs
@@ -113,7 +113,7 @@ export class EpochContext {
    *
    * 32 x Number
    */
-  nextEpochProposers: ValidatorIndex[];
+  nextEpochProposers: Map<Epoch, ValidatorIndex[]> = new Map<Epoch, ValidatorIndex[]>();
   /**
    * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
    * Note: Per spec definition, shuffling will always be defined. They are never called before loadState()
@@ -181,7 +181,6 @@ export class EpochContext {
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
-    nextEpochProposers: number[];
     previousShuffling: IEpochShuffling;
     currentShuffling: IEpochShuffling;
     nextShuffling: IEpochShuffling;
@@ -202,7 +201,6 @@ export class EpochContext {
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.proposers = data.proposers;
-    this.nextEpochProposers = data.nextEpochProposers;
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
@@ -345,7 +343,6 @@ export class EpochContext {
       pubkey2index,
       index2pubkey,
       proposers,
-      nextEpochProposers,
       previousShuffling,
       currentShuffling,
       nextShuffling,
@@ -378,7 +375,6 @@ export class EpochContext {
       index2pubkey: this.index2pubkey,
       // Immutable data
       proposers: this.proposers,
-      nextEpochProposers: this.nextEpochProposers,
       previousShuffling: this.previousShuffling,
       currentShuffling: this.currentShuffling,
       nextShuffling: this.nextShuffling,
@@ -417,7 +413,6 @@ export class EpochContext {
     const nextEpoch = currEpoch + 1;
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
     this.proposers = computeProposers(state, this.currentShuffling, this.effectiveBalanceIncrements);
-    this.nextEpochProposers = computeProposers(state, this.nextShuffling, this.effectiveBalanceIncrements);
 
     // TODO: DEDUPLICATE from createEpochContext
     //
@@ -492,11 +487,14 @@ export class EpochContext {
         `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
     }
-    return this.proposers[slot % SLOTS_PER_EPOCH];
-  }
 
-  async getNextEpochBeaconProposer(): Promise<ValidatorIndex[]> {
-    return this.nextEpochProposers;
+    for (const cachedEpoch of this.nextEpochProposers.keys()) {
+      // Do not keep past cached future proposal duties.
+      if (cachedEpoch <= epoch) {
+        this.nextEpochProposers.delete(cachedEpoch);
+      }
+    }
+    return this.proposers[slot % SLOTS_PER_EPOCH];
   }
 
   /**
