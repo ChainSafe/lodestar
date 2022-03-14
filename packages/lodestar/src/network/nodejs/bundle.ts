@@ -33,7 +33,8 @@ export class NodejsNode extends LibP2p {
         announce: options.addresses.announce || [],
       },
       modules: {
-        connEncryption: [NOISE],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
+        connEncryption: [NOISE] as any,
         transport: [TCP],
         streamMuxer: [Mplex],
         peerDiscovery: options.peerDiscovery || [Bootstrap, MDNS],
