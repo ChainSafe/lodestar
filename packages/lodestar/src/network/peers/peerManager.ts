@@ -11,7 +11,6 @@ import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
 import {ISubnetsService} from "../subnets";
-import {Libp2pPeerMetadataStore} from "./metastore";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
 import {
@@ -69,7 +68,6 @@ export type PeerManagerModules = {
   syncnetsService: ISubnetsService;
   chain: IBeaconChain;
   config: IBeaconConfig;
-  peerMetadata: Libp2pPeerMetadataStore;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
 };
@@ -89,6 +87,7 @@ type PeerData = {
   relevantStatus: RelevantPeerStatus;
   direction: Connection["stat"]["direction"];
   peerId: PeerId;
+  metadata: altair.Metadata | null;
 };
 
 /**
@@ -108,7 +107,6 @@ export class PeerManager {
   private syncnetsService: ISubnetsService;
   private chain: IBeaconChain;
   private config: IBeaconConfig;
-  private peerMetadata: Libp2pPeerMetadataStore;
   private peerRpcScores: IPeerRpcScoreStore;
   /** If null, discovery is disabled */
   private discovery: PeerDiscovery | null;
@@ -129,7 +127,6 @@ export class PeerManager {
     this.syncnetsService = modules.syncnetsService;
     this.chain = modules.chain;
     this.config = modules.config;
-    this.peerMetadata = modules.peerMetadata;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.networkEventBus;
     this.opts = opts;
@@ -246,7 +243,7 @@ export class PeerManager {
    */
   private onPing(peer: PeerId, seqNumber: phase0.Ping): void {
     // if the sequence number is unknown update the peer's metadata
-    const metadata = this.peerMetadata.metadata.get(peer);
+    const metadata = this.connectedPeers.get(peer.toB58String())?.metadata;
     if (!metadata || metadata.seqNumber < seqNumber) {
       void this.requestMetadata(peer);
     }
@@ -258,10 +255,14 @@ export class PeerManager {
   private onMetadata(peer: PeerId, metadata: allForks.Metadata): void {
     // Store metadata always in case the peer updates attnets but not the sequence number
     // Trust that the peer always sends the latest metadata (From Lighthouse)
-    this.peerMetadata.metadata.set(peer, {
-      ...metadata,
-      syncnets: (metadata as Partial<altair.Metadata>).syncnets || [],
-    });
+    const peerData = this.connectedPeers.get(peer.toB58String());
+    if (peerData) {
+      peerData.metadata = {
+        seqNumber: metadata.seqNumber,
+        attnets: metadata.attnets,
+        syncnets: (metadata as Partial<altair.Metadata>).syncnets || [],
+      };
+    }
   }
 
   /**
@@ -328,6 +329,10 @@ export class PeerManager {
   private async requestPing(peer: PeerId): Promise<void> {
     try {
       this.onPing(peer, await this.reqResp.ping(peer));
+
+      // If peer replies a PING request also update lastReceivedMsg
+      const peerData = this.connectedPeers.get(peer.toB58String());
+      if (peerData) peerData.lastReceivedMsgUnixTsMs = Date.now();
     } catch (e) {
       // TODO: Downvote peer here or in the reqResp layer
     }
@@ -358,11 +363,12 @@ export class PeerManager {
   private heartbeat(): void {
     const connectedPeers = this.getConnectedPeerIds();
 
+    // Decay scores before reading them. Also prunes scores
+    this.peerRpcScores.update();
+
     // ban and disconnect peers with bad score, collect rest of healthy peers
     const connectedHealthyPeers: PeerId[] = [];
     for (const peer of connectedPeers) {
-      // to decay score
-      this.peerRpcScores.update(peer);
       switch (this.peerRpcScores.getScoreState(peer)) {
         case ScoreState.Banned:
           void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.BANNED);
@@ -376,12 +382,15 @@ export class PeerManager {
     }
 
     const {peersToDisconnect, peersToConnect, attnetQueries, syncnetQueries} = prioritizePeers(
-      connectedHealthyPeers.map((peer) => ({
-        id: peer,
-        attnets: this.peerMetadata.metadata.get(peer)?.attnets ?? [],
-        syncnets: this.peerMetadata.metadata.get(peer)?.syncnets ?? [],
-        score: this.peerRpcScores.getScore(peer),
-      })),
+      connectedHealthyPeers.map((peer) => {
+        const peerData = this.connectedPeers.get(peer.toB58String());
+        return {
+          id: peer,
+          attnets: peerData?.metadata?.attnets ?? [],
+          syncnets: peerData?.metadata?.syncnets ?? [],
+          score: this.peerRpcScores.getScore(peer),
+        };
+      }),
       // Collect subnets which we need peers for in the current slot
       this.attnetsService.getActiveSubnets(),
       this.syncnetsService.getActiveSubnets(),
@@ -424,6 +433,18 @@ export class PeerManager {
 
     for (const peer of peersToDisconnect) {
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+    }
+
+    // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
+    // disconnect is not always called for all peers
+    if (this.connectedPeers.size > connectedPeers.length * 2) {
+      const actualConnectedPeerIds = new Set(connectedPeers.map((peerId) => peerId.toB58String()));
+      for (const [peerIdStr, peerData] of this.connectedPeers) {
+        if (!actualConnectedPeerIds.has(peerIdStr)) {
+          this.connectedPeers.delete(peerIdStr);
+          this.reqResp.pruneOnPeerDisconnect(peerData.peerId);
+        }
+      }
     }
   }
 
@@ -481,6 +502,7 @@ export class PeerManager {
         relevantStatus: RelevantPeerStatus.Unknown,
         direction,
         peerId: peer,
+        metadata: null,
       });
 
       if (direction === "outbound") {
@@ -505,7 +527,7 @@ export class PeerManager {
 
     this.logger.verbose("peer disconnected", {peer: prettyPrintPeerId(peer), direction, status});
     this.networkEventBus.emit(NetworkEvent.peerDisconnected, peer);
-    this.reqResp.pruneRateLimiterData(peer);
+    this.reqResp.pruneOnPeerDisconnect(peer);
     this.metrics?.peerDisconnectedEvent.inc({direction});
   };
 
@@ -529,7 +551,7 @@ export class PeerManager {
   }
 
   /** Register peer count metrics */
-  private runPeerCountMetrics(metrics: IMetrics): void {
+  private async runPeerCountMetrics(metrics: IMetrics): Promise<void> {
     let total = 0;
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
@@ -538,7 +560,7 @@ export class PeerManager {
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
-        const client = getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
+        const client = await getClientFromPeerStore(openCnx.remotePeer, this.libp2p.peerStore.metadataBook);
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
         total++;
       }

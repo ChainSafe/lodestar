@@ -20,7 +20,6 @@ import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
 import {Eth2Gossipsub, GossipType, GossipHandlers, getGossipHandlers} from "./gossip";
 import {MetadataController} from "./metadata";
 import {getActiveForks, FORK_EPOCH_LOOKAHEAD} from "./forks";
-import {IPeerMetadataStore, Libp2pPeerMetadataStore} from "./peers/metastore";
 import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
@@ -45,7 +44,6 @@ export class Network implements INetwork {
   syncnetsService: SyncnetsService;
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
-  peerMetadata: IPeerMetadataStore;
   private readonly peerRpcScores: IPeerRpcScoreStore;
 
   private readonly peerManager: PeerManager;
@@ -66,24 +64,12 @@ export class Network implements INetwork {
     this.chain = chain;
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
-    const peerMetadata = new Libp2pPeerMetadataStore(libp2p.peerStore.metadataBook);
-    const peerRpcScores = new PeerRpcScoreStore(peerMetadata);
+    const peerRpcScores = new PeerRpcScoreStore();
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
-    this.peerMetadata = peerMetadata;
     this.reqResp = new ReqResp(
-      {
-        config,
-        libp2p,
-        reqRespHandlers,
-        peerMetadata,
-        metadata,
-        peerRpcScores,
-        logger,
-        networkEventBus,
-        metrics,
-      },
+      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics},
       opts
     );
 
@@ -91,7 +77,6 @@ export class Network implements INetwork {
       config,
       libp2p,
       logger,
-      peerRpcScores,
       metrics,
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
@@ -115,7 +100,6 @@ export class Network implements INetwork {
         metrics,
         chain,
         config,
-        peerMetadata,
         peerRpcScores,
         networkEventBus,
       },
@@ -139,7 +123,7 @@ export class Network implements INetwork {
     this.reqResp.start();
     this.metadata.start(this.getEnr(), this.config.getForkName(this.clock.currentSlot));
     await this.peerManager.start();
-    this.gossip.start();
+    await this.gossip.start();
     this.attnetsService.start();
     this.syncnetsService.start();
     const multiaddresses = this.libp2p.multiaddrs.map((m) => m.toString()).join(",");
@@ -150,11 +134,10 @@ export class Network implements INetwork {
     // Must goodbye and disconnect before stopping libp2p
     await this.peerManager.goodbyeAndDisconnectAllPeers();
     await this.peerManager.stop();
-    this.gossip.stop();
+    await this.gossip.stop();
     this.reqResp.stop();
     this.attnetsService.stop();
     this.syncnetsService.stop();
-    this.gossip.stop();
     await this.libp2p.stop();
   }
 
@@ -245,7 +228,7 @@ export class Network implements INetwork {
   // Debug
 
   async connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void> {
-    this.libp2p.peerStore.addressBook.add(peer, multiaddr);
+    await this.libp2p.peerStore.addressBook.add(peer, multiaddr);
     await this.libp2p.dial(peer);
   }
 

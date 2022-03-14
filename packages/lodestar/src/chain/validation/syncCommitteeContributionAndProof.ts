@@ -9,7 +9,6 @@ import {
   getSyncCommitteeContributionSignatureSet,
   getContributionPubkeys,
 } from "./signatureSets";
-import {PeerAction} from "../../network/peers";
 
 /**
  * Spec v1.1.0-beta.2
@@ -39,7 +38,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [IGNORE] The sync committee contribution is the first valid contribution received for the aggregator with index
   // contribution_and_proof.aggregator_index for the slot contribution.slot and subcommittee index contribution.subcommittee_index.
   if (chain.seenContributionAndProof.isKnown(slot, subcommitteeIndex, aggregatorIndex)) {
-    throw new SyncCommitteeError(GossipAction.IGNORE, null, {
+    throw new SyncCommitteeError(GossipAction.IGNORE, {
       code: SyncCommitteeErrorCode.SYNC_COMMITTEE_ALREADY_KNOWN,
     });
   }
@@ -47,7 +46,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits)
   const pubkeys = getContributionPubkeys(headState as CachedBeaconStateAltair, contribution);
   if (!pubkeys.length) {
-    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.NO_PARTICIPANT,
     });
   }
@@ -55,7 +54,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // [REJECT] contribution_and_proof.selection_proof selects the validator as an aggregator for the slot --
   // i.e. is_sync_committee_aggregator(contribution_and_proof.selection_proof) returns True.
   if (!isSyncCommitteeAggregator(contributionAndProof.selectionProof)) {
-    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_AGGREGATOR,
       aggregatorIndex: contributionAndProof.aggregatorIndex,
     });
@@ -79,7 +78,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   ];
 
   if (!(await chain.bls.verifySignatureSets(signatureSets, {batchable: true}))) {
-    throw new SyncCommitteeError(GossipAction.REJECT, PeerAction.LowToleranceError, {
+    throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.INVALID_SIGNATURE,
     });
   }

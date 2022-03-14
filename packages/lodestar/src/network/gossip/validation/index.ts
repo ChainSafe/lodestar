@@ -14,19 +14,14 @@ import {
 } from "../interface";
 import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
-import {decodeMessageData, UncompressCache} from "../encoding";
 import {createValidationQueues} from "./queue";
-import {DEFAULT_ENCODING} from "../constants";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
-import {IPeerRpcScoreStore, PeerAction} from "../../peers/score";
-import PeerId from "peer-id";
+import {getUncompressedData} from "../encoding";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
   logger: ILogger;
-  peerRpcScores: IPeerRpcScoreStore;
   metrics: IMetrics | null;
-  uncompressCache: UncompressCache;
 };
 
 /**
@@ -58,7 +53,7 @@ export function createValidatorFnsByType(
 
 /**
  * Returns a GossipSub validator function from a GossipHandlerFn. GossipHandlerFn may throw GossipActionError if one
- * or more validation conditions from the eth2.0-specs#p2p-interface are not satisfied.
+ * or more validation conditions from the consensus-specs#p2p-interface are not satisfied.
  *
  * This function receives a string topic and a binary message `InMessage` and deserializes both using caches.
  * - The topic string should be known in advance and pre-computed
@@ -75,20 +70,17 @@ function getGossipValidatorFn<K extends GossipType>(
   type: K,
   modules: ValidatorFnModules
 ): GossipValidatorFn {
-  const {config, logger, metrics, uncompressCache} = modules;
+  const {config, logger, metrics} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
   return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
     // Define in scope above try {} to be used in catch {} if object was parsed
     let gossipObject;
-    const {data, receivedFrom} = gossipMsg;
     try {
-      const encoding = topic.encoding ?? DEFAULT_ENCODING;
-
       // Deserialize object from bytes ONLY after being picked up from the validation queue
       try {
         const sszType = getGossipSSZType(topic);
-        const messageData = decodeMessageData(encoding, data, uncompressCache);
+        const messageData = getUncompressedData(gossipMsg);
         gossipObject =
           // TODO: Review if it's really necessary to deserialize this as TreeBacked
           topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
@@ -96,10 +88,10 @@ function getGossipValidatorFn<K extends GossipType>(
             : sszType.deserialize(messageData);
       } catch (e) {
         // TODO: Log the error or do something better with it
-        throw new GossipActionError(GossipAction.REJECT, PeerAction.LowToleranceError, {code: (e as Error).message});
+        throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, receivedFrom, seenTimestampSec);
+      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom, seenTimestampSec);
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);
@@ -108,10 +100,6 @@ function getGossipValidatorFn<K extends GossipType>(
       if (!(e instanceof GossipActionError)) {
         logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
         throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
-      }
-
-      if (e.lodestarAction) {
-        modules.peerRpcScores.applyAction(PeerId.createFromB58String(receivedFrom), e.lodestarAction);
       }
 
       // If the gossipObject was deserialized include its short metadata with the error data

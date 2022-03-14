@@ -47,14 +47,14 @@
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.2",
+    "@chainsafe/blst": "^0.2.4",
     "@types/buffer-xor": "^2.0.0",
     "@types/mockery": "^1.4.29",
     "mockery": "^2.1.0"
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ]
