@@ -88,7 +88,7 @@ describe("chain / bls / multithread queue", function () {
       isValidPromiseArr.push(pool.verifySignatureSets(sets, {batchable: true}));
     }
 
-    await expect(isInvalidPromise).to.rejectedWith("BLST_ERROR");
+    await expect(isInvalidPromise).to.rejectedWith("BLST_INVALID_SIZE");
 
     const isValidArr = await Promise.all(isValidPromiseArr);
     for (const [i, isValid] of isValidArr.entries()) {
