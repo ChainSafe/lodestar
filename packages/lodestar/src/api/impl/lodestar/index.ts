@@ -87,12 +87,13 @@ export function getLodestarApi({
       }
 
       return jobQueue.getItems().map((item) => {
-        const [topic, message] = item.args;
+        const [topic, message, propagationSource, seenTimestampSec] = item.args;
         return {
           topic: topic,
-          receivedFrom: message.receivedFrom,
+          propagationSource,
           data: message.data,
           addedTimeMs: item.addedTimeMs,
+          seenTimestampSec,
         };
       });
     },

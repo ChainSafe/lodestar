@@ -1,10 +1,8 @@
-/* eslint-disable @typescript-eslint/naming-convention */
-import Gossipsub from "libp2p-gossipsub";
-import {messageIdToString} from "libp2p-gossipsub/src/utils/messageIdToString";
-import SHA256 from "@chainsafe/as-sha256";
-import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
-import {InMessage, utils} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
+import Gossipsub from "libp2p-gossipsub";
+import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types";
+import {PeerScore} from "libp2p-gossipsub/src/score";
+import PeerId from "peer-id";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
@@ -21,18 +19,11 @@ import {
   GossipTypeMap,
   ValidatorFnsByType,
   GossipHandlers,
-  Eth2InMessage,
 } from "./interface";
 import {getGossipSSZType, GossipTopicCache, stringifyGossipTopic} from "./topic";
-import {computeMsgId, encodeMessageData} from "./encoding";
-import {DEFAULT_ENCODING} from "./constants";
-import {GossipValidationError} from "./errors";
-import {GOSSIP_MAX_SIZE} from "../../constants";
+import {DataTransformSnappy, fastMsgIdFn, msgIdFn} from "./encoding";
 import {createValidatorFnsByType} from "./validation";
 import {Map2d, Map2dArr} from "../../util/map";
-import PeerStreams from "libp2p-interfaces/src/pubsub/peer-streams";
-import {RPC} from "libp2p-gossipsub/src/message/rpc";
-import {normalizeInRpcMessage} from "libp2p-interfaces/src/pubsub/utils";
 
 import {
   computeGossipPeerScoreParams,
@@ -43,6 +34,18 @@ import {
 } from "./scoringParameters";
 import {Eth2Context} from "../../chain";
 import {computeAllPeersScoreWeights} from "./scoreMetrics";
+import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
+
+/* eslint-disable @typescript-eslint/naming-convention */
+
+// TODO: Export this type
+type GossipsubEvents = {
+  "gossipsub:message": {
+    propagationSource: PeerId;
+    msgId: string;
+    msg: GossipsubMessage;
+  };
+};
 
 export interface IGossipsubModules {
   config: IBeaconConfig;
@@ -78,23 +81,29 @@ export class Eth2Gossipsub extends Gossipsub {
   private readonly validatorFnsByType: ValidatorFnsByType;
 
   constructor(modules: IGossipsubModules) {
+    const gossipTopicCache = new GossipTopicCache(modules.config);
+
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p, {
       gossipIncoming: true,
-      globalSignaturePolicy: "StrictNoSign" as const,
+      globalSignaturePolicy: SignaturePolicy.StrictNoSign,
       D: GOSSIP_D,
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
       scoreParams: computeGossipPeerScoreParams(modules),
       scoreThresholds: gossipScoreThresholds,
-      fastMsgIdFn: (msg: InMessage) => Buffer.from(SHA256.digest(msg.data)).toString("hex"),
+      fastMsgIdFn: fastMsgIdFn,
+      msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
+      dataTransform: new DataTransformSnappy(gossipTopicCache),
+      metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
+      metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
     });
     const {config, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
     this.logger = logger;
-    this.gossipTopicCache = new GossipTopicCache(config);
+    this.gossipTopicCache = gossipTopicCache;
 
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
     // libp2p-js layer will emit the message to an EventEmitter that won't be listened by anyone.
@@ -109,231 +118,10 @@ export class Eth2Gossipsub extends Gossipsub {
     this.jobQueues = jobQueues;
 
     if (metrics) {
-      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeMetrics(metrics));
-    }
-  }
-
-  async start(): Promise<void> {
-    return super.start();
-  }
-
-  async stop(): Promise<void> {
-    try {
-      await super.stop();
-    } catch (error) {
-      if ((error as GossipValidationError).code !== "ERR_HEARTBEAT_NO_RUNNING") {
-        throw error;
-      }
-    }
-  }
-
-  /**
-   * @override Use eth2 msg id and cache results to the msg
-   * The cached msgId inside the message will be ignored when we send messages to other peers
-   * since we don't have this field in protobuf.
-   */
-  getMsgId(msg: Eth2InMessage): Uint8Array {
-    let msgId = msg.msgId;
-    if (!msgId) {
-      const topicStr = msg.topicIDs[0];
-      const topic = this.gossipTopicCache.getTopic(topicStr);
-      msgId = computeMsgId(topic, topicStr, msg);
-      msg.msgId = msgId;
-    }
-    return msgId;
-  }
-
-  /**
-   * Get cached message id string if we have it.
-   */
-  getCachedMsgIdStr(msg: Eth2InMessage): string | undefined {
-    const cachedMsgId = msg.msgId;
-    return cachedMsgId ? messageIdToString(cachedMsgId) : undefined;
-  }
-
-  // Temporaly reverts https://github.com/libp2p/js-libp2p-interfaces/pull/103 while a proper fixed is done upstream
-  // Lodestar wants to use our own queue instead of gossipsub queue introduced in https://github.com/libp2p/js-libp2p-interfaces/pull/103
-  async _processRpc(idB58Str: string, peerStreams: PeerStreams, rpc: RPC): Promise<boolean> {
-    this.log("rpc from", idB58Str);
-    const subs = rpc.subscriptions;
-    const msgs = rpc.msgs;
-
-    if (subs.length) {
-      // update peer subscriptions
-      subs.forEach((subOpt) => {
-        this._processRpcSubOpt(idB58Str, subOpt);
-      });
-      this.emit("pubsub:subscription-change", peerStreams.id, subs);
+      metrics.gossipMesh.peersByType.addCollect(() => this.onScrapeLodestarMetrics(metrics));
     }
 
-    if (!this._acceptFrom(idB58Str)) {
-      this.log("received message from unacceptable peer %s", idB58Str);
-      return false;
-    }
-
-    if (msgs.length) {
-      await Promise.all(
-        msgs.map(async (message) => {
-          if (
-            !(
-              this.canRelayMessage ||
-              (message.topicIDs && message.topicIDs.some((topic) => this.subscriptions.has(topic)))
-            )
-          ) {
-            this.log("received message we didn't subscribe to. Dropping.");
-            return;
-          }
-          const msg = normalizeInRpcMessage(message, idB58Str);
-          await this._processRpcMessage(msg);
-        })
-      );
-    }
-    // not a direct implementation of js-libp2p-gossipsub, this is from gossipsub
-    // https://github.com/ChainSafe/js-libp2p-gossipsub/blob/751ea73e9b7dc2287ca56786857d32ec2ce796b9/ts/index.ts#L366
-    if (rpc.control) {
-      await super._processRpcControlMessage(idB58Str, rpc.control);
-    }
-    return true;
-  }
-
-  /**
-   * Similar to gossipsub 0.13.0 except that no await
-   * TODO: override getMsgIdIfNotSeen and add metric
-   * See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files
-   */
-  async _processRpcMessage(msg: InMessage): Promise<void> {
-    let canonicalMsgIdStr;
-    if (this.getFastMsgIdStr && this.fastMsgIdCache) {
-      // check duplicate
-      // change: no await needed
-      const fastMsgIdStr = this.getFastMsgIdStr(msg);
-      canonicalMsgIdStr = this.fastMsgIdCache.get(fastMsgIdStr);
-      if (canonicalMsgIdStr !== undefined) {
-        void this.score.duplicateMessage(msg, canonicalMsgIdStr);
-        return;
-      }
-      // change: no await needed
-      canonicalMsgIdStr = messageIdToString(this.getMsgId(msg));
-
-      this.fastMsgIdCache.put(fastMsgIdStr, canonicalMsgIdStr);
-    } else {
-      // check duplicate
-      // change: no await needed
-      canonicalMsgIdStr = messageIdToString(this.getMsgId(msg));
-      if (this.seenCache.has(canonicalMsgIdStr)) {
-        void this.score.duplicateMessage(msg, canonicalMsgIdStr);
-        return;
-      }
-    }
-
-    // put in cache
-    this.seenCache.put(canonicalMsgIdStr);
-
-    await this.score.validateMessage(canonicalMsgIdStr);
-
-    // await super._processRpcMessage(msg);
-    // this is from libp2p-interface 4.0.4
-    // https://github.com/libp2p/js-libp2p-interfaces/blob/libp2p-interfaces%404.0.4/packages/interfaces/src/pubsub/index.js#L461
-    if (this.peerId.toB58String() === msg.from && !this.emitSelf) {
-      return;
-    }
-
-    // Ensure the message is valid before processing it
-    try {
-      await this.validate(msg);
-    } catch (/** @type {any} */ err) {
-      this.log("Message is invalid, dropping it. %O", err);
-      return;
-    }
-
-    // Emit to self: no need as we don't do that in this child class
-    // this._emitMessage(msg);
-
-    return this._publish((utils.normalizeOutRpcMessage(msg) as unknown) as InMessage);
-  }
-
-  // // Snippet of _processRpcMessage from https://github.com/libp2p/js-libp2p-interfaces/blob/92245d66b0073f0a72fed9f7abcf4b533102f1fd/packages/interfaces/src/pubsub/index.js#L442
-  // async _processRpcMessage(msg: InMessage): Promise<void> {
-  //   try {
-  //     await this.validate(msg);
-  //   } catch (err) {
-  //     this.log("Message is invalid, dropping it. %O", err);
-  //     return;
-  //   }
-  // }
-
-  /**
-   * @override https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436
-   * @override https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
-   * Note: this does not call super. All logic is re-implemented below
-   */
-  async validate(message: Eth2InMessage): Promise<void> {
-    try {
-      // messages must have a single topicID
-      const topicStr = Array.isArray(message.topicIDs) ? message.topicIDs[0] : undefined;
-
-      // message sanity check
-      if (!topicStr || message.topicIDs.length > 1) {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "Not exactly one topicID");
-      }
-      if (message.data === undefined) {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "No message.data");
-      }
-      if (message.data.length > GOSSIP_MAX_SIZE) {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "message.data too big");
-      }
-
-      if (message.from || message.signature || message.key || message.seqno) {
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, "StrictNoSigning invalid");
-      }
-
-      // We use 'StrictNoSign' policy, no need to validate message signature
-
-      // Also validates that the topicStr is known
-      const topic = this.gossipTopicCache.getTopic(topicStr);
-
-      // Get seenTimestamp before adding the message to the queue or add async delays
-      const seenTimestampSec = Date.now() / 1000;
-
-      // No error here means that the incoming object is valid
-      await this.validatorFnsByType[topic.type](topic, message, seenTimestampSec);
-    } catch (e) {
-      // JobQueue may throw non-typed errors
-      const code = e instanceof GossipValidationError ? e.code : ERR_TOPIC_VALIDATOR_IGNORE;
-      // async to compute msgId with sha256 from multiformats/hashes/sha2
-      const messageId = await this.getCanonicalMsgIdStr(message);
-      await this.score.rejectMessage(message, messageId, code);
-      await this.gossipTracer.rejectMessage(messageId, code);
-      throw e;
-    }
-  }
-
-  /**
-   * @override
-   * See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L428
-   *
-   * Our handlers are attached on the validator functions, so no need to emit the objects internally.
-   */
-  _emitMessage(): void {
-    // Objects are handled in the validator functions, no need to do anything here
-  }
-
-  /**
-   * @override
-   * Differs from upstream `unsubscribe` by _always_ unsubscribing,
-   * instead of unsubsribing only when no handlers are attached to the topic
-   *
-   * See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.8.3/src/pubsub/index.js#L720
-   */
-  unsubscribe(topicStr: string): void {
-    if (!this.started) {
-      throw new Error("Pubsub is not started");
-    }
-
-    if (this.subscriptions.has(topicStr)) {
-      this.subscriptions.delete(topicStr);
-      this.peers.forEach((_, id) => this._sendSubscriptions(id, [topicStr], false));
-    }
+    this.on("gossipsub:message", this.onGossipsubMessage.bind(this));
   }
 
   /**
@@ -344,7 +132,7 @@ export class Eth2Gossipsub extends Gossipsub {
     this.logger.verbose("Publish to topic", {topic: topicStr});
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    await this.publish(topicStr, encodeMessageData(topic.encoding ?? DEFAULT_ENCODING, messageData));
+    await this.publish(topicStr, messageData);
   }
 
   /**
@@ -427,10 +215,15 @@ export class Eth2Gossipsub extends Gossipsub {
     return stringifyGossipTopic(this.config, topic);
   }
 
-  private onScrapeMetrics(metrics: IMetrics): void {
+  private onScrapeLodestarMetrics(metrics: IMetrics): void {
+    const mesh = this["mesh"] as Map<string, Set<string>>;
+    const topics = this["topics"] as Map<string, Set<string>>;
+    const peers = this["peers"] as Map<string, unknown>;
+    const score = this["score"] as PeerScore;
+
     for (const {peersMap, metricsGossip} of [
-      {peersMap: this.mesh, metricsGossip: metrics.gossipMesh},
-      {peersMap: this.topics, metricsGossip: metrics.gossipTopic},
+      {peersMap: mesh, metricsGossip: metrics.gossipMesh},
+      {peersMap: topics, metricsGossip: metrics.gossipTopic},
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
       const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
@@ -481,15 +274,15 @@ export class Eth2Gossipsub extends Gossipsub {
     let peerCountScoreGossip = 0;
     let peerCountScoreMesh = 0;
     const {graylistThreshold, publishThreshold, gossipThreshold} = gossipScoreThresholds;
-    const gossipScores = [];
+    const gossipScores: number[] = [];
 
-    for (const peerIdStr of this.peers.keys()) {
-      const score = this.score.score(peerIdStr);
-      if (score >= graylistThreshold) peerCountScoreGraylist++;
-      if (score >= publishThreshold) peerCountScorePublish++;
-      if (score >= gossipThreshold) peerCountScoreGossip++;
-      if (score >= 0) peerCountScoreMesh++;
-      gossipScores.push(score);
+    for (const peerIdStr of peers.keys()) {
+      const s = score.score(peerIdStr);
+      if (s >= graylistThreshold) peerCountScoreGraylist++;
+      if (s >= publishThreshold) peerCountScorePublish++;
+      if (s >= gossipThreshold) peerCountScoreGossip++;
+      if (s >= 0) peerCountScoreMesh++;
+      gossipScores.push(s);
     }
 
     // Access once for all calls below
@@ -501,10 +294,10 @@ export class Eth2Gossipsub extends Gossipsub {
 
     // Breakdown on each score weight
     const sw = computeAllPeersScoreWeights(
-      this.peers.keys(),
-      this.score.peerStats,
-      this.score.params,
-      this.score.peerIPs,
+      peers.keys(),
+      score.peerStats,
+      score.params,
+      score.peerIPs,
       this.gossipTopicCache
     );
 
@@ -523,6 +316,30 @@ export class Eth2Gossipsub extends Gossipsub {
     // Register full score too
     metrics.gossipPeer.score.set(sw.score);
   }
+
+  private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {
+    const {propagationSource, msgId, msg} = event;
+
+    // TODO: validation GOSSIP_MAX_SIZE
+    // - Should be done here after inserting the message in the mcache?
+    // - Should be done in the inboundtransform?
+    // - Should be a parameter in gossipsub: maxMsgDataSize?
+
+    // Also validates that the topicStr is known
+    const topic = this.gossipTopicCache.getTopic(msg.topic);
+
+    // Get seenTimestamp before adding the message to the queue or add async delays
+    const seenTimestampSec = Date.now() / 1000;
+
+    // Puts object in queue, validates, then processes
+    this.validatorFnsByType[topic.type](topic, msg, propagationSource.toString(), seenTimestampSec)
+      .then((acceptance) => {
+        this.reportMessageValidationResult(msgId, propagationSource, acceptance);
+      })
+      .catch((e) => {
+        this.logger.error("Error onGossipsubMessage", {}, e);
+      });
+  }
 }
 
 /**
@@ -532,4 +349,32 @@ export class Eth2Gossipsub extends Gossipsub {
 function attSubnetLabel(subnet: number): string {
   if (subnet > 9) return String(subnet);
   else return `0${subnet}`;
+}
+
+function getMetricsTopicStrToLabel(config: IBeaconConfig): TopicStrToLabel {
+  const metricsTopicStrToLabel = new Map<TopicStr, TopicLabel>();
+  const topics: GossipTopic[] = [];
+
+  for (const {name: fork} of config.forksAscendingEpochOrder) {
+    for (let subnet = 0; subnet < ATTESTATION_SUBNET_COUNT; subnet++) {
+      topics.push({fork, type: GossipType.beacon_attestation, subnet});
+    }
+
+    for (let subnet = 0; subnet < SYNC_COMMITTEE_SUBNET_COUNT; subnet++) {
+      topics.push({fork, type: GossipType.sync_committee, subnet});
+    }
+
+    topics.push({fork, type: GossipType.beacon_block});
+    topics.push({fork, type: GossipType.beacon_aggregate_and_proof});
+    topics.push({fork, type: GossipType.voluntary_exit});
+    topics.push({fork, type: GossipType.proposer_slashing});
+    topics.push({fork, type: GossipType.attester_slashing});
+    topics.push({fork, type: GossipType.sync_committee_contribution_and_proof});
+  }
+
+  for (const topic of topics) {
+    metricsTopicStrToLabel.set(stringifyGossipTopic(config, topic), topic.type);
+  }
+
+  return metricsTopicStrToLabel;
 }

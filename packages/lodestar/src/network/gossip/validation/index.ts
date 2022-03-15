@@ -1,4 +1,4 @@
-import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
+import {MessageAcceptance} from "libp2p-gossipsub/src/types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
@@ -12,11 +12,9 @@ import {
   GossipHandlers,
   GossipHandlerFn,
 } from "../interface";
-import {GossipValidationError} from "../errors";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {createValidationQueues} from "./queue";
 import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
-import {getUncompressedData} from "../encoding";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
@@ -42,8 +40,8 @@ export function createValidatorFnsByType(
   const validatorFnsByType = mapValues(
     jobQueues,
     (jobQueue): GossipValidatorFn => {
-      return async function gossipValidatorFnWithQueue(topic, gossipMsg, seenTimestampsMs) {
-        await jobQueue.push(topic, gossipMsg, seenTimestampsMs);
+      return async function gossipValidatorFnWithQueue(topic, gossipMsg, propagationSource, seenTimestampSec) {
+        return await jobQueue.push(topic, gossipMsg, propagationSource, seenTimestampSec);
       };
     }
   );
@@ -73,33 +71,34 @@ function getGossipValidatorFn<K extends GossipType>(
   const {config, logger, metrics} = modules;
   const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
 
-  return async function gossipValidatorFn(topic, gossipMsg, seenTimestampSec) {
+  return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
     // Define in scope above try {} to be used in catch {} if object was parsed
     let gossipObject;
     try {
       // Deserialize object from bytes ONLY after being picked up from the validation queue
       try {
         const sszType = getGossipSSZType(topic);
-        const messageData = getUncompressedData(gossipMsg);
         gossipObject =
           // TODO: Review if it's really necessary to deserialize this as TreeBacked
           topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
-            ? sszType.createTreeBackedFromBytes(messageData)
-            : sszType.deserialize(messageData);
+            ? sszType.createTreeBackedFromBytes(msg.data)
+            : sszType.deserialize(msg.data);
       } catch (e) {
         // TODO: Log the error or do something better with it
-        throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});
+        return MessageAcceptance.Reject;
       }
 
-      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, gossipMsg.receivedFrom, seenTimestampSec);
+      await (gossipHandler as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
 
       const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
       logger.debug(`gossip - ${type} - accept`, metadata);
       metrics?.gossipValidationAccept.inc({topic: type});
+
+      return MessageAcceptance.Accept;
     } catch (e) {
       if (!(e instanceof GossipActionError)) {
         logger.error(`Gossip validation ${type} threw a non-GossipActionError`, {}, e as Error);
-        throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, (e as Error).message);
+        return MessageAcceptance.Ignore;
       }
 
       // If the gossipObject was deserialized include its short metadata with the error data
@@ -110,12 +109,12 @@ function getGossipValidatorFn<K extends GossipType>(
         case GossipAction.IGNORE:
           logger.debug(`gossip - ${type} - ignore`, errorData);
           metrics?.gossipValidationIgnore.inc({topic: type});
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_IGNORE, e.message);
+          return MessageAcceptance.Ignore;
 
         case GossipAction.REJECT:
           logger.debug(`gossip - ${type} - reject`, errorData);
           metrics?.gossipValidationReject.inc({topic: type});
-          throw new GossipValidationError(ERR_TOPIC_VALIDATOR_REJECT, e.message);
+          return MessageAcceptance.Reject;
       }
     }
   };

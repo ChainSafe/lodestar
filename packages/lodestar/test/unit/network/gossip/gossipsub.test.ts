@@ -6,9 +6,8 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 
-import {Eth2Gossipsub, GossipHandlers, GossipType, GossipEncoding} from "../../../../src/network/gossip";
+import {Eth2Gossipsub, GossipHandlers, GossipType} from "../../../../src/network/gossip";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
-import {encodeMessageData} from "../../../../src/network/gossip/encoding";
 import {GossipValidationError} from "../../../../src/network/gossip/errors";
 
 import {config} from "../../../utils/config";
@@ -43,7 +42,7 @@ describe("network / gossip / validation", function () {
     const signedBlock = generateEmptySignedBlock();
     topicString = stringifyGossipTopic(config, {type: gossipType, fork: ForkName.phase0});
     message = {
-      data: encodeMessageData(GossipEncoding.ssz_snappy, ssz.phase0.SignedBeaconBlock.serialize(signedBlock)),
+      data: ssz.phase0.SignedBeaconBlock.serialize(signedBlock),
       receivedFrom: "0",
       topicIDs: [topicString],
     };

@@ -6556,6 +6556,14 @@ iso-random-stream@^2.0.0:
     events "^3.3.0"
     readable-stream "^3.4.0"
 
+iso-random-stream@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/iso-random-stream/-/iso-random-stream-2.0.2.tgz#a24f77c34cfdad9d398707d522a6a0cc640ff27d"
+  integrity sha512-yJvs+Nnelic1L2vH2JzWvvPQFA4r7kSTnpST/+LkAQjSz0hos2oqLD+qIVi9Qk38Hoe7mNDt3j0S27R58MVjLQ==
+  dependencies:
+    events "^3.3.0"
+    readable-stream "^3.4.0"
+
 iso-url@^1.1.5:
   version "1.1.5"
   resolved "https://registry.yarnpkg.com/iso-url/-/iso-url-1.1.5.tgz#875a0f2bf33fa1fc200f8d89e3f49eee57a8f0d9"
@@ -7164,22 +7172,44 @@ libp2p-crypto@^0.21.2:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-gossipsub@^0.13.0:
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.13.0.tgz#a70db85139c62d7a8ad273be3ba01d1c9f338f7b"
-  integrity sha512-xy2jRZGmJpjy++Di6f1admtjve8Fx0z5l8NISTQS282egwbRMmTPE6/UeYktb6hNGAgtSTIwXdHjXmMOiTarFA==
+libp2p-gossipsub@dapplion/js-libp2p-gossipsub#7a288c9741f274d59b81c0fa20af92b0c03b7189:
+  version "0.13.1"
+  resolved "https://codeload.github.com/dapplion/js-libp2p-gossipsub/tar.gz/7a288c9741f274d59b81c0fa20af92b0c03b7189"
   dependencies:
     "@types/debug" "^4.1.7"
     debug "^4.3.1"
     denque "^1.5.0"
     err-code "^3.0.1"
+    iso-random-stream "^2.0.2"
     it-pipe "^1.1.0"
-    libp2p-interfaces "^4.0.4"
+    libp2p-crypto "^0.21.2"
+    libp2p-interfaces "4.0.4"
+    multiformats "^9.6.4"
     peer-id "^0.16.0"
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-interfaces@^4.0.0, libp2p-interfaces@^4.0.4:
+libp2p-interfaces@4.0.4:
+  version "4.0.4"
+  resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-4.0.4.tgz#aa88ce344cb73bdf3972c7ef4a79566c27a41228"
+  integrity sha512-pD46BpdZBM4OEs/LdYJ74BT582OyL+MLOawZr+YRdQTt3s0UZBInc0SF/AhhL2je9bcfkMe4Z1ko+/nninTNvw==
+  dependencies:
+    abort-controller "^3.0.0"
+    abortable-iterator "^3.0.0"
+    debug "^4.3.1"
+    err-code "^3.0.1"
+    it-length-prefixed "^5.0.2"
+    it-pipe "^1.1.0"
+    it-pushable "^1.4.2"
+    libp2p-crypto "^0.21.0"
+    multiaddr "^10.0.0"
+    multiformats "^9.1.2"
+    p-queue "^6.6.2"
+    peer-id "^0.16.0"
+    protobufjs "^6.10.2"
+    uint8arrays "^3.0.0"
+
+libp2p-interfaces@^4.0.0:
   version "4.0.6"
   resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-4.0.6.tgz#462062e04a680703bca18eb1d7a9c963a39344d1"
   integrity sha512-3KjzNEIWhi+VoOamLvgKKUE/xqwxSw/JYqsBnfMhAWVRvRtosROtVT03wci2XbuuowCYw+/hEX1xKJIR1w5n0A==
@@ -7971,6 +8001,11 @@ multiformats@^9.4.2, multiformats@^9.4.5:
   version "9.4.5"
   resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.4.5.tgz#9ac47bbc87aadb09d4bd05e9cd3da6f4436414f6"
   integrity sha512-zQxukxsHM34EJi3yT3MkUlycY9wEouyrAz0PSN+CyCj6cYchJZ4LrTH74YtlsxVyAK6waz/gnVLmJwi3P0knKg==
+
+multiformats@^9.6.4:
+  version "9.6.4"
+  resolved "https://registry.yarnpkg.com/multiformats/-/multiformats-9.6.4.tgz#5dce1f11a407dbb69aa612cb7e5076069bb759ca"
+  integrity sha512-fCCB6XMrr6CqJiHNjfFNGT0v//dxOBMrOMqUIzpPc/mmITweLEyhvMpY9bF+jZ9z3vaMAau5E8B68DW77QMXkg==
 
 multihashes@^4.0.3:
   version "4.0.3"

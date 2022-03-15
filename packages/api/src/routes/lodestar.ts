@@ -27,9 +27,10 @@ export type SyncChainDebugState = {
 
 export type GossipQueueItem = {
   topic: unknown;
-  receivedFrom: string;
+  propagationSource: string;
   data: Uint8Array;
   addedTimeMs: number;
+  seenTimestampSec: number;
 };
 
 export type RegenQueueItem = {
@@ -164,16 +165,18 @@ export function getReturnTypes(): ReturnTypes<Api> {
   const GossipQueueItem = new ContainerType<GossipQueueItem>({
     fields: {
       topic: stringType,
-      receivedFrom: stringType,
+      propagationSource: stringType,
       data: new ByteVectorType({length: 256}),
       addedTimeMs: ssz.Slot,
+      seenTimestampSec: ssz.Slot,
     },
     // Custom type, not in the consensus specs
     casingMap: {
       topic: "topic",
-      receivedFrom: "received_from",
+      propagationSource: "propagation_source",
       data: "data",
       addedTimeMs: "added_time_ms",
+      seenTimestampSec: "seen_timestamp_sec",
     },
   });
 
