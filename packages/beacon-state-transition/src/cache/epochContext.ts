@@ -294,8 +294,6 @@ export class EpochContext {
     // Allow to create CachedBeaconState for empty states
     const proposers =
       state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
-    const nextEpochProposers =
-      state.validators.length > 0 ? computeProposers(state, nextShuffling, effectiveBalanceIncrements) : [];
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;

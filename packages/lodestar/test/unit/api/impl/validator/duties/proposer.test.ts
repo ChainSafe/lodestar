@@ -40,8 +40,6 @@ describe("get proposers api impl", function () {
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
     chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    (chainStub as any).nextEpochProposerDutyCache = new Map();
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,
