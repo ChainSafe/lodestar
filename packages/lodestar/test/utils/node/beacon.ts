@@ -66,10 +66,9 @@ export async function getDevBeaconNode(
       // This deepmerge should merge all the array elements of the api options with the
       // dev defaults that we wish, especially for the api options
       {
-        api: {rest: {port: 19596}},
         db: {name: tmpDir.name},
         eth1: {enabled: false},
-        api: {rest: {api: ["beacon", "config", "events", "node", "validator"]}},
+        api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
         network: {discv5: null},
       } as Partial<IBeaconNodeOptions>,
