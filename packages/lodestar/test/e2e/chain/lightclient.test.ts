@@ -37,6 +37,9 @@ describe("chain / lightclient", function () {
   // This is a rare event, with maxLcHeadTrackingDiffSlots = 4, SECONDS_PER_SLOT = 1
   this.retries(2);
 
+  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+
   it("Lightclient track head on server configuration", async function () {
     this.timeout("10 min");
 
@@ -67,6 +70,7 @@ describe("chain / lightclient", function () {
       genesisTime,
       logger: loggerNodeA,
     });
+    afterEachCallbacks.push(() => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -77,6 +81,7 @@ describe("chain / lightclient", function () {
     });
 
     await Promise.all(validators.map((validator) => validator.start()));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
 
     // This promise chain does:
     // 1. Wait for the beacon node to emit one head that has a snapshot associated to it
@@ -158,8 +163,5 @@ describe("chain / lightclient", function () {
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
-
-    await Promise.all(validators.map((v) => v.stop()));
-    await bn.close();
   });
 });
