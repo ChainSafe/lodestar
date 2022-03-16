@@ -110,8 +110,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = Array.from(netA.gossip.mesh.keys())[0];
-      const peersOnTopic = netA.gossip.mesh.get(topicStr);
+      const topicStr = Array.from(netA.gossip["mesh"].keys())[0];
+      const peersOnTopic = netA.gossip["mesh"].get(topicStr);
       if (peersOnTopic && peersOnTopic?.size > 0) {
         break;
       }
@@ -143,8 +143,8 @@ describe("gossipsub", function () {
     // Wait to have a peer connected to a topic
     while (!controller.signal.aborted) {
       await sleep(500);
-      const topicStr = Array.from(netA.gossip.mesh.keys())[0];
-      const peersOnTopic = netA.gossip.mesh.get(topicStr);
+      const topicStr = Array.from(netA.gossip["mesh"].keys())[0];
+      const peersOnTopic = netA.gossip["mesh"].get(topicStr);
       if (peersOnTopic && peersOnTopic?.size > 0) {
         break;
       }
