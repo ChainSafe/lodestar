@@ -7172,9 +7172,9 @@ libp2p-crypto@^0.21.2:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-gossipsub@dapplion/js-libp2p-gossipsub#7a288c9741f274d59b81c0fa20af92b0c03b7189:
+libp2p-gossipsub@dapplion/js-libp2p-gossipsub#d1f3267a50be65c9a008dd518bddec3b49acf954:
   version "0.13.1"
-  resolved "https://codeload.github.com/dapplion/js-libp2p-gossipsub/tar.gz/7a288c9741f274d59b81c0fa20af92b0c03b7189"
+  resolved "https://codeload.github.com/dapplion/js-libp2p-gossipsub/tar.gz/d1f3267a50be65c9a008dd518bddec3b49acf954"
   dependencies:
     "@types/debug" "^4.1.7"
     debug "^4.3.1"

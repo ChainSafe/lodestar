@@ -96,7 +96,7 @@
     "jwt-simple": "0.5.6",
     "libp2p": "^0.36.2",
     "libp2p-bootstrap": "^0.14.0",
-    "libp2p-gossipsub": "dapplion/js-libp2p-gossipsub#7a288c9741f274d59b81c0fa20af92b0c03b7189",
+    "libp2p-gossipsub": "dapplion/js-libp2p-gossipsub#d1f3267a50be65c9a008dd518bddec3b49acf954",
     "libp2p-mdns": "^0.18.0",
     "libp2p-mplex": "^0.10.5",
     "libp2p-tcp": "^0.17.2",

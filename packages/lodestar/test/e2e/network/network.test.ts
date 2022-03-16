@@ -245,11 +245,11 @@ describe("network", function () {
   it("Should subscribe to gossip core topics on demand", async () => {
     const {network: netA} = await createTestNode("A");
 
-    expect(netA.gossip["subscriptions"].size).to.equal(0);
+    expect(netA.gossip.getTopics().length).to.equal(0);
     netA.subscribeGossipCoreTopics();
-    expect(netA.gossip["subscriptions"].size).to.equal(5);
+    expect(netA.gossip.getTopics().length).to.equal(5);
     netA.unsubscribeGossipCoreTopics();
-    expect(netA.gossip["subscriptions"].size).to.equal(0);
+    expect(netA.gossip.getTopics().length).to.equal(0);
     netA.close();
   });
 });
