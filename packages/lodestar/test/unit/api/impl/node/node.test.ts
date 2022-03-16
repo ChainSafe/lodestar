@@ -81,6 +81,47 @@ describe("node api implementation", function () {
     });
   });
 
+  describe("getPeerCount", function () {
+    let peer1: PeerId, peer2: PeerId, peer3: PeerId;
+
+    before(async function () {
+      peer1 = await createPeerId();
+      peer2 = await createPeerId();
+      peer3 = await createPeerId();
+    });
+
+    it("it should return peer count", async function () {
+      const connectionsByPeer = new Map<string, Connection[]>([
+        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
+        [
+          peer2.toB58String(),
+          [libp2pConnection(peer2, "closing", "inbound"), libp2pConnection(peer2, "closing", "inbound")],
+        ],
+        [
+          peer3.toB58String(),
+          [
+            libp2pConnection(peer3, "closed", "inbound"),
+            libp2pConnection(peer3, "closed", "inbound"),
+            libp2pConnection(peer3, "closed", "inbound"),
+          ],
+        ],
+      ]);
+
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
+      const {data: count} = await api.getPeerCount();
+      expect(count).to.be.deep.equal(
+        {
+          connected: 1,
+          disconnecting: 2,
+          disconnected: 3,
+          connecting: 0,
+        },
+        "getPeerCount incorrect"
+      );
+    });
+  });
+
   describe("getPeers", function () {
     let peer1: PeerId, peer2: PeerId;
 

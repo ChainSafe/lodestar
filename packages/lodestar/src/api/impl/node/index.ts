@@ -51,13 +51,34 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
     },
 
     async getPeerCount() {
-      // TODO: Implement
+      let disconnected = 0;
+      let connecting = 0;
+      let connected = 0;
+      let disconnecting = 0;
+
+      for (const connections of network.getConnectionsByPeer().values()) {
+        for (const connection of connections) {
+          switch (connection.stat.status) {
+            case "open":
+              connected++;
+              break;
+            case "closing":
+              disconnecting++;
+              break;
+            case "closed":
+              disconnected++;
+              break;
+            default:
+              connecting++;
+          }
+        }
+      }
       return {
         data: {
-          disconnected: 0,
-          connecting: 0,
-          connected: 0,
-          disconnecting: 0,
+          disconnected,
+          connecting,
+          connected,
+          disconnecting,
         },
       };
     },
