@@ -47,7 +47,7 @@ type GossipsubEvents = {
   };
 };
 
-export interface IGossipsubModules {
+export type Eth2GossipsubModules = {
   config: IBeaconConfig;
   libp2p: Libp2p;
   logger: ILogger;
@@ -55,7 +55,11 @@ export interface IGossipsubModules {
   signal: AbortSignal;
   eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
-}
+};
+
+export type Eth2GossipsubOpts = {
+  allowPublishToZeroPeers?: boolean;
+};
 
 /**
  * Wrapper around js-libp2p-gossipsub with the following extensions:
@@ -80,7 +84,7 @@ export class Eth2Gossipsub extends Gossipsub {
 
   private readonly validatorFnsByType: ValidatorFnsByType;
 
-  constructor(modules: IGossipsubModules) {
+  constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
     // Gossipsub parameters defined here:
@@ -88,6 +92,7 @@ export class Eth2Gossipsub extends Gossipsub {
     super(modules.libp2p, {
       gossipIncoming: true,
       globalSignaturePolicy: SignaturePolicy.StrictNoSign,
+      allowPublishToZeroPeers: opts.allowPublishToZeroPeers,
       D: GOSSIP_D,
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,

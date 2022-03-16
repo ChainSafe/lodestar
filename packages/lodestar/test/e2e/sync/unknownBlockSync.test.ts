@@ -41,7 +41,7 @@ describe("sync / unknown block sync", function () {
 
     const bn = await getDevBeaconNode({
       params: testParams,
-      options: {sync: {isSingleNode: true}},
+      options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
       validatorCount,
       logger: loggerNodeA,
     });

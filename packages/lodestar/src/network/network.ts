@@ -73,7 +73,7 @@ export class Network implements INetwork {
       opts
     );
 
-    this.gossip = new Eth2Gossipsub({
+    this.gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,

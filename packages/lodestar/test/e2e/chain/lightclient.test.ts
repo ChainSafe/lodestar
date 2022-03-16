@@ -64,6 +64,7 @@ describe("chain / lightclient", function () {
       params: testParams,
       options: {
         sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient"], port: restPort}},
       },
       validatorCount,

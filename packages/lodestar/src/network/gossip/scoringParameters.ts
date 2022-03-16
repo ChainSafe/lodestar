@@ -5,7 +5,7 @@ import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
 import {getActiveForks} from "../forks";
-import {IGossipsubModules} from "./gossipsub";
+import {Eth2GossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
 import {stringifyGossipTopic} from "./topic";
 
@@ -71,7 +71,7 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   eth2Context,
-}: Pick<IGossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
+}: Pick<Eth2GossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;

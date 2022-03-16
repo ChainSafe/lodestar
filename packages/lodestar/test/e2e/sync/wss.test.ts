@@ -65,6 +65,7 @@ describe("Start from WSS", function () {
           rest: {enabled: true, api: ["debug"]} as RestApiOptions,
         },
         sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
       },
       validatorCount: 32,
       logger: loggerNodeA,
