@@ -35,7 +35,8 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
     {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
   ];
 
-  let onDoneHandlers: (() => Promise<void>)[] = [];
+  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  afterEach(() => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
 
   // TODO test multiNode with remote;
 
@@ -63,37 +64,33 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
         };
         const logger = testLogger(`Node ${i}`, testLoggerOpts);
 
-        const node = await getDevBeaconNode({
+        const bn = await getDevBeaconNode({
           params: {...testParams, ALTAIR_FORK_EPOCH: altairForkEpoch},
           options: {api: {rest: {port: 10000 + i}}},
           validatorCount: nodeCount * validatorsPerNode,
           genesisTime,
           logger,
         });
+        afterEachCallbacks.push(() => bn.close());
 
         const {validators: nodeValidators} = await getAndInitDevValidators({
-          node,
+          node: bn,
           validatorsPerClient: validatorsPerNode,
           validatorClientCount: 1,
           startIndex: i * validatorsPerNode,
           testLoggerOpts,
         });
+        afterEachCallbacks.push(() => validators.map((validator) => validator.stop()));
 
         loggers.push(logger);
-        nodes.push(node);
+        nodes.push(bn);
         validators.push(...nodeValidators);
       }
 
       const stopInfoTracker = simTestInfoTracker(nodes[0], loggers[0]);
 
-      onDoneHandlers.push(async () => {
-        await Promise.all(validators.map((validator) => validator.stop()));
-        console.log("--- Stopped all validators ---");
-        // wait for 1 slot
-        await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
-
+      afterEachCallbacks.push(async () => {
         stopInfoTracker();
-        await Promise.all(nodes.map((node) => node.close()));
         console.log("--- Stopped all nodes ---");
         // Wait a bit for nodes to shutdown
         await sleep(3000);
@@ -116,12 +113,4 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       console.log("--- All nodes reached justified checkpoint ---");
     });
   }
-
-  afterEach("Stop nodes and validators", async function () {
-    this.timeout(20000);
-    for (const onDoneHandler of onDoneHandlers) {
-      await onDoneHandler();
-    }
-    onDoneHandlers = [];
-  });
 });

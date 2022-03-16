@@ -19,6 +19,9 @@ describe("sync / unknown block sync", function () {
     SECONDS_PER_SLOT: 2,
   };
 
+  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  afterEach(() => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+
   it("should do an unknown block sync from another BN", async function () {
     this.timeout("10 min");
 
@@ -42,6 +45,7 @@ describe("sync / unknown block sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
+    afterEachCallbacks.push(() => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -52,6 +56,7 @@ describe("sync / unknown block sync", function () {
     });
 
     await Promise.all(validators.map((validator) => validator.start()));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
     loggerNodeA.important("Node A emitted checkpoint event");
@@ -63,6 +68,7 @@ describe("sync / unknown block sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
+    afterEachCallbacks.push(() => bn2.close());
 
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
@@ -83,9 +89,5 @@ describe("sync / unknown block sync", function () {
 
     // Wait for NODE-A head to be processed in NODE-B without range sync
     await waitForSynced;
-
-    await bn2.close();
-    await Promise.all(validators.map((v) => v.stop()));
-    await bn.close();
   });
 });
