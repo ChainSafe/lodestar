@@ -1,15 +1,15 @@
-import {Epoch, RootHex, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot, ssz, StringType, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
 import {
+  ArrayOf,
   jsonType,
-  ReqEmpty,
   reqEmpty,
-  ReturnTypes,
+  ReqEmpty,
   ReqSerializers,
+  ReturnTypes,
   RoutesData,
   sameType,
   Schema,
-  ArrayOf,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -53,6 +53,12 @@ export type StateCacheItem = {
   lastRead: number;
 };
 
+export type LivenessResponseData = {
+  index: ValidatorIndex;
+  epoch: Epoch;
+  isLive: boolean;
+};
+
 export type Api = {
   /** TODO: description */
   getWtfNode(): Promise<{data: string}>;
@@ -84,6 +90,8 @@ export type Api = {
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
+
+  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 
 /**
@@ -104,6 +112,7 @@ export const routesData: RoutesData<Api> = {
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
+  getLiveness: {url: "/eth/v1/lodestar/liveness", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -121,6 +130,7 @@ export type ReqTypes = {
   connectPeer: {query: {peerId: string; multiaddr: string[]}};
   disconnectPeer: {query: {peerId: string}};
   discv5GetKadValues: ReqEmpty;
+  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -155,6 +165,12 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {query: {peerId: Schema.StringRequired}},
     },
     discv5GetKadValues: reqEmpty,
+
+    getLiveness: {
+      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
+      parseReq: ({query}) => [query.indices, query.epoch],
+      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
+    },
   };
 }
 
@@ -188,5 +204,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getStateCacheItems: jsonType(),
     getCheckpointStateCacheItems: jsonType(),
     discv5GetKadValues: jsonType(),
+    getLiveness: jsonType(),
   };
 }

@@ -1,14 +1,20 @@
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
-import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeStartSlotAtEpoch,
+  getLatestWeakSubjectivityCheckpointEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {Json, toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
-import {BeaconChain} from "../../../chain";
+import {BeaconChain, IBeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
+import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
+import {computeEndSlotForStartSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 export function getLodestarApi({
   chain,
@@ -156,7 +162,44 @@ export function getLodestarApi({
         data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
       };
     },
+
+    async getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}> {
+      const state = await chain.getHeadStateAtCurrentEpoch();
+      if (epoch < state.previousShuffling.epoch || epoch > state.nextShuffling.epoch) {
+        throw new Error(
+          `request epoch ${epoch} is more than one epoch previous or after from the current epoch ${state.currentShuffling.epoch}`
+        );
+      }
+
+      return {
+        data: indices.map((index: ValidatorIndex) => {
+          return {
+            index,
+            epoch,
+            isLive: isLive(chain, index, epoch, config.SECONDS_PER_SLOT),
+          };
+        }),
+      };
+    },
   };
+}
+
+function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch, secondsPerSlot: number): boolean {
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  const endSlot = computeEndSlotForStartSlot(startSlot, secondsPerSlot);
+
+  let proposedBlock = false;
+  for (let slot = startSlot; slot <= endSlot; slot++) {
+    if (chain.seenBlockProposers.isKnown(slot, index)) {
+      proposedBlock = true;
+      break;
+    }
+  }
+
+  const hasAggregated = chain.seenAggregators.isKnown(epoch, index);
+  const hasAttested = chain.seenAttesters.isKnown(epoch, index);
+
+  return proposedBlock || hasAggregated || hasAttested;
 }
 
 function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): Json {
