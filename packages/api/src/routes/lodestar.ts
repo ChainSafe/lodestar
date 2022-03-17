@@ -73,6 +73,8 @@ export type Api = {
   getStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
+  /** Dump peer gossip stats by peer */
+  getGossipPeerScoreStats(): Promise<Record<string, unknown>>;
   /** Run GC with `global.gc()` */
   runGC(): Promise<void>;
   /** Drop all states in the state cache */
@@ -100,6 +102,7 @@ export const routesData: RoutesData<Api> = {
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
+  getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip-peer-score-stats", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
@@ -117,6 +120,7 @@ export type ReqTypes = {
   getBlockProcessorQueueItems: ReqEmpty;
   getStateCacheItems: ReqEmpty;
   getCheckpointStateCacheItems: ReqEmpty;
+  getGossipPeerScoreStats: ReqEmpty;
   runGC: ReqEmpty;
   dropStateCache: ReqEmpty;
   connectPeer: {query: {peerId: string; multiaddr: string[]}};
@@ -143,6 +147,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getBlockProcessorQueueItems: reqEmpty,
     getStateCacheItems: reqEmpty,
     getCheckpointStateCacheItems: reqEmpty,
+    getGossipPeerScoreStats: reqEmpty,
     runGC: reqEmpty,
     dropStateCache: reqEmpty,
     connectPeer: {
@@ -190,6 +195,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getBlockProcessorQueueItems: jsonType(),
     getStateCacheItems: jsonType(),
     getCheckpointStateCacheItems: jsonType(),
+    getGossipPeerScoreStats: jsonType(),
     discv5GetKadValues: jsonType(),
   };
 }
