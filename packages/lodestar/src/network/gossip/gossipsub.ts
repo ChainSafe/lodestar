@@ -87,6 +87,8 @@ export class Eth2Gossipsub extends Gossipsub {
   constructor(opts: Eth2GossipsubOpts, modules: Eth2GossipsubModules) {
     const gossipTopicCache = new GossipTopicCache(modules.config);
 
+    const scoreParams = computeGossipPeerScoreParams(modules);
+
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p, {
@@ -97,7 +99,7 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
-      scoreParams: computeGossipPeerScoreParams(modules),
+      scoreParams,
       scoreThresholds: gossipScoreThresholds,
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
@@ -127,6 +129,10 @@ export class Eth2Gossipsub extends Gossipsub {
     }
 
     this.on("gossipsub:message", this.onGossipsubMessage.bind(this));
+
+    // Having access to this data is CRUCIAL for debugging. While this is a massive log, it must not be deleted.
+    // Scoring issues require this dump + current peer score stats to re-calculate scores.
+    this.logger.debug("Gossipsub score params", {params: JSON.stringify(scoreParams)});
   }
 
   /**
