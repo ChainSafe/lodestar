@@ -74,7 +74,7 @@ describe("api / impl / lodestar", function () {
       );
     });
 
-    it("Should return only for current epoch", async function () {
+    it("Should return only for previous, current and next epoch", async function () {
       // TODO [DA] Look at how to advance the epoch in test so as to confirm that
       // epoch less than previous epoch is also rejected
       this.timeout("10 min");
