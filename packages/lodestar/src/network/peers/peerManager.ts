@@ -504,17 +504,24 @@ export class PeerManager {
       this.connectedPeers.set(peer.toB58String(), peerData);
 
       if (direction === "outbound") {
-        this.pingAndStatusTimeouts();
+        // There's an issue that cause libp2p to open another connection in peer:connect event handler
+        // This causes the sim test multiThreadSingleNode fails because no gossip block is received
+        // TODO: remove setTimeout once this is done
+        // https://github.com/libp2p/js-libp2p/pull/1171
+        setTimeout(() => this.pingAndStatusTimeouts(), 0);
       }
 
-      // AgentVersion was set in libp2p handler of 'peer:connect' event
-      // we register our handler after libp2p so this data should be available
-      const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
-      if (agentVersionBytes) {
-        const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
-        peerData.agentVersion = agentVersion;
-        peerData.agentClient = clientFromAgentVersion(agentVersion);
-      }
+      // AgentVersion was set in libp2p IdentifyService, 'peer:connect' event handler
+      // since it's not possible to handle it async, we have to wait for a while to set AgentVersion
+      // See https://github.com/libp2p/js-libp2p/pull/1168
+      setTimeout(async () => {
+        const agentVersionBytes = await this.libp2p.peerStore.metadataBook.getValue(peerData.peerId, "AgentVersion");
+        if (agentVersionBytes) {
+          const agentVersion = new TextDecoder().decode(agentVersionBytes) || "N/A";
+          peerData.agentVersion = agentVersion;
+          peerData.agentClient = clientFromAgentVersion(agentVersion);
+        }
+      }, 1000);
     }
 
     this.logger.verbose("peer connected", {peer: prettyPrintPeerId(peer), direction, status});
