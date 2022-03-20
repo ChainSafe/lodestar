@@ -4,10 +4,10 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getClient} from "@chainsafe/lodestar-api";
+import {toHexString} from "@chainsafe/ssz";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../../../utils/logger";
 import {getDevBeaconNode} from "../../../../../utils/node/beacon";
 import {getAndInitDevValidators} from "../../../../../utils/node/validator";
-import {toHexString} from "@chainsafe/ssz";
 
 chai.use(chaiAsPromised);
 
@@ -23,6 +23,7 @@ describe("lodestar / api / impl / state", function () {
   const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
   describe("eth/v1/beacon/states/{status_id}/validators", function () {
+    this.timeout("10 min");
     const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
       SECONDS_PER_SLOT: 2,
     };
@@ -41,7 +42,6 @@ describe("lodestar / api / impl / state", function () {
 
     it("should return all validators when getStateValidators called without filters", async function () {
       const validatorCount = 2;
-      this.timeout("10 min");
       const bn = await getDevBeaconNode({
         params: testParams,
         options: {
@@ -71,8 +71,6 @@ describe("lodestar / api / impl / state", function () {
       expect(response.data.length).to.be.equal(validatorCount);
       expect(response.data[0].index).to.be.equal(0);
       expect(response.data[1].index).to.be.equal(1);
-
-      console.log(toHexString(response.data[0].validator.pubkey));
     });
 
     it("should return filtered validators when getStateValidators called with filters", async function () {
@@ -80,7 +78,6 @@ describe("lodestar / api / impl / state", function () {
       const filterPubKey =
         "0xa99a76ed7796f7be22d5b7e85deeb7c5677e88e511e0b337618f8c4eb61349b4bf2d153f649f7b53359fe8b94a38e44c";
 
-      this.timeout("10 min");
       const bn = await getDevBeaconNode({
         params: testParams,
         options: {
