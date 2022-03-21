@@ -1,6 +1,6 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {createKeypairFromPeerId} from "@chainsafe/discv5";
-import {formatNodePeer} from "./utils";
+import {formatNodePeer, getRevelantConnection} from "./utils";
 import {ApiError} from "../errors";
 import {ApiModules} from "../types";
 import {IApiOptions} from "../../options";
@@ -57,22 +57,22 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
       let disconnecting = 0;
 
       for (const connections of network.getConnectionsByPeer().values()) {
-        for (const connection of connections) {
-          switch (connection.stat.status) {
-            case "open":
-              connected++;
-              break;
-            case "closing":
-              disconnecting++;
-              break;
-            case "closed":
-              disconnected++;
-              break;
-            default:
-              connecting++;
-          }
+        const relevantConnection = getRevelantConnection(connections);
+        switch (relevantConnection?.stat.status) {
+          case "open":
+            connected++;
+            break;
+          case "closing":
+            disconnecting++;
+            break;
+          case "closed":
+            disconnected++;
+            break;
+          default:
+            connecting++;
         }
       }
+
       return {
         data: {
           disconnected,
