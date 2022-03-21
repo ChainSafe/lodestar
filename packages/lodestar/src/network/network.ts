@@ -24,7 +24,7 @@ import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
-import {NetworkGlobals} from "./globals";
+import {PeersData} from "./peers/peersData";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -46,7 +46,7 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
-  private readonly networkGlobals: NetworkGlobals;
+  private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
@@ -64,7 +64,7 @@ export class Network implements INetwork {
     this.config = config;
     this.clock = chain.clock;
     this.chain = chain;
-    this.networkGlobals = new NetworkGlobals();
+    this.peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
     const peerRpcScores = new PeerRpcScoreStore();
@@ -81,7 +81,7 @@ export class Network implements INetwork {
         logger,
         networkEventBus,
         metrics,
-        networkGlobals: this.networkGlobals,
+        peersData: this.peersData,
       },
       opts
     );
@@ -115,7 +115,7 @@ export class Network implements INetwork {
         config,
         peerRpcScores,
         networkEventBus,
-        networkGlobals: this.networkGlobals,
+        peersData: this.peersData,
       },
       opts
     );
@@ -251,7 +251,7 @@ export class Network implements INetwork {
   }
 
   getAgentVersion(peerIdStr: string): string {
-    return this.networkGlobals.getAgentVersion(peerIdStr);
+    return this.peersData.getAgentVersion(peerIdStr);
   }
 
   /**

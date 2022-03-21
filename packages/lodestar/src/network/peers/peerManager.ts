@@ -10,7 +10,7 @@ import {IMetrics} from "../../metrics";
 import {NetworkEvent, INetworkEventBus} from "../events";
 import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {prettyPrintPeerId} from "../util";
-import {NetworkGlobals, PeerData} from "../globals";
+import {PeersData, PeerData} from "./peersData";
 import {ISubnetsService} from "../subnets";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState} from "./score";
@@ -72,7 +72,7 @@ export type PeerManagerModules = {
   config: IBeaconConfig;
   peerRpcScores: IPeerRpcScoreStore;
   networkEventBus: INetworkEventBus;
-  networkGlobals: NetworkGlobals;
+  peersData: PeersData;
 };
 
 type PeerIdStr = string;
@@ -122,7 +122,7 @@ export class PeerManager {
     this.config = modules.config;
     this.peerRpcScores = modules.peerRpcScores;
     this.networkEventBus = modules.networkEventBus;
-    this.connectedPeers = modules.networkGlobals.connectedPeers;
+    this.connectedPeers = modules.peersData.connectedPeers;
     this.opts = opts;
 
     // opts.discv5 === null, discovery is disabled
@@ -568,7 +568,6 @@ export class PeerManager {
   private async runPeerCountMetrics(metrics: IMetrics): Promise<void> {
     let total = 0;
 
-    // TODO: Should we use here `this.connectedPeers`?
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
     for (const connections of this.libp2p.connectionManager.connections.values()) {

@@ -6,7 +6,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers";
 import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
-import {NetworkGlobals} from "../../../../src/network/globals";
+import {PeersData} from "../../../../src/network/peers/peersData";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -83,7 +83,7 @@ describe("network / peers / PeerManager", function () {
         networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
-        networkGlobals: new NetworkGlobals(),
+        peersData: new PeersData(),
       },
       {
         targetPeers: 30,

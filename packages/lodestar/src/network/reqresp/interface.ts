@@ -7,7 +7,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {IPeerRpcScoreStore} from "../peers";
 import {MetadataController} from "../metadata";
 import {INetworkEventBus} from "../events";
-import {NetworkGlobals} from "../globals";
+import {PeersData} from "../peers/peersData";
 import {ReqRespHandlers} from "./handlers";
 import {IMetrics} from "../../metrics";
 import {RequestTypedContainer} from "./types";
@@ -30,7 +30,7 @@ export interface IReqResp {
 export interface IReqRespModules {
   config: IBeaconConfig;
   libp2p: LibP2p;
-  networkGlobals: NetworkGlobals;
+  peersData: PeersData;
   logger: ILogger;
   metadata: MetadataController;
   reqRespHandlers: ReqRespHandlers;

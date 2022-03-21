@@ -5,7 +5,7 @@ import {ILogger, TimeoutError, withTimeout} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {REQUEST_TIMEOUT, RespStatus} from "../../../constants";
 import {prettyPrintPeerId} from "../../util";
-import {NetworkGlobals} from "../../globals";
+import {PeersData} from "../../peers/peersData";
 import {Protocol, RequestBody, OutgoingResponseBody} from "../types";
 import {renderRequestBody} from "../utils";
 import {Libp2pStream} from "../interface";
@@ -24,7 +24,7 @@ export type PerformRequestHandler = (
 type HandleRequestModules = {
   config: IBeaconConfig;
   logger: ILogger;
-  networkGlobals: NetworkGlobals;
+  peersData: PeersData;
 };
 
 /**
@@ -38,7 +38,7 @@ type HandleRequestModules = {
  * 4b. On error, encode and write an error `<response_chunk>` and stop
  */
 export async function handleRequest(
-  {config, logger, networkGlobals}: HandleRequestModules,
+  {config, logger, peersData: peersData}: HandleRequestModules,
   performRequestHandler: PerformRequestHandler,
   stream: Libp2pStream,
   peerId: PeerId,
@@ -46,7 +46,7 @@ export async function handleRequest(
   signal?: AbortSignal,
   requestId = 0
 ): Promise<void> {
-  const client = networkGlobals.getPeerKind(peerId.toB58String());
+  const client = peersData.getPeerKind(peerId.toB58String());
   const logCtx = {method: protocol.method, client, peer: prettyPrintPeerId(peerId), requestId};
 
   let responseError: Error | null = null;

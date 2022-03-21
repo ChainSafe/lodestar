@@ -6,7 +6,7 @@ import {IForkDigestContext} from "@chainsafe/lodestar-config";
 import {ErrorAborted, ILogger, withTimeout, TimeoutError} from "@chainsafe/lodestar-utils";
 import {timeoutOptions} from "../../../constants";
 import {prettyPrintPeerId} from "../../util";
-import {NetworkGlobals} from "../../globals";
+import {PeersData} from "../../peers/peersData";
 import {Method, Encoding, Protocol, Version, IncomingResponseBody, RequestBody} from "../types";
 import {formatProtocolId, renderRequestBody} from "../utils";
 import {ResponseError} from "../response";
@@ -29,7 +29,7 @@ type SendRequestModules = {
   logger: ILogger;
   forkDigestContext: IForkDigestContext;
   libp2p: Libp2p;
-  networkGlobals: NetworkGlobals;
+  peersData: PeersData;
 };
 
 /**
@@ -44,7 +44,7 @@ type SendRequestModules = {
  *    - The maximum number of requested chunks are read. Does not throw, returns read chunks only.
  */
 export async function sendRequest<T extends IncomingResponseBody | IncomingResponseBody[]>(
-  {logger, forkDigestContext, libp2p, networkGlobals}: SendRequestModules,
+  {logger, forkDigestContext, libp2p, peersData}: SendRequestModules,
   peerId: PeerId,
   method: Method,
   encoding: Encoding,
@@ -57,7 +57,7 @@ export async function sendRequest<T extends IncomingResponseBody | IncomingRespo
 ): Promise<T> {
   const {REQUEST_TIMEOUT, DIAL_TIMEOUT} = {...timeoutOptions, ...options};
   const peer = prettyPrintPeerId(peerId);
-  const client = networkGlobals.getPeerKind(peerId.toB58String());
+  const client = peersData.getPeerKind(peerId.toB58String());
   const logCtx = {method, encoding, client, peer, requestId};
 
   if (signal?.aborted) {

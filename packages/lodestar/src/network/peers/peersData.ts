@@ -1,7 +1,7 @@
 import {altair} from "@chainsafe/lodestar-types";
 import PeerId from "peer-id";
-import {ClientKind} from "./peers/client";
-import {Encoding} from "./reqresp/types";
+import {ClientKind} from "./client";
+import {Encoding} from "../reqresp/types";
 
 type PeerIdStr = string;
 
@@ -31,7 +31,7 @@ export type PeerData = {
  *
  * The pruning and bounding of this class is handled by the PeerManager
  */
-export class NetworkGlobals {
+export class PeersData {
   readonly connectedPeers = new Map<PeerIdStr, PeerData>();
 
   getAgentVersion(peerIdStr: string): string {
