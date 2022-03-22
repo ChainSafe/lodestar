@@ -113,8 +113,8 @@ describe("node api implementation", function () {
       expect(count).to.be.deep.equal(
         {
           connected: 1,
-          disconnecting: 2,
-          disconnected: 3,
+          disconnecting: 1, // picks most relevant connection to count
+          disconnected: 1, // picks most relevant connection to count
           connecting: 0,
         },
         "getPeerCount incorrect"
