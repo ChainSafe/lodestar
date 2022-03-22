@@ -99,6 +99,7 @@ export function computeGossipPeerScoreParams({
     // js-gossipsub doesn't have behaviourPenaltiesThreshold
     behaviourPenaltyDecay,
     behaviourPenaltyWeight: gossipScoreThresholds.gossipThreshold / (targetValue * targetValue),
+    behaviourPenaltyThreshold,
     topicScoreCap,
     IPColocationFactorWeight: -1 * topicScoreCap,
   };
