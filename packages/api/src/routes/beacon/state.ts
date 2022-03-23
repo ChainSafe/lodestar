@@ -20,7 +20,7 @@ export type ValidatorStatus =
   | "withdrawal_done";
 
 export type ValidatorFilters = {
-  indices?: ValidatorId[];
+  id?: ValidatorId[];
   statuses?: ValidatorStatus[];
 };
 export type CommitteesFilters = {
@@ -153,8 +153,8 @@ export type ReqTypes = {
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
   getStateValidator: {params: {stateId: StateId; validatorId: ValidatorId}};
-  getStateValidators: {params: {stateId: StateId}; query: {indices?: ValidatorId[]; statuses?: ValidatorStatus[]}};
-  getStateValidatorBalances: {params: {stateId: StateId}; query: {indices?: ValidatorId[]}};
+  getStateValidators: {params: {stateId: StateId}; query: {id?: ValidatorId[]; statuses?: ValidatorStatus[]}};
+  getStateValidatorBalances: {params: {stateId: StateId}; query: {id?: ValidatorId[]}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -200,16 +200,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintOrStringArray, statuses: Schema.StringArray},
+        query: {id: Schema.UintOrStringArray, statuses: Schema.StringArray},
       },
     },
 
     getStateValidatorBalances: {
-      writeReq: (stateId, indices) => ({params: {stateId}, query: {indices}}),
-      parseReq: ({params, query}) => [params.stateId, query.indices],
+      writeReq: (stateId, id) => ({params: {stateId}, query: {id}}),
+      parseReq: ({params, query}) => [params.stateId, query.id],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintOrStringArray},
+        query: {id: Schema.UintOrStringArray},
       },
     },
   };
