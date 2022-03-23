@@ -54,7 +54,7 @@ describe("beacon api impl - state - validators", function () {
         } as unknown) as PubkeyIndexMap,
       } as CachedBeaconStateAllForks);
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
-      const {data: validators} = await api.getStateValidators("someState", {indices: [0, 1, 123]});
+      const {data: validators} = await api.getStateValidators("someState", {id: [0, 1, 123]});
       expect(validators.length).to.equal(2);
     });
 
@@ -96,7 +96,7 @@ describe("beacon api impl - state - validators", function () {
       }
       const api = getBeaconStateApi({config, db: dbStub, chain: chainStub});
       const {data: stateValidators} = await api.getStateValidators("someState", {
-        indices: [0, 1, 2, 123],
+        id: [0, 1, 2, 123],
         statuses: ["pending_initialized"],
       });
       expect(stateValidators.length).to.equal(3);
