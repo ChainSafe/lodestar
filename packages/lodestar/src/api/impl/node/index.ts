@@ -51,6 +51,7 @@ export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, 
     },
 
     async getPeerCount() {
+      // TODO: Implement disconnect count with on-disk persistence
       let disconnected = 0;
       let connecting = 0;
       let connected = 0;
