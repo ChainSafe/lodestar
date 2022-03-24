@@ -1,5 +1,5 @@
 import xor from "buffer-xor";
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {allForks} from "@chainsafe/lodestar-types";
 import {getRandaoMix} from "../../util";
 import {verifyRandaoSignature} from "../signatureSets";
@@ -28,9 +28,6 @@ export function processRandao(
   }
 
   // mix in RANDAO reveal
-  const randaoMix = xor(
-    Buffer.from(getRandaoMix(state, epoch) as Uint8Array),
-    Buffer.from(SHA256.digest(randaoReveal))
-  );
+  const randaoMix = xor(Buffer.from(getRandaoMix(state, epoch) as Uint8Array), Buffer.from(digest(randaoReveal)));
   state.randaoMixes.set(epoch % EPOCHS_PER_HISTORICAL_VECTOR, randaoMix);
 }

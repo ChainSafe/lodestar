@@ -2,7 +2,7 @@
  * @module chain/stateTransition/util
  */
 
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {
@@ -37,7 +37,7 @@ export function computeProposers(
       computeProposerIndex(
         effectiveBalanceIncrements,
         shuffling.activeIndices,
-        SHA256.digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
+        digest(Buffer.concat([epochSeed, intToBytes(slot, 8)]))
       )
     );
   }
@@ -66,7 +66,7 @@ export function computeProposerIndex(
   /* eslint-disable-next-line no-constant-condition */
   while (true) {
     const candidateIndex = indices[computeShuffledIndex(i % indices.length, indices.length, seed)];
-    const randByte = SHA256.digest(
+    const randByte = digest(
       Buffer.concat([
         seed,
         //
@@ -113,7 +113,7 @@ export function getNextSyncCommitteeIndices(
   while (syncCommitteeIndices.length < SYNC_COMMITTEE_SIZE) {
     const shuffledIndex = computeShuffledIndex(i % activeValidatorCount, activeValidatorCount, seed);
     const candidateIndex = activeValidatorIndices[shuffledIndex];
-    const randByte = SHA256.digest(
+    const randByte = digest(
       Buffer.concat([
         seed,
         //
@@ -146,11 +146,11 @@ export function computeShuffledIndex(index: number, indexCount: number, seed: By
   const _seed = seed;
   for (let i = 0; i < SHUFFLE_ROUND_COUNT; i++) {
     const pivot = Number(
-      bytesToBigInt(SHA256.digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
+      bytesToBigInt(digest(Buffer.concat([_seed, intToBytes(i, 1)])).slice(0, 8)) % BigInt(indexCount)
     );
     const flip = (pivot + indexCount - permuted) % indexCount;
     const position = Math.max(permuted, flip);
-    const source = SHA256.digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
+    const source = digest(Buffer.concat([_seed, intToBytes(i, 1), intToBytes(Math.floor(position / 256), 4)]));
     const byte = source[Math.floor((position % 256) / 8)];
     const bit = (byte >> position % 8) % 2;
     permuted = bit ? flip : permuted;
@@ -171,5 +171,5 @@ export function getRandaoMix(state: BeaconStateAllForks, epoch: Epoch): Bytes32 
 export function getSeed(state: BeaconStateAllForks, epoch: Epoch, domainType: DomainType): Uint8Array {
   const mix = getRandaoMix(state, epoch + EPOCHS_PER_HISTORICAL_VECTOR - MIN_SEED_LOOKAHEAD - 1);
 
-  return SHA256.digest(Buffer.concat([domainType as Buffer, intToBytes(epoch, 8), mix]));
+  return digest(Buffer.concat([domainType as Buffer, intToBytes(epoch, 8), mix]));
 }

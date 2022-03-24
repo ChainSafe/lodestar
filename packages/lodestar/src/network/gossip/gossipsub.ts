@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Gossipsub from "libp2p-gossipsub";
 import {messageIdToString} from "libp2p-gossipsub/src/utils/messageIdToString";
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {InMessage, utils} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
@@ -89,7 +89,7 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlazy: 6,
       scoreParams: computeGossipPeerScoreParams(modules),
       scoreThresholds: gossipScoreThresholds,
-      fastMsgIdFn: (msg: InMessage) => Buffer.from(SHA256.digest(msg.data)).toString("hex"),
+      fastMsgIdFn: (msg: InMessage) => Buffer.from(digest(msg.data)).toString("hex"),
     });
     const {config, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;

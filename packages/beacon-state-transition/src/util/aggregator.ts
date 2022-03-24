@@ -1,4 +1,4 @@
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {BLSSignature} from "@chainsafe/lodestar-types";
 import {intDiv, bytesToBigInt} from "@chainsafe/lodestar-utils";
 import {
@@ -29,5 +29,5 @@ export function isAggregatorFromCommitteeLength(committeeLength: number, slotSig
  * Using bytesToInt() may cause isSelectionProofValid() to always return false.
  */
 export function isSelectionProofValid(sig: BLSSignature, modulo: number): boolean {
-  return bytesToBigInt(SHA256.digest(sig).slice(0, 8)) % BigInt(modulo) === ZERO_BIGINT;
+  return bytesToBigInt(digest(sig).slice(0, 8)) % BigInt(modulo) === ZERO_BIGINT;
 }
