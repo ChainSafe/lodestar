@@ -10,5 +10,5 @@ export function processParticipationRecordUpdates(state: CachedBeaconStatePhase0
   state.previousEpochAttestations = state.currentEpochAttestations;
 
   // Reset list to empty
-  state.currentEpochAttestations = ssz.phase0.EpochAttestations.toViewDU([]);
+  state.currentEpochAttestations = ssz.phase0.EpochAttestations.defaultViewDU();
 }

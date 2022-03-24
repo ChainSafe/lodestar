@@ -53,9 +53,7 @@ export function upgradeState(stateAltair: CachedBeaconStateAltair): CachedBeacon
   });
 
   // Execution-layer
-  stateBellatrix.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
-    ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
-  );
+  stateBellatrix.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
 
   // Commit new added fields ViewDU to the root node
   stateBellatrix.commit();

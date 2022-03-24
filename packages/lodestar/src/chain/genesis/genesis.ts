@@ -86,7 +86,7 @@ export class GenesisBuilder implements IGenesisBuilder {
         ssz.phase0.Eth1Data.defaultValue(),
         getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
       );
-      this.depositTree = ssz.phase0.DepositDataRootList.toViewDU(ssz.phase0.DepositDataRootList.defaultValue());
+      this.depositTree = ssz.phase0.DepositDataRootList.defaultViewDU();
       this.fromBlock = this.eth1Provider.deployBlock;
     }
 
