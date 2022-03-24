@@ -35,7 +35,7 @@
   },
   "types": "lib/index.d.ts",
   "dependencies": {
-    "@chainsafe/as-sha256": "^0.2.4",
+    "@chainsafe/as-sha256": "^0.3.0",
     "@chainsafe/bls": "6.0.3",
     "@chainsafe/lodestar-config": "^0.36.0",
     "@chainsafe/lodestar-params": "^0.36.0",
@@ -48,14 +48,14 @@
     "buffer-xor": "^2.0.2"
   },
   "devDependencies": {
-    "@chainsafe/blst": "^0.2.2",
+    "@chainsafe/blst": "^0.2.4",
     "@types/buffer-xor": "^2.0.0",
     "@types/mockery": "^1.4.29",
     "mockery": "^2.1.0"
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ]

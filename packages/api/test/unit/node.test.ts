@@ -24,7 +24,7 @@ describe("node", () => {
           enr: "enr",
           p2pAddresses: ["p2pAddresses"],
           discoveryAddresses: ["discoveryAddresses"],
-          metadata: ssz.altair.Metadata.defaultValue,
+          metadata: ssz.altair.Metadata.defaultValue(),
         },
       },
     },
@@ -53,7 +53,7 @@ describe("node", () => {
     },
     getSyncingStatus: {
       args: [],
-      res: {data: {headSlot: 1, syncDistance: 2, isSyncing: false}},
+      res: {data: {headSlot: "1", syncDistance: "2", isSyncing: false}},
     },
     getHealth: {
       args: [],

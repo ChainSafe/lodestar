@@ -67,7 +67,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "No deposits yet, should throw with NoDepositsForBlockRange",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU(),
         lastProcessedDepositBlockNumber: 0,
         error: Eth1ErrorCode.NO_DEPOSITS_FOR_BLOCK_RANGE,
       };
@@ -78,7 +78,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "With deposits and no deposit roots, should throw with NotEnoughDepositRoots",
         blocks: [getMockBlock({blockNumber: 0})],
         deposits: [getMockDeposit({blockNumber: 0, index: 0})],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU(),
         lastProcessedDepositBlockNumber: 0,
         error: Eth1ErrorCode.NOT_ENOUGH_DEPOSIT_ROOTS,
       };
@@ -89,7 +89,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
         id: "Empty case",
         blocks: [],
         deposits: [],
-        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU,
+        depositRootTree: ssz.phase0.DepositDataRootList.defaultViewDU(),
         lastProcessedDepositBlockNumber: 0,
         expectedEth1Data: [],
       };
@@ -212,7 +212,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
   }
 
   const fullRootMap = new Map<number, Root>();
-  const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU;
+  const fullDepositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU();
   for (let i = 0; i < 10; i++) {
     fullDepositRootTree.push(Buffer.alloc(32, i));
     fullRootMap.set(fullDepositRootTree.length, fullDepositRootTree.hashTreeRoot());
@@ -242,7 +242,7 @@ describe("eth1 / util / getDepositRootByDepositCount", function () {
       };
     },
     () => {
-      const emptyTree = ssz.phase0.DepositDataRootList.defaultViewDU;
+      const emptyTree = ssz.phase0.DepositDataRootList.defaultViewDU();
       return {
         id: "Empty case",
         depositCounts: [],

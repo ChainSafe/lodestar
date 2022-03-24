@@ -1,5 +1,6 @@
 import {ethers} from "ethers";
-import {hash, toHexString} from "@chainsafe/ssz";
+import {digest} from "@chainsafe/as-sha256";
+import {toHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import bls, {SecretKey, PublicKey} from "@chainsafe/bls";
@@ -37,7 +38,7 @@ export function encodeDepositData(
   config: IChainForkConfig
 ): string {
   const pubkey = signingKey.toPublicKey().toBytes();
-  const withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX, hash(withdrawalPublicKey.toBytes()).slice(1)]);
+  const withdrawalCredentials = Buffer.concat([BLS_WITHDRAWAL_PREFIX, digest(withdrawalPublicKey.toBytes()).slice(1)]);
 
   // deposit data with empty signature to sign
   const depositData: phase0.DepositData = {

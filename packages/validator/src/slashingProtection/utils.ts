@@ -2,7 +2,7 @@ import {Epoch, Root, ssz} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 export const blsPubkeyLen = 48;
-export const ZERO_ROOT = ssz.Root.defaultValue;
+export const ZERO_ROOT = ssz.Root.defaultValue();
 
 export function isEqualRoot(root1: Root, root2: Root): boolean {
   return ssz.Root.equals(root1, root2);

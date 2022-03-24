@@ -34,7 +34,7 @@ describe("GossipMessageValidator", () => {
 
   describe("validate attester slashing", () => {
     it("should return invalid attester slashing - already exisits", async () => {
-      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue;
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
       opPool.hasSeenAttesterSlashing.returns(true);
 
       await expectRejectedWithLodestarError(
@@ -44,7 +44,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return invalid attester slashing - invalid", async () => {
-      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue;
+      const attesterSlashing = ssz.phase0.AttesterSlashing.defaultValue();
 
       await expectRejectedWithLodestarError(
         validateGossipAttesterSlashing(chainStub, attesterSlashing),
@@ -53,7 +53,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = ssz.phase0.AttestationData.defaultValue;
+      const attestationData = ssz.phase0.AttestationData.defaultValue();
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,

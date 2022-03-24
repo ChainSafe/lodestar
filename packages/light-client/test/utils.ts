@@ -52,7 +52,7 @@ export function getSyncAggregateSigningRoot(
 }
 
 export function defaultBeaconBlockHeader(slot: Slot): phase0.BeaconBlockHeader {
-  const header = ssz.phase0.BeaconBlockHeader.defaultValue;
+  const header = ssz.phase0.BeaconBlockHeader.defaultValue();
   header.slot = slot;
   return header;
 }

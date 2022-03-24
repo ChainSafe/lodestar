@@ -14,8 +14,8 @@ describe("eth1 / pickEth1Vote", () => {
     eth1DataVotes: new ListCompositeType(ssz.phase0.Eth1Data, eth1DataVotesLimit),
   });
 
-  const stateNoVotes = stateMainnetType.defaultViewDU;
-  const stateMaxVotes = stateMainnetType.defaultViewDU;
+  const stateNoVotes = stateMainnetType.defaultViewDU();
+  const stateMaxVotes = stateMainnetType.defaultViewDU();
 
   // Must convert all instances to create a cache
   stateMaxVotes.eth1DataVotes = ssz.phase0.Eth1DataVotes.toViewDU(

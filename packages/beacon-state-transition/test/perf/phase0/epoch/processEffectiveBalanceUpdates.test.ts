@@ -49,11 +49,11 @@ function getEffectiveBalanceTestData(
   state: CachedBeaconStateAllForks;
   epochProcess: EpochProcess;
 } {
-  const stateTree = ssz.phase0.BeaconState.defaultViewDU;
+  const stateTree = ssz.phase0.BeaconState.defaultViewDU();
   stateTree.slot = 1;
 
   const activeValidator = ssz.phase0.Validator.toViewDU({
-    ...ssz.phase0.Validator.defaultValue,
+    ...ssz.phase0.Validator.defaultValue(),
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
     // Set current effective balance to max

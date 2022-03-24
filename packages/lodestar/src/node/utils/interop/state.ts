@@ -24,7 +24,7 @@ export function getInteropState(
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositTree
 ): BeaconStateAllForks {
-  const latestPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU;
+  const latestPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
   // TODO: when having different test options, consider modifying these values
   latestPayloadHeader.blockHash = eth1BlockHash;
   latestPayloadHeader.timestamp = eth1Timestamp;

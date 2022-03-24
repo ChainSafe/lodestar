@@ -83,7 +83,7 @@ export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedB
       slot: 90009,
       body: {
         ...sszSnappySignedBeaconBlockPhase0.body.message.body,
-        syncAggregate: ssz.altair.SyncAggregate.defaultValue,
+        syncAggregate: ssz.altair.SyncAggregate.defaultValue(),
       },
     },
   },

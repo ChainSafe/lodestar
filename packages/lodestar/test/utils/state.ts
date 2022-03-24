@@ -110,17 +110,17 @@ export function generateState(
 
   if (isAltair) {
     const defaultAltairState: altair.BeaconState = {
-      ...ssz.altair.BeaconState.defaultValue,
+      ...ssz.altair.BeaconState.defaultValue(),
       ...defaultState,
       previousEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
       currentEpochParticipation: [...[0xff, 0xff], ...Array.from({length: numValidators - 2}, () => 0)],
       currentSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue,
+        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
       },
       nextSyncCommittee: {
         pubkeys: Array.from({length: SYNC_COMMITTEE_SIZE}, (_, i) => validators[i % validators.length].pubkey),
-        aggregatePubkey: ssz.BLSPubkey.defaultValue,
+        aggregatePubkey: ssz.BLSPubkey.defaultValue(),
       },
     };
 

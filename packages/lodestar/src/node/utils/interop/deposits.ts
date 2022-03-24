@@ -1,4 +1,4 @@
-import {hash} from "@chainsafe/ssz";
+import {digest} from "@chainsafe/as-sha256";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -27,7 +27,7 @@ export function interopDeposits(
     // create DepositData
     const data: phase0.DepositData = {
       pubkey,
-      withdrawalCredentials: Buffer.concat([BLS_WITHDRAWAL_PREFIX, hash(pubkey).slice(1)]),
+      withdrawalCredentials: Buffer.concat([BLS_WITHDRAWAL_PREFIX, digest(pubkey).slice(1)]),
       amount: MAX_EFFECTIVE_BALANCE,
       signature: Buffer.alloc(0),
     };

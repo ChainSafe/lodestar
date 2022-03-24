@@ -11,10 +11,10 @@ import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet";
 import * as prater from "./prater";
-import * as kintsugi from "./kintsugi";
+import * as kiln from "./kiln";
 
-export type NetworkName = "mainnet" | "prater" | "kintsugi" | "dev";
-export const networkNames: NetworkName[] = ["mainnet", "prater", "kintsugi"];
+export type NetworkName = "mainnet" | "prater" | "kiln" | "dev";
+export const networkNames: NetworkName[] = ["mainnet", "prater", "kiln"];
 
 export type WeakSubjectivityFetchOptions = {
   weakSubjectivityServerUrl: string;
@@ -35,8 +35,8 @@ function getNetworkData(
       return mainnet;
     case "prater":
       return prater;
-    case "kintsugi":
-      return kintsugi;
+    case "kiln":
+      return kiln;
     default:
       throw Error(`Network not supported: ${network}`);
   }

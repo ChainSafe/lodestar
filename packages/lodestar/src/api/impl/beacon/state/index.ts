@@ -51,8 +51,8 @@ export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" 
       const {pubkey2index} = chain.getHeadState().epochCtx;
 
       const validatorResponses: routes.beacon.ValidatorResponse[] = [];
-      if (filters?.indices) {
-        for (const id of filters.indices) {
+      if (filters?.id) {
+        for (const id of filters.id) {
           const validatorIndex = getStateValidatorIndex(id, state, pubkey2index);
           if (validatorIndex != null) {
             const validator = validators.get(validatorIndex);

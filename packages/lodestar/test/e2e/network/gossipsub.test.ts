@@ -30,7 +30,7 @@ const opts: INetworkOptions = {
   discv5: null,
 };
 
-describe("network", function () {
+describe("gossipsub", function () {
   if (this.timeout() < 15 * 1000) this.timeout(15 * 1000);
   this.retries(2); // This test fail sometimes, with a 5% rate.
 
@@ -117,7 +117,7 @@ describe("network", function () {
       }
     }
 
-    const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue;
+    const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
     await netA.gossip.publishVoluntaryExit(voluntaryExit);
 
     const receivedVoluntaryExit = await onVoluntaryExitPromise;
@@ -153,7 +153,7 @@ describe("network", function () {
     const msgCount = 1000;
 
     for (let i = 0; i < msgCount; i++) {
-      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue;
+      const voluntaryExit = ssz.phase0.SignedVoluntaryExit.defaultValue();
       voluntaryExit.message.epoch = i;
       netA.gossip.publishVoluntaryExit(voluntaryExit).catch((e: Error) => {
         logger.error("Error on publishVoluntaryExit", {}, e);

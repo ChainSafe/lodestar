@@ -5,7 +5,7 @@ import {createCachedBeaconState, PubkeyIndexMap} from "../../../src";
 
 describe("CachedBeaconState", () => {
   it("Create empty CachedBeaconState", () => {
-    const emptyState = ssz.phase0.BeaconState.defaultViewDU;
+    const emptyState = ssz.phase0.BeaconState.defaultViewDU();
 
     createCachedBeaconState(emptyState, {
       config: createIBeaconConfig(config, emptyState.genesisValidatorsRoot),

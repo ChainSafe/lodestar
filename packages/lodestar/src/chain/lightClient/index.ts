@@ -179,8 +179,8 @@ export class LightClientServer {
     this.logger = logger;
 
     this.zero = {
-      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue,
-      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue,
+      finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
+      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
   }
 

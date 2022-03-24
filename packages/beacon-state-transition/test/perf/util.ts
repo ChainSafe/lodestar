@@ -266,7 +266,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
     state.inactivityScores = Array.from({length: pubkeys.length}, (_, i) => i % 2);
 
     // Placeholder syncCommittees
-    state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue;
+    state.currentSyncCommittee = ssz.altair.SyncCommittee.defaultValue();
     state.nextSyncCommittee = state.currentSyncCommittee;
 
     // Now the state is fully populated to convert to ViewDU
@@ -297,7 +297,7 @@ export function generatePerformanceStateAltair(pubkeysArg?: Uint8Array[]): Beaco
  */
 export function generatePerformanceBlockPhase0(): phase0.SignedBeaconBlock {
   if (!phase0SignedBlock) {
-    const block = ssz.phase0.SignedBeaconBlock.defaultValue;
+    const block = ssz.phase0.SignedBeaconBlock.defaultValue();
     const parentState = generatePerfTestCachedStatePhase0();
     block.message.slot = parentState.slot;
     block.message.proposerIndex = parentState.epochCtx.getBeaconProposer(parentState.slot);
@@ -367,7 +367,7 @@ function buildPerformanceStatePhase0(pubkeysArg?: Uint8Array[]): phase0.BeaconSt
     balances: Array.from({length: pubkeys.length}, () => 31217089836),
     randaoMixes: Array.from({length: EPOCHS_PER_HISTORICAL_VECTOR}, (_, i) => Buffer.alloc(32, i)),
     // Slashings
-    slashings: ssz.phase0.Slashings.defaultValue,
+    slashings: ssz.phase0.Slashings.defaultValue(),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
     // Finality
@@ -407,7 +407,7 @@ export function generateTestCachedBeaconStateOnlyValidators({
     index2pubkey.push(pubkeyObj);
   }
 
-  const state = ssz.phase0.BeaconState.defaultViewDU;
+  const state = ssz.phase0.BeaconState.defaultViewDU();
   state.slot = slot;
 
   const activeValidator = ssz.phase0.Validator.toViewDU({

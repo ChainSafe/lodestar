@@ -70,6 +70,6 @@ export function serializeSyncCommittee(syncCommittee: SyncCommitteeFast): altair
 }
 
 export function isEmptyHeader(header: BeaconBlockHeader): boolean {
-  const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue;
+  const emptyValue = ssz.phase0.BeaconBlockHeader.defaultValue();
   return ssz.phase0.BeaconBlockHeader.equals(emptyValue, header);
 }

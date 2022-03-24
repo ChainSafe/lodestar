@@ -95,7 +95,7 @@ describe("Lightclient sync", () => {
     // Test fetching a proof
     // First create a state with some known data
     const executionStateRoot = Buffer.alloc(32, 0xee);
-    const state = ssz.bellatrix.BeaconState.defaultViewDU;
+    const state = ssz.bellatrix.BeaconState.defaultViewDU();
     state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
 
     // Track head + reference states with some known data

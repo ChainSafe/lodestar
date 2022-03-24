@@ -120,7 +120,7 @@ describe("eth1 / util / deposits", function () {
         })
       );
 
-      const depositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU;
+      const depositRootTree = ssz.phase0.DepositDataRootList.defaultViewDU();
       for (const depositEvent of depositEvents) {
         depositRootTree.push(ssz.phase0.DepositData.hashTreeRoot(depositEvent.depositData));
       }

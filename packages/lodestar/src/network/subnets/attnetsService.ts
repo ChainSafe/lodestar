@@ -248,7 +248,7 @@ export class AttnetsService implements IAttnetsService {
 
   /** Update ENR */
   private updateMetadata(): void {
-    const subnets = ssz.phase0.AttestationSubnets.defaultValue;
+    const subnets = ssz.phase0.AttestationSubnets.defaultValue();
     for (const subnet of this.subscriptionsRandom.getAll()) {
       subnets.set(subnet, true);
     }

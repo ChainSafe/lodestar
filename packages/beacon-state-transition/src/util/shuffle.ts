@@ -46,7 +46,7 @@ def shuffle(list_size, seed):
 Heavily-optimized version of the set-shuffling algorithm proposed by Vitalik to shuffle all items in a list together.
 
 Original here:
-	https://github.com/ethereum/eth2.0-specs/pull/576#issue-250741806
+	https://github.com/ethereum/consensus-specs/pull/576
 
 Main differences, implemented by @protolambda:
     - User can supply input slice to shuffle, simple provide [0,1,2,3,4, ...] to get a list of cleanly shuffled indices.

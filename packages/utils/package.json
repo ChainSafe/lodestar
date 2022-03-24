@@ -37,7 +37,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
-    "@chainsafe/as-sha256": "^0.2.4",
+    "@chainsafe/as-sha256": "^0.3.0",
     "any-signal": "2.1.2",
     "bigint-buffer": "^1.1.5",
     "case": "^1.6.3",
@@ -54,7 +54,7 @@
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ]

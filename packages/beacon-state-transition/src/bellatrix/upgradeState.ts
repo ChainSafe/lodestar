@@ -54,7 +54,7 @@ export function upgradeState(stateAltair: CachedBeaconStateAltair): CachedBeacon
 
   // Execution-layer
   stateBellatrix.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.toViewDU(
-    ssz.bellatrix.ExecutionPayloadHeader.defaultValue
+    ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
   );
 
   // Commit new added fields ViewDU to the root node

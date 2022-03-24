@@ -2,13 +2,14 @@
 
 [![npm](https://img.shields.io/npm/v/@chainsafe/lodestar-types)](https://www.npmjs.com/package/@chainsafe/lodestar-types)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![ETH2.0_Spec_Version 1.0.0](https://img.shields.io/badge/ETH2.0_Spec_Version-1.0.0-2e86c1.svg)
+[![Eth Consensus Spec v1.1.10](https://img.shields.io/badge/ETH%20consensus--spec-1.1.10-blue)](https://github.com/ethereum/consensus-specs/releases/tag/v1.1.10)
 ![ES Version](https://img.shields.io/badge/ES-2020-yellow)
-![Node Version](https://img.shields.io/badge/node-12.x-green)
+![Node Version](https://img.shields.io/badge/node-16.x-green)
 
 > This package is part of [ChainSafe's Lodestar](https://lodestar.chainsafe.io) project
 
-Lodestar defines all constants and presets defined in the [Ethereum Consensus / Eth2 spec](https://github.com/ethereum/eth2.0-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
+
+Lodestar defines all constants and presets defined in the [Ethereum Consensus spec](https://github.com/ethereum/consensus-specs). This can be used in conjunction with other Lodestar libraries to interact with the Ethereum consensus.
 
 ## Installation
 

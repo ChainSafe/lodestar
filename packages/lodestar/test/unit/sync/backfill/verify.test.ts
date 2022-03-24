@@ -23,7 +23,7 @@ describe("backfill sync - verify block sequence", function () {
   it("should fail with sequence not anchored", function () {
     const blocks = getBlocks();
 
-    const wrongAncorRoot = ssz.Root.defaultValue;
+    const wrongAncorRoot = ssz.Root.defaultValue();
     expect(() => verifyBlockSequence(beaconConfig, blocks, wrongAncorRoot)).to.throw(
       BackfillSyncErrorCode.NOT_ANCHORED
     );

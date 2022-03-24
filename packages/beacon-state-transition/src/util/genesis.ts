@@ -60,7 +60,7 @@ export function getGenesisBeaconState(
   const randaoMixes = newFilledArray(EPOCHS_PER_HISTORICAL_VECTOR, genesisEth1Data.blockHash);
 
   const beaconStateType = config.getForkTypes(GENESIS_SLOT).BeaconState;
-  const state = beaconStateType.defaultViewDU;
+  const state = beaconStateType.defaultViewDU();
 
   // MISC
   state.slot = GENESIS_SLOT;
@@ -214,14 +214,14 @@ export function initializeBeaconStateFromEth1(
   eth1Timestamp: TimeSeconds,
   deposits: phase0.Deposit[],
   fullDepositDataRootList?: DepositDataRootViewDU,
-  executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU
+  executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU()
 ): CachedBeaconStateAllForks {
   const stateView = getGenesisBeaconState(
     // CachedBeaconcState is used for convinience only, we return BeaconStateAllForks anyway
     // so it's safe to do a cast here, we can't use get domain until we have genesisValidatorRoot
     config as IBeaconConfig,
-    ssz.phase0.Eth1Data.defaultValue,
-    getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue)
+    ssz.phase0.Eth1Data.defaultValue(),
+    getTemporaryBlockHeader(config, config.getForkTypes(GENESIS_SLOT).BeaconBlock.defaultValue())
   );
 
   // We need a CachedBeaconState to run processDeposit() which uses various caches.

@@ -13,7 +13,7 @@ import {
 export function isExecutionEnabled(state: BeaconStateBellatrix, body: bellatrix.BeaconBlockBody): boolean {
   return (
     isMergeTransitionComplete(state) ||
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue)
+    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
   );
 }
 
@@ -24,7 +24,7 @@ export function isExecutionEnabled(state: BeaconStateBellatrix, body: bellatrix.
 export function isMergeTransitionBlock(state: BeaconStateBellatrix, body: bellatrix.BeaconBlockBody): boolean {
   return (
     !isMergeTransitionComplete(state) &&
-    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue)
+    !ssz.bellatrix.ExecutionPayload.equals(body.executionPayload, ssz.bellatrix.ExecutionPayload.defaultValue())
   );
 }
 
@@ -36,7 +36,7 @@ export function isMergeTransitionComplete(state: BeaconStateBellatrix): boolean 
   return !ssz.bellatrix.ExecutionPayloadHeader.equals(
     state.latestExecutionPayloadHeader,
     // TODO: Performance
-    ssz.bellatrix.ExecutionPayloadHeader.defaultValue
+    ssz.bellatrix.ExecutionPayloadHeader.defaultValue()
   );
 }
 

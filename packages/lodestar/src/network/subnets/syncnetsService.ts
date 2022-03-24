@@ -101,7 +101,7 @@ export class SyncnetsService implements ISubnetsService {
 
   /** Update ENR */
   private updateMetadata(): void {
-    const subnets = ssz.altair.SyncSubnets.defaultValue;
+    const subnets = ssz.altair.SyncSubnets.defaultValue();
     for (const subnet of this.subscriptionsCommittee.getAll()) {
       subnets.set(subnet, true);
     }

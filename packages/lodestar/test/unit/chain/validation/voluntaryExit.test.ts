@@ -33,7 +33,7 @@ describe("validate voluntary exit", () => {
   before(() => {
     const sk = SecretKey.fromKeygen();
 
-    const stateEmpty = ssz.phase0.BeaconState.defaultValue;
+    const stateEmpty = ssz.phase0.BeaconState.defaultValue();
 
     // Validator has to be active for long enough
     stateEmpty.slot = config.SHARD_COMMITTEE_PERIOD * SLOTS_PER_EPOCH;

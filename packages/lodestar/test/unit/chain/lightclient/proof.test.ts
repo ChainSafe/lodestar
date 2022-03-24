@@ -17,7 +17,7 @@ describe("chain / lightclient / proof", () => {
   const nextSyncCommittee = fillSyncCommittee(Buffer.alloc(48, 0xcc));
 
   before("random state", () => {
-    state = ssz.altair.BeaconState.defaultViewDU;
+    state = ssz.altair.BeaconState.defaultViewDU();
     state.currentSyncCommittee = ssz.altair.SyncCommittee.toViewDU(currentSyncCommittee);
     state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
     // Note: .hashTreeRoot() automatically commits()

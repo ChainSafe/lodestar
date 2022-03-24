@@ -5,7 +5,7 @@ import {createCachedBeaconStateTest} from "../utils/state";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {
-    const stateView = ssz.altair.BeaconState.defaultViewDU;
+    const stateView = ssz.altair.BeaconState.defaultViewDU();
     const state1 = createCachedBeaconStateTest(stateView);
     const state2 = state1.clone();
 
@@ -26,8 +26,8 @@ describe("CachedBeaconState", () => {
 
   it("Auto-commit on hashTreeRoot", () => {
     // Use Checkpoint instead of BeaconState to speed up the test
-    const cp1 = ssz.phase0.Checkpoint.defaultViewDU;
-    const cp2 = ssz.phase0.Checkpoint.defaultViewDU;
+    const cp1 = ssz.phase0.Checkpoint.defaultViewDU();
+    const cp2 = ssz.phase0.Checkpoint.defaultViewDU();
 
     cp1.epoch = 1;
     cp2.epoch = 1;
@@ -41,8 +41,8 @@ describe("CachedBeaconState", () => {
   });
 
   it("Auto-commit on serialize", () => {
-    const cp1 = ssz.phase0.Checkpoint.defaultViewDU;
-    const cp2 = ssz.phase0.Checkpoint.defaultViewDU;
+    const cp1 = ssz.phase0.Checkpoint.defaultViewDU();
+    const cp2 = ssz.phase0.Checkpoint.defaultViewDU();
 
     cp1.epoch = 1;
     cp2.epoch = 1;

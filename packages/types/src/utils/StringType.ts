@@ -8,7 +8,10 @@ export class StringType<T extends string = string> extends BasicType<T> {
   fixedSize = 0;
   minSize = 0;
   maxSize = 0;
-  defaultValue = "" as T;
+
+  defaultValue(): T {
+    return "" as T;
+  }
 
   // Serialization + deserialization
 

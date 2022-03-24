@@ -38,7 +38,7 @@ describe("get proposers api impl", function () {
     syncStub = server.syncStub;
     chainStub.clock = server.sandbox.createStubInstance(LocalClock);
     chainStub.forkChoice = server.sandbox.createStubInstance(ForkChoice);
-    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue);
+    chainStub.getCanonicalBlockAtSlot.resolves(ssz.phase0.SignedBeaconBlock.defaultValue());
     dbStub = server.dbStub;
     modules = {
       chain: server.chainStub,

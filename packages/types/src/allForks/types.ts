@@ -30,7 +30,7 @@ export type AllForksTypes = {
  * The generic argument of `AllForksTypeOf` must be the union of the fork types:
  *
  *
- * For example, `allForks.BeaconState.defaultValue` must return
+ * For example, `allForks.BeaconState.defaultValue()` must return
  * ```
  * phase0.BeaconState | altair.BeaconState | bellatrix.BeaconState
  * ```

@@ -11,7 +11,7 @@ const sync_aggregate: BlockProcessFn<CachedBeaconStateAltair> = (
   state,
   testCase: IBaseSpecTest & {sync_aggregate: altair.SyncAggregate}
 ) => {
-  const block = ssz.altair.BeaconBlock.defaultValue;
+  const block = ssz.altair.BeaconBlock.defaultValue();
 
   // processSyncAggregate() needs the full block to get the slot
   block.slot = state.slot;

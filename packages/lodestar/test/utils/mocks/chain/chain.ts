@@ -179,7 +179,7 @@ export class MockBeaconChain implements IBeaconChain {
 }
 
 function mockForkChoice(): IForkChoice {
-  const root = ssz.Root.defaultValue as Uint8Array;
+  const root = ssz.Root.defaultValue() as Uint8Array;
   const rootHex = toHexString(root);
   const block: IProtoBlock = {
     slot: 0,

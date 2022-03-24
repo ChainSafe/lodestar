@@ -12,7 +12,7 @@ export async function initDevState(
   validatorCount: number,
   interopStateOpts: InteropStateOpts
 ): Promise<BeaconStateAllForks> {
-  const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU, validatorCount);
+  const deposits = interopDeposits(config, ssz.phase0.DepositDataRootList.defaultViewDU(), validatorCount);
   await storeDeposits(db, deposits);
   const state = getInteropState(
     config,
@@ -20,7 +20,7 @@ export async function initDevState(
     deposits,
     await db.depositDataRoot.getDepositRootTreeAtIndex(validatorCount - 1)
   );
-  const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue;
+  const block = config.getForkTypes(GENESIS_SLOT).SignedBeaconBlock.defaultValue();
   block.message.stateRoot = state.hashTreeRoot();
   await db.blockArchive.add(block);
   return state;

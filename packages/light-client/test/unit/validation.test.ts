@@ -45,7 +45,7 @@ describe("validateLightClientUpdate", () => {
     };
 
     // finalizedCheckpointState must have `nextSyncCommittee`
-    const finalizedCheckpointState = ssz.altair.BeaconState.defaultViewDU;
+    const finalizedCheckpointState = ssz.altair.BeaconState.defaultViewDU();
     finalizedCheckpointState.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU(nextSyncCommittee);
     // Prove it
     const nextSyncCommitteeBranch = new Tree(finalizedCheckpointState.node).getSingleProof(
@@ -57,7 +57,7 @@ describe("validateLightClientUpdate", () => {
     finalizedHeader.stateRoot = finalizedCheckpointState.hashTreeRoot();
 
     // syncAttestedState must have `header` as finalizedCheckpoint
-    const syncAttestedState = ssz.altair.BeaconState.defaultViewDU;
+    const syncAttestedState = ssz.altair.BeaconState.defaultViewDU();
     syncAttestedState.finalizedCheckpoint = ssz.phase0.Checkpoint.toViewDU({
       epoch: 0,
       root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader),
@@ -69,7 +69,7 @@ describe("validateLightClientUpdate", () => {
     const syncAttestedBlockHeader = defaultBeaconBlockHeader(attestedHeaderSlot);
     syncAttestedBlockHeader.stateRoot = syncAttestedState.hashTreeRoot();
 
-    const forkVersion = ssz.Bytes4.defaultValue;
+    const forkVersion = ssz.Bytes4.defaultValue();
     const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
     const syncAggregate = signAndAggregate(signingRoot, sks);
 

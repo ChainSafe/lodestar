@@ -9,6 +9,7 @@ import {BeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
+import {formatNodePeer} from "../node/utils";
 
 export function getLodestarApi({
   chain,
@@ -149,6 +150,25 @@ export function getLodestarApi({
     async disconnectPeer(peerIdStr) {
       const peerId = PeerId.createFromB58String(peerIdStr);
       await network.disconnectPeer(peerId);
+    },
+
+    async getPeers(filters) {
+      const {state, direction} = filters || {};
+      const peers = Array.from(network.getConnectionsByPeer().entries())
+        .map(([peerIdStr, connections]) => ({
+          ...formatNodePeer(peerIdStr, connections),
+          agentVersion: network.getAgentVersion(peerIdStr),
+        }))
+        .filter(
+          (nodePeer) =>
+            (!state || state.length === 0 || state.includes(nodePeer.state)) &&
+            (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
+        );
+
+      return {
+        data: peers,
+        meta: {count: peers.length},
+      };
     },
 
     async discv5GetKadValues() {

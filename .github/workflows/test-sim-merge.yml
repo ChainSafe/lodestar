@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: e44f96d1d31bdc405f2653709df53bab4596f66b
-  NETHERMIND_COMMIT: f1fe9d3cb200772c9fd0b8b3935212d93d0f90fe
+  GETH_COMMIT: e0e8bf31c5d44f7de33ce774b221debf2c42256c
+  NETHERMIND_COMMIT: 29ffe2630afb69120004ff79bde70d37a3b80b7b
 
 jobs:
   sim-merge-tests:
@@ -40,7 +40,7 @@ jobs:
         with:
           go-version: '1.17'
       - name: Clone Geth merge interop branch
-        run: git clone -b merge-kiln-v2 https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+        run: git clone -b master https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
       - name: Build Geth
         run: cd go-ethereum && make
 
@@ -59,7 +59,7 @@ jobs:
         with:
           dotnet-version: "6.0.x"
       - name: Clone Nethermind merge interop branch
-        run: git clone -b kiln_processing https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
+        run: git clone -b kiln https://github.com/g11tech/nethermind --recursive && cd nethermind && git reset --hard $NETHERMIND_COMMIT && git submodule update --init --recursive
       - name: Build Nethermind
         run: cd nethermind/src/Nethermind && dotnet build Nethermind.sln -c Release
 
@@ -70,6 +70,7 @@ jobs:
           EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
           EL_SCRIPT_DIR: kiln/nethermind
           EL_PORT: 8550
+          ENGINE_PORT: 8551
 
       - name: Upload debug log test files
         if: ${{ always() }}

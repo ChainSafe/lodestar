@@ -101,7 +101,7 @@ export async function assembleBody(
 
     if (payloadId === null) {
       // Pre-merge, propose a pre-merge block with empty execution and keep the chain going
-      (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue;
+      (blockBody as bellatrix.BeaconBlockBody).executionPayload = ssz.bellatrix.ExecutionPayload.defaultValue();
     } else {
       (blockBody as bellatrix.BeaconBlockBody).executionPayload = await chain.executionEngine.getPayload(payloadId);
     }

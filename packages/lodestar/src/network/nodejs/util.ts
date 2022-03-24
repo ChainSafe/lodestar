@@ -8,7 +8,7 @@ import {NodejsNode} from "./bundle";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
 import {ENR} from "@chainsafe/discv5";
-import LevelDatastore from "datastore-level";
+import {Eth2PeerDataStore} from "../peers/datastore";
 
 export type NodeJsLibp2pOpts = {
   peerStoreDir?: string;
@@ -42,9 +42,9 @@ export async function createNodeJsLibp2p(
     }
   }
 
-  let datastore: undefined | LevelDatastore = undefined;
+  let datastore: undefined | Eth2PeerDataStore = undefined;
   if (peerStoreDir) {
-    datastore = new LevelDatastore(peerStoreDir);
+    datastore = new Eth2PeerDataStore(peerStoreDir);
     await datastore.open();
   }
 

@@ -18,7 +18,7 @@ export interface IForkChoice {
    *
    * Equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#get_ancestor
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_ancestor
    */
   getAncestor(blockRoot: RootHex, ancestorSlot: Slot): RootHex;
   /**
@@ -28,7 +28,7 @@ export interface IForkChoice {
    *
    * Is equivalent to:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.2/specs/phase0/fork-choice.md#get_head
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#get_head
    */
   getHeadRoot(): RootHex;
   getHead(): IProtoBlock;
@@ -46,7 +46,7 @@ export interface IForkChoice {
    *
    * Approximates:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_block
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_block
    *
    * It only approximates the specification since it does not run the `state_transition` check.
    * That should have already been called upstream and it's too expensive to call again.
@@ -66,7 +66,7 @@ export interface IForkChoice {
    *
    * Approximates:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md#on_attestation
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#on_attestation
    *
    * It only approximates the specification since it does not perform
    * `is_valid_indexed_attestation` since that should already have been called upstream and it's

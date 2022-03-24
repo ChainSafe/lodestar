@@ -62,7 +62,7 @@ export function createGenesisBlock(
   genesisState: BeaconStateAllForks
 ): allForks.SignedBeaconBlock {
   const types = config.getForkTypes(GENESIS_SLOT);
-  const genesisBlock = types.SignedBeaconBlock.defaultValue;
+  const genesisBlock = types.SignedBeaconBlock.defaultValue();
   const stateRoot = genesisState.hashTreeRoot();
   genesisBlock.message.stateRoot = stateRoot;
   return genesisBlock;
@@ -196,7 +196,7 @@ export function computeAnchorCheckpoint(
   const blockTypes = config.getForkTypes(anchorState.latestBlockHeader.slot);
 
   if (anchorState.latestBlockHeader.slot === GENESIS_SLOT) {
-    const block = blockTypes.BeaconBlock.defaultValue;
+    const block = blockTypes.BeaconBlock.defaultValue();
     block.stateRoot = anchorState.hashTreeRoot();
     blockHeader = blockToHeader(config, block);
     root = ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader);

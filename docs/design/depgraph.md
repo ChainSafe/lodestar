@@ -74,11 +74,11 @@ Let's talk about how each package fits together in finer detail, from top to bot
 
 ## @chainsafe/lodestar-params
 
-[@chainsafe/lodestar-params](https://github.com/ChainSafe/lodestar/tree/master/packages/params) contains the parameters for configuring an eth2 network. For example, the [mainnet params](https://github.com/ethereum/eth2.0-specs/blob/dev/configs/mainnet/phase0.yaml)
+[@chainsafe/lodestar-params](https://github.com/ChainSafe/lodestar/tree/master/packages/params) contains the parameters for configuring an Ethereum Consensus network. For example, the [mainnet params](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#configuration)
 
 ## @chainsafe/lodestar-types
 
-[@chainsafe/lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) contains eth2 ssz types and data structures.
+[@chainsafe/lodestar-types](https://github.com/ChainSafe/lodestar/tree/master/packages/types) contains Eth Consensus ssz types and data structures.
 
 ## @chainsafe/lodestar-config
 
@@ -90,7 +90,7 @@ Let's talk about how each package fits together in finer detail, from top to bot
 
 ## @chainsafe/lodestar-beacon-state-transition
 
-[@chainsafe/lodestar-beacon-state-transition](https://github.com/ChainSafe/lodestar/tree/master/packages/beacon-state-transition) contains the Lodestar implementation of the [beacon state transition function](https://github.com/ethereum/eth2.0-specs/blob/v0.10.0/specs/phase0/beacon-chain.md#beacon-chain-state-transition-function), which is used by [`@chainsafe/lodestar`](#chainsafelodestar) to perform the actual beacon state transition. This package also contains various functions used to calculate info about the beacon chain (such as `computeEpochAtSlot`) which are used by [@chainsafe/lodestar-fork-choice](#chainsafelodestar-fork-choice) and [@chainsafe/lodestar-validator](#chainsafelodestar-validator)
+[@chainsafe/lodestar-beacon-state-transition](https://github.com/ChainSafe/lodestar/tree/master/packages/beacon-state-transition) contains the Lodestar implementation of the [beacon state transition function](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#beacon-chain-state-transition-function), which is used by [`@chainsafe/lodestar`](#chainsafelodestar) to perform the actual beacon state transition. This package also contains various functions used to calculate info about the beacon chain (such as `computeEpochAtSlot`) which are used by [@chainsafe/lodestar-fork-choice](#chainsafelodestar-fork-choice) and [@chainsafe/lodestar-validator](#chainsafelodestar-validator)
 
 ## @chainsafe/lodestar-db
 
@@ -99,7 +99,7 @@ Let's talk about how each package fits together in finer detail, from top to bot
 ## @chainsafe/lodestar-fork-choice
 
 [@chainsafe/lodestar-fork-choice](https://github.com/ChainSafe/lodestar/tree/master/packages/fork-choice) holds the methods for reading/writing the fork choice DAG. The [`@chainsafe/lodestar`](#chainsafelodestar) package is the sole consumer of this package because the beacon node itself is what controls when the fork choice DAG is updated.
-For a good explainer on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/master/phase0/fork-choice.md). This is an annotated version of the [Eth2 fork choice spec](https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/fork-choice.md) which `lodestar-fork-choice` is based on.
+For a good explainer on how the fork choice itself works, see the [annotated fork choice spec](https://github.com/ethereum/annotated-spec/blob/v1.1.10/phase0/fork-choice.md). This is an annotated version of the [Eth Consensus fork choice spec](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md) which `lodestar-fork-choice` is based on.
 
 ## @chainsafe/lodestar-validator
 

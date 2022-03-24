@@ -25,7 +25,7 @@ export class Eth1DepositsCache {
    * Returns a list of `Deposit` objects, within the given deposit index `range`.
    *
    * The `depositCount` is used to generate the proofs for the `Deposits`. For example, if we
-   * have 100 proofs, but the eth2 chain only acknowledges 50 of them, we must produce our
+   * have 100 proofs, but the Ethereum Consensus chain only acknowledges 50 of them, we must produce our
    * proofs with respect to a tree size of 50.
    */
   async get(indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data): Promise<phase0.Deposit[]> {

@@ -24,7 +24,7 @@ export async function prepareUpdateNaive(
   // domain = get_domain(state, DOMAIN_SYNC_COMMITTEE, compute_epoch_at_slot(previous_slot))
   // signing_root = compute_signing_root(get_block_root_at_slot(state, previous_slot), domain)
   // ```
-  // Ref: https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#sync-committee-processing
+  // Ref: https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#sync-aggregate-processing
   //
   // Then the lightclient will verify it signs over `signedHeader`, where
   // ```js

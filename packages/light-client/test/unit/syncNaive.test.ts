@@ -43,30 +43,30 @@ describe("Lightclient flow", () => {
     const finalizedBlockSlot = SLOTS_PER_EPOCH * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
     const headerBlockSlot = finalizedBlockSlot + 1;
 
-    const finalizedState = ssz.altair.BeaconState.defaultValue;
+    const finalizedState = ssz.altair.BeaconState.defaultValue();
     finalizedState.nextSyncCommittee = getSyncCommittee(0).syncCommittee;
-    const finalizedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue;
+    const finalizedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
     finalizedBlockHeader.slot = finalizedBlockSlot;
     finalizedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(finalizedState);
 
     // Create a state that has the finalizedState as finalized checkpoint
-    const syncAttestedState = ssz.altair.BeaconState.defaultValue;
+    const syncAttestedState = ssz.altair.BeaconState.defaultValue();
     syncAttestedState.finalizedCheckpoint = {
       epoch: 0, // Checkpoint { epoch, blockRoot }
       root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedBlockHeader),
     };
-    const syncAttestedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue;
+    const syncAttestedBlockHeader = ssz.phase0.BeaconBlockHeader.defaultValue();
     syncAttestedBlockHeader.slot = headerBlockSlot;
     syncAttestedBlockHeader.stateRoot = ssz.altair.BeaconState.hashTreeRoot(syncAttestedState);
 
     // Create a state with the block blockWithSyncAggregate
-    const stateWithSyncAggregate = ssz.altair.BeaconState.defaultValue;
+    const stateWithSyncAggregate = ssz.altair.BeaconState.defaultValue();
     stateWithSyncAggregate.slot = 1;
     stateWithSyncAggregate.blockRoots[0] = ssz.phase0.BeaconBlockHeader.hashTreeRoot(syncAttestedBlockHeader);
 
     // Create a signature from current committee to "attest" syncAttestedBlockHeader
     const signingRoot = getSyncAggregateSigningRoot(config, syncAttestedBlockHeader);
-    const blockWithSyncAggregate = ssz.altair.BeaconBlock.defaultValue;
+    const blockWithSyncAggregate = ssz.altair.BeaconBlock.defaultValue();
     blockWithSyncAggregate.body.syncAggregate = getSyncCommittee(0).signAndAggregate(signingRoot);
     blockWithSyncAggregate.stateRoot = ssz.altair.BeaconState.hashTreeRoot(stateWithSyncAggregate);
 
@@ -91,7 +91,7 @@ describe("Lightclient flow", () => {
     const store: LightClientStoreFast = {
       bestUpdates: new Map<SyncPeriod, altair.LightClientUpdate>(),
       snapshot: {
-        header: ssz.phase0.BeaconBlockHeader.defaultValue,
+        header: ssz.phase0.BeaconBlockHeader.defaultValue(),
         currentSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
         nextSyncCommittee: getSyncCommittee(0).syncCommitteeFast,
       },

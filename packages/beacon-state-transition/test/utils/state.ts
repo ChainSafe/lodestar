@@ -68,7 +68,7 @@ export function generateState(opts?: TestBeaconState): BeaconStatePhase0 {
     slashings: newZeroedBigIntArray(EPOCHS_PER_SLASHINGS_VECTOR),
     previousEpochAttestations: [],
     currentEpochAttestations: [],
-    justificationBits: ssz.phase0.JustificationBits.defaultValue,
+    justificationBits: ssz.phase0.JustificationBits.defaultValue(),
     previousJustifiedCheckpoint: {
       epoch: GENESIS_EPOCH,
       root: ZERO_HASH,

@@ -14,8 +14,8 @@ describe("size", function () {
 describe("container serialization/deserialization field casing(s)", function () {
   it("AttesterSlashing", function () {
     const test = {
-      attestation1: ssz.phase0.IndexedAttestation.defaultValue,
-      attestation2: ssz.phase0.IndexedAttestation.defaultValue,
+      attestation1: ssz.phase0.IndexedAttestation.defaultValue(),
+      attestation2: ssz.phase0.IndexedAttestation.defaultValue(),
     };
     const json = {
       attestation_1: ssz.phase0.IndexedAttestation.toJson(test.attestation1),
@@ -29,8 +29,8 @@ describe("container serialization/deserialization field casing(s)", function () 
 
   it("ProposerSlashing", function () {
     const test = {
-      signedHeader1: ssz.phase0.SignedBeaconBlockHeader.defaultValue,
-      signedHeader2: ssz.phase0.SignedBeaconBlockHeader.defaultValue,
+      signedHeader1: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
+      signedHeader2: ssz.phase0.SignedBeaconBlockHeader.defaultValue(),
     };
     const json = {
       signed_header_1: ssz.phase0.SignedBeaconBlockHeader.toJson(test.signedHeader1),
