@@ -17,7 +17,7 @@ export function getLoggerVc(logger: ILogger, clock: IClock): ILoggerVc {
     error(message: string, context?: LogData, e?: Error) {
       if (e) {
         // Returns true if it's an network error with code 503 = Node is syncing
-        // https://github.com/ethereum/eth2.0-APIs/blob/e68a954e1b6f6eb5421abf4532c171ce301c6b2e/types/http.yaml#L62
+        // https://github.com/ethereum/beacon-APIs/blob/e68a954e1b6f6eb5421abf4532c171ce301c6b2e/types/http.yaml#L62
         if (e instanceof HttpError && e.status === 503) {
           this.isSyncing(e);
         }

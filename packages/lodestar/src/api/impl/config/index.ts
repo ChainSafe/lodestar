@@ -6,12 +6,12 @@ import {ApiModules} from "../types";
 export function getConfigApi({config}: Pick<ApiModules, "config">): routes.config.Api {
   // Retrieve specification configuration used on this node.  The configuration should include:
   //  - Constants for all hard forks known by the beacon node, for example the
-  //    [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#constants) and
-  //    [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/altair/beacon-chain.md#constants) values
+  //    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/beacon-chain.md#constants) and
+  //    [altair](https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#constants) values
   //  - Presets for all hard forks supplied to the beacon node, for example the
-  //    [phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/phase0.yaml) and
-  //    [altair](https://github.com/ethereum/eth2.0-specs/blob/dev/presets/mainnet/altair.yaml) values
-  //  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/eth2.0-specs/blob/dev/configs/mainnet.yaml) values
+  //    [phase 0](https://github.com/ethereum/consensus-specs/blob/v1.1.10/presets/mainnet/phase0.yaml) and
+  //    [altair](https://github.com/ethereum/consensus.0-specs/blob/v1.1.10/presets/mainnet/altair.yaml) values
+  //  - Configuration for the beacon node, for example the [mainnet](https://github.com/ethereum/consensus-specs/blob/v1.1.10/configs/mainnet.yaml) values
 
   let jsonSpec: Record<string, string> | null = null;
   function getJsonSpec(): Record<string, string> {

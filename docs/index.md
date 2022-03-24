@@ -2,7 +2,7 @@
 
 ## Welcome to the Lodestar documentation!
 
-> **Lodestar is an open-source Ethereum Consensus (Eth2) client and Typescript ecosystem, maintained by ChainSafe Systems**
+> **Lodestar is an open-source Ethereum Consensus client and Typescript ecosystem, maintained by ChainSafe Systems**
 
 ### Getting started
 

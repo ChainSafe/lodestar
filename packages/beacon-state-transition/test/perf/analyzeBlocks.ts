@@ -2,7 +2,7 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {getInfuraBeaconUrl} from "./infura";
 
-// Analyze how eth2 blocks are in a target network to prepare accurate performance states and blocks
+// Analyze how Ethereum Consensus blocks are in a target network to prepare accurate performance states and blocks
 
 // Mainnet
 // slot: 1803658,

@@ -117,7 +117,7 @@ describe("beacon", () => {
       },
     },
     getStateValidators: {
-      args: ["head", {indices: [pubkeyHex, "1300"], statuses: ["active_ongoing"]}],
+      args: ["head", {id: [pubkeyHex, "1300"], statuses: ["active_ongoing"]}],
       res: {data: [validatorResponse]},
     },
     getStateValidator: {

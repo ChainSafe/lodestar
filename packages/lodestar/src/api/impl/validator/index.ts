@@ -256,7 +256,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      *
      * Requests that the beacon node produce a sync committee contribution.
      *
-     * https://github.com/ethereum/eth2.0-APIs/pull/138
+     * https://github.com/ethereum/beacon-APIs/pull/138
      *
      * @param slot The slot for which a sync committee contribution should be created.
      * @param subcommitteeIndex The subcommittee index for which to produce the contribution.
@@ -366,7 +366,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      * - `sync_committee_index` is the index of the validator in the sync committee. This can be used to infer the
      *   subnet to which the contribution should be broadcast. Note, there can be multiple per validator.
      *
-     * https://github.com/ethereum/eth2.0-APIs/pull/134
+     * https://github.com/ethereum/beacon-APIs/pull/134
      *
      * @param validatorIndices an array of the validator indices for which to obtain the duties.
      */
@@ -490,7 +490,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      *
      * Publish multiple signed sync committee contribution and proofs
      *
-     * https://github.com/ethereum/eth2.0-APIs/pull/137
+     * https://github.com/ethereum/beacon-APIs/pull/137
      */
     async publishContributionAndProofs(contributionAndProofs) {
       notWhileSyncing();
@@ -567,7 +567,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
      * Subscribing to sync committee subnets is an action performed by VC to enable network participation in Altair networks,
      * and only required if the VC has an active validator in an active sync committee.
      *
-     * https://github.com/ethereum/eth2.0-APIs/pull/136
+     * https://github.com/ethereum/beacon-APIs/pull/136
      */
     async prepareSyncCommitteeSubnets(subscriptions) {
       notWhileSyncing();
@@ -580,7 +580,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           subs.push({
             validatorIndex: sub.validatorIndex,
             subnet: subnet,
-            // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/eth2.0-APIs/pull/136#issuecomment-840315097
+            // Subscribe until the end of `untilEpoch`: https://github.com/ethereum/beacon-APIs/pull/136#issuecomment-840315097
             slot: computeStartSlotAtEpoch(sub.untilEpoch + 1),
             isAggregator: true,
           });

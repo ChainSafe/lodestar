@@ -121,7 +121,7 @@ export function processAttestations(
 }
 
 /**
- * https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.4/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
+ * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/beacon-chain.md#get_attestation_participation_flag_indices
  */
 export function getAttestationParticipationStatus(
   data: phase0.AttestationData,

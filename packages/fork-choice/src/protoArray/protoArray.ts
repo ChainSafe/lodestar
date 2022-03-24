@@ -474,9 +474,9 @@ export class ProtoArray {
   }
 
   /**
-   * This is the equivalent to the `filter_block_tree` function in the eth2 spec:
+   * This is the equivalent to the `filter_block_tree` function in the Ethereum Consensus spec:
    *
-   * https://github.com/ethereum/eth2.0-specs/blob/v1.0.1/specs/phase0/fork-choice.md#filter_block_tree
+   * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/fork-choice.md#filter_block_tree
    *
    * Any node that has a different finalized or justified epoch should not be viable for the
    * head.

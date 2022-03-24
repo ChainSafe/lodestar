@@ -30,6 +30,11 @@ jobs:
         env:
           CURRENT_TAG: ${{ steps.get_tag.outputs.tag }}
           IGNORE_PATTERN: beta
+
+      - name: Assert tag == package.json version
+        run: .github/workflows/scripts/assert-same-package-version.sh
+        env:
+          TAG: ${{ steps.get_tag.outputs.tag }}
     outputs:
       is_beta: ${{ contains(github.ref, 'beta') }}
       tag: ${{ steps.get_tag.outputs.tag }}

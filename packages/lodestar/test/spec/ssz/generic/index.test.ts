@@ -22,7 +22,7 @@ const rootGenericSszPath = path.join(SPEC_TEST_LOCATION, "tests", "general", "ph
 //       | serialized.ssz_snappy
 //       | value.yaml
 //
-// Docs: https://github.com/ethereum/eth2.0-specs/blob/master/tests/formats/ssz_generic/README.md
+// Docs: https://github.com/ethereum/consensus-specs/blob/master/tests/formats/ssz_generic/README.md
 
 for (const testType of fs.readdirSync(rootGenericSszPath)) {
   const testTypePath = path.join(rootGenericSszPath, testType);

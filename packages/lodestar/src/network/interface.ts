@@ -8,7 +8,7 @@ import PeerId from "peer-id";
 import {INetworkEventBus} from "./events";
 import {Eth2Gossipsub} from "./gossip";
 import {MetadataController} from "./metadata";
-import {IPeerMetadataStore, PeerAction} from "./peers";
+import {PeerAction} from "./peers";
 import {IReqResp} from "./reqresp";
 import {IAttnetsService, ISubnetsService, CommitteeSubscription} from "./subnets";
 
@@ -25,7 +25,6 @@ export interface INetwork {
   gossip: Eth2Gossipsub;
   discv5?: Discv5;
   metadata: MetadataController;
-  peerMetadata: IPeerMetadataStore;
   /** Our network identity */
   peerId: PeerId;
   localMultiaddrs: Multiaddr[];
@@ -53,6 +52,7 @@ export interface INetwork {
   // Debug
   connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;
   disconnectPeer(peer: PeerId): Promise<void>;
+  getAgentVersion(peerIdStr: string): string;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

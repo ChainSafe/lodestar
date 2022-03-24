@@ -43,7 +43,7 @@
   },
   "keywords": [
     "ethereum",
-    "eth2",
+    "eth-consensus",
     "beacon",
     "blockchain"
   ],
@@ -52,7 +52,7 @@
     "@chainsafe/bls": "6.0.3",
     "@chainsafe/bls-keygen": "^0.3.0",
     "@chainsafe/bls-keystore": "2.0.0",
-    "@chainsafe/blst": "^0.2.2",
+    "@chainsafe/blst": "^0.2.4",
     "@chainsafe/discv5": "^0.6.7",
     "@chainsafe/lodestar": "^0.36.0",
     "@chainsafe/lodestar-api": "^0.36.0",
