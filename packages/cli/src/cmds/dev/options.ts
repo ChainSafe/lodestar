@@ -9,6 +9,7 @@ interface IDevOwnArgs {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
+  enableDoppelgangerProtection?: boolean;
   server: string;
 }
 
@@ -50,6 +51,13 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
+  },
+
+  enableDoppelgangerProtection: {
+    description:
+      "Enables the Doppelganger protection, where lodestar monitors messages in the network for three epochs before signing messages",
+    defaultDescription: "false",
+    type: "boolean",
   },
 };
 

@@ -34,6 +34,7 @@ import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
+import {DoppelgangerService} from "./doppelgangerService";
 
 export enum SignerType {
   Local,
@@ -69,7 +70,8 @@ export class ValidatorStore {
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
     signers: Signer[],
-    genesis: phase0.Genesis
+    genesis: phase0.Genesis,
+    private doppelgangerService?: DoppelgangerService
   ) {
     for (const signer of signers) {
       this.validators.set(getSignerPubkeyHex(signer), signer);
@@ -77,6 +79,11 @@ export class ValidatorStore {
 
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+  }
+
+  setDoppelganger(doppelgangerService: DoppelgangerService): void {
+    this.doppelgangerService = doppelgangerService;
+    this.doppelgangerService.register(this.votingPubkeys());
   }
 
   /** Return true if there is at least 1 pubkey registered */

@@ -19,6 +19,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {DoppelgangerService} from "./services/doppelgangerService";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -27,6 +28,7 @@ export type ValidatorOptions = {
   signers: Signer[];
   logger: ILogger;
   graffiti?: string;
+  enableDoppelganger?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -45,6 +47,7 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  */
 export class Validator {
   private readonly config: IBeaconConfig;
+  private readonly controller: AbortController;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
@@ -56,7 +59,7 @@ export class Validator {
   constructor(opts: ValidatorOptions, genesis: Genesis) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
-
+    this.controller = new AbortController();
     const api =
       typeof opts.api === "string"
         ? getClient(config, {
@@ -70,6 +73,18 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
+    const doppelgangerService = new DoppelgangerService(
+      config,
+      logger,
+      clock,
+      api,
+      Number(genesis.genesisTime),
+      indicesService,
+      this.controller
+    );
+    if (opts.enableDoppelganger) {
+      validatorStore.setDoppelganger(doppelgangerService);
+    }
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
@@ -112,9 +127,8 @@ export class Validator {
    */
   async start(): Promise<void> {
     if (this.state.status === Status.running) return;
-    const controller = new AbortController();
-    this.state = {status: Status.running, controller};
-    const {signal} = controller;
+    this.state = {status: Status.running, controller: this.controller};
+    const {signal} = this.controller;
     this.clock.start(signal);
     this.chainHeaderTracker.start(signal);
   }

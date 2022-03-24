@@ -27,6 +27,16 @@ export class IndicesService {
     private readonly validatorStore: ValidatorStore
   ) {}
 
+  getAllLocalIndicesByPubkey(pubkeys: PubkeyHex[]): ValidatorIndex[] {
+    const indices: ValidatorIndex[] = [];
+    for (const [key, index] of this.pubkey2index.entries()) {
+      if (pubkeys.indexOf(key) !== -1) {
+        indices.push(index);
+      }
+    }
+    return indices;
+  }
+
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
     return Array.from(this.index2pubkey.keys());
@@ -39,7 +49,7 @@ export class IndicesService {
 
   pollValidatorIndices(): Promise<ValidatorIndex[]> {
     // Ensures pollValidatorIndicesInternal() is not called more than once at the same time.
-    // AttestationDutiesService and SyncCommitteeDutiesService will call this function at the same time, so this will
+    // AttestationDutiesService, SyncCommitteeDutiesService and DoppelGangerProtectionService will call this function at the same time, so this will
     // cache the promise and return it to the second caller, preventing calling the API twice for the same data.
     if (this.pollValidatorIndicesPromise) {
       return this.pollValidatorIndicesPromise;

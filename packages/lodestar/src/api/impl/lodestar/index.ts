@@ -8,13 +8,13 @@ import {
 import {Json, toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
+import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconChain, IBeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
-import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
-import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition/src";
 
 export function getLodestarApi({
   chain,
@@ -164,6 +164,11 @@ export function getLodestarApi({
     },
 
     async getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}> {
+      if (indices.length === 0) {
+        return {
+          data: [],
+        };
+      }
       const state = await chain.getHeadStateAtCurrentEpoch();
       if (epoch < state.previousShuffling.epoch || epoch > state.nextShuffling.epoch) {
         throw new Error(

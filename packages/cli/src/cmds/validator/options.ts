@@ -16,6 +16,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     externalSignerUrl?: string;
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
+    enableDoppelgangerProtection?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -83,6 +84,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "External signer",
+  },
+
+  enableDoppelgangerProtection: {
+    description:
+      "Enables the Doppelganger protection, where lodestar monitors messages in the network for three epochs before signing messages",
+    defaultDescription: "false",
+    type: "boolean",
   },
 
   // For testing only
