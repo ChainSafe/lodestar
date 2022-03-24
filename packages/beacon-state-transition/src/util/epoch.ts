@@ -27,8 +27,8 @@ export function computeStartSlotAtEpoch(epoch: Epoch): Slot {
 /**
  * returns the ending slot for the given start slot.
  */
-export function computeEndSlotForStartSlot(startSlot: Slot, secondsPerSlot: number): Slot {
-  return startSlot + secondsPerSlot * SLOTS_PER_EPOCH;
+export function computeEndSlotForEpoch(epoch: Epoch): Slot {
+  return computeStartSlotAtEpoch(epoch + 1) - 1;
 }
 
 /**

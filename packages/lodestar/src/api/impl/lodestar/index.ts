@@ -14,7 +14,7 @@ import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
 import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
-import {computeEndSlotForStartSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition/src";
 
 export function getLodestarApi({
   chain,
@@ -176,7 +176,7 @@ export function getLodestarApi({
           return {
             index,
             epoch,
-            isLive: isLive(chain, index, epoch, config.SECONDS_PER_SLOT),
+            isLive: isLive(chain, index, epoch),
           };
         }),
       };
@@ -184,9 +184,9 @@ export function getLodestarApi({
   };
 }
 
-function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch, secondsPerSlot: number): boolean {
+function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch): boolean {
   const startSlot = computeStartSlotAtEpoch(epoch);
-  const endSlot = computeEndSlotForStartSlot(startSlot, secondsPerSlot);
+  const endSlot = computeEndSlotForEpoch(epoch);
 
   let proposedBlock = false;
   for (let slot = startSlot; slot <= endSlot; slot++) {

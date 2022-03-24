@@ -7,6 +7,7 @@ import {
   getPreviousEpoch,
   computeActivationExitEpoch,
   computeEpochAtSlot,
+  computeEndSlotForEpoch,
 } from "../../../src/util";
 
 import {generateState} from "../../utils/state";
@@ -44,6 +45,25 @@ describe("computeStartSlotAtEpoch", () => {
   for (const pair of pairs) {
     it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
       const result: Slot = computeStartSlotAtEpoch(pair.test);
+      assert.equal(result, pair.expected);
+    });
+  }
+});
+
+describe("computeEndSlotForEpoch", () => {
+  const pairs = [
+    {test: 0, expected: 31},
+    {test: 1, expected: 63},
+    {test: 10, expected: 351},
+    {test: 100, expected: 3231},
+    {test: 1000, expected: 32031},
+    {test: 10000, expected: 320031},
+    {test: 100000, expected: 3200031},
+    {test: 1000000, expected: 32000031},
+  ];
+  for (const pair of pairs) {
+    it(`Epoch ${pair.test} should map to slot ${pair.expected}`, () => {
+      const result: Slot = computeEndSlotForEpoch(pair.test);
       assert.equal(result, pair.expected);
     });
   }
