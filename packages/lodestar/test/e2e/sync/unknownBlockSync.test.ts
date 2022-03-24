@@ -4,7 +4,7 @@ import {waitForEvent} from "../../utils/events/resolver";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
-import {Network} from "../../../src/network";
+import {Network, NetworkEvent} from "../../../src/network";
 import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {fromHexString} from "@chainsafe/ssz";
@@ -78,10 +78,10 @@ describe("sync / unknown block sync", function () {
     );
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
-
-    await bn2.api.beacon.publishBlock(head).catch((e) => {
+    await bn2.chain.processBlock(head).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected
+        bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toB58String());
       } else {
         throw e;
       }
