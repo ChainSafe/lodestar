@@ -3,7 +3,7 @@ FROM golang:1.17-alpine as builder
 
 RUN apk add --no-cache gcc musl-dev linux-headers git bash
 
-RUN git clone --depth 1 -b merge-kiln-v2 https://github.com/MariusVanDerWijden/go-ethereum.git /go-ethereum
+RUN git clone --depth 1 -b master https://github.com/ethereum/go-ethereum /go-ethereum
 RUN cd /go-ethereum && go run build/ci.go install ./cmd/geth
 
 FROM alpine:latest
