@@ -17,7 +17,11 @@ describe("sync / finalized sync", function () {
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
-  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+  afterEach(async () => {
+    for (const callback of afterEachCallbacks) {
+      await callback();
+    }
+  });
 
   it("should do a finalized sync from another BN", async function () {
     this.timeout("10 min");
@@ -32,7 +36,6 @@ describe("sync / finalized sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
-    afterEachCallbacks.push(() => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -44,6 +47,8 @@ describe("sync / finalized sync", function () {
 
     await Promise.all(validators.map((validator) => validator.start()));
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
+    // stop beacon node after validators
+    afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     loggerNodeA.important("Node A emitted finalized checkpoint event");

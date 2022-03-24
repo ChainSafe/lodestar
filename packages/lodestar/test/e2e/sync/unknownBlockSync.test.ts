@@ -20,7 +20,11 @@ describe("sync / unknown block sync", function () {
   };
 
   const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
-  afterEach(() => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
+  afterEach(async () => {
+    for (const callback of afterEachCallbacks) {
+      await callback();
+    }
+  });
 
   it("should do an unknown block sync from another BN", async function () {
     this.timeout("10 min");
@@ -45,7 +49,6 @@ describe("sync / unknown block sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
-    afterEachCallbacks.push(() => bn.close());
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -57,6 +60,8 @@ describe("sync / unknown block sync", function () {
 
     await Promise.all(validators.map((validator) => validator.start()));
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
+    // stop bn after validators
+    afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.checkpoint, 240000);
     loggerNodeA.important("Node A emitted checkpoint event");
