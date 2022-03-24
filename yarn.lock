@@ -385,13 +385,18 @@
   dependencies:
     event-target-shim "^5.0.0"
 
-"@chainsafe/as-sha256@^0.2.3", "@chainsafe/as-sha256@^0.2.4":
+"@chainsafe/as-sha256@^0.2.4":
   version "0.2.4"
   resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.2.4.tgz#17e78d32c71c836160bb55fd79c3daad93d9abf0"
   integrity sha512-rYfIOaQm0OlFcHdJFUu5VyYOA1HVeQXxOivUsawBjd7WXc3lMQ0bXMfCgN50gPPLWT92G4ioZ0EZz8RnH+YT/g==
   dependencies:
     "@assemblyscript/loader" "^0.9.2"
     buffer "^5.4.3"
+
+"@chainsafe/as-sha256@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.3.0.tgz#ba7d4b85a77c51a50c071856ea6ead4066583b74"
+  integrity sha512-X0Yaz1H9ByEelnrG2Q76aEmLmlsjZe8905n6Eez8wmV2E1TvBnY2AFYYy2U52dkaGrWrG4MHYKLo4NJcSqkFeg==
 
 "@chainsafe/bls-hd-key@^0.2.0":
   version "0.2.1"
@@ -488,12 +493,12 @@
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/persistent-merkle-tree@https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2":
-  version "0.3.7"
-  uid "089475892f3e5aae15f767c9f360b2e23af65638"
-  resolved "https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2#089475892f3e5aae15f767c9f360b2e23af65638"
+"@chainsafe/persistent-merkle-tree@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.0.tgz#249abef9623d45889d71f0f7e807d3aa93472d21"
+  integrity sha512-xf/DfSAAeAnFOIlNG+m0IvaVK3ccc47vSLEPi0IgbOslXWa540Zxrr33PHbByKI4OhKBp+Zi58WHZAe5O/s2nQ==
   dependencies:
-    "@chainsafe/as-sha256" "^0.2.3"
+    "@chainsafe/as-sha256" "^0.3.0"
 
 "@chainsafe/persistent-ts@^0.19.1":
   version "0.19.1"
@@ -512,12 +517,13 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2":
-  version "0.8.20"
-  resolved "https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2#dd44c159620efafcd31a0aecfd257f57bdc085d8"
+"@chainsafe/ssz@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.0.tgz#27e40fa3316ef8736bbae898bdf90c1dce4a7045"
+  integrity sha512-QTLxxcknbiFrpgK2FplAxqxAyi0AGDNoAyxaUUJGdG0mXU4WWIKKLXtYATAXOHVruTzKZeydHatkrpKyYRdyjw==
   dependencies:
-    "@chainsafe/as-sha256" "^0.2.4"
-    "@chainsafe/persistent-merkle-tree" "https://gitpkg.now.sh/dapplion/ssz/packages/persistent-merkle-tree?dapplion/v2"
+    "@chainsafe/as-sha256" "^0.3.0"
+    "@chainsafe/persistent-merkle-tree" "^0.4.0"
     case "^1.6.3"
 
 "@cspotcode/source-map-consumer@0.8.0":

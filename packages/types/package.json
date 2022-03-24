@@ -36,7 +36,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/lodestar-params": "^0.36.0",
-    "@chainsafe/ssz": "https://gitpkg.now.sh/dapplion/ssz/packages/ssz?e01ce05824485c0045fb2d1fb99cd1e898f49af2"
+    "@chainsafe/ssz": "^0.9.0"
   },
   "keywords": [
     "ethereum",
