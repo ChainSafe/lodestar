@@ -67,7 +67,7 @@ export class Network implements INetwork {
     this.peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
-    const peerRpcScores = new PeerRpcScoreStore();
+    const peerRpcScores = new PeerRpcScoreStore(metrics);
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;

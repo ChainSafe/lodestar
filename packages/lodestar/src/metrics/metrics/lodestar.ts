@@ -49,6 +49,18 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
+    peerLongLivedSubnets: register.avgMinMax({
+      name: "lodestar_peer_long_lived_subnets_avg_min_max",
+      help: "Avg min max of amount of long lived subnets of peers",
+    }),
+    peerScore: register.avgMinMax({
+      name: "lodestar_peer_score_avg_min_max",
+      help: "Avg min max of peer score at lodestar side",
+    }),
+    peerConnectionLength: register.avgMinMax({
+      name: "lodestar_peer_connection_seconds_avg_min_max",
+      help: "Avg min max of peer connection length in second",
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
@@ -66,6 +78,11 @@ export function createLodestarMetrics(
     peerGoodbyeReceived: register.gauge<"reason">({
       name: "lodestar_peer_goodbye_received_total",
       help: "Total number of goodbye received, labeled by reason",
+      labelNames: ["reason"],
+    }),
+    peerLongConnectionDisconnect: register.gauge<"reason">({
+      name: "lodestar_peer_long_connection_disconnect_total",
+      help: "For peers with long connection, track disconnect reason",
       labelNames: ["reason"],
     }),
     peerGoodbyeSent: register.gauge<"reason">({
@@ -90,6 +107,11 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_subnets_peers_count",
       help: "Priorization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
+    }),
+    peersReportPeerCount: register.gauge<"reason">({
+      name: "lodestar_peers_report_peer_count",
+      help: "network.reportPeer count by reason",
+      labelNames: ["reason"],
     }),
 
     discovery: {

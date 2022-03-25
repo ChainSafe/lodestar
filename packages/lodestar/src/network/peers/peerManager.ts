@@ -23,6 +23,7 @@ import {
   renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
+import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -35,6 +36,8 @@ const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 /** Internal interval to check PING and STATUS timeouts */
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
+/** A peer is considered long connection if it's >= 1 day */
+const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
 
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
@@ -266,6 +269,11 @@ export class PeerManager {
     const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
     this.logger.verbose("Received goodbye request", {peer: prettyPrintPeerId(peer), goodbye, reason});
     this.metrics?.peerGoodbyeReceived.inc({reason});
+
+    const conn = this.libp2p.connectionManager.get(peer);
+    if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+      this.metrics?.peerLongConnectionDisconnect.inc({reason});
+    }
 
     // TODO: Consider register that we are banned, if discovery keeps attempting to connect to the same peers
 
@@ -555,7 +563,14 @@ export class PeerManager {
 
   private async goodbyeAndDisconnect(peer: PeerId, goodbye: GoodByeReasonCode): Promise<void> {
     try {
-      this.metrics?.peerGoodbyeSent.inc({reason: GOODBYE_KNOWN_CODES[goodbye.toString()] || ""});
+      const reason = GOODBYE_KNOWN_CODES[goodbye.toString()] || "";
+      this.metrics?.peerGoodbyeSent.inc({reason});
+
+      const conn = this.libp2p.connectionManager.get(peer);
+      if (conn && Date.now() - conn.stat.timeline.open > LONG_PEER_CONNECTION_MS) {
+        this.metrics?.peerLongConnectionDisconnect.inc({reason});
+      }
+
       await this.reqResp.goodbye(peer, BigInt(goodbye));
     } catch (e) {
       this.logger.verbose("Failed to send goodbye", {peer: prettyPrintPeerId(peer)}, e as Error);
@@ -570,16 +585,23 @@ export class PeerManager {
 
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
+    const longLivedSubnets: number[] = [];
+    const scores: number[] = [];
+    const connSecs: number[] = [];
+    const now = Date.now();
+
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
       if (openCnx) {
         const direction = openCnx.stat.direction;
         peersByDirection.set(direction, 1 + (peersByDirection.get(direction) ?? 0));
-
-        const peerData = this.connectedPeers.get(openCnx.remotePeer.toB58String());
+        const peerId = openCnx.remotePeer;
+        const peerData = this.connectedPeers.get(peerId.toB58String());
         const client = peerData?.agentClient ?? ClientKind.Unknown;
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
-
+        longLivedSubnets.push(countAttnets(peerData));
+        scores.push(this.peerRpcScores.getScore(peerId));
+        connSecs.push(Math.floor((now - openCnx.stat.timeline.open) / 1000));
         total++;
       }
     }
@@ -601,5 +623,20 @@ export class PeerManager {
 
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
+    metrics.peerLongLivedSubnets.set(longLivedSubnets);
+    metrics.peerScore.set(scores);
+    metrics.peerConnectionLength.set(connSecs);
   }
+}
+
+function countAttnets(peerData?: PeerData): number {
+  const attNets = peerData?.metadata?.attnets;
+  if (!attNets) return 0;
+
+  let count = 0;
+  for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
+    if (attNets[i]) count++;
+  }
+
+  return count;
 }
