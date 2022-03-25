@@ -102,7 +102,7 @@ export class Eth2Gossipsub extends Gossipsub {
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
-      gossipsubIWantFollowupMs: 6000,
+      gossipsubIWantFollowupMs: 12 * 1000, // 12s
       fastMsgIdFn: fastMsgIdFn,
       msgIdFn: msgIdFn.bind(msgIdFn, gossipTopicCache),
       dataTransform: new DataTransformSnappy(gossipTopicCache),
