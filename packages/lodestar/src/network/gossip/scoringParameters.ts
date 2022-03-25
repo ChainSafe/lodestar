@@ -246,7 +246,8 @@ function getTopicScoreParams(
     params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
     params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);
     params.meshMessageDeliveriesActivation = activationWindow;
-    params.meshMessageDeliveriesWindow = 2 * 1000; // 2s
+    // the default in gossipsub is 2s is not enough since lodestar suffers from I/O lag
+    params.meshMessageDeliveriesWindow = 4 * 1000; // 4s
     params.meshFailurePenaltyDecay = params.meshMessageDeliveriesDecay;
     params.meshMessageDeliveriesWeight =
       (-1 * maxPositiveScore) / (params.topicWeight * Math.pow(params.meshMessageDeliveriesThreshold, 2));
