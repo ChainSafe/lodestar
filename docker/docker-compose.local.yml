@@ -14,8 +14,6 @@ services:
       args:
         config_file: prometheus.local.yml
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - "prometheus:/prometheus"
     network_mode: host
@@ -26,8 +24,6 @@ services:
       args:
         DATASOURCE_FILE: datasource.local.yml
     restart: always
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
       - "grafana:/var/lib/grafana"
     depends_on: [prometheus]
