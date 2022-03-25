@@ -96,7 +96,7 @@
     "jwt-simple": "0.5.6",
     "libp2p": "^0.36.2",
     "libp2p-bootstrap": "^0.14.0",
-    "libp2p-gossipsub": "tuyennhv/js-libp2p-gossipsub#8d615db22361ec509b1979b67c05a2f9c1fd2a2b",
+    "libp2p-gossipsub": "tuyennhv/js-libp2p-gossipsub#3efae56c9d39ff3a047a7e6c65fa32e5756bebde",
     "libp2p-mdns": "^0.18.0",
     "libp2p-mplex": "^0.10.5",
     "libp2p-tcp": "^0.17.2",
