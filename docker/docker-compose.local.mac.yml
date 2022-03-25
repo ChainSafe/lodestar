@@ -12,7 +12,7 @@ services:
     build:
       context: prometheus
       args:
-        config_file: prometheus.local.yml
+        config_file: prometheus.local.mac.yml
     restart: always
     ports:
       - "9090:9090"
@@ -23,7 +23,7 @@ services:
     build:
       context: grafana
       args:
-        DATASOURCE_FILE: datasource.local.yml
+        DATASOURCE_FILE: datasource.local.mac.yml
     restart: always
     ports:
       - "3000:3000"

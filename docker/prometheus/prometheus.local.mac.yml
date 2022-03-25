@@ -4,4 +4,4 @@ scrape_configs:
     scrape_timeout: 20s
     metrics_path: /metrics
     static_configs:
-      - targets: ["localhost:8008"]
+      - targets: ["host.docker.internal:8008"]
