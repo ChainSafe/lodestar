@@ -1,5 +1,5 @@
 import PeerId from "peer-id";
-import {pruneSetToMax} from "../../util/map";
+import {MapDef, pruneSetToMax} from "../../util/map";
 
 /** The default score for new peers */
 const DEFAULT_SCORE = 0;
@@ -78,13 +78,11 @@ export interface IPeerRpcScoreStore {
  * The decay rate applies equally to positive and negative scores.
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
-  private readonly scores = new Map<string, number>();
-  private readonly lastUpdate = new Map<string, number>();
-
+  private readonly scores = new MapDef<PeerIdStr, PeerScore>(() => new PeerScore());
   // TODO: Persist scores, at least BANNED status to disk
 
   getScore(peer: PeerId): number {
-    return this.scores.get(peer.toB58String()) ?? DEFAULT_SCORE;
+    return this.scores.get(peer.toB58String())?.getScore() ?? DEFAULT_SCORE;
   }
 
   getScoreState(peer: PeerId): ScoreState {
@@ -92,7 +90,8 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
-    this.add(peer, peerActionScore[action]);
+    const peerScore = this.scores.getOrDefault(peer.toB58String());
+    peerScore.add(peerActionScore[action]);
 
     // TODO: Log action to debug + do metrics
     actionName;
@@ -101,56 +100,69 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   update(): void {
     // Bound size of data structures
     pruneSetToMax(this.scores, MAX_ENTRIES);
-    pruneSetToMax(this.lastUpdate, MAX_ENTRIES);
 
-    for (const [peerIdStr, prevScore] of this.scores) {
-      const newScore = this.decayScore(peerIdStr, prevScore);
+    for (const [peerIdStr, peerScore] of this.scores) {
+      const newScore = peerScore.update();
 
       // Prune scores below threshold
       if (Math.abs(newScore) < SCORE_THRESHOLD) {
         this.scores.delete(peerIdStr);
-        this.lastUpdate.delete(peerIdStr);
-      }
-
-      // If above threshold, persist decayed value
-      else {
-        this.scores.set(peerIdStr, newScore);
       }
     }
   }
+}
 
-  private decayScore(peer: PeerIdStr, prevScore: number): number {
-    const nowMs = Date.now();
-    const lastUpdate = this.lastUpdate.get(peer) ?? nowMs;
+/**
+ * Manage score of a peer.
+ */
+class PeerScore {
+  private lodestarScore: number;
+  private lastUpdate: number;
 
-    // Decay the current score
-    // Using exponential decay based on a constant half life.
-    const sinceLastUpdateMs = nowMs - lastUpdate;
-    // If peer was banned, lastUpdate will be in the future
-    if (sinceLastUpdateMs > 0 && prevScore !== 0) {
-      this.lastUpdate.set(peer, nowMs);
-      // e^(-ln(2)/HL*t)
-      const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
-      return prevScore * decayFactor;
-    } else {
-      return prevScore;
-    }
+  constructor() {
+    this.lodestarScore = DEFAULT_SCORE;
+    this.lastUpdate = Date.now();
   }
 
-  private add(peer: PeerId, scoreDelta: number): void {
-    const prevScore = this.getScore(peer);
+  getScore(): number {
+    return this.lodestarScore;
+  }
 
-    let newScore = this.decayScore(peer.toB58String(), prevScore) + scoreDelta;
+  add(scoreDelta: number): void {
+    let newScore = this.lodestarScore + scoreDelta;
     if (newScore > MAX_SCORE) newScore = MAX_SCORE;
     if (newScore < MIN_SCORE) newScore = MIN_SCORE;
 
-    const prevState = scoreToState(prevScore);
+    const prevState = scoreToState(this.lodestarScore);
     const newState = scoreToState(newScore);
     if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
       // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
-      this.lastUpdate.set(peer.toB58String(), Date.now() + BANNED_BEFORE_DECAY_MS);
+      this.lastUpdate = Date.now() + BANNED_BEFORE_DECAY_MS;
     }
 
-    this.scores.set(peer.toB58String(), newScore);
+    this.lodestarScore = newScore;
+  }
+
+  /**
+   * Applies time-based logic such as decay rates to the score.
+   * This function should be called periodically.
+   *
+   * Return the new score.
+   */
+  update(): number {
+    const nowMs = Date.now();
+
+    // Decay the current score
+    // Using exponential decay based on a constant half life.
+    const sinceLastUpdateMs = nowMs - this.lastUpdate;
+    // If peer was banned, lastUpdate will be in the future
+    if (sinceLastUpdateMs > 0 && this.lodestarScore !== 0) {
+      this.lastUpdate = nowMs;
+      // e^(-ln(2)/HL*t)
+      const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
+      this.lodestarScore *= decayFactor;
+    }
+
+    return this.lodestarScore;
   }
 }
