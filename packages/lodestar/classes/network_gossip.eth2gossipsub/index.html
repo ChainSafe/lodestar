@@ -8,7 +8,7 @@
 <meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
 <link href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/network_gossip.eth2gossipsub/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.2.3, mkdocs-material-8.2.7" name="generator"/>
+<meta content="mkdocs-1.3.0, mkdocs-material-8.2.7" name="generator"/>
 <title>Network gossip.eth2gossipsub - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.9d5733d3.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
@@ -95,7 +95,7 @@
 </div>
 </div>
 <div class="md-header__source">
-<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar/" title="Go to repository">
+<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar" title="Go to repository">
 <div class="md-source__icon md-icon">
 <svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
 </div>
@@ -120,7 +120,7 @@
     Lodestar documentation
   </label>
 <div class="md-nav__source">
-<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar/" title="Go to repository">
+<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar" title="Go to repository">
 <div class="md-source__icon md-icon">
 <svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
 </div>
@@ -294,6 +294,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#_heartbeattimer">
+    _heartbeatTimer
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#_libp2p">
     _libp2p
   </a>
@@ -395,11 +400,6 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#gossiptracer">
     gossipTracer
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#heartbeat">
-    heartbeat
   </a>
 </li>
 <li class="md-nav__item">
@@ -614,6 +614,11 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#_handleprune">
     _handlePrune
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#_heartbeat">
+    _heartbeat
   </a>
 </li>
 <li class="md-nav__item">
@@ -959,6 +964,7 @@
 <h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#_directpeerinitial">_directPeerInitial</a></li>
+<li><a href="./#_heartbeattimer">_heartbeatTimer</a></li>
 <li><a href="./#_libp2p">_libp2p</a></li>
 <li><a href="./#_options">_options</a></li>
 <li><a href="./#_registrarid">_registrarId</a></li>
@@ -978,7 +984,6 @@
 <li><a href="./#gossip">gossip</a></li>
 <li><a href="./#private-readonly-gossiptopiccache">gossipTopicCache</a></li>
 <li><a href="./#gossiptracer">gossipTracer</a></li>
-<li><a href="./#heartbeat">heartbeat</a></li>
 <li><a href="./#heartbeatticks">heartbeatTicks</a></li>
 <li><a href="./#iasked">iasked</a></li>
 <li><a href="./#readonly-jobqueues">jobQueues</a></li>
@@ -1023,6 +1028,7 @@
 <li><a href="./#_handleihave">_handleIHave</a></li>
 <li><a href="./#_handleiwant">_handleIWant</a></li>
 <li><a href="./#_handleprune">_handlePrune</a></li>
+<li><a href="./#_heartbeat">_heartbeat</a></li>
 <li><a href="./#_makeprune">_makePrune</a></li>
 <li><a href="./#_now">_now</a></li>
 <li><a href="./#protected-_onincomingstream">_onIncomingStream</a></li>
@@ -1089,7 +1095,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Eth2Gossipsub</strong>(<code>modules</code>: <a href="../../interfaces/network_gossip.igossipsubmodules/">IGossipsubModules</a>): <em><a href="./">Eth2Gossipsub</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L78">packages/lodestar/src/network/gossip/gossipsub.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L78">packages/lodestar/src/network/gossip/gossipsub.ts:78</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1110,18 +1116,23 @@
 <h3 id="_directpeerinitial">_directPeerInitial<a class="headerlink" href="#_directpeerinitial" title="Permanent link">¶</a></h3>
 <p>• <strong>_directPeerInitial</strong>: <em>Timeout</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_directpeerinitial">_directPeerInitial</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:115</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:163</p>
+<hr/>
+<h3 id="_heartbeattimer">_heartbeatTimer<a class="headerlink" href="#_heartbeattimer" title="Permanent link">¶</a></h3>
+<p>• <strong>_heartbeatTimer</strong>: <em>object | null</em></p>
+<p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_heartbeattimer">_heartbeatTimer</a></em></p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:169</p>
 <hr/>
 <h3 id="_libp2p">_libp2p<a class="headerlink" href="#_libp2p" title="Permanent link">¶</a></h3>
 <p>• <strong>_libp2p</strong>: <em>Libp2p</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_libp2p">_libp2p</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:113</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:161</p>
 <hr/>
 <h3 id="_options">_options<a class="headerlink" href="#_options" title="Permanent link">¶</a></h3>
 <p>• <strong>_options</strong>: <em>GossipOptions</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_options">_options</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:114</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:162</p>
 <hr/>
 <h3 id="_registrarid">_registrarId<a class="headerlink" href="#_registrarid" title="Permanent link">¶</a></h3>
 <p>• <strong>_registrarId</strong>: <em>any</em></p>
@@ -1131,12 +1142,14 @@
 <h3 id="acceptfromwhitelist">acceptFromWhitelist<a class="headerlink" href="#acceptfromwhitelist" title="Permanent link">¶</a></h3>
 <p>• <strong>acceptFromWhitelist</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, AcceptFromWhitelistEntry›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#acceptfromwhitelist">acceptFromWhitelist</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:90</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:95</p>
+<p>Map of peer id and AcceptRequestWhileListEntry</p>
 <hr/>
 <h3 id="backoff">backoff<a class="headerlink" href="#backoff" title="Permanent link">¶</a></h3>
 <p>• <strong>backoff</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, number››</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#backoff">backoff</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:99</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:129</p>
+<p>Prune backoff map</p>
 <hr/>
 <h3 id="canrelaymessage">canRelayMessage<a class="headerlink" href="#canrelaymessage" title="Permanent link">¶</a></h3>
 <p>• <strong>canRelayMessage</strong>: <em>boolean</em></p>
@@ -1146,28 +1159,31 @@
 <hr/>
 <h3 id="private-readonly-config"><code>Private</code> <code>Readonly</code> config<a class="headerlink" href="#private-readonly-config" title="Permanent link">¶</a></h3>
 <p>• <strong>config</strong>: <em>IBeaconConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L72">packages/lodestar/src/network/gossip/gossipsub.ts:72</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L72">packages/lodestar/src/network/gossip/gossipsub.ts:72</a></em></p>
 <hr/>
 <h3 id="control">control<a class="headerlink" href="#control" title="Permanent link">¶</a></h3>
 <p>• <strong>control</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, IControlMessage›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#control">control</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:96</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:121</p>
+<p>Map of control messages
+peer id =&gt; control message</p>
 <hr/>
 <h3 id="defaultmsgidfn">defaultMsgIdFn<a class="headerlink" href="#defaultmsgidfn" title="Permanent link">¶</a></h3>
 <p>• <strong>defaultMsgIdFn</strong>: <em>MessageIdFunction</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#defaultmsgidfn">defaultMsgIdFn</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:101</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:135</p>
 <hr/>
 <h3 id="direct">direct<a class="headerlink" href="#direct" title="Permanent link">¶</a></h3>
 <p>• <strong>direct</strong>: <em>Set‹string›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#direct">direct</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:88</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:89</p>
+<p>Direct peers</p>
 <hr/>
 <h3 id="emit">emit<a class="headerlink" href="#emit" title="Permanent link">¶</a></h3>
 <p>• <strong>emit</strong>: <em>function</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#emit">emit</a></em></p>
 <p><em>Overrides <a href="../network_nodejs.nodejsnode/">NodejsNode</a>.<a href="../network_nodejs.nodejsnode/#emit">emit</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:119</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:167</p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <p>▸ (<code>event</code>: string | symbol, ...<code>args</code>: any[]): <em>boolean</em></p>
 <p><strong>Parameters:</strong></p>
@@ -1199,17 +1215,21 @@
 <h3 id="fanout">fanout<a class="headerlink" href="#fanout" title="Permanent link">¶</a></h3>
 <p>• <strong>fanout</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Set‹string››</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#fanout">fanout</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:93</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:106</p>
+<p>Map of topics to set of peers. These mesh peers are the ones to which we are publishing without a topic membership
+topic =&gt; peer id set</p>
 <hr/>
 <h3 id="fastmsgidcache">fastMsgIdCache<a class="headerlink" href="#fastmsgidcache" title="Permanent link">¶</a></h3>
 <p>• <strong>fastMsgIdCache</strong>: <em>SimpleTimeCache‹string› | undefined</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#fastmsgidcache">fastMsgIdCache</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:103</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:141</p>
+<p>Maps fast message-id to canonical message-id</p>
 <hr/>
 <h3 id="getfastmsgidstr">getFastMsgIdStr<a class="headerlink" href="#getfastmsgidstr" title="Permanent link">¶</a></h3>
 <p>• <strong>getFastMsgIdStr</strong>: <em>FastMsgIdFn | undefined</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#getfastmsgidstr">getFastMsgIdStr</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:102</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:139</p>
+<p>A fast message id function used for internal message de-duplication</p>
 <hr/>
 <h3 id="globalsignaturepolicy">globalSignaturePolicy<a class="headerlink" href="#globalsignaturepolicy" title="Permanent link">¶</a></h3>
 <p>• <strong>globalSignaturePolicy</strong>: <em>string</em></p>
@@ -1220,82 +1240,91 @@
 <h3 id="gossip">gossip<a class="headerlink" href="#gossip" title="Permanent link">¶</a></h3>
 <p>• <strong>gossip</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, IControlIHave[]›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#gossip">gossip</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:95</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:116</p>
+<p>Map of pending messages to gossip
+peer id =&gt; control messages</p>
 <hr/>
 <h3 id="private-readonly-gossiptopiccache"><code>Private</code> <code>Readonly</code> gossipTopicCache<a class="headerlink" href="#private-readonly-gossiptopiccache" title="Permanent link">¶</a></h3>
 <p>• <strong>gossipTopicCache</strong>: <em><a href="../network_gossip.gossiptopiccache/">GossipTopicCache</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L76">packages/lodestar/src/network/gossip/gossipsub.ts:76</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L76">packages/lodestar/src/network/gossip/gossipsub.ts:76</a></em></p>
 <hr/>
 <h3 id="gossiptracer">gossipTracer<a class="headerlink" href="#gossiptracer" title="Permanent link">¶</a></h3>
 <p>• <strong>gossipTracer</strong>: <em>IWantTracer</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#gossiptracer">gossipTracer</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:108</p>
-<hr/>
-<h3 id="heartbeat">heartbeat<a class="headerlink" href="#heartbeat" title="Permanent link">¶</a></h3>
-<p>• <strong>heartbeat</strong>: <em>Heartbeat</em></p>
-<p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#heartbeat">heartbeat</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:106</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:156</p>
+<p>Tracks IHAVE/IWANT promises broken by peers</p>
 <hr/>
 <h3 id="heartbeatticks">heartbeatTicks<a class="headerlink" href="#heartbeatticks" title="Permanent link">¶</a></h3>
 <p>• <strong>heartbeatTicks</strong>: <em>number</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#heartbeatticks">heartbeatTicks</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:107</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:152</p>
+<p>Number of heartbeats since the beginning of time
+This allows us to amortize some resource cleanup -- eg: backoff cleanup</p>
 <hr/>
 <h3 id="iasked">iasked<a class="headerlink" href="#iasked" title="Permanent link">¶</a></h3>
 <p>• <strong>iasked</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, number›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#iasked">iasked</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:98</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:127</p>
+<p>Number of messages we have asked from peer in the last heartbeat</p>
 <hr/>
 <h3 id="readonly-jobqueues"><code>Readonly</code> jobQueues<a class="headerlink" href="#readonly-jobqueues" title="Permanent link">¶</a></h3>
 <p>• <strong>jobQueues</strong>: <em><a href="../../modules/network_gossip/#gossipjobqueues">GossipJobQueues</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L71">packages/lodestar/src/network/gossip/gossipsub.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L71">packages/lodestar/src/network/gossip/gossipsub.ts:71</a></em></p>
 <hr/>
 <h3 id="lastpub">lastpub<a class="headerlink" href="#lastpub" title="Permanent link">¶</a></h3>
 <p>• <strong>lastpub</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, number›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#lastpub">lastpub</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:94</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:111</p>
+<p>Map of last publish time for fanout topics
+topic =&gt; last publish time</p>
 <hr/>
 <h3 id="log">log<a class="headerlink" href="#log" title="Permanent link">¶</a></h3>
 <p>• <strong>log</strong>: <em>Debugger &amp; object</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#log">log</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:116</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:164</p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L73">packages/lodestar/src/network/gossip/gossipsub.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L73">packages/lodestar/src/network/gossip/gossipsub.ts:73</a></em></p>
 <hr/>
 <h3 id="mesh">mesh<a class="headerlink" href="#mesh" title="Permanent link">¶</a></h3>
 <p>• <strong>mesh</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Set‹string››</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#mesh">mesh</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:92</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:101</p>
+<p>Map of topic meshes
+topic =&gt; peer id set</p>
 <hr/>
 <h3 id="messagecache">messageCache<a class="headerlink" href="#messagecache" title="Permanent link">¶</a></h3>
 <p>• <strong>messageCache</strong>: <em>MessageCache</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#messagecache">messageCache</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:104</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:145</p>
+<p>A message cache that contains the messages for last few hearbeat ticks</p>
 <hr/>
 <h3 id="multicodecs">multicodecs<a class="headerlink" href="#multicodecs" title="Permanent link">¶</a></h3>
 <p>• <strong>multicodecs</strong>: <em>string[]</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#multicodecs">multicodecs</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:109</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:157</p>
 <hr/>
 <h3 id="outbound">outbound<a class="headerlink" href="#outbound" title="Permanent link">¶</a></h3>
 <p>• <strong>outbound</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, boolean›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#outbound">outbound</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:100</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:134</p>
+<p>Connection direction cache, marks peers with outbound connections
+peer id =&gt; direction</p>
 <hr/>
 <h3 id="peerid">peerId<a class="headerlink" href="#peerid" title="Permanent link">¶</a></h3>
 <p>• <strong>peerId</strong>: <em>PeerId</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#peerid">peerId</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:111</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:159</p>
 <hr/>
 <h3 id="peerhave">peerhave<a class="headerlink" href="#peerhave" title="Permanent link">¶</a></h3>
 <p>• <strong>peerhave</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, number›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#peerhave">peerhave</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:97</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:125</p>
+<p>Number of IHAVEs received from peer in the last heartbeat</p>
 <hr/>
 <h3 id="peers">peers<a class="headerlink" href="#peers" title="Permanent link">¶</a></h3>
 <p>• <strong>peers</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, PeerStreams›</em></p>
@@ -1316,24 +1345,26 @@
 <h3 id="score">score<a class="headerlink" href="#score" title="Permanent link">¶</a></h3>
 <p>• <strong>score</strong>: <em>PeerScore</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#score">score</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:105</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:147</p>
+<p>Peer score tracking</p>
 <hr/>
 <h3 id="seencache">seenCache<a class="headerlink" href="#seencache" title="Permanent link">¶</a></h3>
 <p>• <strong>seenCache</strong>: <em>SimpleTimeCache‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#seencache">seenCache</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:89</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:91</p>
+<p>Cache of seen messages</p>
 <hr/>
 <h3 id="started">started<a class="headerlink" href="#started" title="Permanent link">¶</a></h3>
 <p>• <strong>started</strong>: <em>boolean</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#started">started</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:110</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:158</p>
 <hr/>
 <h3 id="subscriptions">subscriptions<a class="headerlink" href="#subscriptions" title="Permanent link">¶</a></h3>
 <p>• <strong>subscriptions</strong>: <em>Set‹string›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#subscriptions">subscriptions</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:112</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:160</p>
 <hr/>
 <h3 id="topicvalidators">topicValidators<a class="headerlink" href="#topicvalidators" title="Permanent link">¶</a></h3>
 <p>• <strong>topicValidators</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, function›</em></p>
@@ -1347,22 +1378,22 @@ Topic validators are functions with the following input:</p>
 <p>• <strong>topics</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, Set‹string››</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#topics">topics</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:91</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:96</p>
 <hr/>
 <h3 id="private-readonly-validatorfnsbytype"><code>Private</code> <code>Readonly</code> validatorFnsByType<a class="headerlink" href="#private-readonly-validatorfnsbytype" title="Permanent link">¶</a></h3>
 <p>• <strong>validatorFnsByType</strong>: <em><a href="../../modules/network_gossip/#validatorfnsbytype">ValidatorFnsByType</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L78">packages/lodestar/src/network/gossip/gossipsub.ts:78</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L78">packages/lodestar/src/network/gossip/gossipsub.ts:78</a></em></p>
 <hr/>
 <h3 id="static-multicodec"><code>Static</code> multicodec<a class="headerlink" href="#static-multicodec" title="Permanent link">¶</a></h3>
 <p>▪ <strong>multicodec</strong>: <em>string</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#static-multicodec">multicodec</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:120</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:168</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="_acceptfrom">_acceptFrom<a class="headerlink" href="#_acceptfrom" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_acceptFrom</strong>(<code>id</code>: string): <em>boolean</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_acceptfrom">_acceptFrom</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:201</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:234</p>
 <p>Whether to accept a message from a peer</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
@@ -1385,7 +1416,7 @@ Topic validators are functions with the following input:</p>
 <h3 id="_addbackoff">_addBackoff<a class="headerlink" href="#_addbackoff" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_addBackoff</strong>(<code>id</code>: string, <code>topic</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_addbackoff">_addBackoff</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:244</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:260</p>
 <p>Add standard backoff log for a peer in a topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1412,7 +1443,7 @@ Topic validators are functions with the following input:</p>
 <p>▸ <strong>_addPeer</strong>(<code>peerId</code>: PeerId, <code>protocol</code>: string): <em>PeerStreams</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_addpeer">_addPeer</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:162</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:208</p>
 <p>Add a peer to the router</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
@@ -1439,7 +1470,7 @@ Topic validators are functions with the following input:</p>
 <h3 id="_applyiwantpenalties">_applyIwantPenalties<a class="headerlink" href="#_applyiwantpenalties" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_applyIwantPenalties</strong>(): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_applyiwantpenalties">_applyIwantPenalties</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:257</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:269</p>
 <p>Apply penalties from broken IHAVE/IWANT promises</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
@@ -1469,14 +1500,14 @@ Should be used by the routers to create the message to send.</p>
 <h3 id="_clearbackoff">_clearBackoff<a class="headerlink" href="#_clearbackoff" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_clearBackoff</strong>(): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_clearbackoff">_clearBackoff</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:262</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:273</p>
 <p>Clear expired backoff expiries</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="_connect">_connect<a class="headerlink" href="#_connect" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_connect</strong>(<code>id</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_connect">_connect</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:292</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:296</p>
 <p>Connect to a peer using the gossipsub protocol</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1499,7 +1530,7 @@ Should be used by the routers to create the message to send.</p>
 <p>▸ <strong>_decodeRpc</strong>(<code>bytes</code>: Uint8Array): <em>RPC</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_decoderpc">_decodeRpc</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:146</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:197</p>
 <p>Decode a Uint8Array into an RPC object
 Overrided to use an extended protocol-specific protobuf decoder</p>
 <p><strong><code>override</code></strong> </p>
@@ -1523,14 +1554,14 @@ Overrided to use an extended protocol-specific protobuf decoder</p>
 <h3 id="_directconnect">_directConnect<a class="headerlink" href="#_directconnect" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_directConnect</strong>(): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_directconnect">_directConnect</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:267</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:277</p>
 <p>Maybe reconnect to direct peers</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="_doaddbackoff">_doAddBackoff<a class="headerlink" href="#_doaddbackoff" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_doAddBackoff</strong>(<code>id</code>: string, <code>topic</code>: string, <code>interval</code>: number): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_doaddbackoff">_doAddBackoff</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:252</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:265</p>
 <p>Add backoff expiry interval for a peer in a topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1564,7 +1595,7 @@ Overrided to use an extended protocol-specific protobuf decoder</p>
 <h3 id="_emitgossip">_emitGossip<a class="headerlink" href="#_emitgossip" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_emitGossip</strong>(<code>topic</code>: string, <code>exclude</code>: Set‹string›): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_emitgossip">_emitGossip</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:376</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:358</p>
 <p>Emits gossip to peers in a particular topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1593,7 +1624,7 @@ Overrided to use an extended protocol-specific protobuf decoder</p>
 <h3 id="_emitmessage">_emitMessage<a class="headerlink" href="#_emitmessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_emitMessage</strong>(): <em>void</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L317">packages/lodestar/src/network/gossip/gossipsub.ts:317</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L317">packages/lodestar/src/network/gossip/gossipsub.ts:317</a></em></p>
 <p><strong><code>override</code></strong> 
 See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.js#L428</p>
 <p>Our handlers are attached on the validator functions, so no need to emit the objects internally.</p>
@@ -1603,7 +1634,7 @@ See https://github.com/libp2p/js-libp2p-interfaces/blob/v0.5.2/src/pubsub/index.
 <p>▸ <strong>_encodeRpc</strong>(<code>rpc</code>: RPC): <em>Uint8Array</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_encoderpc">_encodeRpc</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:154</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:203</p>
 <p>Encode an RPC object into a Uint8Array
 Overrided to use an extended protocol-specific protobuf encoder</p>
 <p><strong><code>override</code></strong> </p>
@@ -1627,14 +1658,14 @@ Overrided to use an extended protocol-specific protobuf encoder</p>
 <h3 id="_flush">_flush<a class="headerlink" href="#_flush" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_flush</strong>(): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_flush">_flush</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:380</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:362</p>
 <p>Flush gossip and control messages</p>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="_handlegraft">_handleGraft<a class="headerlink" href="#_handlegraft" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_handleGraft</strong>(<code>id</code>: string, <code>graft</code>: IControlGraft[]): <em>Promise‹IControlPrune[]›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_handlegraft">_handleGraft</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:230</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:252</p>
 <p>Handles Graft messages</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1642,19 +1673,16 @@ Overrided to use an extended protocol-specific protobuf encoder</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>graft</code></td>
 <td>IControlGraft[]</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -1663,7 +1691,7 @@ Overrided to use an extended protocol-specific protobuf encoder</p>
 <h3 id="_handleihave">_handleIHave<a class="headerlink" href="#_handleihave" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_handleIHave</strong>(<code>id</code>: string, <code>ihave</code>: IControlIHave[]): <em>IControlIWant[]</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_handleihave">_handleIHave</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:215</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:243</p>
 <p>Handles IHAVE messages</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1671,19 +1699,16 @@ Overrided to use an extended protocol-specific protobuf encoder</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>ihave</code></td>
 <td>IControlIHave[]</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -1692,7 +1717,7 @@ Overrided to use an extended protocol-specific protobuf encoder</p>
 <h3 id="_handleiwant">_handleIWant<a class="headerlink" href="#_handleiwant" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_handleIWant</strong>(<code>id</code>: string, <code>iwant</code>: IControlIWant[]): <em>IMessage[]</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_handleiwant">_handleIWant</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:223</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:248</p>
 <p>Handles IWANT messages
 Returns messages to send back to peer</p>
 <p><strong>Parameters:</strong></p>
@@ -1701,19 +1726,16 @@ Returns messages to send back to peer</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>iwant</code></td>
 <td>IControlIWant[]</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -1722,7 +1744,7 @@ Returns messages to send back to peer</p>
 <h3 id="_handleprune">_handlePrune<a class="headerlink" href="#_handleprune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_handlePrune</strong>(<code>id</code>: string, <code>prune</code>: IControlPrune[]): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_handleprune">_handlePrune</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:237</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:256</p>
 <p>Handles Prune messages</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1730,28 +1752,32 @@ Returns messages to send back to peer</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>prune</code></td>
 <td>IControlPrune[]</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
+<h3 id="_heartbeat">_heartbeat<a class="headerlink" href="#_heartbeat" title="Permanent link">¶</a></h3>
+<p>▸ <strong>_heartbeat</strong>(): <em>void</em></p>
+<p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_heartbeat">_heartbeat</a></em></p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:378</p>
+<p>Maintains the mesh and fanout maps in gossipsub.</p>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
 <h3 id="_makeprune">_makePrune<a class="headerlink" href="#_makeprune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_makePrune</strong>(<code>id</code>: string, <code>topic</code>: string, <code>doPX</code>: boolean): <em>Promise‹IControlPrune›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_makeprune">_makePrune</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:400</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:374</p>
 <p>Make a PRUNE control message for a peer in a topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1781,7 +1807,7 @@ Returns messages to send back to peer</p>
 <h3 id="_now">_now<a class="headerlink" href="#_now" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_now</strong>(): <em>number</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_now">_now</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:392</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:370</p>
 <p>Returns the current time in milliseconds</p>
 <p><strong>Returns:</strong> <em>number</em></p>
 <hr/>
@@ -1877,7 +1903,7 @@ Returns messages to send back to peer</p>
 <h3 id="_piggybackcontrol">_piggybackControl<a class="headerlink" href="#_piggybackcontrol" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_piggybackControl</strong>(<code>id</code>: string, <code>outRpc</code>: IRPC, <code>ctrl</code>: IControlMessage): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_piggybackcontrol">_piggybackControl</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:362</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:346</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1906,7 +1932,7 @@ Returns messages to send back to peer</p>
 <h3 id="_piggybackgossip">_piggybackGossip<a class="headerlink" href="#_piggybackgossip" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_piggybackGossip</strong>(<code>id</code>: string, <code>outRpc</code>: IRPC, <code>ihave</code>: IControlIHave[]): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_piggybackgossip">_piggybackGossip</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:363</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:347</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1969,7 +1995,7 @@ Returns messages to send back to peer</p>
 <h3 id="_processrpc">_processRpc<a class="headerlink" href="#_processrpc" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_processRpc</strong>(<code>idB58Str</code>: string, <code>peerStreams</code>: PeerStreams, <code>rpc</code>: RPC): <em>Promise‹boolean›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L156">packages/lodestar/src/network/gossip/gossipsub.ts:156</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L156">packages/lodestar/src/network/gossip/gossipsub.ts:156</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1998,7 +2024,7 @@ Returns messages to send back to peer</p>
 <h3 id="_processrpccontrolmessage">_processRpcControlMessage<a class="headerlink" href="#_processrpccontrolmessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_processRpcControlMessage</strong>(<code>id</code>: string, <code>controlMsg</code>: IControlMessage): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_processrpccontrolmessage">_processRpcControlMessage</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:186</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:223</p>
 <p>Handles an rpc control message from a peer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2006,19 +2032,16 @@ Returns messages to send back to peer</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>controlMsg</code></td>
 <td>IControlMessage</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -2027,7 +2050,7 @@ Returns messages to send back to peer</p>
 <h3 id="_processrpcmessage">_processRpcMessage<a class="headerlink" href="#_processrpcmessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_processRpcMessage</strong>(<code>msg</code>: InMessage): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L204">packages/lodestar/src/network/gossip/gossipsub.ts:204</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L204">packages/lodestar/src/network/gossip/gossipsub.ts:204</a></em></p>
 <p>Similar to gossipsub 0.13.0 except that no await
 TODO: override getMsgIdIfNotSeen and add metric
 See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
@@ -2081,7 +2104,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <p>▸ <strong>_publish</strong>(<code>msg</code>: InMessage): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_publish">_publish</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:343</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:333</p>
 <p>Publish messages</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
@@ -2104,7 +2127,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="_pushgossip">_pushGossip<a class="headerlink" href="#_pushgossip" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_pushGossip</strong>(<code>id</code>: string, <code>controlIHaveMsgs</code>: IControlIHave): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_pushgossip">_pushGossip</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:387</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:366</p>
 <p>Adds new IHAVE messages to pending gossip</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2130,7 +2153,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="_pxconnect">_pxConnect<a class="headerlink" href="#_pxconnect" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_pxConnect</strong>(<code>peers</code>: IPeerInfo[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_pxconnect">_pxConnect</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:273</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:281</p>
 <p>Maybe attempt connection given signed peer records</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2153,7 +2176,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <p>▸ <strong>_removePeer</strong>(<code>peerId</code>: PeerId): <em>PeerStreams | undefined</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_removepeer">_removePeer</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:169</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:213</p>
 <p>Removes a peer from the router</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
@@ -2176,7 +2199,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="_sendgraft">_sendGraft<a class="headerlink" href="#_sendgraft" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_sendGraft</strong>(<code>id</code>: string, <code>topic</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_sendgraft">_sendGraft</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:350</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:337</p>
 <p>Sends a GRAFT message to a peer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2184,19 +2207,16 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>topic</code></td>
 <td>string</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -2205,7 +2225,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="_sendgraftprune">_sendGraftPrune<a class="headerlink" href="#_sendgraftprune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_sendGraftPrune</strong>(<code>tograft</code>: <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, string[]›, <code>toprune</code>: <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, string[]›, <code>noPX</code>: <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, boolean›): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_sendgraftprune">_sendGraftPrune</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:369</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:353</p>
 <p>Send graft and prune messages</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2239,7 +2259,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="_sendprune">_sendPrune<a class="headerlink" href="#_sendprune" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_sendPrune</strong>(<code>id</code>: string, <code>topic</code>: string): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_sendprune">_sendPrune</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:357</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:341</p>
 <p>Sends a PRUNE message to a peer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2247,19 +2267,16 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <tr>
 <th>Name</th>
 <th>Type</th>
-<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>id</code></td>
 <td>string</td>
-<td>peer id</td>
 </tr>
 <tr>
 <td><code>topic</code></td>
 <td>string</td>
-<td>-</td>
 </tr>
 </tbody>
 </table>
@@ -2269,7 +2286,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <p>▸ <strong>_sendRpc</strong>(<code>id</code>: string, <code>outRpc</code>: IRPC): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#_sendrpc">_sendRpc</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:361</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:345</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2360,7 +2377,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="getcachedmsgidstr">getCachedMsgIdStr<a class="headerlink" href="#getcachedmsgidstr" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCachedMsgIdStr</strong>(<code>msg</code>: <a href="../../modules/network_gossip/#eth2inmessage">Eth2InMessage</a>): <em>string | undefined</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L149">packages/lodestar/src/network/gossip/gossipsub.ts:149</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L149">packages/lodestar/src/network/gossip/gossipsub.ts:149</a></em></p>
 <p>Get cached message id string if we have it.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2382,7 +2399,7 @@ See https://github.com/ChainSafe/js-libp2p-gossipsub/pull/187/files</p>
 <h3 id="getcanonicalmsgidstr">getCanonicalMsgIdStr<a class="headerlink" href="#getcanonicalmsgidstr" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getCanonicalMsgIdStr</strong>(<code>msg</code>: InMessage): <em>Promise‹string›</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#getcanonicalmsgidstr">getCanonicalMsgIdStr</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:327</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:321</p>
 <p>Return the canonical message-id of a message as a string</p>
 <p>If a fast message-id is set: Try 1. the application cache 2. the fast cache 3. <code>getMsgId()</code>
 If a fast message-id is NOT set: Just <code>getMsgId()</code></p>
@@ -2405,7 +2422,7 @@ If a fast message-id is NOT set: Just <code>getMsgId()</code></p>
 <hr/>
 <h3 id="private-getgossiptopicstring"><code>Private</code> getGossipTopicString<a class="headerlink" href="#private-getgossiptopicstring" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getGossipTopicString</strong>(<code>topic</code>: <a href="../../modules/network_gossip/#gossiptopic">GossipTopic</a>): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L426">packages/lodestar/src/network/gossip/gossipsub.ts:426</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L426">packages/lodestar/src/network/gossip/gossipsub.ts:426</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2432,7 +2449,7 @@ If a fast message-id is NOT set: Just <code>getMsgId()</code></p>
 <h3 id="getmsgid">getMsgId<a class="headerlink" href="#getmsgid" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getMsgId</strong>(<code>msg</code>: <a href="../../modules/network_gossip/#eth2inmessage">Eth2InMessage</a>): <em>Uint8Array</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L135">packages/lodestar/src/network/gossip/gossipsub.ts:135</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L135">packages/lodestar/src/network/gossip/gossipsub.ts:135</a></em></p>
 <p><strong><code>override</code></strong> Use eth2 msg id and cache results to the msg
 The cached msgId inside the message will be ignored when we send messages to other peers
 since we don't have this field in protobuf.</p>
@@ -2485,7 +2502,7 @@ since we don't have this field in protobuf.</p>
 <h3 id="join">join<a class="headerlink" href="#join" title="Permanent link">¶</a></h3>
 <p>▸ <strong>join</strong>(<code>topic</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#join">join</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:312</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:310</p>
 <p>Join topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2507,7 +2524,7 @@ since we don't have this field in protobuf.</p>
 <h3 id="leave">leave<a class="headerlink" href="#leave" title="Permanent link">¶</a></h3>
 <p>▸ <strong>leave</strong>(<code>topic</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#leave">leave</a></em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:318</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:314</p>
 <p>Leave topic</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -2620,7 +2637,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="private-onscrapemetrics"><code>Private</code> onScrapeMetrics<a class="headerlink" href="#private-onscrapemetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onScrapeMetrics</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L430">packages/lodestar/src/network/gossip/gossipsub.ts:430</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L430">packages/lodestar/src/network/gossip/gossipsub.ts:430</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2741,7 +2758,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishattesterslashing">publishAttesterSlashing<a class="headerlink" href="#publishattesterslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishAttesterSlashing</strong>(<code>attesterSlashing</code>: AttesterSlashing): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L405">packages/lodestar/src/network/gossip/gossipsub.ts:405</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L405">packages/lodestar/src/network/gossip/gossipsub.ts:405</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2761,7 +2778,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishbeaconaggregateandproof">publishBeaconAggregateAndProof<a class="headerlink" href="#publishbeaconaggregateandproof" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishBeaconAggregateAndProof</strong>(<code>aggregateAndProof</code>: SignedAggregateAndProof): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L376">packages/lodestar/src/network/gossip/gossipsub.ts:376</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L376">packages/lodestar/src/network/gossip/gossipsub.ts:376</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2781,7 +2798,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishbeaconattestation">publishBeaconAttestation<a class="headerlink" href="#publishbeaconattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishBeaconAttestation</strong>(<code>attestation</code>: Attestation, <code>subnet</code>: number): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L384">packages/lodestar/src/network/gossip/gossipsub.ts:384</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L384">packages/lodestar/src/network/gossip/gossipsub.ts:384</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2805,7 +2822,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishbeaconblock">publishBeaconBlock<a class="headerlink" href="#publishbeaconblock" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishBeaconBlock</strong>(<code>signedBlock</code>: allForks.SignedBeaconBlock): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L371">packages/lodestar/src/network/gossip/gossipsub.ts:371</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L371">packages/lodestar/src/network/gossip/gossipsub.ts:371</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2825,7 +2842,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishcontributionandproof">publishContributionAndProof<a class="headerlink" href="#publishcontributionandproof" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishContributionAndProof</strong>(<code>contributionAndProof</code>: SignedContributionAndProof): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L418">packages/lodestar/src/network/gossip/gossipsub.ts:418</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L418">packages/lodestar/src/network/gossip/gossipsub.ts:418</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2845,7 +2862,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishobject">publishObject<a class="headerlink" href="#publishobject" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishObject</strong>‹<strong>K</strong>›(<code>topic</code>: GossipTopicMap[K], <code>object</code>: GossipTypeMap[K]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L342">packages/lodestar/src/network/gossip/gossipsub.ts:342</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L342">packages/lodestar/src/network/gossip/gossipsub.ts:342</a></em></p>
 <p>Publish a <code>GossipObject</code> on a <code>GossipTopic</code></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>K</strong>: <em><a href="../../modules/network_gossip/#gossiptype">GossipType</a></em></p>
@@ -2872,7 +2889,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishproposerslashing">publishProposerSlashing<a class="headerlink" href="#publishproposerslashing" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishProposerSlashing</strong>(<code>proposerSlashing</code>: ProposerSlashing): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L397">packages/lodestar/src/network/gossip/gossipsub.ts:397</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L397">packages/lodestar/src/network/gossip/gossipsub.ts:397</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2892,7 +2909,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishsynccommitteesignature">publishSyncCommitteeSignature<a class="headerlink" href="#publishsynccommitteesignature" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishSyncCommitteeSignature</strong>(<code>signature</code>: SyncCommitteeMessage, <code>subnet</code>: number): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L413">packages/lodestar/src/network/gossip/gossipsub.ts:413</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L413">packages/lodestar/src/network/gossip/gossipsub.ts:413</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -2916,7 +2933,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="publishvoluntaryexit">publishVoluntaryExit<a class="headerlink" href="#publishvoluntaryexit" title="Permanent link">¶</a></h3>
 <p>▸ <strong>publishVoluntaryExit</strong>(<code>voluntaryExit</code>: SignedVoluntaryExit): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L392">packages/lodestar/src/network/gossip/gossipsub.ts:392</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L392">packages/lodestar/src/network/gossip/gossipsub.ts:392</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -3025,20 +3042,20 @@ since we don't have this field in protobuf.</p>
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L116">packages/lodestar/src/network/gossip/gossipsub.ts:116</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L116">packages/lodestar/src/network/gossip/gossipsub.ts:116</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="stop">stop<a class="headerlink" href="#stop" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stop</strong>(): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L120">packages/lodestar/src/network/gossip/gossipsub.ts:120</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L120">packages/lodestar/src/network/gossip/gossipsub.ts:120</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="subscribe">subscribe<a class="headerlink" href="#subscribe" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribe</strong>(<code>topic</code>: string): <em>void</em></p>
 <p><em>Inherited from <a href="./">Eth2Gossipsub</a>.<a href="./#subscribe">subscribe</a></em></p>
 <p><em>Overrides void</em></p>
-<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:299</p>
+<p>Defined in node_modules/libp2p-gossipsub/src/index.d.ts:301</p>
 <p>Subscribes to a topic</p>
 <p><strong><code>override</code></strong> </p>
 <p><strong>Parameters:</strong></p>
@@ -3060,7 +3077,7 @@ since we don't have this field in protobuf.</p>
 <hr/>
 <h3 id="subscribetopic">subscribeTopic<a class="headerlink" href="#subscribetopic" title="Permanent link">¶</a></h3>
 <p>▸ <strong>subscribeTopic</strong>(<code>topic</code>: <a href="../../modules/network_gossip/#gossiptopic">GossipTopic</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L353">packages/lodestar/src/network/gossip/gossipsub.ts:353</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L353">packages/lodestar/src/network/gossip/gossipsub.ts:353</a></em></p>
 <p>Subscribe to a <code>GossipTopic</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -3082,7 +3099,7 @@ since we don't have this field in protobuf.</p>
 <h3 id="unsubscribe">unsubscribe<a class="headerlink" href="#unsubscribe" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribe</strong>(<code>topicStr</code>: string): <em>void</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L328">packages/lodestar/src/network/gossip/gossipsub.ts:328</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L328">packages/lodestar/src/network/gossip/gossipsub.ts:328</a></em></p>
 <p><strong><code>override</code></strong> 
 Differs from upstream <code>unsubscribe</code> by <em>always</em> unsubscribing,
 instead of unsubsribing only when no handlers are attached to the topic</p>
@@ -3106,7 +3123,7 @@ instead of unsubsribing only when no handlers are attached to the topic</p>
 <hr/>
 <h3 id="unsubscribetopic">unsubscribeTopic<a class="headerlink" href="#unsubscribetopic" title="Permanent link">¶</a></h3>
 <p>▸ <strong>unsubscribeTopic</strong>(<code>topic</code>: <a href="../../modules/network_gossip/#gossiptopic">GossipTopic</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L365">packages/lodestar/src/network/gossip/gossipsub.ts:365</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L365">packages/lodestar/src/network/gossip/gossipsub.ts:365</a></em></p>
 <p>Unsubscribe to a <code>GossipTopic</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -3128,7 +3145,7 @@ instead of unsubsribing only when no handlers are attached to the topic</p>
 <h3 id="validate">validate<a class="headerlink" href="#validate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validate</strong>(<code>message</code>: <a href="../../modules/network_gossip/#eth2inmessage">Eth2InMessage</a>): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0b85a46/packages/lodestar/src/network/gossip/gossipsub.ts#L270">packages/lodestar/src/network/gossip/gossipsub.ts:270</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/lodestar/src/network/gossip/gossipsub.ts#L270">packages/lodestar/src/network/gossip/gossipsub.ts:270</a></em></p>
 <p><strong><code>override</code></strong> https://github.com/ChainSafe/js-libp2p-gossipsub/blob/3c3c46595f65823fcd7900ed716f43f76c6b355c/ts/index.ts#L436</p>
 <p><strong><code>override</code></strong> https://github.com/libp2p/js-libp2p-interfaces/blob/ff3bd10704a4c166ce63135747e3736915b0be8d/src/pubsub/index.js#L513
 Note: this does not call super. All logic is re-implemented below</p>
@@ -3184,7 +3201,7 @@ Note: this does not call super. All logic is re-implemented below</p>
 <div class="md-dialog" data-md-component="dialog">
 <div class="md-dialog__inner md-typeset"></div>
 </div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "translations": {"clipboard.copy": "Copy to clipboard", "clipboard.copied": "Copied to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.placeholder": "Type to start searching", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.term.missing": "Missing", "select.version.title": "Select version"}, "search": "../../../../assets/javascripts/workers/search.5e67fbfe.min.js"}</script>
+<script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.5e67fbfe.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
 <script src="../../../../assets/javascripts/bundle.e87a5f81.min.js"></script>
 </body>
 </html>
