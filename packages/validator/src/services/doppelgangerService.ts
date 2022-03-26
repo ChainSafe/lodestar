@@ -1,21 +1,31 @@
 import {IClock} from "../util";
-import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {PubkeyHex} from "../types";
 import {AbortController} from "@chainsafe/abort-controller";
+import {PubkeyHex} from "../types";
+import {toHexString} from "@chainsafe/ssz";
+
+const REMAINING_EPOCH_CHECK = 2;
 
 type DoppelgangerState = {
-  nextCheckEpoch: Epoch;
+  epochRegistered: Epoch;
+  epochChecked: Epoch[];
   remainingEpochsToCheck: number;
 };
 
+export enum DoppelgangerStatus {
+  VerifiedSafe = "VerifiedSafe",
+  Unverified = "Unverified",
+  UnknownToDoppelganger = "UnknownToDoppelganger",
+}
+
 export class DoppelgangerService {
-  private readonly doppelgangerStateByIndex = new Map<PubkeyHex, DoppelgangerState>();
+  private readonly doppelgangerStateByIndex = new Map<ValidatorIndex, DoppelgangerState>();
   constructor(
     private readonly config: IChainForkConfig,
     private readonly logger: ILogger,
@@ -28,12 +38,30 @@ export class DoppelgangerService {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
-  register(pubKeys: PubkeyHex[]): void {
-    for (const pubKey of pubKeys) {
-      this.doppelgangerStateByIndex.set(pubKey, {
-        nextCheckEpoch: 0,
-        remainingEpochsToCheck: 2,
-      });
+  async registerIndices(registeredEpoch: Epoch): Promise<void> {
+    const localIndices: ValidatorIndex[] = this.indicesService.getAllLocalIndices();
+    const polledIndices: ValidatorIndex[] = await this.indicesService.pollValidatorIndices();
+    const newIndices = polledIndices.filter((polledindex) => !localIndices.includes(polledindex));
+    // register the already known local indices and newly learnt indices with doppelganger protection
+    const indices = [...localIndices, ...newIndices];
+    this.doRegister(indices, registeredEpoch);
+    this.logger.info(`Registered indices ${indices} for doppelganger protection at epoch ${registeredEpoch}`);
+  }
+
+  getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+    const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
+
+    if (validatorIndex != null) {
+      const doppelgangerState = this.doppelgangerStateByIndex.get(validatorIndex);
+      if (doppelgangerState?.remainingEpochsToCheck == 0) {
+        return DoppelgangerStatus.VerifiedSafe;
+      } else {
+        return DoppelgangerStatus.Unverified;
+      }
+    } else {
+      this.logger.error(`Validator Index not know for public key ${pubKey}`);
+      return DoppelgangerStatus.UnknownToDoppelganger;
     }
   }
 
@@ -43,48 +71,77 @@ export class DoppelgangerService {
     }
 
     const endSlotOfEpoch = computeEndSlotForEpoch(currentEpoch);
-    // Run the doppelganger protection check 75% through each epoch. This
+    // Run the doppelganger protection check 75% through the last slot of this epoch. This
     // *should* mean that the BN has seen the blocks and attestations for the epoch
     await sleep(this.clock.msToSlotFraction(endSlotOfEpoch, 3 / 4));
-    const indices = await this.getIndices();
+    const indices = await this.getIndicesToCheck(currentEpoch);
     if (indices.length !== 0) {
+      const previousEpoch = currentEpoch - 1;
       try {
-        const previous: LivenessResponseData[] = (await this.api.lodestar.getLiveness(indices, currentEpoch - 1)).data;
+        // in the current epoch also request for liveness check for past epoch in case a validator index was live
+        // in the remaining 25% of the last slot of the previous epoch
+        const previous = previousEpoch >= 0 ? (await this.api.lodestar.getLiveness(indices, previousEpoch)).data : [];
         const current: LivenessResponseData[] = (await this.api.lodestar.getLiveness(indices, currentEpoch)).data;
 
-        this.detect({previous, current});
+        this.detectDoppelganger([...previous, ...current], currentEpoch);
       } catch (e) {
         this.logger.error("Error getting liveness data", {}, e as Error);
       }
     }
-    return Promise.resolve();
   };
 
-  private detect(livenessData: {previous: LivenessResponseData[]; current: LivenessResponseData[]}): void {
-    const liveness = [...livenessData.previous, ...livenessData.current];
-    for (const [pubKey, doppelgangerState] of Array.from(this.doppelgangerStateByIndex.entries())) {
-      const livenessData = liveness.find((response) => {
-        return response.index === this.indicesService.pubkey2index.get(pubKey);
+  private detectDoppelganger(livenessData: LivenessResponseData[], currentEpoch: Epoch): void {
+    const violators = [];
+
+    for (const [validatorIndex, doppelgangerState] of Array.from(this.doppelgangerStateByIndex.entries())) {
+      const validatorIndexWithLiveness = livenessData.find((liveness) => {
+        return liveness.index === validatorIndex;
       });
 
-      if (doppelgangerState.remainingEpochsToCheck !== 0 && livenessData?.isLive) {
-        this.logger.error("Doppelganger protection detected for validator index: {}", livenessData.index);
-        this.validatorController.abort();
+      if (doppelgangerState.remainingEpochsToCheck !== 0 && validatorIndexWithLiveness?.isLive) {
+        violators.push(validatorIndexWithLiveness.index);
       } else {
         doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
+        doppelgangerState.epochChecked.push(currentEpoch);
       }
+    }
+
+    if (violators.length !== 0) {
+      this.logger.error(`Doppelganger protection detected for validator indices: ${violators}`);
+      this.validatorController.abort();
     }
   }
 
-  private async getIndices(): Promise<ValidatorIndex[]> {
-    // Run to get for all known local indices
-    const localIndices = this.indicesService.getAllLocalIndices();
+  private async getIndicesToCheck(currentEpoch: Epoch): Promise<ValidatorIndex[]> {
+    // Get all known local indices protected by doppelganger
+    const localIndices: ValidatorIndex[] = [];
+
+    for (const [index, state] of this.doppelgangerStateByIndex.entries()) {
+      if (state.remainingEpochsToCheck != 0) {
+        localIndices.push(index);
+      }
+    }
+
     try {
-      const newIndices = await this.indicesService.pollValidatorIndices();
+      // then get new indices if any not already protected by doppelganger
+      const polledIndices = await this.indicesService.pollValidatorIndices();
+      const newIndices = polledIndices.filter((polledindex) => !localIndices.includes(polledindex));
+      // register new indices to be protected by doppelganger
+      this.doRegister(newIndices, currentEpoch);
       return [...localIndices, ...newIndices];
     } catch (e) {
       this.logger.error("Error polling validator indices", {}, e as Error);
       return localIndices;
+    }
+  }
+
+  private doRegister(indices: ValidatorIndex[], epoch: Epoch): void {
+    for (const index of indices) {
+      this.doppelgangerStateByIndex.set(index, {
+        epochRegistered: epoch,
+        epochChecked: [],
+        remainingEpochsToCheck: REMAINING_EPOCH_CHECK,
+      });
     }
   }
 }

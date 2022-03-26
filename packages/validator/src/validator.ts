@@ -1,6 +1,6 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {ssz} from "@chainsafe/lodestar-types";
+import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -83,7 +83,7 @@ export class Validator {
       this.controller
     );
     if (opts.enableDoppelganger) {
-      validatorStore.setDoppelganger(doppelgangerService);
+      validatorStore.setDoppelganger(doppelgangerService, this.getCurrentEpoch(config, clock.genesisTime));
     }
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
@@ -153,8 +153,7 @@ export class Validator {
     }
 
     if (exitEpoch === undefined) {
-      const currentSlot = getCurrentSlot(this.config, this.clock.genesisTime);
-      exitEpoch = computeEpochAtSlot(currentSlot);
+      exitEpoch = this.getCurrentEpoch(this.config, this.clock.genesisTime);
     }
 
     const signedVoluntaryExit = await this.validatorStore.signVoluntaryExit(publicKey, stateValidator.index, exitEpoch);
@@ -167,6 +166,11 @@ export class Validator {
   private getAbortSignal = (): AbortSignal | undefined => {
     return this.state.status === Status.running ? this.state.controller.signal : undefined;
   };
+
+  private getCurrentEpoch(config: IBeaconConfig, genesisTime: number): Epoch {
+    const currentSlot = getCurrentSlot(config, genesisTime);
+    return computeEpochAtSlot(currentSlot);
+  }
 }
 
 /** Assert the same genesisValidatorRoot and genesisTime */
