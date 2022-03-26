@@ -1,6 +1,6 @@
 # Lodestar libraries
 
-The Lodestar project is divided into Typescript packages that can be used independently of the CLI. These packages span the breadth of the Ethereum consensus layer (Eth2), and are perfect for Typescript developers looking to build around Ethereum.
+The Lodestar project is divided into Typescript packages that can be used independently of the CLI. These packages span the breadth of the Ethereum Consensus layer, and are perfect for Typescript developers looking to build around Ethereum.
 
 ## Monorepo libraries
 
@@ -15,7 +15,7 @@ Several useful Ethereum consensus libraries are developed as part of the [Lodest
 
 ### BLS Utilities
 
-- [bls](https://github.com/ChainSafe/bls) - Eth2 BLS sign / verify / aggregate
+- [bls](https://github.com/ChainSafe/bls) - Eth Consensus BLS sign / verify / aggregate
 - [bls-keystore](https://github.com/ChainSafe/bls-keystore) - store / retrieve a BLS secret key from an [EIP-2335](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2335.md) JSON keystore
 - [bls-keygen](https://github.com/ChainSafe/bls-keygen) - utility functions to generate BLS secret keys, following [EIP-2333](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2333.md) and [EIP-2334](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2334.md)
 - [bls-hd-key](https://github.com/ChainSafe/bls-hd-key) - low level [EIP-2333](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2333.md) and [EIP-2334](https://github.com/ethereum/EIPs/blob/master/EIPS/eip-2334.md) functionality

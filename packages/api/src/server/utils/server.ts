@@ -23,7 +23,7 @@ export type ServerRoute<Req extends ReqGeneric = ReqGeneric> = {
   method: fastify.HTTPMethods;
   handler: FastifyHandler<Req>;
   schema?: fastify.FastifySchema;
-  /** OperationId as defined in https://github.com/ethereum/eth2.0-APIs/blob/18cb6ff152b33a5f34c377f00611821942955c82/apis/beacon/blocks/attestations.yaml#L2 */
+  /** OperationId as defined in https://github.com/ethereum/beacon-APIs/blob/v2.1.0/apis/beacon/blocks/attestations.yaml#L2 */
   id: string;
 };
 

@@ -1,7 +1,7 @@
 import qs from "qs";
 
 /**
- * Eth2.0 API requires the query with format:
+ * Ethereum Beacon API requires the query with format:
  * - arrayFormat: repeat `topic=topic1&topic=topic2`
  */
 export function stringifyQuery(query: unknown): string {

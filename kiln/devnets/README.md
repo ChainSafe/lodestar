@@ -11,18 +11,18 @@ This is a setup to run and join the devnet with a single shell command. This scr
 ###### Just run the script with arguments
 
 ```bash
-cd kintsugi/devnets
-./setup.sh --dataDir kintsugi-data --elClient geth --devnetVars ./kintsugi.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --"]
+cd kiln/devnets
+./setup.sh --dataDir kiln-data --elClient geth --devnetVars ./kiln.vars [--dockerWithSudo --withTerminal "gnome-terminal --disable-factory --" --withValidator]
 ```
 
 ###### Example scenarios
 
 1. Run with separate terminals launched & attached (best for testing in local) :
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --withTerminal "gnome-terminal --disable-factory --" --dockerWithSudo `
 2. Run _in-terminal_ attached with logs interleaved (best for testing in remote shell) :
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --dockerWithSudo`
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --dockerWithSudo`
 3. Run detached (best for leaving it to run, typically after testing 1 or 2):
-   `./setup.sh --dataDir kintsugi-data --elClient nethermind --devnetVars ./kintsugi.vars --detached --dockerWithSudo`
+   `./setup.sh --dataDir kiln-data --elClient nethermind --devnetVars ./kiln.vars --detached --dockerWithSudo`
 
 You can alternate between `geth` and `nethermind` to experiment with the ELs being out of sync ( and catching up) with `lodestar`.
 
@@ -35,5 +35,6 @@ You can alternate between `geth` and `nethermind` to experiment with the ELs bei
 5. `--withTerminal`(optional): Provide the terminal command prefix for CL and EL processes to run in your favourite terminal.
    You may use an alias or a terminal launching script as long as it waits for the command it runs till ends and then closes.If not provided, it will launch the docker processes in _in-terminal_ mode.
 6. `--detached`(optional): By default the script will wait for processes and use user input (ctrl +c) to end the processes, however you can pass this option to skip this behavior and just return, for e.g. in case you just want to leave it running.
+7. `--withValidator` (optional): Launch a validator client using `LODESTAR_VALIDATOR_ARGS` as set in the devnet vars file.
 
 Only one of `--withTerminal` or `--detached` should be provided.

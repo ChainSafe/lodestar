@@ -2,7 +2,8 @@ import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions} from "../../util";
 
 export interface IChainArgs {
-  "chain.useSingleThreadVerifier": boolean;
+  "chain.blsVerifyAllMultiThread": boolean;
+  "chain.blsVerifyAllMainThread": boolean;
   "chain.disableBlsBatchVerify": boolean;
   "chain.persistInvalidSszObjects": boolean;
   "chain.proposerBoostEnabled": boolean;
@@ -13,7 +14,8 @@ export interface IChainArgs {
 
 export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
   return {
-    useSingleThreadVerifier: args["chain.useSingleThreadVerifier"],
+    blsVerifyAllMultiThread: args["chain.blsVerifyAllMultiThread"],
+    blsVerifyAllMainThread: args["chain.blsVerifyAllMainThread"],
     disableBlsBatchVerify: args["chain.disableBlsBatchVerify"],
     persistInvalidSszObjects: args["chain.persistInvalidSszObjects"],
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
@@ -24,11 +26,19 @@ export function parseArgs(args: IChainArgs): IBeaconNodeOptions["chain"] {
 }
 
 export const options: ICliCommandOptions<IChainArgs> = {
-  "chain.useSingleThreadVerifier": {
+  "chain.blsVerifyAllMultiThread": {
     hidden: true,
     type: "boolean",
-    description: "Disable spawning worker threads for BLS verification, use single thread implementation.",
-    defaultDescription: String(defaultOptions.chain.useSingleThreadVerifier),
+    description: "Always use worker threads for BLS verification",
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
+    group: "chain",
+  },
+
+  "chain.blsVerifyAllMainThread": {
+    hidden: true,
+    type: "boolean",
+    description: "Always use main threads for BLS verification",
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllMainThread),
     group: "chain",
   },
 
@@ -38,7 +48,7 @@ export const options: ICliCommandOptions<IChainArgs> = {
     description:
       "Do not use BLS batch verify to validate all block signatures at once. \
 Will double processing times. Use only for debugging purposes.",
-    defaultDescription: String(defaultOptions.chain.disableBlsBatchVerify),
+    defaultDescription: String(defaultOptions.chain.blsVerifyAllMultiThread),
     group: "chain",
   },
 

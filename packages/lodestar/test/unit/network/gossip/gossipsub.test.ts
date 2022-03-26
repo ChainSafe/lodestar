@@ -1,4 +1,3 @@
-import sinon, {SinonStubbedInstance} from "sinon";
 import {expect, assert} from "chai";
 import Libp2p from "libp2p";
 import {InMessage} from "libp2p-interfaces/src/pubsub";
@@ -18,24 +17,19 @@ import {createNode} from "../../../utils/network";
 import {testLogger} from "../../../utils/logger";
 import {GossipAction, GossipActionError} from "../../../../src/chain/errors";
 import {Eth2Context} from "../../../../src/chain";
-import {IPeerRpcScoreStore, PeerRpcScoreStore} from "../../../../src/network/peers/score";
 
 describe("network / gossip / validation", function () {
   const logger = testLogger();
   const metrics = null;
   const gossipType = GossipType.beacon_block;
-  const sandbox = sinon.createSandbox();
 
   let message: InMessage;
   let topicString: string;
   let libp2p: Libp2p;
   let eth2Context: Eth2Context;
-  let peerRpcScoresStub: IPeerRpcScoreStore & SinonStubbedInstance<PeerRpcScoreStore>;
 
   let controller: AbortController;
   beforeEach(() => {
-    peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore) as IPeerRpcScoreStore &
-      SinonStubbedInstance<PeerRpcScoreStore>;
     controller = new AbortController();
     eth2Context = {
       activeValidatorCount: 16,
@@ -43,11 +37,7 @@ describe("network / gossip / validation", function () {
       currentSlot: 1000 * SLOTS_PER_EPOCH,
     };
   });
-
-  afterEach(() => {
-    controller.abort();
-    sandbox.restore();
-  });
+  afterEach(() => controller.abort());
 
   beforeEach(async function () {
     const signedBlock = generateEmptySignedBlock();
@@ -65,7 +55,7 @@ describe("network / gossip / validation", function () {
   it("should throw on failed validation", async () => {
     const gossipHandlersPartial: Partial<GossipHandlers> = {
       [gossipType]: async () => {
-        throw new GossipActionError(GossipAction.REJECT, null, {code: "TEST_ERROR"});
+        throw new GossipActionError(GossipAction.REJECT, {code: "TEST_ERROR"});
       },
     };
 
@@ -74,7 +64,6 @@ describe("network / gossip / validation", function () {
       gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
       libp2p,
-      peerRpcScores: peerRpcScoresStub,
       metrics,
       signal: controller.signal,
       eth2Context,
@@ -106,7 +95,6 @@ describe("network / gossip / validation", function () {
       gossipHandlers: gossipHandlersPartial as GossipHandlers,
       logger,
       libp2p,
-      peerRpcScores: peerRpcScoresStub,
       metrics,
       signal: controller.signal,
       eth2Context,

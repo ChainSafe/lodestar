@@ -1,5 +1,5 @@
 site_name: Lodestar documentation
-site_description: Lodestar documentation - Typescript Eth2.0 client
+site_description: Lodestar documentation - Typescript Ethereum Consensus client
 site_url: https://chainsafe.github.io/lodestar
 
 repo_name: chainsafe/lodestar

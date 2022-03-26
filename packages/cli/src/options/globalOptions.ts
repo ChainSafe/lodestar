@@ -18,7 +18,7 @@ const globalSingleOptions: ICliCommandOptions<IGlobalSingleArgs> = {
   },
 
   network: {
-    description: "Name of the Eth2 chain network to join",
+    description: "Name of the Ethereum Consensus chain network to join",
     type: "string",
     default: defaultNetwork,
     choices: networkNames,

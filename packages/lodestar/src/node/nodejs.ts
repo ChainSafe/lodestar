@@ -60,7 +60,7 @@ export enum BeaconNodeStatus {
 
 /**
  * The main Beacon Node class.  Contains various components for getting and processing data from the
- * eth2 ecosystem as well as systems for getting beacon node metadata.
+ * Ethereum Consensus ecosystem as well as systems for getting beacon node metadata.
  */
 export class BeaconNode {
   opts: IBeaconNodeOptions;

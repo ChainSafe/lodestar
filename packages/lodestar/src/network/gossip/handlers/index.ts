@@ -67,7 +67,7 @@ const MAX_UNKNOWN_BLOCK_ROOT_RETRIES = 1;
  * - We do expensive processing on the object in the validator function that we need to re-use in the handler function.
  * - The validator function produces extra data that is needed for the handler function. Making this data available in
  *   the handler function scope is hard to achieve without very hacky strategies
- * - Eth2.0 gossipsub protocol strictly defined a single topic for message
+ * - Ethereum Consensus gossipsub protocol strictly defined a single topic for message
  */
 export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipHandlerOpts): GossipHandlers {
   const {chain, config, metrics, network, logger} = modules;
@@ -110,8 +110,14 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       metrics?.registerBeaconBlock(OpSource.gossip, seenTimestampSec, signedBlock.message);
 
       // `validProposerSignature = true`, in gossip validation the proposer signature is checked
+      // At gossip time, it's critical to keep a good number of mesh peers.
+      // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+      // Gossip Job Wait Time depends on the BLS Job Wait Time
+      // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+      // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+      // See https://github.com/ChainSafe/lodestar/issues/3792
       chain
-        .processBlock(signedBlock, {validProposerSignature: true})
+        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);

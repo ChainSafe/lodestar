@@ -163,7 +163,12 @@ export async function verifyBlockStateTransition(
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
       : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
 
-    if (signatureSets.length > 0 && !(await chain.bls.verifySignatureSets(signatureSets))) {
+    if (
+      signatureSets.length > 0 &&
+      !(await chain.bls.verifySignatureSets(signatureSets, {
+        verifyOnMainThread: partiallyVerifiedBlock?.blsVerifyOnMainThread,
+      }))
+    ) {
       throw new BlockError(block, {code: BlockErrorCode.INVALID_SIGNATURE, state: postState});
     }
   }
@@ -215,20 +220,27 @@ export async function verifyBlockStateTransition(
         // will either validate or prune invalid blocks
         //
         // When to import such blocks:
-        // From: https://github.com/ethereum/consensus-specs/pull/2770/files
+        // From: https://github.com/ethereum/consensus-specs/pull/2844
         // A block MUST NOT be optimistically imported, unless either of the following
         // conditions are met:
         //
-        // 1. The justified checkpoint has execution enabled
-        // 2. The current slot (as per the system clock) is at least
+        // 1. Parent of the block has execution
+        // 2. The justified checkpoint has execution enabled
+        // 3. The current slot (as per the system clock) is at least
         //    SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY ahead of the slot of the block being
         //    imported.
+
+        const parentRoot = toHexString(block.message.parentRoot);
+        const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
         const justifiedBlock = chain.forkChoice.getJustifiedBlock();
         const clockSlot = getCurrentSlot(chain.config, postState.genesisTime);
 
         if (
-          justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-          block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot
+          !parentBlock ||
+          // Following condition is the !(Not) of the safe import condition
+          (parentBlock.executionStatus === ExecutionStatus.PreMerge &&
+            justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
+            block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot)
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,

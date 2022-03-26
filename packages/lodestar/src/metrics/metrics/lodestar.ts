@@ -49,6 +49,18 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
+    peerLongLivedSubnets: register.avgMinMax({
+      name: "lodestar_peer_long_lived_subnets_avg_min_max",
+      help: "Avg min max of amount of long lived subnets of peers",
+    }),
+    peerScore: register.avgMinMax({
+      name: "lodestar_peer_score_avg_min_max",
+      help: "Avg min max of peer score at lodestar side",
+    }),
+    peerConnectionLength: register.avgMinMax({
+      name: "lodestar_peer_connection_seconds_avg_min_max",
+      help: "Avg min max of peer connection length in second",
+    }),
     peersSync: register.gauge({
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
@@ -66,6 +78,11 @@ export function createLodestarMetrics(
     peerGoodbyeReceived: register.gauge<"reason">({
       name: "lodestar_peer_goodbye_received_total",
       help: "Total number of goodbye received, labeled by reason",
+      labelNames: ["reason"],
+    }),
+    peerLongConnectionDisconnect: register.gauge<"reason">({
+      name: "lodestar_peer_long_connection_disconnect_total",
+      help: "For peers with long connection, track disconnect reason",
       labelNames: ["reason"],
     }),
     peerGoodbyeSent: register.gauge<"reason">({
@@ -90,6 +107,11 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_subnets_peers_count",
       help: "Priorization results total peers in subnets to query and discover peers in",
       labelNames: ["type"],
+    }),
+    peersReportPeerCount: register.gauge<"reason">({
+      name: "lodestar_peers_report_peer_count",
+      help: "network.reportPeer count by reason",
+      labelNames: ["reason"],
     }),
 
     discovery: {
@@ -170,6 +192,11 @@ export function createLodestarMetrics(
       score: register.avgMinMax({
         name: "lodestar_gossip_score_avg_min_max",
         help: "Avg min max of all gossip peer scores",
+      }),
+      scoreWeights: register.avgMinMax<"p" | "topic">({
+        name: "lodestar_gossip_score_weights_avg_min_max",
+        help: "Avg min max of all gossip peer score weights",
+        labelNames: ["p", "topic"],
       }),
     },
     gossipMesh: {
@@ -291,7 +318,7 @@ export function createLodestarMetrics(
       help: "Time to fullfill a request to the REST api labeled by operationId",
       labelNames: ["operationId"],
       // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 0.5, 1, 5, 10],
+      buckets: [0.01, 0.1, 1],
     }),
 
     // Beacon state transition metrics
@@ -364,6 +391,20 @@ export function createLodestarMetrics(
         name: "lodestar_bls_thread_pool_latency_from_worker",
         help: "Time from the worker sending the result and the main thread receiving it",
         buckets: [0.1],
+      }),
+      mainThreadDurationInThreadPool: register.histogram({
+        name: "lodestar_bls_thread_pool_main_thread_time_seconds",
+        help: "Time to verify signatures in main thread with thread pool mode",
+        buckets: [0.1, 1],
+      }),
+    },
+
+    // BLS time on single thread mode
+    blsSingleThread: {
+      singleThreadDuration: register.histogram({
+        name: "lodestar_bls_single_thread_time_seconds",
+        help: "Time to verify signatures with single thread mode",
+        buckets: [0.1, 1],
       }),
     },
 
@@ -545,6 +586,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_attestations_min_delay_seconds",
         help: "The min delay between when the validator should send the attestation and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       prevEpochAttestationAggregateInclusions: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_attestation_aggregate_inclusions_total",
@@ -570,6 +612,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_beacon_blocks_min_delay_seconds",
         help: "The min delay between when the validator should send the block and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       prevEpochAggregatesTotal: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_aggregates_total",
@@ -580,6 +623,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_prev_epoch_aggregates_min_delay_seconds",
         help: "The min delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
 
       // Validator Monitor Metrics (real-time)
@@ -593,6 +637,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_unaggregated_attestation_delay_seconds",
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",
@@ -603,6 +648,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_aggregated_attestation_delay_seconds",
         help: "The delay between then the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       attestationInAggregateTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_attestation_in_aggregate_total",
@@ -613,6 +659,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_aggregate_delay_seconds",
         help: "The delay between when the validator should send the aggregate and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
       attestationInBlockTotal: register.gauge<"index">({
         name: "validator_monitor_attestation_in_block_total",
@@ -623,6 +670,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_attestation_in_block_delay_slots",
         help: "The excess slots (beyond the minimum delay) between the attestation slot and the block slot",
         labelNames: ["index"],
+        buckets: [0.1, 1],
       }),
       beaconBlockTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_beacon_block_total",
@@ -633,6 +681,7 @@ export function createLodestarMetrics(
         name: "validator_monitor_beacon_block_delay_seconds",
         help: "The delay between when the validator should send the block and when it was received",
         labelNames: ["index", "src"],
+        buckets: [0.1, 1],
       }),
     },
 

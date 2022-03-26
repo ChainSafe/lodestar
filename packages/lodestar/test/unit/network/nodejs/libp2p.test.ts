@@ -23,7 +23,7 @@ describe("[network] nodejs libp2p", () => {
 
     await Promise.all([nodeA.start(), nodeB.start()]);
 
-    nodeA.peerStore.addressBook.add(nodeB.peerId, nodeB.multiaddrs);
+    await nodeA.peerStore.addressBook.add(nodeB.peerId, nodeB.multiaddrs);
 
     // connect
     await Promise.all([

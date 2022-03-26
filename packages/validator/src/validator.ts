@@ -132,7 +132,7 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
-    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {indices: [publicKey]});
+    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);

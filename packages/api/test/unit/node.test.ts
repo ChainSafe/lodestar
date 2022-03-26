@@ -53,7 +53,7 @@ describe("node", () => {
     },
     getSyncingStatus: {
       args: [],
-      res: {data: {headSlot: 1, syncDistance: 2, isSyncing: false}},
+      res: {data: {headSlot: "1", syncDistance: "2", isSyncing: false}},
     },
     getHealth: {
       args: [],

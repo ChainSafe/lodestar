@@ -135,7 +135,7 @@ describe("config / bootnodes / parsing", () => {
     {
       name: "Can parse plain txt-file input",
       input: `
-# Eth2 mainnet bootnodes
+# Ethereum Consensus mainnet bootnodes
 # ---------------------------------------
 # 1. Tag nodes with maintainer
 # 2. Keep nodes updated

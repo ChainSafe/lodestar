@@ -1,7 +1,6 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
 import {PeerAction, ScoreState, PeerRpcScoreStore} from "../../../../src/network/peers/score";
-import {IPeerMetadataStore} from "../../../../src/network/peers";
 
 describe("simple block provider score tracking", function () {
   const peer = PeerId.createFromB58String("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
@@ -9,13 +8,7 @@ describe("simple block provider score tracking", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
-    const store: IPeerMetadataStore = {
-      encoding: new PeerMap<any>(),
-      metadata: new PeerMap<any>(),
-      rpcScore: new PeerMap<number>(),
-      rpcScoreLastUpdate: new PeerMap<number>(),
-    };
-    return {store, scoreStore: new PeerRpcScoreStore(store)};
+    return {scoreStore: new PeerRpcScoreStore()};
   }
 
   it("Should return default score, without any previous action", function () {
@@ -32,7 +25,7 @@ describe("simple block provider score tracking", function () {
   ];
 
   for (const [peerAction, times] of timesToBan)
-    it(`Should ban peer after ${times} ${peerAction}`, () => {
+    it(`Should ban peer after ${times} ${peerAction}`, async () => {
       const {scoreStore} = mockStore();
       for (let i = 0; i < times; i++) scoreStore.applyAction(peer, peerAction);
       expect(scoreStore.getScoreState(peer)).to.be.equal(ScoreState.Banned);
@@ -47,10 +40,10 @@ describe("simple block provider score tracking", function () {
   ];
   for (const [minScore, timeToDecay] of decayTimes)
     it(`Should decay MIN_SCORE to ${minScore} after ${timeToDecay} ms`, () => {
-      const {store, scoreStore} = mockStore();
-      store.rpcScore.set(peer, MIN_SCORE);
-      store.rpcScoreLastUpdate.set(peer, Date.now() - timeToDecay * factorForJsBadMath);
-      scoreStore.update(peer);
+      const {scoreStore} = mockStore();
+      scoreStore["scores"].set(peer.toB58String(), MIN_SCORE);
+      scoreStore["lastUpdate"].set(peer.toB58String(), Date.now() - timeToDecay * factorForJsBadMath);
+      scoreStore.update();
       expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
     });
 
@@ -61,13 +54,3 @@ describe("simple block provider score tracking", function () {
     expect(scoreStore.getScore(peer)).to.be.gte(MIN_SCORE);
   });
 });
-
-class PeerMap<T> {
-  map = new Map<string, T>();
-  get(peer: PeerId): T | undefined {
-    return this.map.get(peer.toB58String());
-  }
-  set(peer: PeerId, value: T): void {
-    this.map.set(peer.toB58String(), value);
-  }
-}

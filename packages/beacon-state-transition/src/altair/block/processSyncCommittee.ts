@@ -73,7 +73,7 @@ export function getSyncCommitteeSignatureSet(
   // When there's no participation we consider the signature valid and just ignore it
   if (participantIndices.length === 0) {
     // Must set signature as G2_POINT_AT_INFINITY when participating bits are empty
-    // https://github.com/ethereum/eth2.0-specs/blob/30f2a076377264677e27324a8c3c78c590ae5e20/specs/altair/bls.md#eth2_fast_aggregate_verify
+    // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/bls.md#eth_fast_aggregate_verify
     if (ssz.BLSSignature.equals(signature, G2_POINT_AT_INFINITY)) {
       return null;
     } else {

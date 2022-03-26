@@ -34,7 +34,7 @@ describe("chain / bls / multithread queue", function () {
   });
 
   async function initializePool(): Promise<BlsMultiThreadWorkerPool> {
-    const pool = new BlsMultiThreadWorkerPool({logger, metrics: null, signal: controller.signal});
+    const pool = new BlsMultiThreadWorkerPool({}, {logger, metrics: null, signal: controller.signal});
     // Wait until initialized
     await pool["waitTillInitialized"]();
     return pool;
@@ -88,7 +88,7 @@ describe("chain / bls / multithread queue", function () {
       isValidPromiseArr.push(pool.verifySignatureSets(sets, {batchable: true}));
     }
 
-    await expect(isInvalidPromise).to.rejectedWith("BLST_ERROR");
+    await expect(isInvalidPromise).to.rejectedWith("BLST_INVALID_SIZE");
 
     const isValidArr = await Promise.all(isValidPromiseArr);
     for (const [i, isValid] of isValidArr.entries()) {

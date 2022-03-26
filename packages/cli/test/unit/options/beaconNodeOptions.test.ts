@@ -14,7 +14,8 @@ describe("options / beaconNodeOptions", () => {
       "api.rest.host": "127.0.0.1",
       "api.rest.port": 7654,
 
-      "chain.useSingleThreadVerifier": true,
+      "chain.blsVerifyAllMultiThread": true,
+      "chain.blsVerifyAllMainThread": true,
       "chain.disableBlsBatchVerify": true,
       "chain.persistInvalidSszObjects": true,
       "chain.proposerBoostEnabled": false,
@@ -71,7 +72,8 @@ describe("options / beaconNodeOptions", () => {
         },
       },
       chain: {
-        useSingleThreadVerifier: true,
+        blsVerifyAllMultiThread: true,
+        blsVerifyAllMainThread: true,
         disableBlsBatchVerify: true,
         persistInvalidSszObjects: true,
         proposerBoostEnabled: false,

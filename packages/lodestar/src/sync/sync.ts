@@ -77,14 +77,14 @@ export class BeaconSync implements IBeaconSync {
       case SyncState.SyncingHead:
       case SyncState.Stalled:
         return {
-          headSlot: headSlot,
-          syncDistance: currentSlot - headSlot,
+          headSlot: String(headSlot),
+          syncDistance: String(currentSlot - headSlot),
           isSyncing: true,
         };
       case SyncState.Synced:
         return {
-          headSlot: headSlot,
-          syncDistance: 0,
+          headSlot: String(headSlot),
+          syncDistance: "0",
           isSyncing: false,
         };
       default:

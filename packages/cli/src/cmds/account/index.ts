@@ -5,6 +5,6 @@ import {wallet} from "./cmds/wallet";
 
 export const account: ICliCommand<Record<never, never>, IGlobalArgs> = {
   command: "account <command>",
-  describe: "Utilities for generating and managing Ethereum 2.0 accounts",
+  describe: "Utilities for generating and managing Ethereum Consensus accounts",
   subcommands: [validator, wallet],
 };
