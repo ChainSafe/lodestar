@@ -6995,23 +6995,23 @@ libp2p-crypto@^0.21.0:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-gossipsub@^0.11.1:
-  version "0.11.1"
-  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.11.1.tgz#591151b9a3a029e3bc7b9fb02a5dd61968e08b7e"
-  integrity sha512-apWeUsCoCIaXFw7NMAm/UH3OiODS/00hRc3ZSckvrV3lRfXh6TU1Q+IbPX0Z4u0ODo7eLXuq6n+JpYitlkB2qg==
+libp2p-gossipsub@^0.11.5:
+  version "0.11.5"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.11.5.tgz#63a8cc866f5778337ffcee9296759f37a7841666"
+  integrity sha512-xUUInif3m+EXVdiVD68aOrBCjOhbZCXVqtPkfNtCLmyTxiI5SrOuFswuXrpIHKC1IPNJ177v7S4B7CCVykOYkw==
   dependencies:
     "@types/debug" "^4.1.5"
     debug "^4.3.1"
     denque "^1.5.0"
     err-code "^3.0.1"
     it-pipe "^1.1.0"
-    libp2p-interfaces "^1.0.1"
-    peer-id "^0.15.0"
+    libp2p-interfaces "^1.1.0"
+    peer-id "^0.15.3"
     protobufjs "^6.11.2"
     time-cache "^0.3.0"
     uint8arrays "^3.0.0"
 
-libp2p-interfaces@^1.0.0, libp2p-interfaces@^1.0.1, libp2p-interfaces@^1.1.0:
+libp2p-interfaces@^1.0.0, libp2p-interfaces@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/libp2p-interfaces/-/libp2p-interfaces-1.1.0.tgz#20fdf21a3da022872abcf6a000e30495d39ab965"
   integrity sha512-5nc/HZJgeks1qfkyYQdI84hcZLF4SJKJSUx33JpO0w7v7R+obz+HOwk0GSa4/ZvQHjX+/+OWC4NYVA0yZxZXag==
