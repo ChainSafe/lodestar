@@ -123,7 +123,8 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void {
-    this.scores.get(peerId)?.updateGossipsubScore(newScore, ignore);
+    const peerScore = this.scores.getOrDefault(peerId);
+    peerScore.updateGossipsubScore(newScore, ignore);
   }
 }
 
