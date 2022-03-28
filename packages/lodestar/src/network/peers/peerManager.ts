@@ -12,7 +12,7 @@ import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
 import {prettyPrintPeerId, getClientFromPeerStore} from "../util";
 import {ISubnetsService} from "../subnets";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
-import {IPeerRpcScoreStore, ScoreState} from "./score";
+import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
 import {
   getConnectedPeerIds,
   hasSomeConnectedPeer,
@@ -467,25 +467,8 @@ export class PeerManager {
       gossipsubScores.set(peerIdStr, this.gossipsub.getScore(peerIdStr));
     }
 
-    let toIgnoreNegativePeers = Math.ceil(this.opts.targetPeers * ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR);
-    // sort by gossipsub score desc
-    const sortedPeerIds = Array.from(this.connectedPeers.keys()).sort(
-      (a, b) => (gossipsubScores.get(a) ?? 0) - (gossipsubScores.get(b) ?? 0)
-    );
-    for (const peerId of sortedPeerIds) {
-      const gossipsubScore = gossipsubScores.get(peerId);
-      if (gossipsubScore !== undefined) {
-        let ignore = false;
-        if (gossipsubScore < 0 && toIgnoreNegativePeers > 0) {
-          // We ignore the negative score for the best negative peers so that their
-          // gossipsub score can recover without getting disconnected.
-          ignore = true;
-          toIgnoreNegativePeers -= 1;
-        }
-
-        this.peerRpcScores.updateGossipsubScore(peerId, gossipsubScore, ignore);
-      }
-    }
+    const toIgnoreNegativePeers = Math.ceil(this.opts.targetPeers * ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR);
+    updateGossipsubScores(this.peerRpcScores, gossipsubScores, toIgnoreNegativePeers);
   }
 
   private pingAndStatusTimeouts(): void {
