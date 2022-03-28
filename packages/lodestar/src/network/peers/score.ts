@@ -1,4 +1,5 @@
 import PeerId from "peer-id";
+import {IMetrics} from "../../metrics";
 import {pruneSetToMax} from "../../util/map";
 
 /** The default score for new peers */
@@ -72,16 +73,25 @@ export interface IPeerRpcScoreStore {
   update(): void;
 }
 
+export interface IPeerRpcScoreStoreModules {
+  metrics: IMetrics | null;
+}
+
 /**
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
  * The decay rate applies equally to positive and negative scores.
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
+  private readonly metrics: IMetrics | null;
   private readonly scores = new Map<string, number>();
   private readonly lastUpdate = new Map<string, number>();
 
   // TODO: Persist scores, at least BANNED status to disk
+
+  constructor(metrics: IMetrics | null = null) {
+    this.metrics = metrics;
+  }
 
   getScore(peer: PeerId): number {
     return this.scores.get(peer.toB58String()) ?? DEFAULT_SCORE;
@@ -94,8 +104,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
     this.add(peer, peerActionScore[action]);
 
-    // TODO: Log action to debug + do metrics
-    actionName;
+    this.metrics?.peersReportPeerCount.inc({reason: actionName});
   }
 
   update(): void {
