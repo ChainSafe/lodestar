@@ -8,7 +8,9 @@ describe("simple block provider score tracking", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
-    return {scoreStore: new PeerRpcScoreStore()};
+    const scoreStore = new PeerRpcScoreStore();
+    const peerScores = scoreStore["scores"];
+    return {scoreStore, peerScores};
   }
 
   it("Should return default score, without any previous action", function () {
@@ -40,9 +42,12 @@ describe("simple block provider score tracking", function () {
   ];
   for (const [minScore, timeToDecay] of decayTimes)
     it(`Should decay MIN_SCORE to ${minScore} after ${timeToDecay} ms`, () => {
-      const {scoreStore} = mockStore();
-      scoreStore["scores"].set(peer.toB58String(), MIN_SCORE);
-      scoreStore["lastUpdate"].set(peer.toB58String(), Date.now() - timeToDecay * factorForJsBadMath);
+      const {scoreStore, peerScores} = mockStore();
+      const peerScore = peerScores.get(peer.toB58String());
+      if (peerScore) {
+        peerScore["lastUpdate"] = Date.now() - timeToDecay * factorForJsBadMath;
+        peerScore["lodestarScore"] = MIN_SCORE;
+      }
       scoreStore.update();
       expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
     });

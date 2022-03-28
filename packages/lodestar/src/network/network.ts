@@ -94,6 +94,7 @@ export class Network implements INetwork {
       {
         libp2p,
         reqResp: this.reqResp,
+        gossip: this.gossip,
         attnetsService: this.attnetsService,
         syncnetsService: this.syncnetsService,
         logger,
