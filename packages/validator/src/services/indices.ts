@@ -37,9 +37,11 @@ export class IndicesService {
     return indices;
   }
 
+  /** Returns the validator index for a given validator pubkey */
   getValidatorIndex(pubKey: PubkeyHex): ValidatorIndex | undefined {
     return this.pubkey2index.get(pubKey);
   }
+
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
     return Array.from(this.index2pubkey.keys());

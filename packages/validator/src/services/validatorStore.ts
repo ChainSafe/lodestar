@@ -81,9 +81,8 @@ export class ValidatorStore {
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
   }
 
-  setDoppelganger(doppelgangerService: DoppelgangerService, registeredEpoch: Epoch): void {
+  setDoppelganger(doppelgangerService: DoppelgangerService): void {
     this.doppelgangerService = doppelgangerService;
-    void this.doppelgangerService.registerIndices(registeredEpoch);
   }
 
   /** Return true if there is at least 1 pubkey registered */

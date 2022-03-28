@@ -83,7 +83,7 @@ export class Validator {
       this.controller
     );
     if (opts.enableDoppelganger) {
-      validatorStore.setDoppelganger(doppelgangerService, this.getCurrentEpoch(config, clock.genesisTime));
+      validatorStore.setDoppelganger(doppelgangerService);
     }
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
