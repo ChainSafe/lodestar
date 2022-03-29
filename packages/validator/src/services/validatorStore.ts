@@ -154,22 +154,35 @@ export class ValidatorStore {
       );
     }
 
-    this.validateAttestationDuty(duty, attestationData);
-    const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
-    const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
-    const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
+    switch (this.doppelgangerService?.getStatus(duty.pubkey)) {
+      case DoppelgangerStatus.Unverified:
+        throw new Error(
+          `Not signing with pubkey ${duty.pubkey}. Doppelganger protection is on but key status is unverified`
+        );
+        break;
+      case DoppelgangerStatus.Unknown:
+        throw new Error(`Not signing with pubkey ${duty.pubkey}. Doppelganger protection is on but key is unknown`);
+        break;
+      case DoppelgangerStatus.VerifiedSafe:
+      default: {
+        this.validateAttestationDuty(duty, attestationData);
+        const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
+        const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+        const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-    await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
-      sourceEpoch: attestationData.source.epoch,
-      targetEpoch: attestationData.target.epoch,
-      signingRoot,
-    });
+        await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
+          sourceEpoch: attestationData.source.epoch,
+          targetEpoch: attestationData.target.epoch,
+          signingRoot,
+        });
 
-    return {
-      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
-      data: attestationData,
-      signature: await this.getSignature(duty.pubkey, signingRoot),
-    };
+        return {
+          aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+          data: attestationData,
+          signature: await this.getSignature(duty.pubkey, signingRoot),
+        };
+      }
+    }
   }
 
   async signAggregateAndProof(
