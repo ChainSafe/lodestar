@@ -73,16 +73,16 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore);
-    const doppelgangerService = new DoppelgangerService(
-      config,
-      logger,
-      clock,
-      api,
-      Number(genesis.genesisTime),
-      indicesService,
-      this.controller
-    );
     if (opts.enableDoppelganger) {
+      const doppelgangerService = new DoppelgangerService(
+        config,
+        logger,
+        clock,
+        api,
+        Number(genesis.genesisTime),
+        indicesService,
+        this.controller
+      );
       validatorStore.setDoppelganger(doppelgangerService);
     }
     this.emitter = new ValidatorEventEmitter();
