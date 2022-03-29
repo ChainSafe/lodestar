@@ -6,6 +6,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network";
+import {PeersData} from "../../../../src/network/peers/peersData";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -83,6 +84,7 @@ describe("network / peers / PeerManager", function () {
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
         gossip: ({getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown) as Eth2Gossipsub,
+        peersData: new PeersData(),
       },
       {
         targetPeers: 30,
@@ -113,7 +115,7 @@ describe("network / peers / PeerManager", function () {
     const {reqResp, networkEventBus, peerManager} = await mockModules();
 
     // Simulate connection so that PeerManager persists the metadata response
-    peerManager["onLibp2pPeerConnect"]({
+    await peerManager["onLibp2pPeerConnect"]({
       stat: {direction: "inbound", status: "open"},
       remotePeer: peerId1,
     } as Connection);

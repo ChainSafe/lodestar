@@ -1,6 +1,7 @@
 import PeerId from "peer-id";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {gossipScoreThresholds} from "../gossip/scoringParameters";
+import {IMetrics} from "../../metrics";
 
 /** The default score for new peers */
 const DEFAULT_SCORE = 0;
@@ -83,6 +84,10 @@ export interface IPeerRpcScoreStore {
   updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
 }
 
+export interface IPeerRpcScoreStoreModules {
+  metrics: IMetrics | null;
+}
+
 /**
  * A peer's score (perceived potential usefulness).
  * This simplistic version consists of a global score per peer which decays to 0 over time.
@@ -90,7 +95,14 @@ export interface IPeerRpcScoreStore {
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   private readonly scores = new MapDef<PeerIdStr, PeerScore>(() => new PeerScore());
+  private readonly metrics: IMetrics | null;
+  private readonly lastUpdate = new Map<string, number>();
+
   // TODO: Persist scores, at least BANNED status to disk
+
+  constructor(metrics: IMetrics | null = null) {
+    this.metrics = metrics;
+  }
 
   getScore(peer: PeerId): number {
     return this.scores.get(peer.toB58String())?.getScore() ?? DEFAULT_SCORE;
@@ -104,8 +116,7 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
     const peerScore = this.scores.getOrDefault(peer.toB58String());
     peerScore.add(peerActionScore[action]);
 
-    // TODO: Log action to debug + do metrics
-    actionName;
+    this.metrics?.peersReportPeerCount.inc({reason: actionName});
   }
 
   update(): void {

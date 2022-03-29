@@ -24,7 +24,7 @@ export function formatNodePeer(peerIdStr: string, connections: Connection[]): ro
  * - Otherwise, the first closing connection
  * - Otherwise, the first closed connection
  */
-function getRevelantConnection(connections: Connection[]): Connection | null {
+export function getRevelantConnection(connections: Connection[]): Connection | null {
   const byStatus = new Map<PeerStatus, Connection>();
   for (const conn of connections) {
     if (conn.stat.status === "open") return conn;

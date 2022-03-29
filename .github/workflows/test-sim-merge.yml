@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: 59a36720b322a1b7e7084de30d6bad2371e5a067
-  NETHERMIND_COMMIT: e6537a3937b7af0cc9d7f892d5698394490eeec4
+  GETH_COMMIT: e0e8bf31c5d44f7de33ce774b221debf2c42256c
+  NETHERMIND_COMMIT: 29ffe2630afb69120004ff79bde70d37a3b80b7b
 
 jobs:
   sim-merge-tests:
@@ -40,7 +40,7 @@ jobs:
         with:
           go-version: '1.17'
       - name: Clone Geth merge interop branch
-        run: git clone -b merge-kiln-v2 https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
+        run: git clone -b master https://github.com/g11tech/go-ethereum.git && cd go-ethereum && git reset --hard $GETH_COMMIT && git submodule update --init --recursive
       - name: Build Geth
         run: cd go-ethereum && make
 
