@@ -1,7 +1,7 @@
 import Libp2p from "libp2p";
 import Gossipsub from "libp2p-gossipsub";
 import {GossipsubMessage, SignaturePolicy, TopicStr} from "libp2p-gossipsub/src/types";
-import {PeerScore} from "libp2p-gossipsub/src/score";
+import {PeerScore, PeerScoreParams} from "libp2p-gossipsub/src/score";
 import PeerId from "peer-id";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -76,6 +76,7 @@ export type Eth2GossipsubOpts = {
  */
 export class Eth2Gossipsub extends Gossipsub {
   readonly jobQueues: GossipJobQueues;
+  readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
 
@@ -109,6 +110,7 @@ export class Eth2Gossipsub extends Gossipsub {
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
     });
+    this.scoreParams = scoreParams;
     const {config, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
     this.logger = logger;
@@ -145,6 +147,7 @@ export class Eth2Gossipsub extends Gossipsub {
     this.logger.verbose("Publish to topic", {topic: topicStr});
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
+    // TODO: log number of sent peers
     await this.publish(topicStr, messageData);
   }
 

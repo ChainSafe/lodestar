@@ -5,7 +5,7 @@ import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers";
-import {NetworkEvent, NetworkEventBus} from "../../../../src/network";
+import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network";
 import {createNode, getAttnets, getSyncnets} from "../../../utils/network";
 import {MockBeaconChain} from "../../../utils/mocks/chain/chain";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -82,6 +82,7 @@ describe("network / peers / PeerManager", function () {
         networkEventBus,
         attnetsService: mockSubnetsService,
         syncnetsService: mockSubnetsService,
+        gossip: ({getScore: () => 0, scoreParams: {decayInterval: 1000}} as unknown) as Eth2Gossipsub,
       },
       {
         targetPeers: 30,
