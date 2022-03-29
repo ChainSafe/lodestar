@@ -25,8 +25,8 @@ import {
   phase0,
   Root,
   Slot,
-  ValidatorIndex,
   ssz,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
@@ -34,7 +34,7 @@ import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
-import {DoppelgangerService} from "./doppelgangerService";
+import {DoppelgangerService, DoppelgangerStatus} from "./doppelgangerService";
 
 export enum SignerType {
   Local,
@@ -108,16 +108,30 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
-    const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
-    const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
-    const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
+    switch (this.doppelgangerService?.getStatus(pubkey)) {
+      case DoppelgangerStatus.Unverified:
+        throw new Error(
+          `Not signing with pubkey ${pubkey}. Doppelganger protection is on but key status is unverified`
+        );
+        break;
+      case DoppelgangerStatus.Unknown:
+        throw new Error(`Not signing with pubkey ${pubkey}. Doppelganger protection is on but key is unknown`);
+        break;
+      case DoppelgangerStatus.VerifiedSafe:
+      default: {
+        // default behaviour is to consider safe if doppelganger protection is not on
+        const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
+        const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
+        const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-    await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+        await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
 
-    return {
-      message: block,
-      signature: await this.getSignature(pubkey, signingRoot),
-    };
+        return {
+          message: block,
+          signature: await this.getSignature(pubkey, signingRoot),
+        };
+      }
+    }
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {

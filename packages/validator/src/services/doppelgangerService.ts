@@ -21,7 +21,7 @@ type DoppelgangerState = {
 export enum DoppelgangerStatus {
   VerifiedSafe = "VerifiedSafe",
   Unverified = "Unverified",
-  UnknownToDoppelganger = "UnknownToDoppelganger",
+  Unknown = "Unknown",
 }
 
 export class DoppelgangerService {
@@ -51,7 +51,7 @@ export class DoppelgangerService {
       }
     } else {
       this.logger.error(`Validator Index not know for public key ${pubKey}`);
-      return DoppelgangerStatus.UnknownToDoppelganger;
+      return DoppelgangerStatus.Unknown;
     }
   }
 
