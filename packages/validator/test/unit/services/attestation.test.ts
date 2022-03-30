@@ -37,6 +37,7 @@ describe("AttestationService", function () {
     validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.returns(true);
     validatorStore.hasSomeValidators.returns(true);
+    validatorStore.isSafe.returns(true);
     validatorStore.signAttestationSelectionProof.resolves(ZERO_HASH);
   });
 

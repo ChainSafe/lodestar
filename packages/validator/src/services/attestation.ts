@@ -130,8 +130,10 @@ export class AttestationService {
         validatorIndex: duty.validatorIndex,
       };
       try {
-        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
-        this.logger.debug("Signed attestation", logCtxValidator);
+        if (this.validatorStore.isSafe(duty.pubkey)) {
+          signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
+          this.logger.debug("Signed attestation", logCtxValidator);
+        }
       } catch (e) {
         this.logger.error("Error signing attestation", logCtxValidator, e as Error);
       }

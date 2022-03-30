@@ -38,6 +38,16 @@ export class DoppelgangerService {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
+  isSafe(pubKey: PubkeyHex | BLSPubkey): boolean {
+    switch (this.getStatus(pubKey)) {
+      case DoppelgangerStatus.VerifiedSafe:
+        return true;
+      case DoppelgangerStatus.Unknown:
+      case DoppelgangerStatus.Unverified:
+        return false;
+    }
+  }
+
   getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
@@ -67,16 +77,26 @@ export class DoppelgangerService {
     const indices = await this.getIndicesToCheck(currentEpoch);
     if (indices.length !== 0) {
       const previousEpoch = currentEpoch - 1;
-      try {
-        // in the current epoch also request for liveness check for past epoch in case a validator index was live
-        // in the remaining 25% of the last slot of the previous epoch
-        const previous = previousEpoch >= 0 ? (await this.api.lodestar.getLiveness(indices, previousEpoch)).data : [];
-        const current: LivenessResponseData[] = (await this.api.lodestar.getLiveness(indices, currentEpoch)).data;
+      // in the current epoch also request for liveness check for past epoch in case a validator index was live
+      // in the remaining 25% of the last slot of the previous epoch
+      const previous =
+        previousEpoch >= 0
+          ? (
+              await this.api.lodestar.getLiveness(indices, previousEpoch).catch((e) => {
+                this.logger.error("Error getting liveness data", {}, e as Error);
+                return Promise.resolve({data: []});
+              })
+            ).data
+          : [];
 
-        this.detectDoppelganger([...previous, ...current], currentEpoch);
-      } catch (e) {
-        this.logger.error("Error getting liveness data", {}, e as Error);
-      }
+      const current: LivenessResponseData[] = (
+        await this.api.lodestar.getLiveness(indices, currentEpoch).catch((e) => {
+          this.logger.error("Error getting liveness data", {}, e as Error);
+          return Promise.resolve({data: []});
+        })
+      ).data;
+
+      this.detectDoppelganger([...previous, ...current], currentEpoch);
     }
   };
 
@@ -91,8 +111,10 @@ export class DoppelgangerService {
       if (doppelgangerState.remainingEpochsToCheck !== 0 && validatorIndexWithLiveness?.isLive) {
         violators.push(validatorIndexWithLiveness.index);
       } else {
-        doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
-        doppelgangerState.epochChecked.push(currentEpoch);
+        if (doppelgangerState.remainingEpochsToCheck !== 0) {
+          doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
+          doppelgangerState.epochChecked.push(currentEpoch);
+        }
       }
     }
 
@@ -132,13 +154,17 @@ export class DoppelgangerService {
   }
 
   private doRegister(validatorIndices: ValidatorIndex[], epoch: Epoch): void {
-    this.logger.info(`Registered indices ${validatorIndices} for doppelganger protection at epoch ${epoch}`);
-    for (const index of validatorIndices) {
-      this.doppelgangerStateByIndex.set(index, {
-        epochRegistered: epoch,
-        epochChecked: [],
-        remainingEpochsToCheck: REMAINING_EPOCH_CHECK,
-      });
+    if (validatorIndices.length > 0) {
+      for (const index of validatorIndices) {
+        if (!this.doppelgangerStateByIndex.has(index)) {
+          this.logger.info(`Registered index: ${index} for doppelganger protection at epoch ${epoch}`);
+          this.doppelgangerStateByIndex.set(index, {
+            epochRegistered: epoch,
+            epochChecked: [],
+            remainingEpochsToCheck: REMAINING_EPOCH_CHECK,
+          });
+        }
+      }
     }
   }
 }

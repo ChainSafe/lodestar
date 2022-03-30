@@ -27,6 +27,7 @@ describe("BlockDutiesService", function () {
     pubkeys = secretKeys.map((sk) => sk.toPublicKey().toBytes());
     validatorStore.votingPubkeys.returns(pubkeys.map(toHexString));
     validatorStore.hasVotingPubkey.returns(true);
+    validatorStore.isSafe.returns(true);
     validatorStore.hasSomeValidators.returns(true);
   });
 

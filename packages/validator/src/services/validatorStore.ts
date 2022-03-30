@@ -34,7 +34,7 @@ import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
-import {DoppelgangerService, DoppelgangerStatus} from "./doppelgangerService";
+import {DoppelgangerService} from "./doppelgangerService";
 
 export enum SignerType {
   Local,
@@ -98,6 +98,15 @@ export class ValidatorStore {
     return this.validators.has(pubkeyHex);
   }
 
+  isSafe(pubkeyHex: PubkeyHex | BLSPubkey): boolean {
+    if (this.doppelgangerService === undefined) {
+      // If doppelganger is not enabled we assumed all keys to be safe for use
+      return true;
+    } else {
+      return this.doppelgangerService.isSafe(pubkeyHex);
+    }
+  }
+
   async signBlock(
     pubkey: BLSPubkey,
     block: allForks.BeaconBlock,
@@ -108,30 +117,16 @@ export class ValidatorStore {
       throw Error(`Not signing block with slot ${block.slot} greater than current slot ${currentSlot}`);
     }
 
-    switch (this.doppelgangerService?.getStatus(pubkey)) {
-      case DoppelgangerStatus.Unverified:
-        throw new Error(
-          `Not signing with pubkey ${pubkey}. Doppelganger protection is on but key status is unverified`
-        );
-        break;
-      case DoppelgangerStatus.Unknown:
-        throw new Error(`Not signing with pubkey ${pubkey}. Doppelganger protection is on but key is unknown`);
-        break;
-      case DoppelgangerStatus.VerifiedSafe:
-      default: {
-        // default behaviour is to consider safe if doppelganger protection is not on
-        const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
-        const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
-        const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
+    const proposerDomain = this.config.getDomain(DOMAIN_BEACON_PROPOSER, block.slot);
+    const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
+    const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-        await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+    await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
 
-        return {
-          message: block,
-          signature: await this.getSignature(pubkey, signingRoot),
-        };
-      }
-    }
+    return {
+      message: block,
+      signature: await this.getSignature(pubkey, signingRoot),
+    };
   }
 
   async signRandao(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
@@ -154,35 +149,22 @@ export class ValidatorStore {
       );
     }
 
-    switch (this.doppelgangerService?.getStatus(duty.pubkey)) {
-      case DoppelgangerStatus.Unverified:
-        throw new Error(
-          `Not signing with pubkey ${duty.pubkey}. Doppelganger protection is on but key status is unverified`
-        );
-        break;
-      case DoppelgangerStatus.Unknown:
-        throw new Error(`Not signing with pubkey ${duty.pubkey}. Doppelganger protection is on but key is unknown`);
-        break;
-      case DoppelgangerStatus.VerifiedSafe:
-      default: {
-        this.validateAttestationDuty(duty, attestationData);
-        const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
-        const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
-        const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
+    this.validateAttestationDuty(duty, attestationData);
+    const slot = computeStartSlotAtEpoch(attestationData.target.epoch);
+    const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
+    const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-        await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
-          sourceEpoch: attestationData.source.epoch,
-          targetEpoch: attestationData.target.epoch,
-          signingRoot,
-        });
+    await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
+      sourceEpoch: attestationData.source.epoch,
+      targetEpoch: attestationData.target.epoch,
+      signingRoot,
+    });
 
-        return {
-          aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
-          data: attestationData,
-          signature: await this.getSignature(duty.pubkey, signingRoot),
-        };
-      }
-    }
+    return {
+      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      data: attestationData,
+      signature: await this.getSignature(duty.pubkey, signingRoot),
+    };
   }
 
   async signAggregateAndProof(
