@@ -149,11 +149,10 @@ export class Eth2Gossipsub extends Gossipsub {
    */
   async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<void> {
     const topicStr = this.getGossipTopicString(topic);
-    this.logger.verbose("Publish to topic", {topic: topicStr});
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
-    // TODO: log number of sent peers
-    await this.publish(topicStr, messageData);
+    const sentPeers = await this.publish(topicStr, messageData);
+    this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
   }
 
   /**
