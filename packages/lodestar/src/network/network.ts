@@ -98,6 +98,7 @@ export class Network implements INetwork {
         currentSlot: this.clock.currentSlot,
         currentEpoch: this.clock.currentEpoch,
       },
+      peersData: this.peersData,
     });
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);

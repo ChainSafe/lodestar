@@ -189,6 +189,11 @@ export function createLodestarMetrics(
         help: "Gossip peer score by threashold",
         labelNames: ["threshold"],
       }),
+      meshPeersByClient: register.gauge<"client">({
+        name: "lodestar_gossip_mesh_peers_by_client_count",
+        help: "number of mesh peers, labeled by client",
+        labelNames: ["client"],
+      }),
       score: register.avgMinMax({
         name: "lodestar_gossip_score_avg_min_max",
         help: "Avg min max of all gossip peer scores",

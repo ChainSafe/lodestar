@@ -35,6 +35,8 @@ import {
 import {Eth2Context} from "../../chain";
 import {computeAllPeersScoreWeights} from "./scoreMetrics";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
+import {PeersData} from "../peers/peersData";
+import {ClientKind} from "../peers/client";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -55,6 +57,7 @@ export type Eth2GossipsubModules = {
   signal: AbortSignal;
   eth2Context: Eth2Context;
   gossipHandlers: GossipHandlers;
+  peersData: PeersData;
 };
 
 export type Eth2GossipsubOpts = {
@@ -79,6 +82,7 @@ export class Eth2Gossipsub extends Gossipsub {
   readonly scoreParams: Partial<PeerScoreParams>;
   private readonly config: IBeaconConfig;
   private readonly logger: ILogger;
+  private readonly peersData: PeersData;
 
   // Internal caches
   private readonly gossipTopicCache: GossipTopicCache;
@@ -111,9 +115,10 @@ export class Eth2Gossipsub extends Gossipsub {
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
     });
     this.scoreParams = scoreParams;
-    const {config, logger, metrics, signal, gossipHandlers} = modules;
+    const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
     this.config = config;
     this.logger = logger;
+    this.peersData = peersData;
     this.gossipTopicCache = gossipTopicCache;
 
     // Note: We use the validator functions as handlers. No handler will be registered to gossipsub.
@@ -236,10 +241,12 @@ export class Eth2Gossipsub extends Gossipsub {
     const topics = this["topics"] as Map<string, Set<string>>;
     const peers = this["peers"] as Map<string, unknown>;
     const score = this["score"] as PeerScore;
+    const meshPeersByClient = new Map<string, number>();
+    const meshPeerIdStrs = new Set<string>();
 
-    for (const {peersMap, metricsGossip} of [
-      {peersMap: mesh, metricsGossip: metrics.gossipMesh},
-      {peersMap: topics, metricsGossip: metrics.gossipTopic},
+    for (const {peersMap, metricsGossip, type} of [
+      {peersMap: mesh, metricsGossip: metrics.gossipMesh, type: "mesh"},
+      {peersMap: topics, metricsGossip: metrics.gossipTopic, type: "topics"},
     ]) {
       // Pre-aggregate results by fork so we can fill the remaining metrics with 0
       const peersByTypeByFork = new Map2d<ForkName, GossipType, number>();
@@ -258,6 +265,16 @@ export class Eth2Gossipsub extends Gossipsub {
           peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
         } else {
           peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+        }
+
+        if (type === "mesh") {
+          for (const peer of peers) {
+            if (!meshPeerIdStrs.has(peer)) {
+              meshPeerIdStrs.add(peer);
+              const client = this.peersData.connectedPeers.get(peer)?.agentClient ?? ClientKind.Unknown;
+              meshPeersByClient.set(client, meshPeersByClient.get(client) ?? 0 + 1);
+            }
+          }
         }
       }
 
@@ -282,6 +299,10 @@ export class Eth2Gossipsub extends Gossipsub {
           metricsGossip.peersBySyncCommitteeSubnet.set({fork, subnet}, peersByBeaconSyncSubnet[subnet] ?? 0);
         }
       }
+    }
+
+    for (const [client, peers] of meshPeersByClient.entries()) {
+      metrics.gossipPeer.meshPeersByClient.set({client}, peers);
     }
 
     // track gossip peer score
@@ -309,6 +330,7 @@ export class Eth2Gossipsub extends Gossipsub {
     scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
 
     // Breakdown on each score weight
+    // TODO: consider removing as it's duplicate to new gossipsub
     const sw = computeAllPeersScoreWeights(
       peers.keys(),
       score.peerStats,
