@@ -14,6 +14,8 @@ export async function getAndInitDevValidators({
   useRestApi,
   testLoggerOpts,
   externalSignerUrl,
+  enableDoppelganger = false,
+  doppelgangerEpochsToCheck = 3,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -22,6 +24,8 @@ export async function getAndInitDevValidators({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
+  enableDoppelganger?: boolean;
+  doppelgangerEpochsToCheck?: number;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -62,6 +66,8 @@ export async function getAndInitDevValidators({
         slashingProtection,
         logger,
         signers,
+        enableDoppelganger,
+        doppelgangerEpochsToCheck,
       })
     );
   }
