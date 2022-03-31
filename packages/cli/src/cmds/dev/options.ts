@@ -10,6 +10,7 @@ interface IDevOwnArgs {
   genesisTime?: number;
   reset?: boolean;
   enableDoppelgangerProtection?: boolean;
+  doppelgangerEpochsToCheck: number;
   server: string;
 }
 
@@ -54,10 +55,15 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   },
 
   enableDoppelgangerProtection: {
-    description:
-      "Enables the Doppelganger protection, where lodestar monitors messages in the network for three epochs before signing messages",
+    description: "Enables Doppelganger protection",
     defaultDescription: "false",
     type: "boolean",
+  },
+
+  doppelgangerEpochsToCheck: {
+    description: "Number of epoch the doppelganger protection should miss validator duties for",
+    default: 3,
+    type: "number",
   },
 };
 

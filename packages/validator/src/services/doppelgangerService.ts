@@ -34,7 +34,7 @@ export class DoppelgangerService {
     private readonly genesisTime: number,
     private readonly indicesService: IndicesService,
     private readonly validatorController: AbortController,
-    private readonly doppelgangerEpochsToCheck?: number
+    private readonly doppelgangerEpochsToCheck: number
   ) {
     this.clock.runEveryEpoch(this.pollLiveness);
   }

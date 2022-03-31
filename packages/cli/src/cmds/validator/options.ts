@@ -3,7 +3,6 @@ import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
-import {DEFAULT_REMAINING_EPOCH_CHECK} from "@chainsafe/lodestar-validator/src/services/doppelgangerService";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
@@ -18,7 +17,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
     enableDoppelgangerProtection?: boolean;
-    doppelgangerEpochsToCheck?: number;
+    doppelgangerEpochsToCheck: number;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
@@ -96,7 +95,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
 
   doppelgangerEpochsToCheck: {
     description: "Number of epoch the doppelganger protection should miss validator duties for",
-    defaultDescription: String(DEFAULT_REMAINING_EPOCH_CHECK),
+    default: 3,
     type: "number",
   },
 

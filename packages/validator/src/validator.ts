@@ -29,7 +29,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   graffiti?: string;
   enableDoppelganger?: boolean;
-  doppelgangerEpochsToCheck?: number;
+  doppelgangerEpochsToCheck: number;
 };
 
 // TODO: Extend the timeout, and let it be customizable
