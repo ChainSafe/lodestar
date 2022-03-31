@@ -103,7 +103,7 @@ export class ValidatorStore {
       // If doppelganger is not enabled we assumed all keys to be safe for use
       return true;
     } else {
-      return this.doppelgangerService.isSafe(pubkeyHex);
+      return this.doppelgangerService.isDoppelgangerSafe(pubkeyHex);
     }
   }
 

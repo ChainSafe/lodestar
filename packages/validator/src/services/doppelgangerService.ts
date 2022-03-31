@@ -38,7 +38,7 @@ export class DoppelgangerService {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
-  isSafe(pubKey: PubkeyHex | BLSPubkey): boolean {
+  isDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): boolean {
     switch (this.getStatus(pubKey)) {
       case DoppelgangerStatus.VerifiedSafe:
         return true;
@@ -48,7 +48,7 @@ export class DoppelgangerService {
     }
   }
 
-  getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
+  private getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
 
@@ -83,7 +83,7 @@ export class DoppelgangerService {
         previousEpoch >= 0
           ? (
               await this.api.lodestar.getLiveness(indices, previousEpoch).catch((e) => {
-                this.logger.error("Error getting liveness data", {}, e as Error);
+                this.logger.error(`Error getting liveness data for previous epoch ${previousEpoch}`, {}, e as Error);
                 return Promise.resolve({data: []});
               })
             ).data
@@ -91,7 +91,7 @@ export class DoppelgangerService {
 
       const current: LivenessResponseData[] = (
         await this.api.lodestar.getLiveness(indices, currentEpoch).catch((e) => {
-          this.logger.error("Error getting liveness data", {}, e as Error);
+          this.logger.error("Error getting liveness data for current epoch `${currentEpoch}`", {}, e as Error);
           return Promise.resolve({data: []});
         })
       ).data;
@@ -104,12 +104,12 @@ export class DoppelgangerService {
     const violators = [];
 
     for (const [validatorIndex, doppelgangerState] of Array.from(this.doppelgangerStateByIndex.entries())) {
-      const validatorIndexWithLiveness = livenessData.find((liveness) => {
+      const validatorIndexToBeChecked = livenessData.find((liveness) => {
         return liveness.index === validatorIndex;
       });
 
-      if (doppelgangerState.remainingEpochsToCheck !== 0 && validatorIndexWithLiveness?.isLive) {
-        violators.push(validatorIndexWithLiveness.index);
+      if (doppelgangerState.remainingEpochsToCheck !== 0 && validatorIndexToBeChecked?.isLive) {
+        violators.push(validatorIndexToBeChecked.index);
       } else {
         if (doppelgangerState.remainingEpochsToCheck !== 0) {
           doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
