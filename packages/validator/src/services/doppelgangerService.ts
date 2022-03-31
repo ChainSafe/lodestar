@@ -10,7 +10,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {toHexString} from "@chainsafe/ssz";
 import {PubkeyHex} from "../types";
 
-const REMAINING_EPOCH_CHECK = 2;
+export const DEFAULT_REMAINING_EPOCH_CHECK = 2;
 
 type DoppelgangerState = {
   epochRegistered: Epoch;
@@ -33,7 +33,8 @@ export class DoppelgangerService {
     private readonly api: Api,
     private readonly genesisTime: number,
     private readonly indicesService: IndicesService,
-    private readonly validatorController: AbortController
+    private readonly validatorController: AbortController,
+    private readonly doppelgangerEpochsToCheck?: number
   ) {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
@@ -161,7 +162,8 @@ export class DoppelgangerService {
           this.doppelgangerStateByIndex.set(index, {
             epochRegistered: epoch,
             epochChecked: [],
-            remainingEpochsToCheck: REMAINING_EPOCH_CHECK,
+            remainingEpochsToCheck:
+              this.doppelgangerEpochsToCheck != null ? this.doppelgangerEpochsToCheck : DEFAULT_REMAINING_EPOCH_CHECK,
           });
         }
       }

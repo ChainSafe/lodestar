@@ -29,6 +29,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   graffiti?: string;
   enableDoppelganger?: boolean;
+  doppelgangerEpochsToCheck?: number;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -81,7 +82,8 @@ export class Validator {
         api,
         Number(genesis.genesisTime),
         indicesService,
-        this.controller
+        this.controller,
+        opts.doppelgangerEpochsToCheck
       );
       validatorStore.setDoppelganger(doppelgangerService);
     }

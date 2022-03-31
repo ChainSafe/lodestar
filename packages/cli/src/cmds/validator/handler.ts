@@ -20,6 +20,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const graffiti = args.graffiti || getDefaultGraffiti();
   const enableDoppelganger = args.enableDoppelgangerProtection;
+  const doppelgangerEpochsToCheck = args.doppelgangerEpochsToCheck;
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -97,7 +98,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const slashingProtection = new SlashingProtection(dbOps);
 
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, signers, graffiti, enableDoppelganger},
+    {dbOps, slashingProtection, api, logger, signers, graffiti, enableDoppelganger, doppelgangerEpochsToCheck},
     controller.signal
   );
 
