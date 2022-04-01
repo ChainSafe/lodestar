@@ -35,12 +35,12 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
     {nodeCount: 4, validatorsPerNode: 8, event: ChainEvent.justified, altairForkEpoch: 2},
   ];
 
-  const afterEachCallbacks: (() => Promise<unknown>)[] = [];
-  // afterEach(() => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
-  this.afterEach(async () => {
-    // should call one by one instead of Promise.all()
-    for (const promise of afterEachCallbacks.splice(0, afterEachCallbacks.length)) {
-      await promise();
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach("Stop nodes and validators", async function () {
+    this.timeout("10 min");
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
     }
   });
 
@@ -86,6 +86,19 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
           testLoggerOpts,
         });
         afterEachCallbacks.push(async () => await Promise.all(validators.map((validator) => validator.stop())));
+
+        afterEachCallbacks.push(async () => {
+          await Promise.all(validators.map((validator) => validator.stop()));
+          console.log("--- Stopped all validators ---");
+          // wait for 1 slot
+          await sleep(1 * testParams.SECONDS_PER_SLOT * 1000);
+
+          stopInfoTracker();
+          await Promise.all(nodes.map((node) => node.close()));
+          console.log("--- Stopped all nodes ---");
+          // Wait a bit for nodes to shutdown
+          await sleep(3000);
+        });
 
         loggers.push(logger);
         nodes.push(bn);

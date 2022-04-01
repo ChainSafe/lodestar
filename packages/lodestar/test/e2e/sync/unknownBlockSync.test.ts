@@ -19,10 +19,11 @@ describe("sync / unknown block sync", function () {
     SECONDS_PER_SLOT: 2,
   };
 
-  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
-    for (const callback of afterEachCallbacks) {
-      await callback();
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
     }
   });
 
@@ -49,6 +50,9 @@ describe("sync / unknown block sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
+
+    afterEachCallbacks.push(() => bn.close());
+
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -57,6 +61,8 @@ describe("sync / unknown block sync", function () {
       useRestApi: false,
       testLoggerOpts,
     });
+
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
 
     await Promise.all(validators.map((validator) => validator.start()));
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
@@ -73,6 +79,8 @@ describe("sync / unknown block sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
+    afterEachCallbacks.push(() => bn2.close());
+
     afterEachCallbacks.push(() => bn2.close());
 
     const headSummary = bn.chain.forkChoice.getHead();

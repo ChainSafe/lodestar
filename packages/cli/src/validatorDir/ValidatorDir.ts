@@ -3,10 +3,10 @@ import path from "node:path";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
+import {getLockFile} from "@chainsafe/lodestar-keymanager-server";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {add0xPrefix} from "../util/format";
-import {getLockFile} from "../util/lockfile";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
