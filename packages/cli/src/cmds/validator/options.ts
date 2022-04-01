@@ -3,6 +3,7 @@ import {defaultValidatorPaths} from "./paths";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
@@ -19,11 +20,12 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
-  };
+  } & KeymanagerArgs;
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
   ...logOptions,
+  ...keymanagerOptions,
   logFile: beaconPathsOptions.logFile,
 
   validatorsDbDir: {
@@ -60,6 +62,8 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     defaultDescription: "./password.txt",
     type: "string",
   },
+
+  // HIDDEN INTEROP OPTIONS
 
   // Remote signer
 

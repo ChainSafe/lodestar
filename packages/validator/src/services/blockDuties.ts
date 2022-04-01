@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {IClock, extendError, differenceHex, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {PubkeyHex} from "../types";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -56,6 +57,14 @@ export class BlockDutiesService {
     }
 
     return Array.from(publicKeys.values());
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const blockDutyAtEpoch of this.proposers.values()) {
+      blockDutyAtEpoch.data = blockDutyAtEpoch.data.filter((proposer) => {
+        return toHexString(proposer.pubkey) !== pubkey;
+      });
+    }
   }
 
   private runBlockDutiesTask = async (slot: Slot): Promise<void> => {
