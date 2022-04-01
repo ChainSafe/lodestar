@@ -6,11 +6,11 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_dev.idevownargs/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/keymanager-server/modules/util/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.3.0, mkdocs-material-8.2.7" name="generator"/>
-<title>Cmds dev.idevownargs - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.9d5733d3.min.css" rel="stylesheet"/>
+<meta content="mkdocs-1.3.0, mkdocs-material-8.2.8" name="generator"/>
+<title>Util - Lodestar documentation</title>
+<link href="../../../../assets/stylesheets/main.644de097.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.e6a45f82.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-idevownargs">
+<a class="md-skip" href="#module-util">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Cmds dev.idevownargs
+              Util
             
           </span>
 </div>
@@ -240,58 +240,80 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#hierarchy">
-    Hierarchy
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#index">
     Index
   </a>
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#type-aliases">
+    Type aliases
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#variables">
+    Variables
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#functions">
+    Functions
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#type-aliases_1">
+    Type aliases
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#optional-genesiseth1hash">
-    Optional genesisEth1Hash
+<a class="md-nav__link" href="#lockfile">
+    Lockfile
+  </a>
+<nav aria-label="Lockfile" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#variables_1">
+    Variables
+  </a>
+<nav aria-label="Variables" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#const-lock_file_ext">
+    Const LOCK_FILE_EXT
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#optional-genesistime">
-    Optional genesisTime
+<a class="md-nav__link" href="#let-lockfile">
+    Let lockFile
   </a>
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#optional-genesisvalidators">
-    Optional genesisValidators
-  </a>
+</ul>
+</nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#optional-reset">
-    Optional reset
+<a class="md-nav__link" href="#functions_1">
+    Functions
   </a>
-</li>
+<nav aria-label="Functions" class="md-nav">
+<ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#server">
-    server
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#optional-startvalidators">
-    Optional startValidators
+<a class="md-nav__link" href="#getlockfile">
+    getLockFile
   </a>
 </li>
 </ul>
@@ -304,49 +326,54 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/cli/interfaces/cmds_dev.idevownargs.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/keymanager-server/modules/util.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar-cli</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/cmds_dev/">cmds/dev</a> › <a href="./">IDevOwnArgs</a></p>
-<h1 id="interface-idevownargs">Interface: IDevOwnArgs<a class="headerlink" href="#interface-idevownargs" title="Permanent link">¶</a></h1>
-<h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
-<ul>
-<li><strong>IDevOwnArgs</strong></li>
-</ul>
+<p><a href="../../">@chainsafe/lodestar-validator</a> › <a href="../../globals/">Globals</a> › <a href="./">util</a></p>
+<h1 id="module-util">Module: util<a class="headerlink" href="#module-util" title="Permanent link">¶</a></h1>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#optional-genesiseth1hash">genesisEth1Hash</a></li>
-<li><a href="./#optional-genesistime">genesisTime</a></li>
-<li><a href="./#optional-genesisvalidators">genesisValidators</a></li>
-<li><a href="./#optional-reset">reset</a></li>
-<li><a href="./#server">server</a></li>
-<li><a href="./#optional-startvalidators">startValidators</a></li>
+<li><a href="./#lockfile">Lockfile</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="optional-genesiseth1hash"><code>Optional</code> genesisEth1Hash<a class="headerlink" href="#optional-genesiseth1hash" title="Permanent link">¶</a></h3>
-<p>• <strong>genesisEth1Hash</strong>? : <em>undefined | string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L7">packages/cli/src/cmds/dev/options.ts:7</a></em></p>
+<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#const-lock_file_ext">LOCK_FILE_EXT</a></li>
+<li><a href="./#let-lockfile">lockFile</a></li>
+</ul>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
+<ul>
+<li><a href="./#getlockfile">getLockFile</a></li>
+</ul>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
+<h3 id="lockfile">Lockfile<a class="headerlink" href="#lockfile" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>Lockfile</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c5997e0/packages/keymanager-server/src/util/lockfile.ts#L1">keymanager-server/src/util/lockfile.ts:1</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>lockSync</strong>(<code>path</code>: string): <em>void</em></p>
+</li>
+<li>
+<p><strong>unlockSync</strong>(<code>path</code>: string): <em>void</em></p>
+</li>
+</ul>
+<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
+<h3 id="const-lock_file_ext"><code>Const</code> LOCK_FILE_EXT<a class="headerlink" href="#const-lock_file_ext" title="Permanent link">¶</a></h3>
+<p>• <strong>LOCK_FILE_EXT</strong>: <em>".lock"</em> = ".lock"</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c5997e0/packages/keymanager-server/src/util/lockfile.ts#L7">keymanager-server/src/util/lockfile.ts:7</a></em></p>
 <hr/>
-<h3 id="optional-genesistime"><code>Optional</code> genesisTime<a class="headerlink" href="#optional-genesistime" title="Permanent link">¶</a></h3>
-<p>• <strong>genesisTime</strong>? : <em>undefined | number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L10">packages/cli/src/cmds/dev/options.ts:10</a></em></p>
-<hr/>
-<h3 id="optional-genesisvalidators"><code>Optional</code> genesisValidators<a class="headerlink" href="#optional-genesisvalidators" title="Permanent link">¶</a></h3>
-<p>• <strong>genesisValidators</strong>? : <em>undefined | number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L8">packages/cli/src/cmds/dev/options.ts:8</a></em></p>
-<hr/>
-<h3 id="optional-reset"><code>Optional</code> reset<a class="headerlink" href="#optional-reset" title="Permanent link">¶</a></h3>
-<p>• <strong>reset</strong>? : <em>undefined | false | true</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L11">packages/cli/src/cmds/dev/options.ts:11</a></em></p>
-<hr/>
-<h3 id="server">server<a class="headerlink" href="#server" title="Permanent link">¶</a></h3>
-<p>• <strong>server</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L12">packages/cli/src/cmds/dev/options.ts:12</a></em></p>
-<hr/>
-<h3 id="optional-startvalidators"><code>Optional</code> startValidators<a class="headerlink" href="#optional-startvalidators" title="Permanent link">¶</a></h3>
-<p>• <strong>startValidators</strong>? : <em>undefined | string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/08f98c2/packages/cli/src/cmds/dev/options.ts#L9">packages/cli/src/cmds/dev/options.ts:9</a></em></p>
+<h3 id="let-lockfile"><code>Let</code> lockFile<a class="headerlink" href="#let-lockfile" title="Permanent link">¶</a></h3>
+<p>• <strong>lockFile</strong>: <em><a href="./#lockfile">Lockfile</a> | null</em> = null</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c5997e0/packages/keymanager-server/src/util/lockfile.ts#L6">keymanager-server/src/util/lockfile.ts:6</a></em></p>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
+<h3 id="getlockfile">getLockFile<a class="headerlink" href="#getlockfile" title="Permanent link">¶</a></h3>
+<p>▸ <strong>getLockFile</strong>(): <em><a href="./#lockfile">Lockfile</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/c5997e0/packages/keymanager-server/src/util/lockfile.ts#L13">keymanager-server/src/util/lockfile.ts:13</a></em></p>
+<p>When lockfile it's required it registers listeners to process
+Since it's only used by the validator client, require lazily to not pollute
+beacon_node client context</p>
+<p><strong>Returns:</strong> <em><a href="./#lockfile">Lockfile</a></em></p>
 </article>
 </div>
 </div>
@@ -384,6 +411,6 @@
 <div class="md-dialog__inner md-typeset"></div>
 </div>
 <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.5e67fbfe.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
-<script src="../../../../assets/javascripts/bundle.e87a5f81.min.js"></script>
+<script src="../../../../assets/javascripts/bundle.c44cc438.min.js"></script>
 </body>
 </html>
