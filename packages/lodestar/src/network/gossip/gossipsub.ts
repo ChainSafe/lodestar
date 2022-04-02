@@ -275,7 +275,8 @@ export class Eth2Gossipsub extends Gossipsub {
           for (const peer of peers) {
             if (!meshPeerIdStrs.has(peer)) {
               meshPeerIdStrs.add(peer);
-              const client = this.peersData.connectedPeers.get(peer)?.agentClient ?? ClientKind.Unknown;
+              const client =
+                this.peersData.connectedPeers.get(peer)?.agentClient?.toString() ?? ClientKind.Unknown.toString();
               meshPeersByClient.set(client, meshPeersByClient.get(client) ?? 0 + 1);
             }
           }
