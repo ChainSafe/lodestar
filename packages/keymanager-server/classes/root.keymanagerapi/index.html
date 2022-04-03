@@ -381,7 +381,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new KeymanagerApi</strong>(<code>logger</code>: ILogger, <code>validator</code>: Validator, <code>importKeystoresPath</code>: string): <em><a href="./">KeymanagerApi</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L20">keymanager-server/src/impl.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L20">keymanager-server/src/impl.ts:20</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -409,19 +409,19 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-importkeystorespath"><code>Private</code> <code>Readonly</code> importKeystoresPath<a class="headerlink" href="#private-readonly-importkeystorespath" title="Permanent link">¶</a></h3>
 <p>• <strong>importKeystoresPath</strong>: <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L24">keymanager-server/src/impl.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L24">keymanager-server/src/impl.ts:24</a></em></p>
 <hr/>
 <h3 id="private-readonly-logger"><code>Private</code> <code>Readonly</code> logger<a class="headerlink" href="#private-readonly-logger" title="Permanent link">¶</a></h3>
 <p>• <strong>logger</strong>: <em>ILogger</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L22">keymanager-server/src/impl.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L22">keymanager-server/src/impl.ts:22</a></em></p>
 <hr/>
 <h3 id="private-readonly-validator"><code>Private</code> <code>Readonly</code> validator<a class="headerlink" href="#private-readonly-validator" title="Permanent link">¶</a></h3>
 <p>• <strong>validator</strong>: <em>Validator</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L23">keymanager-server/src/impl.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L23">keymanager-server/src/impl.ts:23</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="deletekeystores">deleteKeystores<a class="headerlink" href="#deletekeystores" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deleteKeystores</strong>(<code>pubkeysHex</code>: string[]): <em>Promise‹object›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L145">keymanager-server/src/impl.ts:145</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L145">keymanager-server/src/impl.ts:145</a></em></p>
 <p>DELETE must delete all keys from <code>request.pubkeys</code> that are known to the keymanager and exist in its
 persistent storage. Additionally, DELETE must fetch the slashing protection data for the requested keys from
 persistent storage, which must be retained (and not deleted) after the response has been sent. Therefore in the
@@ -454,7 +454,7 @@ nor slashing protection data.</p>
 <hr/>
 <h3 id="getkeystorepathinfoforkey">getKeystorePathInfoForKey<a class="headerlink" href="#getkeystorepathinfoforkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getKeystorePathInfoForKey</strong>(<code>pubkey</code>: string): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L27">keymanager-server/src/impl.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L27">keymanager-server/src/impl.ts:27</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -482,7 +482,7 @@ nor slashing protection data.</p>
 <hr/>
 <h3 id="importkeystores">importKeystores<a class="headerlink" href="#importkeystores" title="Permanent link">¶</a></h3>
 <p>▸ <strong>importKeystores</strong>(<code>keystoresStr</code>: KeystoreStr[], <code>passwords</code>: string[], <code>slashingProtectionStr</code>: SlashingProtectionData): <em>Promise‹object›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L73">keymanager-server/src/impl.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L73">keymanager-server/src/impl.ts:73</a></em></p>
 <p>Import keystores generated by the Eth2.0 deposit CLI tooling. <code>passwords[i]</code> must unlock <code>keystores[i]</code>.</p>
 <p>Users SHOULD send slashing_protection data associated with the imported pubkeys. MUST follow the format defined in
 EIP-3076: Slashing Protection Interchange Format.</p>
@@ -519,7 +519,7 @@ EIP-3076: Slashing Protection Interchange Format.</p>
 <hr/>
 <h3 id="listkeys">listKeys<a class="headerlink" href="#listkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>listKeys</strong>(): <em>Promise‹object›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/43b4c17/packages/keymanager-server/src/impl.ts#L41">keymanager-server/src/impl.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/keymanager-server/src/impl.ts#L41">keymanager-server/src/impl.ts:41</a></em></p>
 <p>List all validating pubkeys known to and decrypted by this keymanager binary</p>
 <p>https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml</p>
 <p><strong>Returns:</strong> <em>Promise‹object›</em></p>
