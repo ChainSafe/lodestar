@@ -18,20 +18,17 @@ import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile";
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
 export class KeymanagerApi implements Api {
-  constructor(
-    private readonly logger: ILogger,
-    private readonly validator: Validator,
-    private readonly importKeystoresPath: string
-  ) {}
-
-  getKeystorePathInfoForKey = (pubkey: string): {keystoreFilePath: string; lockFilePath: string} => {
-    const keystoreFilename = `${KEY_IMPORTED_PREFIX}_${pubkey}.json`;
-    const keystoreFilePath = path.join(this.importKeystoresPath, keystoreFilename);
-    return {
-      keystoreFilePath,
-      lockFilePath: `${keystoreFilePath}${LOCK_FILE_EXT}`,
-    };
-  };
+  constructor(private readonly validator: Validator, private readonly importKeystoresPath: string) {
+    if (fs.existsSync(importKeystoresPath)) {
+      // Ensure is directory
+      if (!fs.statSync(importKeystoresPath).isDirectory()) {
+        throw Error("importKeystoresPath is not a directory");
+      }
+    } else {
+      // Or, create empty directory
+      fs.mkdirSync(importKeystoresPath, {recursive: true});
+    }
+  }
 
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
