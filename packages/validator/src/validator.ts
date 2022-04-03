@@ -36,12 +36,12 @@ export type ValidatorOptions = {
 /// The global timeout for HTTP requests to the beacon node.
 // const HTTP_TIMEOUT_MS = 12 * 1000;
 
-enum Status {
-  running,
-  stopped,
+export enum Status {
+  running = "running",
+  stopped = "stopped",
 }
 
-type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
+export type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
 /**
  * Main class for the Validator client.
@@ -130,6 +130,9 @@ export class Validator {
   async start(): Promise<void> {
     if (this.state.status === Status.running) return;
     this.state = {status: Status.running, controller: this.controller};
+    this.controller.signal.addEventListener("abort", () => {
+      this.state = {status: Status.stopped};
+    });
     const {signal} = this.controller;
     this.clock.start(signal);
     this.chainHeaderTracker.start(signal);
@@ -142,6 +145,13 @@ export class Validator {
     if (this.state.status === Status.stopped) return;
     this.state.controller.abort();
     this.state = {status: Status.stopped};
+  }
+
+  /**
+   * Returns the status of all validator
+   */
+  getStatus(): Status {
+    return this.state.status;
   }
 
   /**

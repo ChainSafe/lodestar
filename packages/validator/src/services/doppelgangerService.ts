@@ -1,14 +1,13 @@
-import {IClock} from "../util";
-import {BLSPubkey, Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
-import {IndicesService} from "./indices";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AbortController} from "@chainsafe/abort-controller";
-import {toHexString} from "@chainsafe/ssz";
 import {PubkeyHex} from "../types";
+import {IClock} from "../util";
+import {IndicesService} from "./indices";
 
 export const DEFAULT_REMAINING_EPOCH_CHECK = 2;
 
@@ -39,8 +38,8 @@ export class DoppelgangerService {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
 
-  isDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): boolean {
-    switch (this.getStatus(pubKey)) {
+  isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
+    switch (this.getStatus(pubKeyHex)) {
       case DoppelgangerStatus.VerifiedSafe:
         return true;
       case DoppelgangerStatus.Unknown:
@@ -49,8 +48,7 @@ export class DoppelgangerService {
     }
   }
 
-  getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
-    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
+  getStatus(pubkeyHex: PubkeyHex): DoppelgangerStatus {
     const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
 
     if (validatorIndex != null) {
@@ -61,7 +59,7 @@ export class DoppelgangerService {
         return DoppelgangerStatus.Unverified;
       }
     } else {
-      this.logger.error(`Validator Index not know for public key ${pubKey}`);
+      this.logger.error(`Validator Index not know for public key ${pubkeyHex}`);
       return DoppelgangerStatus.Unknown;
     }
   }
@@ -120,7 +118,7 @@ export class DoppelgangerService {
     }
 
     if (violators.length !== 0) {
-      this.logger.error(`Doppelganger detected for validator indices: ${violators}`);
+      this.logger.error(`Doppelganger detected for validator indices: ${violators}. Shutting down.`);
       this.validatorController.abort();
     }
   }

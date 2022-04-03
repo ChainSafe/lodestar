@@ -30,6 +30,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {fromHexString, List, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
+import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {getAggregationBits} from "./utils";
@@ -96,15 +97,6 @@ export class ValidatorStore {
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.validators.has(pubkeyHex);
-  }
-
-  isDoppelgangerSafe(pubkeyHex: PubkeyHex | BLSPubkey): boolean {
-    if (this.doppelgangerService === undefined) {
-      // If doppelganger is not enabled we assumed all keys to be safe for use
-      return true;
-    } else {
-      return this.doppelgangerService.isDoppelgangerSafe(pubkeyHex);
-    }
   }
 
   async signBlock(
@@ -269,12 +261,22 @@ export class ValidatorStore {
     };
   }
 
-  private assertDoppelgangerSafe(pubkeyHex: PubkeyHex | BLSPubkey): void {
+  private isDoppelgangerSafe(pubKeyHex: PubkeyHex): boolean {
+    if (this.doppelgangerService === undefined) {
+      // If doppelganger is not enabled we assumed all keys to be safe for use
+      return true;
+    } else {
+      return this.doppelgangerService.isDoppelgangerSafe(pubKeyHex);
+    }
+  }
+
+  private assertDoppelgangerSafe(pubKey: PubkeyHex | BLSPubkey): void {
+    const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     if (!this.isDoppelgangerSafe(pubkeyHex)) {
       throw new Error(
-        `Error using validator with pubkey ${pubkeyHex}. Doppelganger protection status is: ${this.doppelgangerService?.getStatus(
+        `Error using validator with pubkey ${prettyBytes(
           pubkeyHex
-        )}`
+        )}. Doppelganger protection status is: ${this.doppelgangerService?.getStatus(pubkeyHex)}`
       );
     }
   }
