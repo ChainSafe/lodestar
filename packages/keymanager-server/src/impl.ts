@@ -60,9 +60,9 @@ export class KeymanagerApi implements Api {
    * Users SHOULD send slashing_protection data associated with the imported pubkeys. MUST follow the format defined in
    * EIP-3076: Slashing Protection Interchange Format.
    *
-   * @param keystores JSON-encoded keystore files generated with the Launchpad
+   * @param keystoresStr JSON-encoded keystore files generated with the Launchpad
    * @param passwords Passwords to unlock imported keystore files. `passwords[i]` must unlock `keystores[i]`
-   * @param slashingProtection Slashing protection data for some of the keys of `keystores`
+   * @param slashingProtectionStr Slashing protection data for some of the keys of `keystores`
    * @returns Status result of each `request.keystores` with same length and order of `request.keystores`
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
@@ -77,7 +77,7 @@ export class KeymanagerApi implements Api {
       message?: string;
     }[];
   }> {
-    const interchange = (slashingProtectionStr as unknown) as Interchange;
+    const interchange = JSON.parse(slashingProtectionStr) as Interchange;
     await this.validator.validatorStore.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
@@ -134,7 +134,7 @@ export class KeymanagerApi implements Api {
    * Slashing protection data must only be returned for keys from `request.pubkeys` for which a
    * `deleted` or `not_active` status is returned.
    *
-   * @param pubkeys List of public keys to delete.
+   * @param pubkeysHex List of public keys to delete.
    * @returns Deletion status of all keys in `request.pubkeys` in the same order.
    *
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
