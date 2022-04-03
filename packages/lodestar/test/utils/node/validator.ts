@@ -25,12 +25,16 @@ export async function getAndInitValidatorsWithKeystore({
   keystorePubKey,
   useRestApi,
   testLoggerOpts,
+  enableDoppelganger = false,
+  doppelgangerEpochsToCheck = 3,
 }: {
   node: BeaconNode;
   keystoreContent: string;
   keystorePubKey: string;
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
+  enableDoppelganger?: boolean;
+  doppelgangerEpochsToCheck?: number;
 }): Promise<{
   validator: Validator;
   secretKeys: SecretKey[];
@@ -92,6 +96,8 @@ export async function getAndInitValidatorsWithKeystore({
     slashingProtection,
     logger,
     signers,
+    enableDoppelganger,
+    doppelgangerEpochsToCheck,
   });
 
   return {
