@@ -339,26 +339,25 @@ describe("keymanager delete and import test", async function () {
 
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
 
-    const keymanagerApi = new KeymanagerApi(validators[0], "/test/path");
-
-    const tokenDir = tmp.dirSync({unsafeCleanup: true});
+    const keystoresDir = tmp.dirSync({unsafeCleanup: true, prefix: "keystores"});
+    const tokenDir = tmp.dirSync({unsafeCleanup: true, prefix: "token"});
+    afterEachCallbacks.push(() => keystoresDir.removeCallback());
     afterEachCallbacks.push(() => tokenDir.removeCallback());
+
+    const keymanagerApi = new KeymanagerApi(validators[0], keystoresDir.name);
 
     return {config, validators, secretKeys, logger, keymanagerApi, tokenDir: tokenDir.name};
   }
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function prepareTestSingleKeymanagerClient(opts?: PrepareTestOpts) {
-    const {config, secretKeys, logger, keymanagerApi} = await prepareTestSingleKeymanagerApi(opts);
+    const {config, secretKeys, logger, keymanagerApi, tokenDir} = await prepareTestSingleKeymanagerApi(opts);
 
     const kmPort = 10003;
 
-    const tokenDir = tmp.dirSync({unsafeCleanup: true});
-    afterEachCallbacks.push(() => tokenDir.removeCallback());
-
     // by default auth is on
     const keymanagerServer = new KeymanagerServer(
-      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir: tokenDir.name},
+      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir},
       {config, logger, api: keymanagerApi}
     );
 
