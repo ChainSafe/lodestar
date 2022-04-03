@@ -50,10 +50,6 @@ export class BeaconNodeOptions {
   set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
     this.beaconNodeOptions = mergeBeaconNodeOptions(this.beaconNodeOptions, beaconNodeOptionsPartial);
   }
-
-  writeTo(filepath: string): void {
-    writeFile(filepath, this.beaconNodeOptions as Json);
-  }
 }
 
 export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {

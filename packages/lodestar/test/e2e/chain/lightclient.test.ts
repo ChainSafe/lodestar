@@ -37,6 +37,14 @@ describe("chain / lightclient", function () {
   // This is a rare event, with maxLcHeadTrackingDiffSlots = 4, SECONDS_PER_SLOT = 1
   this.retries(2);
 
+  const afterEachCallbacks: (() => Promise<void> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
+
   it("Lightclient track head on server configuration", async function () {
     this.timeout("10 min");
 
@@ -67,6 +75,11 @@ describe("chain / lightclient", function () {
       genesisTime,
       logger: loggerNodeA,
     });
+
+    afterEachCallbacks.push(async () => {
+      await bn.close();
+    });
+
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -74,6 +87,10 @@ describe("chain / lightclient", function () {
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},
+    });
+
+    afterEachCallbacks.push(async () => {
+      await Promise.all(validators.map((v) => v.stop()));
     });
 
     await Promise.all(validators.map((validator) => validator.start()));
@@ -105,6 +122,10 @@ describe("chain / lightclient", function () {
           genesisValidatorsRoot: bn.chain.genesisValidatorsRoot as Uint8Array,
         },
         checkpointRoot: fromHexString(head.blockRoot),
+      });
+
+      afterEachCallbacks.push(async () => {
+        lightclient.stop();
       });
 
       loggerLC.important("Initialized lightclient", {headSlot: lightclient.getHead().slot});
@@ -158,8 +179,5 @@ describe("chain / lightclient", function () {
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
-
-    await Promise.all(validators.map((v) => v.stop()));
-    await bn.close();
   });
 });

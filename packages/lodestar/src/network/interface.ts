@@ -52,6 +52,7 @@ export interface INetwork {
   // Debug
   connectToPeer(peer: PeerId, multiaddr: Multiaddr[]): Promise<void>;
   disconnectPeer(peer: PeerId): Promise<void>;
+  getAgentVersion(peerIdStr: string): string;
 }
 
 export type PeerDirection = Connection["stat"]["direction"];

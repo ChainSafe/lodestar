@@ -20,6 +20,7 @@ import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DoppelgangerService} from "./services/doppelgangerService";
+import {PubkeyHex} from "./types";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -47,17 +48,21 @@ export type State = {status: Status.running; controller: AbortController} | {sta
  * Main class for the Validator client.
  */
 export class Validator {
+  readonly validatorStore: ValidatorStore;
+  private readonly blockProposingService: BlockProposingService;
+  private readonly attestationService: AttestationService;
+  private readonly syncCommitteeService: SyncCommitteeService;
+  private readonly indicesService: IndicesService;
   private readonly config: IBeaconConfig;
   private readonly controller: AbortController;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly validatorStore: ValidatorStore;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, genesis: Genesis) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
     this.controller = new AbortController();
@@ -90,15 +95,35 @@ export class Validator {
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
-    new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
-    new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
-    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
+
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
+
+    this.attestationService = new AttestationService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.emitter,
+      indicesService,
+      this.chainHeaderTracker
+    );
+
+    this.syncCommitteeService = new SyncCommitteeService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.chainHeaderTracker,
+      indicesService
+    );
 
     this.config = config;
     this.logger = logger;
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
+    this.indicesService = indicesService;
   }
 
   /** Waits for genesis and genesis time */
@@ -122,6 +147,13 @@ export class Validator {
     opts.logger.info("Verified node and validator have same genesisValidatorRoot");
 
     return new Validator(opts, genesis);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.indicesService.removeDutiesForKey(pubkey);
+    this.blockProposingService.removeDutiesForKey(pubkey);
+    this.attestationService.removeDutiesForKey(pubkey);
+    this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 
   /**
@@ -158,7 +190,7 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
-    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {indices: [publicKey]});
+    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);

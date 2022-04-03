@@ -1,7 +1,8 @@
 import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
-import {Validator, SlashingProtection, Signer, SignerType} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
@@ -104,4 +105,24 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   onGracefulShutdownCbs.push(async () => await validator.stop());
   await validator.start();
+
+  // Start keymanager API backend
+  // Only if keymanagerEnabled flag is set to true and at least one keystore path is supplied
+  const firstImportKeystorePath = args.importKeystoresPath?.[0];
+  if (args.keymanagerEnabled && firstImportKeystorePath) {
+    const keymanagerApi = new KeymanagerApi(logger, validator, firstImportKeystorePath);
+
+    const keymanagerServer = new KeymanagerServer(
+      {
+        host: args.keymanagerHost,
+        port: args.keymanagerPort,
+        cors: args.keymanagerCors,
+        isAuthEnabled: args.keymanagerAuthEnabled,
+        tokenDir: dbPath,
+      },
+      {config, logger, api: keymanagerApi}
+    );
+    onGracefulShutdownCbs.push(() => keymanagerServer.close());
+    await keymanagerServer.listen();
+  }
 }

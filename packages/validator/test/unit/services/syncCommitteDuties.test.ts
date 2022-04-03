@@ -186,4 +186,70 @@ describe("SyncCommitteeDutiesService", function () {
       "Wrong dutiesService.dutiesByIndexByPeriod Map"
     );
   });
+
+  it("Should remove signer from sync committee duties", async function () {
+    // Reply with some duties
+    const duty1: routes.validator.SyncDuty = {
+      pubkey: pubkeys[0],
+      validatorIndex: indices[0],
+      validatorSyncCommitteeIndices: [7],
+    };
+    const duty2: routes.validator.SyncDuty = {
+      pubkey: pubkeys[1],
+      validatorIndex: indices[1],
+      validatorSyncCommitteeIndices: [7],
+    };
+    api.validator.getSyncCommitteeDuties
+      .withArgs(sinon.match.any, sinon.match.any)
+      .resolves({dependentRoot: ZERO_HASH, data: [duty1, duty2]});
+
+    // Accept all subscriptions
+    api.validator.prepareSyncCommitteeSubnets.resolves();
+
+    // Clock will call runAttesterDutiesTasks() immediatelly
+    const clock = new ClockMock();
+    const indicesService = new IndicesService(logger, api, validatorStore);
+    const dutiesService = new SyncCommitteeDutiesService(config, loggerVc, api, clock, validatorStore, indicesService);
+
+    // Trigger clock onSlot for slot 0
+    await clock.tickEpochFns(0, controller.signal);
+
+    // Duties for this and next epoch should be persisted
+    const dutiesByIndexByPeriodObj = Object.fromEntries(
+      Array.from(dutiesService["dutiesByIndexByPeriod"].entries()).map(([period, dutiesByIndex]) => [
+        period,
+        Object.fromEntries(dutiesByIndex),
+      ])
+    );
+    expect(dutiesByIndexByPeriodObj).to.deep.equal(
+      {
+        0: {
+          [indices[0]]: {dependentRoot: ZERO_HASH, duty: duty1},
+          [indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2},
+        },
+        1: {
+          [indices[0]]: {dependentRoot: ZERO_HASH, duty: duty1},
+          [indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2},
+        },
+      },
+      "Wrong dutiesService.dutiesByIndexByPeriod Map"
+    );
+    // then remove signer with pubkeys[0]
+    dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
+
+    // Removed public key should be removed from duties for this and next epoch should be persisted
+    const dutiesByIndexByPeriodObjAfterRemoval = Object.fromEntries(
+      Array.from(dutiesService["dutiesByIndexByPeriod"].entries()).map(([period, dutiesByIndex]) => [
+        period,
+        Object.fromEntries(dutiesByIndex),
+      ])
+    );
+    expect(dutiesByIndexByPeriodObjAfterRemoval).to.deep.equal(
+      {
+        0: {[indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2}},
+        1: {[indices[1]]: {dependentRoot: ZERO_HASH, duty: duty2}},
+      },
+      "Wrong dutiesService.dutiesByIndexByPeriod Map"
+    );
+  });
 });

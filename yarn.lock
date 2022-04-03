@@ -413,7 +413,7 @@
     buffer "^5.4.3"
     randombytes "^2.1.0"
 
-"@chainsafe/bls-keystore@2.0.0":
+"@chainsafe/bls-keystore@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@chainsafe/bls-keystore/-/bls-keystore-2.0.0.tgz#6ac15109579c2caeae62c83c0257add0e8be2508"
   integrity sha512-XGtgGKdjYqKP09SUsfwaStsYuWuXB56/614dC1XhggG4LH8KTrFOjxb9SkS+T1BUu5doCXd9YA+gNLy01zv+Ww==
@@ -5222,6 +5222,13 @@ fast-url-parser@^1.1.3:
   dependencies:
     punycode "^1.3.2"
 
+fastify-bearer-auth@6.1.0:
+  version "6.1.0"
+  resolved "https://registry.yarnpkg.com/fastify-bearer-auth/-/fastify-bearer-auth-6.1.0.tgz#906780002e32b556fbc3dce3e14861896812fd32"
+  integrity sha512-qplgYoQ1OipyAMwSlAQVxEhlRnBtYukF6sLmxmfBqFgCdHPkvpZ0gL/AsQfpKFt31wlq4fuHZIymMNaWHVfgcA==
+  dependencies:
+    fastify-plugin "^3.0.0"
+
 fastify-cors@^6.0.1:
   version "6.0.1"
   resolved "https://registry.yarnpkg.com/fastify-cors/-/fastify-cors-6.0.1.tgz#300e0f1cbeedda19d9de284e9cf05c65842c182b"
@@ -7164,10 +7171,10 @@ libp2p-crypto@^0.21.2:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-gossipsub@^0.13.0:
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.13.0.tgz#a70db85139c62d7a8ad273be3ba01d1c9f338f7b"
-  integrity sha512-xy2jRZGmJpjy++Di6f1admtjve8Fx0z5l8NISTQS282egwbRMmTPE6/UeYktb6hNGAgtSTIwXdHjXmMOiTarFA==
+libp2p-gossipsub@^0.13.2:
+  version "0.13.2"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.13.2.tgz#3a21d3556f8fb832d8659fdfee118b43da2ba3e7"
+  integrity sha512-r2i+GM5m58IDSIMP/9fv3L0/3V2Bci3NsVnlWEyxptcpUcUt7Dif5FN1lsiFPIkCtjks+OmhWPQmMM/7J/a6Rg==
   dependencies:
     "@types/debug" "^4.1.7"
     debug "^4.3.1"

@@ -3,8 +3,8 @@
  */
 
 export {Validator, ValidatorOptions} from "./validator";
+export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 export {waitForGenesis} from "./genesis";
-export {SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 
 // Remote signer client
 export {externalSignerGetKeys, externalSignerPostSignature, externalSignerUpCheck} from "./util/externalSignerClient";

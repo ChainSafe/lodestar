@@ -24,7 +24,7 @@ export type RouteGroupDefinition<
 
 export type RouteDef = {
   url: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "DELETE";
 };
 
 export type ReqGeneric = {

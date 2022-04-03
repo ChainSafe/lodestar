@@ -7,7 +7,7 @@ To quickly test and run Lodestar we recommend starting a local testnet. We recom
 Run a beacon node, with 8 validators with the following command.
 
 ```bash
-./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 --startValidators 0:8 --enr.ip 127.0.0.1 --rootDir </path/to/node1> --reset
 ```
 
 `--genesisValidators` and `--genesisTime` define the genesis state of the beacon chain. `--rootDir` defines a path where
@@ -25,8 +25,7 @@ This would be used to connect from the second node.
 Start the second node without starting any validators and connect to the first node by supplying the copied `enr` value:
 
 ```bash
-./lodestar dev --startValidators 0:0 \
-  --genesisValidators 8 --genesisTime 1578787200 \
+./lodestar dev --genesisValidators 8 --genesisTime 1578787200 \
   --rootDir /path/to/node2 \
   --port 9001 \
   --api.rest.port 9597 \
@@ -41,7 +40,7 @@ the `--startValidators` option. Passing a value of `0:0` means no validators sho
 Also, take note that the values of `--genesisValidators` and `--genesisTime` must be the same as the ones passed to the first node in other for the two nodes
 to have the same beacon chain.
 
-Finally `--port` and `--api.rest.port` are supplied since the default values will already be in use by the first node.
+Also `--port` and `--api.rest.port` are supplied since the default values will already be in use by the first node.
 
 The `--network.connectToDiscv5Bootnodes` flags needs to be set to true as this is needed to allow connection to boot enrs on local devnet.
 The exact enr of node to connect to is then supplied via the `--network.discv5.bootEnrs` flag.
