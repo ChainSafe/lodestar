@@ -384,7 +384,7 @@
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new SlashingProtectionAttestationService</strong>(<code>signedAttestationDb</code>: <a href="../slashingprotection_attestation.attestationbytargetrepository/">AttestationByTargetRepository</a>, <code>attestationLowerBound</code>: <a href="../slashingprotection_attestation.attestationlowerboundrepository/">AttestationLowerBoundRepository</a>, <code>minMaxSurround</code>: <a href="../slashingprotection_minmaxsurround.minmaxsurround/">MinMaxSurround</a>): <em><a href="./">SlashingProtectionAttestationService</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L23">packages/validator/src/slashingProtection/attestation/index.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L23">packages/validator/src/slashingProtection/attestation/index.ts:23</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -412,19 +412,19 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-attestationbytarget"><code>Private</code> attestationByTarget<a class="headerlink" href="#private-attestationbytarget" title="Permanent link">¶</a></h3>
 <p>• <strong>attestationByTarget</strong>: <em><a href="../slashingprotection_attestation.attestationbytargetrepository/">AttestationByTargetRepository</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L21">packages/validator/src/slashingProtection/attestation/index.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L21">packages/validator/src/slashingProtection/attestation/index.ts:21</a></em></p>
 <hr/>
 <h3 id="private-attestationlowerbound"><code>Private</code> attestationLowerBound<a class="headerlink" href="#private-attestationlowerbound" title="Permanent link">¶</a></h3>
 <p>• <strong>attestationLowerBound</strong>: <em><a href="../slashingprotection_attestation.attestationlowerboundrepository/">AttestationLowerBoundRepository</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L22">packages/validator/src/slashingProtection/attestation/index.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L22">packages/validator/src/slashingProtection/attestation/index.ts:22</a></em></p>
 <hr/>
 <h3 id="private-minmaxsurround"><code>Private</code> minMaxSurround<a class="headerlink" href="#private-minmaxsurround" title="Permanent link">¶</a></h3>
 <p>• <strong>minMaxSurround</strong>: <em><a href="../slashingprotection_minmaxsurround.minmaxsurround/">MinMaxSurround</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L23">packages/validator/src/slashingProtection/attestation/index.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L23">packages/validator/src/slashingProtection/attestation/index.ts:23</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="checkandinsertattestation">checkAndInsertAttestation<a class="headerlink" href="#checkandinsertattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>checkAndInsertAttestation</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../interfaces/slashingprotection.slashingprotectionattestation/">SlashingProtectionAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L39">packages/validator/src/slashingProtection/attestation/index.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L39">packages/validator/src/slashingProtection/attestation/index.ts:39</a></em></p>
 <p>Check an attestation for slash safety, and if it is safe, record it in the database
 This is the safe, externally-callable interface for checking attestations</p>
 <p><strong>Parameters:</strong></p>
@@ -450,7 +450,7 @@ This is the safe, externally-callable interface for checking attestations</p>
 <hr/>
 <h3 id="checkattestation">checkAttestation<a class="headerlink" href="#checkattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>checkAttestation</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../interfaces/slashingprotection.slashingprotectionattestation/">SlashingProtectionAttestation</a>): <em>Promise‹<a href="../../enums/slashingprotection_attestation.safestatus/">SafeStatus</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L52">packages/validator/src/slashingProtection/attestation/index.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L52">packages/validator/src/slashingProtection/attestation/index.ts:52</a></em></p>
 <p>Check an attestation from <code>pubKey</code> for slash safety.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -475,7 +475,7 @@ This is the safe, externally-callable interface for checking attestations</p>
 <hr/>
 <h3 id="exportattestations">exportAttestations<a class="headerlink" href="#exportattestations" title="Permanent link">¶</a></h3>
 <p>▸ <strong>exportAttestations</strong>(<code>pubkey</code>: BLSPubkey): <em>Promise‹<a href="../../interfaces/slashingprotection.slashingprotectionattestation/">SlashingProtectionAttestation</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L158">packages/validator/src/slashingProtection/attestation/index.ts:158</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L158">packages/validator/src/slashingProtection/attestation/index.ts:158</a></em></p>
 <p>Interchange import / export functionality</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -496,7 +496,7 @@ This is the safe, externally-callable interface for checking attestations</p>
 <hr/>
 <h3 id="importattestations">importAttestations<a class="headerlink" href="#importattestations" title="Permanent link">¶</a></h3>
 <p>▸ <strong>importAttestations</strong>(<code>pubkey</code>: BLSPubkey, <code>attestations</code>: <a href="../../interfaces/slashingprotection.slashingprotectionattestation/">SlashingProtectionAttestation</a>[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L139">packages/validator/src/slashingProtection/attestation/index.ts:139</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L139">packages/validator/src/slashingProtection/attestation/index.ts:139</a></em></p>
 <p>Interchange import / export functionality</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -521,7 +521,7 @@ This is the safe, externally-callable interface for checking attestations</p>
 <hr/>
 <h3 id="insertattestation">insertAttestation<a class="headerlink" href="#insertattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>insertAttestation</strong>(<code>pubKey</code>: BLSPubkey, <code>attestation</code>: <a href="../../interfaces/slashingprotection.slashingprotectionattestation/">SlashingProtectionAttestation</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L131">packages/validator/src/slashingProtection/attestation/index.ts:131</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L131">packages/validator/src/slashingProtection/attestation/index.ts:131</a></em></p>
 <p>Insert an attestation into the slashing database
 This should <em>only</em> be called in the same (exclusive) transaction as <code>checkAttestation</code>
 so that the check isn't invalidated by a concurrent mutation</p>
@@ -548,7 +548,7 @@ so that the check isn't invalidated by a concurrent mutation</p>
 <hr/>
 <h3 id="listpubkeys">listPubkeys<a class="headerlink" href="#listpubkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>listPubkeys</strong>(): <em>Promise‹BLSPubkey[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/922cde0/packages/validator/src/slashingProtection/attestation/index.ts#L162">packages/validator/src/slashingProtection/attestation/index.ts:162</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/validator/src/slashingProtection/attestation/index.ts#L162">packages/validator/src/slashingProtection/attestation/index.ts:162</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹BLSPubkey[]›</em></p>
 </article>
 </div>
