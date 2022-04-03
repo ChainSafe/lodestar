@@ -27,9 +27,7 @@ function getLockFile(): Lockfile {
  * @param filepath File to lock, i.e. `keystore_0001.json`
  */
 export function lockFilepath(filepath: string): void {
-  const lf = getLockFile();
-
-  lf.lockSync(getLockFilepath(filepath));
+  getLockFile().lockSync(getLockFilepath(filepath));
 }
 
 /**
@@ -37,9 +35,7 @@ export function lockFilepath(filepath: string): void {
  * @param filepath File to unlock, i.e. `keystore_0001.json`
  */
 export function unlockFilepath(filepath: string): void {
-  const lf = getLockFile();
-
   // Does not throw if the lock file is already deleted
   // https://github.com/npm/lockfile/blob/6590779867ee9bdc5dbebddc962640759892bb91/lockfile.js#L68
-  lf.unlockSync(getLockFilepath(filepath));
+  getLockFile().unlockSync(getLockFilepath(filepath));
 }
