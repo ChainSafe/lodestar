@@ -4,9 +4,8 @@ type Lockfile = {
 };
 
 let lockFile: Lockfile | null = null;
-export const LOCK_FILE_EXT = ".lock";
 
-export function getLockFilepath(filepath: string): string {
+function getLockFilepath(filepath: string): string {
   return `${filepath}.lock`;
 }
 

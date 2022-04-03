@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import path from "node:path";
 import {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -16,15 +17,15 @@ import {lockFilepath, unlockFilepath} from "./util/lockfile";
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
 export class KeymanagerApi implements Api {
-  constructor(private readonly validator: Validator, private readonly importKeystoresPath: string) {
-    if (fs.existsSync(importKeystoresPath)) {
+  constructor(private readonly validator: Validator, private readonly importKeystoresDirpath: string) {
+    if (fs.existsSync(importKeystoresDirpath)) {
       // Ensure is directory
-      if (!fs.statSync(importKeystoresPath).isDirectory()) {
+      if (!fs.statSync(importKeystoresDirpath).isDirectory()) {
         throw Error("importKeystoresPath is not a directory");
       }
     } else {
       // Or, create empty directory
-      fs.mkdirSync(importKeystoresPath, {recursive: true});
+      fs.mkdirSync(importKeystoresDirpath, {recursive: true});
     }
   }
 
@@ -208,6 +209,6 @@ export class KeymanagerApi implements Api {
   }
 
   private getKeystoreFilepath(pubkeyHex: string): string {
-    return `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`;
+    return path.join(this.importKeystoresDirpath, `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`);
   }
 }

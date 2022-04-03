@@ -115,7 +115,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     // KeymanagerApi must ensure that the path is a directory and not a file
     const firstImportKeystorePath = args.importKeystoresPath[0];
 
-    const keymanagerApi = new KeymanagerApi(logger, validator, firstImportKeystorePath);
+    const keymanagerApi = new KeymanagerApi(validator, firstImportKeystorePath);
 
     const keymanagerServer = new KeymanagerServer(
       {
