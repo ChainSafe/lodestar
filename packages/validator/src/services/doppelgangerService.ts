@@ -49,7 +49,7 @@ export class DoppelgangerService {
     }
   }
 
-  private getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
+  getStatus(pubKey: PubkeyHex | BLSPubkey): DoppelgangerStatus {
     const pubkeyHex = typeof pubKey === "string" ? pubKey : toHexString(pubKey);
     const validatorIndex = this.indicesService.getValidatorIndex(pubkeyHex);
 

@@ -141,7 +141,7 @@ export class BlockDutiesService {
     const dependentRoot = proposerDuties.dependentRoot;
     const relevantDuties = proposerDuties.data.filter((duty) => {
       const pubkeyHex = toHexString(duty.pubkey);
-      return this.validatorStore.hasVotingPubkey(pubkeyHex) && this.validatorStore.isSafe(pubkeyHex);
+      return this.validatorStore.hasVotingPubkey(pubkeyHex);
     });
 
     this.logger.debug("Downloaded proposer duties", {

@@ -118,7 +118,7 @@ export class AttestationService {
     const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
       throw extendError(e, "Error producing attestation");
     });
-    const attestation = attestationRes.data;
+    const attestationData = attestationRes.data;
 
     const currentEpoch = computeEpochAtSlot(slot);
     const signedAttestations: phase0.Attestation[] = [];
@@ -126,14 +126,12 @@ export class AttestationService {
     for (const {duty} of duties) {
       const logCtxValidator = {
         ...logCtx,
-        head: toHexString(attestation.beaconBlockRoot),
+        head: toHexString(attestationData.beaconBlockRoot),
         validatorIndex: duty.validatorIndex,
       };
       try {
-        if (this.validatorStore.isSafe(duty.pubkey)) {
-          signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
-          this.logger.debug("Signed attestation", logCtxValidator);
-        }
+        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
+        this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
         this.logger.error("Error signing attestation", logCtxValidator, e as Error);
       }
@@ -148,7 +146,7 @@ export class AttestationService {
       }
     }
 
-    return attestation;
+    return attestationData;
   }
 
   /**
