@@ -1,5 +1,4 @@
 import fs from "node:fs";
-import path from "node:path";
 import {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
@@ -12,8 +11,7 @@ import {
 import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
-import {ILogger} from "@chainsafe/lodestar-utils";
-import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile";
+import {lockFilepath, unlockFilepath} from "./util/lockfile";
 
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
@@ -102,12 +100,13 @@ export class KeymanagerApi implements Api {
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
-        const keystorePathInfo = this.getKeystorePathInfoForKey(pubKey);
+        const keystoreFilepath = this.getKeystoreFilepath(pubKey);
 
-        // Persist keys for latter restarts
-        await fs.promises.writeFile(keystorePathInfo.keystoreFilePath, keystoreStr, {encoding: "utf8"});
-        const lockFile = getLockFile();
-        lockFile.lockSync(keystorePathInfo.lockFilePath);
+        // Lock before writing keystore
+        lockFilepath(keystoreFilepath);
+
+        // Persist keys for latter restarts, directory of `keystoreFilepath` is created in the constructor
+        await fs.promises.writeFile(keystoreFilepath, keystoreStr, {encoding: "utf8"});
 
         statuses[i] = {status: ImportStatus.imported};
       } catch (e) {
@@ -169,14 +168,14 @@ export class KeymanagerApi implements Api {
         // Remove from Sync committee duties
         // Remove from indices
         this.validator.removeDutiesForKey(pubkeyHex);
-        const keystorePathInfo = this.getKeystorePathInfoForKey(pubkeyHex);
+
+        const keystoreFilepath = this.getKeystoreFilepath(pubkeyHex);
+
         // Remove key from persistent storage
-        for (const keystoreFile of await fs.promises.readdir(this.importKeystoresPath)) {
-          if (keystoreFile.indexOf(pubkeyHex) !== -1) {
-            await fs.promises.unlink(keystorePathInfo.keystoreFilePath);
-            await fs.promises.unlink(keystorePathInfo.lockFilePath);
-          }
-        }
+        fs.unlinkSync(keystoreFilepath);
+
+        // Unlock last
+        unlockFilepath(keystoreFilepath);
       } catch (e) {
         statuses[i] = {status: DeletionStatus.error, message: (e as Error).message};
       }
@@ -206,5 +205,9 @@ export class KeymanagerApi implements Api {
       data: statuses,
       slashingProtection: JSON.stringify(interchangeV5),
     };
+  }
+
+  private getKeystoreFilepath(pubkeyHex: string): string {
+    return `${KEY_IMPORTED_PREFIX}_${pubkeyHex}.json`;
   }
 }
