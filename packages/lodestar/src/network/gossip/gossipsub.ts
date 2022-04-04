@@ -113,6 +113,7 @@ export class Eth2Gossipsub extends Gossipsub {
       dataTransform: new DataTransformSnappy(gossipTopicCache),
       metricsRegister: modules.metrics ? ((modules.metrics.register as unknown) as MetricsRegister) : null,
       metricsTopicStrToLabel: modules.metrics ? getMetricsTopicStrToLabel(modules.config) : undefined,
+      asyncValidation: true,
     });
     this.scoreParams = scoreParams;
     const {config, logger, metrics, signal, gossipHandlers, peersData} = modules;
