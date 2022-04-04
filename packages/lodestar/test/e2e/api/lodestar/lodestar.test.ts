@@ -4,8 +4,11 @@ import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {HttpClient} from "@chainsafe/lodestar-api/src";
 import {getClient} from "@chainsafe/lodestar-api/src/client/lodestar";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
+import {phase0} from "@chainsafe/lodestar-types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger";
 import {getDevBeaconNode} from "../../../utils/node/beacon";
+import {waitForEvent} from "../../../utils/events/resolver";
+import {ChainEvent} from "../../../../src/chain";
 
 chai.use(chaiAsPromised);
 
@@ -75,8 +78,6 @@ describe("api / impl / lodestar", function () {
     });
 
     it("Should return only for previous, current and next epoch", async function () {
-      // TODO [DA] Look at how to advance the epoch in test so as to confirm that
-      // epoch less than previous epoch is also rejected
       this.timeout("10 min");
 
       const chainConfig: IChainConfig = {...chainConfigDef, SECONDS_PER_SLOT, ALTAIR_FORK_EPOCH};
@@ -97,18 +98,34 @@ describe("api / impl / lodestar", function () {
       });
       afterEachCallbacks.push(() => bn.close());
 
-      // live indices at epoch of consideration, epoch 0
-      bn.chain.seenBlockProposers.add(1, 1);
+      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000); // wait for epoch 1
+      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000); // wait for epoch 2
+
+      bn.chain.seenBlockProposers.add(bn.chain.clock.currentSlot, 1);
 
       const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`}));
 
+      const currentEpoch = bn.chain.clock.currentEpoch;
+      const nextEpoch = currentEpoch + 1;
+      const previousEpoch = currentEpoch - 1;
+
       // current epoch is fine
-      await expect(client.getLiveness([1], 0)).to.eventually.not.be.rejected;
+      await expect(client.getLiveness([1], currentEpoch)).to.eventually.not.be.rejected;
       // next epoch is fine
-      await expect(client.getLiveness([1], 1)).to.eventually.not.be.rejected;
+      await expect(client.getLiveness([1], nextEpoch)).to.eventually.not.be.rejected;
+      // previous epoch is fine
+      await expect(client.getLiveness([1], previousEpoch)).to.eventually.not.be.rejected;
       // more than next epoch is not fine
-      await expect(client.getLiveness([1], 2)).to.eventually.be.rejectedWith(
-        "request epoch 2 is more than one epoch previous or after from the current epoch 0"
+      await expect(client.getLiveness([1], currentEpoch + 2)).to.eventually.be.rejectedWith(
+        `Request epoch ${
+          currentEpoch + 2
+        } is more than one epoch previous or after from the current epoch ${currentEpoch}`
+      );
+      // more than previous epoch is not fine
+      await expect(client.getLiveness([1], currentEpoch - 2)).to.eventually.be.rejectedWith(
+        `Request epoch ${
+          currentEpoch - 2
+        } is more than one epoch previous or after from the current epoch ${currentEpoch}`
       );
     });
   });
