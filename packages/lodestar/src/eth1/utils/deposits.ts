@@ -1,15 +1,17 @@
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
-import {Root, phase0, allForks, ssz} from "@chainsafe/lodestar-types";
-import {TreeBacked, List, toHexString} from "@chainsafe/ssz";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
+import {toHexString} from "@chainsafe/ssz";
 import {IFilterOptions} from "@chainsafe/lodestar-db";
-import {getTreeAtIndex} from "../../util/tree";
 import {Eth1Error, Eth1ErrorCode} from "../errors";
+import {DepositTree} from "../../db/repositories/depositDataRoot";
 
 export type DepositGetter<T> = (indexRange: IFilterOptions<number>, eth1Data: phase0.Eth1Data) => Promise<T[]>;
 
 export async function getDeposits<T>(
   // eth1_deposit_index represents the next deposit index to be added
-  state: allForks.BeaconState,
+  state: BeaconStateAllForks,
   eth1Data: phase0.Eth1Data,
   depositsGetter: DepositGetter<T>
 ): Promise<T[]> {
@@ -38,13 +40,13 @@ export async function getDeposits<T>(
 
 export function getDepositsWithProofs(
   depositEvents: phase0.DepositEvent[],
-  depositRootTree: TreeBacked<List<Root>>,
+  depositRootTree: DepositTree,
   eth1Data: phase0.Eth1Data
 ): phase0.Deposit[] {
   // Get tree at this particular depositCount to compute correct proofs
-  const treeAtDepositCount = getTreeAtIndex(depositRootTree, eth1Data.depositCount - 1);
+  const viewAtDepositCount = depositRootTree.sliceTo(eth1Data.depositCount - 1);
 
-  const depositRoot = treeAtDepositCount.hashTreeRoot();
+  const depositRoot = viewAtDepositCount.hashTreeRoot();
 
   if (!ssz.Root.equals(depositRoot, eth1Data.depositRoot)) {
     throw new Eth1Error({
@@ -54,8 +56,12 @@ export function getDepositsWithProofs(
     });
   }
 
+  // Already commited for .hashTreeRoot()
+  const treeAtDepositCount = new Tree(viewAtDepositCount.node);
+  const depositTreeDepth = viewAtDepositCount.type.depth;
+
   return depositEvents.map((log) => ({
-    proof: treeAtDepositCount.tree.getSingleProof(treeAtDepositCount.type.getPropertyGindex(log.index)),
+    proof: treeAtDepositCount.getSingleProof(toGindex(depositTreeDepth, BigInt(log.index))),
     data: log.depositData,
   }));
 }

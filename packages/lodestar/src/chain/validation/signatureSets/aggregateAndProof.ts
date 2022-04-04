@@ -24,6 +24,6 @@ export function getAggregateAndProofSignatureSet(
     type: SignatureSetType.single,
     pubkey: aggregator,
     signingRoot,
-    signature: aggregateAndProof.signature.valueOf() as Uint8Array,
+    signature: aggregateAndProof.signature,
   };
 }

@@ -1,4 +1,5 @@
 import {itBench} from "@dapplion/benchmark";
+import {ssz} from "@chainsafe/lodestar-types";
 import {
   ACTIVE_PRESET,
   MAX_ATTESTATIONS,
@@ -9,8 +10,8 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, CachedBeaconStateAllForks} from "../../../../src";
-import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
+import {allForks, CachedBeaconStateAltair} from "../../../../src";
+import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
 import {StateBlock} from "../../types";
 
@@ -31,7 +32,7 @@ import {StateBlock} from "../../types";
 //
 // ### Verifying signatures
 // Signature verification is done in bulk using batch BLS verification. Performance is proportional to the amount of
-// sigs to verify and the cost to construct the signature sets from TreeBacked data.
+// sigs to verify and the cost to construct the signature sets from TreeView data.
 //
 // - Same as phase0
 // - SyncAggregate sigs:     1 x agg (358 bits on avg) - TODO: assuming same participation as attestations
@@ -99,24 +100,41 @@ describe("altair processBlock", () => {
   ];
 
   for (const {id, opts} of testCases) {
-    itBench<StateBlock, StateBlock>({
-      id: `altair processBlock - ${perfStateId} ${id}`,
-      before: () => {
-        const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
-        const block = getBlockAltair(state, opts);
-        state.hashTreeRoot();
-        return {state, block};
-      },
-      beforeEach: ({state, block}) => ({state: state.clone(), block}),
-      fn: ({state, block}) => {
-        allForks.stateTransition(state, block, {
-          verifyProposer: false,
-          verifySignatures: false,
-          verifyStateRoot: false,
-        });
-        // set verifyStateRoot = false, and get the root here because the block root is wrong
-        state.hashTreeRoot();
-      },
-    });
+    for (const hashState of [false, true]) {
+      itBench<StateBlock, StateBlock>({
+        id: `altair processBlock - ${perfStateId} ${id}` + (hashState ? " hashState" : ""),
+        before: () => {
+          const state = generatePerfTestCachedStateAltair();
+          const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
+          // Populate permanent root caches of the block
+          ssz.altair.BeaconBlock.hashTreeRoot(block.message);
+          // Populate tree root caches of the state
+          state.hashTreeRoot();
+          return {state, block};
+        },
+        beforeEach: ({state, block}) => {
+          const stateCloned = state.clone();
+          // Populate all state array caches (on the cloned instance)
+          cachedStateAltairPopulateCaches(stateCloned as CachedBeaconStateAltair);
+          return {state: stateCloned, block};
+        },
+        fn: ({state, block}) => {
+          const postState = allForks.stateTransition(state, block, {
+            verifyProposer: false,
+            verifySignatures: false,
+            verifyStateRoot: false,
+          });
+
+          // Not necessary to call commit here since it's called inside .stateTransition()
+
+          if (hashState) {
+            // set verifyStateRoot = false, and get the root here because the block root is wrong
+            // normalcase vc 250_000: 6947 hashes - 8.683 ms
+            // worstcase vc 250_000: 15297 hashes - 19.121 ms
+            postState.hashTreeRoot();
+          }
+        },
+      });
+    }
   }
 });

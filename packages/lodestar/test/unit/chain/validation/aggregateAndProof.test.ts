@@ -95,8 +95,8 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData();
     // Unset all aggregationBits
     const {aggregationBits} = signedAggregateAndProof.message.aggregate;
-    for (let i = 0, len = aggregationBits.length; i < len; i++) {
-      aggregationBits[i] = false;
+    for (let i = 0, len = aggregationBits.bitLen; i < len; i++) {
+      aggregationBits.set(i, false);
     }
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.EMPTY_AGGREGATION_BITFIELD);
@@ -141,8 +141,8 @@ describe("chain / validation / aggregateAndProof", () => {
     const bitIndex = 1;
     const {chain, signedAggregateAndProof} = getValidData({bitIndex});
     // Change the bit index so the signature is validated against a different pubkey
-    signedAggregateAndProof.message.aggregate.aggregationBits[bitIndex] = false;
-    signedAggregateAndProof.message.aggregate.aggregationBits[bitIndex + 1] = true;
+    signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex, false);
+    signedAggregateAndProof.message.aggregate.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.INVALID_SIGNATURE);
   });

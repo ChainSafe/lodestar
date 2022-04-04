@@ -1,6 +1,6 @@
 // Only used by processDeposit +  lightclient
 
-import {Epoch, Version, Root, DomainType, allForks, phase0, ssz, Domain} from "@chainsafe/lodestar-types";
+import {Epoch, Version, Root, DomainType, phase0, ssz, Domain} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
 
 /**
@@ -17,7 +17,7 @@ export function computeDomain(domainType: DomainType, forkVersion: Version, gene
 /**
  * Return the ForkVersion at an epoch from a Fork type
  */
-export function getForkVersion(fork: allForks.BeaconState["fork"], epoch: Epoch): Version {
+export function getForkVersion(fork: phase0.Fork, epoch: Epoch): Version {
   return epoch < fork.epoch ? fork.previousVersion : fork.currentVersion;
 }
 

@@ -163,7 +163,7 @@ describe("network", function () {
       isAggregator: false,
     };
 
-    netB.metadata.attnets[subscription.subnet] = true;
+    netB.metadata.attnets.set(subscription.subnet, true);
     const connected = Promise.all([onPeerConnect(netA), onPeerConnect(netB)]);
 
     // Add subnets to B ENR

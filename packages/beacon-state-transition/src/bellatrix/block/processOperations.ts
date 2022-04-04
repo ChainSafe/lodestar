@@ -1,13 +1,12 @@
-import {readonlyValues} from "@chainsafe/ssz";
 import {bellatrix} from "@chainsafe/lodestar-types";
+import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {CachedBeaconStateAltair, CachedBeaconStateBellatrix, CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateBellatrix, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestations} from "../../altair/block/processAttestation";
 import {processDeposit} from "../../altair/block/processDeposit";
 import {processVoluntaryExit} from "../../altair/block/processVoluntaryExit";
-import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
 export function processOperations(
   state: CachedBeaconStateBellatrix,
@@ -22,23 +21,23 @@ export function processOperations(
     );
   }
 
-  for (const proposerSlashing of readonlyValues(body.proposerSlashings)) {
+  for (const proposerSlashing of body.proposerSlashings) {
     processProposerSlashing(state, proposerSlashing, verifySignatures);
   }
-  for (const attesterSlashing of readonlyValues(body.attesterSlashings)) {
+  for (const attesterSlashing of body.attesterSlashings) {
     processAttesterSlashing(state, attesterSlashing, verifySignatures);
   }
 
   processAttestations(
     (state as CachedBeaconStateAllForks) as CachedBeaconStateAltair,
-    Array.from(readonlyValues(body.attestations)),
+    body.attestations,
     verifySignatures
   );
 
-  for (const deposit of readonlyValues(body.deposits)) {
+  for (const deposit of body.deposits) {
     processDeposit((state as CachedBeaconStateAllForks) as CachedBeaconStateAltair, deposit);
   }
-  for (const voluntaryExit of readonlyValues(body.voluntaryExits)) {
+  for (const voluntaryExit of body.voluntaryExits) {
     processVoluntaryExit(
       (state as CachedBeaconStateAllForks) as CachedBeaconStateAltair,
       voluntaryExit,

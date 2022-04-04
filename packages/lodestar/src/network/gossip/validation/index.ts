@@ -78,11 +78,7 @@ function getGossipValidatorFn<K extends GossipType>(
       // Deserialize object from bytes ONLY after being picked up from the validation queue
       try {
         const sszType = getGossipSSZType(topic);
-        gossipObject =
-          // TODO: Review if it's really necessary to deserialize this as TreeBacked
-          topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
-            ? sszType.createTreeBackedFromBytes(msg.data)
-            : sszType.deserialize(msg.data);
+        gossipObject = sszType.deserialize(msg.data);
       } catch (e) {
         // TODO: Log the error or do something better with it
         return MessageAcceptance.Reject;

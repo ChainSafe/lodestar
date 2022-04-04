@@ -18,19 +18,11 @@ export class AttestationByTargetRepository {
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = new ContainerType<SlashingProtectionAttestation>({
-      fields: {
-        sourceEpoch: ssz.Epoch,
-        targetEpoch: ssz.Epoch,
-        signingRoot: ssz.Root,
-      },
-      // Custom type, not in the consensus specs
-      casingMap: {
-        sourceEpoch: "source_epoch",
-        targetEpoch: "target_epoch",
-        signingRoot: "signing_root",
-      },
-    });
+    this.type = new ContainerType({
+      sourceEpoch: ssz.Epoch,
+      targetEpoch: ssz.Epoch,
+      signingRoot: ssz.Root,
+    }); // casing doesn't matter
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionAttestation[]> {

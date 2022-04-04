@@ -3,6 +3,7 @@ import {EventEmitter} from "events";
 import sinon from "sinon";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
+import {BitArray} from "@chainsafe/ssz";
 import {IReqResp, ReqRespMethod} from "../../../../src/network/reqresp";
 import {PeerRpcScoreStore, PeerManager} from "../../../../src/network/peers";
 import {Eth2Gossipsub, NetworkEvent, NetworkEventBus} from "../../../../src/network";
@@ -121,7 +122,7 @@ describe("network / peers / PeerManager", function () {
     } as Connection);
 
     const seqNumber = BigInt(2);
-    const metadata: phase0.Metadata = {seqNumber, attnets: []};
+    const metadata: phase0.Metadata = {seqNumber, attnets: BitArray.fromBitLen(0)};
 
     // Simulate peer1 responding with its metadata
     reqResp.metadata.resolves(metadata);

@@ -1,6 +1,6 @@
 import {phase0, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
-import {BitList, readonlyValues, toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 import {pruneBySlot} from "./utils";
 import {MapDef} from "../../util/map";
@@ -23,7 +23,7 @@ const MAX_ATTESTATIONS_PER_SLOT = 16_384;
 
 type AggregateFast = {
   data: phase0.Attestation["data"];
-  aggregationBits: boolean[];
+  aggregationBits: BitArray;
   signature: Signature;
 };
 
@@ -161,21 +161,21 @@ export class AttestationPool {
  * Aggregate a new contribution into `aggregate` mutating it
  */
 function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.Attestation): InsertOutcome {
-  const bitIndex = bitArrayGetSingleTrueBit(attestation.aggregationBits);
+  const bitIndex = attestation.aggregationBits.getSingleTrueBit();
 
   // Should never happen, attestations are verified against this exact condition before
   if (bitIndex === null) {
     throw Error("Invalid attestation not exactly one bit set");
   }
 
-  if (aggregate.aggregationBits[bitIndex] === true) {
+  if (aggregate.aggregationBits.get(bitIndex) === true) {
     return InsertOutcome.AlreadyKnown;
   }
 
-  aggregate.aggregationBits[bitIndex] = true;
+  aggregate.aggregationBits.set(bitIndex, true);
   aggregate.signature = Signature.aggregate([
     aggregate.signature,
-    bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array, undefined, true),
+    bls.Signature.fromBytes(attestation.signature, undefined, true),
   ]);
   return InsertOutcome.Aggregated;
 }
@@ -186,8 +186,9 @@ function aggregateAttestationInto(aggregate: AggregateFast, attestation: phase0.
 function attestationToAggregate(attestation: phase0.Attestation): AggregateFast {
   return {
     data: attestation.data,
-    aggregationBits: Array.from(readonlyValues(attestation.aggregationBits)),
-    signature: bls.Signature.fromBytes(attestation.signature.valueOf() as Uint8Array, undefined, true),
+    // clone because it will be mutated
+    aggregationBits: attestation.aggregationBits.clone(),
+    signature: bls.Signature.fromBytes(attestation.signature, undefined, true),
   };
 }
 
@@ -197,16 +198,7 @@ function attestationToAggregate(attestation: phase0.Attestation): AggregateFast 
 function fastToAttestation(aggFast: AggregateFast): phase0.Attestation {
   return {
     data: aggFast.data,
-    aggregationBits: aggFast.aggregationBits as BitList,
+    aggregationBits: aggFast.aggregationBits,
     signature: aggFast.signature.toBytes(PointFormat.compressed),
   };
-}
-
-function bitArrayGetSingleTrueBit(bits: BitList): number | null {
-  for (const [index, participated] of Array.from(readonlyValues(bits)).entries()) {
-    if (participated) {
-      return index;
-    }
-  }
-  return null;
 }

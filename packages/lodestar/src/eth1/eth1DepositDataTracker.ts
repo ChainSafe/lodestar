@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
@@ -72,7 +72,7 @@ export class Eth1DepositDataTracker {
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     const eth1Data = await this.getEth1Data(state);
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -82,7 +82,7 @@ export class Eth1DepositDataTracker {
    * Returns an eth1Data vote for a given state.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getEth1Data(state: allForks.BeaconState): Promise<phase0.Eth1Data> {
+  private async getEth1Data(state: BeaconStateAllForks): Promise<phase0.Eth1Data> {
     try {
       const eth1VotesToConsider = await getEth1VotesToConsider(
         this.config,
@@ -101,10 +101,7 @@ export class Eth1DepositDataTracker {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(
-    state: CachedBeaconStateAllForks,
-    eth1DataVote: phase0.Eth1Data
-  ): Promise<phase0.Deposit[]> {
+  private async getDeposits(state: BeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
     // No new deposits have to be included, continue
     if (eth1DataVote.depositCount === state.eth1DepositIndex) {
       return [];
@@ -112,7 +109,7 @@ export class Eth1DepositDataTracker {
 
     // TODO: Review if this is optimal
     // Convert to view first to hash once and compare hashes
-    const eth1DataVoteView = ssz.phase0.Eth1Data.createTreeBackedFromStruct(eth1DataVote);
+    const eth1DataVoteView = ssz.phase0.Eth1Data.toViewDU(eth1DataVote);
 
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = allForks.becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;

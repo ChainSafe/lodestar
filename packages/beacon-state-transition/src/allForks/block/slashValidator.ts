@@ -23,17 +23,18 @@ export function slashValidatorAllForks(
 ): void {
   const {epochCtx} = state;
   const epoch = epochCtx.currentShuffling.epoch;
-  const validator = state.validators[slashedIndex];
+  const validator = state.validators.get(slashedIndex);
 
   // TODO: Bellatrix initiateValidatorExit validators.update() with the one below
-  initiateValidatorExit(state as CachedBeaconStateAllForks, validator);
+  initiateValidatorExit(state, validator);
 
   validator.slashed = true;
   validator.withdrawableEpoch = Math.max(validator.withdrawableEpoch, epoch + EPOCHS_PER_SLASHINGS_VECTOR);
 
   const {effectiveBalance} = validator;
   // TODO: could state.slashings be number?
-  state.slashings[epoch % EPOCHS_PER_SLASHINGS_VECTOR] += BigInt(effectiveBalance);
+  const slashingIndex = epoch % EPOCHS_PER_SLASHINGS_VECTOR;
+  state.slashings.set(slashingIndex, state.slashings.get(slashingIndex) + BigInt(effectiveBalance));
 
   const minSlashingPenaltyQuotient =
     fork === ForkName.phase0

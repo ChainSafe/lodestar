@@ -1,5 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
+import {BitArray} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {validateGossipAttestation} from "../../../../src/chain/validation";
@@ -65,7 +66,7 @@ describe("chain / validation / attestation", () => {
     // Unset the single aggregationBits
     const bitIndex = 1;
     const {chain, attestation, subnet} = getValidData({bitIndex});
-    attestation.aggregationBits[bitIndex] = false;
+    attestation.aggregationBits.set(bitIndex, false);
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET);
   });
@@ -74,7 +75,7 @@ describe("chain / validation / attestation", () => {
     // Set an extra bit in the attestation
     const bitIndex = 1;
     const {chain, attestation, subnet} = getValidData({bitIndex});
-    attestation.aggregationBits[bitIndex + 1] = true;
+    attestation.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET);
   });
@@ -98,7 +99,10 @@ describe("chain / validation / attestation", () => {
   it("WRONG_NUMBER_OF_AGGREGATION_BITS", async () => {
     const {chain, attestation, subnet} = getValidData();
     // Increase the length of aggregationBits beyond the committee size
-    attestation.aggregationBits[attestation.aggregationBits.length] = false;
+    attestation.aggregationBits = new BitArray(
+      attestation.aggregationBits.uint8Array,
+      attestation.aggregationBits.bitLen + 1
+    );
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS);
   });
@@ -123,8 +127,8 @@ describe("chain / validation / attestation", () => {
     const bitIndex = 1;
     const {chain, attestation, subnet} = getValidData({bitIndex});
     // Change the bit index so the signature is validated against a different pubkey
-    attestation.aggregationBits[bitIndex] = false;
-    attestation.aggregationBits[bitIndex + 1] = true;
+    attestation.aggregationBits.set(bitIndex, false);
+    attestation.aggregationBits.set(bitIndex + 1, true);
 
     await expectError(chain, attestation, subnet, AttestationErrorCode.INVALID_SIGNATURE);
   });

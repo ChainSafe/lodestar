@@ -122,12 +122,14 @@ describe("ForkChoice", () => {
       const aggregatedAttestations: IndexedAttestation[] = [];
       const averageAggregatorsPerSlot = 11;
       for (let committeeIndex = 0; committeeIndex < ATTESTATION_SUBNET_COUNT; committeeIndex++) {
-        const tbAttestationData = ssz.phase0.AttestationData.createTreeBackedFromStruct({
+        const tbAttestationData = {
           ...attestationDataOmitIndex,
           index: committeeIndex,
-        });
+        };
+
         // cache the root
-        tbAttestationData.hashTreeRoot();
+        ssz.phase0.AttestationData.hashTreeRoot(tbAttestationData);
+
         for (let aggregator = 0; aggregator < averageAggregatorsPerSlot; aggregator++) {
           // same data, different signatures
           aggregatedAttestations.push({

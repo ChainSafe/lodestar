@@ -1,11 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import fs, {unlinkSync, writeFileSync} from "node:fs";
+import {unlinkSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
 
-import {ContainerType, Type, Json} from "@chainsafe/ssz";
+import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType} from "../../../src/single";
-import {loadYaml} from "@chainsafe/lodestar-utils";
+import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -22,18 +21,16 @@ export interface ISimpleCase extends Iterable<string> {
   };
 }
 
-const inputSchema = new ContainerType({
-  fields: {
-    test: ssz.Boolean,
-    number: ssz.Number64,
-  },
+const sampleContainerType = new ContainerType({
+  test: ssz.Boolean,
+  number: ssz.UintNum64,
 });
 
 before(() => {
-  yamlToSSZ(join(__dirname, "../_test_files/single/case0/input.yaml"), inputSchema);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.Number64);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case1/input.yaml"), inputSchema);
-  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.Number64);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case0/input.yaml"), sampleContainerType);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case0/output.yaml"), ssz.UintNum64);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case1/input.yaml"), sampleContainerType);
+  yamlToSSZ(join(__dirname, "../_test_files/single/case1/output.yaml"), ssz.UintNum64);
 });
 
 after(() => {
@@ -55,8 +52,8 @@ describeDirectorySpecTest<ISimpleCase, number>(
       output: InputType.YAML,
     },
     sszTypes: {
-      input: inputSchema,
-      output: ssz.Number64,
+      input: sampleContainerType,
+      output: ssz.UintNum64,
     },
     shouldError: (testCase) => !testCase.input.test,
     getExpected: (testCase) => testCase.output,
@@ -64,10 +61,6 @@ describeDirectorySpecTest<ISimpleCase, number>(
 );
 
 function yamlToSSZ(file: string, sszSchema: Type<any>): void {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const input: any = sszSchema.fromJson(loadYaml<Json>(fs.readFileSync(file, "utf8")));
-  if (input.number) {
-    input.number = Number(input.number);
-  }
+  const input = sszSchema.fromJson(loadYamlFile(file)) as {test: boolean; number: number};
   writeFileSync(file.replace(".yaml", ".ssz"), sszSchema.serialize(input));
 }

@@ -1,16 +1,11 @@
 import BufferList from "bl";
 import varint from "varint";
-import {CompositeType} from "@chainsafe/ssz";
 import {MAX_VARINT_BYTES} from "../../../../constants";
 import {BufferedSource} from "../../utils";
 import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types";
 import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
 import {maxEncodedLen} from "./utils";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
-
-export interface ISszSnappyOptions {
-  deserializeToTree?: boolean;
-}
 
 /**
  * ssz_snappy encoding strategy reader.
@@ -21,13 +16,12 @@ export interface ISszSnappyOptions {
  */
 export async function readSszSnappyPayload<T extends RequestOrIncomingResponseBody>(
   bufferedSource: BufferedSource,
-  type: RequestOrResponseType,
-  options?: ISszSnappyOptions
+  type: RequestOrResponseType
 ): Promise<T> {
   const sszDataLength = await readSszSnappyHeader(bufferedSource, type);
 
   const bytes = await readSszSnappyBody(bufferedSource, sszDataLength);
-  return deserializeSszBody<T>(bytes, type, options);
+  return deserializeSszBody<T>(bytes, type);
 }
 
 /**
@@ -61,8 +55,8 @@ async function readSszSnappyHeader(bufferedSource: BufferedSource, type: Request
     buffer.consume(varintBytes);
 
     // MUST validate: the length-prefix is within the expected size bounds derived from the payload SSZ type.
-    const minSize = type.getMinSerializedLength();
-    const maxSize = type.getMaxSerializedLength();
+    const minSize = type.minSize;
+    const maxSize = type.maxSize;
     if (sszDataLength < minSize) {
       throw new SszSnappyError({code: SszSnappyErrorCode.UNDER_SSZ_MIN_SIZE, minSize, sszDataLength});
     }
@@ -130,18 +124,9 @@ async function readSszSnappyBody(bufferedSource: BufferedSource, sszDataLength: 
  * Deseralizes SSZ body.
  * `isSszTree` option allows the SignedBeaconBlock type to be deserialized as a tree
  */
-function deserializeSszBody<T extends RequestOrIncomingResponseBody>(
-  bytes: Buffer,
-  type: RequestOrResponseType,
-  options?: ISszSnappyOptions
-): T {
+function deserializeSszBody<T extends RequestOrIncomingResponseBody>(bytes: Buffer, type: RequestOrResponseType): T {
   try {
-    if (options?.deserializeToTree) {
-      const typeTree = (type as unknown) as CompositeType<Record<string, unknown>>;
-      return (typeTree.createTreeBackedFromBytes(bytes) as unknown) as T;
-    } else {
-      return type.deserialize(bytes) as T;
-    }
+    return type.deserialize(bytes) as T;
   } catch (e) {
     throw new SszSnappyError({code: SszSnappyErrorCode.DESERIALIZE_ERROR, deserializeError: e as Error});
   }

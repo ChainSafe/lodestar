@@ -4,7 +4,6 @@ import stream from "node:stream";
 import {promisify} from "node:util";
 import got from "got";
 import {load, dump, FAILSAFE_SCHEMA, Schema, Type} from "js-yaml";
-import {Json} from "@chainsafe/ssz";
 
 export const yamlSchema = new Schema({
   include: [FAILSAFE_SCHEMA],
@@ -36,7 +35,7 @@ export enum FileFormat {
 /**
  * Parse file contents as Json.
  */
-export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
+export function parse<T>(contents: string, fileFormat: FileFormat): T {
   switch (fileFormat) {
     case FileFormat.json:
       return JSON.parse(contents) as T;
@@ -51,7 +50,7 @@ export function parse<T = Json>(contents: string, fileFormat: FileFormat): T {
 /**
  * Stringify file contents.
  */
-export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
+export function stringify(obj: unknown, fileFormat: FileFormat): string {
   let contents: string;
   switch (fileFormat) {
     case FileFormat.json:
@@ -72,7 +71,7 @@ export function stringify<T = Json>(obj: T, fileFormat: FileFormat): string {
  *
  * Serialize either to json, yaml, or toml
  */
-export function writeFile(filepath: string, obj: Json): void {
+export function writeFile(filepath: string, obj: unknown): void {
   mkdir(path.dirname(filepath));
   const fileFormat = path.extname(filepath).substr(1);
   fs.writeFileSync(filepath, stringify(obj, fileFormat as FileFormat), "utf-8");
@@ -84,7 +83,7 @@ export function writeFile(filepath: string, obj: Json): void {
  * Parse either from json, yaml, or toml
  * Optional acceptedFormats object can be passed which can be an array of accepted formats, in future can be extended to include parseFn for the accepted formats
  */
-export function readFile<T = Json>(filepath: string, acceptedFormats?: Json[]): T {
+export function readFile<T>(filepath: string, acceptedFormats?: string[]): T {
   const fileFormat = path.extname(filepath).substr(1);
   if (acceptedFormats && !acceptedFormats.includes(fileFormat)) throw new Error(`UnsupportedFileFormat: ${filepath}`);
   const contents = fs.readFileSync(filepath, "utf-8");
@@ -95,7 +94,7 @@ export function readFile<T = Json>(filepath: string, acceptedFormats?: Json[]): 
  * @see readFile
  * If `filepath` does not exist returns null
  */
-export function readFileIfExists<T = Json>(filepath: string, acceptedFormats?: Json[]): T | null {
+export function readFileIfExists<T>(filepath: string, acceptedFormats?: string[]): T | null {
   try {
     return readFile(filepath, acceptedFormats);
   } catch (e) {

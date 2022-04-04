@@ -1,5 +1,5 @@
-import {ContainerType, TreeBacked} from "@chainsafe/ssz";
-import {Epoch, Root, Slot, allForks, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
@@ -8,40 +8,41 @@ import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 
-export class StateArchiveRepository extends Repository<Slot, TreeBacked<allForks.BeaconState>> {
+export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks> {
   constructor(config: IChainForkConfig, db: Db, metrics?: IDbMetrics) {
-    // Pick some type but won't be used
-    const type = (ssz.phase0.BeaconState as unknown) as ContainerType<TreeBacked<allForks.BeaconState>>;
+    // Pick some type but won't be used. Casted to any because no type can match `BeaconStateAllForks`
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+    const type = ssz.phase0.BeaconState as any;
     super(config, db, Bucket.allForks_stateArchive, type, metrics);
   }
 
   // Overrides for multi-fork
 
-  encodeValue(value: allForks.BeaconState): Buffer {
-    return this.config.getForkTypes(value.slot).BeaconState.serialize(value) as Buffer;
+  encodeValue(value: BeaconStateAllForks): Uint8Array {
+    return value.serialize();
   }
 
-  decodeValue(data: Buffer): TreeBacked<allForks.BeaconState> {
-    return getStateTypeFromBytes(this.config, data).createTreeBackedFromBytes(data);
+  decodeValue(data: Uint8Array): BeaconStateAllForks {
+    return getStateTypeFromBytes(this.config, data).deserializeToViewDU(data);
   }
 
   // Handle key as slot
 
-  async put(key: Slot, value: TreeBacked<allForks.BeaconState>): Promise<void> {
+  async put(key: Slot, value: BeaconStateAllForks): Promise<void> {
     await Promise.all([super.put(key, value), storeRootIndex(this.db, key, value.hashTreeRoot())]);
   }
 
-  getId(state: TreeBacked<allForks.BeaconState>): Epoch {
+  getId(state: BeaconStateAllForks): Epoch {
     return state.slot;
   }
 
-  decodeKey(data: Buffer): number {
+  decodeKey(data: Uint8Array): number {
     return bytesToInt((super.decodeKey(data) as unknown) as Uint8Array, "be");
   }
 
   // Index Root -> Slot
 
-  async getByRoot(stateRoot: Root): Promise<TreeBacked<allForks.BeaconState> | null> {
+  async getByRoot(stateRoot: Root): Promise<BeaconStateAllForks | null> {
     const slot = await this.getSlotByRoot(stateRoot);
     if (slot !== null && Number.isInteger(slot)) {
       return this.get(slot);

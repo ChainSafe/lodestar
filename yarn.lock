@@ -59,11 +59,6 @@
   resolved "https://registry.yarnpkg.com/@actions/io/-/io-1.1.1.tgz#4a157406309e212ab27ed3ae30e8c1d641686a66"
   integrity sha512-Qi4JoKXjmE0O67wAOH6y0n26QXhMKMFo7GD/4IXNVcrtLjUlGjGuVys6pQgwF3ArfGTQu0XpqaNr0YhED2RaRA==
 
-"@assemblyscript/loader@^0.9.2":
-  version "0.9.4"
-  resolved "https://registry.yarnpkg.com/@assemblyscript/loader/-/loader-0.9.4.tgz#a483c54c1253656bb33babd464e3154a173e1577"
-  integrity sha512-HazVq9zwTVwGmqdwYzu7WyQ6FQVZ7SwET0KKQuKm55jD0IfUpZgN0OPIiZG3zV1iSrVYcN0bdwLRXI/VNCYsUA==
-
 "@azure/abort-controller@^1.0.0":
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/@azure/abort-controller/-/abort-controller-1.0.4.tgz#fd3c4d46c8ed67aace42498c8e2270960250eafd"
@@ -385,13 +380,10 @@
   dependencies:
     event-target-shim "^5.0.0"
 
-"@chainsafe/as-sha256@^0.2.3", "@chainsafe/as-sha256@^0.2.4":
-  version "0.2.4"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.2.4.tgz#17e78d32c71c836160bb55fd79c3daad93d9abf0"
-  integrity sha512-rYfIOaQm0OlFcHdJFUu5VyYOA1HVeQXxOivUsawBjd7WXc3lMQ0bXMfCgN50gPPLWT92G4ioZ0EZz8RnH+YT/g==
-  dependencies:
-    "@assemblyscript/loader" "^0.9.2"
-    buffer "^5.4.3"
+"@chainsafe/as-sha256@^0.3.0":
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.3.0.tgz#ba7d4b85a77c51a50c071856ea6ead4066583b74"
+  integrity sha512-X0Yaz1H9ByEelnrG2Q76aEmLmlsjZe8905n6Eez8wmV2E1TvBnY2AFYYy2U52dkaGrWrG4MHYKLo4NJcSqkFeg==
 
 "@chainsafe/bls-hd-key@^0.2.0":
   version "0.2.1"
@@ -489,12 +481,12 @@
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/persistent-merkle-tree@^0.3.7":
-  version "0.3.7"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.3.7.tgz#d257674fcacf1770e54df1e7e476bb55efcb3ed4"
-  integrity sha512-UXXzvCN8P4eQWCsaTaHRrNa+2sTwY3NB0Vf+uWgM4cU1qf8LOsTU7aU2CeXFAGJag5W/xEQfVGNh463kXTYAgg==
+"@chainsafe/persistent-merkle-tree@^0.4.0":
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.0.tgz#249abef9623d45889d71f0f7e807d3aa93472d21"
+  integrity sha512-xf/DfSAAeAnFOIlNG+m0IvaVK3ccc47vSLEPi0IgbOslXWa540Zxrr33PHbByKI4OhKBp+Zi58WHZAe5O/s2nQ==
   dependencies:
-    "@chainsafe/as-sha256" "^0.2.3"
+    "@chainsafe/as-sha256" "^0.3.0"
 
 "@chainsafe/persistent-ts@^0.19.1":
   version "0.19.1"
@@ -513,13 +505,13 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.8.20":
-  version "0.8.20"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.8.20.tgz#2c8e70e173a2540c8e4e0bad7c44fd836b8b256b"
-  integrity sha512-SjD/GqkByWbC5JC2W4cvaFjok6kfZeZDLLzr9k0Kn4sIOZPBfuRTumvV6ihqgn7ItOFpZRXMz0u4DgH+lr28WQ==
+"@chainsafe/ssz@^0.9.0":
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.0.tgz#27e40fa3316ef8736bbae898bdf90c1dce4a7045"
+  integrity sha512-QTLxxcknbiFrpgK2FplAxqxAyi0AGDNoAyxaUUJGdG0mXU4WWIKKLXtYATAXOHVruTzKZeydHatkrpKyYRdyjw==
   dependencies:
-    "@chainsafe/as-sha256" "^0.2.4"
-    "@chainsafe/persistent-merkle-tree" "^0.3.7"
+    "@chainsafe/as-sha256" "^0.3.0"
+    "@chainsafe/persistent-merkle-tree" "^0.4.0"
     case "^1.6.3"
 
 "@cspotcode/source-map-consumer@0.8.0":
@@ -7794,9 +7786,9 @@ minimist-options@4.1.0:
     kind-of "^6.0.3"
 
 minimist@^1.1.3, minimist@^1.2.0, minimist@^1.2.5:
-  version "1.2.5"
-  resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.5.tgz#67d66014b66a6a8aaa0c083c5fd58df4e4e97602"
-  integrity sha512-FM9nNUYrRBAELZQT3xeZQ7fmMOBg6nWNmJKTcgsJeaLstP/UODVpGsr5OhXhhXg6f+qtJ8uiZ+PUxkDWcgIXLw==
+  version "1.2.6"
+  resolved "https://registry.yarnpkg.com/minimist/-/minimist-1.2.6.tgz#8637a5b759ea0d6e98702cfb3a9283323c93af44"
+  integrity sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q==
 
 minipass-collect@^1.0.2:
   version "1.0.2"

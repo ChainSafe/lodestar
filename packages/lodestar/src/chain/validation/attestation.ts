@@ -1,14 +1,11 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {List, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {
   allForks,
   phase0,
   computeEpochAtSlot,
-  getSingleBitIndex,
-  AggregationBitsError,
-  AggregationBitsErrorCode,
   CachedBeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
@@ -55,15 +52,11 @@ export async function validateGossipAttestation(
   // (len([bit for bit in attestation.aggregation_bits if bit]) == 1, i.e. exactly 1 bit is set).
   // > TODO: Do this check **before** getting the target state but don't recompute zipIndexes
   const aggregationBits = attestation.aggregationBits;
-  let bitIndex: number;
-  try {
-    bitIndex = getSingleBitIndex(aggregationBits);
-  } catch (e) {
-    if (e instanceof AggregationBitsError && e.type.code === AggregationBitsErrorCode.NOT_EXACTLY_ONE_BIT_SET) {
-      throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET});
-    } else {
-      throw e;
-    }
+  const bitIndex = aggregationBits.getSingleTrueBit();
+  if (bitIndex === null) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.NOT_EXACTLY_ONE_AGGREGATION_BIT_SET,
+    });
   }
 
   // Attestations must be for a known block. If the block is unknown, we simply drop the
@@ -104,8 +97,10 @@ export async function validateGossipAttestation(
   // [REJECT] The number of aggregation bits matches the committee size
   // -- i.e. len(attestation.aggregation_bits) == len(get_beacon_committee(state, data.slot, data.index)).
   // > TODO: Is this necessary? Lighthouse does not do this check
-  if (aggregationBits.length !== committeeIndices.length) {
-    throw new AttestationError(GossipAction.REJECT, {code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS});
+  if (aggregationBits.bitLen !== committeeIndices.length) {
+    throw new AttestationError(GossipAction.REJECT, {
+      code: AttestationErrorCode.WRONG_NUMBER_OF_AGGREGATION_BITS,
+    });
   }
 
   // LH > verify_middle_checks
@@ -117,7 +112,7 @@ export async function validateGossipAttestation(
   // -- i.e. compute_subnet_for_attestation(committees_per_slot, attestation.data.slot, attestation.data.index) == subnet_id,
   // where committees_per_slot = get_committee_count_per_slot(state, attestation.data.target.epoch),
   // which may be pre-computed along with the committee information for the signature check.
-  const expectedSubnet = computeSubnetForSlot(attHeadState, attSlot, attIndex);
+  const expectedSubnet = attHeadState.epochCtx.computeSubnetForSlot(attSlot, attIndex);
   if (subnet !== null && subnet !== expectedSubnet) {
     throw new AttestationError(GossipAction.REJECT, {
       code: AttestationErrorCode.INVALID_SUBNET_ID,
@@ -138,7 +133,7 @@ export async function validateGossipAttestation(
 
   // [REJECT] The signature of attestation is valid.
   const indexedAttestation: phase0.IndexedAttestation = {
-    attestingIndices: [validatorIndex] as List<number>,
+    attestingIndices: [validatorIndex],
     data: attData,
     signature: attestation.signature,
   };
@@ -232,7 +227,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IPr
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
       code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
-      root: toHexString(beaconBlockRoot.valueOf() as typeof beaconBlockRoot),
+      root: toHexString(beaconBlockRoot as typeof beaconBlockRoot),
     });
   }
 
@@ -292,7 +287,7 @@ export function getCommitteeIndices(
   attestationSlot: Slot,
   attestationIndex: number
 ): number[] {
-  const {committees} = attestationTargetState.getShufflingAtSlot(attestationSlot);
+  const {committees} = attestationTargetState.epochCtx.getShufflingAtSlot(attestationSlot);
   const slotCommittees = committees[attestationSlot % SLOTS_PER_EPOCH];
 
   if (attestationIndex >= slotCommittees.length) {
@@ -309,7 +304,7 @@ export function getCommitteeIndices(
  */
 export function computeSubnetForSlot(state: CachedBeaconStateAllForks, slot: number, committeeIndex: number): number {
   const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
-  const committeesPerSlot = state.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+  const committeesPerSlot = state.epochCtx.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
   const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
   return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
 }

@@ -1,5 +1,4 @@
 import {bellatrix, Root, RootHex} from "@chainsafe/lodestar-types";
-import {ByteVector} from "@chainsafe/ssz";
 
 import {DATA, QUANTITY} from "../eth1/provider/utils";
 // An execution engine can produce a payload id anywhere the the uint64 range
@@ -52,8 +51,8 @@ export type ForkChoiceUpdateStatus =
 
 export type PayloadAttributes = {
   timestamp: number;
-  prevRandao: Uint8Array | ByteVector;
-  suggestedFeeRecipient: Uint8Array | ByteVector;
+  prevRandao: Uint8Array;
+  suggestedFeeRecipient: Uint8Array;
 };
 
 export type ApiPayloadAttributes = {

@@ -2,7 +2,6 @@
  * @module chain/blockAssembly
  */
 
-import {List} from "@chainsafe/ssz";
 import {
   Bytes96,
   Bytes32,
@@ -62,17 +61,17 @@ export async function assembleBody(
 
   const [attesterSlashings, proposerSlashings, voluntaryExits] = chain.opPool.getSlashingsAndExits(currentState);
   const attestations = chain.aggregatedAttestationPool.getAttestationsForBlock(currentState);
-  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState as CachedBeaconStateAllForks);
+  const {eth1Data, deposits} = await chain.eth1.getEth1DataAndDeposits(currentState);
 
   const blockBody: phase0.BeaconBlockBody = {
     randaoReveal,
     graffiti,
     eth1Data,
-    proposerSlashings: proposerSlashings as List<phase0.ProposerSlashing>,
-    attesterSlashings: attesterSlashings as List<phase0.AttesterSlashing>,
-    attestations: attestations as List<phase0.Attestation>,
-    deposits: deposits as List<phase0.Deposit>,
-    voluntaryExits: voluntaryExits as List<phase0.SignedVoluntaryExit>,
+    proposerSlashings,
+    attesterSlashings,
+    attestations,
+    deposits,
+    voluntaryExits,
   };
 
   const blockEpoch = computeEpochAtSlot(blockSlot);
@@ -151,7 +150,7 @@ async function prepareExecutionPayload(
   }
 
   const timestamp = computeTimeAtSlot(chain.config, state.slot, state.genesisTime);
-  const prevRandao = getRandaoMix(state, state.currentShuffling.epoch);
+  const prevRandao = getRandaoMix(state, state.epochCtx.epoch);
   const payloadId = await chain.executionEngine.notifyForkchoiceUpdate(parentHash, finalizedBlockHash, {
     timestamp,
     prevRandao,

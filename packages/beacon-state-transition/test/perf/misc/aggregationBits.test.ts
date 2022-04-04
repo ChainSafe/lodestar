@@ -1,8 +1,7 @@
 import {itBench, setBenchOpts} from "@dapplion/benchmark";
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {BitList, List, readonlyValues, TreeBacked} from "@chainsafe/ssz";
-import {zipIndexesCommitteeBits} from "../../../src";
+import {BitArray} from "@chainsafe/ssz";
 
 describe("aggregationBits", () => {
   setBenchOpts({noThreshold: true});
@@ -11,11 +10,11 @@ describe("aggregationBits", () => {
   const idPrefix = `aggregationBits - ${len} els`;
 
   let indexes: number[];
-  let bitlistTree: TreeBacked<BitList>;
+  let bitlistTree: BitArray;
 
   before(function () {
-    const aggregationBits = Array.from({length: len}, () => true);
-    bitlistTree = ssz.phase0.CommitteeBits.createTreeBackedFromStruct(aggregationBits as List<boolean>);
+    const aggregationBits = BitArray.fromBoolArray(Array.from({length: len}, () => true));
+    bitlistTree = ssz.phase0.CommitteeBits.toViewDU(aggregationBits);
     indexes = Array.from({length: len}, () => 165432);
   });
 
@@ -23,11 +22,7 @@ describe("aggregationBits", () => {
   // aggregationBits - 2048 els - zipIndexesInBitList	50.904 us/op	236.17 us/op	0.22
 
   // This benchmark is very unstable in CI. We already know that zipIndexesInBitList is faster
-  itBench(`${idPrefix} - readonlyValues`, () => {
-    Array.from(readonlyValues(bitlistTree));
-  });
-
   itBench(`${idPrefix} - zipIndexesInBitList`, () => {
-    zipIndexesCommitteeBits(indexes, bitlistTree);
+    bitlistTree.intersectValues(indexes);
   });
 });

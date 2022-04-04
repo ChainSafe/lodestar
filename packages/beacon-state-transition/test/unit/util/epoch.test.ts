@@ -1,7 +1,7 @@
 import {assert} from "chai";
 
 import {GENESIS_SLOT, MAX_SEED_LOOKAHEAD} from "@chainsafe/lodestar-params";
-import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot} from "@chainsafe/lodestar-types";
 import {
   computeStartSlotAtEpoch,
   getPreviousEpoch,
@@ -61,7 +61,7 @@ describe("getPreviousEpoch", () => {
 
   for (const testValue of testValues) {
     it("epoch should return previous epoch", () => {
-      const state: phase0.BeaconState = generateState({slot: testValue.slot});
+      const state = generateState({slot: testValue.slot});
       const result = getPreviousEpoch(state);
       assert.equal(result, testValue.expectedEpoch);
     });

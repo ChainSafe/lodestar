@@ -14,9 +14,11 @@ export function processHistoricalRootsUpdate(state: CachedBeaconStateAllForks, e
   // set historical root accumulator
   if (nextEpoch % intDiv(SLOTS_PER_HISTORICAL_ROOT, SLOTS_PER_EPOCH) === 0) {
     state.historicalRoots.push(
-      ssz.phase0.HistoricalBatch.hashTreeRoot({
-        blockRoots: state.blockRoots,
-        stateRoots: state.stateRoots,
+      // HistoricalBatchRoots = Non-spec'ed helper type to allow efficient hashing in epoch transition.
+      // This type is like a 'Header' of HistoricalBatch where its fields are hashed.
+      ssz.phase0.HistoricalBatchRoots.hashTreeRoot({
+        blockRoots: state.blockRoots.hashTreeRoot(),
+        stateRoots: state.stateRoots.hashTreeRoot(),
       })
     );
   }

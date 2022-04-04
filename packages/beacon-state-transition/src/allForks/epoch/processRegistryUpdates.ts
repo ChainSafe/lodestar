@@ -28,18 +28,18 @@ export function processRegistryUpdates(state: CachedBeaconStateAllForks, epochPr
   for (const index of epochProcess.indicesToEject) {
     // set validator exit epoch and withdrawable epoch
     // TODO: Figure out a way to quickly set properties on the validators tree
-    initiateValidatorExit(state, validators[index]);
+    initiateValidatorExit(state, validators.get(index));
   }
 
   // set new activation eligibilities
   for (const index of epochProcess.indicesEligibleForActivationQueue) {
-    validators[index].activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
+    validators.get(index).activationEligibilityEpoch = epochCtx.currentShuffling.epoch + 1;
   }
 
   const finalityEpoch = state.finalizedCheckpoint.epoch;
   // dequeue validators for activation up to churn limit
   for (const index of epochProcess.indicesEligibleForActivation.slice(0, epochCtx.churnLimit)) {
-    const validator = validators[index];
+    const validator = validators.get(index);
     // placement in queue is finalized
     if (validator.activationEligibilityEpoch > finalityEpoch) {
       // remaining validators all have an activationEligibilityEpoch that is higher anyway, break early

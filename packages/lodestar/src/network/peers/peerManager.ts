@@ -1,6 +1,8 @@
 import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
+import {BitArray} from "@chainsafe/ssz";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -24,7 +26,6 @@ import {
 } from "./utils";
 import {SubnetType} from "../metadata";
 import {Eth2Gossipsub} from "../gossip/gossipsub";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -270,7 +271,7 @@ export class PeerManager {
       peerData.metadata = {
         seqNumber: metadata.seqNumber,
         attnets: metadata.attnets,
-        syncnets: (metadata as Partial<altair.Metadata>).syncnets || [],
+        syncnets: (metadata as Partial<altair.Metadata>).syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
       };
     }
   }
@@ -401,8 +402,8 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toB58String());
         return {
           id: peer,
-          attnets: peerData?.metadata?.attnets ?? [],
-          syncnets: peerData?.metadata?.syncnets ?? [],
+          attnets: peerData?.metadata?.attnets ?? BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT),
+          syncnets: peerData?.metadata?.syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
           score: this.peerRpcScores.getScore(peer),
         };
       }),
@@ -658,7 +659,7 @@ function countAttnets(peerData?: PeerData): number {
 
   let count = 0;
   for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
-    if (attNets[i]) count++;
+    if (attNets.get(i)) count++;
   }
 
   return count;

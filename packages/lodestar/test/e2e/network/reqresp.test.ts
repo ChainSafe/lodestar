@@ -7,6 +7,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {sleep as _sleep} from "@chainsafe/lodestar-utils";
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
+import {BitArray} from "@chainsafe/ssz";
 import {createPeerId, IReqRespOptions, Network, prettyPrintPeerId} from "../../../src/network";
 import {defaultNetworkOptions, INetworkOptions} from "../../../src/network/options";
 import {Method, Encoding} from "../../../src/network/reqresp/types";
@@ -118,8 +119,8 @@ describe("network / ReqResp", function () {
     const [netA, netB] = await createAndConnectPeers();
 
     // Modify the metadata to make the seqNumber non-zero
-    netB.metadata.attnets = [];
-    netB.metadata.attnets = [];
+    netB.metadata.attnets = BitArray.fromBitLen(0);
+    netB.metadata.attnets = BitArray.fromBitLen(0);
     const expectedPong = netB.metadata.seqNumber;
     expect(expectedPong.toString()).to.deep.equal("2", "seqNumber");
 

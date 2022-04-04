@@ -46,7 +46,7 @@ export function bytesToBigInt(value: Uint8Array, endianness: Endianness = "le"):
   throw new Error("endianness must be either 'le' or 'be'");
 }
 
-export function toHex(buffer: Parameters<typeof Buffer.from>[0]): string {
+export function toHex(buffer: Uint8Array | Parameters<typeof Buffer.from>[0]): string {
   if (Buffer.isBuffer(buffer)) {
     return "0x" + buffer.toString("hex");
   } else if (buffer instanceof Uint8Array) {

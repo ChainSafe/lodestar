@@ -9,7 +9,7 @@ import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default"
 import {HttpClient} from "@chainsafe/lodestar-api/src";
 import {getClient} from "@chainsafe/lodestar-api/src/keymanager/client";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {ByteVector, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
@@ -483,7 +483,7 @@ function dirContainFileWithPubkeyInFilename(dir: string, pubkeys: string[]): boo
 }
 
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function createAttesterDuty(pubkey: ByteVector, slot: number, committeeIndex: number, validatorIndex: number) {
+function createAttesterDuty(pubkey: Uint8Array, slot: number, committeeIndex: number, validatorIndex: number) {
   return {
     slot: slot,
     committeeIndex: committeeIndex,

@@ -1,6 +1,6 @@
 import bls, {CoordType, PublicKey} from "@chainsafe/bls";
-import {allForks, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {ByteVector} from "@chainsafe/ssz";
+import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "./types";
 
 export type Index2PubkeyCache = PublicKey[];
 
@@ -14,7 +14,7 @@ type PubkeyHex = string;
  *
  * See https://github.com/ChainSafe/lodestar/issues/3446
  */
-function toMemoryEfficientHexStr(hex: ByteVector | Uint8Array | string): string {
+function toMemoryEfficientHexStr(hex: Uint8Array | string): string {
   if (typeof hex === "string") {
     if (hex.startsWith("0x")) {
       hex = hex.slice(2);
@@ -36,7 +36,7 @@ export class PubkeyIndexMap {
   /**
    * Must support reading with string for API support where pubkeys are already strings
    */
-  get(key: ByteVector | Uint8Array | PubkeyHex): ValidatorIndex | undefined {
+  get(key: Uint8Array | PubkeyHex): ValidatorIndex | undefined {
     return this.map.get(toMemoryEfficientHexStr(key));
   }
 
@@ -53,7 +53,7 @@ export class PubkeyIndexMap {
  * If pubkey caches are empty: SLOW CODE - 🐢
  */
 export function syncPubkeys(
-  state: allForks.BeaconState,
+  state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap,
   index2pubkey: Index2PubkeyCache
 ): void {
@@ -66,7 +66,7 @@ export function syncPubkeys(
 
   const newCount = state.validators.length;
   for (let i = pubkey2index.size; i < newCount; i++) {
-    const pubkey = validators[i].pubkey.valueOf() as Uint8Array;
+    const pubkey = validators.getReadonly(i).pubkey;
     pubkey2index.set(pubkey, i);
     // Pubkeys must be checked for group + inf. This must be done only once when the validator deposit is processed.
     // Afterwards any public key is the state consider validated.

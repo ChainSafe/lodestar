@@ -21,17 +21,10 @@ export class AttestationLowerBoundRepository {
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = new ContainerType<SlashingProtectionLowerBound>({
-      fields: {
-        minSourceEpoch: ssz.Epoch,
-        minTargetEpoch: ssz.Epoch,
-      },
-      // Custom type, not in the consensus specs
-      casingMap: {
-        minSourceEpoch: "min_source_epoch",
-        minTargetEpoch: "min_target_epoch",
-      },
-    });
+    this.type = new ContainerType({
+      minSourceEpoch: ssz.Epoch,
+      minTargetEpoch: ssz.Epoch,
+    }); // casing doesn't matter
   }
 
   async get(pubkey: BLSPubkey): Promise<SlashingProtectionLowerBound | null> {
