@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {ArrayLike, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {BUCKET_LENGTH} from ".";
 import {IFilterOptions, IKeyValue} from "./controller";
 import {Db} from "./controller/interface";
@@ -11,8 +11,8 @@ export type Id = Uint8Array | string | number | bigint;
 
 /**
  * Repository is a high level kv storage
- * managing a Uint8rray to Uint8rray kv database
- * It translates typed keys and values to Uint8rrays required by the underlying database
+ * managing a Uint8Array to Uint8Array kv database
+ * It translates typed keys and values to Uint8Arrays required by the underlying database
  *
  * By default, SSZ-encoded values,
  * indexed by root
@@ -100,7 +100,7 @@ export abstract class Repository<I extends Id, T> {
     await this.delete(this.getId(value));
   }
 
-  async batchPut(items: ArrayLike<IKeyValue<I, T>>): Promise<void> {
+  async batchPut(items: IKeyValue<I, T>[]): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
@@ -111,7 +111,7 @@ export abstract class Repository<I extends Id, T> {
   }
 
   // Similar to batchPut but we support value as Uint8Array
-  async batchPutBinary(items: ArrayLike<IKeyValue<I, Uint8Array>>): Promise<void> {
+  async batchPutBinary(items: IKeyValue<I, Uint8Array>[]): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.batchPut(
       Array.from({length: items.length}, (_, i) => ({
@@ -121,12 +121,12 @@ export abstract class Repository<I extends Id, T> {
     );
   }
 
-  async batchDelete(ids: ArrayLike<I>): Promise<void> {
+  async batchDelete(ids: I[]): Promise<void> {
     this.dbWriteMetrics?.inc();
     await this.db.batchDelete(Array.from({length: ids.length}, (_, i) => this.encodeKey(ids[i])));
   }
 
-  async batchAdd(values: ArrayLike<T>): Promise<void> {
+  async batchAdd(values: T[]): Promise<void> {
     await this.batchPut(
       Array.from({length: values.length}, (_, i) => ({
         key: this.getId(values[i]),
@@ -135,7 +135,7 @@ export abstract class Repository<I extends Id, T> {
     );
   }
 
-  async batchRemove(values: ArrayLike<T>): Promise<void> {
+  async batchRemove(values: T[]): Promise<void> {
     await this.batchDelete(Array.from({length: values.length}, (ignored, i) => this.getId(values[i])));
   }
 

@@ -1,6 +1,5 @@
 import {EPOCHS_PER_ETH1_VOTING_PERIOD} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 import {EpochProcess, CachedBeaconStateAllForks} from "../../types";
 
 /**
@@ -13,6 +12,6 @@ export function processEth1DataReset(state: CachedBeaconStateAllForks, epochProc
 
   // reset eth1 data votes
   if (nextEpoch % EPOCHS_PER_ETH1_VOTING_PERIOD === 0) {
-    state.eth1DataVotes = ([] as phase0.Eth1Data[]) as List<phase0.Eth1Data>;
+    state.eth1DataVotes = ssz.phase0.Eth1DataVotes.defaultViewDU();
   }
 }

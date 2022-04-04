@@ -1,7 +1,8 @@
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 import {aggregatePublicKeys} from "@chainsafe/bls";
-import {CachedBeaconStateAltair} from "../../types";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
+import {ssz} from "@chainsafe/lodestar-types";
 import {getNextSyncCommitteeIndices} from "../../util/seed";
+import {CachedBeaconStateAltair} from "../../types";
 
 /**
  * Rotate nextSyncCommittee to currentSyncCommittee if sync committee period is over.
@@ -23,17 +24,16 @@ export function processSyncCommitteeUpdates(state: CachedBeaconStateAltair): voi
     );
 
     // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-    const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map(
-      (index) => state.validators[index].pubkey.valueOf() as Uint8Array
-    );
+    const nextSyncCommitteePubkeys = nextSyncCommitteeIndices.map((index) => state.validators.get(index).pubkey);
 
     // Rotate syncCommittee in state
     state.currentSyncCommittee = state.nextSyncCommittee;
-    state.nextSyncCommittee = {
+    state.nextSyncCommittee = ssz.altair.SyncCommittee.toViewDU({
       pubkeys: nextSyncCommitteePubkeys,
       aggregatePubkey: aggregatePublicKeys(nextSyncCommitteePubkeys),
-    };
+    });
 
+    // Rotate syncCommittee cache
     state.epochCtx.rotateSyncCommitteeIndexed(nextSyncCommitteeIndices);
   }
 }

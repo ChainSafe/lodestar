@@ -1,5 +1,5 @@
 import {Bucket, encodeKey, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {Root, Uint64} from "@chainsafe/lodestar-types";
+import {Root, UintNum64} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {LodestarValidatorDatabaseController} from "../types";
 
@@ -22,19 +22,16 @@ export class MetaDataRepository {
   }
 
   async setGenesisValidatorsRoot(genesisValidatorsRoot: Root): Promise<void> {
-    await this.db.put(
-      this.encodeKey(GENESIS_VALIDATORS_ROOT),
-      Buffer.from(genesisValidatorsRoot.valueOf() as Uint8Array)
-    );
+    await this.db.put(this.encodeKey(GENESIS_VALIDATORS_ROOT), Buffer.from(genesisValidatorsRoot));
   }
 
-  async getGenesisTime(): Promise<Uint64 | null> {
+  async getGenesisTime(): Promise<UintNum64 | null> {
     const bytes = await this.db.get(this.encodeKey(GENESIS_TIME));
-    return bytes ? ssz.Uint64.deserialize(bytes) : null;
+    return bytes ? ssz.UintNum64.deserialize(bytes) : null;
   }
 
-  async setGenesisTime(genesisTime: Uint64): Promise<void> {
-    await this.db.put(this.encodeKey(GENESIS_TIME), Buffer.from(ssz.Uint64.serialize(genesisTime)));
+  async setGenesisTime(genesisTime: UintNum64): Promise<void> {
+    await this.db.put(this.encodeKey(GENESIS_TIME), Buffer.from(ssz.UintNum64.serialize(genesisTime)));
   }
 
   private encodeKey(key: Uint8Array): Uint8Array {

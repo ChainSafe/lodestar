@@ -1,15 +1,10 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
-import {
-  allForks,
-  beforeProcessEpoch,
-  CachedBeaconStateAllForks,
-  createCachedBeaconState,
-  EpochProcess,
-} from "../../../../src";
+import {allForks, beforeProcessEpoch, CachedBeaconStateAllForks, EpochProcess} from "../../../../src";
 import {numValidators} from "../../util";
 import {StateEpoch} from "../../types";
+import {createCachedBeaconStateTest} from "../../../utils/state";
 
 // PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 // of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
@@ -54,16 +49,16 @@ function getEffectiveBalanceTestData(
   state: CachedBeaconStateAllForks;
   epochProcess: EpochProcess;
 } {
-  const stateTree = ssz.phase0.BeaconState.defaultTreeBacked();
+  const stateTree = ssz.phase0.BeaconState.defaultViewDU();
   stateTree.slot = 1;
 
-  const activeValidator = {
-    ...ssz.phase0.Validator.defaultTreeBacked(),
+  const activeValidator = ssz.phase0.Validator.toViewDU({
+    ...ssz.phase0.Validator.defaultValue(),
     exitEpoch: Infinity,
     withdrawableEpoch: Infinity,
     // Set current effective balance to max
     effectiveBalance: 32e9,
-  };
+  });
 
   const balances: number[] = [];
   for (let i = 0; i < vc; i++) {
@@ -76,12 +71,14 @@ function getEffectiveBalanceTestData(
     stateTree.validators.push(activeValidator);
   }
 
-  const cachedBeaconState = createCachedBeaconState(config, stateTree, {skipSyncPubkeys: true});
+  stateTree.commit();
+
+  const cachedBeaconState = createCachedBeaconStateTest(stateTree, config, {skipSyncPubkeys: true});
   const epochProcess = beforeProcessEpoch(cachedBeaconState);
   epochProcess.balances = balances;
 
   return {
-    state: cachedBeaconState as CachedBeaconStateAllForks,
+    state: cachedBeaconState,
     epochProcess: epochProcess,
   };
 }

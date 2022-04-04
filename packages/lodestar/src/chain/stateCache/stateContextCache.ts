@@ -1,5 +1,5 @@
-import {ByteVector, toHexString} from "@chainsafe/ssz";
-import {Epoch, RootHex} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {Epoch, Root, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
 import {IMetrics} from "../../metrics";
@@ -58,7 +58,7 @@ export class StateContextCache {
     }
   }
 
-  delete(root: ByteVector): void {
+  delete(root: Root): void {
     const key = toHexString(root);
     const item = this.cache.get(key);
     if (!item) return;
@@ -66,7 +66,7 @@ export class StateContextCache {
     this.cache.delete(key);
   }
 
-  batchDelete(roots: ByteVector[]): void {
+  batchDelete(roots: Root[]): void {
     roots.map((root) => this.delete(root));
   }
 

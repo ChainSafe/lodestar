@@ -1,11 +1,11 @@
 import {join} from "node:path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
-import {TreeBacked} from "@chainsafe/ssz";
+import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {bnToNum} from "@chainsafe/lodestar-utils";
-import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest, shouldVerify} from "../type";
 import {getConfig} from "./util";
@@ -18,17 +18,19 @@ export function sanity(fork: ForkName): void {
 }
 
 export function sanitySlot(fork: ForkName): void {
-  describeDirectorySpecTest<IProcessSlotsTestCase, allForks.BeaconState>(
+  describeDirectorySpecTest<IProcessSlotsTestCase, BeaconStateAllForks>(
     `${ACTIVE_PRESET}/${fork}/sanity/slots`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/sanity/slots/pyspec_tests`),
     (testcase) => {
-      const stateTB = (testcase.pre as TreeBacked<allForks.BeaconState>).clone();
-      const state = createCachedBeaconState(getConfig(fork), stateTB);
+      const stateTB = testcase.pre.clone();
+      const state = createCachedBeaconStateTest(stateTB, getConfig(fork));
       const postState = allForks.processSlots(state, state.slot + bnToNum(testcase.slots));
-      return postState.type.createTreeBacked(postState.tree);
+      // TODO: May be part of runStateTranstion, necessary to commit again?
+      postState.commit();
+      return postState;
     },
     {
-      inputTypes: {...inputTypeSszTreeBacked, slots: InputType.YAML},
+      inputTypes: {...inputTypeSszTreeViewDU, slots: InputType.YAML},
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
@@ -44,29 +46,25 @@ export function sanitySlot(fork: ForkName): void {
 }
 
 export function sanityBlock(fork: ForkName, testPath: string): void {
-  describeDirectorySpecTest<IBlockSanityTestCase, allForks.BeaconState>(
+  describeDirectorySpecTest<IBlockSanityTestCase, BeaconStateAllForks>(
     `${ACTIVE_PRESET}/${fork}/sanity/blocks`,
     join(SPEC_TEST_LOCATION, testPath),
     (testcase) => {
-      const stateTB = testcase.pre as TreeBacked<allForks.BeaconState>;
-      let wrappedState = createCachedBeaconState(getConfig(fork), stateTB);
+      const stateTB = testcase.pre;
+      let wrappedState = createCachedBeaconStateTest(stateTB, getConfig(fork));
       const verify = shouldVerify(testcase);
       for (let i = 0; i < testcase.meta.blocks_count; i++) {
         const signedBlock = testcase[`blocks_${i}`] as bellatrix.SignedBeaconBlock;
-        wrappedState = allForks.stateTransition(
-          wrappedState,
-          ssz[fork].SignedBeaconBlock.createTreeBackedFromStruct(signedBlock),
-          {
-            verifyStateRoot: verify,
-            verifyProposer: verify,
-            verifySignatures: verify,
-          }
-        );
+        wrappedState = allForks.stateTransition(wrappedState, signedBlock, {
+          verifyStateRoot: verify,
+          verifyProposer: verify,
+          verifySignatures: verify,
+        });
       }
       return wrappedState;
     },
     {
-      inputTypes: inputTypeSszTreeBacked,
+      inputTypes: inputTypeSszTreeViewDU,
       sszTypes: {
         pre: ssz[fork].BeaconState,
         post: ssz[fork].BeaconState,
@@ -98,12 +96,12 @@ interface IBlockSanityTestCase extends IBaseSpecTest {
     blocks_count: number;
     bls_setting: bigint;
   };
-  pre: allForks.BeaconState;
-  post: allForks.BeaconState;
+  pre: BeaconStateAllForks;
+  post: BeaconStateAllForks;
 }
 
 interface IProcessSlotsTestCase extends IBaseSpecTest {
-  pre: allForks.BeaconState;
-  post?: allForks.BeaconState;
+  pre: BeaconStateAllForks;
+  post?: BeaconStateAllForks;
   slots: bigint;
 }

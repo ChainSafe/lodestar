@@ -1,6 +1,5 @@
 import {expect} from "chai";
 import {LodestarError, mapValues} from "@chainsafe/lodestar-utils";
-import {Json} from "@chainsafe/ssz";
 
 export function expectThrowsLodestarError(fn: () => void, expectedErr: LodestarError<any> | string): void {
   try {
@@ -49,7 +48,7 @@ export function expectLodestarError<T extends {code: string}>(err1: LodestarErro
   expect(errMeta1).to.deep.equal(errMeta2, "Wrong LodestarError metadata");
 }
 
-export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | Json): Json {
+export function getErrorMetadata<T extends {code: string}>(err: LodestarError<T> | Error | unknown): unknown {
   if (err instanceof LodestarError) {
     return mapValues(err.getMetadata(), (value) => getErrorMetadata(value as any));
   } else if (err instanceof Error) {

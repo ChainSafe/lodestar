@@ -2,7 +2,6 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
 import {ChainEvent} from "../../../src/chain";
 import {IBeaconNodeOptions} from "../../../src/node/options";
-import {Json} from "@chainsafe/ssz";
 
 export type NodeWorkerOptions = {
   params: Pick<IChainConfig, "SECONDS_PER_SLOT" | "ALTAIR_FORK_EPOCH">;
@@ -26,5 +25,5 @@ export enum MessageEvent {
 }
 
 export type Message =
-  | {event: ChainEvent.justified; checkpoint: Json}
+  | {event: ChainEvent.justified; checkpoint: unknown}
   | {event: MessageEvent.NodeStarted; multiaddr: string};

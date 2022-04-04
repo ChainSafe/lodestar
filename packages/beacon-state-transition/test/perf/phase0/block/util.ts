@@ -1,16 +1,17 @@
 import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {SecretKey} from "@chainsafe/blst";
+import {toGindex, Tree} from "@chainsafe/persistent-merkle-tree";
+import {BitArray} from "@chainsafe/ssz";
 import {DOMAIN_DEPOSIT, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
-import {List} from "@chainsafe/ssz";
 import {
   computeDomain,
   computeEpochAtSlot,
   computeSigningRoot,
   ZERO_HASH,
   CachedBeaconStateAllForks,
+  CachedBeaconStateAltair,
 } from "../../../../src";
-import {LeafNode} from "@chainsafe/persistent-merkle-tree";
 import {getBlockRoot, getBlockRootAtSlot} from "../../../../src";
 
 export type BlockOpts = {
@@ -47,7 +48,7 @@ export function getBlockPhase0(
   const attesterSlashingStartIndex = proposerSlashingStartIndex + proposerSlashingLen * exitedIndexStep;
   const voluntaryExitStartIndex = attesterSlashingStartIndex + attesterSlashingLen * bitsLen * exitedIndexStep;
 
-  const proposerSlashings = ([] as phase0.ProposerSlashing[]) as List<phase0.ProposerSlashing>;
+  const proposerSlashings = [] as phase0.ProposerSlashing[];
   for (let i = 0; i < proposerSlashingLen; i++) {
     const proposerIndex = proposerSlashingStartIndex + i * exitedIndexStep;
     proposerSlashings.push({
@@ -64,11 +65,11 @@ export function getBlockPhase0(
 
   const attSlot = stateSlot - 2;
   const attEpoch = computeEpochAtSlot(attSlot);
-  const attesterSlashings = ([] as phase0.AttesterSlashing[]) as List<phase0.AttesterSlashing>;
+  const attesterSlashings = [] as phase0.AttesterSlashing[];
   for (let i = 0; i < attesterSlashingLen; i++) {
     // Double vote for 128 participants
     const startIndex = attesterSlashingStartIndex + i * bitsLen * exitedIndexStep;
-    const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep) as List<number>;
+    const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep);
 
     const attData: phase0.AttestationData = {
       slot: attSlot,
@@ -91,8 +92,8 @@ export function getBlockPhase0(
     });
   }
 
-  const attestations = ([] as phase0.Attestation[]) as List<phase0.Attestation>;
-  const committeeCountPerSlot = preState.getCommitteeCountPerSlot(attEpoch);
+  const attestations = [] as phase0.Attestation[];
+  const committeeCountPerSlot = preState.epochCtx.getCommitteeCountPerSlot(attEpoch);
   const attSource =
     attEpoch === stateEpoch ? preState.currentJustifiedCheckpoint : preState.previousJustifiedCheckpoint;
   for (let i = 0; i < attestationLen; i++) {
@@ -100,7 +101,7 @@ export function getBlockPhase0(
     const attCommittee = preState.epochCtx.getBeaconCommittee(attSlot, attIndex);
     // Spread attesting indices through the whole range, offset on each attestation
     attestations.push({
-      aggregationBits: getAggregationBits(attCommittee.length, bitsLen) as List<boolean>,
+      aggregationBits: getAggregationBits(attCommittee.length, bitsLen),
       data: {
         slot: attSlot,
         index: attIndex,
@@ -115,7 +116,7 @@ export function getBlockPhase0(
   // Moved to different function since it's a bit complex
   const deposits = getDeposits(preState, depositsLen);
 
-  const voluntaryExits = ([] as phase0.SignedVoluntaryExit[]) as List<phase0.SignedVoluntaryExit>;
+  const voluntaryExits = [] as phase0.SignedVoluntaryExit[];
   for (let i = 0; i < voluntaryExitLen; i++) {
     voluntaryExits.push({
       message: {
@@ -127,10 +128,10 @@ export function getBlockPhase0(
   }
 
   const slot = preState.slot + 1;
-  return ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct({
+  return {
     message: {
       slot,
-      proposerIndex: preState.getBeaconProposer(slot),
+      proposerIndex: preState.epochCtx.getBeaconProposer(slot),
       parentRoot: ssz.phase0.BeaconBlockHeader.hashTreeRoot(preState.latestBlockHeader),
       // TODO: Compute the state root properly!
       stateRoot: rootA,
@@ -152,22 +153,26 @@ export function getBlockPhase0(
       },
     },
     signature: emptySig,
-  });
+  };
 }
 
 /**
  * Get an altair block.
  * This mutates the input preState as well to mark attestations not seen by the network.
  */
-export function getBlockAltair(preState: CachedBeaconStateAllForks, opts: BlockAltairOpts): altair.SignedBeaconBlock {
+export function getBlockAltair(preState: CachedBeaconStateAltair, opts: BlockAltairOpts): altair.SignedBeaconBlock {
   const emptySig = Buffer.alloc(96);
-  const phase0Block = getBlockPhase0(preState as CachedBeaconStateAllForks, opts);
+  const phase0Block = getBlockPhase0(preState, opts);
   const stateEpoch = computeEpochAtSlot(preState.slot);
   for (const attestation of phase0Block.message.body.attestations) {
     const attEpoch = computeEpochAtSlot(attestation.data.slot);
     const epochParticipation =
       attEpoch === stateEpoch ? preState.currentEpochParticipation : preState.previousEpochParticipation;
-    const attestingIndices = preState.getAttestingIndices(attestation.data, attestation.aggregationBits);
+
+    const committeeindices = preState.epochCtx.getBeaconCommittee(attestation.data.slot, attestation.data.index);
+    const attestingIndices = attestation.aggregationBits.intersectValues(committeeindices);
+
+    // TODO: Is this necessary?
     for (const index of attestingIndices) {
       epochParticipation.set(index, 0);
     }
@@ -191,13 +196,18 @@ export function getBlockAltair(preState: CachedBeaconStateAllForks, opts: BlockA
  * Generate valid deposits with valid signatures and valid merkle proofs.
  * NOTE: Mutates `preState` to add the new `eth1Data.depositRoot`
  */
-function getDeposits(preState: CachedBeaconStateAllForks, count: number): List<phase0.Deposit> {
-  const depositRootTree = ssz.phase0.DepositDataRootList.defaultTreeBacked();
+function getDeposits(preState: CachedBeaconStateAllForks, count: number): phase0.Deposit[] {
+  const depositRootViewDU = ssz.phase0.DepositDataRootList.toViewDU([]);
   const depositCount = preState.eth1Data.depositCount;
   const withdrawalCredentials = Buffer.alloc(32, 0xee);
 
   const depositsData: phase0.DepositData[] = [];
-  const deposits = ([] as phase0.Deposit[]) as List<phase0.Deposit>;
+  const deposits = [] as phase0.Deposit[];
+
+  // Fill depositRootViewDU up to depositCount
+  // Instead of actually filling it, just mutate the length to allow .set()
+  depositRootViewDU["_length"] = depositCount + count;
+  depositRootViewDU["dirtyLength"] = true;
 
   for (let i = 0; i < count; i++) {
     const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
@@ -206,28 +216,30 @@ function getDeposits(preState: CachedBeaconStateAllForks, count: number): List<p
     // Sign with disposable keys
     const domain = computeDomain(DOMAIN_DEPOSIT, config.GENESIS_FORK_VERSION, ZERO_HASH);
     const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
-    const signature = sk.sign(signingRoot).toBytes();
-    const depositData: phase0.DepositData = {...depositMessage, signature};
+    const depositData: phase0.DepositData = {...depositMessage, signature: sk.sign(signingRoot).toBytes()};
     depositsData.push(depositData);
 
     // First, push all deposits to the tree to generate proofs against the same root
     const index = depositCount + i;
-    const gindex = depositRootTree.type.getPropertyGindex(index);
     const depositDataRoot = ssz.phase0.DepositData.hashTreeRoot(depositData);
-    depositRootTree.tree.setNode(gindex, new LeafNode(depositDataRoot), true);
+    depositRootViewDU.set(index, depositDataRoot);
   }
+
+  // Commit to get `.node` with changes from above
+  depositRootViewDU.commit();
+  const depositRootTree = new Tree(depositRootViewDU.node);
 
   // Once the tree is complete, create proofs for each
   for (let i = 0; i < count; i++) {
-    const gindex = depositRootTree.type.getPropertyGindex(depositCount + i);
-    const proof = depositRootTree.tree.getSingleProof(gindex);
+    const gindex = toGindex(ssz.phase0.DepositDataRootList.depth, BigInt(depositCount + i));
+    const proof = depositRootTree.getSingleProof(gindex);
     deposits.push({proof, data: depositsData[i]});
   }
 
   // Write eth1Data to state
   if (count > 0) {
     preState.eth1Data.depositCount = depositCount + count;
-    preState.eth1Data.depositRoot = depositRootTree.hashTreeRoot();
+    preState.eth1Data.depositRoot = depositRootViewDU.hashTreeRoot();
   }
 
   return deposits;
@@ -242,10 +254,10 @@ function linspace(from: number, count: number, step: number): number[] {
   return arr;
 }
 
-function getAggregationBits(len: number, participants: number): boolean[] {
-  const bits: boolean[] = [];
-  for (let i = 0; i < len; i++) {
-    bits.push(i < participants);
+function getAggregationBits(len: number, participants: number): BitArray {
+  const bits = BitArray.fromBitLen(len);
+  for (let i = 0; i < participants; i++) {
+    bits.set(i, true);
   }
   return bits;
 }

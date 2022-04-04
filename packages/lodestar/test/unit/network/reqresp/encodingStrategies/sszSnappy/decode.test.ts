@@ -51,13 +51,13 @@ describe("network / reqresp / sszSnappy / decode", () => {
         id: "if it read more than maxEncodedLen",
         type: ssz.phase0.Ping,
         error: SszSnappyErrorCode.TOO_MUCH_BYTES_READ,
-        chunks: [Buffer.from(varint.encode(ssz.phase0.Ping.getMinSerializedLength())), Buffer.alloc(100)],
+        chunks: [Buffer.from(varint.encode(ssz.phase0.Ping.minSize)), Buffer.alloc(100)],
       },
       {
         id: "if failed ssz snappy input malformed",
         type: ssz.phase0.Status,
         error: SszSnappyErrorCode.DECOMPRESSOR_ERROR,
-        chunks: [Buffer.from(varint.encode(ssz.phase0.Status.minSize())), Buffer.from("wrong snappy data")],
+        chunks: [Buffer.from(varint.encode(ssz.phase0.Status.minSize)), Buffer.from("wrong snappy data")],
       },
     ];
 

@@ -1,5 +1,5 @@
 import {Epoch, Root, ssz} from "@chainsafe/lodestar-types";
-import {fromHexString, toHexString, Vector} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 
 export const blsPubkeyLen = 48;
 export const ZERO_ROOT = ssz.Root.defaultValue();
@@ -31,7 +31,7 @@ export function minEpoch(epochs: Epoch[]): Epoch | null {
   return epochs.length > 0 ? Math.min(...epochs) : null;
 }
 
-export function uniqueVectorArr(buffers: Vector<number>[]): Vector<number>[] {
+export function uniqueVectorArr(buffers: Uint8Array[]): Uint8Array[] {
   const bufferStr = new Set<string>();
   return buffers.filter((buffer) => {
     const str = toHexString(buffer);

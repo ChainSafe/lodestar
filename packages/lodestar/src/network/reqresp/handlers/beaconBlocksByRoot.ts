@@ -10,7 +10,7 @@ export async function* onBeaconBlocksByRoot(
   db: IBeaconDb
 ): AsyncIterable<ReqRespBlockResponse> {
   for (const blockRoot of requestBody) {
-    const root = blockRoot.valueOf() as Uint8Array;
+    const root = blockRoot;
     const summary = chain.forkChoice.getBlock(root);
     let blockBytes: Uint8Array | null = null;
 

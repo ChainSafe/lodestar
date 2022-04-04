@@ -1,19 +1,8 @@
-import {BitList, List, readonlyValuesListOfLeafNodeStruct} from "@chainsafe/ssz";
 import bls, {CoordType} from "@chainsafe/bls";
+import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncPeriod} from "@chainsafe/lodestar-types";
+import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {
-  BLSSignature,
-  CommitteeIndex,
-  Epoch,
-  Slot,
-  ValidatorIndex,
-  phase0,
-  allForks,
-  Number64,
-  altair,
-  SyncPeriod,
-} from "@chainsafe/lodestar-types";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {
+  ATTESTATION_SUBNET_COUNT,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
@@ -22,21 +11,20 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
-  computeProposers,
   computeStartSlotAtEpoch,
   getChurnLimit,
   isActiveValidator,
   isAggregatorFromCommitteeLength,
-  zipIndexesCommitteeBits,
+  computeProposers,
   computeSyncPeriodAtEpoch,
 } from "../util";
 import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
 import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types";
 import {
   computeSyncCommitteeCache,
   getSyncCommitteeCache,
@@ -48,11 +36,15 @@ import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../ut
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */
 export const PROPOSER_WEIGHT_FACTOR = PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT);
 
+export type EpochContextImmutableData = {
+  config: IBeaconConfig;
+  pubkey2index: PubkeyIndexMap;
+  index2pubkey: Index2PubkeyCache;
+};
+
 export type EpochContextOpts = {
-  pubkey2index?: PubkeyIndexMap;
-  index2pubkey?: Index2PubkeyCache;
-  skipSyncPubkeys?: boolean;
   skipSyncCommitteeCache?: boolean;
+  skipSyncPubkeys?: boolean;
 };
 
 /**
@@ -149,16 +141,9 @@ export class EpochContext {
    */
   exitQueueChurn: number;
 
-  /**
-   * Returns a SyncCommitteeCache. (Note: phase0 has no sync committee, and returns an empty cache)
-   * - validatorIndices (of the committee members)
-   * - validatorIndexMap: Map of ValidatorIndex -> syncCommitteeIndexes
-   *
-   * The syncCommittee is immutable and changes as a whole every ~ 27h.
-   * It contains fixed 512 members so it's rather small.
-   */
+  /** TODO: Indexed SyncCommitteeCache */
   currentSyncCommitteeIndexed: SyncCommitteeCache;
-  /** Same as currentSyncCommitteeIndexed */
+  /** TODO: Indexed SyncCommitteeCache */
   nextSyncCommitteeIndexed: SyncCommitteeCache;
 
   // TODO: Helper stats
@@ -213,9 +198,13 @@ export class EpochContext {
    *
    * SLOW CODE - 🐢
    */
-  static createFromState(config: IBeaconConfig, state: allForks.BeaconState, opts?: EpochContextOpts): EpochContext {
-    const pubkey2index = opts?.pubkey2index || new PubkeyIndexMap();
-    const index2pubkey = opts?.index2pubkey || ([] as Index2PubkeyCache);
+  static createFromState(
+    state: BeaconStateAllForks,
+    {config, pubkey2index, index2pubkey}: EpochContextImmutableData,
+    opts?: EpochContextOpts
+  ): EpochContext {
+    // syncPubkeys here to ensure EpochContextImmutableData is popualted before computing the rest of caches
+    // - computeSyncCommitteeCache() needs a fully populated pubkey2index cache
     if (!opts?.skipSyncPubkeys) {
       syncPubkeys(state, pubkey2index, index2pubkey);
     }
@@ -229,7 +218,7 @@ export class EpochContext {
     let exitQueueEpoch = computeActivationExitEpoch(currentEpoch);
     let exitQueueChurn = 0;
 
-    const validators = readonlyValuesListOfLeafNodeStruct(state.validators);
+    const validators = state.validators.getAllReadonlyValues();
     const validatorCount = validators.length;
 
     const effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(validatorCount);
@@ -297,7 +286,7 @@ export class EpochContext {
     let nextSyncCommitteeIndexed: SyncCommitteeCache;
     // Allow to skip populating sync committee for initializeBeaconStateFromEth1()
     if (afterAltairFork && !opts?.skipSyncCommitteeCache) {
-      const altairState = state as altair.BeaconState;
+      const altairState = state as BeaconStateAltair;
       currentSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.currentSyncCommittee, pubkey2index);
       nextSyncCommitteeIndexed = computeSyncCommitteeCache(altairState.nextSyncCommittee, pubkey2index);
     } else {
@@ -337,7 +326,7 @@ export class EpochContext {
       syncParticipantReward,
       syncProposerReward,
       baseRewardPerIncrement,
-      totalActiveBalanceIncrements: totalActiveBalanceIncrements,
+      totalActiveBalanceIncrements,
       churnLimit,
       exitQueueEpoch,
       exitQueueChurn,
@@ -351,7 +340,7 @@ export class EpochContext {
   /**
    * Copies a given EpochContext while avoiding copying its immutable parts.
    */
-  copy(): EpochContext {
+  clone(): EpochContext {
     // warning: pubkey cache is not copied, it is shared, as eth1 is not expected to reorder validators.
     // Shallow copy all data from current epoch context to the next
     // All data is completely replaced, or only-appended
@@ -388,7 +377,7 @@ export class EpochContext {
    * new epoch.
    */
   afterProcessEpoch(
-    state: allForks.BeaconState,
+    state: BeaconStateAllForks,
     epochProcess: {
       nextEpochShufflingActiveValidatorIndices: ValidatorIndex[];
       nextEpochTotalActiveBalanceByIncrement: number;
@@ -398,6 +387,7 @@ export class EpochContext {
     this.currentShuffling = this.nextShuffling;
     const currEpoch = this.currentShuffling.epoch;
     const nextEpoch = currEpoch + 1;
+
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
     this.proposers = computeProposers(state, this.currentShuffling, this.effectiveBalanceIncrements);
 
@@ -467,6 +457,16 @@ export class EpochContext {
     return this.getShufflingAtEpoch(epoch).committeesPerSlot;
   }
 
+  /**
+   * Compute the correct subnet for a slot/committee index
+   */
+  computeSubnetForSlot(slot: number, committeeIndex: number): number {
+    const slotsSinceEpochStart = slot % SLOTS_PER_EPOCH;
+    const committeesPerSlot = this.getCommitteeCountPerSlot(computeEpochAtSlot(slot));
+    const committeesSinceEpochStart = committeesPerSlot * slotsSinceEpochStart;
+    return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
+  }
+
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
@@ -483,21 +483,15 @@ export class EpochContext {
   getIndexedAttestation(attestation: phase0.Attestation): phase0.IndexedAttestation {
     const {aggregationBits, data} = attestation;
     const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
-    const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregationBits);
+    const attestingIndices = aggregationBits.intersectValues(committeeIndices);
 
     // sort in-place
     attestingIndices.sort((a, b) => a - b);
     return {
-      attestingIndices: attestingIndices as List<number>,
+      attestingIndices: attestingIndices,
       data: data,
       signature: attestation.signature,
     };
-  }
-
-  getAttestingIndices(data: phase0.AttestationData, bits: BitList): ValidatorIndex[] {
-    const committeeIndices = this.getBeaconCommittee(data.slot, data.index);
-    const validatorIndices = zipIndexesCommitteeBits(committeeIndices, bits);
-    return validatorIndices;
   }
 
   getCommitteeAssignments(
@@ -554,7 +548,7 @@ export class EpochContext {
         const committee = this.getBeaconCommittee(slot, i);
         if (committee.includes(validatorIndex)) {
           return {
-            validators: committee as List<number>,
+            validators: committee,
             committeeIndex: i,
             slot,
           };
@@ -591,18 +585,6 @@ export class EpochContext {
     }
   }
 
-  effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
-    if (index >= this.effectiveBalanceIncrements.length) {
-      // Clone and extend effectiveBalanceIncrements
-      const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
-      // Note: getEffectiveBalanceIncrementsWithLen() returns a Uint8Array larger than `index + 1` to reduce copy-ing
-      this.effectiveBalanceIncrements = getEffectiveBalanceIncrementsWithLen(index + 1);
-      this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
-    }
-
-    this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
-  }
-
   /**
    * Note: The range of slots a validator has to perform duties is off by one.
    * The previous slot wording means that if your validator is in a sync committee for a period that runs from slot
@@ -634,15 +616,37 @@ export class EpochContext {
     this.currentSyncCommitteeIndexed = this.nextSyncCommitteeIndexed;
     this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
   }
+
+  /** On phase0 -> altair fork, set both current and nextSyncCommitteeIndexed */
+  setSyncCommitteesIndexed(nextSyncCommitteeIndices: number[]): void {
+    this.nextSyncCommitteeIndexed = getSyncCommitteeCache(nextSyncCommitteeIndices);
+    this.currentSyncCommitteeIndexed = this.nextSyncCommitteeIndexed;
+  }
+
+  effectiveBalanceIncrementsSet(index: number, effectiveBalance: number): void {
+    if (index >= this.effectiveBalanceIncrements.length) {
+      // Clone and extend effectiveBalanceIncrements
+      const effectiveBalanceIncrements = this.effectiveBalanceIncrements;
+      this.effectiveBalanceIncrements = new Uint8Array(getEffectiveBalanceIncrementsByteLen(index + 1));
+      this.effectiveBalanceIncrements.set(effectiveBalanceIncrements, 0);
+    }
+
+    this.effectiveBalanceIncrements[index] = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+  }
+}
+
+function getEffectiveBalanceIncrementsByteLen(validatorCount: number): number {
+  // TODO: Research what's the best number to minimize both memory cost and copy costs
+  return 1024 * Math.ceil(validatorCount / 1024);
 }
 
 // Copied from lodestar-api package to avoid depending on the package
 type AttesterDuty = {
   validatorIndex: ValidatorIndex;
   committeeIndex: CommitteeIndex;
-  committeeLength: Number64;
-  committeesAtSlot: Number64;
-  validatorCommitteeIndex: Number64;
+  committeeLength: number;
+  committeesAtSlot: number;
+  validatorCommitteeIndex: number;
   slot: Slot;
 };
 
@@ -657,3 +661,15 @@ type EpochContextErrorType = {
 };
 
 export class EpochContextError extends LodestarError<EpochContextErrorType> {}
+
+export function createEmptyEpochContextImmutableData(
+  chainConfig: IChainConfig,
+  state: Pick<BeaconStateAllForks, "genesisValidatorsRoot">
+): EpochContextImmutableData {
+  return {
+    config: createIBeaconConfig(chainConfig, state.genesisValidatorsRoot),
+    // This is a test state, there's no need to have a global shared cache of keys
+    pubkey2index: new PubkeyIndexMap(),
+    index2pubkey: [],
+  };
+}

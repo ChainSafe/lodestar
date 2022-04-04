@@ -1,4 +1,3 @@
-import {ssz} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   computeStartSlotAtEpoch,
@@ -19,6 +18,7 @@ import {IStateRegenerator, RegenCaller} from "../regen";
 import {IBlsVerifier} from "../bls";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
+import {byteArrayEquals} from "../../util/bytes";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
@@ -161,7 +161,7 @@ export async function verifyBlockStateTransition(
   if (useBlsBatchVerify && !validSignatures) {
     const signatureSets = validProposerSignature
       ? allForks.getAllBlockSignatureSetsExceptProposer(postState, block)
-      : allForks.getAllBlockSignatureSets(postState as CachedBeaconStateAllForks, block);
+      : allForks.getAllBlockSignatureSets(postState, block);
 
     if (
       signatureSets.length > 0 &&
@@ -176,13 +176,7 @@ export async function verifyBlockStateTransition(
   let executionStatus: ExecutionStatus;
   if (executionPayloadEnabled) {
     // TODO: Handle better notifyNewPayload() returning error is syncing
-    const execResult = await chain.executionEngine.notifyNewPayload(
-      // executionPayload must be serialized as JSON and the TreeBacked structure breaks the baseFeePerGas serializer
-      // For clarity and since it's needed anyway, just send the struct representation at this level such that
-      // notifyNewPayload() can expect a regular JS object.
-      // TODO: If blocks are no longer TreeBacked, remove.
-      executionPayloadEnabled.valueOf() as typeof executionPayloadEnabled
-    );
+    const execResult = await chain.executionEngine.notifyNewPayload(executionPayloadEnabled);
 
     switch (execResult.status) {
       case ExecutePayloadStatus.VALID:
@@ -286,11 +280,11 @@ export async function verifyBlockStateTransition(
   }
 
   // Check state root matches
-  if (!ssz.Root.equals(block.message.stateRoot, postState.tree.root)) {
+  if (!byteArrayEquals(block.message.stateRoot, postState.hashTreeRoot())) {
     throw new BlockError(block, {
       code: BlockErrorCode.INVALID_STATE_ROOT,
-      root: postState.tree.root,
-      expectedRoot: block.message.stateRoot.valueOf() as Uint8Array,
+      root: postState.hashTreeRoot(),
+      expectedRoot: block.message.stateRoot,
       preState,
       postState,
     });

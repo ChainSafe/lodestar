@@ -1,7 +1,6 @@
 import {assert, expect} from "chai";
 
-import {List} from "@chainsafe/ssz";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 
 import {getActiveValidatorIndices, isActiveValidator, isSlashableValidator} from "../../../src/util";
 
@@ -17,10 +16,11 @@ describe("getActiveValidatorIndices", () => {
     const state = generateState();
     const activationEpoch = 1;
     const exitEpoch = 10;
-    state.validators = Array.from({length: 10}, () =>
-      generateValidator({activation: activationEpoch, exit: exitEpoch})
-    ) as List<phase0.Validator>;
-    const allActiveIndices = Array.from(state.validators).map((_, i) => i);
+    state.validators = ssz.phase0.Validators.toViewDU(
+      Array.from({length: 10}, () => generateValidator({activation: activationEpoch, exit: exitEpoch}))
+    );
+
+    const allActiveIndices = state.validators.getAllReadonlyValues().map((_, i) => i);
     const allInactiveIndices: any = [];
     assert.deepEqual(getActiveValidatorIndices(state, activationEpoch), allActiveIndices);
     assert.deepEqual(getActiveValidatorIndices(state, exitEpoch), allInactiveIndices);

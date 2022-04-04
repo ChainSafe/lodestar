@@ -1,7 +1,6 @@
 import {join} from "node:path";
 import {expect} from "chai";
 import {
-  createCachedBeaconState,
   phase0,
   allForks,
   computeEpochAtSlot,
@@ -10,6 +9,7 @@ import {
   getEffectiveBalanceIncrementsZeroInactive,
   computeStartSlotAtEpoch,
   EffectiveBalanceIncrements,
+  BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
@@ -24,9 +24,12 @@ import {CheckpointWithHex, ForkChoiceError, ForkChoiceErrorCode, IForkChoice} fr
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 import {testLogger} from "../../utils/logger";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {getConfig} from "./util";
+
+/* eslint-disable @typescript-eslint/naming-convention */
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -40,14 +43,13 @@ const logger = testLogger("spec-test");
 export function forkChoiceTest(fork: ForkName): void {
   for (const testFolder of ["get_head", "on_block"]) {
     describeDirectorySpecTest<IForkChoiceTestCase, void>(
-      `${ACTIVE_PRESET}/${fork}/fork_choice/get_head`,
+      `${ACTIVE_PRESET}/${fork}/fork_choice/${testFolder}`,
       join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork_choice/${testFolder}/pyspec_tests`),
       (testcase) => {
         const {steps, anchorState} = testcase;
         const currentSlot = anchorState.slot;
         const config = getConfig(fork);
-        const tbState = config.getForkTypes(currentSlot).BeaconState.createTreeBackedFromStruct(anchorState);
-        let state = createCachedBeaconState(config, tbState);
+        let state = createCachedBeaconStateTest(anchorState, config);
 
         const emitter = new ChainEventEmitter();
         const forkchoice = initializeForkChoice(config, emitter, currentSlot, state, true);
@@ -62,11 +64,14 @@ export function forkChoiceTest(fork: ForkName): void {
         for (const [i, step] of steps.entries()) {
           if (isTick(step)) {
             tickTime = bnToNum(step.tick);
-            forkchoice.updateTime(Math.floor(tickTime / config.SECONDS_PER_SLOT));
+            const currentSlot = Math.floor(tickTime / config.SECONDS_PER_SLOT);
+            logger.debug("Step tick", {currentSlot, valid: Boolean(step.valid), time: tickTime});
+            forkchoice.updateTime(currentSlot);
           }
 
           // attestation step
           else if (isAttestation(step)) {
+            logger.debug("Step attestation", {root: step.attestation, valid: Boolean(step.valid)});
             const attestation = testcase.attestations.get(step.attestation);
             if (!attestation) throw Error(`No attestation ${step.attestation}`);
             forkchoice.onAttestation(state.epochCtx.getIndexedAttestation(attestation));
@@ -76,6 +81,13 @@ export function forkChoiceTest(fork: ForkName): void {
           else if (isBlock(step)) {
             const signedBlock = testcase.blocks.get(step.block);
             if (!signedBlock) throw Error(`No block ${step.block}`);
+
+            // Log the BeaconBlock root instead of the SignedBeaconBlock root, forkchoice references BeaconBlock roots
+            const blockRoot = config
+              .getForkTypes(signedBlock.message.slot)
+              .BeaconBlock.hashTreeRoot(signedBlock.message);
+            logger.debug("Step block", {slot: signedBlock.message.slot, root: toHexString(blockRoot)});
+
             const preState = stateCache.get(toHexString(signedBlock.message.parentRoot));
             if (!preState) {
               continue;
@@ -83,6 +95,8 @@ export function forkChoiceTest(fork: ForkName): void {
             }
             const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
             state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
+            // TODO: May be part of runStateTranstion, necessary to commit again?
+            state.commit();
             cacheState(state, stateCache);
           }
 
@@ -192,13 +206,13 @@ function runStateTranstion(
     postState = allForks.processSlots(postState, nextEpochSlot, null);
     cacheCheckpointState(postState, checkpointCache);
   }
-  preEpoch = postState.currentShuffling.epoch;
+  preEpoch = postState.epochCtx.epoch;
   postState = allForks.stateTransition(postState, signedBlock, {
     verifyStateRoot: true,
     verifyProposer: false,
     verifySignatures: false,
   });
-  const postEpoch = postState.currentShuffling.epoch;
+  const postEpoch = postState.epochCtx.epoch;
   if (postEpoch > preEpoch) {
     cacheCheckpointState(postState, checkpointCache);
   }
@@ -246,14 +260,13 @@ function runStateTranstion(
 }
 
 function cacheCheckpointState(checkpointState: CachedBeaconStateAllForks, checkpointCache: CheckpointStateCache): void {
-  const config = checkpointState.config;
   const slot = checkpointState.slot;
   if (slot % SLOTS_PER_EPOCH !== 0) {
     throw new Error(`Invalid checkpoint state slot ${checkpointState.slot}`);
   }
   const blockHeader = ssz.phase0.BeaconBlockHeader.clone(checkpointState.latestBlockHeader);
   if (ssz.Root.equals(blockHeader.stateRoot, ZERO_HASH)) {
-    blockHeader.stateRoot = config.getForkTypes(slot).BeaconState.hashTreeRoot(checkpointState);
+    blockHeader.stateRoot = checkpointState.hashTreeRoot();
   }
   const cp: phase0.Checkpoint = {
     root: ssz.phase0.BeaconBlockHeader.hashTreeRoot(blockHeader),
@@ -324,7 +337,7 @@ interface IForkChoiceTestCase {
     description?: string;
     bls_setting: BigInt;
   };
-  anchorState: allForks.BeaconState;
+  anchorState: BeaconStateAllForks;
   anchorBlock: allForks.BeaconBlock;
   steps: Step[];
   blocks: Map<string, allForks.SignedBeaconBlock>;

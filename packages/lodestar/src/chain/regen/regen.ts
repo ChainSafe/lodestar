@@ -157,12 +157,8 @@ export class StateRegenerator implements IStateRegenerator {
     }
 
     for (const b of blocksToReplay.reverse()) {
-      const structBlock = await this.modules.db.block.get(fromHexString(b.blockRoot));
-      if (!structBlock) {
-        throw Error(`No block found for ${b.blockRoot}`);
-      }
-      const block = this.modules.config.getForkTypes(b.slot).SignedBeaconBlock.createTreeBackedFromStruct(structBlock);
-      if (block === undefined) {
+      const block = await this.modules.db.block.get(fromHexString(b.blockRoot));
+      if (!block) {
         throw new RegenError({
           code: RegenErrorCode.BLOCK_NOT_IN_DB,
           blockRoot: b.blockRoot,
@@ -196,7 +192,7 @@ export class StateRegenerator implements IStateRegenerator {
       }
     }
 
-    return state as CachedBeaconStateAllForks;
+    return state;
   }
 
   private findFirstStateBlock(stateRoot: RootHex): IProtoBlock {

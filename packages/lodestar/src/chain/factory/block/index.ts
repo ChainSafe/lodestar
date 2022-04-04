@@ -3,7 +3,6 @@
  */
 
 import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, Bytes96, ExecutionAddress, Root, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
 
@@ -38,7 +37,7 @@ export async function assembleBlock(
 
   const block: allForks.BeaconBlock = {
     slot,
-    proposerIndex: state.getBeaconProposer(slot),
+    proposerIndex: state.epochCtx.getBeaconProposer(slot),
     parentRoot: parentBlockRoot,
     stateRoot: ZERO_HASH,
     body: await assembleBody(chain, state, {
@@ -51,7 +50,7 @@ export async function assembleBlock(
     }),
   };
 
-  block.stateRoot = computeNewStateRoot({config: chain.config, metrics}, state, block);
+  block.stateRoot = computeNewStateRoot({metrics}, state, block);
 
   return block;
 }
@@ -62,7 +61,7 @@ export async function assembleBlock(
  * epoch transition which happen at slot % 32 === 0)
  */
 function computeNewStateRoot(
-  {config, metrics}: {config: IChainForkConfig; metrics: IMetrics | null},
+  {metrics}: {metrics: IMetrics | null},
   state: CachedBeaconStateAllForks,
   block: allForks.BeaconBlock
 ): Root {
@@ -70,5 +69,5 @@ function computeNewStateRoot(
   // verifySignatures = false since the data to assemble the block is trusted
   allForks.processBlock(postState, block, {verifySignatures: false}, metrics);
 
-  return config.getForkTypes(state.slot).BeaconState.hashTreeRoot(postState);
+  return postState.hashTreeRoot();
 }

@@ -1,7 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
-import {generatePerformanceStatePhase0, getPubkeys, numValidators} from "../util";
+import {ssz} from "@chainsafe/lodestar-types";
+import {generatePerfTestCachedStatePhase0, numValidators} from "../util";
 import {unshuffleList} from "../../../src";
 
 // Test cost of hashing state after some modifications
@@ -9,22 +8,21 @@ import {unshuffleList} from "../../../src";
 describe("BeaconState hashTreeRoot", () => {
   const vc = numValidators;
   const indicesShuffled: number[] = [];
-  let stateOg: TreeBacked<phase0.BeaconState>;
+  let stateOg: ReturnType<typeof generatePerfTestCachedStatePhase0>;
 
   before(function () {
     this.timeout(300_000);
-    const {pubkeys} = getPubkeys();
-    stateOg = generatePerformanceStatePhase0(pubkeys);
+    stateOg = generatePerfTestCachedStatePhase0();
     stateOg.hashTreeRoot();
 
     for (let i = 0; i < vc; i++) indicesShuffled[i] = i;
     unshuffleList(indicesShuffled, new Uint8Array([42, 32]));
   });
 
-  const validator: phase0.Validator = ssz.phase0.Validator.defaultValue();
+  const validator = ssz.phase0.Validator.defaultViewDU();
   const balance = 31e9;
 
-  const testCases: {id: string; noTrack?: boolean; fn: (state: TreeBacked<phase0.BeaconState>) => void}[] = [
+  const testCases: {id: string; noTrack?: boolean; fn: (state: typeof stateOg) => void}[] = [
     {
       id: "No change",
       fn: () => {
@@ -39,7 +37,7 @@ describe("BeaconState hashTreeRoot", () => {
       id: `${count} full validator`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of indicesShuffled.slice(0, count)) state.validators[i] = validator;
+        for (const i of indicesShuffled.slice(0, count)) state.validators.set(i, validator);
       },
     });
   }
@@ -50,7 +48,7 @@ describe("BeaconState hashTreeRoot", () => {
       noTrack: count < 512,
       fn: (state) => {
         for (const i of indicesShuffled.slice(0, count)) {
-          state.validators[i].effectiveBalance = balance;
+          state.validators.get(i).effectiveBalance = balance;
         }
       },
     });
@@ -62,18 +60,19 @@ describe("BeaconState hashTreeRoot", () => {
       id: `${count} balances`,
       noTrack: count < 512,
       fn: (state) => {
-        for (const i of indicesShuffled.slice(0, count)) state.balances[i] = balance;
+        for (const i of indicesShuffled.slice(0, count)) state.balances.set(i, balance);
       },
     });
   }
 
   for (const {id, noTrack, fn} of testCases) {
-    itBench<TreeBacked<phase0.BeaconState>, TreeBacked<phase0.BeaconState>>({
+    itBench<typeof stateOg, typeof stateOg>({
       id: `BeaconState.hashTreeRoot - ${id}`,
       noThreshold: noTrack,
       beforeEach: () => {
         const state = stateOg.clone();
         fn(state);
+        state.commit();
         return state;
       },
       fn: (state) => {

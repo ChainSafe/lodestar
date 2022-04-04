@@ -54,16 +54,6 @@ export const isSingleResponseChunkByMethod: {[K in Method]: boolean} = {
   [Method.BeaconBlocksByRoot]: false,
 };
 
-/** Deserialize some types to TreeBacked directly for more efficient hashing */
-export const deserializeToTreeByMethod: {[K in Method]: boolean} = {
-  [Method.Status]: false,
-  [Method.Goodbye]: false,
-  [Method.Ping]: false,
-  [Method.Metadata]: false,
-  [Method.BeaconBlocksByRange]: true,
-  [Method.BeaconBlocksByRoot]: true,
-};
-
 export const CONTEXT_BYTES_FORK_DIGEST_LENGTH = 4;
 export enum ContextBytesType {
   /** 0 bytes chunk, can be ignored */

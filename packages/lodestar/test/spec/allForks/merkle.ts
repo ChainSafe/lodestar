@@ -1,9 +1,10 @@
 import {join} from "node:path";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {ProofType, SingleProof} from "@chainsafe/persistent-merkle-tree";
+import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {fromHexString, toHexString, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
@@ -17,18 +18,19 @@ export function merkle(fork: ForkName): void {
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/merkle/single_proof/pyspec_tests`),
     (testcase) => {
       const {proof: specTestProof, state} = testcase;
-      const stateTB = state as TreeBacked<allForks.BeaconState>;
-      const stateRoot = stateTB.hashTreeRoot();
+      const stateRoot = state.hashTreeRoot();
       const leaf = fromHexString(specTestProof.leaf);
       const branch = specTestProof.branch.map((item) => fromHexString(item));
       const leafIndex = Number(specTestProof.leaf_index);
       const depth = Math.floor(Math.log2(leafIndex));
       const verified = verifyMerkleBranch(leaf, branch, depth, leafIndex % 2 ** depth, stateRoot);
       expect(verified, "cannot verify merkle branch").to.be.true;
-      const lodestarProof = stateTB.tree.getProof({
+
+      const lodestarProof = new Tree(state.node).getProof({
         gindex: specTestProof.leaf_index,
         type: ProofType.single,
       }) as SingleProof;
+
       return {
         leaf: toHexString(lodestarProof.leaf),
         leaf_index: lodestarProof.gindex,
@@ -40,11 +42,9 @@ export function merkle(fork: ForkName): void {
         state: {type: InputType.SSZ_SNAPPY as const, treeBacked: true as const},
         proof: InputType.YAML as const,
       },
-      getSszTypes: () => {
-        return {
-          state: ssz[fork].BeaconState,
-        };
-      },
+      getSszTypes: () => ({
+        state: ssz[fork].BeaconState,
+      }),
       timeout: 10000,
       getExpected: (testCase) => testCase.proof,
       expectFunc: (testCase, expected, actual) => {
@@ -54,7 +54,7 @@ export function merkle(fork: ForkName): void {
   );
 
   interface IMerkleTestCase extends IBaseSpecTest {
-    state: allForks.BeaconState;
+    state: BeaconStateAllForks;
     proof: IProof;
   }
 

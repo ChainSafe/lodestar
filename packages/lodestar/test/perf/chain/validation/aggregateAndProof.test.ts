@@ -1,5 +1,4 @@
 import {itBench} from "@dapplion/benchmark";
-import {ssz} from "@chainsafe/lodestar-types";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof";
@@ -14,9 +13,8 @@ describe("validate gossip signedAggregateAndProof", () => {
   });
 
   const aggStruct = signedAggregateAndProof;
-  const aggTreeBacked = ssz.phase0.SignedAggregateAndProof.createTreeBackedFromStruct(aggStruct);
 
-  for (const [id, agg] of Object.entries({struct: aggStruct, treeBacked: aggTreeBacked})) {
+  for (const [id, agg] of Object.entries({struct: aggStruct})) {
     itBench({
       id: `validate gossip signedAggregateAndProof - ${id}`,
       beforeEach: () => chain.seenAggregators["validatorIndexesByEpoch"].clear(),

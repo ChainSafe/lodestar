@@ -64,7 +64,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     if (!genesisBlockRoot) {
       // Close to genesis the genesis block may not be available in the DB
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
-        genesisBlockRoot = state.blockRoots[0];
+        genesisBlockRoot = state.blockRoots.get(0);
       }
 
       const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
@@ -285,7 +285,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Gather indexes to get pubkeys in batch (performance optimization)
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         // getBeaconProposer ensures the requested epoch is correct
-        const validatorIndex = state.getBeaconProposer(startSlot + i);
+        const validatorIndex = state.epochCtx.getBeaconProposer(startSlot + i);
         indexes.push(validatorIndex);
       }
 
@@ -446,7 +446,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
             await Promise.all([
               chain.aggregatedAttestationPool.add(
                 signedAggregateAndProof.message.aggregate,
-                indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[],
+                indexedAttestation.attestingIndices,
                 committeeIndices
               ),
               network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),

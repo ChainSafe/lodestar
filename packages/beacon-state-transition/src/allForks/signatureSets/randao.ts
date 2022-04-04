@@ -23,6 +23,6 @@ export function getRandaoRevealSignatureSet(
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[block.proposerIndex],
     signingRoot: computeSigningRoot(ssz.Epoch, epoch, domain),
-    signature: block.body.randaoReveal.valueOf() as Uint8Array,
+    signature: block.body.randaoReveal,
   };
 }

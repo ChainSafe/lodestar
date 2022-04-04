@@ -6,7 +6,7 @@ import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-type
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
-import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
+import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
@@ -229,7 +229,7 @@ export class Lightclient {
   }
 
   /** Returns header since head may change during request */
-  async getHeadStateProof(paths: Path[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+  async getHeadStateProof(paths: JsonPath[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
     const header = this.head.header;
     const stateId = toHexString(header.stateRoot);
     const res = await this.api.lightclient.getStateProof(stateId, paths);

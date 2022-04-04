@@ -8,7 +8,6 @@ import {
   Protocol,
   IncomingResponseBody,
   ContextBytesType,
-  deserializeToTreeByMethod,
   contextBytesTypeByProtocol,
   getResponseSzzTypeByMethod,
   CONTEXT_BYTES_FORK_DIGEST_LENGTH,
@@ -34,7 +33,6 @@ export function responseDecode(
   protocol: Protocol
 ): (source: AsyncIterable<Buffer>) => AsyncGenerator<IncomingResponseBody> {
   return async function* responseDecodeSink(source) {
-    const deserializeToTree = deserializeToTreeByMethod[protocol.method];
     const contextBytesType = contextBytesTypeByProtocol(protocol);
     const bufferedSource = new BufferedSource(source as AsyncGenerator<Buffer>);
 
@@ -58,7 +56,7 @@ export function responseDecode(
       const forkName = await readForkName(forkDigestContext, bufferedSource, contextBytesType);
       const type = getResponseSzzTypeByMethod(protocol, forkName);
 
-      yield await readEncodedPayload(bufferedSource, protocol.encoding, type, {deserializeToTree});
+      yield await readEncodedPayload(bufferedSource, protocol.encoding, type);
     }
   };
 }

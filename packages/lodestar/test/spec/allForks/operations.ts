@@ -1,31 +1,29 @@
 import fs from "node:fs";
 import {join} from "node:path";
-import {CachedBeaconState, allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
-import {TreeBacked, Type} from "@chainsafe/ssz";
+import {Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
-export type BlockProcessFn<BeaconState extends allForks.BeaconState> = (
-  state: CachedBeaconState<BeaconState>,
-  testCase: any
-) => void;
+export type BlockProcessFn<T extends CachedBeaconStateAllForks> = (state: T, testCase: any) => void;
 
-export type OperationsTestCase<BeaconState extends allForks.BeaconState> = IBaseSpecTest & {
-  pre: BeaconState;
-  post: BeaconState;
+export type OperationsTestCase = IBaseSpecTest & {
+  pre: BeaconStateAllForks;
+  post: BeaconStateAllForks;
   execution: {execution_valid: boolean};
 };
 
-export function operations<BeaconState extends allForks.BeaconState>(
+export function operations<T extends CachedBeaconStateAllForks>(
   fork: ForkName,
-  operationFns: Record<string, BlockProcessFn<BeaconState>>,
+  operationFns: Record<string, BlockProcessFn<T>>,
   sszTypes?: Record<string, Type<any>>
 ): void {
   const rootDir = join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/operations`);
@@ -40,17 +38,18 @@ export function operations<BeaconState extends allForks.BeaconState>(
       throw Error(`No operationFn for ${testDir}`);
     }
 
-    describeDirectorySpecTest<OperationsTestCase<BeaconState>, BeaconState>(
+    describeDirectorySpecTest<OperationsTestCase, BeaconStateAllForks>(
       `${ACTIVE_PRESET}/${fork}/operations/${testDir}`,
       join(rootDir, `${testDir}/pyspec_tests`),
       (testcase) => {
-        const stateTB = (testcase.pre as TreeBacked<BeaconState>).clone();
-        const state = createCachedBeaconState(getConfig(fork), stateTB);
-        operationFn(state, testcase);
+        const state = testcase.pre.clone();
+        const cachedState = createCachedBeaconStateTest(state, getConfig(fork));
+        operationFn(cachedState as T, testcase);
+        state.commit();
         return state;
       },
       {
-        inputTypes: {...inputTypeSszTreeBacked, execution: InputType.YAML},
+        inputTypes: {...inputTypeSszTreeViewDU, execution: InputType.YAML},
         sszTypes: {
           pre: ssz[fork].BeaconState,
           post: ssz[fork].BeaconState,

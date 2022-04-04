@@ -26,10 +26,10 @@ export function verifySignatureSet(signatureSet: ISignatureSet): boolean {
 
   switch (signatureSet.type) {
     case SignatureSetType.single:
-      return signature.verify(signatureSet.pubkey, signatureSet.signingRoot.valueOf() as Uint8Array);
+      return signature.verify(signatureSet.pubkey, signatureSet.signingRoot);
 
     case SignatureSetType.aggregate:
-      return signature.verifyAggregate(signatureSet.pubkeys, signatureSet.signingRoot.valueOf() as Uint8Array);
+      return signature.verifyAggregate(signatureSet.pubkeys, signatureSet.signingRoot);
 
     default:
       throw Error("Unknown signature set type");

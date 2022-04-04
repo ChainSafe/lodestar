@@ -22,9 +22,9 @@ export function processAttestation(
   const slot = state.slot;
   const data = attestation.data;
 
-  validateAttestation(state as CachedBeaconStateAllForks, attestation);
+  validateAttestation(state, attestation);
 
-  const pendingAttestation = ssz.phase0.PendingAttestation.createTreeBackedFromStruct({
+  const pendingAttestation = ssz.phase0.PendingAttestation.toViewDU({
     data: data,
     aggregationBits: attestation.aggregationBits,
     inclusionDelay: slot - data.slot,
@@ -51,13 +51,7 @@ export function processAttestation(
     state.previousEpochAttestations.push(pendingAttestation);
   }
 
-  if (
-    !isValidIndexedAttestation(
-      state as CachedBeaconStateAllForks,
-      epochCtx.getIndexedAttestation(attestation),
-      verifySignature
-    )
-  ) {
+  if (!isValidIndexedAttestation(state, epochCtx.getIndexedAttestation(attestation), verifySignature)) {
     throw new Error("Attestation is not valid");
   }
 }
@@ -96,10 +90,10 @@ export function validateAttestation(state: CachedBeaconStateAllForks, attestatio
   }
 
   const committee = epochCtx.getBeaconCommittee(data.slot, data.index);
-  if (attestation.aggregationBits.length !== committee.length) {
+  if (attestation.aggregationBits.bitLen !== committee.length) {
     throw new Error(
       "Attestation aggregation bits length does not match committee length: " +
-        `aggregationBitsLength=${attestation.aggregationBits.length} committeeLength=${committee.length}`
+        `aggregationBitsLength=${attestation.aggregationBits.bitLen} committeeLength=${committee.length}`
     );
   }
 }

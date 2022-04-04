@@ -50,7 +50,7 @@ describe("Tree (persistent-merkle-tree)", () => {
 
   const d = 40;
   const gih = toGindex(d, BigInt(ih));
-  const n2 = new LeafNode(Buffer.alloc(32, 2));
+  const n2 = LeafNode.fromRoot(Buffer.alloc(32, 2));
   let tree: Tree;
 
   before(function () {
@@ -89,7 +89,7 @@ describe("Tree (persistent-merkle-tree)", () => {
   });
 
   function getTree(d: number, n: number): Tree {
-    const leaf = new LeafNode(Buffer.alloc(32, 1));
+    const leaf = LeafNode.fromRoot(Buffer.alloc(32, 1));
     const startIndex = BigInt(2 ** d);
     const tree = new Tree(zeroNode(d));
     for (let i = BigInt(0), nB = BigInt(n); i < nB; i++) {

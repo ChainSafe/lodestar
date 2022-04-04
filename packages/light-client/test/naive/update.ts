@@ -70,7 +70,7 @@ export function processLightClientUpdate(
   // Note that (2) means that the current light client design needs finality.
   // It may be changed to re-organizable light client design. See the on-going issue https://github.com/ethereum/consensus-specs/issues/2315.
   if (
-    sumBits(update.syncAggregate.syncCommitteeBits) * 3 >= update.syncAggregate.syncCommitteeBits.length * 2 &&
+    sumBits(update.syncAggregate.syncCommitteeBits) * 3 >= update.syncAggregate.syncCommitteeBits.bitLen * 2 &&
     !isEmptyHeader(update.finalizedHeader)
   ) {
     applyLightClientUpdate(store.snapshot, update);

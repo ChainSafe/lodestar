@@ -1,16 +1,5 @@
-import {Epoch, RootHex, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
-import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
-import {
-  jsonType,
-  ReqEmpty,
-  reqEmpty,
-  ReturnTypes,
-  ReqSerializers,
-  RoutesData,
-  sameType,
-  Schema,
-  ArrayOf,
-} from "../utils";
+import {Epoch, RootHex, Slot} from "@chainsafe/lodestar-types";
+import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType, Schema} from "../utils";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -35,7 +24,7 @@ export type GossipQueueItem = {
 
 export type RegenQueueItem = {
   key: string;
-  args: Json;
+  args: unknown;
   addedTimeMs: number;
 };
 
@@ -174,34 +163,17 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const stringType = new StringType();
-  const GossipQueueItem = new ContainerType<GossipQueueItem>({
-    fields: {
-      topic: stringType,
-      receivedFrom: stringType,
-      data: new ByteVectorType({length: 256}),
-      addedTimeMs: ssz.Slot,
-    },
-    // Custom type, not in the consensus specs
-    casingMap: {
-      topic: "topic",
-      receivedFrom: "received_from",
-      data: "data",
-      addedTimeMs: "added_time_ms",
-    },
-  });
-
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
-    getSyncChainsDebugState: jsonType(),
-    getGossipQueueItems: ArrayOf(GossipQueueItem),
-    getRegenQueueItems: jsonType(),
-    getBlockProcessorQueueItems: jsonType(),
-    getStateCacheItems: jsonType(),
-    getCheckpointStateCacheItems: jsonType(),
-    getPeers: jsonType(),
-    discv5GetKadValues: jsonType(),
+    getSyncChainsDebugState: jsonType("camel"),
+    getGossipQueueItems: jsonType("camel"),
+    getRegenQueueItems: jsonType("camel"),
+    getBlockProcessorQueueItems: jsonType("camel"),
+    getStateCacheItems: jsonType("camel"),
+    getCheckpointStateCacheItems: jsonType("camel"),
+    getPeers: jsonType("camel"),
+    discv5GetKadValues: jsonType("camel"),
   };
 }

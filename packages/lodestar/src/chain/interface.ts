@@ -1,4 +1,4 @@
-import {allForks, Number64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
+import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
@@ -34,7 +34,7 @@ export type Eth2Context = {
  * and applying the fork choice rule to update the chain head
  */
 export interface IBeaconChain {
-  readonly genesisTime: Number64;
+  readonly genesisTime: UintNum64;
   readonly genesisValidatorsRoot: Root;
   readonly eth1: IEth1ForBlockProduction;
   readonly executionEngine: IExecutionEngine;
@@ -74,7 +74,6 @@ export interface IBeaconChain {
   loadFromDisk(): Promise<void>;
   /** Persist in-memory data to the DB. Call at least once before stopping the process */
   persistToDisk(): Promise<void>;
-  getGenesisTime(): Number64;
 
   getHeadState(): CachedBeaconStateAllForks;
   getHeadStateAtCurrentEpoch(): Promise<CachedBeaconStateAllForks>;

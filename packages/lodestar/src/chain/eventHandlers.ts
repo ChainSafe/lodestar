@@ -103,7 +103,7 @@ export function onForkVersion(this: BeaconChain, version: Version): void {
 export function onCheckpoint(this: BeaconChain, cp: phase0.Checkpoint, state: CachedBeaconStateAllForks): void {
   this.logger.verbose("Checkpoint processed", toCheckpointHex(cp));
 
-  this.metrics?.currentValidators.set({status: "active"}, state.currentShuffling.activeIndices.length);
+  this.metrics?.currentValidators.set({status: "active"}, state.epochCtx.currentShuffling.activeIndices.length);
   const parentBlockSummary = this.forkChoice.getBlock(state.latestBlockHeader.parentRoot);
 
   if (parentBlockSummary) {

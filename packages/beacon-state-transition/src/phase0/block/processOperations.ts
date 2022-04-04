@@ -1,4 +1,3 @@
-import {List, readonlyValues} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
@@ -8,14 +7,6 @@ import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-
-type Operation =
-  | phase0.ProposerSlashing
-  | phase0.AttesterSlashing
-  | phase0.Attestation
-  | phase0.Deposit
-  | phase0.VoluntaryExit;
-type OperationFunction = (state: CachedBeaconStatePhase0, op: Operation, verify: boolean) => void;
 
 export function processOperations(
   state: CachedBeaconStatePhase0,
@@ -30,15 +21,19 @@ export function processOperations(
     );
   }
 
-  for (const [operations, processOp] of [
-    [body.proposerSlashings, processProposerSlashing],
-    [body.attesterSlashings, processAttesterSlashing],
-    [body.attestations, processAttestation],
-    [body.deposits, processDeposit],
-    [body.voluntaryExits, processVoluntaryExit],
-  ] as [List<Operation>, OperationFunction][]) {
-    for (const op of readonlyValues(operations)) {
-      processOp(state, op, verifySignatures);
-    }
+  for (const proposerSlashing of body.proposerSlashings) {
+    processProposerSlashing(state, proposerSlashing, verifySignatures);
+  }
+  for (const attesterSlashing of body.attesterSlashings) {
+    processAttesterSlashing(state, attesterSlashing, verifySignatures);
+  }
+  for (const attestation of body.attestations) {
+    processAttestation(state, attestation, verifySignatures);
+  }
+  for (const deposit of body.deposits) {
+    processDeposit(state, deposit);
+  }
+  for (const voluntaryExit of body.voluntaryExits) {
+    processVoluntaryExit(state, voluntaryExit, verifySignatures);
   }
 }

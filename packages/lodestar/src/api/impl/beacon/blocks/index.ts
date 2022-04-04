@@ -125,7 +125,7 @@ export function getBeaconBlockApi({
 
         if (slot < head.slot && head.slot <= slot + SLOTS_PER_HISTORICAL_ROOT) {
           const state = chain.getHeadState();
-          return {data: state.blockRoots[slot % SLOTS_PER_HISTORICAL_ROOT]};
+          return {data: state.blockRoots.get(slot % SLOTS_PER_HISTORICAL_ROOT)};
         }
       } else if (blockId === "head") {
         const head = chain.forkChoice.getHead();

@@ -10,12 +10,16 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
+import {phase0} from "@chainsafe/lodestar-types";
 import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
 import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
-import {StateAltair, StateAttestations} from "../../types";
-import {ParticipationFlags, phase0} from "@chainsafe/lodestar-types";
-import {updateEpochParticipants} from "../../../../src/altair/block/processAttestation";
+import {StateAltair} from "../../types";
+
+type StateAttestations = {
+  state: CachedBeaconStateAllForks;
+  attestations: phase0.Attestation[];
+};
 
 // Most of the cost of processAttestation in altair is for updating participation flag tree
 describe("altair processAttestation", () => {
@@ -55,14 +59,23 @@ describe("altair processAttestation", () => {
     itBench<StateAttestations, StateAttestations>({
       id: `altair processAttestation - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStateAltair() as CachedBeaconStateAllForks;
-        const block = getBlockAltair(state, opts);
-        state.hashTreeRoot();
+        const state = generatePerfTestCachedStateAltair();
+        const block = getBlockAltair(state as CachedBeaconStateAltair, opts);
         return {state, attestations: block.message.body.attestations as phase0.Attestation[]};
       },
-      beforeEach: ({state, attestations}) => ({state: state.clone(), attestations}),
+      beforeEach: ({state, attestations}) => {
+        const stateCloned = state.clone();
+        // Populate state array cache (on the cloned instance)
+        (stateCloned as CachedBeaconStateAltair).previousEpochParticipation.getAll();
+        (stateCloned as CachedBeaconStateAltair).currentEpochParticipation.getAll();
+        (stateCloned as CachedBeaconStateAltair).balances.getAll();
+        return {state: stateCloned, attestations};
+      },
       fn: ({state, attestations}) => {
         altair.processAttestations(state as CachedBeaconStateAltair, attestations, false);
+        state.commit();
+        // After processAttestations normal case vc 250_000 it has to do 6802 hash64 ops
+        // state.hashTreeRoot();
       },
     });
   }
@@ -89,13 +102,20 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
         state.hashTreeRoot();
         return state;
       },
-      beforeEach: (state) => state.clone(),
+      beforeEach: (state) => {
+        const stateCloned = state.clone();
+        // Populate state array cache (on the cloned instance)
+        stateCloned.currentEpochParticipation.getAll();
+        return stateCloned;
+      },
       fn: (state) => {
         const {currentEpochParticipation} = state;
-        const numAttesters = Math.floor((state.currentShuffling.activeIndices.length * ratio) / SLOTS_PER_EPOCH);
+        const numAttesters = Math.floor(
+          (state.epochCtx.currentShuffling.activeIndices.length * ratio) / SLOTS_PER_EPOCH
+        );
         // just get committees of slot 10
         let count = 0;
-        for (const committees of state.currentShuffling.committees[10]) {
+        for (const committees of state.epochCtx.currentShuffling.committees[10]) {
           for (const committee of committees) {
             currentEpochParticipation.set(committee, 0b111);
             count++;
@@ -105,46 +125,4 @@ describe("altair processAttestation - CachedEpochParticipation.setStatus", () =>
       },
     });
   }
-
-  for (const {name, ratio} of testCases) {
-    itBench<StateAltair, StateAltair>({
-      id: `altair processAttestation - updateEpochParticipants - ${name} join`,
-      before: () => {
-        const state = generatePerfTestCachedStateAltair();
-        state.hashTreeRoot();
-        return state;
-      },
-      beforeEach: (state) => state.clone(),
-      fn: (state) => {
-        const {currentEpochParticipation} = state;
-        const numAttesters = Math.floor((state.currentShuffling.activeIndices.length * ratio) / SLOTS_PER_EPOCH);
-        // just get committees of slot 10
-        let count = 0;
-        const epochStatuses = new Map<number, ParticipationFlags>();
-        for (const committees of state.currentShuffling.committees[10]) {
-          for (const committee of committees) {
-            // currentEpochParticipation.setStatus(committee, {timelyHead: true, timelySource: true, timelyTarget: true});
-            epochStatuses.set(committee, 0b111);
-            count++;
-            if (count >= numAttesters) break;
-          }
-        }
-        updateEpochParticipants(epochStatuses, currentEpochParticipation, state.currentShuffling.activeIndices.length);
-      },
-    });
-  }
-
-  itBench<StateAltair, StateAltair>({
-    id: "altair processAttestation - updateAllStatus",
-    before: () => {
-      const state = generatePerfTestCachedStateAltair();
-      state.hashTreeRoot();
-      return state;
-    },
-    beforeEach: (state) => state.clone(),
-    fn: (state) => {
-      const {currentEpochParticipation} = state;
-      currentEpochParticipation.updateAllStatus(currentEpochParticipation.persistent.vector);
-    },
-  });
 });

@@ -1,4 +1,4 @@
-import {ContainerType, Path, VectorType} from "@chainsafe/ssz";
+import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {
@@ -29,10 +29,10 @@ export type LightclientSnapshotWithProof = {
 
 export type Api = {
   /**
-   * Returns a multiproof of `paths` at the requested `stateId`.
+   * Returns a multiproof of `jsonPaths` at the requested `stateId`.
    * The requested `stateId` may not be available. Regular nodes only keep recent states in memory.
    */
-  getStateProof(stateId: string, paths: Path[]): Promise<{data: Proof}>;
+  getStateProof(stateId: string, jsonPaths: JsonPath[]): Promise<{data: Proof}>;
   /**
    * Returns an array of best updates in the requested periods within the inclusive range `from` - `to`.
    * Best is defined by (in order of priority):
@@ -96,30 +96,22 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 }
 
 export function getReturnTypes(): ReturnTypes<Api> {
-  const lightclientSnapshotWithProofType = new ContainerType<LightclientSnapshotWithProof>({
-    fields: {
+  const lightclientSnapshotWithProofType = new ContainerType(
+    {
       header: ssz.phase0.BeaconBlockHeader,
       currentSyncCommittee: ssz.altair.SyncCommittee,
-      currentSyncCommitteeBranch: new VectorType({elementType: ssz.Root, length: 5}),
+      currentSyncCommitteeBranch: new VectorCompositeType(ssz.Root, 5),
     },
-    // Custom type, not in the consensus specs
-    casingMap: {
-      header: "header",
-      currentSyncCommittee: "current_sync_committee",
-      currentSyncCommitteeBranch: "current_sync_committee_branch",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const lightclientHeaderUpdate = new ContainerType<LightclientHeaderUpdate>({
-    fields: {
+  const lightclientHeaderUpdate = new ContainerType(
+    {
       syncAggregate: ssz.altair.SyncAggregate,
       attestedHeader: ssz.phase0.BeaconBlockHeader,
     },
-    casingMap: {
-      syncAggregate: "sync_aggregate",
-      attestedHeader: "attested_header",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     // Just sent the proof JSON as-is

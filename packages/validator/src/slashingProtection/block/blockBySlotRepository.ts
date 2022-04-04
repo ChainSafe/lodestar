@@ -18,17 +18,10 @@ export class BlockBySlotRepository {
 
   constructor(opts: IDatabaseApiOptions) {
     this.db = opts.controller;
-    this.type = new ContainerType<SlashingProtectionBlock>({
-      fields: {
-        slot: ssz.Slot,
-        signingRoot: ssz.Root,
-      },
-      // Custom type, not in the consensus specs
-      casingMap: {
-        slot: "slot",
-        signingRoot: "signing_root",
-      },
-    });
+    this.type = new ContainerType({
+      slot: ssz.Slot,
+      signingRoot: ssz.Root,
+    }); // casing doesn't matter
   }
 
   async getAll(pubkey: BLSPubkey, limit?: number): Promise<SlashingProtectionBlock[]> {

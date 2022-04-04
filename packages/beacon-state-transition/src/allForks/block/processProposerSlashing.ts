@@ -18,7 +18,7 @@ export function processProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  assertValidProposerSlashing(state as CachedBeaconStateAllForks, proposerSlashing, verifySignatures);
+  assertValidProposerSlashing(state, proposerSlashing, verifySignatures);
 
   slashValidatorAllForks(fork, state, proposerSlashing.signedHeader1.message.proposerIndex);
 }
@@ -51,18 +51,16 @@ export function assertValidProposerSlashing(
   }
 
   // verify the proposer is slashable
-  const proposer = state.validators[header1.proposerIndex];
+  const proposer = state.validators.get(header1.proposerIndex);
   if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
 
   // verify signatures
   if (verifySignatures) {
-    for (const [i, signatureSet] of getProposerSlashingSignatureSets(
-      state as CachedBeaconStateAllForks,
-      proposerSlashing
-    ).entries()) {
-      if (!verifySignatureSet(signatureSet)) {
+    const signatureSets = getProposerSlashingSignatureSets(state, proposerSlashing);
+    for (let i = 0; i < signatureSets.length; i++) {
+      if (!verifySignatureSet(signatureSets[i])) {
         throw new Error(`ProposerSlashing header${i + 1} signature invalid`);
       }
     }

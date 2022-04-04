@@ -24,7 +24,7 @@ export function getBeaconApi(
       return {
         data: {
           genesisForkVersion,
-          genesisTime: BigInt(chain.genesisTime),
+          genesisTime: chain.genesisTime,
           genesisValidatorsRoot: chain.genesisValidatorsRoot,
         },
       };

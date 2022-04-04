@@ -154,8 +154,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   return {
-    listKeys: jsonType(),
-    importKeystores: jsonType(),
-    deleteKeystores: jsonType(),
+    listKeys: jsonType("camel"),
+    importKeystores: jsonType("camel"),
+    deleteKeystores: jsonType("camel"),
   };
 }

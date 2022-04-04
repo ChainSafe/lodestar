@@ -2,7 +2,7 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {SecretKey, PublicKey} from "@chainsafe/bls";
-import {DOMAIN_DEPOSIT} from "@chainsafe/lodestar-params";
+import {DOMAIN_DEPOSIT, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {
   computeDomain,
@@ -121,7 +121,7 @@ function generateDeposit(index: ValidatorIndex, secretKey: SecretKey, publicKey:
   const depositMessage = {
     pubkey: publicKey.toBytes(),
     withdrawalCredentials: Buffer.alloc(32, index),
-    amount: 32e18,
+    amount: MAX_EFFECTIVE_BALANCE,
   };
   const signingRoot = computeSigningRoot(ssz.phase0.DepositMessage, depositMessage, domain);
   const signature = secretKey.sign(signingRoot);

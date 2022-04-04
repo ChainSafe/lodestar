@@ -81,11 +81,7 @@ function getGossipValidatorFn<K extends GossipType>(
       try {
         const sszType = getGossipSSZType(topic);
         const messageData = getUncompressedData(gossipMsg);
-        gossipObject =
-          // TODO: Review if it's really necessary to deserialize this as TreeBacked
-          topic.type === GossipType.beacon_block || topic.type === GossipType.beacon_aggregate_and_proof
-            ? sszType.createTreeBackedFromBytes(messageData)
-            : sszType.deserialize(messageData);
+        gossipObject = sszType.deserialize(messageData);
       } catch (e) {
         // TODO: Log the error or do something better with it
         throw new GossipActionError(GossipAction.REJECT, {code: (e as Error).message});

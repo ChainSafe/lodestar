@@ -1,5 +1,4 @@
 import {phase0, altair, CommitteeIndex, Slot, ssz} from "@chainsafe/lodestar-types";
-import {Json} from "@chainsafe/ssz";
 import {
   RoutesData,
   ReturnTypes,
@@ -122,11 +121,11 @@ export type ReqTypes = {
   getPoolAttesterSlashings: ReqEmpty;
   getPoolProposerSlashings: ReqEmpty;
   getPoolVoluntaryExits: ReqEmpty;
-  submitPoolAttestations: {body: Json};
-  submitPoolAttesterSlashing: {body: Json};
-  submitPoolProposerSlashing: {body: Json};
-  submitPoolVoluntaryExit: {body: Json};
-  submitPoolSyncCommitteeSignatures: {body: Json};
+  submitPoolAttestations: {body: unknown};
+  submitPoolAttesterSlashing: {body: unknown};
+  submitPoolProposerSlashing: {body: unknown};
+  submitPoolVoluntaryExit: {body: unknown};
+  submitPoolSyncCommitteeSignatures: {body: unknown};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {

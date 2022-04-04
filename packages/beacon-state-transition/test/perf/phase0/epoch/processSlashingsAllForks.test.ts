@@ -54,7 +54,7 @@ function getProcessSlashingsTestData(
   epochProcess.indicesToSlash = linspace(indicesToSlashLen);
 
   return {
-    state: state as CachedBeaconStateAllForks,
+    state,
     epochProcess,
   };
 }

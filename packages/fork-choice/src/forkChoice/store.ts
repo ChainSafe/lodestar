@@ -75,7 +75,7 @@ export class ForkChoiceStore implements IForkChoiceStore {
 export function toCheckpointWithHex(checkpoint: phase0.Checkpoint): CheckpointWithHex {
   // `valueOf` coerses the checkpoint, which may be tree-backed, into a javascript object
   // See https://github.com/ChainSafe/lodestar/issues/2258
-  const root = checkpoint.root.valueOf() as Uint8Array;
+  const root = checkpoint.root;
   return {
     epoch: checkpoint.epoch,
     root,

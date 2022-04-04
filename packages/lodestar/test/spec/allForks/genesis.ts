@@ -1,9 +1,13 @@
 import {join} from "node:path";
 import {expect} from "chai";
-import {phase0, Uint64, Root, ssz, allForks, bellatrix} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
+import {phase0, Root, ssz, bellatrix, TimeSeconds} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {initializeBeaconStateFromEth1, isValidGenesisState} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  BeaconStateAllForks,
+  createEmptyEpochContextImmutableData,
+  initializeBeaconStateFromEth1,
+  isValidGenesisState,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
@@ -11,10 +15,13 @@ import {expectEqualBeaconState} from "../util";
 import {IBaseSpecTest} from "../type";
 import {getConfig} from "./util";
 
+// The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
+// proposed genesis-validity conditions are working.
+
 /* eslint-disable @typescript-eslint/naming-convention */
 
 export function genesis(fork: ForkName): void {
-  describeDirectorySpecTest<IGenesisInitSpecTest, phase0.BeaconState>(
+  describeDirectorySpecTest<IGenesisInitSpecTest, BeaconStateAllForks>(
     `${ACTIVE_PRESET}/${fork}/genesis/initialization`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/genesis/initialization/pyspec_tests`),
     (testcase) => {
@@ -22,21 +29,33 @@ export function genesis(fork: ForkName): void {
       for (let i = 0; i < testcase.meta.deposits_count; i++) {
         deposits.push(testcase[`deposits_${i}`] as phase0.Deposit);
       }
-      let executionPayloadHeader: TreeBacked<bellatrix.ExecutionPayloadHeader> | undefined = undefined;
-      if (testcase["execution_payload_header"]) {
-        executionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.createTreeBackedFromStruct(
-          testcase["execution_payload_header"]
-        );
-      }
+
+      const config = getConfig(fork);
+      const immutableData = createEmptyEpochContextImmutableData(config, {
+        // TODO: Should the genesisValidatorsRoot be random here?
+        genesisValidatorsRoot: Buffer.alloc(32, 0),
+      });
+
       return initializeBeaconStateFromEth1(
         getConfig(fork),
+        immutableData,
         ssz.Root.fromJson((testcase.eth1 as IGenesisInitCase).eth1_block_hash),
         bnToNum((testcase.eth1 as IGenesisInitCase).eth1_timestamp),
         deposits,
         undefined,
-        executionPayloadHeader
-      ) as phase0.BeaconState;
+        testcase["execution_payload_header"] &&
+          ssz.bellatrix.ExecutionPayloadHeader.toViewDU(testcase["execution_payload_header"])
+      );
     },
+    // eth1.yaml
+    // ```
+    // {eth1_block_hash: '0x1212121212121212121212121212121212121212121212121212121212121212',
+    // eth1_timestamp: 1578009600}
+    // ```
+    // meta.yaml
+    // ```
+    // {deposits_count: 64}
+    // ```
     {
       inputTypes: {meta: InputType.YAML, eth1: InputType.YAML},
       sszTypes: {
@@ -54,6 +73,11 @@ export function genesis(fork: ForkName): void {
     }
   );
 
+  interface IGenesisValidityTestCase extends IBaseSpecTest {
+    is_valid: boolean;
+    genesis: BeaconStateAllForks;
+  }
+
   describeDirectorySpecTest<IGenesisValidityTestCase, boolean>(
     `${ACTIVE_PRESET}/${fork}/genesis/validity`,
     join(SPEC_TEST_LOCATION, `tests/${ACTIVE_PRESET}/${fork}/genesis/validity/pyspec_tests`),
@@ -65,8 +89,6 @@ export function genesis(fork: ForkName): void {
         is_valid: InputType.YAML,
         genesis: InputType.SSZ_SNAPPY,
       },
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
       sszTypes: {
         genesis: ssz[fork].BeaconState,
       },
@@ -89,20 +111,15 @@ function generateDepositSSZTypeMapping(n: number): Record<string, typeof ssz.pha
 interface IGenesisInitSpecTest {
   [k: string]: phase0.Deposit | unknown | null | undefined;
   eth1_block_hash: Root;
-  eth1_timestamp: Uint64;
+  eth1_timestamp: TimeSeconds;
   meta: {
     deposits_count: number;
   };
   execution_payload_header?: bellatrix.ExecutionPayloadHeader;
-  state: phase0.BeaconState;
+  state: BeaconStateAllForks;
 }
 
 interface IGenesisInitCase {
   eth1_block_hash: string;
   eth1_timestamp: bigint;
-}
-
-interface IGenesisValidityTestCase extends IBaseSpecTest {
-  is_valid: boolean;
-  genesis: allForks.BeaconState;
 }

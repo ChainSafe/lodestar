@@ -1,6 +1,6 @@
 import {compress, uncompress} from "snappyjs";
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {hash} from "@chainsafe/ssz";
+import {digest} from "@chainsafe/as-sha256";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {
   DEFAULT_ENCODING,
@@ -102,5 +102,5 @@ export function computeMsgIdAltair(topic: GossipTopic, topicStr: string, msg: Et
 }
 
 function hashGossipMsgData(...dataArrToHash: Uint8Array[]): Uint8Array {
-  return hash(Buffer.concat(dataArrToHash)).slice(0, GOSSIP_MSGID_LENGTH);
+  return digest(Buffer.concat(dataArrToHash)).slice(0, GOSSIP_MSGID_LENGTH);
 }
