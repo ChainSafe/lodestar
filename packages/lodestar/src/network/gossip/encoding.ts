@@ -1,4 +1,4 @@
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {compress, uncompress} from "snappyjs";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {ForkName} from "@chainsafe/lodestar-params";
@@ -13,7 +13,7 @@ import {GossipsubMessage} from "libp2p-gossipsub/src/types";
  */
 export function fastMsgIdFn(rpcMsg: RPC.IMessage): string {
   if (rpcMsg.data) {
-    return Buffer.from(SHA256.digest(rpcMsg.data)).slice(0, 8).toString("hex");
+    return Buffer.from(digest(rpcMsg.data)).slice(0, 8).toString("hex");
   } else {
     return "0000000000000000";
   }
@@ -53,7 +53,7 @@ export function msgIdFn(gossipTopicCache: GossipTopicCache, msg: GossipsubMessag
     }
   }
 
-  return SHA256.digest(Buffer.concat(vec)).slice(0, 20);
+  return digest(Buffer.concat(vec)).slice(0, 20);
 }
 
 export class DataTransformSnappy {
