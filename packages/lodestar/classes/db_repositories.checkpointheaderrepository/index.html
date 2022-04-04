@@ -507,7 +507,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p>Used to prepare light client updates</p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li>Repository‹Uint8Array, BeaconBlockHeader›</li>
+<li>Repository‹Uint8Array, phase0.BeaconBlockHeader›</li>
 </ul>
 <p>↳ <strong>CheckpointHeaderRepository</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
@@ -563,7 +563,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new CheckpointHeaderRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Uint8Array, Uint8Array›, <code>metrics?</code>: IDbMetrics): <em><a href="./">CheckpointHeaderRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientCheckpointHeader.ts#L11">packages/lodestar/src/db/repositories/lightclientCheckpointHeader.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientCheckpointHeader.ts#L11">packages/lodestar/src/db/repositories/lightclientCheckpointHeader.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -615,12 +615,12 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:22</p>
 <hr/>
 <h3 id="protected-type"><code>Protected</code> type<a class="headerlink" href="#protected-type" title="Permanent link">¶</a></h3>
-<p>• <strong>type</strong>: <em>Type‹BeaconBlockHeader›</em></p>
+<p>• <strong>type</strong>: <em>Type‹phase0.BeaconBlockHeader›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#protected-type">type</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:20</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
-<p>▸ <strong>add</strong>(<code>value</code>: BeaconBlockHeader): <em>Promise‹void›</em></p>
+<p>▸ <strong>add</strong>(<code>value</code>: phase0.BeaconBlockHeader): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#add">add</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:35</p>
 <p><strong>Parameters:</strong></p>
@@ -634,14 +634,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>BeaconBlockHeader</td>
+<td>phase0.BeaconBlockHeader</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹BeaconBlockHeader›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: phase0.BeaconBlockHeader[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:40</p>
 <p><strong>Parameters:</strong></p>
@@ -655,14 +655,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹BeaconBlockHeader›</td>
+<td>phase0.BeaconBlockHeader[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>ids</code>: ArrayLike‹Uint8Array›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchDelete</strong>(<code>ids</code>: Uint8Array[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchdelete">batchDelete</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:39</p>
 <p><strong>Parameters:</strong></p>
@@ -676,14 +676,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>ids</code></td>
-<td>ArrayLike‹Uint8Array›</td>
+<td>Uint8Array[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, BeaconBlockHeader››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: IKeyValue‹Uint8Array, phase0.BeaconBlockHeader›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -697,14 +697,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹Uint8Array, BeaconBlockHeader››</td>
+<td>IKeyValue‹Uint8Array, phase0.BeaconBlockHeader›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchputbinary">batchPutBinary<a class="headerlink" href="#batchputbinary" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, Uint8Array››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: IKeyValue‹Uint8Array, Uint8Array›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchputbinary">batchPutBinary</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -718,14 +718,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹Uint8Array, Uint8Array››</td>
+<td>IKeyValue‹Uint8Array, Uint8Array›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹BeaconBlockHeader›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: phase0.BeaconBlockHeader[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -739,7 +739,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹BeaconBlockHeader›</td>
+<td>phase0.BeaconBlockHeader[]</td>
 </tr>
 </tbody>
 </table>
@@ -810,7 +810,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>BeaconBlockHeader</em></p>
+<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>phase0.BeaconBlockHeader</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:25</p>
 <p><strong>Parameters:</strong></p>
@@ -828,7 +828,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>BeaconBlockHeader</em></p>
+<p><strong>Returns:</strong> <em>phase0.BeaconBlockHeader</em></p>
 <hr/>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>delete</strong>(<code>id</code>: Uint8Array): <em>Promise‹void›</em></p>
@@ -873,7 +873,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>encodeValue</strong>(<code>value</code>: BeaconBlockHeader): <em>Uint8Array</em></p>
+<p>▸ <strong>encodeValue</strong>(<code>value</code>: phase0.BeaconBlockHeader): <em>Uint8Array</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:24</p>
 <p><strong>Parameters:</strong></p>
@@ -887,14 +887,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>BeaconBlockHeader</td>
+<td>phase0.BeaconBlockHeader</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader›[]›</em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader›[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entries">entries</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
 <p><strong>Parameters:</strong></p>
@@ -912,10 +912,10 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader›[]›</em></p>
 <hr/>
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Uint8Array, BeaconBlockHeader››</em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader››</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entriesstream">entriesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
@@ -933,13 +933,13 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Uint8Array, BeaconBlockHeader››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader››</em></p>
 <hr/>
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader› | null›</em></p>
+<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstentry">firstEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
@@ -948,13 +948,13 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstValue</strong>(): <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p>▸ <strong>firstValue</strong>(): <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstvalue">firstValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
-<p><strong>Returns:</strong> <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
-<p>▸ <strong>get</strong>(<code>id</code>: Uint8Array): <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p>▸ <strong>get</strong>(<code>id</code>: Uint8Array): <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#get">get</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:28</p>
 <p><strong>Parameters:</strong></p>
@@ -972,7 +972,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <hr/>
 <h3 id="getbinary">getBinary<a class="headerlink" href="#getbinary" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBinary</strong>(<code>id</code>: Uint8Array): <em>Promise‹Uint8Array | null›</em></p>
@@ -996,7 +996,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getId</strong>(<code>value</code>: BeaconBlockHeader): <em>Uint8Array</em></p>
+<p>▸ <strong>getId</strong>(<code>value</code>: phase0.BeaconBlockHeader): <em>Uint8Array</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:34</p>
 <p><strong>Parameters:</strong></p>
@@ -1010,7 +1010,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>BeaconBlockHeader</td>
+<td>phase0.BeaconBlockHeader</td>
 </tr>
 </tbody>
 </table>
@@ -1080,10 +1080,10 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>AsyncIterable‹Uint8Array›</em></p>
 <hr/>
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader› | null›</em></p>
+<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastentry">lastEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, BeaconBlockHeader› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹Uint8Array, phase0.BeaconBlockHeader› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹Uint8Array | null›</em></p>
@@ -1092,13 +1092,13 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastValue</strong>(): <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p>▸ <strong>lastValue</strong>(): <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastvalue">lastValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
-<p><strong>Returns:</strong> <em>Promise‹BeaconBlockHeader | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.BeaconBlockHeader | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
-<p>▸ <strong>put</strong>(<code>id</code>: Uint8Array, <code>value</code>: BeaconBlockHeader): <em>Promise‹void›</em></p>
+<p>▸ <strong>put</strong>(<code>id</code>: Uint8Array, <code>value</code>: phase0.BeaconBlockHeader): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#put">put</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:31</p>
 <p><strong>Parameters:</strong></p>
@@ -1116,7 +1116,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 <tr>
 <td><code>value</code></td>
-<td>BeaconBlockHeader</td>
+<td>phase0.BeaconBlockHeader</td>
 </tr>
 </tbody>
 </table>
@@ -1148,7 +1148,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>remove</strong>(<code>value</code>: BeaconBlockHeader): <em>Promise‹void›</em></p>
+<p>▸ <strong>remove</strong>(<code>value</code>: phase0.BeaconBlockHeader): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#remove">remove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:36</p>
 <p><strong>Parameters:</strong></p>
@@ -1162,14 +1162,14 @@ all non-checkpoint headers are pruned from this repository.</p>
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>BeaconBlockHeader</td>
+<td>phase0.BeaconBlockHeader</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">¶</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹BeaconBlockHeader[]›</em></p>
+<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>Promise‹phase0.BeaconBlockHeader[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#values">values</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:44</p>
 <p><strong>Parameters:</strong></p>
@@ -1187,10 +1187,10 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹BeaconBlockHeader[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.BeaconBlockHeader[]›</em></p>
 <hr/>
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹BeaconBlockHeader›</em></p>
+<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹Uint8Array›): <em>AsyncIterable‹phase0.BeaconBlockHeader›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#valuesstream">valuesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:45</p>
 <p><strong>Parameters:</strong></p>
@@ -1208,7 +1208,7 @@ all non-checkpoint headers are pruned from this repository.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹BeaconBlockHeader›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹phase0.BeaconBlockHeader›</em></p>
 </article>
 </div>
 </div>

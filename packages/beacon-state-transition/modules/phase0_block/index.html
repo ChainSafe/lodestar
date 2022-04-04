@@ -251,11 +251,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#type-aliases">
-    Type aliases
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#functions">
     Functions
   </a>
@@ -273,34 +268,6 @@
 <a class="md-nav__link" href="#isvalidindexedattestation">
     isValidIndexedAttestation
   </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-aliases_1">
-    Type aliases
-  </a>
-<nav aria-label="Type aliases" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#operation">
-    Operation
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#operationfunction">
-    OperationFunction
-  </a>
-<nav aria-label="OperationFunction" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration">
-    Type declaration:
-  </a>
-</li>
-</ul>
-</nav>
 </li>
 </ul>
 </nav>
@@ -376,11 +343,6 @@
 <ul>
 <li><a href="./#isvalidindexedattestation">isValidIndexedAttestation</a></li>
 </ul>
-<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="./#operation">Operation</a></li>
-<li><a href="./#operationfunction">OperationFunction</a></li>
-</ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#checkpointtostr">checkpointToStr</a></li>
@@ -396,43 +358,10 @@
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
 <h3 id="isvalidindexedattestation">isValidIndexedAttestation<a class="headerlink" href="#isvalidindexedattestation" title="Permanent link">¶</a></h3>
 <p>• <strong>isValidIndexedAttestation</strong>:</p>
-<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
-<h3 id="operation">Operation<a class="headerlink" href="#operation" title="Permanent link">¶</a></h3>
-<p>Ƭ <strong>Operation</strong>: <em>ProposerSlashing | AttesterSlashing | Attestation | Deposit | VoluntaryExit</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processOperations.ts#L12">packages/beacon-state-transition/src/phase0/block/processOperations.ts:12</a></em></p>
-<hr/>
-<h3 id="operationfunction">OperationFunction<a class="headerlink" href="#operationfunction" title="Permanent link">¶</a></h3>
-<p>Ƭ <strong>OperationFunction</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processOperations.ts#L18">packages/beacon-state-transition/src/phase0/block/processOperations.ts:18</a></em></p>
-<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
-<p>▸ (<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>op</code>: <a href="./#operation">Operation</a>, <code>verify</code>: boolean): <em>void</em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
-</tr>
-<tr>
-<td><code>op</code></td>
-<td><a href="./#operation">Operation</a></td>
-</tr>
-<tr>
-<td><code>verify</code></td>
-<td>boolean</td>
-</tr>
-</tbody>
-</table>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="checkpointtostr">checkpointToStr<a class="headerlink" href="#checkpointtostr" title="Permanent link">¶</a></h3>
-<p>▸ <strong>checkpointToStr</strong>(<code>checkpoint</code>: Checkpoint): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L107">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:107</a></em></p>
+<p>▸ <strong>checkpointToStr</strong>(<code>checkpoint</code>: <a href="../phase0/#checkpoint">Checkpoint</a>): <em>string</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L101">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:101</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -444,15 +373,15 @@
 <tbody>
 <tr>
 <td><code>checkpoint</code></td>
-<td>Checkpoint</td>
+<td><a href="../phase0/#checkpoint">Checkpoint</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>string</em></p>
 <hr/>
 <h3 id="processattestation">processAttestation<a class="headerlink" href="#processattestation" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processAttestation</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>attestation</code>: Attestation, <code>verifySignature</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L16">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:16</a></em></p>
+<p>▸ <strong>processAttestation</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>attestation</code>: <a href="../phase0/#attestation">Attestation</a>, <code>verifySignature</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L16">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:16</a></em></p>
 <p>Process an Attestation operation. Validates an attestation and appends it to state.currentEpochAttestations or
 state.previousEpochAttestations to be processed in bulk at the epoch transition.</p>
 <p>PERF: Work depends on number of Attestation per block. On mainnet the average is 89.7 / block, with 87.8 participant
@@ -469,12 +398,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>attestation</code></td>
-<td>Attestation</td>
+<td><a href="../phase0/#attestation">Attestation</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -487,8 +416,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processattesterslashing">processAttesterSlashing<a class="headerlink" href="#processattesterslashing" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>attesterSlashing</code>: AttesterSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processAttesterSlashing.ts#L7">packages/beacon-state-transition/src/phase0/block/processAttesterSlashing.ts:7</a></em></p>
+<p>▸ <strong>processAttesterSlashing</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>attesterSlashing</code>: <a href="../phase0/#attesterslashing">AttesterSlashing</a>, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processAttesterSlashing.ts#L7">packages/beacon-state-transition/src/phase0/block/processAttesterSlashing.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -501,12 +430,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>attesterSlashing</code></td>
-<td>AttesterSlashing</td>
+<td><a href="../phase0/#attesterslashing">AttesterSlashing</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -519,8 +448,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processblock">processBlock<a class="headerlink" href="#processblock" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>block</code>: BeaconBlock, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/index.ts#L24">packages/beacon-state-transition/src/phase0/block/index.ts:24</a></em></p>
+<p>▸ <strong>processBlock</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>block</code>: <a href="../phase0/#beaconblock">BeaconBlock</a>, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/index.ts#L24">packages/beacon-state-transition/src/phase0/block/index.ts:24</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -533,12 +462,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>block</code></td>
-<td>BeaconBlock</td>
+<td><a href="../phase0/#beaconblock">BeaconBlock</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -551,8 +480,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processdeposit">processDeposit<a class="headerlink" href="#processdeposit" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processDeposit</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>deposit</code>: Deposit): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processDeposit.ts#L7">packages/beacon-state-transition/src/phase0/block/processDeposit.ts:7</a></em></p>
+<p>▸ <strong>processDeposit</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>deposit</code>: <a href="../phase0/#deposit">Deposit</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processDeposit.ts#L7">packages/beacon-state-transition/src/phase0/block/processDeposit.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -564,19 +493,19 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 </tr>
 <tr>
 <td><code>deposit</code></td>
-<td>Deposit</td>
+<td><a href="../phase0/#deposit">Deposit</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processoperations">processOperations<a class="headerlink" href="#processoperations" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>body</code>: BeaconBlockBody, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processOperations.ts#L20">packages/beacon-state-transition/src/phase0/block/processOperations.ts:20</a></em></p>
+<p>▸ <strong>processOperations</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>body</code>: <a href="../phase0/#beaconblockbody">BeaconBlockBody</a>, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processOperations.ts#L11">packages/beacon-state-transition/src/phase0/block/processOperations.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -589,12 +518,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>body</code></td>
-<td>BeaconBlockBody</td>
+<td><a href="../phase0/#beaconblockbody">BeaconBlockBody</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -607,8 +536,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processproposerslashing">processProposerSlashing<a class="headerlink" href="#processproposerslashing" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>proposerSlashing</code>: ProposerSlashing, <code>verifySignatures</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/phase0/block/processProposerSlashing.ts:6</a></em></p>
+<p>▸ <strong>processProposerSlashing</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>proposerSlashing</code>: <a href="../phase0/#proposerslashing">ProposerSlashing</a>, <code>verifySignatures</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processProposerSlashing.ts#L6">packages/beacon-state-transition/src/phase0/block/processProposerSlashing.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -621,12 +550,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>proposerSlashing</code></td>
-<td>ProposerSlashing</td>
+<td><a href="../phase0/#proposerslashing">ProposerSlashing</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -639,8 +568,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processvoluntaryexit">processVoluntaryExit<a class="headerlink" href="#processvoluntaryexit" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processVoluntaryExit</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>signedVoluntaryExit</code>: SignedVoluntaryExit, <code>verifySignature</code>: boolean): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processVoluntaryExit.ts#L5">packages/beacon-state-transition/src/phase0/block/processVoluntaryExit.ts:5</a></em></p>
+<p>▸ <strong>processVoluntaryExit</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>, <code>signedVoluntaryExit</code>: <a href="../phase0/#signedvoluntaryexit">SignedVoluntaryExit</a>, <code>verifySignature</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processVoluntaryExit.ts#L5">packages/beacon-state-transition/src/phase0/block/processVoluntaryExit.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -653,12 +582,12 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 <td>-</td>
 </tr>
 <tr>
 <td><code>signedVoluntaryExit</code></td>
-<td>SignedVoluntaryExit</td>
+<td><a href="../phase0/#signedvoluntaryexit">SignedVoluntaryExit</a></td>
 <td>-</td>
 </tr>
 <tr>
@@ -671,8 +600,8 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="validateattestation">validateAttestation<a class="headerlink" href="#validateattestation" title="Permanent link">¶</a></h3>
-<p>▸ <strong>validateAttestation</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>attestation</code>: Attestation): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L65">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:65</a></em></p>
+<p>▸ <strong>validateAttestation</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>attestation</code>: <a href="../phase0/#attestation">Attestation</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/phase0/block/processAttestation.ts#L59">packages/beacon-state-transition/src/phase0/block/processAttestation.ts:59</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -684,11 +613,11 @@ true bits on average. See <code>packages/beacon-state-transition/test/perf/analy
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>attestation</code></td>
-<td>Attestation</td>
+<td><a href="../phase0/#attestation">Attestation</a></td>
 </tr>
 </tbody>
 </table>

@@ -414,8 +414,8 @@
 <p>• <strong>processSlashingsReset</strong>:</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="processeffectivebalanceupdates_1">processEffectiveBalanceUpdates<a class="headerlink" href="#processeffectivebalanceupdates_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processEffectiveBalanceUpdates</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processEffectiveBalanceUpdates.ts#L20">packages/beacon-state-transition/src/allForks/epoch/processEffectiveBalanceUpdates.ts:20</a></em></p>
+<p>▸ <strong>processEffectiveBalanceUpdates</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processEffectiveBalanceUpdates.ts#L20">packages/beacon-state-transition/src/allForks/epoch/processEffectiveBalanceUpdates.ts:20</a></em></p>
 <p>Update effective balances if validator.balance has changed enough</p>
 <p>PERF: Cost 'proportional' to $VALIDATOR_COUNT, to iterate over all balances. Then cost is proportional to the amount
 of validators whose effectiveBalance changed. Worst case is a massive network leak or a big slashing event which
@@ -435,19 +435,19 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processeth1datareset_1">processEth1DataReset<a class="headerlink" href="#processeth1datareset_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processEth1DataReset</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processEth1DataReset.ts#L11">packages/beacon-state-transition/src/allForks/epoch/processEth1DataReset.ts:11</a></em></p>
+<p>▸ <strong>processEth1DataReset</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processEth1DataReset.ts#L10">packages/beacon-state-transition/src/allForks/epoch/processEth1DataReset.ts:10</a></em></p>
 <p>Reset eth1DataVotes tree every <code>EPOCHS_PER_ETH1_VOTING_PERIOD</code>.</p>
 <p>PERF: Almost no (constant) cost</p>
 <p><strong>Parameters:</strong></p>
@@ -461,19 +461,19 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processhistoricalrootsupdate_1">processHistoricalRootsUpdate<a class="headerlink" href="#processhistoricalrootsupdate_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processHistoricalRootsUpdate</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processHistoricalRootsUpdate.ts#L11">packages/beacon-state-transition/src/allForks/epoch/processHistoricalRootsUpdate.ts:11</a></em></p>
+<p>▸ <strong>processHistoricalRootsUpdate</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processHistoricalRootsUpdate.ts#L11">packages/beacon-state-transition/src/allForks/epoch/processHistoricalRootsUpdate.ts:11</a></em></p>
 <p>Persist blockRoots and stateRoots to historicalRoots.</p>
 <p>PERF: Very low (constant) cost. Most of the HistoricalBatch should already be hashed.</p>
 <p><strong>Parameters:</strong></p>
@@ -487,19 +487,19 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processjustificationandfinalization_1">processJustificationAndFinalization<a class="headerlink" href="#processjustificationandfinalization_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processJustificationAndFinalization</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processJustificationAndFinalization.ts#L11">packages/beacon-state-transition/src/allForks/epoch/processJustificationAndFinalization.ts:11</a></em></p>
+<p>▸ <strong>processJustificationAndFinalization</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processJustificationAndFinalization.ts#L12">packages/beacon-state-transition/src/allForks/epoch/processJustificationAndFinalization.ts:12</a></em></p>
 <p>Update justified and finalized checkpoints depending on network participation.</p>
 <p>PERF: Very low (constant) cost. Persist small objects to the tree.</p>
 <p><strong>Parameters:</strong></p>
@@ -513,19 +513,19 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processrandaomixesreset_1">processRandaoMixesReset<a class="headerlink" href="#processrandaomixesreset_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processRandaoMixesReset</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processRandaoMixesReset.ts#L10">packages/beacon-state-transition/src/allForks/epoch/processRandaoMixesReset.ts:10</a></em></p>
+<p>▸ <strong>processRandaoMixesReset</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processRandaoMixesReset.ts#L9">packages/beacon-state-transition/src/allForks/epoch/processRandaoMixesReset.ts:9</a></em></p>
 <p>Write next randaoMix</p>
 <p>PERF: Almost no (constant) cost</p>
 <p><strong>Parameters:</strong></p>
@@ -539,19 +539,19 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processregistryupdates_1">processRegistryUpdates<a class="headerlink" href="#processregistryupdates_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processRegistryUpdates</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processRegistryUpdates.ts#L19">packages/beacon-state-transition/src/allForks/epoch/processRegistryUpdates.ts:19</a></em></p>
+<p>▸ <strong>processRegistryUpdates</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processRegistryUpdates.ts#L19">packages/beacon-state-transition/src/allForks/epoch/processRegistryUpdates.ts:19</a></em></p>
 <p>Update validator registry for validators that activate + exit</p>
 <p>PERF: Cost 'proportional' to only validators that active + exit. For mainnet conditions:
 - indicesEligibleForActivationQueue: Maxing deposits triggers 512 validator mutations
@@ -575,24 +575,21 @@ causes a large amount of the network to decrease their balance simultaneously.</
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processrewardsandpenaltiesallforks">processRewardsAndPenaltiesAllForks<a class="headerlink" href="#processrewardsandpenaltiesallforks" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processRewardsAndPenaltiesAllForks</strong>‹<strong>T</strong>›(<code>fork</code>: ForkName, <code>state</code>: T, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processRewardsAndPenalties.ts#L12">packages/beacon-state-transition/src/allForks/epoch/processRewardsAndPenalties.ts:12</a></em></p>
+<p>▸ <strong>processRewardsAndPenaltiesAllForks</strong>(<code>fork</code>: ForkName, <code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processRewardsAndPenalties.ts#L13">packages/beacon-state-transition/src/allForks/epoch/processRewardsAndPenalties.ts:13</a></em></p>
 <p>Iterate over all validator and compute rewards and penalties to apply to balances.</p>
-<p>PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags
-are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*</p>
-<p><strong>Type parameters:</strong></p>
-<p>▪ <strong>T</strong>: <em><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></em></p>
+<p>PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set</p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -608,19 +605,19 @@ are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*</p>
 </tr>
 <tr>
 <td><code>state</code></td>
-<td>T</td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processslashingsallforks">processSlashingsAllForks<a class="headerlink" href="#processslashingsallforks" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processSlashingsAllForks</strong>(<code>fork</code>: ForkName, <code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>process</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processSlashings.ts#L23">packages/beacon-state-transition/src/allForks/epoch/processSlashings.ts:23</a></em></p>
+<p>▸ <strong>processSlashingsAllForks</strong>(<code>fork</code>: ForkName, <code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>process</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processSlashings.ts#L22">packages/beacon-state-transition/src/allForks/epoch/processSlashings.ts:22</a></em></p>
 <p>Update validator registry for validators that activate + exit</p>
 <p>PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same
@@ -643,19 +640,19 @@ are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*</p>
 </tr>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>process</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="processslashingsreset_1">processSlashingsReset<a class="headerlink" href="#processslashingsreset_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>processSlashingsReset</strong>(<code>state</code>: <a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../cache/#epochprocess">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/allForks/epoch/processSlashingsReset.ts#L9">packages/beacon-state-transition/src/allForks/epoch/processSlashingsReset.ts:9</a></em></p>
+<p>▸ <strong>processSlashingsReset</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/allForks/epoch/processSlashingsReset.ts#L9">packages/beacon-state-transition/src/allForks/epoch/processSlashingsReset.ts:9</a></em></p>
 <p>Reset the next slashings balance accumulator</p>
 <p>PERF: Almost no (constant) cost</p>
 <p><strong>Parameters:</strong></p>
@@ -669,11 +666,11 @@ are true, worst case: FLAG_UNSLASHED + FLAG_ELIGIBLE_ATTESTER + FLAG_PREV_*</p>
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
 </tr>
 <tr>
 <td><code>epochProcess</code></td>
-<td><a href="../cache/#epochprocess">EpochProcess</a></td>
+<td><a href="../../interfaces/cache.epochprocess/">EpochProcess</a></td>
 </tr>
 </tbody>
 </table>

@@ -261,11 +261,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#interfaces">
-    Interfaces
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#type-aliases">
     Type aliases
   </a>
@@ -284,11 +279,6 @@
   </a>
 <nav aria-label="References" class="md-nav">
 <ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#isszsnappyoptions">
-    ISszSnappyOptions
-  </a>
-</li>
 <li class="md-nav__item">
 <a class="md-nav__link" href="#sszsnappyerror">
     SszSnappyError
@@ -390,7 +380,6 @@
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
 <h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#isszsnappyoptions">ISszSnappyOptions</a></li>
 <li><a href="./#sszsnappyerror">SszSnappyError</a></li>
 <li><a href="./#sszsnappyerrorcode">SszSnappyErrorCode</a></li>
 <li><a href="./#readsszsnappypayload">readSszSnappyPayload</a></li>
@@ -403,10 +392,6 @@
 <h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="../../classes/network_reqresp_encodingstrategies_sszsnappy.sszsnappyerror/">SszSnappyError</a></li>
-</ul>
-<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="../../interfaces/network_reqresp_encodingstrategies_sszsnappy.isszsnappyoptions/">ISszSnappyOptions</a></li>
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
@@ -424,9 +409,6 @@
 <li><a href="./#writesszsnappypayload">writeSszSnappyPayload</a></li>
 </ul>
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="isszsnappyoptions">ISszSnappyOptions<a class="headerlink" href="#isszsnappyoptions" title="Permanent link">¶</a></h3>
-<p>• <strong>ISszSnappyOptions</strong>:</p>
-<hr/>
 <h3 id="sszsnappyerror">SszSnappyError<a class="headerlink" href="#sszsnappyerror" title="Permanent link">¶</a></h3>
 <p>• <strong>SszSnappyError</strong>:</p>
 <hr/>
@@ -441,11 +423,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="sszsnappyerrortype">SszSnappyErrorType<a class="headerlink" href="#sszsnappyerrortype" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SszSnappyErrorType</strong>: <em>object | object | object | object | object | object | object | object | object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/errors.ts#L20">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/errors.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/errors.ts#L20">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/errors.ts:20</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="deserializesszbody">deserializeSszBody<a class="headerlink" href="#deserializesszbody" title="Permanent link">¶</a></h3>
-<p>▸ <strong>deserializeSszBody</strong>‹<strong>T</strong>›(<code>bytes</code>: Buffer, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>, <code>options?</code>: <a href="./#isszsnappyoptions">ISszSnappyOptions</a>): <em>T</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L133">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:133</a></em></p>
+<p>▸ <strong>deserializeSszBody</strong>‹<strong>T</strong>›(<code>bytes</code>: Buffer, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>): <em>T</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L127">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:127</a></em></p>
 <p>Deseralizes SSZ body.
 <code>isSszTree</code> option allows the SignedBeaconBlock type to be deserialized as a tree</p>
 <p><strong>Type parameters:</strong></p>
@@ -467,17 +449,13 @@
 <td><code>type</code></td>
 <td><a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a></td>
 </tr>
-<tr>
-<td><code>options?</code></td>
-<td><a href="./#isszsnappyoptions">ISszSnappyOptions</a></td>
-</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>T</em></p>
 <hr/>
 <h3 id="encodesszsnappy">encodeSszSnappy<a class="headerlink" href="#encodesszsnappy" title="Permanent link">¶</a></h3>
 <p>▸ <strong>encodeSszSnappy</strong>(<code>bytes</code>: Buffer): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L31">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L31">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:31</a></em></p>
 <p>Buffered Snappy writer</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -498,7 +476,7 @@
 <hr/>
 <h3 id="maxencodedlen">maxEncodedLen<a class="headerlink" href="#maxencodedlen" title="Permanent link">¶</a></h3>
 <p>▸ <strong>maxEncodedLen</strong>(<code>sszLength</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/utils.ts#L4">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/utils.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/utils.ts#L4">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/utils.ts:4</a></em></p>
 <p>Computes the worst-case compression result by SSZ-Snappy</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -519,7 +497,7 @@
 <hr/>
 <h3 id="readsszsnappybody">readSszSnappyBody<a class="headerlink" href="#readsszsnappybody" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readSszSnappyBody</strong>(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>sszDataLength</code>: number): <em>Promise‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L83">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L77">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:77</a></em></p>
 <p>Reads <code>&lt;encoded-payload&gt;</code> for ssz-snappy and decompress.
 The returned bytes can be SSZ deseralized</p>
 <p><strong>Parameters:</strong></p>
@@ -545,7 +523,7 @@ The returned bytes can be SSZ deseralized</p>
 <hr/>
 <h3 id="readsszsnappyheader">readSszSnappyHeader<a class="headerlink" href="#readsszsnappyheader" title="Permanent link">¶</a></h3>
 <p>▸ <strong>readSszSnappyHeader</strong>(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>): <em>Promise‹number›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L37">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L31">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:31</a></em></p>
 <p>Reads <code>&lt;encoding-dependent-header&gt;</code> for ssz-snappy.
 encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned protobuf varint</p>
 <p><strong>Parameters:</strong></p>
@@ -570,8 +548,8 @@ encoding-header ::= the length of the raw SSZ bytes, encoded as an unsigned prot
 <p><strong>Returns:</strong> <em>Promise‹number›</em></p>
 <hr/>
 <h3 id="readsszsnappypayload_1">readSszSnappyPayload<a class="headerlink" href="#readsszsnappypayload_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>readSszSnappyPayload</strong>‹<strong>T</strong>›(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>, <code>options?</code>: <a href="./#isszsnappyoptions">ISszSnappyOptions</a>): <em>Promise‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L22">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:22</a></em></p>
+<p>▸ <strong>readSszSnappyPayload</strong>‹<strong>T</strong>›(<code>bufferedSource</code>: <a href="../../classes/network_reqresp_utils.bufferedsource/">BufferedSource</a>, <code>type</code>: <a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a>): <em>Promise‹T›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts#L17">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/decode.ts:17</a></em></p>
 <p>ssz_snappy encoding strategy reader.
 Consumes a stream source to read encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nc">encoding-dependent-header</span><span class="p">&gt;</span> | <span class="p">&lt;</span><span class="nc">encoded-payload</span><span class="p">&gt;</span>
@@ -595,17 +573,13 @@ Consumes a stream source to read encoded header and payload as defined in the sp
 <td><code>type</code></td>
 <td><a href="../network_reqresp/#requestorresponsetype">RequestOrResponseType</a></td>
 </tr>
-<tr>
-<td><code>options?</code></td>
-<td><a href="./#isszsnappyoptions">ISszSnappyOptions</a></td>
-</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹T›</em></p>
 <hr/>
 <h3 id="serializesszbody">serializeSszBody<a class="headerlink" href="#serializesszbody" title="Permanent link">¶</a></h3>
 <p>▸ <strong>serializeSszBody</strong>‹<strong>T</strong>›(<code>body</code>: T, <code>serializer</code>: <a href="../network_reqresp/#outgoingserializer">OutgoingSerializer</a>): <em>Buffer</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L41">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L41">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:41</a></em></p>
 <p>Returns SSZ serialized body. Wrapps errors with SszSnappyError.SERIALIZE_ERROR</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong>: <em><a href="../network_reqresp/#requestoroutgoingresponsebody">RequestOrOutgoingResponseBody</a></em></p>
@@ -632,7 +606,7 @@ Consumes a stream source to read encoded header and payload as defined in the sp
 <hr/>
 <h3 id="writesszsnappypayload_1">writeSszSnappyPayload<a class="headerlink" href="#writesszsnappypayload_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>writeSszSnappyPayload</strong>‹<strong>T</strong>›(<code>body</code>: T, <code>serializer</code>: <a href="../network_reqresp/#outgoingserializer">OutgoingSerializer</a>): <em>AsyncGenerator‹Buffer›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L14">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts#L14">packages/lodestar/src/network/reqresp/encodingStrategies/sszSnappy/encode.ts:14</a></em></p>
 <p>ssz_snappy encoding strategy writer.
 Yields byte chunks for encoded header and payload as defined in the spec:
 <div class="highlight"><pre><span></span><code>&lt;encoding-dependent-header&gt; | &lt;encoded-payload&gt;

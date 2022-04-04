@@ -514,7 +514,7 @@
 <h1 id="class-eth1datarepository">Class: Eth1DataRepository<a class="headerlink" href="#class-eth1datarepository" title="Permanent link">¶</a></h1>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li>Repository‹number, Eth1DataOrdered›</li>
+<li>Repository‹number, phase0.Eth1DataOrdered›</li>
 </ul>
 <p>↳ <strong>Eth1DataRepository</strong></p>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
@@ -572,7 +572,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Eth1DataRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: Db, <code>metrics?</code>: IDbMetrics): <em><a href="./">Eth1DataRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/eth1Data.ts#L6">packages/lodestar/src/db/repositories/eth1Data.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/eth1Data.ts#L6">packages/lodestar/src/db/repositories/eth1Data.ts:6</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -624,12 +624,12 @@
 <p>Defined in packages/db/lib/abstractRepository.d.ts:22</p>
 <hr/>
 <h3 id="protected-type"><code>Protected</code> type<a class="headerlink" href="#protected-type" title="Permanent link">¶</a></h3>
-<p>• <strong>type</strong>: <em>Type‹Eth1DataOrdered›</em></p>
+<p>• <strong>type</strong>: <em>Type‹phase0.Eth1DataOrdered›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#protected-type">type</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:20</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
-<p>▸ <strong>add</strong>(<code>value</code>: Eth1DataOrdered): <em>Promise‹void›</em></p>
+<p>▸ <strong>add</strong>(<code>value</code>: phase0.Eth1DataOrdered): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#add">add</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:35</p>
 <p><strong>Parameters:</strong></p>
@@ -643,14 +643,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>Eth1DataOrdered</td>
+<td>phase0.Eth1DataOrdered</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹Eth1DataOrdered›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: phase0.Eth1DataOrdered[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:40</p>
 <p><strong>Parameters:</strong></p>
@@ -664,14 +664,14 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹Eth1DataOrdered›</td>
+<td>phase0.Eth1DataOrdered[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>ids</code>: ArrayLike‹number›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchDelete</strong>(<code>ids</code>: number[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchdelete">batchDelete</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:39</p>
 <p><strong>Parameters:</strong></p>
@@ -685,14 +685,14 @@
 <tbody>
 <tr>
 <td><code>ids</code></td>
-<td>ArrayLike‹number›</td>
+<td>number[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹number, Eth1DataOrdered››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: IKeyValue‹number, phase0.Eth1DataOrdered›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -706,14 +706,14 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹number, Eth1DataOrdered››</td>
+<td>IKeyValue‹number, phase0.Eth1DataOrdered›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchputbinary">batchPutBinary<a class="headerlink" href="#batchputbinary" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: ArrayLike‹IKeyValue‹number, Uint8Array››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: IKeyValue‹number, Uint8Array›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchputbinary">batchPutBinary</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -727,15 +727,15 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹number, Uint8Array››</td>
+<td>IKeyValue‹number, Uint8Array›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchputvalues">batchPutValues<a class="headerlink" href="#batchputvalues" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPutValues</strong>(<code>eth1Datas</code>: Eth1DataOrdered &amp; object[]): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/eth1Data.ts#L20">packages/lodestar/src/db/repositories/eth1Data.ts:20</a></em></p>
+<p>▸ <strong>batchPutValues</strong>(<code>eth1Datas</code>: phase0.Eth1DataOrdered &amp; object[]): <em>Promise‹void›</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/eth1Data.ts#L20">packages/lodestar/src/db/repositories/eth1Data.ts:20</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -747,14 +747,14 @@
 <tbody>
 <tr>
 <td><code>eth1Datas</code></td>
-<td>Eth1DataOrdered &amp; object[]</td>
+<td>phase0.Eth1DataOrdered &amp; object[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹Eth1DataOrdered›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: phase0.Eth1DataOrdered[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -768,7 +768,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹Eth1DataOrdered›</td>
+<td>phase0.Eth1DataOrdered[]</td>
 </tr>
 </tbody>
 </table>
@@ -820,7 +820,7 @@
 <h3 id="decodekey">decodeKey<a class="headerlink" href="#decodekey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decodeKey</strong>(<code>data</code>: Buffer): <em>number</em></p>
 <p><em>Overrides <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#decodekey">decodeKey</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/eth1Data.ts#L11">packages/lodestar/src/db/repositories/eth1Data.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/eth1Data.ts#L11">packages/lodestar/src/db/repositories/eth1Data.ts:11</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -839,7 +839,7 @@
 <p><strong>Returns:</strong> <em>number</em></p>
 <hr/>
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>Eth1DataOrdered</em></p>
+<p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em>phase0.Eth1DataOrdered</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:25</p>
 <p><strong>Parameters:</strong></p>
@@ -857,7 +857,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Eth1DataOrdered</em></p>
+<p><strong>Returns:</strong> <em>phase0.Eth1DataOrdered</em></p>
 <hr/>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>delete</strong>(<code>id</code>: number): <em>Promise‹void›</em></p>
@@ -882,7 +882,7 @@
 <hr/>
 <h3 id="deleteold">deleteOld<a class="headerlink" href="#deleteold" title="Permanent link">¶</a></h3>
 <p>▸ <strong>deleteOld</strong>(<code>timestamp</code>: number): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/eth1Data.ts#L29">packages/lodestar/src/db/repositories/eth1Data.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/eth1Data.ts#L29">packages/lodestar/src/db/repositories/eth1Data.ts:29</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -922,7 +922,7 @@
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>encodeValue</strong>(<code>value</code>: Eth1DataOrdered): <em>Uint8Array</em></p>
+<p>▸ <strong>encodeValue</strong>(<code>value</code>: phase0.Eth1DataOrdered): <em>Uint8Array</em></p>
 <p><em>Inherited from <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:24</p>
 <p><strong>Parameters:</strong></p>
@@ -936,14 +936,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>Eth1DataOrdered</td>
+<td>phase0.Eth1DataOrdered</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Uint8Array</em></p>
 <hr/>
 <h3 id="entries">entries<a class="headerlink" href="#entries" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>Promise‹IKeyValue‹number, Eth1DataOrdered›[]›</em></p>
+<p>▸ <strong>entries</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered›[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entries">entries</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:47</p>
 <p><strong>Parameters:</strong></p>
@@ -961,10 +961,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, Eth1DataOrdered›[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered›[]›</em></p>
 <hr/>
 <h3 id="entriesstream">entriesStream<a class="headerlink" href="#entriesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹IKeyValue‹number, Eth1DataOrdered››</em></p>
+<p>▸ <strong>entriesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹IKeyValue‹number, phase0.Eth1DataOrdered››</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#entriesstream">entriesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:48</p>
 <p><strong>Parameters:</strong></p>
@@ -982,13 +982,13 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹number, Eth1DataOrdered››</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹IKeyValue‹number, phase0.Eth1DataOrdered››</em></p>
 <hr/>
 <h3 id="firstentry">firstEntry<a class="headerlink" href="#firstentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹number, Eth1DataOrdered› | null›</em></p>
+<p>▸ <strong>firstEntry</strong>(): <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstentry">firstEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:53</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, Eth1DataOrdered› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered› | null›</em></p>
 <hr/>
 <h3 id="firstkey">firstKey<a class="headerlink" href="#firstkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>firstKey</strong>(): <em>Promise‹number | null›</em></p>
@@ -997,13 +997,13 @@
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 <hr/>
 <h3 id="firstvalue">firstValue<a class="headerlink" href="#firstvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>firstValue</strong>(): <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p>▸ <strong>firstValue</strong>(): <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#firstvalue">firstValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:51</p>
-<p><strong>Returns:</strong> <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <hr/>
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
-<p>▸ <strong>get</strong>(<code>id</code>: number): <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p>▸ <strong>get</strong>(<code>id</code>: number): <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#get">get</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:28</p>
 <p><strong>Parameters:</strong></p>
@@ -1021,7 +1021,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <hr/>
 <h3 id="getbinary">getBinary<a class="headerlink" href="#getbinary" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBinary</strong>(<code>id</code>: number): <em>Promise‹Uint8Array | null›</em></p>
@@ -1045,9 +1045,9 @@
 <p><strong>Returns:</strong> <em>Promise‹Uint8Array | null›</em></p>
 <hr/>
 <h3 id="getid">getId<a class="headerlink" href="#getid" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getId</strong>(<code>value</code>: Eth1Data): <em>number</em></p>
+<p>▸ <strong>getId</strong>(<code>value</code>: phase0.Eth1Data): <em>number</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#getid">getId</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/eth1Data.ts#L16">packages/lodestar/src/db/repositories/eth1Data.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/eth1Data.ts#L16">packages/lodestar/src/db/repositories/eth1Data.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1059,7 +1059,7 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>Eth1Data</td>
+<td>phase0.Eth1Data</td>
 </tr>
 </tbody>
 </table>
@@ -1129,10 +1129,10 @@
 <p><strong>Returns:</strong> <em>AsyncIterable‹number›</em></p>
 <hr/>
 <h3 id="lastentry">lastEntry<a class="headerlink" href="#lastentry" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹number, Eth1DataOrdered› | null›</em></p>
+<p>▸ <strong>lastEntry</strong>(): <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered› | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastentry">lastEntry</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:54</p>
-<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, Eth1DataOrdered› | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹IKeyValue‹number, phase0.Eth1DataOrdered› | null›</em></p>
 <hr/>
 <h3 id="lastkey">lastKey<a class="headerlink" href="#lastkey" title="Permanent link">¶</a></h3>
 <p>▸ <strong>lastKey</strong>(): <em>Promise‹number | null›</em></p>
@@ -1141,13 +1141,13 @@
 <p><strong>Returns:</strong> <em>Promise‹number | null›</em></p>
 <hr/>
 <h3 id="lastvalue">lastValue<a class="headerlink" href="#lastvalue" title="Permanent link">¶</a></h3>
-<p>▸ <strong>lastValue</strong>(): <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p>▸ <strong>lastValue</strong>(): <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#lastvalue">lastValue</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:52</p>
-<p><strong>Returns:</strong> <em>Promise‹Eth1DataOrdered | null›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.Eth1DataOrdered | null›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
-<p>▸ <strong>put</strong>(<code>id</code>: number, <code>value</code>: Eth1DataOrdered): <em>Promise‹void›</em></p>
+<p>▸ <strong>put</strong>(<code>id</code>: number, <code>value</code>: phase0.Eth1DataOrdered): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#put">put</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:31</p>
 <p><strong>Parameters:</strong></p>
@@ -1165,7 +1165,7 @@
 </tr>
 <tr>
 <td><code>value</code></td>
-<td>Eth1DataOrdered</td>
+<td>phase0.Eth1DataOrdered</td>
 </tr>
 </tbody>
 </table>
@@ -1197,7 +1197,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="remove">remove<a class="headerlink" href="#remove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>remove</strong>(<code>value</code>: Eth1DataOrdered): <em>Promise‹void›</em></p>
+<p>▸ <strong>remove</strong>(<code>value</code>: phase0.Eth1DataOrdered): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#remove">remove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:36</p>
 <p><strong>Parameters:</strong></p>
@@ -1211,14 +1211,14 @@
 <tbody>
 <tr>
 <td><code>value</code></td>
-<td>Eth1DataOrdered</td>
+<td>phase0.Eth1DataOrdered</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="values">values<a class="headerlink" href="#values" title="Permanent link">¶</a></h3>
-<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>Promise‹Eth1DataOrdered[]›</em></p>
+<p>▸ <strong>values</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>Promise‹phase0.Eth1DataOrdered[]›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#values">values</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:44</p>
 <p><strong>Parameters:</strong></p>
@@ -1236,10 +1236,10 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>Promise‹Eth1DataOrdered[]›</em></p>
+<p><strong>Returns:</strong> <em>Promise‹phase0.Eth1DataOrdered[]›</em></p>
 <hr/>
 <h3 id="valuesstream">valuesStream<a class="headerlink" href="#valuesstream" title="Permanent link">¶</a></h3>
-<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹Eth1DataOrdered›</em></p>
+<p>▸ <strong>valuesStream</strong>(<code>opts?</code>: IFilterOptions‹number›): <em>AsyncIterable‹phase0.Eth1DataOrdered›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#valuesstream">valuesStream</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:45</p>
 <p><strong>Parameters:</strong></p>
@@ -1257,7 +1257,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>AsyncIterable‹Eth1DataOrdered›</em></p>
+<p><strong>Returns:</strong> <em>AsyncIterable‹phase0.Eth1DataOrdered›</em></p>
 </article>
 </div>
 </div>

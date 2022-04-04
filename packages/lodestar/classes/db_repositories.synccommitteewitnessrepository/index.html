@@ -562,7 +562,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new SyncCommitteeWitnessRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Uint8Array, Uint8Array›, <code>metrics?</code>: IDbMetrics): <em><a href="./">SyncCommitteeWitnessRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientSyncCommitteeWitness.ts#L12">packages/lodestar/src/db/repositories/lightclientSyncCommitteeWitness.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientSyncCommitteeWitness.ts#L12">packages/lodestar/src/db/repositories/lightclientSyncCommitteeWitness.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -640,7 +640,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:40</p>
 <p><strong>Parameters:</strong></p>
@@ -654,14 +654,14 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹<a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›</td>
+<td><a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>ids</code>: ArrayLike‹Uint8Array›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchDelete</strong>(<code>ids</code>: Uint8Array[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchdelete">batchDelete</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:39</p>
 <p><strong>Parameters:</strong></p>
@@ -675,14 +675,14 @@
 <tbody>
 <tr>
 <td><code>ids</code></td>
-<td>ArrayLike‹Uint8Array›</td>
+<td>Uint8Array[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: IKeyValue‹Uint8Array, <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -696,14 +696,14 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹Uint8Array, <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>››</td>
+<td>IKeyValue‹Uint8Array, <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchputbinary">batchPutBinary<a class="headerlink" href="#batchputbinary" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: ArrayLike‹IKeyValue‹Uint8Array, Uint8Array››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: IKeyValue‹Uint8Array, Uint8Array›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchputbinary">batchPutBinary</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -717,14 +717,14 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹Uint8Array, Uint8Array››</td>
+<td>IKeyValue‹Uint8Array, Uint8Array›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: <a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -738,7 +738,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹<a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>›</td>
+<td><a href="../../modules/chain_lightclient/#synccommitteewitness">SyncCommitteeWitness</a>[]</td>
 </tr>
 </tbody>
 </table>

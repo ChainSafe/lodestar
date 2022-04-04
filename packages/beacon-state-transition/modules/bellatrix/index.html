@@ -315,6 +315,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#isbellatrixcachedstatetype">
+    isBellatrixCachedStateType
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#isbellatrixstatetype">
     isBellatrixStateType
   </a>
@@ -402,6 +407,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#isbellatrixcachedstatetype_1">
+    isBellatrixCachedStateType
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#isbellatrixstatetype_1">
     isBellatrixStateType
   </a>
@@ -424,11 +434,6 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#upgradestate_1">
     upgradeState
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#upgradetreebackedstate">
-    upgradeTreeBackedState
   </a>
 </li>
 </ul>
@@ -458,6 +463,7 @@
 <li><a href="./#signedbeaconblock">SignedBeaconBlock</a></li>
 <li><a href="./#transaction">Transaction</a></li>
 <li><a href="./#isbellatrixblockbodytype">isBellatrixBlockBodyType</a></li>
+<li><a href="./#isbellatrixcachedstatetype">isBellatrixCachedStateType</a></li>
 <li><a href="./#isbellatrixstatetype">isBellatrixStateType</a></li>
 <li><a href="./#isexecutionenabled">isExecutionEnabled</a></li>
 <li><a href="./#ismergetransitionblock">isMergeTransitionBlock</a></li>
@@ -476,12 +482,12 @@
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#isbellatrixblockbodytype">isBellatrixBlockBodyType</a></li>
+<li><a href="./#isbellatrixcachedstatetype">isBellatrixCachedStateType</a></li>
 <li><a href="./#isbellatrixstatetype">isBellatrixStateType</a></li>
 <li><a href="./#isexecutionenabled">isExecutionEnabled</a></li>
 <li><a href="./#ismergetransitionblock">isMergeTransitionBlock</a></li>
 <li><a href="./#ismergetransitioncomplete">isMergeTransitionComplete</a></li>
 <li><a href="./#upgradestate">upgradeState</a></li>
-<li><a href="./#upgradetreebackedstate">upgradeTreeBackedState</a></li>
 </ul>
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
 <h3 id="beaconblock">BeaconBlock<a class="headerlink" href="#beaconblock" title="Permanent link">¶</a></h3>
@@ -510,6 +516,9 @@
 <hr/>
 <h3 id="isbellatrixblockbodytype">isBellatrixBlockBodyType<a class="headerlink" href="#isbellatrixblockbodytype" title="Permanent link">¶</a></h3>
 <p>• <strong>isBellatrixBlockBodyType</strong>:</p>
+<hr/>
+<h3 id="isbellatrixcachedstatetype">isBellatrixCachedStateType<a class="headerlink" href="#isbellatrixcachedstatetype" title="Permanent link">¶</a></h3>
+<p>• <strong>isBellatrixCachedStateType</strong>:</p>
 <hr/>
 <h3 id="isbellatrixstatetype">isBellatrixStateType<a class="headerlink" href="#isbellatrixstatetype" title="Permanent link">¶</a></h3>
 <p>• <strong>isBellatrixStateType</strong>:</p>
@@ -543,15 +552,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="executionengine">ExecutionEngine<a class="headerlink" href="#executionengine" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ExecutionEngine</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/executionEngine.ts#L3">packages/beacon-state-transition/src/bellatrix/executionEngine.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/executionEngine.ts#L3">packages/beacon-state-transition/src/bellatrix/executionEngine.ts:3</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li><strong>notifyNewPayload</strong>(<code>executionPayload</code>: <a href="./#executionpayload">ExecutionPayload</a>): <em>boolean</em></li>
 </ul>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="isbellatrixblockbodytype_1">isBellatrixBlockBodyType<a class="headerlink" href="#isbellatrixblockbodytype_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isBellatrixBlockBodyType</strong>(<code>blockBody</code>: <a href="../allforks/#beaconblockbody">BeaconBlockBody</a>): <em>blockBody is BeaconBlockBody</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/utils.ts#L42">packages/beacon-state-transition/src/bellatrix/utils.ts:42</a></em></p>
+<p>▸ <strong>isBellatrixBlockBodyType</strong>(<code>blockBody</code>: <a href="../allforks/#beaconblockbody">BeaconBlockBody</a>): <em>blockBody is bellatrix.BeaconBlockBody</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L54">packages/beacon-state-transition/src/bellatrix/utils.ts:54</a></em></p>
 <p>Type guard for bellatrix.BeaconBlockBody</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -568,11 +577,32 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>blockBody is BeaconBlockBody</em></p>
+<p><strong>Returns:</strong> <em>blockBody is bellatrix.BeaconBlockBody</em></p>
+<hr/>
+<h3 id="isbellatrixcachedstatetype_1">isBellatrixCachedStateType<a class="headerlink" href="#isbellatrixcachedstatetype_1" title="Permanent link">¶</a></h3>
+<p>▸ <strong>isBellatrixCachedStateType</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a>): <em>state is CachedBeaconStateBellatrix</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L49">packages/beacon-state-transition/src/bellatrix/utils.ts:49</a></em></p>
+<p>Type guard for bellatrix.CachedBeaconState</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>state</code></td>
+<td><a href="../cache/#cachedbeaconstateallforks">CachedBeaconStateAllForks</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>state is CachedBeaconStateBellatrix</em></p>
 <hr/>
 <h3 id="isbellatrixstatetype_1">isBellatrixStateType<a class="headerlink" href="#isbellatrixstatetype_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isBellatrixStateType</strong>(<code>state</code>: <a href="../allforks/#beaconstate">BeaconState</a>): <em>state is BeaconState</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/utils.ts#L37">packages/beacon-state-transition/src/bellatrix/utils.ts:37</a></em></p>
+<p>▸ <strong>isBellatrixStateType</strong>(<code>state</code>: <a href="../cache/#beaconstateallforks">BeaconStateAllForks</a>): <em>state is BeaconStateBellatrix</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L44">packages/beacon-state-transition/src/bellatrix/utils.ts:44</a></em></p>
 <p>Type guard for bellatrix.BeaconState</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -585,15 +615,15 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../allforks/#beaconstate">BeaconState</a></td>
+<td><a href="../cache/#beaconstateallforks">BeaconStateAllForks</a></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>state is BeaconState</em></p>
+<p><strong>Returns:</strong> <em>state is BeaconStateBellatrix</em></p>
 <hr/>
 <h3 id="isexecutionenabled_1">isExecutionEnabled<a class="headerlink" href="#isexecutionenabled_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isExecutionEnabled</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/utils.ts#L7">packages/beacon-state-transition/src/bellatrix/utils.ts:7</a></em></p>
+<p>▸ <strong>isExecutionEnabled</strong>(<code>state</code>: <a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a>, <code>body</code>: <a href="./#beaconblockbody">BeaconBlockBody</a>): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L13">packages/beacon-state-transition/src/bellatrix/utils.ts:13</a></em></p>
 <p>Execution enabled = merge is done.
 When (A) state has execution data OR (B) block has execution data</p>
 <p><strong>Parameters:</strong></p>
@@ -607,19 +637,19 @@ When (A) state has execution data OR (B) block has execution data</p>
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td>BeaconState</td>
+<td><a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a></td>
 </tr>
 <tr>
 <td><code>body</code></td>
-<td>BeaconBlockBody</td>
+<td><a href="./#beaconblockbody">BeaconBlockBody</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="ismergetransitionblock_1">isMergeTransitionBlock<a class="headerlink" href="#ismergetransitionblock_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isMergeTransitionBlock</strong>(<code>state</code>: BeaconState, <code>body</code>: BeaconBlockBody): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/utils.ts#L18">packages/beacon-state-transition/src/bellatrix/utils.ts:18</a></em></p>
+<p>▸ <strong>isMergeTransitionBlock</strong>(<code>state</code>: <a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a>, <code>body</code>: <a href="./#beaconblockbody">BeaconBlockBody</a>): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L24">packages/beacon-state-transition/src/bellatrix/utils.ts:24</a></em></p>
 <p>Merge block is the SINGLE block that transitions from POW to POS.
 state has no execution data AND this block has execution data</p>
 <p><strong>Parameters:</strong></p>
@@ -633,19 +663,19 @@ state has no execution data AND this block has execution data</p>
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td>BeaconState</td>
+<td><a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a></td>
 </tr>
 <tr>
 <td><code>body</code></td>
-<td>BeaconBlockBody</td>
+<td><a href="./#beaconblockbody">BeaconBlockBody</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="ismergetransitioncomplete_1">isMergeTransitionComplete<a class="headerlink" href="#ismergetransitioncomplete_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>isMergeTransitionComplete</strong>(<code>state</code>: BeaconState): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/utils.ts#L29">packages/beacon-state-transition/src/bellatrix/utils.ts:29</a></em></p>
+<p>▸ <strong>isMergeTransitionComplete</strong>(<code>state</code>: <a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a>): <em>boolean</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/utils.ts#L35">packages/beacon-state-transition/src/bellatrix/utils.ts:35</a></em></p>
 <p>Merge is complete when the state includes execution layer data:
 state.latestExecutionPayloadHeader NOT EMPTY</p>
 <p><strong>Parameters:</strong></p>
@@ -659,15 +689,15 @@ state.latestExecutionPayloadHeader NOT EMPTY</p>
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td>BeaconState</td>
+<td><a href="../cache/#beaconstatebellatrix">BeaconStateBellatrix</a></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>boolean</em></p>
 <hr/>
 <h3 id="upgradestate_1">upgradeState<a class="headerlink" href="#upgradestate_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>upgradeState</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>): <em><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/upgradeState.ts#L10">packages/beacon-state-transition/src/bellatrix/upgradeState.ts:10</a></em></p>
+<p>▸ <strong>upgradeState</strong>(<code>stateAltair</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>): <em><a href="../cache/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/bellatrix/upgradeState.ts#L8">packages/beacon-state-transition/src/bellatrix/upgradeState.ts:8</a></em></p>
 <p>Upgrade a state from altair to bellatrix.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -679,36 +709,12 @@ state.latestExecutionPayloadHeader NOT EMPTY</p>
 </thead>
 <tbody>
 <tr>
-<td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></td>
+<td><code>stateAltair</code></td>
+<td><a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="../root/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></em></p>
-<hr/>
-<h3 id="upgradetreebackedstate">upgradeTreeBackedState<a class="headerlink" href="#upgradetreebackedstate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>upgradeTreeBackedState</strong>(<code>config</code>: IBeaconConfig, <code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>): <em>TreeBacked‹BeaconState›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/bellatrix/upgradeState.ts#L17">packages/beacon-state-transition/src/bellatrix/upgradeState.ts:17</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>config</code></td>
-<td>IBeaconConfig</td>
-</tr>
-<tr>
-<td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>TreeBacked‹BeaconState›</em></p>
+<p><strong>Returns:</strong> <em><a href="../cache/#cachedbeaconstatebellatrix">CachedBeaconStateBellatrix</a></em></p>
 </article>
 </div>
 </div>

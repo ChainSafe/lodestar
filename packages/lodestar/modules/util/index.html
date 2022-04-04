@@ -378,11 +378,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#gettreeatindex">
-    getTreeAtIndex
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#groupbyfork">
     groupByFork
   </a>
@@ -511,7 +506,6 @@
 <li><a href="./#getsignedblocktypefrombytes">getSignedBlockTypeFromBytes</a></li>
 <li><a href="./#getslotfrombytes">getSlotFromBytes</a></li>
 <li><a href="./#getstatetypefrombytes">getStateTypeFromBytes</a></li>
-<li><a href="./#gettreeatindex">getTreeAtIndex</a></li>
 <li><a href="./#groupbyfork">groupByFork</a></li>
 <li><a href="./#hextobuffer">hexToBuffer</a></li>
 <li><a href="./#isvalidaddress">isValidAddress</a></li>
@@ -530,15 +524,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="point">Point<a class="headerlink" href="#point" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>Point</strong>: <em>[number, number]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/timeSeries.ts#L1">packages/lodestar/src/util/timeSeries.ts:1</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/timeSeries.ts#L1">packages/lodestar/src/util/timeSeries.ts:1</a></em></p>
 <hr/>
 <h3 id="result">Result<a class="headerlink" href="#result" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>Result</strong>: <em>object | object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/wrapError.ts#L1">packages/lodestar/src/util/wrapError.ts:1</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/wrapError.ts#L1">packages/lodestar/src/util/wrapError.ts:1</a></em></p>
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-slot_bytes_position_in_block"><code>Const</code> SLOT_BYTES_POSITION_IN_BLOCK<a class="headerlink" href="#const-slot_bytes_position_in_block" title="Permanent link">¶</a></h3>
 <p>• <strong>SLOT_BYTES_POSITION_IN_BLOCK</strong>: <em>100</em> = 100</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L25">packages/lodestar/src/util/multifork.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L24">packages/lodestar/src/util/multifork.ts:24</a></em></p>
 <p>4 + 96 = 100
 <div class="highlight"><pre><span></span><code>class SignedBeaconBlock(Container):
   message: BeaconBlock [offset - 4 bytes]
@@ -554,7 +548,7 @@ class BeaconBlock(Container):
 <hr/>
 <h3 id="const-slot_bytes_position_in_state"><code>Const</code> SLOT_BYTES_POSITION_IN_STATE<a class="headerlink" href="#const-slot_bytes_position_in_state" title="Permanent link">¶</a></h3>
 <p>• <strong>SLOT_BYTES_POSITION_IN_STATE</strong>: <em>40</em> = 40</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L36">packages/lodestar/src/util/multifork.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L35">packages/lodestar/src/util/multifork.ts:35</a></em></p>
 <p>8 + 32 = 40
 <div class="highlight"><pre><span></span><code>class BeaconState(Container):
   genesis_time: uint64 [fixed - 8 bytes]
@@ -565,12 +559,12 @@ class BeaconBlock(Container):
 <hr/>
 <h3 id="const-slot_byte_count"><code>Const</code> SLOT_BYTE_COUNT<a class="headerlink" href="#const-slot_byte_count" title="Permanent link">¶</a></h3>
 <p>• <strong>SLOT_BYTE_COUNT</strong>: <em>8</em> = 8</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L9">packages/lodestar/src/util/multifork.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L8">packages/lodestar/src/util/multifork.ts:8</a></em></p>
 <p>Slot    uint64</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="abortablesource">abortableSource<a class="headerlink" href="#abortablesource" title="Permanent link">¶</a></h3>
 <p>▸ <strong>abortableSource</strong>‹<strong>T</strong>›(<code>sourceArg</code>: AsyncIterable‹T›, <code>signals</code>: object[]): <em>AsyncIterable‹T›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/abortableSource.ts#L8">packages/lodestar/src/util/abortableSource.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/abortableSource.ts#L8">packages/lodestar/src/util/abortableSource.ts:8</a></em></p>
 <p>Wraps an AsyncIterable and rejects early if any signal aborts.
 Throws the error returned by <code>getError()</code> of each signal options.</p>
 <p>Simplified fork of <code>"abortable-iterator"</code>.
@@ -600,7 +594,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="binarysearchlte">binarySearchLte<a class="headerlink" href="#binarysearchlte" title="Permanent link">¶</a></h3>
 <p>▸ <strong>binarySearchLte</strong>‹<strong>T</strong>›(<code>items</code>: T[], <code>value</code>: number, <code>getter</code>: function): <em>T</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/binarySearch.ts#L1">packages/lodestar/src/util/binarySearch.ts:1</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/binarySearch.ts#L1">packages/lodestar/src/util/binarySearch.ts:1</a></em></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
 <p><strong>Parameters:</strong></p>
@@ -627,7 +621,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="buffertohex">bufferToHex<a class="headerlink" href="#buffertohex" title="Permanent link">¶</a></h3>
 <p>▸ <strong>bufferToHex</strong>(<code>buffer</code>: Buffer): <em>RootHex</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/hex.ts#L3">packages/lodestar/src/util/hex.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/hex.ts#L3">packages/lodestar/src/util/hex.ts:3</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -647,7 +641,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="bytearrayconcat">byteArrayConcat<a class="headerlink" href="#bytearrayconcat" title="Permanent link">¶</a></h3>
 <p>▸ <strong>byteArrayConcat</strong>(<code>bytesArr</code>: Uint8Array[]): <em>Uint8Array</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/bytes.ts#L3">packages/lodestar/src/util/bytes.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/bytes.ts#L3">packages/lodestar/src/util/bytes.ts:3</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -667,7 +661,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="bytearrayequals">byteArrayEquals<a class="headerlink" href="#bytearrayequals" title="Permanent link">¶</a></h3>
 <p>▸ <strong>byteArrayEquals</strong>(<code>a</code>: Uint8Array | Root, <code>b</code>: Uint8Array | Root): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/bytes.ts#L16">packages/lodestar/src/util/bytes.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/bytes.ts#L16">packages/lodestar/src/util/bytes.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -691,7 +685,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="chunkifyinclusiverange">chunkifyInclusiveRange<a class="headerlink" href="#chunkifyinclusiverange" title="Permanent link">¶</a></h3>
 <p>▸ <strong>chunkifyInclusiveRange</strong>(<code>from</code>: number, <code>to</code>: number, <code>chunkCount</code>: number): <em>number[][]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/chunkify.ts#L12">packages/lodestar/src/util/chunkify.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/chunkify.ts#L12">packages/lodestar/src/util/chunkify.ts:12</a></em></p>
 <p>Split an inclusive range into a sequence of contiguous inclusive ranges
 <div class="highlight"><pre><span></span><code>[[a,b], [c,d] ... Sn] = chunkifyInclusiveRange([a,z], n)
 // where
@@ -728,7 +722,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="ensuredirectoryexistence">ensureDirectoryExistence<a class="headerlink" href="#ensuredirectoryexistence" title="Permanent link">¶</a></h3>
 <p>▸ <strong>ensureDirectoryExistence</strong>(<code>filePath</code>: string): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/file.ts#L12">packages/lodestar/src/util/file.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/file.ts#L12">packages/lodestar/src/util/file.ts:12</a></em></p>
 <p>Recursively ensures directory exists by creating any missing directories</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -751,7 +745,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="findlastindex">findLastIndex<a class="headerlink" href="#findlastindex" title="Permanent link">¶</a></h3>
 <p>▸ <strong>findLastIndex</strong>‹<strong>T</strong>›(<code>array</code>: T[], <code>predicate</code>: function): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/array.ts#L4">packages/lodestar/src/util/array.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/array.ts#L4">packages/lodestar/src/util/array.ts:4</a></em></p>
 <p>Return the last index in the array that matches the predicate</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
@@ -777,8 +771,8 @@ Read function's source for reasoning of the fork.</p>
 <p><strong>Returns:</strong> <em>number</em></p>
 <hr/>
 <h3 id="getsignedblocktypefrombytes">getSignedBlockTypeFromBytes<a class="headerlink" href="#getsignedblocktypefrombytes" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getSignedBlockTypeFromBytes</strong>(<code>config</code>: IChainForkConfig, <code>bytes</code>: Buffer | Uint8Array): <em>ContainerType‹allForks.SignedBeaconBlock›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L38">packages/lodestar/src/util/multifork.ts:38</a></em></p>
+<p>▸ <strong>getSignedBlockTypeFromBytes</strong>(<code>config</code>: IChainForkConfig, <code>bytes</code>: Buffer | Uint8Array): <em>allForks.AllForksSSZTypes["SignedBeaconBlock"]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L37">packages/lodestar/src/util/multifork.ts:37</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -798,11 +792,11 @@ Read function's source for reasoning of the fork.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>ContainerType‹allForks.SignedBeaconBlock›</em></p>
+<p><strong>Returns:</strong> <em>allForks.AllForksSSZTypes["SignedBeaconBlock"]</em></p>
 <hr/>
 <h3 id="getslotfrombytes">getSlotFromBytes<a class="headerlink" href="#getslotfrombytes" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getSlotFromBytes</strong>(<code>bytes</code>: Buffer | Uint8Array): <em>Slot</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L46">packages/lodestar/src/util/multifork.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L45">packages/lodestar/src/util/multifork.ts:45</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -821,8 +815,8 @@ Read function's source for reasoning of the fork.</p>
 <p><strong>Returns:</strong> <em>Slot</em></p>
 <hr/>
 <h3 id="getstatetypefrombytes">getStateTypeFromBytes<a class="headerlink" href="#getstatetypefrombytes" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getStateTypeFromBytes</strong>(<code>config</code>: IChainForkConfig, <code>bytes</code>: Buffer | Uint8Array): <em>ContainerType‹allForks.BeaconState›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/multifork.ts#L50">packages/lodestar/src/util/multifork.ts:50</a></em></p>
+<p>▸ <strong>getStateTypeFromBytes</strong>(<code>config</code>: IChainForkConfig, <code>bytes</code>: Buffer | Uint8Array): <em>allForks.AllForksSSZTypes["BeaconState"]</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/multifork.ts#L49">packages/lodestar/src/util/multifork.ts:49</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -842,37 +836,11 @@ Read function's source for reasoning of the fork.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em>ContainerType‹allForks.BeaconState›</em></p>
-<hr/>
-<h3 id="gettreeatindex">getTreeAtIndex<a class="headerlink" href="#gettreeatindex" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getTreeAtIndex</strong>‹<strong>T</strong>›(<code>tree</code>: TreeBacked‹List‹T››, <code>index</code>: number): <em>TreeBacked‹List‹T››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/tree.ts#L3">packages/lodestar/src/util/tree.ts:3</a></em></p>
-<p><strong>Type parameters:</strong></p>
-<p>▪ <strong>T</strong></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>tree</code></td>
-<td>TreeBacked‹List‹T››</td>
-</tr>
-<tr>
-<td><code>index</code></td>
-<td>number</td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>TreeBacked‹List‹T››</em></p>
+<p><strong>Returns:</strong> <em>allForks.AllForksSSZTypes["BeaconState"]</em></p>
 <hr/>
 <h3 id="groupbyfork">groupByFork<a class="headerlink" href="#groupbyfork" title="Permanent link">¶</a></h3>
 <p>▸ <strong>groupByFork</strong>‹<strong>T</strong>›(<code>config</code>: IBeaconConfig, <code>items</code>: T[], <code>getSlot</code>: function): <em><a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹ForkName, T[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/forkName.ts#L8">packages/lodestar/src/util/forkName.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/forkName.ts#L8">packages/lodestar/src/util/forkName.ts:8</a></em></p>
 <p>Group an array of items by ForkName according to the slot associted to each item</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
@@ -900,7 +868,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="hextobuffer">hexToBuffer<a class="headerlink" href="#hextobuffer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>hexToBuffer</strong>(<code>v</code>: string): <em>Buffer</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/hex.ts#L7">packages/lodestar/src/util/hex.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/hex.ts#L7">packages/lodestar/src/util/hex.ts:7</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -920,7 +888,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="isvalidaddress">isValidAddress<a class="headerlink" href="#isvalidaddress" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isValidAddress</strong>(<code>address</code>: string): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/address.ts#L5">packages/lodestar/src/util/address.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/address.ts#L5">packages/lodestar/src/util/address.ts:5</a></em></p>
 <p><strong><code>module</code></strong> util/address</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -941,7 +909,7 @@ Read function's source for reasoning of the fork.</p>
 <hr/>
 <h3 id="linearregression">linearRegression<a class="headerlink" href="#linearregression" title="Permanent link">¶</a></h3>
 <p>▸ <strong>linearRegression</strong>(<code>data</code>: <a href="./#point">Point</a>[]): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/timeSeries.ts#L50">packages/lodestar/src/util/timeSeries.ts:50</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/timeSeries.ts#L50">packages/lodestar/src/util/timeSeries.ts:50</a></em></p>
 <p>From https://github.com/simple-statistics/simple-statistics/blob/d0d177baf74976a2421638bce98ab028c5afb537/src/linear_regression.js</p>
 <p><a href="http://en.wikipedia.org/wiki/Simple_linear_regression">Simple linear regression</a>
 is a simple way to find a fitted line between a set of coordinates.
@@ -979,7 +947,7 @@ linearRegression([[0, 0], [1, 1]]); // =&gt; { m: 1, b: 0 }</p>
 <hr/>
 <h3 id="linspace">linspace<a class="headerlink" href="#linspace" title="Permanent link">¶</a></h3>
 <p>▸ <strong>linspace</strong>(<code>start</code>: number, <code>stop</code>: number): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/numpy.ts#L4">packages/lodestar/src/util/numpy.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/numpy.ts#L4">packages/lodestar/src/util/numpy.ts:4</a></em></p>
 <p>Returns num evenly spaced samples, calculated over the interval [start, stop] inclusive.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1004,7 +972,7 @@ linearRegression([[0, 0], [1, 1]]); // =&gt; { m: 1, b: 0 }</p>
 <hr/>
 <h3 id="prettytimediff">prettyTimeDiff<a class="headerlink" href="#prettytimediff" title="Permanent link">¶</a></h3>
 <p>▸ <strong>prettyTimeDiff</strong>(<code>diffMs</code>: number): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/time.ts#L4">packages/lodestar/src/util/time.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/time.ts#L4">packages/lodestar/src/util/time.ts:4</a></em></p>
 <p>Render a time difference in human readable form</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1025,7 +993,7 @@ linearRegression([[0, 0], [1, 1]]); // =&gt; { m: 1, b: 0 }</p>
 <hr/>
 <h3 id="prunesettomax">pruneSetToMax<a class="headerlink" href="#prunesettomax" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneSetToMax</strong>‹<strong>T</strong>›(<code>set</code>: Set‹T› | <a href="../../classes/chain_statecache.maptracker/#static-map">Map</a>‹T, unknown›, <code>maxItems</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/map.ts#L60">packages/lodestar/src/util/map.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/map.ts#L60">packages/lodestar/src/util/map.ts:60</a></em></p>
 <p>Prune an arbitrary set removing the first keys to have a set.size === maxItems.
 Returns the count of deleted items.</p>
 <p><strong>Type parameters:</strong></p>
@@ -1053,7 +1021,7 @@ Returns the count of deleted items.</p>
 <hr/>
 <h3 id="retry">retry<a class="headerlink" href="#retry" title="Permanent link">¶</a></h3>
 <p>▸ <strong>retry</strong>‹<strong>A</strong>›(<code>fn</code>: function, <code>opts?</code>: <a href="../../interfaces/util.iretryoptions/">IRetryOptions</a>): <em>Promise‹A›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/retry.ts#L26">packages/lodestar/src/util/retry.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/retry.ts#L26">packages/lodestar/src/util/retry.ts:26</a></em></p>
 <p>Retry a given function on error.</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>A</strong></p>
@@ -1082,7 +1050,7 @@ A Number identifying the attempt. The absolute first attempt (before any retries
 <hr/>
 <h3 id="rmdir">rmDir<a class="headerlink" href="#rmdir" title="Permanent link">¶</a></h3>
 <p>▸ <strong>rmDir</strong>(<code>dir</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/file.ts#L22">packages/lodestar/src/util/file.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/file.ts#L22">packages/lodestar/src/util/file.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1102,7 +1070,7 @@ A Number identifying the attempt. The absolute first attempt (before any retries
 <hr/>
 <h3 id="shuffle">shuffle<a class="headerlink" href="#shuffle" title="Permanent link">¶</a></h3>
 <p>▸ <strong>shuffle</strong>‹<strong>T</strong>›(<code>arr</code>: T[]): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/shuffle.ts#L5">packages/lodestar/src/util/shuffle.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/shuffle.ts#L5">packages/lodestar/src/util/shuffle.ts:5</a></em></p>
 <p>Randomize an array of items without mutation.
 Note: Uses Math.random() as entropy source, use for non-critical stuff</p>
 <p><strong>Type parameters:</strong></p>
@@ -1126,7 +1094,7 @@ Note: Uses Math.random() as entropy source, use for non-critical stuff</p>
 <hr/>
 <h3 id="shuffleone">shuffleOne<a class="headerlink" href="#shuffleone" title="Permanent link">¶</a></h3>
 <p>▸ <strong>shuffleOne</strong>‹<strong>T</strong>›(<code>arr</code>: T[]): <em>T | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/shuffle.ts#L17">packages/lodestar/src/util/shuffle.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/shuffle.ts#L17">packages/lodestar/src/util/shuffle.ts:17</a></em></p>
 <p>Return one random item from array</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>T</strong></p>
@@ -1149,7 +1117,7 @@ Note: Uses Math.random() as entropy source, use for non-critical stuff</p>
 <hr/>
 <h3 id="sortby">sortBy<a class="headerlink" href="#sortby" title="Permanent link">¶</a></h3>
 <p>▸ <strong>sortBy</strong>‹<strong>T</strong>›(<code>arr</code>: T[], ...<code>conditions</code>: function[]): <em>T[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/sortBy.ts#L9">packages/lodestar/src/util/sortBy.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/sortBy.ts#L9">packages/lodestar/src/util/sortBy.ts:9</a></em></p>
 <p>Sort by multiple prioritized conditions
 - Sort is stable
 - Sort does not mutate the original array
@@ -1179,7 +1147,7 @@ Note: Uses Math.random() as entropy source, use for non-critical stuff</p>
 <hr/>
 <h3 id="tograffitibuffer">toGraffitiBuffer<a class="headerlink" href="#tograffitibuffer" title="Permanent link">¶</a></h3>
 <p>▸ <strong>toGraffitiBuffer</strong>(<code>graffiti</code>: string): <em>Buffer</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/graffiti.ts#L6">packages/lodestar/src/util/graffiti.ts:6</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/graffiti.ts#L6">packages/lodestar/src/util/graffiti.ts:6</a></em></p>
 <p>Parses a graffiti UTF8 string and returns a 32 bytes buffer right padded with zeros</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1200,7 +1168,7 @@ Note: Uses Math.random() as entropy source, use for non-critical stuff</p>
 <hr/>
 <h3 id="wraperror">wrapError<a class="headerlink" href="#wraperror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>wrapError</strong>‹<strong>T</strong>›(<code>promise</code>: Promise‹T›): <em>Promise‹<a href="./#result">Result</a>‹T››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/util/wrapError.ts#L16">packages/lodestar/src/util/wrapError.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/util/wrapError.ts#L16">packages/lodestar/src/util/wrapError.ts:16</a></em></p>
 <p>Wraps a promise to return either an error or result
 Useful for SyncChain code that must ensure in a sample code
 <div class="highlight"><pre><span></span><code><span class="k">try</span> <span class="p">{</span>

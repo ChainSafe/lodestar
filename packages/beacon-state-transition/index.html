@@ -261,17 +261,13 @@
 <span class="k">import</span> <span class="p">{</span><span class="nx">generateState</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"../test/utils/state"</span><span class="p">;</span>
 
 <span class="c1">// dummy test state</span>
-<span class="kd">const</span> <span class="nx">state</span>: <span class="kt">CachedBeaconStateAllForks</span> <span class="o">=</span> <span class="nx">generateState</span><span class="p">()</span> <span class="kr">as</span> <span class="nx">CachedBeaconStateAllForks</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">preState</span>: <span class="kt">CachedBeaconStateAllForks</span> <span class="o">=</span> <span class="nx">generateState</span><span class="p">()</span> <span class="kr">as</span> <span class="nx">CachedBeaconStateAllForks</span><span class="p">;</span>
 
 <span class="c1">// dummy test block</span>
 <span class="kd">const</span> <span class="nx">block</span>: <span class="kt">allForks.SignedBeaconBlock</span> <span class="o">=</span> <span class="nx">generateEmptySignedBlock</span><span class="p">();</span>
 
-<span class="kd">let</span> <span class="nx">postStateContext</span>: <span class="kt">allForks.BeaconState</span><span class="p">;</span>
-<span class="k">try</span> <span class="p">{</span>
-  <span class="nx">postStateContext</span> <span class="o">=</span> <span class="nx">allForks</span><span class="p">.</span><span class="nx">stateTransition</span><span class="p">(</span><span class="nx">state</span><span class="p">,</span> <span class="nx">block</span><span class="p">);</span>
-<span class="p">}</span> <span class="k">catch</span> <span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
-  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">e</span><span class="p">);</span>
-<span class="p">}</span>
+<span class="c1">// Run state transition on block</span>
+<span class="kd">const</span> <span class="nx">postState</span> <span class="o">=</span> <span class="nx">allForks</span><span class="p">.</span><span class="nx">stateTransition</span><span class="p">(</span><span class="nx">preState</span><span class="p">,</span> <span class="nx">block</span><span class="p">);</span>
 </code></pre></div>
 <h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">¶</a></h2>
 <p>Apache-2.0 <a href="https://chainsafe.io">ChainSafe Systems</a></p>

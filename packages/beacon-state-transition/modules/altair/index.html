@@ -285,6 +285,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#lightclientsnapshot">
+    LightClientSnapshot
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#lightclientstore">
     LightClientStore
   </a>
@@ -443,11 +448,6 @@
     upgradeState
   </a>
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#upgradetreebackedstate">
-    upgradeTreeBackedState
-  </a>
-</li>
 </ul>
 </nav>
 </li>
@@ -470,6 +470,7 @@
 <li><a href="./#beaconblockbody">BeaconBlockBody</a></li>
 <li><a href="./#beaconstate">BeaconState</a></li>
 <li><a href="./#contributionandproof">ContributionAndProof</a></li>
+<li><a href="./#lightclientsnapshot">LightClientSnapshot</a></li>
 <li><a href="./#lightclientstore">LightClientStore</a></li>
 <li><a href="./#lightclientupdate">LightClientUpdate</a></li>
 <li><a href="./#metadata">Metadata</a></li>
@@ -503,7 +504,6 @@
 <ul>
 <li><a href="./#translateparticipation">translateParticipation</a></li>
 <li><a href="./#upgradestate">upgradeState</a></li>
-<li><a href="./#upgradetreebackedstate">upgradeTreeBackedState</a></li>
 </ul>
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
 <h3 id="beaconblock">BeaconBlock<a class="headerlink" href="#beaconblock" title="Permanent link">¶</a></h3>
@@ -517,6 +517,9 @@
 <hr/>
 <h3 id="contributionandproof">ContributionAndProof<a class="headerlink" href="#contributionandproof" title="Permanent link">¶</a></h3>
 <p>• <strong>ContributionAndProof</strong>:</p>
+<hr/>
+<h3 id="lightclientsnapshot">LightClientSnapshot<a class="headerlink" href="#lightclientsnapshot" title="Permanent link">¶</a></h3>
+<p>• <strong>LightClientSnapshot</strong>:</p>
 <hr/>
 <h3 id="lightclientstore">LightClientStore<a class="headerlink" href="#lightclientstore" title="Permanent link">¶</a></h3>
 <p>• <strong>LightClientStore</strong>:</p>
@@ -603,8 +606,8 @@
 <p>• <strong>upgradeState</strong>:</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="translateparticipation">translateParticipation<a class="headerlink" href="#translateparticipation" title="Permanent link">¶</a></h3>
-<p>▸ <strong>translateParticipation</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>pendingAttesations</code>: PendingAttestation[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/altair/upgradeState.ts#L46">packages/beacon-state-transition/src/altair/upgradeState.ts:46</a></em></p>
+<p>▸ <strong>translateParticipation</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>pendingAttesations</code>: CompositeViewDU‹typeof EpochAttestations›): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/altair/upgradeState.ts#L100">packages/beacon-state-transition/src/altair/upgradeState.ts:100</a></em></p>
 <p>Translate_participation in https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/altair/fork.md</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -617,19 +620,19 @@
 <tbody>
 <tr>
 <td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></td>
+<td><a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></td>
 </tr>
 <tr>
 <td><code>pendingAttesations</code></td>
-<td>PendingAttestation[]</td>
+<td>CompositeViewDU‹typeof EpochAttestations›</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
 <h3 id="upgradestate_1">upgradeState<a class="headerlink" href="#upgradestate_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>upgradeState</strong>(<code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>): <em><a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/altair/upgradeState.ts#L13">packages/beacon-state-transition/src/altair/upgradeState.ts:13</a></em></p>
+<p>▸ <strong>upgradeState</strong>(<code>statePhase0</code>: <a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>): <em><a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/beacon-state-transition/src/altair/upgradeState.ts#L12">packages/beacon-state-transition/src/altair/upgradeState.ts:12</a></em></p>
 <p>Upgrade a state from phase0 to altair.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -641,36 +644,12 @@
 </thead>
 <tbody>
 <tr>
-<td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
+<td><code>statePhase0</code></td>
+<td><a href="../cache/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
 </tr>
 </tbody>
 </table>
-<p><strong>Returns:</strong> <em><a href="../root/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></em></p>
-<hr/>
-<h3 id="upgradetreebackedstate">upgradeTreeBackedState<a class="headerlink" href="#upgradetreebackedstate" title="Permanent link">¶</a></h3>
-<p>▸ <strong>upgradeTreeBackedState</strong>(<code>config</code>: IBeaconConfig, <code>state</code>: <a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a>): <em>TreeBacked‹BeaconState›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/beacon-state-transition/src/altair/upgradeState.ts#L22">packages/beacon-state-transition/src/altair/upgradeState.ts:22</a></em></p>
-<p><strong>Parameters:</strong></p>
-<table>
-<thead>
-<tr>
-<th>Name</th>
-<th>Type</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td><code>config</code></td>
-<td>IBeaconConfig</td>
-</tr>
-<tr>
-<td><code>state</code></td>
-<td><a href="../root/#cachedbeaconstatephase0">CachedBeaconStatePhase0</a></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Returns:</strong> <em>TreeBacked‹BeaconState›</em></p>
+<p><strong>Returns:</strong> <em><a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a></em></p>
 </article>
 </div>
 </div>

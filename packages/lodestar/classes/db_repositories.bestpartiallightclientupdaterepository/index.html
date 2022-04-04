@@ -574,7 +574,7 @@
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new BestPartialLightClientUpdateRepository</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: IDatabaseController‹Uint8Array, Uint8Array›, <code>metrics?</code>: IDbMetrics): <em><a href="./">BestPartialLightClientUpdateRepository</a></em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L54">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L31">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:31</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -631,46 +631,27 @@
 <p>Defined in packages/db/lib/abstractRepository.d.ts:20</p>
 <hr/>
 <h3 id="typefinalized">typeFinalized<a class="headerlink" href="#typefinalized" title="Permanent link">¶</a></h3>
-<p>• <strong>typeFinalized</strong>: <em>ContainerType‹<a href="../../modules/chain_lightclient/#partiallightclientupdatefinalized">PartialLightClientUpdateFinalized</a>›</em> = new ContainerType<partiallightclientupdatefinalized>({
-    fields: {
-      // isFinalized: true
-      isFinalized: booleanType,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      blockRoot: ssz.Root,
-      finalityBranch: new VectorType<uint8array[]>({length: FINALIZED_ROOT_DEPTH, elementType: ssz.Root}),
-      finalizedCheckpoint: ssz.phase0.Checkpoint,
-      finalizedHeader: ssz.phase0.BeaconBlockHeader,
-      syncAggregate: ssz.altair.SyncAggregate,
-    },
-    casingMap: {
-      isFinalized: "is_finalized",
-      attestedHeader: "attested_header",
-      blockRoot: "block_root",
-      finalityBranch: "finality_branch",
-      finalizedCheckpoint: "finalized_checkpoint",
-      finalizedHeader: "finalized_header",
-      syncAggregate: "sync_aggregate",
-    },
-  })</uint8array[]></partiallightclientupdatefinalized></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L18">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:18</a></em></p>
+<p>• <strong>typeFinalized</strong>: <em>ContainerType‹object›</em> = new ContainerType({
+    // isFinalized: true
+    isFinalized: new BooleanType(),
+    attestedHeader: ssz.phase0.BeaconBlockHeader,
+    blockRoot: ssz.Root,
+    finalityBranch: new VectorCompositeType(ssz.Root, FINALIZED_ROOT_DEPTH),
+    finalizedCheckpoint: ssz.phase0.Checkpoint,
+    finalizedHeader: ssz.phase0.BeaconBlockHeader,
+    syncAggregate: ssz.altair.SyncAggregate,
+  })</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L14">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:14</a></em></p>
 <hr/>
 <h3 id="typenonfinalized">typeNonFinalized<a class="headerlink" href="#typenonfinalized" title="Permanent link">¶</a></h3>
-<p>• <strong>typeNonFinalized</strong>: <em>ContainerType‹<a href="../../modules/chain_lightclient/#partiallightclientupdatenonfinalized">PartialLightClientUpdateNonFinalized</a>›</em> = new ContainerType<partiallightclientupdatenonfinalized>({
-    fields: {
-      // isFinalized: false
-      isFinalized: booleanType,
-      attestedHeader: ssz.phase0.BeaconBlockHeader,
-      blockRoot: ssz.Root,
-      syncAggregate: ssz.altair.SyncAggregate,
-    },
-    casingMap: {
-      isFinalized: "is_finalized",
-      attestedHeader: "attested_header",
-      blockRoot: "block_root",
-      syncAggregate: "sync_aggregate",
-    },
-  })</partiallightclientupdatenonfinalized></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L40">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:40</a></em></p>
+<p>• <strong>typeNonFinalized</strong>: <em>ContainerType‹object›</em> = new ContainerType({
+    // isFinalized: false
+    isFinalized: new BooleanType(),
+    attestedHeader: ssz.phase0.BeaconBlockHeader,
+    blockRoot: ssz.Root,
+    syncAggregate: ssz.altair.SyncAggregate,
+  })</p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L25">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:25</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">¶</a></h3>
 <p>▸ <strong>add</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Promise‹void›</em></p>
@@ -694,7 +675,7 @@
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchadd">batchAdd<a class="headerlink" href="#batchadd" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchAdd</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchAdd</strong>(<code>values</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchadd">batchAdd</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:40</p>
 <p><strong>Parameters:</strong></p>
@@ -708,14 +689,14 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchdelete">batchDelete<a class="headerlink" href="#batchdelete" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchDelete</strong>(<code>ids</code>: ArrayLike‹SyncPeriod›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchDelete</strong>(<code>ids</code>: SyncPeriod[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchdelete">batchDelete</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:39</p>
 <p><strong>Parameters:</strong></p>
@@ -729,14 +710,14 @@
 <tbody>
 <tr>
 <td><code>ids</code></td>
-<td>ArrayLike‹SyncPeriod›</td>
+<td>SyncPeriod[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchput">batchPut<a class="headerlink" href="#batchput" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPut</strong>(<code>items</code>: ArrayLike‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPut</strong>(<code>items</code>: IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchput">batchPut</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:37</p>
 <p><strong>Parameters:</strong></p>
@@ -750,14 +731,14 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>››</td>
+<td>IKeyValue‹SyncPeriod, <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchputbinary">batchPutBinary<a class="headerlink" href="#batchputbinary" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: ArrayLike‹IKeyValue‹SyncPeriod, Uint8Array››): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchPutBinary</strong>(<code>items</code>: IKeyValue‹SyncPeriod, Uint8Array›[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchputbinary">batchPutBinary</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:38</p>
 <p><strong>Parameters:</strong></p>
@@ -771,14 +752,14 @@
 <tbody>
 <tr>
 <td><code>items</code></td>
-<td>ArrayLike‹IKeyValue‹SyncPeriod, Uint8Array››</td>
+<td>IKeyValue‹SyncPeriod, Uint8Array›[]</td>
 </tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="batchremove">batchRemove<a class="headerlink" href="#batchremove" title="Permanent link">¶</a></h3>
-<p>▸ <strong>batchRemove</strong>(<code>values</code>: ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›): <em>Promise‹void›</em></p>
+<p>▸ <strong>batchRemove</strong>(<code>values</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]): <em>Promise‹void›</em></p>
 <p><em>Inherited from <a href="../db_repositories.blockrepository/">BlockRepository</a>.<a href="../db_repositories.blockrepository/#batchremove">batchRemove</a></em></p>
 <p>Defined in packages/db/lib/abstractRepository.d.ts:41</p>
 <p><strong>Parameters:</strong></p>
@@ -792,7 +773,7 @@
 <tbody>
 <tr>
 <td><code>values</code></td>
-<td>ArrayLike‹<a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>›</td>
+<td><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>[]</td>
 </tr>
 </tbody>
 </table>
@@ -865,7 +846,7 @@
 <h3 id="decodevalue">decodeValue<a class="headerlink" href="#decodevalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>decodeValue</strong>(<code>data</code>: Uint8Array): <em><a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a></em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#decodevalue">decodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L70">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L47">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:47</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -928,7 +909,7 @@
 <h3 id="encodevalue">encodeValue<a class="headerlink" href="#encodevalue" title="Permanent link">¶</a></h3>
 <p>▸ <strong>encodeValue</strong>(<code>value</code>: <a href="../../modules/chain_lightclient/#partiallightclientupdate">PartialLightClientUpdate</a>): <em>Uint8Array</em></p>
 <p><em>Overrides <a href="../db_repositories.attesterslashingrepository/">AttesterSlashingRepository</a>.<a href="../db_repositories.attesterslashingrepository/#encodevalue">encodeValue</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3e1f9b2/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L62">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3d1fd18/packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts#L39">packages/lodestar/src/db/repositories/lightclientBestPartialUpdate.ts:39</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
