@@ -9,6 +9,13 @@ export type LightclientHeaderUpdate = {
   attestedHeader: phase0.BeaconBlockHeader;
 };
 
+export type LightclientFinalizedUpdate = {
+  attestedHeader: phase0.BeaconBlockHeader;
+  finalizedHeader: phase0.BeaconBlockHeader;
+  finalityBranch: Uint8Array[];
+  syncAggregate: altair.SyncAggregate;
+};
+
 export enum EventType {
   /**
    * The node has finished processing, resulting in a new head. previous_duty_dependent_root is

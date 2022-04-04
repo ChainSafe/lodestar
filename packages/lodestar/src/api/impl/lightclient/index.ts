@@ -49,7 +49,15 @@ export function getLightclientApi(
     },
 
     async getHeadUpdate() {
-      return {data: await chain.lightClientServer.getHeadUpdate()};
+      return {data: await chain.lightClientServer.getLatestHeadUpdate()};
+    },
+
+    async getLatestHeadUpdate() {
+      return {data: await chain.lightClientServer.getLatestHeadUpdate()};
+    },
+
+    async getFinalizedHeadUpdate() {
+      return {data: await chain.lightClientServer.getFinalizedHeadUpdate()};
     },
 
     async getSnapshot(blockRoot) {

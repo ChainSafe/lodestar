@@ -169,6 +169,10 @@ export class LightClientServer {
   private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+  private finalized?: Pick<
+    altair.LightClientUpdate,
+    "finalityBranch" | "finalizedHeader" | "attestedHeader" | "syncAggregate"
+  >;
 
   constructor(modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
@@ -300,11 +304,19 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `lightclient_header_update` if available
    */
-  async getHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
+  async getLatestHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
     return this.latestHeadUpdate;
+  }
+
+  async getFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
+    // Signature data
+    if (this.finalized == null) {
+      throw Error("No latest header update available");
+    }
+    return this.finalized;
   }
 
   /**
@@ -445,6 +457,25 @@ export class LightClientServer {
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;
+    }
+
+    if (attestedData.isFinalized) {
+      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
+      const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+      if (
+        finalizedHeader &&
+        (!this.finalized ||
+          finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
+          sumBits(syncAggregate.syncCommitteeBits) > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
+      ) {
+        this.finalized = {
+          attestedHeader: attestedData.attestedHeader,
+          finalizedHeader,
+          syncAggregate,
+          finalityBranch: attestedData.finalityBranch,
+        };
+        this.emitter.emit(ChainEvent.lightclientFinalizedUpdate, this.finalized);
+      }
     }
 
     // Check if this update is better, otherwise ignore
