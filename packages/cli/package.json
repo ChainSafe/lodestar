@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-cli",
-  "version": "0.34.2",
+  "version": "0.34.3",
   "description": "Command line interface for other packages",
   "author": "ChainSafe Systems",
   "license": "LGPL-3.0",
@@ -54,7 +54,7 @@
     "@chainsafe/bls-keystore": "2.0.0",
     "@chainsafe/blst": "^0.2.2",
     "@chainsafe/discv5": "^0.6.7",
-    "@chainsafe/lodestar": "^0.34.2",
+    "@chainsafe/lodestar": "^0.34.3",
     "@chainsafe/lodestar-api": "^0.34.2",
     "@chainsafe/lodestar-beacon-state-transition": "^0.34.2",
     "@chainsafe/lodestar-config": "^0.34.2",
