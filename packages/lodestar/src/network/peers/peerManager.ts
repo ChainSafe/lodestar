@@ -25,7 +25,6 @@ import {
   renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -637,7 +636,7 @@ function countAttnets(peerData?: PeerData): number {
 
   let count = 0;
   for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
-    if (attNets[i]) count++;
+    if (attNets.get(i)) count++;
   }
 
   return count;
