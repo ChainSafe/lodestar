@@ -16,6 +16,7 @@ export class GossipTopicCache implements IGossipTopicCache {
 
   constructor(private readonly forkDigestContext: IForkDigestContext) {}
 
+  /** Returns cached GossipTopic, otherwise attempts to parse it from the str */
   getTopic(topicStr: string): GossipTopic {
     let topic = this.topicsByTopicStr.get(topicStr);
     if (topic === undefined) {
@@ -24,6 +25,11 @@ export class GossipTopicCache implements IGossipTopicCache {
       this.topicsByTopicStr.set(topicStr, topic);
     }
     return topic;
+  }
+
+  /** Returns cached GossipTopic, otherwise returns undefined */
+  getKnownTopic(topicStr: string): GossipTopic | undefined {
+    return this.topicsByTopicStr.get(topicStr);
   }
 
   setTopic(topicStr: string, topic: GossipTopic): void {

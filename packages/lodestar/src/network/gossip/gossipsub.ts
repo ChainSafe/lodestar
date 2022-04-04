@@ -442,10 +442,10 @@ export class Eth2Gossipsub extends Gossipsub {
         // Ignore topics with 0 peers. May prevent overriding after a fork
         if (peers.size === 0) continue;
 
-        // there are some new topics in the network so we have to try/catch
+        // there are some new topics in the network so `getKnownTopic()` returns undefined
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
-        try {
-          const topic = this.gossipTopicCache.getTopic(topicString);
+        const topic = this.gossipTopicCache.getKnownTopic(topicString);
+        if (topic !== undefined) {
           if (topic.type === GossipType.beacon_attestation) {
             peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
@@ -453,8 +453,7 @@ export class Eth2Gossipsub extends Gossipsub {
           } else {
             peersByTypeByFork.set(topic.fork, topic.type, peers.size);
           }
-          // eslint-disable-next-line no-empty
-        } catch {}
+        }
       }
 
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet
