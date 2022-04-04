@@ -19,6 +19,7 @@ import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 import {ByteVector} from "@chainsafe/ssz";
+import {AttesterDuty} from "@chainsafe/lodestar-api/lib/routes/validator";
 
 export async function getAndInitValidatorsWithKeystore({
   node,
@@ -192,15 +193,7 @@ export function createAttesterDuty(
   slot: number,
   committeeIndex: number,
   validatorIndex: number
-): {
-  committeeLength: number;
-  validatorCommitteeIndex: number;
-  committeesAtSlot: number;
-  validatorIndex: number;
-  slot: number;
-  committeeIndex: number;
-  pubkey: ArrayLike<number>;
-} {
+): AttesterDuty {
   return {
     slot: slot,
     committeeIndex: committeeIndex,
