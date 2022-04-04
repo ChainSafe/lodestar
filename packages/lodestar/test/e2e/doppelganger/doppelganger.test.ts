@@ -1,5 +1,6 @@
-import {expect} from "chai";
-import {phase0} from "@chainsafe/lodestar-types";
+import chai, {expect} from "chai";
+import chaiAsPromised from "chai-as-promised";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
@@ -8,8 +9,11 @@ import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
+import {fromHexString} from "@chainsafe/ssz";
 
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+chai.use(chaiAsPromised);
+
+/* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment */
 describe("doppelganger / doppelganger test", function () {
   const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
   afterEach(async () => {
@@ -165,5 +169,56 @@ describe("doppelganger / doppelganger test", function () {
       "running",
       "validator with doppelganger protection should still be active after first epoch"
     );
+  });
+  it("should not propose block if doppelganger period has not passed", async function () {
+    this.timeout("10 min");
+
+    const enableDoppelganger = true;
+    const doppelgangerEpochsToCheck = 2;
+    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+    const bn = await getDevBeaconNode({
+      params: beaconParams,
+      options: {sync: {isSingleNode: true}},
+      validatorCount,
+      logger: loggerNodeA,
+    });
+    afterEachCallbacks.push(() => bn.close());
+
+    const {validators: validatorsWithDoppelganger} = await getAndInitDevValidators({
+      node: bn,
+      validatorsPerClient: validatorCount,
+      validatorClientCount: 1,
+      startIndex: 0,
+      useRestApi: false,
+      testLoggerOpts,
+      enableDoppelganger,
+      doppelgangerEpochsToCheck,
+    });
+    afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
+
+    await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));
+
+    const validatorUnderTest = validatorsWithDoppelganger[0];
+    const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
+    const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
+
+    await expect(
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+    ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
+
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+
+    await expect(
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
+    ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unverified");
+
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+
+    await expect(
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
+      "Signing should be possible after doppelganger check has elapsed"
+    ).to.eventually.be.fulfilled;
   });
 });
