@@ -9,12 +9,16 @@ import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default"
 import {HttpClient} from "@chainsafe/lodestar-api/src";
 import {getClient} from "@chainsafe/lodestar-api/src/keymanager/client";
 import {ISlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {ByteVector, fromHexString} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {ssz} from "@chainsafe/lodestar-types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
 import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators, getAndInitValidatorsWithKeystore} from "../../utils/node/validator";
+import {
+  createAttesterDuty,
+  getAndInitDevValidators,
+  getAndInitValidatorsWithKeystore,
+} from "../../utils/node/validator";
 import {getKeystoreForPubKey1, getKeystoreForPubKey2} from "../../utils/node/keymanager";
 import {logFilesDir} from "../../sim/params";
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -480,19 +484,6 @@ function dirContainFileWithPubkeyInFilename(dir: string, pubkeys: string[]): boo
   return fs.readdirSync(dir).some((name) => {
     return pubkeys.some((pubkey) => name.indexOf(pubkey) !== -1);
   });
-}
-
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function createAttesterDuty(pubkey: ByteVector, slot: number, committeeIndex: number, validatorIndex: number) {
-  return {
-    slot: slot,
-    committeeIndex: committeeIndex,
-    committeeLength: 120,
-    committeesAtSlot: 120,
-    validatorCommitteeIndex: 1,
-    validatorIndex: validatorIndex,
-    pubkey: pubkey,
-  };
 }
 
 function createKeymanager(

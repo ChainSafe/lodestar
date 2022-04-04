@@ -18,6 +18,7 @@ import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
+import {ByteVector} from "@chainsafe/ssz";
 
 export async function getAndInitValidatorsWithKeystore({
   node,
@@ -183,6 +184,31 @@ export async function getAndInitDevValidators({
     validators: await Promise.all(validators),
     // Return secretKeys to start the externalSigner
     secretKeys,
+  };
+}
+
+export function createAttesterDuty(
+  pubkey: ByteVector,
+  slot: number,
+  committeeIndex: number,
+  validatorIndex: number
+): {
+  committeeLength: number;
+  validatorCommitteeIndex: number;
+  committeesAtSlot: number;
+  validatorIndex: number;
+  slot: number;
+  committeeIndex: number;
+  pubkey: ArrayLike<number>;
+} {
+  return {
+    slot: slot,
+    committeeIndex: committeeIndex,
+    committeeLength: 120,
+    committeesAtSlot: 120,
+    validatorCommitteeIndex: 1,
+    validatorIndex: validatorIndex,
+    pubkey: pubkey,
   };
 }
 

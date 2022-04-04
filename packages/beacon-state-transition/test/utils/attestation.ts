@@ -1,16 +1,21 @@
 import {List} from "@chainsafe/ssz";
-import {phase0, Epoch} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
 
 /**
  * Generates a fake attestation data for test purposes.
- * @param {number} slotValue
- * @param {number} justifiedEpochValue
  * @returns {AttestationData}
+ * @param sourceEpoch
+ * @param targetEpoch
+ * @param slot
  */
 
-export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationData {
+export function generateAttestationData(
+  sourceEpoch: Epoch,
+  targetEpoch: Epoch,
+  slot: Slot = 0
+): phase0.AttestationData {
   return {
-    slot: 0,
+    slot: slot,
     index: 0,
     beaconBlockRoot: Buffer.alloc(32),
     source: {
