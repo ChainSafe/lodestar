@@ -98,6 +98,7 @@ export type Api = {
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
 
+  /** Returns validator indices that has been observed to be active on the network */
   getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 

@@ -155,7 +155,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
         type: SignerType.Local,
         secretKey,
       })),
-      enableDoppelganger: args.enableDoppelgangerProtection,
+      enableDoppelganger: args.enableDoppelganger,
       doppelgangerEpochsToCheck: args.doppelgangerEpochsToCheck,
     });
 

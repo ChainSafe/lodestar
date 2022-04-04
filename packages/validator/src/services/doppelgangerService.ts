@@ -9,8 +9,6 @@ import {PubkeyHex} from "../types";
 import {IClock} from "../util";
 import {IndicesService} from "./indices";
 
-export const DEFAULT_REMAINING_EPOCH_CHECK = 2;
-
 type DoppelgangerState = {
   epochRegistered: Epoch;
   epochChecked: Epoch[];
@@ -59,7 +57,7 @@ export class DoppelgangerService {
         return DoppelgangerStatus.Unverified;
       }
     } else {
-      this.logger.error(`Validator Index not know for public key ${pubkeyHex}`);
+      this.logger.error(`Validator index not know for public key ${pubkeyHex}`);
       return DoppelgangerStatus.Unknown;
     }
   }
@@ -160,8 +158,7 @@ export class DoppelgangerService {
           this.doppelgangerStateByIndex.set(index, {
             epochRegistered: epoch,
             epochChecked: [],
-            remainingEpochsToCheck:
-              this.doppelgangerEpochsToCheck != null ? this.doppelgangerEpochsToCheck : DEFAULT_REMAINING_EPOCH_CHECK,
+            remainingEpochsToCheck: this.doppelgangerEpochsToCheck,
           });
         }
       }

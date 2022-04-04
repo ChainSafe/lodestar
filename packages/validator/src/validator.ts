@@ -29,7 +29,7 @@ export type ValidatorOptions = {
   signers: Signer[];
   logger: ILogger;
   graffiti?: string;
-  enableDoppelganger?: boolean;
+  enableDoppelganger: boolean;
   doppelgangerEpochsToCheck: number;
 };
 

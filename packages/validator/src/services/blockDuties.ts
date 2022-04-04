@@ -148,10 +148,9 @@ export class BlockDutiesService {
       throw extendError(e, "Error on getProposerDuties");
     });
     const dependentRoot = proposerDuties.dependentRoot;
-    const relevantDuties = proposerDuties.data.filter((duty) => {
-      const pubkeyHex = toHexString(duty.pubkey);
-      return this.validatorStore.hasVotingPubkey(pubkeyHex);
-    });
+    const relevantDuties = proposerDuties.data.filter((duty) =>
+      this.validatorStore.hasVotingPubkey(toHexString(duty.pubkey))
+    );
 
     this.logger.debug("Downloaded proposer duties", {
       epoch,

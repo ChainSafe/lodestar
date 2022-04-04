@@ -15,7 +15,7 @@ export function generateAttestationData(
   slot: Slot = 0
 ): phase0.AttestationData {
   return {
-    slot: slot,
+    slot,
     index: 0,
     beaconBlockRoot: Buffer.alloc(32),
     source: {

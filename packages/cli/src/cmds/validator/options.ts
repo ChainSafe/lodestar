@@ -17,7 +17,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     externalSignerUrl?: string;
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
-    enableDoppelgangerProtection?: boolean;
+    enableDoppelganger: boolean;
     doppelgangerEpochsToCheck: number;
     interopIndexes?: string;
     fromMnemonic?: string;
@@ -91,9 +91,10 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     group: "External signer",
   },
 
-  enableDoppelgangerProtection: {
+  enableDoppelganger: {
     description: "Enables Doppelganger protection",
     defaultDescription: "false",
+    default: false,
     type: "boolean",
   },
 

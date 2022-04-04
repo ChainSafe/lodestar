@@ -192,7 +192,7 @@ export function getLodestarApi({
       const state = await chain.getHeadStateAtCurrentEpoch();
       if (epoch < state.previousShuffling.epoch || epoch > state.nextShuffling.epoch) {
         throw new Error(
-          `request epoch ${epoch} is more than one epoch previous or after from the current epoch ${state.currentShuffling.epoch}`
+          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${state.currentShuffling.epoch}`
         );
       }
 

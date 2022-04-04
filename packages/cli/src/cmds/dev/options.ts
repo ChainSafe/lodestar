@@ -11,7 +11,7 @@ type IDevOwnArgs = {
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
-  enableDoppelgangerProtection?: boolean;
+  enableDoppelganger: boolean;
   doppelgangerEpochsToCheck: number;
   server: string;
 } & KeymanagerArgs &
@@ -62,7 +62,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     type: "string",
   },
 
-  enableDoppelgangerProtection: {
+  enableDoppelganger: {
     description: "Enables Doppelganger protection",
     defaultDescription: "false",
     type: "boolean",

@@ -20,7 +20,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   await initBLS();
 
   const graffiti = args.graffiti || getDefaultGraffiti();
-  const enableDoppelganger = args.enableDoppelgangerProtection;
+  const enableDoppelganger = args.enableDoppelganger;
   const doppelgangerEpochsToCheck = args.doppelgangerEpochsToCheck;
 
   const validatorPaths = getValidatorPaths(args);
