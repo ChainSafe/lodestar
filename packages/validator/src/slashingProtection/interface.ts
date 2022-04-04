@@ -1,4 +1,5 @@
-import {BLSPubkey} from "@chainsafe/lodestar-types";
+import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
+import {Interchange, InterchangeFormatVersion} from "./interchange/types";
 import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types";
 
 export interface ISlashingProtection {
@@ -10,4 +11,11 @@ export interface ISlashingProtection {
    * Check an attestation for slash safety, and if it is safe, record it in the database
    */
   checkAndInsertAttestation(pubKey: BLSPubkey, attestation: SlashingProtectionAttestation): Promise<void>;
+
+  importInterchange(interchange: Interchange, genesisValidatorsRoot: Uint8Array | Root): Promise<void>;
+  exportInterchange(
+    genesisValidatorsRoot: Uint8Array | Root,
+    pubkeys: BLSPubkey[],
+    formatVersion: InterchangeFormatVersion
+  ): Promise<Interchange>;
 }

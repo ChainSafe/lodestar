@@ -8,6 +8,7 @@ import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
+import {PubkeyHex} from "../types";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -44,6 +45,19 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [epoch, attDutiesAtEpoch] of this.dutiesByIndexByEpoch) {
+      for (const [vIndex, attDutyAndProof] of attDutiesAtEpoch.dutiesByIndex) {
+        if (toHexString(attDutyAndProof.duty.pubkey) === pubkey) {
+          attDutiesAtEpoch.dutiesByIndex.delete(vIndex);
+          if (attDutiesAtEpoch.dutiesByIndex.size === 0) {
+            this.dutiesByIndexByEpoch.delete(epoch);
+          }
+        }
+      }
+    }
   }
 
   /** Returns all `ValidatorDuty` for the given `slot` */

@@ -17,6 +17,14 @@ describe("sync / finalized sync", function () {
     SECONDS_PER_SLOT: 2,
   };
 
+  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
+  afterEach(async () => {
+    while (afterEachCallbacks.length > 0) {
+      const callback = afterEachCallbacks.pop();
+      if (callback) await callback();
+    }
+  });
+
   it("should do a finalized sync from another BN", async function () {
     this.timeout("10 min");
 
@@ -30,6 +38,9 @@ describe("sync / finalized sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
+
+    afterEachCallbacks.push(() => bn.close());
+
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
@@ -38,6 +49,8 @@ describe("sync / finalized sync", function () {
       useRestApi: false,
       testLoggerOpts,
     });
+
+    afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
 
     await Promise.all(validators.map((validator) => validator.start()));
 
@@ -51,6 +64,8 @@ describe("sync / finalized sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
+
+    afterEachCallbacks.push(() => bn2.close());
 
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
@@ -66,8 +81,5 @@ describe("sync / finalized sync", function () {
     } catch (e) {
       assert.fail("Failed to sync to other node in time");
     }
-    await bn2.close();
-    await Promise.all(validators.map((v) => v.stop()));
-    await bn.close();
   });
 });

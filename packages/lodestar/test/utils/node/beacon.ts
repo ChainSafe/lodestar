@@ -68,7 +68,7 @@ export async function getDevBeaconNode(
       {
         db: {name: tmpDir.name},
         eth1: {enabled: false},
-        api: {rest: {api: ["beacon", "config", "events", "node", "validator"]}},
+        api: {rest: {api: ["beacon", "config", "events", "node", "validator"], port: 19596}},
         metrics: {enabled: false},
         network: {discv5: null},
       } as Partial<IBeaconNodeOptions>,

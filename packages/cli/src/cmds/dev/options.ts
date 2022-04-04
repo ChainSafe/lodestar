@@ -2,17 +2,25 @@ import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
+import {IValidatorCliArgs, validatorOptions} from "../validator/options";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
-interface IDevOwnArgs {
+type IDevOwnArgs = {
   genesisEth1Hash?: string;
   genesisValidators?: number;
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
   server: string;
-}
+} & KeymanagerArgs &
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+  ...keymanagerOptions,
+  ...{
+    importKeystoresPath: validatorOptions["importKeystoresPath"],
+    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  },
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",

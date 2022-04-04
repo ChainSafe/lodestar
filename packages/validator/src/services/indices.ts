@@ -53,6 +53,16 @@ export class IndicesService {
     return this.pollValidatorIndicesPromise;
   }
 
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [key, value] of this.index2pubkey) {
+      if (value === pubkey) {
+        this.index2pubkey.delete(key);
+      }
+    }
+
+    this.pubkey2index.delete(pubkey);
+  }
+
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
   private async pollValidatorIndicesInternal(): Promise<ValidatorIndex[]> {

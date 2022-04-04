@@ -11,6 +11,7 @@ import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {PubkeyHex} from "../types";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -89,6 +90,19 @@ export class SyncCommitteeDutiesService {
     }
 
     return duties;
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [syncPeriod, validatorDutyAtPeriodMap] of this.dutiesByIndexByPeriod) {
+      for (const [validatorIndex, dutyAtPeriod] of validatorDutyAtPeriodMap) {
+        if (toHexString(dutyAtPeriod.duty.pubkey) === pubkey) {
+          validatorDutyAtPeriodMap.delete(validatorIndex);
+          if (validatorDutyAtPeriodMap.size === 0) {
+            this.dutiesByIndexByPeriod.delete(syncPeriod);
+          }
+        }
+      }
+    }
   }
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {
@@ -230,7 +244,7 @@ export class SyncCommitteeDutiesService {
 
   private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
     // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
+    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? toHexString(duty.pubkey);
 
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const index of duty.validatorSyncCommitteeIndices) {

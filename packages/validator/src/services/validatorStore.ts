@@ -30,7 +30,7 @@ import {
 } from "@chainsafe/lodestar-types";
 import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {ISlashingProtection} from "../slashingProtection";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
 
@@ -71,11 +71,23 @@ export class ValidatorStore {
     genesis: phase0.Genesis
   ) {
     for (const signer of signers) {
-      this.validators.set(getSignerPubkeyHex(signer), signer);
+      this.addSigner(signer);
     }
 
     this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+  }
+
+  addSigner(signer: Signer): void {
+    this.validators.set(getSignerPubkeyHex(signer), signer);
+  }
+
+  getSigner(pubkeyHex: PubkeyHex): Signer | undefined {
+    return this.validators.get(pubkeyHex);
+  }
+
+  removeSigner(pubkeyHex: PubkeyHex): boolean {
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -89,6 +101,14 @@ export class ValidatorStore {
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.validators.has(pubkeyHex);
+  }
+
+  async importInterchange(interchange: Interchange): Promise<void> {
+    return this.slashingProtection.importInterchange(interchange, this.genesisValidatorsRoot);
+  }
+
+  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
+    return this.slashingProtection.exportInterchange(this.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   async signBlock(
