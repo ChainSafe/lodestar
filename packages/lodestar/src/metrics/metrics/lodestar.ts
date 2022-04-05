@@ -198,11 +198,6 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_score_avg_min_max",
         help: "Avg min max of all gossip peer scores",
       }),
-      scoreWeights: register.avgMinMax<"p" | "topic">({
-        name: "lodestar_gossip_score_weights_avg_min_max",
-        help: "Avg min max of all gossip peer score weights",
-        labelNames: ["p", "topic"],
-      }),
     },
     gossipMesh: {
       peersByType: register.gauge<"type" | "fork">({
