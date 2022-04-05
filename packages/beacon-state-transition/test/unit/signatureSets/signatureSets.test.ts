@@ -1,19 +1,19 @@
 import crypto from "node:crypto";
 import bls from "@chainsafe/bls";
-import {BitList, List, TreeBacked} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
-import {ValidatorIndex, BLSSignature, ssz} from "@chainsafe/lodestar-types";
+import {ValidatorIndex, BLSSignature} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "../../../src/constants";
-import {generateState} from "../../utils/state";
+import {generateCachedState} from "../../utils/state";
 import {generateValidators} from "../../utils/validator";
 import {expect} from "chai";
-import {phase0, createCachedBeaconState, allForks} from "../../../src";
+import {phase0, allForks} from "../../../src";
 import {FAR_FUTURE_EPOCH, MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {BitArray} from "@chainsafe/ssz";
+
+const EMPTY_SIGNATURE = Buffer.alloc(96);
 
 describe("signatureSets", () => {
   it("should aggregate all signatures from a block", () => {
-    const EMPTY_SIGNATURE = Buffer.alloc(96);
-
     const block: phase0.BeaconBlock = {
       slot: 0,
       proposerIndex: 0,
@@ -32,20 +32,17 @@ describe("signatureSets", () => {
             {proposerIndex: 0, signature: EMPTY_SIGNATURE},
             {proposerIndex: 0, signature: EMPTY_SIGNATURE}
           ),
-        ] as List<phase0.ProposerSlashing>,
+        ],
         attesterSlashings: [
           getMockAttesterSlashings(
-            {attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE},
-            {attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE}
+            {attestingIndices: [0], signature: EMPTY_SIGNATURE},
+            {attestingIndices: [0], signature: EMPTY_SIGNATURE}
           ),
-        ] as List<phase0.AttesterSlashing>,
-        attestations: [
-          getMockAttestations({attestingIndices: [0] as List<ValidatorIndex>, signature: EMPTY_SIGNATURE}),
-        ] as List<phase0.Attestation>,
-        deposits: ([] as phase0.Deposit[]) as List<phase0.Deposit>,
-        voluntaryExits: [
-          getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE}),
-        ] as List<phase0.SignedVoluntaryExit>,
+        ],
+        // Set to 1 since there's only one validator per committee
+        attestations: [getMockAttestations(1)],
+        deposits: [] as phase0.Deposit[],
+        voluntaryExits: [getMockSignedVoluntaryExit({validatorIndex: 0, signature: EMPTY_SIGNATURE})],
       },
     };
 
@@ -64,10 +61,7 @@ describe("signatureSets", () => {
       validator.pubkey = bls.SecretKey.fromKeygen().toPublicKey().toBytes();
     }
 
-    const state = createCachedBeaconState(
-      config,
-      ssz.phase0.BeaconState.createTreeBackedFromStruct(generateState({validators})) as TreeBacked<allForks.BeaconState>
-    );
+    const state = generateCachedState(config, {validators});
 
     const signatureSets = allForks.getAllBlockSignatureSets(state, signedBlock);
     expect(signatureSets.length).to.equal(
@@ -113,7 +107,7 @@ function getMockSignedBeaconBlockHeader(data: IBlockProposerData): phase0.Signed
 }
 
 interface IIndexAttestationData {
-  attestingIndices: List<ValidatorIndex>;
+  attestingIndices: ValidatorIndex[];
   signature: BLSSignature;
 }
 
@@ -148,11 +142,11 @@ function getAttestationData(): phase0.AttestationData {
   };
 }
 
-function getMockAttestations(data: IIndexAttestationData): phase0.Attestation {
+function getMockAttestations(bitLen: number): phase0.Attestation {
   return {
-    aggregationBits: [true] as BitList,
+    aggregationBits: BitArray.fromSingleBit(bitLen, 0),
     data: getAttestationData(),
-    signature: data.signature,
+    signature: EMPTY_SIGNATURE,
   };
 }
 

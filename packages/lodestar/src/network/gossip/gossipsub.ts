@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Gossipsub from "libp2p-gossipsub";
 import {messageIdToString} from "libp2p-gossipsub/src/utils/messageIdToString";
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 import {ERR_TOPIC_VALIDATOR_IGNORE, ERR_TOPIC_VALIDATOR_REJECT} from "libp2p-gossipsub/src/constants";
 import {InMessage, utils} from "libp2p-interfaces/src/pubsub";
 import Libp2p from "libp2p";
@@ -89,7 +89,7 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlazy: 6,
       scoreParams: computeGossipPeerScoreParams(modules),
       scoreThresholds: gossipScoreThresholds,
-      fastMsgIdFn: (msg: InMessage) => Buffer.from(SHA256.digest(msg.data)).toString("hex"),
+      fastMsgIdFn: (msg: InMessage) => Buffer.from(digest(msg.data)).toString("hex"),
     });
     const {config, logger, metrics, signal, gossipHandlers} = modules;
     this.config = config;
@@ -442,10 +442,10 @@ export class Eth2Gossipsub extends Gossipsub {
         // Ignore topics with 0 peers. May prevent overriding after a fork
         if (peers.size === 0) continue;
 
-        // there are some new topics in the network so we have to try/catch
+        // there are some new topics in the network so `getKnownTopic()` returns undefined
         // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
-        try {
-          const topic = this.gossipTopicCache.getTopic(topicString);
+        const topic = this.gossipTopicCache.getKnownTopic(topicString);
+        if (topic !== undefined) {
           if (topic.type === GossipType.beacon_attestation) {
             peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
           } else if (topic.type === GossipType.sync_committee) {
@@ -453,8 +453,7 @@ export class Eth2Gossipsub extends Gossipsub {
           } else {
             peersByTypeByFork.set(topic.fork, topic.type, peers.size);
           }
-          // eslint-disable-next-line no-empty
-        } catch {}
+        }
       }
 
       // beacon attestation mesh gets counted separately so we can track mesh peers by subnet

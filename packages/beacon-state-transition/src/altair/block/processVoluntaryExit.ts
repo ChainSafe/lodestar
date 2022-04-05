@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateAltair} from "../../types";
 import {processVoluntaryExitAllForks} from "../../allForks/block";
 
 export function processVoluntaryExit(
@@ -7,5 +7,5 @@ export function processVoluntaryExit(
   signedVoluntaryExit: phase0.SignedVoluntaryExit,
   verifySignature = true
 ): void {
-  processVoluntaryExitAllForks(state as CachedBeaconStateAllForks, signedVoluntaryExit, verifySignature);
+  processVoluntaryExitAllForks(state, signedVoluntaryExit, verifySignature);
 }

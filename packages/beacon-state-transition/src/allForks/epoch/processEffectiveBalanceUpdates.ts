@@ -26,16 +26,18 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
   let nextEpochTotalActiveBalanceByIncrement = 0;
 
   // update effective balances with hysteresis
-  if (!epochProcess.balances) {
-    // only do this for genesis epoch, or spec test
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    epochProcess.balances = Array.from({length: state.balanceList.length}, (_, i) => state.balanceList.get(i)!);
-  }
 
-  for (let i = 0, len = epochProcess.balances.length; i < len; i++) {
-    const balance = epochProcess.balances[i];
+  // epochProcess.balances is set in processRewardsAndPenalties(), so it's recycled here for performance.
+  // It defaults to `state.balances.getAll()` to make Typescript happy and for spec tests
+  const balances = epochProcess.balances ?? state.balances.getAll();
+
+  for (let i = 0, len = balances.length; i < len; i++) {
+    const balance = balances[i];
+
+    // PERF: It's faster to access to get() every single element (4ms) than to convert to regular array then loop (9ms)
     let effectiveBalanceIncrement = effectiveBalanceIncrements[i];
     let effectiveBalance = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT;
+
     if (
       // Too big
       effectiveBalance > balance + DOWNWARD_THRESHOLD ||
@@ -44,13 +46,14 @@ export function processEffectiveBalanceUpdates(state: CachedBeaconStateAllForks,
     ) {
       effectiveBalance = Math.min(balance - (balance % EFFECTIVE_BALANCE_INCREMENT), MAX_EFFECTIVE_BALANCE);
       // Update the state tree
-      validators[i].effectiveBalance = effectiveBalance;
-      // Also update the fast cached version
       // Should happen rarely, so it's fine to update the tree
-      // TODO: Update all in batch after this loop
+      validators.get(i).effectiveBalance = effectiveBalance;
+      // Also update the fast cached version
       effectiveBalanceIncrement = Math.floor(effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
       effectiveBalanceIncrements[i] = effectiveBalanceIncrement;
     }
+
+    // TODO: Do this in afterEpochProcess, looping a Uint8Array should be very cheap
     if (epochProcess.isActiveNextEpoch[i]) {
       // We track nextEpochTotalActiveBalanceByIncrement as ETH to fit total network balance in a JS number (53 bits)
       nextEpochTotalActiveBalanceByIncrement += effectiveBalanceIncrement;

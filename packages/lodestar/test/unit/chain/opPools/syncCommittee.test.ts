@@ -49,12 +49,8 @@ describe("chain / opPools / SyncCommitteeMessagePool", function () {
       expect(contribution.subcommitteeIndex).to.be.equal(subcommitteeIndex);
       const newIndices = [...newIndicesInSubSyncCommittee, indexInSubcommittee];
       const aggregationBits = contribution.aggregationBits;
-      for (let index = 0; index < aggregationBits.length; index++) {
-        if (newIndices.includes(index)) {
-          expect(aggregationBits[index]).to.be.true;
-        } else {
-          expect(aggregationBits[index]).to.be.false;
-        }
+      for (let index = 0; index < aggregationBits.bitLen; index++) {
+        expect(aggregationBits.get(index)).to.equal(newIndices.includes(index), `Wrong bit value index ${index}`);
       }
     }
   });

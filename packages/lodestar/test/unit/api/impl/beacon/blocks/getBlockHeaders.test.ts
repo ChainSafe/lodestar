@@ -6,7 +6,6 @@ import {
   generateEmptySignedBlock,
   generateSignedBlock,
 } from "../../../../../utils/block";
-import deepmerge from "deepmerge";
 import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {toHexString} from "@chainsafe/ssz";
@@ -31,7 +30,11 @@ describe("api - beacon - getBlockHeaders", function () {
         blockRoot: toHexString(ssz.phase0.BeaconBlock.hashTreeRoot(generateEmptyBlock())),
       },
     ]);
-    server.dbStub.block.get.resolves(deepmerge(generateEmptySignedBlock(), {message: {slot: 3}}));
+
+    const blockFromDb3 = generateEmptySignedBlock();
+    blockFromDb3.message.slot = 3;
+    server.dbStub.block.get.resolves(blockFromDb3);
+
     server.dbStub.blockArchive.get.resolves(null);
     const {data: blockHeaders} = await server.blockApi.getBlockHeaders({});
     expect(blockHeaders).to.not.be.null;

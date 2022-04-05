@@ -4,14 +4,15 @@ import {registerRoutes} from "@chainsafe/lodestar-api/server";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Path, TreeBacked} from "@chainsafe/ssz";
-import {allForks, altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
+import {JsonPath} from "@chainsafe/ssz";
+import {altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
+import {BeaconStateAltair} from "./types";
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
 export type IStateRegen = {
-  getStateByRoot(stateRoot: string): Promise<TreeBacked<altair.BeaconState>>;
+  getStateByRoot(stateRoot: string): Promise<BeaconStateAltair>;
 };
 
 export type IBlockCache = {
@@ -39,12 +40,12 @@ export async function startServer(opts: ServerOpts, config: IChainForkConfig, ap
 }
 
 export class LightclientServerApi implements routes.lightclient.Api {
-  readonly states = new Map<RootHex, TreeBacked<allForks.BeaconState>>();
+  readonly states = new Map<RootHex, BeaconStateAltair>();
   readonly updates = new Map<SyncPeriod, altair.LightClientUpdate>();
   readonly snapshots = new Map<RootHex, routes.lightclient.LightclientSnapshotWithProof>();
   latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
-  async getStateProof(stateId: string, paths: Path[]): Promise<{data: Proof}> {
+  async getStateProof(stateId: string, paths: JsonPath[]): Promise<{data: Proof}> {
     const state = this.states.get(stateId);
     if (!state) throw Error(`stateId ${stateId} not available`);
     return {data: state.createProof(paths)};

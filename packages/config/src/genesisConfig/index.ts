@@ -1,6 +1,6 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
-import {ByteVector, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "../beaconConfig";
 import {ForkDigestHex, ICachedGenesis} from "./types";
 export {IForkDigestContext} from "./types";
@@ -89,7 +89,7 @@ function computeForkDataRoot(currentVersion: Version, genesisValidatorsRoot: Roo
   return ssz.phase0.ForkData.hashTreeRoot(forkData);
 }
 
-function toHexStringNoPrefix(hex: string | ByteVector): string {
+function toHexStringNoPrefix(hex: string | Uint8Array): string {
   return strip0xPrefix(typeof hex === "string" ? hex : toHexString(hex));
 }
 

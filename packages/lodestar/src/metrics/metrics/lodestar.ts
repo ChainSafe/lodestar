@@ -11,7 +11,7 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
   metadata: IMetricsOptions["metadata"],
-  anchorState?: allForks.BeaconState
+  anchorState?: Pick<allForks.BeaconState, "genesisTime">
 ) {
   if (metadata) {
     register.static<"semver" | "branch" | "commit" | "version" | "network">({

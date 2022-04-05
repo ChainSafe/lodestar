@@ -28,12 +28,11 @@ import {
   ssz,
   ValidatorIndex,
 } from "@chainsafe/lodestar-types";
-import {fromHexString, List, toHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
 import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {PubkeyHex} from "../types";
-import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
 import {DoppelgangerService} from "./doppelgangerService";
 
@@ -177,7 +176,7 @@ export class ValidatorStore {
     });
 
     return {
-      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
       data: attestationData,
       signature: await this.getSignature(duty.pubkey, signingRoot),
     };
@@ -257,7 +256,7 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
     const signingData: altair.SyncAggregatorSelectionData = {
       slot,
-      subcommitteeIndex: subcommitteeIndex,
+      subcommitteeIndex,
     };
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);

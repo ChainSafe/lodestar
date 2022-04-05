@@ -1,61 +1,40 @@
 import {join} from "node:path";
-import {allForks, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
-import {TreeBacked} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
 import {bnToNum} from "@chainsafe/lodestar-utils";
-
-type CreateTreeBackedSignedBlock = (block: allForks.SignedBeaconBlock) => TreeBacked<allForks.SignedBeaconBlock>;
-const createTreeBackedSignedBlockByFork: Record<ForkName, CreateTreeBackedSignedBlock> = {
-  // Dummy placeholder Fn for phase0
-  [ForkName.phase0]: ssz.phase0.SignedBeaconBlock.createTreeBackedFromStruct.bind(
-    ssz.phase0.SignedBeaconBlock
-  ) as CreateTreeBackedSignedBlock,
-  [ForkName.altair]: ssz.altair.SignedBeaconBlock.createTreeBackedFromStruct.bind(
-    ssz.altair.SignedBeaconBlock
-  ) as CreateTreeBackedSignedBlock,
-  [ForkName.bellatrix]: ssz.bellatrix.SignedBeaconBlock.createTreeBackedFromStruct.bind(
-    ssz.bellatrix.SignedBeaconBlock
-  ) as CreateTreeBackedSignedBlock,
-};
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 
 export function transition(
   forkConfig: (forkEpoch: number) => Partial<IChainConfig>,
   pre: ForkName,
   fork: Exclude<ForkName, ForkName.phase0>
 ): void {
-  describeDirectorySpecTest<ITransitionTestCase, allForks.BeaconState>(
+  describeDirectorySpecTest<ITransitionTestCase, BeaconStateAllForks>(
     `${ACTIVE_PRESET}/${fork}/transition`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/transition/core/pyspec_tests`),
     (testcase) => {
       const meta = testcase.meta;
       // testConfig is used here to load forkEpoch from meta.yaml
       const testConfig = createIChainForkConfig(forkConfig(bnToNum(meta.fork_epoch)));
-      let wrappedState = createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
+      let state = createCachedBeaconStateTest(testcase.pre, testConfig);
       for (let i = 0; i < meta.blocks_count; i++) {
-        let tbSignedBlock: TreeBacked<allForks.SignedBeaconBlock>;
-        if (i <= meta.fork_block) {
-          const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-          tbSignedBlock = createTreeBackedSignedBlockByFork[pre](signedBlock);
-        } else {
-          const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
-          tbSignedBlock = createTreeBackedSignedBlockByFork[fork](signedBlock);
-        }
-        wrappedState = allForks.stateTransition(wrappedState, tbSignedBlock, {
+        const signedBlock = testcase[`blocks_${i}`] as allForks.SignedBeaconBlock;
+        state = allForks.stateTransition(state, signedBlock, {
           verifyStateRoot: true,
           verifyProposer: false,
           verifySignatures: false,
         });
       }
-      return wrappedState;
+      return state;
     },
     {
-      inputTypes: inputTypeSszTreeBacked,
+      inputTypes: inputTypeSszTreeViewDU,
       getSszTypes: (meta: ITransitionTestCase["meta"]) => {
         return {
           pre: ssz[pre].BeaconState,
@@ -100,6 +79,6 @@ interface ITransitionTestCase extends IBaseSpecTest {
     blocks_count: bigint;
     bls_setting?: bigint;
   };
-  pre: allForks.BeaconState;
-  post: allForks.BeaconState;
+  pre: BeaconStateAllForks;
+  post: BeaconStateAllForks;
 }

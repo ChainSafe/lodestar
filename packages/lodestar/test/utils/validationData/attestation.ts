@@ -1,5 +1,4 @@
 import {
-  CachedBeaconStateAllForks,
   computeEpochAtSlot,
   computeSigningRoot,
   computeStartSlotAtEpoch,
@@ -16,11 +15,9 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {SeenAttesters} from "../../../src/chain/seenCache";
 import {BlsSingleThreadVerifier} from "../../../src/chain/bls";
-import {computeSubnetForSlot} from "../../../src/chain/validation";
 import {signCached} from "../cache";
 import {ClockStatic} from "../clock";
-import {toSingleBit} from "../aggregationBits";
-import {toHexString} from "@chainsafe/ssz";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
@@ -77,9 +74,8 @@ export function getAttestationValidData(
     },
   } as Partial<IForkChoice>) as IForkChoice;
 
-  const committeeIndices = state.getBeaconCommittee(attSlot, attIndex);
+  const committeeIndices = state.epochCtx.getBeaconCommittee(attSlot, attIndex);
   const validatorIndex = committeeIndices[bitIndex];
-  const aggregationBits = toSingleBit(committeeIndices.length, bitIndex);
 
   const attestationData: phase0.AttestationData = {
     slot: attSlot,
@@ -101,16 +97,16 @@ export function getAttestationValidData(
   const sk = getSecretKeyFromIndexCached(validatorIndex);
 
   const attestation: phase0.Attestation = {
-    aggregationBits,
+    aggregationBits: BitArray.fromSingleBit(committeeIndices.length, bitIndex),
     data: attestationData,
     signature: signCached(sk, signingRoot),
   };
 
-  const subnet = computeSubnetForSlot(state, attSlot, attIndex);
+  const subnet = state.epochCtx.computeSubnetForSlot(attSlot, attIndex);
 
   // Add state to regen
   const regen = ({
-    getState: async () => (state as unknown) as CachedBeaconStateAllForks,
+    getState: async () => state,
   } as Partial<IStateRegenerator>) as IStateRegenerator;
 
   const chain = ({

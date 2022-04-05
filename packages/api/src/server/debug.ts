@@ -1,5 +1,4 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {jsonOpts} from "../utils";
 import {ServerRoutes, getGenericJsonServer} from "./utils";
 import {Api, ReqTypes, routesData, getReturnTypes, getReqSerializers} from "../routes/debug";
 
@@ -25,7 +24,7 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
           return Buffer.from(data);
         } else {
-          return returnTypes.getState.toJson(data, jsonOpts);
+          return returnTypes.getState.toJson(data);
         }
       },
     },
@@ -37,7 +36,7 @@ export function getRoutes(config: IChainForkConfig, api: Api): ServerRoutes<Api,
           // Fastify 3.x.x will automatically add header `Content-Type: application/octet-stream` if Buffer
           return Buffer.from(data);
         } else {
-          return returnTypes.getStateV2.toJson(data, jsonOpts);
+          return returnTypes.getStateV2.toJson(data);
         }
       },
     },

@@ -42,7 +42,6 @@ describe("Sync Committee Signature validation", function () {
     (chain as {
       seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
     }).seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
-    chain.getGenesisTime.returns(Math.floor(Date.now() / 1000));
     clockStub = sandbox.createStubInstance(LocalClock);
     chain.clock = clockStub;
     clockStub.isCurrentSlotGivenGossipDisparity.returns(true);

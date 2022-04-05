@@ -24,7 +24,12 @@ type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: num
  * - Prioritize peers with good score
  */
 export function prioritizePeers(
-  connectedPeers: {id: PeerId; attnets: phase0.AttestationSubnets; syncnets: altair.SyncSubnets; score: number}[],
+  connectedPeers: {
+    id: PeerId;
+    attnets: phase0.AttestationSubnets | null;
+    syncnets: altair.SyncSubnets | null;
+    score: number;
+  }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
   {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number}
@@ -56,7 +61,9 @@ export function prioritizePeers(
       for (const peer of connectedPeers) {
         let hasDuty = false;
         for (const {subnet} of subnets) {
-          if (peer[subnetKey][subnet]) {
+          const subnetBitArray = peer[subnetKey];
+          // TODO: Review performance
+          if (subnetBitArray && subnetBitArray.get(subnet) === true) {
             hasDuty = true;
             peersPerSubnet.set(subnet, 1 + (peersPerSubnet.get(subnet) ?? 0));
           }

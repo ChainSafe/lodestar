@@ -1,3 +1,6 @@
+import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
+import {BeaconStateAllForks} from "../types";
+
 /**
  * Alias to allow easier refactoring.
  * TODO: Estimate the risk of future proof of MAX_EFFECTIVE_BALANCE_INCREMENT < 255
@@ -20,4 +23,18 @@ export function getEffectiveBalanceIncrementsWithLen(validatorCount: number): Ef
   const byteLen = 1024 * Math.ceil(validatorCount / 1024);
 
   return new Uint8Array(byteLen);
+}
+
+/**
+ * Shows how EffectiveBalanceIncrements is meant to be populated.
+ * In practice this function should not be used, since it more efficient to loop the validators array once and do
+ * more tasks than only populating effectiveBalanceIncrements
+ */
+export function getEffectiveBalanceIncrements(state: BeaconStateAllForks): EffectiveBalanceIncrements {
+  const validatorsArr = state.validators.getAllReadonlyValues();
+  const effectiveBalanceIncrements = new Uint8Array(validatorsArr.length);
+  for (let i = 0; i < validatorsArr.length; i++) {
+    effectiveBalanceIncrements[i] = Math.floor(validatorsArr[i].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+  }
+  return effectiveBalanceIncrements;
 }

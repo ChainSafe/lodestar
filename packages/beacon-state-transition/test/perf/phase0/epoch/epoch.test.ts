@@ -28,7 +28,7 @@ describe(`phase0 processEpoch - ${stateId}`, () => {
 
   itBench({
     id: `phase0 processEpoch - ${stateId}`,
-    beforeEach: () => stateOg.value.clone() as CachedBeaconStateAllForks,
+    beforeEach: () => stateOg.value.clone(),
     fn: (state) => {
       const epochProcess = beforeProcessEpoch(state);
       phase0.processEpoch(state as CachedBeaconStatePhase0, epochProcess);

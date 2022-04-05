@@ -51,7 +51,7 @@ describe("blockAssembly - body", function () {
       [generateEmptySignedVoluntaryExit()],
     ]);
     aggregatedAttestationPool.getAttestationsForBlock.returns([generateEmptyAttestation()]);
-    dbStub.depositDataRoot.getTreeBacked.resolves(ssz.phase0.DepositDataRootList.defaultTreeBacked());
+    dbStub.depositDataRoot.getDepositRootTreeAtIndex.resolves(ssz.phase0.DepositDataRootList.defaultViewDU());
 
     const result = await assembleBody(chain, generateCachedState(), {
       randaoReveal: Buffer.alloc(96, 0),

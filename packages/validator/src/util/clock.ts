@@ -2,7 +2,7 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Epoch, Number64, Slot} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, TimeSeconds} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
@@ -111,7 +111,7 @@ export class Clock implements IClock {
 /**
  * Same to the spec but we use Math.round instead of Math.floor.
  */
-export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: Number64): Slot {
+export function getCurrentSlotAround(config: IChainForkConfig, genesisTime: TimeSeconds): Slot {
   const diffInSeconds = Date.now() / 1000 - genesisTime;
   const slotsSinceGenesis = Math.round(diffInSeconds / config.SECONDS_PER_SLOT);
   return GENESIS_SLOT + slotsSinceGenesis;

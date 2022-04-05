@@ -1,33 +1,39 @@
 import {
-  BigIntUintType,
-  BitListType,
-  BitVectorType,
-  booleanType,
-  byteType,
-  ContainerType,
-  ListType,
   Type,
-  VectorType,
+  BooleanType,
+  UintBigintType,
+  UintNumberType,
+  BitVectorType,
+  BitListType,
+  ContainerType,
+  ListBasicType,
+  VectorBasicType,
+  VectorCompositeType,
 } from "@chainsafe/ssz";
+
+const bool = new BooleanType();
+const byte = new UintNumberType(1);
+const uint8 = new UintNumberType(1);
+const uint16 = new UintNumberType(2);
+const uint32 = new UintNumberType(4);
+const uint64 = new UintBigintType(8);
+const uint128 = new UintBigintType(16);
+const uint256 = new UintBigintType(32);
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // class SingleFieldTestStruct(Container):
 //     A: byte
 const SingleFieldTestStruct = new ContainerType({
-  fields: {
-    a: byteType,
-  },
+  A: byte,
 });
 
 // class SmallTestStruct(Container):
 //     A: uint16
 //     B: uint16
 const SmallTestStruct = new ContainerType({
-  fields: {
-    a: new BigIntUintType({byteLength: 16 / 8}),
-    b: new BigIntUintType({byteLength: 16 / 8}),
-  },
+  A: uint16,
+  B: uint16,
 });
 
 // class FixedTestStruct(Container):
@@ -35,11 +41,9 @@ const SmallTestStruct = new ContainerType({
 //     B: uint64
 //     C: uint32
 const FixedTestStruct = new ContainerType({
-  fields: {
-    a: new BigIntUintType({byteLength: 8 / 8}),
-    b: new BigIntUintType({byteLength: 64 / 8}),
-    c: new BigIntUintType({byteLength: 32 / 8}),
-  },
+  A: uint8,
+  B: uint64,
+  C: uint32,
 });
 
 // class VarTestStruct(Container):
@@ -47,11 +51,9 @@ const FixedTestStruct = new ContainerType({
 //     B: List[uint16, 1024]
 //     C: uint8
 const VarTestStruct = new ContainerType({
-  fields: {
-    a: new BigIntUintType({byteLength: 16 / 8}),
-    b: new ListType({elementType: new BigIntUintType({byteLength: 16 / 8}), limit: 1024}),
-    c: new BigIntUintType({byteLength: 8 / 8}),
-  },
+  A: uint16,
+  B: new ListBasicType(uint16, 1024),
+  C: uint8,
 });
 
 // class ComplexTestStruct(Container):
@@ -63,15 +65,13 @@ const VarTestStruct = new ContainerType({
 //     F: Vector[FixedTestStruct, 4]
 //     G: Vector[VarTestStruct, 2]
 const ComplexTestStruct = new ContainerType({
-  fields: {
-    a: new BigIntUintType({byteLength: 16 / 8}),
-    b: new ListType({elementType: new BigIntUintType({byteLength: 16 / 8}), limit: 128}),
-    c: new BigIntUintType({byteLength: 8 / 8}),
-    d: new BitListType({limit: 256}),
-    e: VarTestStruct,
-    f: new VectorType({elementType: FixedTestStruct, length: 4}),
-    g: new VectorType({elementType: VarTestStruct, length: 2}),
-  },
+  A: uint16,
+  B: new ListBasicType(uint16, 128),
+  C: uint8,
+  D: new BitListType(256),
+  E: VarTestStruct,
+  F: new VectorCompositeType(FixedTestStruct, 4),
+  G: new VectorCompositeType(VarTestStruct, 2),
 });
 
 // class BitsStruct(Container):
@@ -81,13 +81,11 @@ const ComplexTestStruct = new ContainerType({
 //     D: Bitlist[6]
 //     E: Bitvector[8]
 const BitsStruct = new ContainerType({
-  fields: {
-    a: new BitListType({limit: 5}),
-    b: new BitVectorType({length: 2}),
-    c: new BitVectorType({length: 1}),
-    d: new BitListType({limit: 6}),
-    e: new BitVectorType({length: 8}),
-  },
+  A: new BitListType(5),
+  B: new BitVectorType(2),
+  C: new BitVectorType(1),
+  D: new BitListType(6),
+  E: new BitVectorType(8),
 });
 
 const containerTypes = {
@@ -100,13 +98,13 @@ const containerTypes = {
 };
 
 const vecElementTypes = {
-  bool: booleanType,
-  uint8: new BigIntUintType({byteLength: 8 / 8}),
-  uint16: new BigIntUintType({byteLength: 16 / 8}),
-  uint32: new BigIntUintType({byteLength: 32 / 8}),
-  uint64: new BigIntUintType({byteLength: 64 / 8}),
-  uint128: new BigIntUintType({byteLength: 128 / 8}),
-  uint256: new BigIntUintType({byteLength: 256 / 8}),
+  bool,
+  uint8,
+  uint16,
+  uint32,
+  uint64,
+  uint128,
+  uint256,
 };
 
 export function getTestType(testType: string, testCase: string): Type<unknown> {
@@ -121,28 +119,29 @@ export function getTestType(testType: string, testCase: string): Type<unknown> {
       if (elementType === undefined) throw Error(`No vecElementType for ${elementTypeStr}: '${testCase}'`);
       const length = parseInt(lengthStr);
       if (isNaN(length)) throw Error(`Bad length ${length}: '${testCase}'`);
-      return new VectorType({elementType, length});
+      return new VectorBasicType(elementType, length);
     }
 
     // `bitlist_{limit}`
     // {limit}: the list limit, in bits, of the bitlist.
     case "bitlist": {
       // Consider case `bitlist_no_delimiter_empty`
-      const limit = testCase.includes("no_delimiter") ? 0 : parseSecondNum(testCase, "limit");
+      // Set bitLen to a random big value. 0 is invalid and will throw at the constructor
+      const limit = testCase.includes("no_delimiter") ? 1024 : parseSecondNum(testCase, "limit");
       // TODO: memoize
-      return new BitListType({limit});
+      return new BitListType(limit);
     }
 
     // `bitvec_{length}`
     // {length}: the length, in bits, of the bitvector.
     case "bitvector": {
       // TODO: memoize
-      return new BitVectorType({length: parseSecondNum(testCase, "length")});
+      return new BitVectorType(parseSecondNum(testCase, "length"));
     }
 
     // A boolean has no type variations. Instead, file names just plainly describe the contents for debugging.
     case "boolean":
-      return booleanType;
+      return bool;
 
     // {container name}
     // {container name}: Any of the container names listed below (excluding the `(Container)` python super type)
@@ -158,7 +157,7 @@ export function getTestType(testType: string, testCase: string): Type<unknown> {
     // {size}: the uint size: 8, 16, 32, 64, 128 or 256.
     case "uints": {
       // TODO: memoize
-      return new BigIntUintType({byteLength: parseSecondNum(testCase, "size") / 8});
+      return new UintBigintType((parseSecondNum(testCase, "size") / 8) as 8);
     }
 
     default:

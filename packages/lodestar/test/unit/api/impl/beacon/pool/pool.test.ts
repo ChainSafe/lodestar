@@ -13,8 +13,7 @@ import * as attesterSlashingValidation from "../../../../../../src/chain/validat
 import * as proposerSlashingValidation from "../../../../../../src/chain/validation/proposerSlashing";
 import * as voluntaryExitValidation from "../../../../../../src/chain/validation/voluntaryExit";
 
-import {phase0, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
+import {phase0} from "@chainsafe/lodestar-types";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip";
 import {generateEmptySignedBlockHeader} from "../../../../../utils/block";
 import {setupApiImplTestServer} from "../../index.test";
@@ -87,12 +86,12 @@ describe("beacon pool api impl", function () {
   describe("submitPoolAttesterSlashing", function () {
     const atterterSlashing: phase0.AttesterSlashing = {
       attestation1: {
-        attestingIndices: [0] as List<ValidatorIndex>,
+        attestingIndices: [0],
         data: generateAttestationData(0, 1, 0, 1),
         signature: Buffer.alloc(96),
       },
       attestation2: {
-        attestingIndices: [0] as List<ValidatorIndex>,
+        attestingIndices: [0],
         data: generateAttestationData(0, 1, 0, 1),
         signature: Buffer.alloc(96),
       },

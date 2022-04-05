@@ -18,17 +18,13 @@ import {generateEmptySignedBlock} from "../test/utils/block";
 import {generateState} from "../test/utils/state";
 
 // dummy test state
-const state: CachedBeaconStateAllForks = generateState() as CachedBeaconStateAllForks;
+const preState: CachedBeaconStateAllForks = generateState() as CachedBeaconStateAllForks;
 
 // dummy test block
 const block: allForks.SignedBeaconBlock = generateEmptySignedBlock();
 
-let postStateContext: allForks.BeaconState;
-try {
-  postStateContext = allForks.stateTransition(state, block);
-} catch (e) {
-  console.log(e);
-}
+// Run state transition on block
+const postState = allForks.stateTransition(preState, block);
 ```
 
 ## License

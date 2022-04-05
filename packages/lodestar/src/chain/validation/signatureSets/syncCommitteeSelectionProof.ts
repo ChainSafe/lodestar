@@ -22,6 +22,6 @@ export function getSyncCommitteeSelectionProofSignatureSet(
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[contributionAndProof.aggregatorIndex],
     signingRoot: computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain),
-    signature: contributionAndProof.selectionProof.valueOf() as Uint8Array,
+    signature: contributionAndProof.selectionProof,
   };
 }

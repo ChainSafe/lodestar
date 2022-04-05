@@ -1,5 +1,6 @@
 import {CachedBeaconStateAltair, isSyncCommitteeAggregator} from "@chainsafe/lodestar-beacon-state-transition";
-import {altair} from "@chainsafe/lodestar-types";
+import {altair, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {GossipAction, SyncCommitteeError, SyncCommitteeErrorCode} from "../errors";
 import {IBeaconChain} from "../interface";
 import {validateGossipSyncCommitteeExceptSig} from "./syncCommittee";
@@ -7,7 +8,6 @@ import {
   getSyncCommitteeSelectionProofSignatureSet,
   getContributionAndProofSignatureSet,
   getSyncCommitteeContributionSignatureSet,
-  getContributionPubkeys,
 } from "./signatureSets";
 
 /**
@@ -44,8 +44,8 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   }
 
   // [REJECT] The contribution has participants -- that is, any(contribution.aggregation_bits)
-  const pubkeys = getContributionPubkeys(headState as CachedBeaconStateAltair, contribution);
-  if (!pubkeys.length) {
+  const syncCommitteeIndices = getContributionIndices(headState as CachedBeaconStateAltair, contribution);
+  if (!syncCommitteeIndices.length) {
     throw new SyncCommitteeError(GossipAction.REJECT, {
       code: SyncCommitteeErrorCode.NO_PARTICIPANT,
     });
@@ -64,6 +64,7 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // i.e. state.validators[contribution_and_proof.aggregator_index].pubkey in get_sync_subcommittee_pubkeys(state, contribution.subcommittee_index).
   // > Checked in validateGossipSyncCommitteeExceptSig()
 
+  const pubkeys = syncCommitteeIndices.map((validatorIndex) => headState.epochCtx.index2pubkey[validatorIndex]);
   const signatureSets = [
     // [REJECT] The contribution_and_proof.selection_proof is a valid signature of the SyncAggregatorSelectionData
     // derived from the contribution by the validator with index contribution_and_proof.aggregator_index.
@@ -86,5 +87,22 @@ export async function validateSyncCommitteeGossipContributionAndProof(
   // no need to add to seenSyncCommittteeContributionCache here, gossip handler will do that
   chain.seenContributionAndProof.add(slot, subcommitteeIndex, aggregatorIndex);
 
-  return {syncCommitteeParticipants: pubkeys.length};
+  return {syncCommitteeParticipants: syncCommitteeIndices.length};
+}
+
+/**
+ * Retrieve pubkeys in contribution aggregate using epochCtx:
+ * - currSyncCommitteeIndexes cache
+ * - index2pubkey cache
+ */
+function getContributionIndices(
+  state: CachedBeaconStateAltair,
+  contribution: altair.SyncCommitteeContribution
+): ValidatorIndex[] {
+  const startIndex = contribution.subcommitteeIndex * SYNC_COMMITTEE_SUBNET_SIZE;
+
+  const syncCommittee = state.epochCtx.getIndexedSyncCommittee(contribution.slot);
+  // The bits in contribution.aggregationBits select validatorIndexes in the subcommittee starting at startIndex
+  const subcommitteeIndices = syncCommittee.validatorIndices.slice(startIndex, startIndex + SYNC_COMMITTEE_SUBNET_SIZE);
+  return contribution.aggregationBits.intersectValues(subcommitteeIndices);
 }

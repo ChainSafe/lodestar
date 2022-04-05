@@ -2,8 +2,8 @@ import {ApiModules} from "../types";
 import {resolveStateId} from "../beacon/state/utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {linspace} from "../../../util/numpy";
-import {fromHexString, isCompositeType} from "@chainsafe/ssz";
-import {ProofType} from "@chainsafe/persistent-merkle-tree";
+import {fromHexString} from "@chainsafe/ssz";
+import {ProofType, Tree} from "@chainsafe/persistent-merkle-tree";
 import {IApiOptions} from "../../options";
 
 // TODO: Import from lightclient/server package
@@ -17,31 +17,18 @@ export function getLightclientApi(
   const maxGindicesInProof = opts.maxGindicesInProof ?? 512;
 
   return {
-    async getStateProof(stateId, paths) {
+    async getStateProof(stateId, jsonPaths) {
       const state = await resolveStateId(config, chain, db, stateId);
-      // eslint-disable-next-line @typescript-eslint/naming-convention
-      const BeaconState = config.getForkTypes(state.slot).BeaconState;
-      const stateTreeBacked = BeaconState.createTreeBackedFromStruct(state);
-      const tree = stateTreeBacked.tree;
 
-      const gindicesSet = new Set<bigint>();
+      // Commit any changes before computing the state root. In normal cases the state should have no changes here
+      state.commit();
+      const stateNode = state.node;
+      const tree = new Tree(stateNode);
 
-      for (const path of paths) {
-        // Logic from TreeBacked#createProof is (mostly) copied here to expose the # of gindices in the proof
-        const {type, gindex} = BeaconState.getPathInfo(path);
-        if (!isCompositeType(type)) {
-          gindicesSet.add(gindex);
-        } else {
-          // if the path subtype is composite, include the gindices of all the leaves
-          const gindexes = type.tree_getLeafGindices(
-            type.hasVariableSerializedLength() ? tree.getSubtree(gindex) : undefined,
-            gindex
-          );
-          for (const gindex of gindexes) {
-            gindicesSet.add(gindex);
-          }
-        }
-      }
+      const gindexes = state.type.tree_createProofGindexes(stateNode, jsonPaths);
+      // TODO: Is it necessary to de-duplicate?
+      //       It's not a problem if we overcount gindexes
+      const gindicesSet = new Set(gindexes);
 
       if (gindicesSet.size > maxGindicesInProof) {
         throw new Error("Requested proof is too large.");

@@ -78,7 +78,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   if (args.genesisStateFile) {
     const state = config
       .getForkTypes(GENESIS_SLOT)
-      .BeaconState.createTreeBackedFromBytes(await fs.promises.readFile(args.genesisStateFile));
+      .BeaconState.deserializeToViewDU(await fs.promises.readFile(args.genesisStateFile));
     anchorState = await initStateFromAnchorState(config, db, logger, state);
   } else {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

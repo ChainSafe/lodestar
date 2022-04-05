@@ -53,7 +53,7 @@ export async function runNodeNotifier({
       const headInfo = chain.forkChoice.getHead();
       const headState = chain.getHeadState();
       const finalizedEpoch = headState.finalizedCheckpoint.epoch;
-      const finalizedRoot = headState.finalizedCheckpoint.root.valueOf() as Uint8Array;
+      const finalizedRoot = headState.finalizedCheckpoint.root;
       const headSlot = headInfo.slot;
       timeSeries.addPoint(headSlot, Date.now());
 
@@ -61,7 +61,7 @@ export async function runNodeNotifier({
       const finalizedCheckpointRow = `finalized: ${prettyBytes(finalizedRoot)}:${finalizedEpoch}`;
       const headRow = `head: ${headInfo.slot} ${prettyBytes(headInfo.blockRoot)}`;
       const isMergeTransitionComplete =
-        bellatrix.isBellatrixStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
+        bellatrix.isBellatrixCachedStateType(headState) && bellatrix.isMergeTransitionComplete(headState);
       const executionInfo = isMergeTransitionComplete
         ? [
             `execution: ${headInfo.executionStatus.toLowerCase()}(${prettyBytes(
@@ -132,7 +132,7 @@ export async function runNodeNotifier({
 
 function timeToNextHalfSlot(config: IBeaconConfig, chain: IBeaconChain): number {
   const msPerSlot = config.SECONDS_PER_SLOT * 1000;
-  const msFromGenesis = Date.now() - chain.getGenesisTime() * 1000;
+  const msFromGenesis = Date.now() - chain.genesisTime * 1000;
   const msToNextSlot = msPerSlot - (msFromGenesis % msPerSlot);
   return msToNextSlot > msPerSlot / 2 ? msToNextSlot - msPerSlot / 2 : msToNextSlot + msPerSlot / 2;
 }

@@ -1,5 +1,5 @@
 import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
-import {processParticipationRecordUpdates} from "@chainsafe/lodestar-beacon-state-transition/src/phase0/epoch/processParticipationRecordUpdates";
+import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {EpochProcessFn, epochProcessing} from "../allForks/epochProcessing";
 
@@ -12,7 +12,7 @@ epochProcessing(ForkName.altair, {
   inactivity_updates: altair.processInactivityUpdates as EpochProcessFn,
   justification_and_finalization: allForks.processJustificationAndFinalization,
   participation_flag_updates: altair.processParticipationFlagUpdates as EpochProcessFn,
-  participation_record_updates: (processParticipationRecordUpdates as unknown) as EpochProcessFn,
+  participation_record_updates: (phase0.processParticipationRecordUpdates as unknown) as EpochProcessFn,
   randao_mixes_reset: allForks.processRandaoMixesReset,
   registry_updates: allForks.processRegistryUpdates,
   rewards_and_penalties: altair.processRewardsAndPenalties as EpochProcessFn,

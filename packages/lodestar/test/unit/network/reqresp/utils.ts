@@ -1,5 +1,5 @@
 import {Root, phase0} from "@chainsafe/lodestar-types";
-import {List, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {Libp2pStream} from "../../../../src/network";
 import {generateEmptySignedBlock} from "../../../utils/block";
@@ -14,12 +14,12 @@ export function createStatus(): phase0.Status {
   };
 }
 
-export function generateRoots(count: number, offset = 0): List<Root> {
+export function generateRoots(count: number, offset = 0): Root[] {
   const roots: Root[] = [];
   for (let i = 0; i < count; i++) {
     roots.push(Buffer.alloc(32, i + offset));
   }
-  return roots as List<Root>;
+  return roots;
 }
 
 /**

@@ -9,12 +9,12 @@ import {
   WEIGHT_DENOMINATOR,
   ForkName,
 } from "@chainsafe/lodestar-params";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks, EpochProcess} from "../../types";
+import {CachedBeaconStateAltair, EpochProcess} from "../../types";
 import {
   FLAG_ELIGIBLE_ATTESTER,
-  FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED,
-  FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED,
-  FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED,
+  FLAG_PREV_HEAD_ATTESTER_UNSLASHED,
+  FLAG_PREV_SOURCE_ATTESTER_UNSLASHED,
+  FLAG_PREV_TARGET_ATTESTER_UNSLASHED,
   hasMarkers,
 } from "../../util/attesterStatus";
 import {isInInactivityLeak, newZeroedArray} from "../../util";
@@ -48,7 +48,7 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
   const rewards = newZeroedArray(validatorCount);
   const penalties = newZeroedArray(validatorCount);
 
-  const isInInactivityLeakBn = isInInactivityLeak(state as CachedBeaconStateAllForks);
+  const isInInactivityLeakBn = isInInactivityLeak(state);
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
   // so there are limited values of them like 32, 31, 30
   const rewardPenaltyItemCache = new Map<number, IRewardPenaltyItem>();
@@ -100,31 +100,35 @@ export function getRewardsAndPenalties(state: CachedBeaconStateAltair, process: 
     } = rewardPenaltyItem;
 
     // same logic to getFlagIndexDeltas
-    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
+    if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelySourceReward;
       }
     } else {
       penalties[i] += timelySourcePenalty;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
+
+    if (hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelyTargetReward;
       }
     } else {
       penalties[i] += timelyTargetPenalty;
     }
-    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_OR_UNSLASHED)) {
+
+    if (hasMarkers(status.flags, FLAG_PREV_HEAD_ATTESTER_UNSLASHED)) {
       if (!isInInactivityLeakBn) {
         rewards[i] += timelyHeadReward;
       }
     }
+
     // Same logic to getInactivityPenaltyDeltas
     // TODO: if we have limited value in inactivityScores we can provide a cache too
-    if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_OR_UNSLASHED)) {
-      const penaltyNumerator = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT * state.inactivityScores[i];
+    if (!hasMarkers(status.flags, FLAG_PREV_TARGET_ATTESTER_UNSLASHED)) {
+      const penaltyNumerator = effectiveBalanceIncrement * EFFECTIVE_BALANCE_INCREMENT * state.inactivityScores.get(i);
       penalties[i] += Math.floor(penaltyNumerator / penaltyDenominator);
     }
   }
+
   return [rewards, penalties];
 }

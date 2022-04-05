@@ -10,18 +10,24 @@ export * as phase0 from "./phase0";
 export * as altair from "./altair";
 export * as bellatrix from "./bellatrix";
 export * as allForks from "./allForks";
-export {CachedBeaconState, createCachedBeaconState} from "./cache/cachedBeaconState";
 
 export {
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   CachedBeaconStateBellatrix,
   CachedBeaconStateAllForks,
-  CachedBeaconStateAnyFork,
+  // Non-cached states
+  BeaconStatePhase0,
+  BeaconStateAltair,
+  BeaconStateBellatrix,
+  BeaconStateAllForks,
 } from "./types";
 
-export {EpochContext} from "./cache/epochContext";
+// Main state caches
+export {createCachedBeaconState, BeaconStateCache} from "./cache/stateCache";
+export {EpochContext, EpochContextImmutableData, createEmptyEpochContextImmutableData} from "./cache/epochContext";
 export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess";
-export {PubkeyIndexMap, Index2PubkeyCache} from "./cache/pubkeyCache";
 
+// Aux data-structures
+export {PubkeyIndexMap, Index2PubkeyCache} from "./cache/pubkeyCache";
 export {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "./cache/effectiveBalanceIncrements";

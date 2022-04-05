@@ -16,7 +16,6 @@ import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/key
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
-import {ByteVector} from "@chainsafe/ssz";
 import {BeaconNode} from "../../../src/node";
 import {testLogger, TestLoggerOpts} from "../logger";
 
@@ -187,8 +186,8 @@ export async function getAndInitDevValidators({
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type,@typescript-eslint/explicit-module-boundary-types
-export function createAttesterDuty(pubkey: ByteVector, slot: number, committeeIndex: number, validatorIndex: number) {
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type,@typescript-eslint/explicit-module-boundary-types,@typescript-eslint/no-unsafe-assignment
+export function createAttesterDuty(pubkey: Uint8Array, slot: number, committeeIndex: number, validatorIndex: number) {
   return {
     slot: slot,
     committeeIndex: committeeIndex,

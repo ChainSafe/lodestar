@@ -5,7 +5,7 @@ import {
   computeStartSlotAtEpoch,
   getLatestWeakSubjectivityCheckpointEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {Json, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
@@ -190,9 +190,10 @@ export function getLodestarApi({
         };
       }
       const state = await chain.getHeadStateAtCurrentEpoch();
-      if (epoch < state.previousShuffling.epoch || epoch > state.nextShuffling.epoch) {
+      const epochCtx = state.epochCtx;
+      if (epoch < epochCtx.previousShuffling.epoch || epoch > epochCtx.nextShuffling.epoch) {
         throw new Error(
-          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${state.currentShuffling.epoch}`
+          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${epochCtx.currentShuffling.epoch}`
         );
       }
 
@@ -227,7 +228,7 @@ function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch): boole
   return proposedBlock || hasAggregated || hasAttested;
 }
 
-function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): Json {
+function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): unknown {
   switch (regenRequest.key) {
     case "getBlockSlotState":
       return {

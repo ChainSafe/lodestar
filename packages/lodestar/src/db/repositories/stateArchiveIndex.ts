@@ -7,5 +7,5 @@ export function storeRootIndex(db: Db, slot: Slot, stateRoot: Root): Promise<voi
 }
 
 export function getRootIndexKey(root: Root): Uint8Array {
-  return encodeKey(Bucket.index_stateArchiveRootIndex, root.valueOf() as Uint8Array);
+  return encodeKey(Bucket.index_stateArchiveRootIndex, root);
 }

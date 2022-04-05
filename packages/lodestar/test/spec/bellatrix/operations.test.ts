@@ -16,22 +16,22 @@ import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transiti
 /* eslint-disable @typescript-eslint/naming-convention */
 
 // Define above to re-use in sync_aggregate and sync_aggregate_random
-const sync_aggregate: BlockProcessFn<bellatrix.BeaconState> = (
+const sync_aggregate: BlockProcessFn<CachedBeaconStateBellatrix> = (
   state,
   testCase: IBaseSpecTest & {sync_aggregate: altair.SyncAggregate}
 ) => {
-  const block = ssz.altair.BeaconBlock.defaultTreeBacked();
+  const block = ssz.altair.BeaconBlock.defaultValue();
 
   // processSyncAggregate() needs the full block to get the slot
   block.slot = state.slot;
-  block.body.syncAggregate = testCase["sync_aggregate"];
+  block.body.syncAggregate = ssz.altair.SyncAggregate.toViewDU(testCase["sync_aggregate"]);
 
-  altair.processSyncAggregate((state as unknown) as CachedBeaconStateAltair, block);
+  altair.processSyncAggregate((state as CachedBeaconStateAllForks) as CachedBeaconStateAltair, block);
 };
 
-operations<bellatrix.BeaconState>(ForkName.bellatrix, {
+operations<CachedBeaconStateBellatrix>(ForkName.bellatrix, {
   attestation: (state, testCase: IBaseSpecTest & {attestation: phase0.Attestation}) => {
-    altair.processAttestations((state as unknown) as CachedBeaconStateAltair, [testCase.attestation]);
+    altair.processAttestations((state as CachedBeaconStateAllForks) as CachedBeaconStateAltair, [testCase.attestation]);
   },
 
   attester_slashing: (state, testCase: IBaseSpecTest & {attester_slashing: phase0.AttesterSlashing}) => {
@@ -39,11 +39,11 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   },
 
   block_header: (state, testCase: IBaseSpecTest & {block: altair.BeaconBlock}) => {
-    allForks.processBlockHeader(state as CachedBeaconStateAllForks, testCase.block);
+    allForks.processBlockHeader(state, testCase.block);
   },
 
   deposit: (state, testCase: IBaseSpecTest & {deposit: phase0.Deposit}) => {
-    altair.processDeposit((state as unknown) as CachedBeaconStateAltair, testCase.deposit);
+    altair.processDeposit((state as CachedBeaconStateAllForks) as CachedBeaconStateAltair, testCase.deposit);
   },
 
   proposer_slashing: (state, testCase: IBaseSpecTest & {proposer_slashing: phase0.ProposerSlashing}) => {
@@ -54,15 +54,20 @@ operations<bellatrix.BeaconState>(ForkName.bellatrix, {
   sync_aggregate_random: sync_aggregate,
 
   voluntary_exit: (state, testCase: IBaseSpecTest & {voluntary_exit: phase0.SignedVoluntaryExit}) => {
-    altair.processVoluntaryExit((state as unknown) as CachedBeaconStateAltair, testCase.voluntary_exit);
+    altair.processVoluntaryExit(
+      (state as CachedBeaconStateAllForks) as CachedBeaconStateAltair,
+      testCase.voluntary_exit
+    );
   },
 
   execution_payload: (
     state,
     testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
   ) => {
-    processExecutionPayload((state as unknown) as CachedBeaconStateBellatrix, testCase.execution_payload, {
-      notifyNewPayload: () => testCase.execution.execution_valid,
-    });
+    processExecutionPayload(
+      (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
+      testCase.execution_payload,
+      {notifyNewPayload: () => testCase.execution.execution_valid}
+    );
   },
 });

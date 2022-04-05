@@ -1,4 +1,3 @@
-import {Json} from "@chainsafe/ssz";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {FetchOpts, IHttpClient} from "./httpClient";
 import {compileRouteUrlFormater} from "../../utils/urlFormat";
@@ -8,7 +7,6 @@ import {
   RouteGeneric,
   ReturnTypes,
   TypeJson,
-  jsonOpts,
   ReqSerializer,
   ReqSerializers,
   RoutesData,
@@ -69,10 +67,10 @@ export function generateGenericJsonClient<
     const returnType = returnTypes[routeKey as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return async function request(...args: Parameters<Api[keyof Api]>): Promise<any | void> {
-      const res = await fetchFn.json<Json>(fetchOptsSerializer(...args));
+      const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
       if (returnType) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return returnType.fromJson(res, jsonOpts) as ReturnType<Api[keyof Api]>;
+        return returnType.fromJson(res) as ReturnType<Api[keyof Api]>;
       }
     };
   }) as Api;

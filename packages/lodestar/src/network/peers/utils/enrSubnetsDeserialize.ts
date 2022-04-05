@@ -1,4 +1,5 @@
-import {getUint8ByteToBitBooleanArray, newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
+import {getUint8ByteToBitBooleanArray} from "@chainsafe/ssz";
+import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 
 export const zeroAttnets = newFilledArray(ATTESTATION_SUBNET_COUNT, false);

@@ -1,5 +1,5 @@
-import {altair, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {PubkeyIndexMap} from "./pubkeyCache";
 
 type SyncComitteeValidatorIndexMap = Map<ValidatorIndex, number[]>;
@@ -36,7 +36,7 @@ export function getSyncCommitteeCache(validatorIndices: ValidatorIndex[]): SyncC
 }
 
 export function computeSyncCommitteeCache(
-  syncCommittee: altair.SyncCommittee,
+  syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
   pubkey2index: PubkeyIndexMap
 ): SyncCommitteeCache {
   const validatorIndices = computeSyncCommitteeIndices(syncCommittee, pubkey2index);
@@ -74,13 +74,13 @@ export function computeSyncComitteeMap(syncCommitteeIndexes: ValidatorIndex[]): 
  * Extract validator indices from current and next sync committee
  */
 function computeSyncCommitteeIndices(
-  syncCommittee: altair.SyncCommittee,
+  syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
   pubkey2index: PubkeyIndexMap
 ): ValidatorIndex[] {
   const validatorIndices: ValidatorIndex[] = [];
-  const pubkeys = readonlyValues(syncCommittee.pubkeys);
+  const pubkeys = syncCommittee.pubkeys.getAllReadonly();
   for (const pubkey of pubkeys) {
-    const validatorIndex = pubkey2index.get(pubkey.valueOf() as typeof pubkey);
+    const validatorIndex = pubkey2index.get(pubkey);
     if (validatorIndex === undefined) {
       throw Error(`SyncCommittee pubkey is unknown ${toHexString(pubkey)}`);
     }

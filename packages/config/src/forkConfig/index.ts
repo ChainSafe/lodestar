@@ -43,7 +43,7 @@ export function createIForkConfig(config: IChainConfig): IForkConfig {
       return this.getForkInfo(slot).version;
     },
     getForkTypes(slot: Slot): allForks.AllForksSSZTypes {
-      return ssz.allForks[this.getForkName(slot)];
+      return ssz.allForks[this.getForkName(slot)] as allForks.AllForksSSZTypes;
     },
   };
 }

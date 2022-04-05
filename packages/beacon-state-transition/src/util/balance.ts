@@ -3,10 +3,11 @@
  */
 
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
-import {allForks, Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types";
+import {BeaconStateAllForks} from "..";
+import {CachedBeaconStateAllForks} from "../types";
 
 /**
  * Return the combined effective balance of the [[indices]].
@@ -14,27 +15,24 @@ import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../types";
  *
  * SLOW CODE - 🐢
  */
-export function getTotalBalance(state: allForks.BeaconState, indices: ValidatorIndex[]): Gwei {
-  return bigIntMax(
-    BigInt(EFFECTIVE_BALANCE_INCREMENT),
-    indices.reduce(
-      // TODO: Use a fast cache to get the effective balance 🐢
-      (total: Gwei, index: ValidatorIndex): Gwei => total + BigInt(state.validators[index].effectiveBalance),
-      BigInt(0)
-    )
-  );
+export function getTotalBalance(state: BeaconStateAllForks, indices: ValidatorIndex[]): Gwei {
+  let total = BigInt(0);
+
+  // TODO: Use a fast cache to get the effective balance 🐢
+  const validatorsArr = state.validators.getAllReadonlyValues();
+  for (let i = 0; i < indices.length; i++) {
+    total += BigInt(validatorsArr[indices[i]].effectiveBalance);
+  }
+
+  return bigIntMax(BigInt(EFFECTIVE_BALANCE_INCREMENT), total);
 }
 
 /**
  * Increase the balance for a validator with the given ``index`` by ``delta``.
  */
-export function increaseBalance(
-  state: CachedBeaconStateAllForks | CachedBeaconStateAltair,
-  index: ValidatorIndex,
-  delta: number
-): void {
+export function increaseBalance(state: BeaconStateAllForks, index: ValidatorIndex, delta: number): void {
   // TODO: Inline this
-  state.balanceList.applyDelta(index, delta);
+  state.balances.set(index, state.balances.get(index) + delta);
 }
 
 /**
@@ -42,12 +40,10 @@ export function increaseBalance(
  *
  * Set to ``0`` when underflow.
  */
-export function decreaseBalance(
-  state: CachedBeaconStateAllForks | CachedBeaconStateAltair,
-  index: ValidatorIndex,
-  delta: number
-): void {
-  state.balanceList.applyDelta(index, -delta);
+export function decreaseBalance(state: BeaconStateAllForks, index: ValidatorIndex, delta: number): void {
+  const newBalance = state.balances.get(index) - delta;
+  // TODO: Is it necessary to protect against underflow here? Add unit test
+  state.balances.set(index, Math.max(0, newBalance));
 }
 
 /**
@@ -58,10 +54,10 @@ export function decreaseBalance(
 export function getEffectiveBalanceIncrementsZeroInactive(
   justifiedState: CachedBeaconStateAllForks
 ): EffectiveBalanceIncrements {
-  const {activeIndices} = justifiedState.currentShuffling;
-  // 5x faster than using readonlyValuesListOfLeafNodeStruct
+  const {activeIndices} = justifiedState.epochCtx.currentShuffling;
+  // 5x faster than reading from state.validators, with validator Nodes as values
   const validatorCount = justifiedState.validators.length;
-  const {effectiveBalanceIncrements} = justifiedState;
+  const {effectiveBalanceIncrements} = justifiedState.epochCtx;
   // Slice up to `validatorCount` since it won't be mutated, nor accessed beyond `validatorCount`
   const effectiveBalanceIncrementsZeroInactive = effectiveBalanceIncrements.slice(0, validatorCount);
 

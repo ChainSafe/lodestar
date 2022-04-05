@@ -1,16 +1,17 @@
-import {altair, phase0, Root} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
+import {altair, phase0, Root, ssz} from "@chainsafe/lodestar-types";
+import {CompositeViewDU} from "@chainsafe/ssz";
 import {FINALIZED_ROOT_GINDEX, NEXT_SYNC_COMMITTEE_GINDEX, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {computeEpochAtSlot} from "../src/utils/clock";
 import {getForkVersion} from "../src/utils/domain";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 
 export interface IBeaconChainLc {
   getBlockHeaderByRoot(blockRoot: Root): Promise<phase0.BeaconBlockHeader>;
-  getStateByRoot(stateRoot: Root): Promise<TreeBacked<altair.BeaconState>>;
+  getStateByRoot(stateRoot: Root): Promise<CompositeViewDU<typeof ssz.altair.BeaconState>>;
 }
 
 /**
- * From a TreeBacked state, return an update to be consumed by a light client
+ * From a TreeView state, return an update to be consumed by a light client
  * Spec v1.0.1
  */
 export async function prepareUpdateNaive(
@@ -83,7 +84,7 @@ export async function prepareUpdateNaive(
   // Get the finality block root that sync committees have signed in blockA
   const syncAttestedSlot = stateWithSyncAggregate.slot - 1;
   // Inlined `getBlockRootAtSlot()`
-  const syncAttestedBlockRoot = stateWithSyncAggregate.blockRoots[syncAttestedSlot % SLOTS_PER_HISTORICAL_ROOT];
+  const syncAttestedBlockRoot = stateWithSyncAggregate.blockRoots.get(syncAttestedSlot % SLOTS_PER_HISTORICAL_ROOT);
   const syncAttestedBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedBlockRoot);
 
   // Get the ForkVersion used in the syncAggregate, as verified in the state transition fn
@@ -93,17 +94,22 @@ export async function prepareUpdateNaive(
   // Get the finalized state defined in the block "attested" by the current sync committee
   const syncAttestedState = await chain.getStateByRoot(syncAttestedBlockHeader.stateRoot);
   const finalizedCheckpointBlockHeader = await chain.getBlockHeaderByRoot(syncAttestedState.finalizedCheckpoint.root);
+
   // Prove that the `finalizedCheckpointRoot` belongs in that block
-  const finalityBranch = syncAttestedState.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+  syncAttestedState.commit();
+  const syncAttestedStateTree = new Tree(syncAttestedState.node);
+  const finalityBranch = syncAttestedStateTree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 
   // Get `nextSyncCommittee` from a finalized state so the lightclient can safely transition to the next committee
   const finalizedCheckpointState = await chain.getStateByRoot(finalizedCheckpointBlockHeader.stateRoot);
   // Prove that the `nextSyncCommittee` is included in a finalized state "attested" by the current sync committee
-  const nextSyncCommitteeBranch = finalizedCheckpointState.tree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
+  finalizedCheckpointState.commit();
+  const finalizedCheckpointStateTree = new Tree(finalizedCheckpointState.node);
+  const nextSyncCommitteeBranch = finalizedCheckpointStateTree.getSingleProof(BigInt(NEXT_SYNC_COMMITTEE_GINDEX));
 
   return {
     attestedHeader: syncAttestedBlockHeader,
-    nextSyncCommittee: finalizedCheckpointState.nextSyncCommittee,
+    nextSyncCommittee: finalizedCheckpointState.nextSyncCommittee.toValue(),
     nextSyncCommitteeBranch: nextSyncCommitteeBranch,
     finalizedHeader: finalizedCheckpointBlockHeader,
     finalityBranch: finalityBranch,

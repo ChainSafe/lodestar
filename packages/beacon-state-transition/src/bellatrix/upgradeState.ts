@@ -1,34 +1,63 @@
-import {bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {createCachedBeaconState} from "../cache/cachedBeaconState";
+import {ssz} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAltair, CachedBeaconStateBellatrix} from "../types";
-import {TreeBacked} from "@chainsafe/ssz";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {getCachedBeaconState} from "../cache/stateCache";
 
 /**
  * Upgrade a state from altair to bellatrix.
  */
-export function upgradeState(state: CachedBeaconStateAltair): CachedBeaconStateBellatrix {
-  const {config} = state;
-  const postTreeBackedState = upgradeTreeBackedState(config, state);
-  // TODO: This seems very sub-optimal, review
-  return createCachedBeaconState(config, postTreeBackedState);
-}
+export function upgradeState(stateAltair: CachedBeaconStateAltair): CachedBeaconStateBellatrix {
+  const {config} = stateAltair;
 
-function upgradeTreeBackedState(
-  config: IBeaconConfig,
-  state: CachedBeaconStateAltair
-): TreeBacked<bellatrix.BeaconState> {
-  const stateTB = ssz.phase0.BeaconState.createTreeBacked(state.tree);
+  // Get underlying node and cast altair tree to bellatrix tree
+  //
+  // An altair BeaconState tree can be safely casted to a bellatrix BeaconState tree because:
+  // - All new fields are appended at the end
+  //
+  // altair                        | op  | altair
+  // ----------------------------- | --- | ------------
+  // genesis_time                  | -   | genesis_time
+  // genesis_validators_root       | -   | genesis_validators_root
+  // slot                          | -   | slot
+  // fork                          | -   | fork
+  // latest_block_header           | -   | latest_block_header
+  // block_roots                   | -   | block_roots
+  // state_roots                   | -   | state_roots
+  // historical_roots              | -   | historical_roots
+  // eth1_data                     | -   | eth1_data
+  // eth1_data_votes               | -   | eth1_data_votes
+  // eth1_deposit_index            | -   | eth1_deposit_index
+  // validators                    | -   | validators
+  // balances                      | -   | balances
+  // randao_mixes                  | -   | randao_mixes
+  // slashings                     | -   | slashings
+  // previous_epoch_participation  | -   | previous_epoch_participation
+  // current_epoch_participation   | -   | current_epoch_participation
+  // justification_bits            | -   | justification_bits
+  // previous_justified_checkpoint | -   | previous_justified_checkpoint
+  // current_justified_checkpoint  | -   | current_justified_checkpoint
+  // finalized_checkpoint          | -   | finalized_checkpoint
+  // inactivity_scores             | -   | inactivity_scores
+  // current_sync_committee        | -   | current_sync_committee
+  // next_sync_committee           | -   | next_sync_committee
+  // -                             | new | latest_execution_payload_header
 
-  // TODO: Does this preserve the hashing cache? In altair devnets memory spikes on the fork transition
-  const postState = ssz.bellatrix.BeaconState.createTreeBacked(stateTB.tree);
-  postState.fork = {
-    previousVersion: stateTB.fork.currentVersion,
+  const stateAltairNode = ssz.altair.BeaconState.commitViewDU(stateAltair);
+  const stateBellatrixView = ssz.bellatrix.BeaconState.getViewDU(stateAltairNode);
+  // Attach existing BeaconStateCache from stateAltair to new stateBellatrixView object
+  const stateBellatrix = getCachedBeaconState(stateBellatrixView, stateAltair);
+
+  stateBellatrix.fork = ssz.phase0.Fork.toViewDU({
+    previousVersion: stateAltair.fork.currentVersion,
     currentVersion: config.BELLATRIX_FORK_VERSION,
-    epoch: state.currentShuffling.epoch,
-  };
-  // Execution-layer
-  postState.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultTreeBacked();
+    epoch: stateAltair.epochCtx.epoch,
+  });
 
-  return postState;
+  // Execution-layer
+  stateBellatrix.latestExecutionPayloadHeader = ssz.bellatrix.ExecutionPayloadHeader.defaultViewDU();
+
+  // Commit new added fields ViewDU to the root node
+  stateBellatrix.commit();
+  // No need to clear cache since no index is replaced, only appended at the end
+
+  return stateBellatrix;
 }

@@ -10,5 +10,5 @@ export function processSlashingsReset(state: CachedBeaconStateAllForks, epochPro
   const nextEpoch = epochProcess.currentEpoch + 1;
 
   // reset slashings
-  state.slashings[nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR] = BigInt(0);
+  state.slashings.set(nextEpoch % EPOCHS_PER_SLASHINGS_VECTOR, BigInt(0));
 }

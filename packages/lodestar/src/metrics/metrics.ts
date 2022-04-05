@@ -1,9 +1,8 @@
 /**
  * @module metrics
  */
-import {getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
 import {collectDefaultMetrics, Counter, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
@@ -18,7 +17,7 @@ export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {
 export function createMetrics(
   opts: IMetricsOptions,
   config: IChainForkConfig,
-  anchorState: allForks.BeaconState,
+  anchorState: BeaconStateAllForks,
   registries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
