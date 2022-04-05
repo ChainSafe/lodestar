@@ -36,7 +36,6 @@ import {
   GOSSIP_D_HIGH,
   GOSSIP_D_LOW,
 } from "./scoringParameters";
-import {computeAllPeersScoreWeights} from "./scoreMetrics";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -328,36 +327,13 @@ export class Eth2Gossipsub extends Gossipsub {
     }
 
     // Access once for all calls below
-    const {scoreByThreshold, scoreWeights} = metrics.gossipPeer;
-    scoreByThreshold.set({threshold: "graylist"}, peerCountScoreGraylist);
-    scoreByThreshold.set({threshold: "publish"}, peerCountScorePublish);
-    scoreByThreshold.set({threshold: "gossip"}, peerCountScoreGossip);
-    scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
-
-    // Breakdown on each score weight
-    // TODO: consider removing as it's duplicate to new gossipsub
-    const sw = computeAllPeersScoreWeights(
-      peers.keys(),
-      score.peerStats,
-      score.params,
-      score.peerIPs,
-      this.gossipTopicCache
-    );
-
-    for (const [topic, wsTopic] of sw.byTopic) {
-      scoreWeights.set({topic, p: "p1"}, wsTopic.p1w);
-      scoreWeights.set({topic, p: "p2"}, wsTopic.p2w);
-      scoreWeights.set({topic, p: "p3"}, wsTopic.p3w);
-      scoreWeights.set({topic, p: "p3b"}, wsTopic.p3bw);
-      scoreWeights.set({topic, p: "p4"}, wsTopic.p4w);
-    }
-
-    scoreWeights.set({p: "p5"}, sw.p5w);
-    scoreWeights.set({p: "p6"}, sw.p6w);
-    scoreWeights.set({p: "p7"}, sw.p7w);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "graylist"}, peerCountScoreGraylist);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "publish"}, peerCountScorePublish);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "gossip"}, peerCountScoreGossip);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
 
     // Register full score too
-    metrics.gossipPeer.score.set(sw.score);
+    metrics.gossipPeer.score.set(gossipScores);
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {

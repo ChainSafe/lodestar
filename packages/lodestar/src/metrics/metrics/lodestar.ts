@@ -198,11 +198,6 @@ export function createLodestarMetrics(
         name: "lodestar_gossip_score_avg_min_max",
         help: "Avg min max of all gossip peer scores",
       }),
-      scoreWeights: register.avgMinMax<"p" | "topic">({
-        name: "lodestar_gossip_score_weights_avg_min_max",
-        help: "Avg min max of all gossip peer score weights",
-        labelNames: ["p", "topic"],
-      }),
     },
     gossipMesh: {
       peersByType: register.gauge<"type" | "fork">({
@@ -253,6 +248,11 @@ export function createLodestarMetrics(
       name: "lodestar_gossip_validation_reject_total",
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
+    }),
+    gossipValidationError: register.gauge<"topic" | "error">({
+      name: "lodestar_gossip_validation_error_total",
+      help: "Count of total gossip validation errors detailed",
+      labelNames: ["topic", "error"],
     }),
 
     gossipValidationQueueLength: register.gauge<"topic">({

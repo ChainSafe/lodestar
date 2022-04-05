@@ -101,6 +101,10 @@ function getGossipValidatorFn<K extends GossipType>(
       const metadata = gossipObject && getGossipObjectAcceptMetadata(config, gossipObject, topic);
       const errorData = {...metadata, ...e.getMetadata()};
 
+      // Metrics on specific error reason
+      // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
+      metrics?.gossipValidationError.inc({topic: type, error: (e as GossipActionError<{code: string}>).type.code});
+
       switch (e.action) {
         case GossipAction.IGNORE:
           logger.debug(`gossip - ${type} - ignore`, errorData);
