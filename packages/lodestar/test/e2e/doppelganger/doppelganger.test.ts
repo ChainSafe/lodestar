@@ -106,6 +106,7 @@ describe("doppelganger / doppelganger test", function () {
       "validator with doppelganger protection should be stopped after first epoch"
     );
   });
+
   it("should not shut down validator if key is different", async function () {
     this.timeout("10 min");
 
@@ -176,6 +177,7 @@ describe("doppelganger / doppelganger test", function () {
       "validator with doppelganger protection should still be active after first epoch"
     );
   });
+
   it("should not sign block if doppelganger period has not passed", async function () {
     this.timeout("10 min");
 
@@ -227,6 +229,7 @@ describe("doppelganger / doppelganger test", function () {
       "Signing should be possible after doppelganger check has elapsed"
     ).to.eventually.be.fulfilled;
   });
+
   it("should not sign attestations if doppelganger period has not passed", async function () {
     this.timeout("10 min");
 
