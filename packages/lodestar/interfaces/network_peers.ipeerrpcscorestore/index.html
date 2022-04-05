@@ -289,6 +289,11 @@
     update
   </a>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#updategossipsubscore">
+    updateGossipsubScore
+  </a>
+</li>
 </ul>
 </nav>
 </li>
@@ -319,11 +324,12 @@
 <li><a href="./#getscore">getScore</a></li>
 <li><a href="./#getscorestate">getScoreState</a></li>
 <li><a href="./#update">update</a></li>
+<li><a href="./#updategossipsubscore">updateGossipsubScore</a></li>
 </ul>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="applyaction">applyAction<a class="headerlink" href="#applyaction" title="Permanent link">¶</a></h3>
 <p>▸ <strong>applyAction</strong>(<code>peer</code>: PeerId, <code>action</code>: <a href="../../modules/network_peers/#peeraction">PeerAction</a>, <code>actionName?</code>: undefined | string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/111b194/packages/lodestar/src/network/peers/score.ts#L72">packages/lodestar/src/network/peers/score.ts:72</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/network/peers/score.ts#L82">packages/lodestar/src/network/peers/score.ts:82</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -351,7 +357,7 @@
 <hr/>
 <h3 id="getscore">getScore<a class="headerlink" href="#getscore" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getScore</strong>(<code>peer</code>: PeerId): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/111b194/packages/lodestar/src/network/peers/score.ts#L70">packages/lodestar/src/network/peers/score.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/network/peers/score.ts#L80">packages/lodestar/src/network/peers/score.ts:80</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -371,7 +377,7 @@
 <hr/>
 <h3 id="getscorestate">getScoreState<a class="headerlink" href="#getscorestate" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getScoreState</strong>(<code>peer</code>: PeerId): <em><a href="../../modules/network_peers/#scorestate">ScoreState</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/111b194/packages/lodestar/src/network/peers/score.ts#L71">packages/lodestar/src/network/peers/score.ts:71</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/network/peers/score.ts#L81">packages/lodestar/src/network/peers/score.ts:81</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -391,7 +397,35 @@
 <hr/>
 <h3 id="update">update<a class="headerlink" href="#update" title="Permanent link">¶</a></h3>
 <p>▸ <strong>update</strong>(): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/111b194/packages/lodestar/src/network/peers/score.ts#L73">packages/lodestar/src/network/peers/score.ts:73</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/network/peers/score.ts#L83">packages/lodestar/src/network/peers/score.ts:83</a></em></p>
+<p><strong>Returns:</strong> <em>void</em></p>
+<hr/>
+<h3 id="updategossipsubscore">updateGossipsubScore<a class="headerlink" href="#updategossipsubscore" title="Permanent link">¶</a></h3>
+<p>▸ <strong>updateGossipsubScore</strong>(<code>peerId</code>: <a href="../../modules/network_peers/#peeridstr">PeerIdStr</a>, <code>newScore</code>: number, <code>ignore</code>: boolean): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/network/peers/score.ts#L84">packages/lodestar/src/network/peers/score.ts:84</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>peerId</code></td>
+<td><a href="../../modules/network_peers/#peeridstr">PeerIdStr</a></td>
+</tr>
+<tr>
+<td><code>newScore</code></td>
+<td>number</td>
+</tr>
+<tr>
+<td><code>ignore</code></td>
+<td>boolean</td>
+</tr>
+</tbody>
+</table>
 <p><strong>Returns:</strong> <em>void</em></p>
 </article>
 </div>
