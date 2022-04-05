@@ -56,7 +56,7 @@ export function getLightclientApi(
       return {data: await chain.lightClientServer.getLatestHeadUpdate()};
     },
 
-    async getFinalizedHeadUpdate() {
+    async getLatestFinalizedHeadUpdate() {
       return {data: await chain.lightClientServer.getFinalizedHeadUpdate()};
     },
 

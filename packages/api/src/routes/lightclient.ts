@@ -48,7 +48,7 @@ export type Api = {
    */
   getHeadUpdate(): Promise<{data: LightclientHeaderUpdate}>;
   getLatestHeadUpdate(): Promise<{data: LightclientHeaderUpdate}>;
-  getFinalizedHeadUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
+  getLatestFinalizedHeadUpdate(): Promise<{data: LightclientFinalizedUpdate}>;
   /**
    * Fetch a snapshot with a proof to a trusted block root.
    * The trusted block root should be fetched with similar means to a weak subjectivity checkpoint.
@@ -65,7 +65,7 @@ export const routesData: RoutesData<Api> = {
   getCommitteeUpdates: {url: "/eth/v1/lightclient/committee_updates", method: "GET"},
   getHeadUpdate: {url: "/eth/v1/lightclient/head_update/", method: "GET"},
   getLatestHeadUpdate: {url: "/eth/v1/lightclient/latest_head_update/", method: "GET"},
-  getFinalizedHeadUpdate: {url: "/eth/v1/lightclient/finalized_head_update/", method: "GET"},
+  getLatestFinalizedHeadUpdate: {url: "/eth/v1/lightclient/latest_finalized_head_update/", method: "GET"},
   getSnapshot: {url: "/eth/v1/lightclient/snapshot/:blockRoot", method: "GET"},
 };
 
@@ -74,7 +74,7 @@ export type ReqTypes = {
   getCommitteeUpdates: {query: {from: number; to: number}};
   getHeadUpdate: ReqEmpty;
   getLatestHeadUpdate: ReqEmpty;
-  getFinalizedHeadUpdate: ReqEmpty;
+  getLatestFinalizedHeadUpdate: ReqEmpty;
   getSnapshot: {params: {blockRoot: string}};
 };
 
@@ -94,7 +94,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
     getHeadUpdate: reqEmpty,
     getLatestHeadUpdate: reqEmpty,
-    getFinalizedHeadUpdate: reqEmpty,
+    getLatestFinalizedHeadUpdate: reqEmpty,
 
     getSnapshot: {
       writeReq: (blockRoot) => ({params: {blockRoot}}),
@@ -138,7 +138,7 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getCommitteeUpdates: ContainerData(ArrayOf(ssz.altair.LightClientUpdate)),
     getHeadUpdate: ContainerData(lightclientHeaderUpdate),
     getLatestHeadUpdate: ContainerData(lightclientHeaderUpdate),
-    getFinalizedHeadUpdate: ContainerData(lightclientFinalizedUpdate),
+    getLatestFinalizedHeadUpdate: ContainerData(lightclientFinalizedUpdate),
     getSnapshot: ContainerData(lightclientSnapshotWithProofType),
   };
 }
