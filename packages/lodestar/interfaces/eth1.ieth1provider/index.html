@@ -358,11 +358,11 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="deployblock">deployBlock<a class="headerlink" href="#deployblock" title="Permanent link">¶</a></h3>
 <p>• <strong>deployBlock</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L26">packages/lodestar/src/eth1/interface.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L26">packages/lodestar/src/eth1/interface.ts:26</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="getblockbyhash">getBlockByHash<a class="headerlink" href="#getblockbyhash" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBlockByHash</strong>(<code>blockHashHex</code>: string): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a> | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L31">packages/lodestar/src/eth1/interface.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L31">packages/lodestar/src/eth1/interface.ts:31</a></em></p>
 <p>Returns HTTP code 200 + value=null if block is not found</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -383,7 +383,7 @@
 <hr/>
 <h3 id="getblockbynumber">getBlockByNumber<a class="headerlink" href="#getblockbynumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBlockByNumber</strong>(<code>blockNumber</code>: number | "latest"): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a> | null›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L29">packages/lodestar/src/eth1/interface.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L29">packages/lodestar/src/eth1/interface.ts:29</a></em></p>
 <p>Returns HTTP code 200 + value=null if block is not found</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -404,12 +404,12 @@
 <hr/>
 <h3 id="getblocknumber">getBlockNumber<a class="headerlink" href="#getblocknumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBlockNumber</strong>(): <em>Promise‹number›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L27">packages/lodestar/src/eth1/interface.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L27">packages/lodestar/src/eth1/interface.ts:27</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹number›</em></p>
 <hr/>
 <h3 id="getblocksbynumber">getBlocksByNumber<a class="headerlink" href="#getblocksbynumber" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getBlocksByNumber</strong>(<code>fromBlock</code>: number, <code>toBlock</code>: number): <em>Promise‹<a href="../../modules/eth1/#ethjsonrpcblockraw">EthJsonRpcBlockRaw</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L33">packages/lodestar/src/eth1/interface.ts:33</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L33">packages/lodestar/src/eth1/interface.ts:33</a></em></p>
 <p>null returns are ignored, may return a different number of blocks than expected</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -434,7 +434,7 @@
 <hr/>
 <h3 id="getdepositevents">getDepositEvents<a class="headerlink" href="#getdepositevents" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getDepositEvents</strong>(<code>fromBlock</code>: number, <code>toBlock</code>: number): <em>Promise‹phase0.DepositEvent[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L34">packages/lodestar/src/eth1/interface.ts:34</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L34">packages/lodestar/src/eth1/interface.ts:34</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -458,7 +458,7 @@
 <hr/>
 <h3 id="validatecontract">validateContract<a class="headerlink" href="#validatecontract" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validateContract</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d61d898/packages/lodestar/src/eth1/interface.ts#L35">packages/lodestar/src/eth1/interface.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4be67cc/packages/lodestar/src/eth1/interface.ts#L35">packages/lodestar/src/eth1/interface.ts:35</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 </article>
 </div>
