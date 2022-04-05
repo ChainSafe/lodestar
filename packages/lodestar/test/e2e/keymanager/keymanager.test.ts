@@ -224,7 +224,7 @@ describe("keymanager delete and import test", async function () {
   });
 
   it("should not delete external signers", async function () {
-    const {client, secretKeys} = await prepareTestSingleKeymanagerClient({useRemoteSigner: true});
+    const {client, secretKeys} = await prepareTestSingleKeymanagerClient({useRemoteSigner: true, isAuthEnabled: false});
 
     expect((await client.listKeys()).data).to.be.deep.equal(
       [
@@ -306,7 +306,7 @@ describe("keymanager delete and import test", async function () {
     );
   });
 
-  type PrepareTestOpts = {useRemoteSigner?: boolean};
+  type PrepareTestOpts = {useRemoteSigner?: boolean; isAuthEnabled?: boolean};
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   async function prepareTestSingleKeymanagerApi(opts?: PrepareTestOpts) {
@@ -357,7 +357,7 @@ describe("keymanager delete and import test", async function () {
 
     // by default auth is on
     const keymanagerServer = new KeymanagerServer(
-      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir},
+      {host: "127.0.0.1", port: kmPort, cors: "*", tokenDir, isAuthEnabled: opts?.isAuthEnabled ?? true},
       {config, logger, api: keymanagerApi}
     );
 

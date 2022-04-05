@@ -76,7 +76,12 @@ export class KeymanagerApi implements Api {
       message?: string;
     }[];
   }> {
-    const interchange = JSON.parse(slashingProtectionStr) as Interchange;
+    // The arguments to this function is passed in within the body of an HTTP request
+    // hence fastify will parse it into an object before this function is called.
+    // Even though the slashingProtectionStr is typed as SlashingProtectionData,
+    // at runtime, when the handler for the request is selected, it would see slashingProtectionStr
+    // as an object, hence trying to parse it using JSON.parse won't work. Instead, we cast straight to Interchange
+    const interchange = (slashingProtectionStr as unknown) as Interchange;
     await this.validator.validatorStore.importInterchange(interchange);
 
     const statuses: {status: ImportStatus; message?: string}[] = [];
