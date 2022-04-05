@@ -284,10 +284,10 @@ export class Lightclient {
         // Fetch latest head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestHeadUpdate} = await this.api.lightclient.getHeadUpdate();
+          const {data: latestHeadUpdate} = await this.api.lightclient.getLatestHeadUpdate();
           this.processHeaderUpdate(latestHeadUpdate);
         } catch (e) {
-          this.logger.error("Error fetching getHeadUpdate", {currentPeriod}, e as Error);
+          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
       }
 
@@ -298,7 +298,7 @@ export class Lightclient {
         this.logger.debug("Started tracking the head");
 
         // Subscribe to head updates over SSE
-        // TODO: Use polling for getHeadUpdate() is SSE is unavailable
+        // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
         this.api.events.eventstream([routes.events.EventType.lightclientHeaderUpdate], controller.signal, this.onSSE);
       }
 

@@ -169,10 +169,7 @@ export class LightClientServer {
   private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
-  private finalized?: Pick<
-    altair.LightClientUpdate,
-    "finalityBranch" | "finalizedHeader" | "attestedHeader" | "syncAggregate"
-  >;
+  private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
 
   constructor(modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
@@ -311,9 +308,9 @@ export class LightClientServer {
     return this.latestHeadUpdate;
   }
 
-  async getFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
+  async getLatestFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
     // Signature data
-    if (this.finalized == null) {
+    if (this.finalized === null) {
       throw Error("No latest header update available");
     }
     return this.finalized;
@@ -453,7 +450,7 @@ export class LightClientServer {
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
     this.emitter.emit(ChainEvent.lightclientHeaderUpdate, headerUpdate);
 
-    // Persist latest best update for getHeadUpdate()
+    // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;

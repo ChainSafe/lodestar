@@ -9,6 +9,8 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {routes} from "@chainsafe/lodestar-api";
+
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
@@ -62,7 +64,7 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
+export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
