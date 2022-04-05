@@ -254,6 +254,11 @@ export function createLodestarMetrics(
       help: "Count of total gossip validation reject",
       labelNames: ["topic"],
     }),
+    gossipValidationError: register.gauge<"topic" | "error">({
+      name: "lodestar_gossip_validation_error_total",
+      help: "Count of total gossip validation errors detailed",
+      labelNames: ["topic", "error"],
+    }),
 
     gossipValidationQueueLength: register.gauge<"topic">({
       name: "lodestar_gossip_validation_queue_length",
