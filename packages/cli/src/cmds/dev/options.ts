@@ -35,8 +35,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   },
 
   startValidators: {
-    description: "Start interop validators in given range",
-    default: "0:7",
+    description: "Start interop validators in inclusive range with notation '0:7'",
     type: "string",
     group: "dev",
   },
@@ -71,6 +70,11 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
 const externalOptionsOverrides: {[k: string]: Options} = {
   "sync.isSingleNode": {
     ...beaconNodeOptions["sync.isSingleNode"],
+    defaultDescription: undefined,
+    default: true,
+  },
+  "network.allowPublishToZeroPeers": {
+    ...beaconNodeOptions["network.allowPublishToZeroPeers"],
     defaultDescription: undefined,
     default: true,
   },

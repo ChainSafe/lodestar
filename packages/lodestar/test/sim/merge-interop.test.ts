@@ -318,7 +318,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       options: {
         api: {rest: {enabled: true} as RestApiOptions},
         sync: {isSingleNode: true},
-        network: {discv5: null},
+        network: {allowPublishToZeroPeers: true, discv5: null},
         eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},
       },

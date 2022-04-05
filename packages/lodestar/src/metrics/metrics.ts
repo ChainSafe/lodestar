@@ -3,7 +3,7 @@
  */
 import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {collectDefaultMetrics, Counter, Registry} from "prom-client";
+import {collectDefaultMetrics, Counter, Metric, Registry} from "prom-client";
 import gcStats from "prometheus-gc-stats";
 import {DbMetricLabels, IDbMetrics} from "@chainsafe/lodestar-db";
 import {createBeaconMetrics, IBeaconMetrics} from "./metrics/beacon";
@@ -12,13 +12,13 @@ import {IMetricsOptions} from "./options";
 import {RegistryMetricCreator} from "./utils/registryMetricCreator";
 import {createValidatorMonitor, IValidatorMonitor} from "./validatorMonitor";
 
-export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: Registry};
+export type IMetrics = IBeaconMetrics & ILodestarMetrics & IValidatorMonitor & {register: RegistryMetricCreator};
 
 export function createMetrics(
   opts: IMetricsOptions,
   config: IChainForkConfig,
   anchorState: BeaconStateAllForks,
-  registries: Registry[] = []
+  externalRegistries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
@@ -47,7 +47,24 @@ export function createMetrics(
   // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
   gcStats(register)();
 
-  return {...beacon, ...lodestar, ...validatorMonitor, register: Registry.merge([register, ...registries])};
+  // Merge external registries
+  register;
+  for (const externalRegister of externalRegistries) {
+    // Wrong types, does not return a promise
+    const metrics = (externalRegister.getMetricsAsArray() as unknown) as Resolves<
+      typeof externalRegister.getMetricsAsArray
+    >;
+    for (const metric of metrics) {
+      register.registerMetric((metric as unknown) as Metric<string>);
+    }
+  }
+
+  return {
+    ...beacon,
+    ...lodestar,
+    ...validatorMonitor,
+    register,
+  };
 }
 
 export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
@@ -68,3 +85,6 @@ export function createDbMetrics(): {metrics: IDbMetrics; registry: Registry} {
   registry.registerMetric(metrics.dbWrites);
   return {metrics, registry};
 }
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Resolves<F extends (...args: any[]) => Promise<any>> = F extends (...args: any[]) => Promise<infer T> ? T : never;

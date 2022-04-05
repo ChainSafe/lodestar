@@ -1,8 +1,8 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {assert} from "chai";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import assert from "assert";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
 import {Network} from "../../../src/network";
@@ -34,7 +34,7 @@ describe("sync / finalized sync", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {isSingleNode: true}},
+      options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
       validatorCount,
       logger: loggerNodeA,
     });
@@ -53,6 +53,9 @@ describe("sync / finalized sync", function () {
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
 
     await Promise.all(validators.map((validator) => validator.start()));
+    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
+    // stop beacon node after validators
+    afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     loggerNodeA.important("Node A emitted finalized checkpoint event");
@@ -64,6 +67,7 @@ describe("sync / finalized sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
+    afterEachCallbacks.push(() => bn2.close());
 
     afterEachCallbacks.push(() => bn2.close());
 

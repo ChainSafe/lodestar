@@ -17,6 +17,7 @@ export interface INetworkArgs {
   "network.blockCountPeerLimit": number;
   "network.rateTrackerTimeoutMs": number;
   "network.dontSendGossipAttestationsToForkchoice": boolean;
+  "network.allowPublishToZeroPeers": boolean;
 }
 
 export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
@@ -40,6 +41,7 @@ export function parseArgs(args: INetworkArgs): IBeaconNodeOptions["network"] {
     blockCountPeerLimit: args["network.blockCountPeerLimit"],
     rateTrackerTimeoutMs: args["network.rateTrackerTimeoutMs"],
     dontSendGossipAttestationsToForkchoice: args["network.dontSendGossipAttestationsToForkchoice"],
+    allowPublishToZeroPeers: args["network.allowPublishToZeroPeers"],
   };
 }
 
@@ -151,6 +153,13 @@ export const options: ICliCommandOptions<INetworkArgs> = {
     hidden: true,
     type: "boolean",
     description: "Pass gossip attestations to forkchoice or not",
+    group: "network",
+  },
+
+  "network.allowPublishToZeroPeers": {
+    hidden: true,
+    type: "boolean",
+    description: "Don't error when publishing to zero peers",
     group: "network",
   },
 };

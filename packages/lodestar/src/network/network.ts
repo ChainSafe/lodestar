@@ -86,7 +86,7 @@ export class Network implements INetwork {
       opts
     );
 
-    this.gossip = new Eth2Gossipsub({
+    this.gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,
@@ -98,6 +98,7 @@ export class Network implements INetwork {
         currentSlot: this.clock.currentSlot,
         currentEpoch: this.clock.currentEpoch,
       },
+      peersData: this.peersData,
     });
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);
@@ -107,6 +108,7 @@ export class Network implements INetwork {
       {
         libp2p,
         reqResp: this.reqResp,
+        gossip: this.gossip,
         attnetsService: this.attnetsService,
         syncnetsService: this.syncnetsService,
         logger,
