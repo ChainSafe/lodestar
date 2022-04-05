@@ -10,10 +10,10 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {getConfig} from "./util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {expectEqualBeaconState} from "../util";
 import {IBaseSpecTest} from "../type";
+import {getConfig} from "./util";
 
 // The aim of the genesis tests is to provide a baseline to test genesis-state initialization and test if the
 // proposed genesis-validity conditions are working.

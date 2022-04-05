@@ -1,12 +1,12 @@
 import {phase0} from "@chainsafe/lodestar-types";
+import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
+import {CachedBeaconStatePhase0} from "../../types";
 import {processOperations} from "./processOperations";
 import {processAttestation, validateAttestation} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
-import {CachedBeaconStatePhase0} from "../../types";
 
 // Extra utils used by other modules
 export {isValidIndexedAttestation} from "../../allForks/block";

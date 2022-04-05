@@ -4,6 +4,8 @@ import {Keystore} from "@chainsafe/bls-keystore";
 import bls from "@chainsafe/bls";
 import {IEth2ValidatorKeys} from "@chainsafe/bls-keygen";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {encodeDepositData} from "../depositContract/depositData";
+import {ensureDirExists, YargsError, writeValidatorPassphrase} from "../util";
 import {ValidatorDir} from "./ValidatorDir";
 import {
   VOTING_KEYSTORE_FILE,
@@ -12,8 +14,6 @@ import {
   ETH1_DEPOSIT_AMOUNT_FILE,
   getValidatorDirPath,
 } from "./paths";
-import {encodeDepositData} from "../depositContract/depositData";
-import {ensureDirExists, YargsError, writeValidatorPassphrase} from "../util";
 
 interface IValidatorDirBuildOptions {
   keystores: {[key in keyof IEth2ValidatorKeys]: Keystore};

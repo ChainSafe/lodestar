@@ -1,6 +1,7 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {FastifyInstance} from "fastify";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Api} from "../interface";
 import {ServerRoute} from "./utils";
 
 import * as beacon from "./beacon";
@@ -11,7 +12,6 @@ import * as lightclient from "./lightclient";
 import * as lodestar from "./lodestar";
 import * as node from "./node";
 import * as validator from "./validator";
-import {Api} from "../interface";
 
 export type RouteConfig = {
   operationId: ServerRoute["id"];

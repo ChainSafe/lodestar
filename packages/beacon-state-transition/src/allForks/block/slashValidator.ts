@@ -11,9 +11,9 @@ import {
   WHISTLEBLOWER_REWARD_QUOTIENT,
 } from "@chainsafe/lodestar-params";
 
-import {initiateValidatorExit} from "./initiateValidatorExit";
 import {decreaseBalance, increaseBalance} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
+import {initiateValidatorExit} from "./initiateValidatorExit";
 
 export function slashValidatorAllForks(
   fork: ForkName,

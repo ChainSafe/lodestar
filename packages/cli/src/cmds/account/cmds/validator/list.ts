@@ -1,9 +1,9 @@
-import {IAccountValidatorArgs} from "./options";
 import {ValidatorDirManager} from "../../../../validatorDir";
 import {getAccountPaths} from "../../paths";
 import {ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
 import {add0xPrefix} from "../../../../util/format";
+import {IAccountValidatorArgs} from "./options";
 
 export type ReturnType = string[];
 

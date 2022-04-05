@@ -10,11 +10,11 @@ import {
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {getConfig} from "./util";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
 import {IBaseSpecTest} from "../type";
+import {getConfig} from "./util";
 
 export type EpochProcessFn = (state: CachedBeaconStateAllForks, epochProcess: EpochProcess) => void;
 

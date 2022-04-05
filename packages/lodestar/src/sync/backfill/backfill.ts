@@ -9,8 +9,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {AbortSignal} from "@chainsafe/abort-controller";
 
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
-import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify";
 import {IBeaconChain} from "../../chain";
 import {GENESIS_SLOT, ZERO_HASH} from "../../constants";
 import {IBeaconDb} from "../../db";
@@ -21,6 +19,8 @@ import {shuffleOne} from "../../util/shuffle";
 import {IMetrics} from "../../metrics/metrics";
 import {byteArrayEquals} from "../../util/bytes";
 import {computeAnchorCheckpoint} from "../../chain/initState";
+import {verifyBlockProposerSignature, verifyBlockSequence, BackfillBlockHeader, BackfillBlock} from "./verify";
+import {BackfillSyncError, BackfillSyncErrorCode} from "./errors";
 /**
  * Timeout in ms to take a break from reading a backfillBatchSize from db, as just yielding
  * to sync loop gives hardly any.

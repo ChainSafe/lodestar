@@ -1,6 +1,6 @@
 import {WinstonLogger, LogLevel} from "@chainsafe/lodestar-utils";
-import {ClockMock} from "./clock";
 import {getLoggerVc} from "../../src/util";
+import {ClockMock} from "./clock";
 
 /**
  * Run the test with ENVs to control log level:

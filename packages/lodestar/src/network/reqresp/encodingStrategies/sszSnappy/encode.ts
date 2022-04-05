@@ -1,8 +1,8 @@
 import varint from "varint";
 import {source} from "stream-to-it";
 import {createCompressStream} from "@chainsafe/snappy-stream";
-import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 /**
  * ssz_snappy encoding strategy writer.

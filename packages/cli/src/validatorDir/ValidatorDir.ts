@@ -4,6 +4,9 @@ import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
 import {getLockFile} from "@chainsafe/lodestar-keymanager-server";
+import {YargsError, readValidatorPassphrase} from "../util";
+import {decodeEth1TxData} from "../depositContract/depositData";
+import {add0xPrefix} from "../util/format";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
@@ -12,9 +15,6 @@ import {
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
-import {YargsError, readValidatorPassphrase} from "../util";
-import {decodeEth1TxData} from "../depositContract/depositData";
-import {add0xPrefix} from "../util/format";
 
 export interface IValidatorDirOptions {
   force: boolean;

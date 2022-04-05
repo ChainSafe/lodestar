@@ -1,9 +1,9 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {createKeypairFromPeerId} from "@chainsafe/discv5";
-import {formatNodePeer, getRevelantConnection} from "./utils";
 import {ApiError} from "../errors";
 import {ApiModules} from "../types";
 import {IApiOptions} from "../../options";
+import {formatNodePeer, getRevelantConnection} from "./utils";
 
 export function getNodeApi(opts: IApiOptions, {network, sync}: Pick<ApiModules, "network" | "sync">): routes.node.Api {
   return {

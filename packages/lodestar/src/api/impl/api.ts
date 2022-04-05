@@ -1,4 +1,5 @@
 import {Api} from "@chainsafe/lodestar-api";
+import {IApiOptions} from "../options";
 import {ApiModules} from "./types";
 import {getBeaconApi} from "./beacon";
 import {getConfigApi} from "./config";
@@ -8,7 +9,6 @@ import {getLightclientApi} from "./lightclient";
 import {getLodestarApi} from "./lodestar";
 import {getNodeApi} from "./node";
 import {getValidatorApi} from "./validator";
-import {IApiOptions} from "../options";
 
 export function getApi(opts: IApiOptions, modules: ApiModules): Api {
   return {

@@ -16,10 +16,10 @@ import {
   SLOTS_PER_EPOCH,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {computeStartSlotAtEpoch} from "./epoch";
-import {computeEpochAtSlot} from "./epoch";
 import {BeaconStateAllForks} from "../types";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
+import {computeStartSlotAtEpoch} from "./epoch";
+import {computeEpochAtSlot} from "./epoch";
 
 /**
  * Compute proposer indices for an epoch

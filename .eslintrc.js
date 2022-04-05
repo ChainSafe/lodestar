@@ -33,8 +33,8 @@ module.exports = {
             "builtin",
             "external",
             "internal",
-            "sibling",
             "parent",
+            "sibling",
             "index",
           ],
       }

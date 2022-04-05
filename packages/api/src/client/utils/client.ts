@@ -1,5 +1,4 @@
 import {mapValues} from "@chainsafe/lodestar-utils";
-import {FetchOpts, IHttpClient} from "./httpClient";
 import {compileRouteUrlFormater} from "../../utils/urlFormat";
 import {
   RouteDef,
@@ -11,6 +10,7 @@ import {
   ReqSerializers,
   RoutesData,
 } from "../../utils/types";
+import {FetchOpts, IHttpClient} from "./httpClient";
 
 // See /packages/api/src/routes/index.ts for reasoning
 

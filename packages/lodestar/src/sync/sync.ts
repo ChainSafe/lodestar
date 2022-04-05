@@ -2,6 +2,9 @@ import PeerId from "peer-id";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
+import {IMetrics} from "../metrics";
+import {INetwork, NetworkEvent} from "../network";
+import {ChainEvent, IBeaconChain} from "../chain";
 import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
 import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
 import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType";
@@ -9,9 +12,6 @@ import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
 import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
 import {SyncOptions} from "./options";
 import {UnknownBlockSync} from "./unknownBlock";
-import {IMetrics} from "../metrics";
-import {INetwork, NetworkEvent} from "../network";
-import {ChainEvent, IBeaconChain} from "../chain";
 
 export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;

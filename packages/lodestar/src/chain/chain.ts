@@ -17,6 +17,11 @@ import {allForks, UintNum64, Root, phase0, Slot, RootHex} from "@chainsafe/lodes
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {AbortController} from "@chainsafe/abort-controller";
+import {IEth1ForBlockProduction} from "../eth1";
+import {IExecutionEngine} from "../executionEngine";
+import {IMetrics} from "../metrics";
+import {IBeaconDb} from "../db";
+import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 import {CheckpointStateCache, StateContextCache} from "./stateCache";
 import {BlockProcessor, PartiallyVerifiedBlockFlags} from "./blocks";
 import {IBeaconClock, LocalClock} from "./clock";
@@ -46,11 +51,6 @@ import {LightClientServer} from "./lightClient";
 import {Archiver} from "./archiver";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
-import {IEth1ForBlockProduction} from "../eth1";
-import {IExecutionEngine} from "../executionEngine";
-import {IMetrics} from "../metrics";
-import {IBeaconDb} from "../db";
-import {GENESIS_EPOCH, ZERO_HASH} from "../constants";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;

@@ -4,14 +4,14 @@ import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
+import {extendError, IClock, ILoggerVc} from "../util";
+import {PubkeyHex} from "../types";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
-import {extendError, IClock, ILoggerVc} from "../util";
-import {PubkeyHex} from "../types";
 
 /**
  * Service that sets up and handles validator attester duties.

@@ -2,11 +2,11 @@ import {AbortSignal} from "@chainsafe/abort-controller";
 import {ILogger} from "@chainsafe/lodestar-utils";
 
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
-import {archiveBlocks} from "./archiveBlocks";
-import {StatesArchiver} from "./archiveStates";
 import {IBeaconDb} from "../../db";
 import {ChainEvent, IBeaconChain} from "..";
 import {JobItemQueue} from "../../util/queue";
+import {StatesArchiver} from "./archiveStates";
+import {archiveBlocks} from "./archiveBlocks";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 

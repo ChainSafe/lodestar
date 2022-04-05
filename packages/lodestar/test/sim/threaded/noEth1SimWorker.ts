@@ -10,13 +10,13 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {NodeWorkerOptions, Message} from "./types";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
 import {connect} from "../../utils/network";
 import {Network} from "../../../src/network";
 import {simTestInfoTracker} from "../../utils/node/simTest";
+import {NodeWorkerOptions, Message} from "./types";
 
 /* eslint-disable no-console */
 

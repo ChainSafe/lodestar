@@ -1,7 +1,7 @@
 import {allForks, phase0} from "@chainsafe/lodestar-types";
-import {getIndexedAttestationSignatureSet} from "./indexedAttestation";
 import {ISignatureSet} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
+import {getIndexedAttestationSignatureSet} from "./indexedAttestation";
 
 /** Get signature sets from a single AttesterSlashing object */
 export function getAttesterSlashingSignatureSets(

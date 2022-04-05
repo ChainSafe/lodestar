@@ -6,9 +6,9 @@ import {Epoch, Slot, Root, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {computeStartSlotAtEpoch} from "./epoch";
 import {ZERO_HASH} from "../constants";
 import {BeaconStateAllForks} from "../types";
+import {computeStartSlotAtEpoch} from "./epoch";
 
 /**
  * Return the block root at a recent [[slot]].

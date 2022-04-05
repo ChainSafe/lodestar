@@ -1,9 +1,9 @@
-import {defaultValidatorPaths} from "./paths";
 import {ICliCommandOptions, ILogArgs} from "../../util";
 import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
+import {defaultValidatorPaths} from "./paths";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {

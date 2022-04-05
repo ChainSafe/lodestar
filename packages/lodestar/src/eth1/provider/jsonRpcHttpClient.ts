@@ -4,8 +4,8 @@ import fetch from "cross-fetch";
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
-import {encodeJwtToken} from "./jwt";
 import {IJson, IRpcPayload, ReqOpts} from "../interface";
+import {encodeJwtToken} from "./jwt";
 /**
  * Limits the amount of response text printed with RPC or parsing errors
  */

@@ -1,8 +1,3 @@
-import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
-import {processSlashings} from "./processSlashings";
-import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates";
-import {processInactivityUpdates} from "./processInactivityUpdates";
-import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -13,6 +8,11 @@ import {
   processHistoricalRootsUpdate,
 } from "../../allForks/epoch";
 import {CachedBeaconStateAltair, EpochProcess} from "../../types";
+import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
+import {processSlashings} from "./processSlashings";
+import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates";
+import {processInactivityUpdates} from "./processInactivityUpdates";
+import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
 
 // For spec tests
 export {getRewardsAndPenalties} from "./getRewardsAndPenalties";

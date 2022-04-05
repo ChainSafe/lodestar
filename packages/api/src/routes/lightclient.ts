@@ -1,7 +1,6 @@
 import {ContainerType, JsonPath, VectorCompositeType} from "@chainsafe/ssz";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
 import {altair, phase0, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {LightclientHeaderUpdate} from "./events";
 import {
   ArrayOf,
   ReturnTypes,
@@ -14,6 +13,7 @@ import {
   ReqEmpty,
 } from "../utils";
 import {queryParseProofPathsArr, querySerializeProofPathsArr} from "../utils/serdes";
+import {LightclientHeaderUpdate} from "./events";
 
 // Re-export for convenience when importing routes.lightclient.LightclientHeaderUpdate
 export {LightclientHeaderUpdate};

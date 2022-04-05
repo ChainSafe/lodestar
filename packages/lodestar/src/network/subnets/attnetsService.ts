@@ -9,13 +9,13 @@ import {
 } from "@chainsafe/lodestar-params";
 import {Epoch, Slot, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, randBetween} from "@chainsafe/lodestar-utils";
-import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts} from "./interface";
 import {shuffle} from "../../util/shuffle";
 import {ChainEvent, IBeaconChain} from "../../chain";
 import {Eth2Gossipsub, GossipType} from "../gossip";
 import {MetadataController} from "../metadata";
 import {SubnetMap, RequestedSubnet} from "../peers/utils";
 import {getActiveForks} from "../forks";
+import {IAttnetsService, CommitteeSubscription, SubnetsServiceOpts} from "./interface";
 
 /**
  * The time (in slots) before a last seen validator is considered absent and we unsubscribe from the random

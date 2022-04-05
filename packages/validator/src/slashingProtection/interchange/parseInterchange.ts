@@ -1,9 +1,9 @@
 import {Root} from "@chainsafe/lodestar-types";
+import {isEqualRoot} from "../utils";
 import {InterchangeError, InterchangeErrorErrorCode} from "./errors";
 import {Interchange, IInterchangeLodestar} from "./types";
 import {IInterchangeCompleteV4, parseInterchangeCompleteV4} from "./formats/completeV4";
 import {IInterchangeV5, parseInterchangeV5} from "./formats/v5";
-import {isEqualRoot} from "../utils";
 
 export function parseInterchange(interchange: Interchange, expectedGenesisValidatorsRoot: Root): IInterchangeLodestar {
   const format = (interchange as IInterchangeCompleteV4)?.metadata?.interchange_format;

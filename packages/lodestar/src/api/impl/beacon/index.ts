@@ -1,9 +1,9 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {GENESIS_SLOT} from "@chainsafe/lodestar-params";
+import {ApiModules} from "../types";
 import {getBeaconBlockApi} from "./blocks";
 import {getBeaconPoolApi} from "./pool";
 import {getBeaconStateApi} from "./state";
-import {ApiModules} from "../types";
 
 export function getBeaconApi(
   modules: Pick<ApiModules, "chain" | "config" | "logger" | "metrics" | "network" | "db">

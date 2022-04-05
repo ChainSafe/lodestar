@@ -1,7 +1,7 @@
 import fs from "node:fs";
+import {getValidatorPassphrasePath} from "../validatorDir/paths";
 import {stripOffNewlines} from "./stripOffNewlines";
 import {writeFile600Perm} from "./fs";
-import {getValidatorPassphrasePath} from "../validatorDir/paths";
 
 /**
  * Utility to read file as UTF8 and strip any trailing new lines.

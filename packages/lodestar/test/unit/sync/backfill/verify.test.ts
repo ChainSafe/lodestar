@@ -4,8 +4,8 @@ import {expect} from "chai";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors";
 import {verifyBlockSequence} from "../../../../src/sync/backfill/verify";
+import {BackfillSyncErrorCode, BackfillSyncError} from "./../../../../src/sync/backfill/errors";
 
 describe("backfill sync - verify block sequence", function () {
   //mainnet validators root

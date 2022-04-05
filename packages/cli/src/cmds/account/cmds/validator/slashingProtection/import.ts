@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import {Interchange} from "@chainsafe/lodestar-validator";
-import {ISlashingProtectionArgs} from "./options";
-import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils";
 import {ICliCommand} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
 import {IAccountValidatorArgs} from "../options";
+import {getGenesisValidatorsRoot, getSlashingProtection} from "./utils";
+import {ISlashingProtectionArgs} from "./options";
 
 /* eslint-disable no-console */
 

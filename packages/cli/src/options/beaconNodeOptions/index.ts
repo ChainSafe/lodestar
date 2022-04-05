@@ -1,5 +1,6 @@
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {removeUndefinedRecursive} from "../../util";
 import * as api from "./api";
 import * as chain from "./chain";
 import * as eth1 from "./eth1";
@@ -8,7 +9,6 @@ import * as logger from "./logger";
 import * as metrics from "./metrics";
 import * as network from "./network";
 import * as sync from "./sync";
-import {removeUndefinedRecursive} from "../../util";
 
 export type IBeaconNodeArgs = api.IApiArgs &
   chain.IChainArgs &

@@ -19,9 +19,6 @@ import {
 } from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {getCheckpointFromState} from "./utils/checkpoint";
-import {PendingEvents} from "./utils/pendingEvents";
-import {FullyVerifiedBlock} from "./types";
 import {IMetrics} from "../../metrics";
 import {IEth1ForBlockProduction} from "../../eth1";
 import {IExecutionEngine} from "../../executionEngine";
@@ -31,6 +28,9 @@ import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../state
 import {ChainEvent} from "../emitter";
 import {ChainEventEmitter} from "../emitter";
 import {LightClientServer} from "../lightClient";
+import {FullyVerifiedBlock} from "./types";
+import {PendingEvents} from "./utils/pendingEvents";
+import {getCheckpointFromState} from "./utils/checkpoint";
 // import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 /**

@@ -15,7 +15,6 @@ import {
 } from "@chainsafe/lodestar-params";
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {getClient} from "@chainsafe/lodestar-api";
-import {getInfuraBeaconUrl} from "./infura";
 import {interopPubkeysCached} from "../utils/interop";
 import {profilerLogger} from "../utils/logger";
 import {
@@ -39,6 +38,7 @@ import {testCachePath} from "../cache";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee";
 import {createCachedBeaconStateTest} from "../utils/state";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements";
+import {getInfuraBeaconUrl} from "./infura";
 
 let phase0State: BeaconStatePhase0 | null = null;
 let phase0CachedState23637: CachedBeaconStatePhase0 | null = null;

@@ -2,7 +2,6 @@ import all from "it-all";
 import pipe from "it-pipe";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {LodestarError} from "@chainsafe/lodestar-utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 import {
   reqRespBlockResponseSerializer,
   RequestOrIncomingResponseBody,
@@ -17,6 +16,7 @@ import {expectRejectedWithLodestarError} from "../../../../../utils/errors";
 import {expectEqualByteChunks} from "../../utils";
 import {blocksToReqRespBlockResponses} from "../../../../../utils/block";
 import {RequestOrOutgoingResponseBody} from "../../../../../../src/network/reqresp/types";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 
 describe("network / reqresp / sszSnappy / encode", () => {
   describe("Test data vectors (generated in a previous version)", () => {

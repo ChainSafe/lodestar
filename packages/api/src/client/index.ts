@@ -1,4 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Api} from "../interface";
 import * as beacon from "./beacon";
 import * as configApi from "./config";
 import * as debug from "./debug";
@@ -8,7 +9,6 @@ import * as lodestar from "./lodestar";
 import * as node from "./node";
 import * as validator from "./validator";
 import {IHttpClient, HttpClient, HttpClientOptions, HttpError} from "./utils";
-import {Api} from "../interface";
 export {HttpClient, HttpClientOptions, HttpError};
 /**
  * REST HTTP client for all routes

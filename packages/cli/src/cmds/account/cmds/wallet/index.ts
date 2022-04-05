@@ -1,9 +1,9 @@
+import {IGlobalArgs} from "../../../../options";
+import {ICliCommand} from "../../../../util";
 import {accountWalletsOptions, IAccountWalletArgs} from "./options";
 import {create} from "./create";
 import {list} from "./list";
 import {recover} from "./recover";
-import {IGlobalArgs} from "../../../../options";
-import {ICliCommand} from "../../../../util";
 
 export const wallet: ICliCommand<IAccountWalletArgs, IGlobalArgs> = {
   command: "wallet <command>",

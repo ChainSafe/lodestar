@@ -10,7 +10,6 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 
 import {createIBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {generateEmptyBlock} from "./block";
 import {ZERO_HASH} from "../../src/constants";
 import {newZeroedBigIntArray} from "../../src/util";
 
@@ -23,6 +22,7 @@ import {
 } from "../../src";
 import {BeaconStateCache} from "../../src/cache/stateCache";
 import {EpochContextOpts} from "../../src/cache/epochContext";
+import {generateEmptyBlock} from "./block";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

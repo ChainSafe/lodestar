@@ -1,9 +1,9 @@
 import {phase0, Slot, Root, ssz} from "@chainsafe/lodestar-types";
 import bls, {PointFormat, Signature} from "@chainsafe/bls";
 import {BitArray, toHexString} from "@chainsafe/ssz";
+import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 import {pruneBySlot} from "./utils";
-import {MapDef} from "../../util/map";
 
 /**
  * The number of slots that will be stored in the pool.

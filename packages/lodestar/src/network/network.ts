@@ -12,6 +12,8 @@ import {ATTESTATION_SUBNET_COUNT, ForkName, SYNC_COMMITTEE_SUBNET_COUNT} from "@
 import {Discv5, ENR} from "@chainsafe/discv5";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch} from "@chainsafe/lodestar-types";
+import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
+import {IMetrics} from "../metrics";
 import {INetworkOptions} from "./options";
 import {INetwork} from "./interface";
 import {ReqResp, IReqResp, IReqRespOptions, ReqRespHandlers} from "./reqresp";
@@ -23,8 +25,6 @@ import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
 import {PeersData} from "./peers/peersData";
-import {ChainEvent, IBeaconChain, IBeaconClock} from "../chain";
-import {IMetrics} from "../metrics";
 
 interface INetworkModules {
   config: IBeaconConfig;

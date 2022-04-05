@@ -5,11 +5,11 @@ import {
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
-import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
 import {IBeaconChain} from "..";
 import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
 import {RegenCaller} from "../regen";
+import {getCommitteeIndices, verifyHeadBlockAndTargetRoot, verifyPropagationSlotRange} from "./attestation";
+import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
 
 export async function validateGossipAggregateAndProof(
   chain: IBeaconChain,

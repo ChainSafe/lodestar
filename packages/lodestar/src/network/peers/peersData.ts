@@ -1,7 +1,7 @@
 import PeerId from "peer-id";
 import {altair} from "@chainsafe/lodestar-types";
-import {ClientKind} from "./client";
 import {Encoding} from "../reqresp/types";
+import {ClientKind} from "./client";
 
 type PeerIdStr = string;
 

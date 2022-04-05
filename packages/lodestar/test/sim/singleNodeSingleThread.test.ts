@@ -5,7 +5,6 @@ import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
-import {logFilesDir} from "./params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
@@ -14,6 +13,7 @@ import {RestApiOptions} from "../../src/api/rest";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
 import {simTestInfoTracker} from "../utils/node/simTest";
 import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
+import {logFilesDir} from "./params";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

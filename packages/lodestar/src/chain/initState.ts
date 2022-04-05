@@ -15,13 +15,13 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {GenesisBuilder} from "./genesis/genesis";
-import {IGenesisResult} from "./genesis/interface";
 import {GENESIS_SLOT, ZERO_HASH} from "../constants";
 import {IBeaconDb} from "../db";
 import {Eth1Provider} from "../eth1";
 import {IMetrics} from "../metrics";
 import {Eth1Options} from "../eth1/options";
+import {IGenesisResult} from "./genesis/interface";
+import {GenesisBuilder} from "./genesis/genesis";
 
 export async function persistGenesisResult(
   db: IBeaconDb,

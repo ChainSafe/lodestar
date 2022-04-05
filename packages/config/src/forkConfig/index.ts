@@ -1,7 +1,7 @@
 import {GENESIS_EPOCH, ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, allForks, Version, ssz} from "@chainsafe/lodestar-types";
-import {IForkConfig, IForkInfo} from "./types";
 import {IChainConfig} from "../chainConfig";
+import {IForkConfig, IForkInfo} from "./types";
 
 export * from "./types";
 

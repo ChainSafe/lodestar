@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import inquirer from "inquirer";
-import {createWalletFromArgsAndMnemonic} from "./utils";
-import {IWalletCreateArgs, walletCreateOptions} from "./create";
 import {IGlobalArgs} from "../../../../options";
 import {ICliCommand, initBLS} from "../../../../util";
+import {createWalletFromArgsAndMnemonic} from "./utils";
+import {IWalletCreateArgs, walletCreateOptions} from "./create";
 
 /* eslint-disable no-console */
 

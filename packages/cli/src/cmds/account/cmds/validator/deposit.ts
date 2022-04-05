@@ -1,6 +1,6 @@
-import {IAccountValidatorArgs} from "./options";
 import {YargsError, ICliCommand} from "../../../../util";
 import {IGlobalArgs} from "../../../../options";
+import {IAccountValidatorArgs} from "./options";
 
 const deprecatedDescription =
   "DEPRECATED. Please use the official tools to perform your deposits \

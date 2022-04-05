@@ -2,8 +2,8 @@ import deepmerge from "deepmerge";
 import {phase0} from "@chainsafe/lodestar-types";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
-import {generateEmptyAttestation} from "./attestation";
 import {EMPTY_SIGNATURE} from "../../src/constants";
+import {generateEmptyAttestation} from "./attestation";
 
 export function generateAggregateAndProof(
   override: RecursivePartial<phase0.AggregateAndProof> = {}

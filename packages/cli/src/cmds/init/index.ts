@@ -1,8 +1,8 @@
-import {initHandler, ReturnType} from "./handler";
 import {ICliCommand, ICliCommandOptions} from "../../util";
 import {IGlobalArgs} from "../../options";
 import {IBeaconArgs, beaconOptions} from "../beacon/options";
 import {getBeaconPaths} from "../beacon/paths";
+import {initHandler, ReturnType} from "./handler";
 
 const defaultBeaconPathsPrater = getBeaconPaths({rootDir: ".prater"});
 

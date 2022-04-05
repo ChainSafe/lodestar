@@ -1,8 +1,8 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {DomainType, ForkDigest, phase0, Root, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {ForkDigestHex, ICachedGenesis} from "./types";
 import {IChainForkConfig} from "../beaconConfig";
+import {ForkDigestHex, ICachedGenesis} from "./types";
 export {IForkDigestContext} from "./types";
 
 export function createICachedGenesis(chainForkConfig: IChainForkConfig, genesisValidatorsRoot: Root): ICachedGenesis {

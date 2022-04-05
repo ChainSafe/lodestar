@@ -9,7 +9,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {IMetrics} from "../../metrics";
 import {IExecutionEngine} from "../../executionEngine";
 import {BlockError, BlockErrorCode} from "../errors";
@@ -19,6 +18,7 @@ import {IStateRegenerator, RegenCaller} from "../regen";
 import {IBlsVerifier} from "../bls";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
 import {byteArrayEquals} from "../../util/bytes";
+import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;

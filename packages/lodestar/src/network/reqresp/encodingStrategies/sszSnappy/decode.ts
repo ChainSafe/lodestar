@@ -1,11 +1,11 @@
 import BufferList from "bl";
 import varint from "varint";
-import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
-import {maxEncodedLen} from "./utils";
-import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 import {MAX_VARINT_BYTES} from "../../../../constants";
 import {BufferedSource} from "../../utils";
 import {RequestOrResponseType, RequestOrIncomingResponseBody} from "../../types";
+import {SnappyFramesUncompress} from "./snappyFrames/uncompress";
+import {maxEncodedLen} from "./utils";
+import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 /**
  * ssz_snappy encoding strategy reader.

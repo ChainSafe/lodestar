@@ -4,11 +4,11 @@ import {Worker} from "worker_threads";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {logFilesDir} from "./params";
-import {NodeWorkerOptions} from "./threaded/types";
 import {waitForEvent} from "../utils/events/resolver";
 import {ChainEvent} from "../../src/chain";
 import {createPeerId} from "../../src/network";
+import {NodeWorkerOptions} from "./threaded/types";
+import {logFilesDir} from "./params";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

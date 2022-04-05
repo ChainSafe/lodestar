@@ -8,10 +8,10 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@chainsafe/lodestar-params";
-import {BlockOpts, getBlockPhase0} from "./util";
 import {allForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 import {StateBlock} from "../../types";
+import {BlockOpts, getBlockPhase0} from "./util";
 
 // As of Jun 12 2021
 // Process block

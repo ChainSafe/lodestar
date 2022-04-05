@@ -10,6 +10,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
+import {IPeerRpcScoreStore} from "../peers";
+import {MetadataController} from "../metadata";
+import {INetworkEventBus, NetworkEvent} from "../events";
+import {PeersData} from "../peers/peersData";
+import {IMetrics} from "../../metrics";
+import {RespStatus, timeoutOptions} from "../../constants";
 import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest, ResponseError} from "./response";
@@ -29,12 +35,6 @@ import {
   IncomingResponseBody,
 } from "./types";
 import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter";
-import {IPeerRpcScoreStore} from "../peers";
-import {MetadataController} from "../metadata";
-import {INetworkEventBus, NetworkEvent} from "../events";
-import {PeersData} from "../peers/peersData";
-import {IMetrics} from "../../metrics";
-import {RespStatus, timeoutOptions} from "../../constants";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 

@@ -6,17 +6,6 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {PeersData, PeerData} from "./peersData";
-import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
-import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
-import {clientFromAgentVersion, ClientKind} from "./client";
-import {
-  getConnectedPeerIds,
-  hasSomeConnectedPeer,
-  assertPeerRelevance,
-  prioritizePeers,
-  renderIrrelevantPeerType,
-} from "./utils";
 import {IBeaconChain} from "../../chain";
 import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
 import {IMetrics} from "../../metrics";
@@ -26,6 +15,17 @@ import {prettyPrintPeerId} from "../util";
 import {ISubnetsService} from "../subnets";
 import {SubnetType} from "../metadata";
 import {Eth2Gossipsub} from "../gossip/gossipsub";
+import {
+  getConnectedPeerIds,
+  hasSomeConnectedPeer,
+  assertPeerRelevance,
+  prioritizePeers,
+  renderIrrelevantPeerType,
+} from "./utils";
+import {clientFromAgentVersion, ClientKind} from "./client";
+import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
+import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
+import {PeersData, PeerData} from "./peersData";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;

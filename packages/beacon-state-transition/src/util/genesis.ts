@@ -10,15 +10,15 @@ import {
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@chainsafe/lodestar-types";
 
 import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
+import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
+import {processDeposit} from "../allForks";
+import {createCachedBeaconState} from "../cache/stateCache";
+import {EpochContextImmutableData} from "../cache/epochContext";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
 import {newFilledArray} from "./array";
 import {getNextSyncCommittee} from "./syncCommittee";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
-import {processDeposit} from "../allForks";
-import {createCachedBeaconState} from "../cache/stateCache";
-import {EpochContextImmutableData} from "../cache/epochContext";
 
 type DepositDataRootListType = ListCompositeType<typeof ssz.Root>;
 type DepositDataRootViewDU = CompositeViewDU<DepositDataRootListType>;

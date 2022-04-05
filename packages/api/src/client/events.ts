@@ -1,7 +1,7 @@
 import EventSource from "eventsource";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {stringifyQuery} from "./utils/format";
 import {Api, BeaconEvent, routesData, getEventSerdes} from "../routes/events";
+import {stringifyQuery} from "./utils/format";
 
 /**
  * REST HTTP client for events routes

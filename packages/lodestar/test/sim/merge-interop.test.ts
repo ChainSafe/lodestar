@@ -10,8 +10,6 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {shell} from "./shell";
-import {logFilesDir} from "./params";
 import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
 import {ExecutionEngineHttp} from "../../src/executionEngine/http";
 import {ChainEvent} from "../../src/chain";
@@ -23,6 +21,8 @@ import {getAndInitDevValidators} from "../utils/node/validator";
 import {Eth1Provider} from "../../src";
 import {ZERO_HASH} from "../../src/constants";
 import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {logFilesDir} from "./params";
+import {shell} from "./shell";
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable

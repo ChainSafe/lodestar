@@ -1,6 +1,6 @@
-import {paramsOptions, IParamsArgs} from "./paramsOptions";
 import {NetworkName, networkNames} from "../networks";
 import {ICliCommandOptions, readFile} from "../util";
+import {paramsOptions, IParamsArgs} from "./paramsOptions";
 
 interface IGlobalSingleArgs {
   rootDir: string;

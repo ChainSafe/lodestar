@@ -3,15 +3,15 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
-import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs} from "./options";
-import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
 import {onGracefulShutdown} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getVersion} from "../../util/version";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
+import {IValidatorCliArgs} from "./options";
+import {getValidatorPaths} from "./paths";
 
 /**
  * Runs a validator client.

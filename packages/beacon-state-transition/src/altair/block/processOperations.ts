@@ -1,12 +1,12 @@
 import {altair} from "@chainsafe/lodestar-types";
 
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
+import {CachedBeaconStateAltair} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processAttestations} from "./processAttestation";
 import {processDeposit} from "./processDeposit";
 import {processVoluntaryExit} from "./processVoluntaryExit";
-import {CachedBeaconStateAltair} from "../../types";
 
 export function processOperations(
   state: CachedBeaconStateAltair,

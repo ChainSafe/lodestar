@@ -4,9 +4,9 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {LodestarError} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {hashBlocks} from "./utils";
 import {BATCH_SLOT_OFFSET, MAX_BATCH_DOWNLOAD_ATTEMPTS, MAX_BATCH_PROCESSING_ATTEMPTS} from "../constants";
 import {ChainSegmentError, BlockErrorCode} from "../../chain/errors";
+import {hashBlocks} from "./utils";
 
 export type BatchOpts = {
   epochsPerBatch: Epoch;

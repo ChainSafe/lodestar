@@ -17,7 +17,6 @@ import {Root, Slot, ValidatorIndex, ssz} from "@chainsafe/lodestar-types";
 import {ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {assembleBlock} from "../../../chain/factory/block";
 import {AttestationError, AttestationErrorCode, GossipAction, SyncCommitteeError} from "../../../chain/errors";
 import {validateGossipAggregateAndProof} from "../../../chain/validation";
@@ -30,6 +29,7 @@ import {CommitteeSubscription} from "../../../network/subnets";
 import {OpSource} from "../../../metrics/validatorMonitor";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
+import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a

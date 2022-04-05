@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
@@ -9,7 +10,6 @@ import {
   PayloadId,
   PayloadAttributes,
 } from "./interface";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {

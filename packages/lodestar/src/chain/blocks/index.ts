@@ -2,14 +2,14 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {allForks} from "@chainsafe/lodestar-types";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {verifyBlock, VerifyBlockModules} from "./verifyBlock";
-import {importBlock, ImportBlockModules} from "./importBlock";
-import {assertLinearChainSegment} from "./utils/chainSegment";
-import {PartiallyVerifiedBlock} from "./types";
 import {ChainEvent} from "../emitter";
 import {JobItemQueue} from "../../util/queue";
 import {BlockError, BlockErrorCode, ChainSegmentError} from "../errors";
 import {BlockProcessOpts} from "../options";
+import {verifyBlock, VerifyBlockModules} from "./verifyBlock";
+import {importBlock, ImportBlockModules} from "./importBlock";
+import {assertLinearChainSegment} from "./utils/chainSegment";
+import {PartiallyVerifiedBlock} from "./types";
 export {PartiallyVerifiedBlockFlags} from "./types";
 
 const QUEUE_MAX_LENGHT = 256;

@@ -1,8 +1,8 @@
-import {validatorOptions, IValidatorCliArgs} from "./options";
-import {validatorHandler} from "./handler";
 import {ICliCommand} from "../../util";
 import {IGlobalArgs} from "../../options";
 import {getAccountPaths} from "../account/paths";
+import {validatorHandler} from "./handler";
+import {validatorOptions, IValidatorCliArgs} from "./options";
 
 export const validator: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "validator",

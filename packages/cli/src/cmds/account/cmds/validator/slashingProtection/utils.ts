@@ -2,12 +2,12 @@ import {Root} from "@chainsafe/lodestar-types";
 import {getClient} from "@chainsafe/lodestar-api";
 import {SlashingProtection} from "@chainsafe/lodestar-validator";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {ISlashingProtectionArgs} from "./options";
 import {YargsError} from "../../../../../util";
 import {IGlobalArgs} from "../../../../../options";
 import {getValidatorPaths} from "../../../../validator/paths";
 import {getBeaconConfigFromArgs} from "../../../../../config";
 import {errorLogger} from "../../../../../util/logger";
+import {ISlashingProtectionArgs} from "./options";
 
 /**
  * Returns a new SlashingProtection object instance based on global args.

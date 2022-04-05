@@ -3,7 +3,6 @@ import {phase0} from "@chainsafe/lodestar-types";
 import {Validator} from "@chainsafe/lodestar-validator/lib";
 import {ILogger, sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {logFilesDir} from "./params";
 import {Network} from "../../src/network";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
@@ -13,6 +12,7 @@ import {ChainEvent} from "../../src/chain";
 import {testLogger, LogLevel, TestLoggerOpts} from "../utils/logger";
 import {connect} from "../utils/network";
 import {simTestInfoTracker} from "../utils/node/simTest";
+import {logFilesDir} from "./params";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

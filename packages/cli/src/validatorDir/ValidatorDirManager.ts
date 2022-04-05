@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {SecretKey} from "@chainsafe/bls";
-import {ValidatorDir, IValidatorDirOptions} from "./ValidatorDir";
 import {YargsError} from "../util";
+import {ValidatorDir, IValidatorDirOptions} from "./ValidatorDir";
 
 /**
  * Manages a directory containing multiple `ValidatorDir` directories.

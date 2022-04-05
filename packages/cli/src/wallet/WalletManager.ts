@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import {isUuid} from "uuidv4";
-import {Wallet, IWalletKeystoreJson} from "./Wallet";
 import {ensureDirExists, YargsError} from "../util";
+import {Wallet, IWalletKeystoreJson} from "./Wallet";
 
 /**
  * Manages a directory containing EIP-2386 wallets.

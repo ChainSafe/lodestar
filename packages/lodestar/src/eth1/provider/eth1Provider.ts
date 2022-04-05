@@ -2,8 +2,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
-import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils";
 import {chunkifyInclusiveRange} from "../../util/chunkify";
 import {linspace} from "../../util/numpy";
 import {retry} from "../../util/retry";
@@ -12,6 +10,8 @@ import {Eth1Block, IEth1Provider} from "../interface";
 import {Eth1Options} from "../options";
 import {isValidAddress} from "../../util/address";
 import {EthJsonRpcBlockRaw} from "../interface";
+import {isJsonRpcTruncatedError, quantityToNum, numToQuantity, dataToBytes} from "./utils";
+import {JsonRpcHttpClient} from "./jsonRpcHttpClient";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

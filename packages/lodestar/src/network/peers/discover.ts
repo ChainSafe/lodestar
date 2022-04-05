@@ -6,12 +6,12 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Discv5, ENR, IDiscv5Metrics, IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {IPeerRpcScoreStore, ScoreState} from "./score";
-import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize";
 import {IMetrics} from "../../metrics";
 import {ENRKey, SubnetType} from "../metadata";
 import {prettyPrintPeerId} from "../util";
 import {pruneSetToMax} from "../../util/map";
+import {deserializeEnrSubnets, zeroAttnets, zeroSyncnets} from "./utils/enrSubnetsDeserialize";
+import {IPeerRpcScoreStore, ScoreState} from "./score";
 
 /** Max number of cached ENRs after discovering a good peer */
 const MAX_CACHED_ENRS = 100;

@@ -1,6 +1,6 @@
 import {Epoch, RootHex, Slot} from "@chainsafe/lodestar-types";
-import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType, Schema} from "../utils";
+import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

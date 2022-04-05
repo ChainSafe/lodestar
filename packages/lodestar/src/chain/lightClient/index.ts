@@ -9,19 +9,19 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
-import {
-  getNextSyncCommitteeBranch,
-  getSyncCommitteesWitness,
-  getFinalizedRootProof,
-  getCurrentSyncCommitteeBranch,
-} from "./proofs";
-import {PartialLightClientUpdate} from "./types";
 import {IBeaconDb} from "../../db";
 import {IMetrics} from "../../metrics";
 import {MapDef, pruneSetToMax} from "../../util/map";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {byteArrayEquals} from "../../util/bytes";
 import {ZERO_HASH} from "../../constants";
+import {PartialLightClientUpdate} from "./types";
+import {
+  getNextSyncCommitteeBranch,
+  getSyncCommitteesWitness,
+  getFinalizedRootProof,
+  getCurrentSyncCommitteeBranch,
+} from "./proofs";
 
 type DependantRootHex = RootHex;
 type BlockRooHex = RootHex;

@@ -5,11 +5,11 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {NetworkEvent} from "../../../../network";
 import {ApiModules} from "../../types";
+import {resolveBlockId, toBeaconHeaderResponse} from "./utils";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a

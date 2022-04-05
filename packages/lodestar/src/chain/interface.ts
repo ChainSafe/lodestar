@@ -3,6 +3,8 @@ import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transi
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
+import {IExecutionEngine} from "../executionEngine";
+import {IEth1ForBlockProduction} from "../eth1";
 import {IBeaconClock} from "./clock/interface";
 import {ChainEventEmitter} from "./emitter";
 import {IStateRegenerator} from "./regen";
@@ -20,8 +22,6 @@ import {LightClientServer} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 import {ReprocessController} from "./reprocess";
-import {IExecutionEngine} from "../executionEngine";
-import {IEth1ForBlockProduction} from "../eth1";
 
 export type Eth2Context = {
   activeValidatorCount: number;

@@ -1,6 +1,6 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IHttpClient, generateGenericJsonClient} from "./utils";
 import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "../routes/lodestar";
+import {IHttpClient, generateGenericJsonClient} from "./utils";
 
 /**
  * REST HTTP client for lodestar routes

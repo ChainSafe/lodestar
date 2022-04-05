@@ -11,12 +11,12 @@ import {
 import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
-import {IValidatorCreateArgs, validatorCreateOptions} from "./create";
 import {getBeaconConfigFromArgs} from "../../../../config";
 import {getAccountPaths} from "../../paths";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {IGlobalArgs} from "../../../../options";
 import {add0xPrefix, ICliCommand, initBLS, randomPassword} from "../../../../util";
+import {IValidatorCreateArgs, validatorCreateOptions} from "./create";
 
 /* eslint-disable no-console */
 

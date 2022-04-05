@@ -20,9 +20,9 @@ import {
 
 import {SecretKey} from "@chainsafe/bls";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 import {generateEmptyBlock} from "./block";
 import {generateValidator, generateValidators} from "./validator";
-import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.

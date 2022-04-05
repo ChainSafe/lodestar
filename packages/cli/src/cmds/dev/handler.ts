@@ -12,7 +12,6 @@ import {SecretKey} from "@chainsafe/bls";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
-import {IDevArgs} from "./options";
 import {onGracefulShutdown} from "../../util/process";
 import {createEnr, createPeerId, overwriteEnrWithCliArgs} from "../../config";
 import {IGlobalArgs, parseEnrArgs} from "../../options";
@@ -21,6 +20,7 @@ import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
 import {getVersion} from "../../util/version";
+import {IDevArgs} from "./options";
 
 /**
  * Run a beacon node with validator

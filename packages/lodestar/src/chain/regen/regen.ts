@@ -10,13 +10,13 @@ import {IForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IStateRegenerator, RegenCaller} from "./interface";
-import {RegenError, RegenErrorCode} from "./errors";
 import {IMetrics} from "../../metrics";
 import {IBeaconDb} from "../../db";
 import {CheckpointStateCache, StateContextCache} from "../stateCache";
 import {getCheckpointFromState} from "../blocks/utils/checkpoint";
 import {ChainEvent, ChainEventEmitter} from "../emitter";
+import {RegenError, RegenErrorCode} from "./errors";
+import {IStateRegenerator, RegenCaller} from "./interface";
 
 export type RegenModules = {
   db: IBeaconDb;

@@ -12,6 +12,11 @@ import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 
+import {Map2d, Map2dArr} from "../../util/map";
+import {Eth2Context} from "../../chain";
+import {IMetrics} from "../../metrics";
+import {PeersData} from "../peers/peersData";
+import {ClientKind} from "../peers/client";
 import {
   GossipJobQueues,
   GossipTopic,
@@ -32,12 +37,6 @@ import {
   GOSSIP_D_LOW,
 } from "./scoringParameters";
 import {computeAllPeersScoreWeights} from "./scoreMetrics";
-import {Map2d, Map2dArr} from "../../util/map";
-
-import {Eth2Context} from "../../chain";
-import {IMetrics} from "../../metrics";
-import {PeersData} from "../peers/peersData";
-import {ClientKind} from "../peers/client";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

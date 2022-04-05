@@ -2,7 +2,6 @@
  * @module node
  */
 
-import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions";
 import {defaultApiOptions, IApiOptions} from "../api/options";
 import {defaultChainOptions, IChainOptions} from "../chain/options";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options";
@@ -11,6 +10,7 @@ import {defaultMetricsOptions, IMetricsOptions} from "../metrics/options";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options";
 import {defaultSyncOptions, SyncOptions} from "../sync/options";
 import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngine";
+import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions";
 // Re-export so the CLI doesn't need to depend on lodestar-api
 export {allNamespaces} from "../api/rest/index";
 

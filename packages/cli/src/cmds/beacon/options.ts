@@ -1,6 +1,5 @@
 import {Options} from "yargs";
 import {defaultLogLevel, LogLevels} from "@chainsafe/lodestar-utils";
-import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 import {
   beaconNodeOptions,
   paramsOptions,
@@ -11,6 +10,7 @@ import {
   wssOptions,
 } from "../../options";
 import {ICliCommandOptions, ILogArgs} from "../../util";
+import {defaultBeaconPaths, IBeaconPaths} from "./paths";
 
 interface IBeaconExtraArgs {
   port?: number;

@@ -1,7 +1,3 @@
-import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
-import {processSlashings} from "./processSlashings";
-import {getAttestationDeltas} from "./getAttestationDeltas";
-import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -12,6 +8,10 @@ import {
   processHistoricalRootsUpdate,
 } from "../../allForks/epoch";
 import {CachedBeaconStatePhase0, EpochProcess} from "../../types";
+import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
+import {processSlashings} from "./processSlashings";
+import {getAttestationDeltas} from "./getAttestationDeltas";
+import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas, processParticipationRecordUpdates};
 

@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 import inquirer from "inquirer";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {IAccountValidatorArgs} from "./options";
 import {
   YargsError,
   stripOffNewlines,
@@ -16,6 +15,7 @@ import {
 import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths";
 import {getAccountPaths} from "../../paths";
 import {IGlobalArgs} from "../../../../options";
+import {IAccountValidatorArgs} from "./options";
 
 /* eslint-disable no-console */
 

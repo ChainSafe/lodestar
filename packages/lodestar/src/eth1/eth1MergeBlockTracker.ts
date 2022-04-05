@@ -4,9 +4,9 @@ import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 import {ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {ZERO_HASH_HEX} from "../constants";
 import {IEth1Provider, EthJsonRpcBlockRaw, PowMergeBlock} from "./interface";
 import {quantityToNum, quantityToBigint, dataToRootHex} from "./provider/utils";
-import {ZERO_HASH_HEX} from "../constants";
 
 export enum StatusCode {
   PRE_MERGE = "PRE_MERGE",

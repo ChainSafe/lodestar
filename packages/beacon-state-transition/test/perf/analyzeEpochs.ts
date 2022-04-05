@@ -4,8 +4,6 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {NetworkName} from "@chainsafe/lodestar-config/networks";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {csvAppend, readCsv} from "./csv";
-import {getInfuraBeaconUrl} from "./infura";
 import {
   allForks,
   computeEpochAtSlot,
@@ -16,6 +14,8 @@ import {
 } from "../../src";
 import {Validator} from "../../lib/phase0";
 import {createCachedBeaconStateTest} from "../utils/state";
+import {getInfuraBeaconUrl} from "./infura";
+import {csvAppend, readCsv} from "./csv";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
 //
