@@ -27,12 +27,13 @@ describe("doppelganger / doppelganger test", function () {
 
   const validatorCount = 1;
   const SECONDS_PER_SLOT = 2;
+  const genesisSlotsDelay = 5;
   const beaconParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
     SECONDS_PER_SLOT: SECONDS_PER_SLOT,
   };
 
-  const timeout = SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT * 1000;
+  const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SECONDS_PER_SLOT * 1000;
 
   it("should shut down validator if same key is active", async function () {
     this.timeout("10 min");

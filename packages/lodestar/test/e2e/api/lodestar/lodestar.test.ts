@@ -24,8 +24,8 @@ describe("api / impl / lodestar", function () {
       SECONDS_PER_SLOT: SECONDS_PER_SLOT,
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
     };
-
-    const timeout = SLOTS_PER_EPOCH * testParams.SECONDS_PER_SLOT * 1000;
+    const genesisSlotsDelay = 5;
+    const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * testParams.SECONDS_PER_SLOT * 1000;
 
     const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
     afterEach(async () => {
