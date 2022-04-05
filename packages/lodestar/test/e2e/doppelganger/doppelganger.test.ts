@@ -11,6 +11,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
 import {fromHexString} from "@chainsafe/ssz";
 import {generateAttestationData} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 chai.use(chaiAsPromised);
 
@@ -25,10 +26,13 @@ describe("doppelganger / doppelganger test", function () {
   });
 
   const validatorCount = 1;
-  const beaconParams: Partial<IChainConfig> = {
+  const SECONDS_PER_SLOT = 2;
+  const beaconParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    SECONDS_PER_SLOT: 2,
+    SECONDS_PER_SLOT: SECONDS_PER_SLOT,
   };
+
+  const timeout = SLOTS_PER_EPOCH * beaconParams.SECONDS_PER_SLOT * 1000;
 
   it("should shut down validator if same key is active", async function () {
     this.timeout("10 min");
@@ -90,7 +94,7 @@ describe("doppelganger / doppelganger test", function () {
       "running",
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
     // After first checkpoint doppelganger protection should have stopped the validatorsWithDoppelganger
     expect(validators[0].getStatus()).to.be.equals(
       "running",
@@ -161,7 +165,7 @@ describe("doppelganger / doppelganger test", function () {
       "running",
       "validator with doppelganger protection should be running before first epoch"
     );
-    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
     expect(validators[0].getStatus()).to.be.equals(
       "running",
       "validator without doppelganger protection should still be running after first epoch"
@@ -209,13 +213,13 @@ describe("doppelganger / doppelganger test", function () {
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unverified");
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
@@ -265,7 +269,7 @@ describe("doppelganger / doppelganger test", function () {
       )
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(
@@ -275,7 +279,7 @@ describe("doppelganger / doppelganger test", function () {
       )
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unverified");
 
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000);
+    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(

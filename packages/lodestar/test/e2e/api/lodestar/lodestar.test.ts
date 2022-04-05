@@ -9,6 +9,7 @@ import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger";
 import {getDevBeaconNode} from "../../../utils/node/beacon";
 import {waitForEvent} from "../../../utils/events/resolver";
 import {ChainEvent} from "../../../../src/chain";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 chai.use(chaiAsPromised);
 
@@ -23,6 +24,8 @@ describe("api / impl / lodestar", function () {
       SECONDS_PER_SLOT: SECONDS_PER_SLOT,
       ALTAIR_FORK_EPOCH: ALTAIR_FORK_EPOCH,
     };
+
+    const timeout = SLOTS_PER_EPOCH * testParams.SECONDS_PER_SLOT * 1000;
 
     const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
     afterEach(async () => {
@@ -98,8 +101,8 @@ describe("api / impl / lodestar", function () {
       });
       afterEachCallbacks.push(() => bn.close());
 
-      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000); // wait for epoch 1
-      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, 240000); // wait for epoch 2
+      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 1
+      await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 2
 
       bn.chain.seenBlockProposers.add(bn.chain.clock.currentSlot, 1);
 
