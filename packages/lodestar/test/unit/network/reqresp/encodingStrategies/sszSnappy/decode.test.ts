@@ -2,6 +2,7 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import varint from "varint";
 import {ssz} from "@chainsafe/lodestar-types";
+import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 import {RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 import {BufferedSource} from "../../../../../../src/network/reqresp/utils";
 import {
@@ -10,7 +11,6 @@ import {
 } from "../../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
 import {isEqualSszType} from "../../../../../utils/ssz";
 import {arrToSource} from "../../utils";
-import {sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0} from "./testData";
 
 chai.use(chaiAsPromised);
 

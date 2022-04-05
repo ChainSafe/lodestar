@@ -3,11 +3,11 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {routes} from "@chainsafe/lodestar-api";
+import {toHexString} from "@chainsafe/ssz";
 import {ApiModules} from "../types";
 import {ChainEvent, IChainEvents} from "../../../chain";
-import {routes} from "@chainsafe/lodestar-api";
 import {ApiError} from "../errors";
-import {toHexString} from "@chainsafe/ssz";
 
 /**
  * Mapping of internal `ChainEvents` to API spec events

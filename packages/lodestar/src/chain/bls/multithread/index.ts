@@ -9,12 +9,12 @@ self = undefined;
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {bls, Implementation, PointFormat} from "@chainsafe/bls";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
+import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types";
+import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
 import {QueueError, QueueErrorCode} from "../../../util/queue";
 import {IMetrics} from "../../../metrics";
 import {IBlsVerifier, VerifySignatureOpts} from "../interface";
-import {BlsWorkReq, BlsWorkResult, WorkerData, WorkResultCode} from "./types";
-import {chunkifyMaximizeChunkSize, getDefaultPoolSize} from "./utils";
-import {ISignatureSet} from "@chainsafe/lodestar-beacon-state-transition";
 import {getAggregatedPubkey} from "../utils";
 import {verifySignatureSetsMaybeBatch} from "../maybeBatch";
 

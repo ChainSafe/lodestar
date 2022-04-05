@@ -2,8 +2,6 @@ import {Epoch, phase0, Root, Slot} from "@chainsafe/lodestar-types";
 import {byteArrayEquals} from "@chainsafe/ssz";
 import {intSqrt} from "@chainsafe/lodestar-utils";
 
-import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
-import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {
   MIN_ATTESTATION_INCLUSION_DELAY,
   PROPOSER_WEIGHT,
@@ -16,6 +14,8 @@ import {
   TIMELY_TARGET_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
+import {getBlockRoot, getBlockRootAtSlot, increaseBalance, verifySignatureSet} from "../../util";
+import {CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {checkpointToStr, validateAttestation} from "../../phase0/block/processAttestation";
 import {getAttestationWithIndicesSignatureSet} from "../../allForks";
 

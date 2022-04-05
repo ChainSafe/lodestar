@@ -5,10 +5,10 @@ import {
   IChainForkConfig,
   chainConfigFromJson,
 } from "@chainsafe/lodestar-config";
+import {IBeaconParamsUnparsed} from "./types";
 import {readFile} from "../util";
 import {getNetworkBeaconParams, NetworkName} from "../networks";
 import {getGlobalPaths, IGlobalPaths} from "../paths/global";
-import {IBeaconParamsUnparsed} from "./types";
 import {parseBeaconParamsArgs, parseTerminalPowArgs, ITerminalPowArgs} from "../options";
 
 type IBeaconParamsCliArgs = {

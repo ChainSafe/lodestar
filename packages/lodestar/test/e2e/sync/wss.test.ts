@@ -4,6 +4,7 @@ import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {fetchWeakSubjectivityState} from "@chainsafe/lodestar-cli/src/networks";
 import {config} from "@chainsafe/lodestar-config/default";
+import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
 import {getAndInitDevValidators} from "../../utils/node/validator";
@@ -13,7 +14,6 @@ import {testLogger, TestLoggerOpts} from "../../utils/logger";
 import {connect} from "../../utils/network";
 import {Network} from "../../../src/network";
 import {BackfillSyncEvent} from "../../../src/sync/backfill";
-import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 describe("Start from WSS", function () {

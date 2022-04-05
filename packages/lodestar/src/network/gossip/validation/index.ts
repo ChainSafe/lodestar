@@ -2,6 +2,8 @@ import {MessageAcceptance} from "libp2p-gossipsub/src/types";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
+import {createValidationQueues} from "./queue";
+import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 import {IMetrics} from "../../../metrics";
 import {getGossipSSZType} from "../topic";
 import {
@@ -13,8 +15,6 @@ import {
   GossipHandlerFn,
 } from "../interface";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
-import {createValidationQueues} from "./queue";
-import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;

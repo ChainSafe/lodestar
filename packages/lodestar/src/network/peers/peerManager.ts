@@ -6,14 +6,7 @@ import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
-import {IMetrics} from "../../metrics";
-import {NetworkEvent, INetworkEventBus} from "../events";
-import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
-import {prettyPrintPeerId} from "../util";
 import {PeersData, PeerData} from "./peersData";
-import {ISubnetsService} from "../subnets";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
 import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
 import {clientFromAgentVersion, ClientKind} from "./client";
@@ -24,6 +17,13 @@ import {
   prioritizePeers,
   renderIrrelevantPeerType,
 } from "./utils";
+import {IBeaconChain} from "../../chain";
+import {GoodByeReasonCode, GOODBYE_KNOWN_CODES, Libp2pEvent} from "../../constants";
+import {IMetrics} from "../../metrics";
+import {NetworkEvent, INetworkEventBus} from "../events";
+import {IReqResp, ReqRespMethod, RequestTypedContainer} from "../reqresp";
+import {prettyPrintPeerId} from "../util";
+import {ISubnetsService} from "../subnets";
 import {SubnetType} from "../metadata";
 import {Eth2Gossipsub} from "../gossip/gossipsub";
 

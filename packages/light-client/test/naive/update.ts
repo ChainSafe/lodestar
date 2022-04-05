@@ -1,10 +1,10 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {altair, Slot} from "@chainsafe/lodestar-types";
+import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {LightClientSnapshotFast, LightClientStoreFast} from "../../src/types";
 import {assertValidLightClientUpdate} from "../../src/validation";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "../../src/utils/utils";
 import {computeSyncPeriodAtSlot} from "../../src/utils/clock";
-import {IBeaconConfig} from "@chainsafe/lodestar-config";
 
 //
 // A lightclient has two types of syncing:

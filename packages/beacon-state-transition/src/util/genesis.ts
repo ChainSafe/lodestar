@@ -9,14 +9,14 @@ import {
 } from "@chainsafe/lodestar-params";
 import {Bytes32, phase0, Root, ssz, TimeSeconds} from "@chainsafe/lodestar-types";
 
-import {processDeposit} from "../allForks";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
+import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {computeEpochAtSlot} from "./epoch";
 import {getActiveValidatorIndices} from "./validator";
 import {getTemporaryBlockHeader} from "./blockRoot";
-import {CompositeViewDU, ListCompositeType} from "@chainsafe/ssz";
 import {newFilledArray} from "./array";
 import {getNextSyncCommittee} from "./syncCommittee";
+import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
+import {processDeposit} from "../allForks";
 import {createCachedBeaconState} from "../cache/stateCache";
 import {EpochContextImmutableData} from "../cache/epochContext";
 

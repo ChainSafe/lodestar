@@ -5,9 +5,9 @@
 import {Epoch, Slot, Root, phase0, allForks} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
-import {ZERO_HASH} from "../constants";
-import {computeStartSlotAtEpoch} from "./epoch";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
+import {computeStartSlotAtEpoch} from "./epoch";
+import {ZERO_HASH} from "../constants";
 import {BeaconStateAllForks} from "../types";
 
 /**

@@ -1,8 +1,8 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {HttpClient, HttpClientOptions} from "../client";
-import {IHttpClient} from "../client/utils";
 import {Api} from "./routes";
 import * as keymanager from "./client";
+import {HttpClient, HttpClientOptions} from "../client";
+import {IHttpClient} from "../client/utils";
 
 export {ImportStatus, DeletionStatus, KeystoreStr, SlashingProtectionData, PubkeyHex, Api} from "./routes";
 

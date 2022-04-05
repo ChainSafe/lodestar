@@ -9,10 +9,11 @@ import {
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 
+import {createIBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {generateEmptyBlock} from "./block";
 import {ZERO_HASH} from "../../src/constants";
 import {newZeroedBigIntArray} from "../../src/util";
 
-import {generateEmptyBlock} from "./block";
 import {
   BeaconStatePhase0,
   CachedBeaconStateAllForks,
@@ -20,7 +21,6 @@ import {
   createCachedBeaconState,
   PubkeyIndexMap,
 } from "../../src";
-import {createIBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateCache} from "../../src/cache/stateCache";
 import {EpochContextOpts} from "../../src/cache/epochContext";
 

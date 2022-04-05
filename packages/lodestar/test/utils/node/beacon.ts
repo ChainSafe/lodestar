@@ -8,6 +8,7 @@ import {ILogger, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {BeaconNode} from "../../../src/node";
 import {createNodeJsLibp2p} from "../../../src/network/nodejs";
 import {createPeerId} from "../../../src/network";
@@ -18,7 +19,6 @@ import {defaultOptions} from "../../../src/node/options";
 import {BeaconDb} from "../../../src/db";
 import {testLogger} from "../logger";
 import {InteropStateOpts} from "../../../src/node/utils/interop/state";
-import {isPlainObject} from "@chainsafe/lodestar-utils";
 
 export async function getDevBeaconNode(
   opts: {

@@ -1,6 +1,6 @@
-import {IHttpClient, generateGenericJsonClient} from "../client/utils";
-import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "./routes";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
+import {Api, ReqTypes, routesData, getReqSerializers, getReturnTypes} from "./routes";
+import {IHttpClient, generateGenericJsonClient} from "../client/utils";
 
 export function getClient(_config: IChainForkConfig, httpClient: IHttpClient): Api {
   const reqSerializers = getReqSerializers();

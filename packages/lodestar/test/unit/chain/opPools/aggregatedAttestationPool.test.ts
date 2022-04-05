@@ -1,10 +1,11 @@
+import {expect} from "chai";
+import sinon from "sinon";
 import {bls, SecretKey} from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIChainForkConfig, defaultChainConfig} from "@chainsafe/lodestar-config";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {expect} from "chai";
 import {ssz, phase0} from "@chainsafe/lodestar-types";
 import {
   AggregatedAttestationPool,
@@ -15,7 +16,6 @@ import {InsertOutcome} from "../../../../src/chain/opPools/types";
 import {generateAttestation, generateEmptyAttestation} from "../../../utils/attestation";
 import {generateCachedState} from "../../../utils/state";
 import {renderBitArray} from "../../../utils/render";
-import sinon from "sinon";
 
 describe("AggregatedAttestationPool", function () {
   let pool: AggregatedAttestationPool;

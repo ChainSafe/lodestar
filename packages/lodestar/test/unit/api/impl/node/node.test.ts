@@ -1,21 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import {Connection} from "libp2p";
-import {getNodeApi} from "../../../../../src/api/impl/node";
 import sinon, {SinonStubbedInstance} from "sinon";
-import {BitArray} from "@chainsafe/ssz";
-import {createPeerId, INetwork, Network} from "../../../../../src/network";
-import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
-import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
 import PeerId from "peer-id";
 import {expect, use} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import {Multiaddr} from "multiaddr";
+import {BitArray} from "@chainsafe/ssz";
+import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
+import {altair} from "@chainsafe/lodestar-types";
+import {routes} from "@chainsafe/lodestar-api";
+import {createPeerId, INetwork, Network} from "../../../../../src/network";
+import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {MetadataController} from "../../../../../src/network/metadata";
 import {defaultApiOptions} from "../../../../../src/api/options";
-import {altair} from "@chainsafe/lodestar-types";
 import {PeerStatus, PeerDirection} from "../../../../../src/network";
-import {routes} from "@chainsafe/lodestar-api";
+import {getNodeApi} from "../../../../../src/api/impl/node";
 
 use(chaiAsPromised);
 

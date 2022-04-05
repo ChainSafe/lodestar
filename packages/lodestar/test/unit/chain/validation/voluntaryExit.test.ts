@@ -11,6 +11,9 @@ import {
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
+import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {PointFormat, SecretKey} from "@chainsafe/bls";
+import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {BeaconChain} from "../../../../src/chain";
 import {StubbedChain} from "../../../utils/stub";
 import {generateState} from "../../../utils/state";
@@ -18,9 +21,6 @@ import {validateGossipVoluntaryExit} from "../../../../src/chain/validation/volu
 import {VoluntaryExitErrorCode} from "../../../../src/chain/errors/voluntaryExitError";
 import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {DOMAIN_VOLUNTARY_EXIT, FAR_FUTURE_EPOCH, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {PointFormat, SecretKey} from "@chainsafe/bls";
-import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {createCachedBeaconStateTest} from "../../../utils/cachedBeaconState";
 
 describe("validate voluntary exit", () => {

@@ -1,6 +1,5 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
 import {DatabaseService, IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {uniqueVectorArr} from "../slashingProtection/utils";
 import {BlockBySlotRepository, SlashingProtectionBlockService} from "./block";
 import {
   AttestationByTargetRepository,
@@ -17,6 +16,7 @@ import {
 } from "./interchange";
 import {MinMaxSurround, DistanceStoreRepository} from "./minMaxSurround";
 import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types";
+import {uniqueVectorArr} from "../slashingProtection/utils";
 
 export {InvalidAttestationError, InvalidAttestationErrorCode} from "./attestation";
 export {InvalidBlockError, InvalidBlockErrorCode} from "./block";

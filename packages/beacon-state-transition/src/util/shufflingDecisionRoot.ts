@@ -1,7 +1,7 @@
 import {Epoch, Root, Slot} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAllForks} from "../types";
 import {getBlockRootAtSlot} from "./blockRoot";
 import {computeStartSlotAtEpoch} from "./epoch";
+import {CachedBeaconStateAllForks} from "../types";
 
 /**
  * Returns the block root which decided the proposer shuffling for the current epoch. This root

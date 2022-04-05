@@ -1,8 +1,8 @@
 import * as bip39 from "bip39";
-import {ICliCommand, ICliCommandOptions, initBLS} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
 import {accountWalletsOptions, IAccountWalletArgs} from "./options";
 import {createWalletFromArgsAndMnemonic} from "./utils";
+import {ICliCommand, ICliCommandOptions, initBLS} from "../../../../util";
+import {IGlobalArgs} from "../../../../options";
 
 export const command = "create";
 

@@ -20,10 +20,10 @@ import {
   getActiveValidatorIndices,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
+import {IGenesisBuilder, IGenesisResult} from "./interface";
 import {IEth1Provider} from "../../eth1";
 import {IEth1StreamParams} from "../../eth1/interface";
 import {getDepositsAndBlockStreamForGenesis, getDepositsStream} from "../../eth1/stream";
-import {IGenesisBuilder, IGenesisResult} from "./interface";
 import {DepositTree} from "../../db/repositories/depositDataRoot";
 
 export interface IGenesisBuilderKwargs {

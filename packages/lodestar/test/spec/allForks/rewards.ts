@@ -13,11 +13,11 @@ import {
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {VectorCompositeType} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
+import {getConfig} from "./util";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {inputTypeSszTreeViewDU} from "../util";
-import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

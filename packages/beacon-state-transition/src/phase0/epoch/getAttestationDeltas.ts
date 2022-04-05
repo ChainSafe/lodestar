@@ -1,7 +1,4 @@
 import {bigIntSqrt, bnToNum} from "@chainsafe/lodestar-utils";
-import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
-import {newZeroedArray} from "../../util";
-import {EpochProcess, CachedBeaconStatePhase0} from "../../types";
 import {
   BASE_REWARD_FACTOR,
   EFFECTIVE_BALANCE_INCREMENT,
@@ -9,6 +6,9 @@ import {
   MIN_EPOCHS_TO_INACTIVITY_PENALTY,
   PROPOSER_REWARD_QUOTIENT,
 } from "@chainsafe/lodestar-params";
+import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
+import {newZeroedArray} from "../../util";
+import {EpochProcess, CachedBeaconStatePhase0} from "../../types";
 import {hasMarkers} from "../../util/attesterStatus";
 
 /**

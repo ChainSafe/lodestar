@@ -8,10 +8,7 @@ import {
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
 import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
-import {IBeaconDb} from "../../db";
-import {IMetrics} from "../../metrics";
-import {MapDef, pruneSetToMax} from "../../util/map";
-import {ChainEvent, ChainEventEmitter} from "../emitter";
+import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {
   getNextSyncCommitteeBranch,
   getSyncCommitteesWitness,
@@ -19,7 +16,10 @@ import {
   getCurrentSyncCommitteeBranch,
 } from "./proofs";
 import {PartialLightClientUpdate} from "./types";
-import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
+import {IBeaconDb} from "../../db";
+import {IMetrics} from "../../metrics";
+import {MapDef, pruneSetToMax} from "../../util/map";
+import {ChainEvent, ChainEventEmitter} from "../emitter";
 import {byteArrayEquals} from "../../util/bytes";
 import {ZERO_HASH} from "../../constants";
 

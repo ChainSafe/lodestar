@@ -2,6 +2,7 @@
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
+import {toHexString} from "@chainsafe/ssz";
 import {validateGossipAttestation} from "../../../../chain/validation";
 import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
 import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
@@ -9,7 +10,6 @@ import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntar
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
 import {ApiModules} from "../../types";
 import {OpSource} from "../../../../metrics/validatorMonitor";
-import {toHexString} from "@chainsafe/ssz";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
 
 export function getBeaconPoolApi({

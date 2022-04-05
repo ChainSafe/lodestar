@@ -26,6 +26,19 @@ module.exports = {
     "prettier/prettier": "error",
     //doesnt work, it reports false errors
     "constructor-super": "off",
+    "import/order" : [
+      "error",
+      { "groups":
+          [
+            "builtin",
+            "external",
+            "internal",
+            "sibling",
+            "parent",
+            "index",
+          ],
+      }
+    ],
     "@typescript-eslint/await-thenable": "error",
     "@typescript-eslint/naming-convention": [
       "error",
@@ -151,6 +164,7 @@ module.exports = {
     "no-only-tests/no-only-tests": "error",
   },
   settings: {
+    "import/internal-regex": "^@chainsafe/",
     "import/core-modules": [
       "node:child_process",
       "node:crypto",

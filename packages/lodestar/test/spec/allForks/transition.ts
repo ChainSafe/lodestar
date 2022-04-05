@@ -4,10 +4,10 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ForkName, ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
-import {bnToNum} from "@chainsafe/lodestar-utils";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 
 export function transition(

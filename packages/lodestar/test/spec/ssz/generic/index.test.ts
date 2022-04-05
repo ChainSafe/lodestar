@@ -1,10 +1,10 @@
-import {expect} from "chai";
 import path from "node:path";
 import fs from "node:fs";
+import {expect} from "chai";
+import {getTestType} from "./types";
 import {SPEC_TEST_LOCATION} from "../../specTestVersioning";
 import {parseSszGenericValidTestcase, parseSszGenericInvalidTestcase} from "../../utils/sszTestCaseParser";
 import {runValidSszTest} from "../../utils/runValidSszTest";
-import {getTestType} from "./types";
 
 const rootGenericSszPath = path.join(SPEC_TEST_LOCATION, "tests", "general", "phase0", "ssz_generic");
 

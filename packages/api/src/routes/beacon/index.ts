@@ -1,9 +1,9 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils";
 import * as block from "./block";
 import * as pool from "./pool";
 import * as state from "./state";
+import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

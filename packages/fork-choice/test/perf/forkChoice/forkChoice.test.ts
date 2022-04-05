@@ -1,5 +1,5 @@
-import {config} from "@chainsafe/lodestar-config/default";
 import {itBench} from "@dapplion/benchmark";
+import {config} from "@chainsafe/lodestar-config/default";
 import {AttestationData, IndexedAttestation} from "@chainsafe/lodestar-types/phase0";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";

@@ -1,3 +1,4 @@
+import {expect} from "chai";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
@@ -8,7 +9,6 @@ import {getRoutes} from "../../src/server/debug";
 import {runGenericServerTest} from "../utils/genericServerTest";
 import {getMockApi, getTestServer} from "../utils/utils";
 import {registerRoutesGroup} from "../../src/server";
-import {expect} from "chai";
 import {HttpClient} from "../../src";
 
 describe("debug", function () {

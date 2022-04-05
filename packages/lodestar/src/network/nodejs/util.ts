@@ -4,10 +4,10 @@
 
 import PeerId from "peer-id";
 import LibP2p from "libp2p";
+import {ENR} from "@chainsafe/discv5";
 import {NodejsNode} from "./bundle";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
-import {ENR} from "@chainsafe/discv5";
 import {Eth2PeerDataStore} from "../peers/datastore";
 
 export type NodeJsLibp2pOpts = {

@@ -1,5 +1,5 @@
-import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 import {itBench} from "@dapplion/benchmark";
+import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 import {processSyncCommitteeUpdates} from "../../../../src/altair";
 import {StateAltair} from "../../types";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";

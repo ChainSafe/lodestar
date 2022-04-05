@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
+import {mutateInactivityScores} from "./util";
 import {altair} from "../../../../src";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
 import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util";
 import {StateAltairEpoch} from "../../types";
-import {mutateInactivityScores} from "./util";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
 

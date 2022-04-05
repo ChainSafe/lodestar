@@ -1,11 +1,11 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
+import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {validateGossipAttestation} from "../../../../src/chain/validation";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {memoOnce} from "../../../utils/cache";
 import {getAttestationValidData, AttestationValidDataOpts} from "../../../utils/validationData/attestation";
 

@@ -1,19 +1,19 @@
+import PeerId from "peer-id";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {PendingBlock, PendingBlockStatus} from "./interface";
+import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
+import {SyncOptions} from "./options";
 import {INetwork, NetworkEvent, PeerAction} from "../network";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
 import {shuffle} from "../util/shuffle";
 import {byteArrayEquals} from "../util/bytes";
-import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
-import {PendingBlock, PendingBlockStatus} from "./interface";
-import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
-import {SyncOptions} from "./options";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;

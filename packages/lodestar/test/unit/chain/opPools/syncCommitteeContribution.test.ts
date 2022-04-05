@@ -1,10 +1,10 @@
+import {expect} from "chai";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {newFilledArray} from "@chainsafe/lodestar-beacon-state-transition";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {BitArray} from "@chainsafe/ssz";
 import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
-import {expect} from "chai";
 import {
   aggregate,
   replaceIfBetter,

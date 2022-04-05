@@ -1,14 +1,14 @@
 import {join} from "node:path";
+import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
-import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
-import {expect} from "chai";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

@@ -1,9 +1,9 @@
+import {expect} from "chai";
 import {preset as mainnetParams} from "../../src/presets/mainnet";
 import {preset as minimalParams} from "../../src/presets/minimal";
 import {ACTIVE_PRESET, PresetName} from "../../src";
 import {setActivePreset} from "../../src/setPreset";
 import {setActivePreset as setActivePresetLib} from "../../setPreset";
-import {expect} from "chai";
 
 describe("active preset", () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires

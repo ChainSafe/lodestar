@@ -1,9 +1,9 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
-import {CachedBeaconStateBellatrix, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {processProposerSlashing} from "./processProposerSlashing";
 import {processAttesterSlashing} from "./processAttesterSlashing";
+import {CachedBeaconStateBellatrix, CachedBeaconStateAltair, CachedBeaconStateAllForks} from "../../types";
 import {processAttestations} from "../../altair/block/processAttestation";
 import {processDeposit} from "../../altair/block/processDeposit";
 import {processVoluntaryExit} from "../../altair/block/processVoluntaryExit";

@@ -13,14 +13,14 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 
+import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
+import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
 import {computeDeltas} from "../protoArray/computeDeltas";
 import {HEX_ZERO_HASH, IVoteTracker, IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
-import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
-import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
 

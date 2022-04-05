@@ -1,15 +1,15 @@
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
+import {fromHexString} from "@chainsafe/ssz";
+import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {getDevBeaconNode} from "../../utils/node/beacon";
 import {waitForEvent} from "../../utils/events/resolver";
-import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {getAndInitDevValidators} from "../../utils/node/validator";
 import {ChainEvent} from "../../../src/chain";
 import {Network, NetworkEvent} from "../../../src/network";
 import {connect} from "../../utils/network";
 import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {fromHexString} from "@chainsafe/ssz";
-import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors";
 
 describe("sync / unknown block sync", function () {

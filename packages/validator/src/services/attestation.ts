@@ -3,14 +3,14 @@ import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, IClock, ILoggerVc} from "../util";
+import {toHexString} from "@chainsafe/ssz";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";
 import {IndicesService} from "./indices";
-import {toHexString} from "@chainsafe/ssz";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
+import {extendError, IClock, ILoggerVc} from "../util";
 import {PubkeyHex} from "../types";
 
 /**

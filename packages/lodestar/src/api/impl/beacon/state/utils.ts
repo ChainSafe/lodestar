@@ -14,11 +14,11 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
+import {sleep, assert} from "@chainsafe/lodestar-utils";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
 import {ApiError, ValidationError} from "../../errors";
-import {sleep, assert} from "@chainsafe/lodestar-utils";
 
 type ResolveStateIdOpts = {
   /**

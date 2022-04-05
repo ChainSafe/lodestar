@@ -1,5 +1,5 @@
-import {toHexString} from "@chainsafe/ssz";
 import crypto from "node:crypto";
+import {toHexString} from "@chainsafe/ssz";
 import {testRunnerMemory} from "./testRunnerMemory";
 
 // Results in Linux Dec 2021

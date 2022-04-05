@@ -1,12 +1,12 @@
 import {allForks, altair} from "@chainsafe/lodestar-types";
-import {computeEpochAtSlot, ISignatureSet} from "../../util";
-import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
 import {getProposerSlashingsSignatureSets} from "./proposerSlashings";
 import {getAttesterSlashingsSignatureSets} from "./attesterSlashings";
 import {getAttestationsSignatureSets} from "./indexedAttestation";
 import {getProposerSignatureSet} from "./proposer";
 import {getRandaoRevealSignatureSet} from "./randao";
 import {getVoluntaryExitsSignatureSets} from "./voluntaryExits";
+import {CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../types";
+import {computeEpochAtSlot, ISignatureSet} from "../../util";
 import {getSyncCommitteeSignatureSet} from "../../altair/block/processSyncCommittee";
 
 export * from "./attesterSlashings";

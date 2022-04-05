@@ -1,11 +1,11 @@
-import {BeaconDb} from "../../../../../../src/db";
+import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {generateSignedBlock} from "../../../../../utils/block";
-import {testLogger} from "../../../../../utils/logger";
 import {fromHexString} from "@chainsafe/ssz";
 import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
-import {expect} from "chai";
+import {BeaconDb} from "../../../../../../src/db";
+import {generateSignedBlock} from "../../../../../utils/block";
+import {testLogger} from "../../../../../utils/logger";
 import {BlockArchiveBatchPutBinaryItem} from "../../../../../../src/db/repositories";
 
 describe("BlockArchiveRepository", function () {

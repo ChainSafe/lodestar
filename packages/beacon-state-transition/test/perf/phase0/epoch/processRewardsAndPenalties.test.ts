@@ -1,8 +1,8 @@
 import {itBench} from "@dapplion/benchmark";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util";
 import {phase0} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 import {StatePhase0Epoch} from "../../types";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "./util";
 
 // - On normal mainnet conditions
 //   - prevSourceAttester: 98%

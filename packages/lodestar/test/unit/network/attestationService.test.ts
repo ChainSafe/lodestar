@@ -1,3 +1,5 @@
+import sinon, {SinonStubbedInstance} from "sinon";
+import {expect} from "chai";
 import {
   ATTESTATION_SUBNET_COUNT,
   EPOCHS_PER_RANDOM_SUBNET_SUBSCRIPTION,
@@ -9,11 +11,9 @@ import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-st
 // eslint-disable-next-line no-restricted-imports
 import * as mathUtils from "@chainsafe/lodestar-utils/lib/math";
 import * as shuffleUtils from "../../../src/util/shuffle";
-import sinon, {SinonStubbedInstance} from "sinon";
 import {MockBeaconChain} from "../../utils/mocks/chain/chain";
 import {generateState} from "../../utils/state";
 import {testLogger} from "../../utils/logger";
-import {expect} from "chai";
 import {SinonStubFn} from "../../utils/types";
 import {MetadataController} from "../../../src/network/metadata";
 import {Eth2Gossipsub, GossipType} from "../../../src/network/gossip";

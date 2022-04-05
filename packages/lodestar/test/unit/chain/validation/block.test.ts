@@ -1,6 +1,8 @@
 import sinon, {SinonStubbedInstance} from "sinon";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkChoice, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
+import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {ForkName} from "@chainsafe/lodestar-params";
 import {BeaconChain, IBeaconChain} from "../../../../src/chain";
 import {LocalClock} from "../../../../src/chain/clock";
 import {StateRegenerator} from "../../../../src/chain/regen";
@@ -10,9 +12,7 @@ import {BlockErrorCode} from "../../../../src/chain/errors";
 import {SinonStubFn} from "../../../utils/types";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {SeenBlockProposers} from "../../../../src/chain/seenCache";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {EMPTY_SIGNATURE, ZERO_HASH} from "../../../../src/constants";
-import {ForkName} from "@chainsafe/lodestar-params";
 
 describe("gossip block validation", function () {
   let chain: SinonStubbedInstance<IBeaconChain>;

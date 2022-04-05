@@ -1,10 +1,10 @@
 import {SinonStubbedInstance} from "sinon";
-import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
-import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
 import {expect, use} from "chai";
-import {toHexString} from "@chainsafe/ssz";
-import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block";
 import chaiAsPromised from "chai-as-promised";
+import {ForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {toHexString} from "@chainsafe/ssz";
+import {resolveBlockId} from "../../../../../../src/api/impl/beacon/blocks/utils";
+import {generateEmptySignedBlock, generateProtoBlock} from "../../../../../utils/block";
 import {StubbedBeaconDb} from "../../../../../utils/stub";
 import {GENESIS_SLOT} from "../../../../../../src/constants";
 import {bufferEqualsMatcher} from "../../../../../utils/sinon/matcher";

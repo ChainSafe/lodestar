@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import got from "got";
 import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {getClient} from "@chainsafe/lodestar-api";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
@@ -7,8 +9,6 @@ import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import fs from "node:fs";
-import got from "got";
 import * as mainnet from "./mainnet";
 import * as prater from "./prater";
 import * as kiln from "./kiln";

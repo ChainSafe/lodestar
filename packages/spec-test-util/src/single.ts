@@ -1,6 +1,6 @@
-import {expect} from "chai";
 import fs from "node:fs";
 import {basename, join, parse} from "node:path";
+import {expect} from "chai";
 import {uncompress} from "snappyjs";
 import {loadYaml} from "@chainsafe/lodestar-utils";
 

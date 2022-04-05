@@ -1,11 +1,11 @@
+import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
+import {IAccountValidatorArgs} from "./options";
 import {getAccountPaths} from "../../paths";
 import {WalletManager} from "../../../../wallet";
 import {ValidatorDirBuilder} from "../../../../validatorDir";
 import {getBeaconConfigFromArgs} from "../../../../config";
 import {ICliCommand, YargsError, readPassphraseFile, add0xPrefix, initBLS, ICliCommandOptions} from "../../../../util";
-import {IAccountValidatorArgs} from "./options";
 import {IGlobalArgs} from "../../../../options";
-import {MAX_EFFECTIVE_BALANCE} from "@chainsafe/lodestar-params";
 
 export interface IValidatorCreateArgs {
   name: string;

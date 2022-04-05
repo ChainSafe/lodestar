@@ -1,7 +1,7 @@
-import {defaultOptions} from "@chainsafe/lodestar";
-import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
+import {expect} from "chai";
+import {defaultOptions} from "@chainsafe/lodestar";
 import {getBeaconPaths} from "../../../src/cmds/beacon/paths";
 import {BeaconNodeOptions, mergeBeaconNodeOptions} from "../../../src/config";
 import {enrsToNetworkConfig, parseBootnodesFile} from "../../../src/networks";

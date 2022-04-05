@@ -3,25 +3,19 @@
  */
 import {Connection} from "libp2p";
 import {HandlerProps} from "libp2p/src/registrar";
+import LibP2p from "libp2p";
+import PeerId from "peer-id";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {AbortController} from "@chainsafe/abort-controller";
-import LibP2p from "libp2p";
-import PeerId from "peer-id";
-import {RespStatus, timeoutOptions} from "../../constants";
 import {IReqResp, IReqRespModules, IRateLimiter, Libp2pStream} from "./interface";
 import {sendRequest} from "./request";
 import {handleRequest, ResponseError} from "./response";
 import {onOutgoingReqRespError} from "./score";
-import {IPeerRpcScoreStore} from "../peers";
 import {assertSequentialBlocksInRange, formatProtocolId} from "./utils";
-import {MetadataController} from "../metadata";
-import {INetworkEventBus, NetworkEvent} from "../events";
-import {PeersData} from "../peers/peersData";
 import {ReqRespHandlers} from "./handlers";
-import {IMetrics} from "../../metrics";
 import {RequestError, RequestErrorCode} from "./request";
 import {
   Method,
@@ -35,6 +29,12 @@ import {
   IncomingResponseBody,
 } from "./types";
 import {InboundRateLimiter, RateLimiterOpts} from "./response/rateLimiter";
+import {IPeerRpcScoreStore} from "../peers";
+import {MetadataController} from "../metadata";
+import {INetworkEventBus, NetworkEvent} from "../events";
+import {PeersData} from "../peers/peersData";
+import {IMetrics} from "../../metrics";
+import {RespStatus, timeoutOptions} from "../../constants";
 
 export type IReqRespOptions = Partial<typeof timeoutOptions>;
 

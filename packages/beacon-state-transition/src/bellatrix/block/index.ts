@@ -1,14 +1,14 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateBellatrix} from "../../types";
-import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
-import {processSyncAggregate} from "../../altair/block/processSyncCommittee";
 import {processExecutionPayload} from "./processExecutionPayload";
-import {ExecutionEngine} from "../executionEngine";
-import {isExecutionEnabled} from "../utils";
 import {processAttesterSlashing} from "./processAttesterSlashing";
 import {processProposerSlashing} from "./processProposerSlashing";
+import {CachedBeaconStateBellatrix} from "../../types";
+import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
+import {processSyncAggregate} from "../../altair/block/processSyncCommittee";
+import {ExecutionEngine} from "../executionEngine";
+import {isExecutionEnabled} from "../utils";
 
 export {processOperations, processAttesterSlashing, processProposerSlashing};
 

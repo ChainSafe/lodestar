@@ -11,6 +11,16 @@ import {
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
 import {LodestarError} from "@chainsafe/lodestar-utils";
+import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
+import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
+import {BeaconStateAllForks, BeaconStateAltair} from "./types";
+import {
+  computeSyncCommitteeCache,
+  getSyncCommitteeCache,
+  SyncCommitteeCache,
+  SyncCommitteeCacheEmpty,
+} from "./syncCommitteeCache";
+import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
 import {
   computeActivationExitEpoch,
   computeEpochAtSlot,
@@ -21,16 +31,6 @@ import {
   computeProposers,
   computeSyncPeriodAtEpoch,
 } from "../util";
-import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
-import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
-import {Index2PubkeyCache, PubkeyIndexMap, syncPubkeys} from "./pubkeyCache";
-import {BeaconStateAllForks, BeaconStateAltair} from "./types";
-import {
-  computeSyncCommitteeCache,
-  getSyncCommitteeCache,
-  SyncCommitteeCache,
-  SyncCommitteeCacheEmpty,
-} from "./syncCommitteeCache";
 import {computeBaseRewardPerIncrement, computeSyncParticipantReward} from "../util/syncCommittee";
 
 /** `= PROPOSER_WEIGHT / (WEIGHT_DENOMINATOR - PROPOSER_WEIGHT)` */

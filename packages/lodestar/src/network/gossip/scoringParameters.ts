@@ -1,13 +1,13 @@
+import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
+import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {computeCommitteeCount} from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {ATTESTATION_SUBNET_COUNT, SLOTS_PER_EPOCH, TARGET_AGGREGATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
-import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
-import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
-import {Eth2Context} from "../../chain";
-import {getActiveForks} from "../forks";
 import {Eth2GossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
 import {stringifyGossipTopic} from "./topic";
+import {Eth2Context} from "../../chain";
+import {getActiveForks} from "../forks";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

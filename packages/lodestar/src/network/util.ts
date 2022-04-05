@@ -3,9 +3,9 @@
  * @module network
  */
 
+import {networkInterfaces} from "node:os";
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
-import {networkInterfaces} from "node:os";
 import {ENR} from "@chainsafe/discv5";
 
 // peers

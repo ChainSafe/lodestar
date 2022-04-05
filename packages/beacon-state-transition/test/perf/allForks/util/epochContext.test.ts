@@ -1,5 +1,5 @@
-import {Epoch} from "@chainsafe/lodestar-types";
 import {itBench} from "@dapplion/benchmark";
+import {Epoch} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot, CachedBeaconStateAllForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 

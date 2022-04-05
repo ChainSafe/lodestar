@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import {expect} from "chai";
+import {config} from "@chainsafe/lodestar-config/default";
 import {getBeaconApi} from "../../../../../src/api/impl/beacon";
 import {StubbedBeaconDb} from "../../../../utils/stub";
-import {config} from "@chainsafe/lodestar-config/default";
-import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../index.test";
 import {testLogger} from "../../../../utils/logger";
 

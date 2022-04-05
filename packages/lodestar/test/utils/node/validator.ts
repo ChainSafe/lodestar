@@ -1,6 +1,6 @@
-import tmp, {DirResult, FileResult} from "tmp";
 import fs from "node:fs";
 import path from "node:path";
+import tmp, {DirResult, FileResult} from "tmp";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {
@@ -11,13 +11,13 @@ import {
   ISlashingProtection,
   SignerLocal,
 } from "@chainsafe/lodestar-validator";
-import {BeaconNode} from "../../../src/node";
-import {testLogger, TestLoggerOpts} from "../logger";
 import {SecretKey} from "@chainsafe/bls";
 import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
 import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
 import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
+import {testLogger, TestLoggerOpts} from "../logger";
+import {BeaconNode} from "../../../src/node";
 
 export async function getAndInitValidatorsWithKeystore({
   node,

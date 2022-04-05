@@ -1,6 +1,6 @@
-import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
+import {expect} from "chai";
 import {SPEC_TEST_LOCATION} from "./specTestVersioning";
 
 // TEMP TEMP

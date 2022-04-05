@@ -1,11 +1,11 @@
 import fs from "node:fs";
+import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconNodeOptions, getBeaconConfigFromArgs, initPeerId, initEnr, readPeerId, readEnr} from "../../config";
 import {IGlobalArgs, parseBeaconNodeArgs} from "../../options";
 import {mkdir} from "../../util";
 import {fetchBootnodes} from "../../networks";
 import {getBeaconPaths} from "../beacon/paths";
 import {IBeaconArgs} from "../beacon/options";
-import {IChainForkConfig} from "@chainsafe/lodestar-config";
 
 export type ReturnType = {
   beaconNodeOptions: BeaconNodeOptions;

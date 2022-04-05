@@ -1,6 +1,6 @@
-import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
+import {expect} from "chai";
 import findUp from "find-up";
 import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath";
 

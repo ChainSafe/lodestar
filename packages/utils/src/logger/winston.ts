@@ -2,11 +2,11 @@
  * @module logger
  */
 
-import {createLogger, Logger} from "winston";
-import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface";
-import chalk from "chalk";
-import {getFormat} from "./format";
 import {Writable} from "node:stream";
+import {createLogger, Logger} from "winston";
+import chalk from "chalk";
+import {defaultLogLevel, ILogger, ILoggerOptions, LogLevel, logLevelNum} from "./interface";
+import {getFormat} from "./format";
 import {TransportOpts, TransportType, fromTransportOpts} from "./transport";
 import {LogData} from "./json";
 

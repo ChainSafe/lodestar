@@ -6,14 +6,14 @@ import {BeaconNode, BeaconDb, createNodeJsLibp2p} from "@chainsafe/lodestar";
 import {createDbMetrics} from "@chainsafe/lodestar/lib/metrics";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {ACTIVE_PRESET, PresetName} from "@chainsafe/lodestar-params";
+import {IBeaconArgs} from "./options";
+import {getBeaconPaths} from "./paths";
+import {initBeaconState} from "./initBeaconState";
 import {IGlobalArgs} from "../../options";
 import {parseEnrArgs} from "../../options/enrOptions";
 import {initBLS, onGracefulShutdown, getCliLogger} from "../../util";
 import {FileENR, overwriteEnrWithCliArgs, readPeerId} from "../../config";
 import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handler";
-import {IBeaconArgs} from "./options";
-import {getBeaconPaths} from "./paths";
-import {initBeaconState} from "./initBeaconState";
 import {getVersion, getVersionGitData} from "../../util/version";
 import {deleteOldPeerstorePreV036} from "../../migrations";
 

@@ -1,7 +1,7 @@
-import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 import PeerId from "peer-id";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {WinstonLogger} from "@chainsafe/lodestar-utils";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "../../../../../src/network";
 import {defaultNetworkOptions} from "../../../../../src/network/options";
 import {InboundRateLimiter} from "../../../../../src/network/reqresp/response/rateLimiter";

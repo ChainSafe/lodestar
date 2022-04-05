@@ -5,11 +5,11 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {ssz} from "@chainsafe/lodestar-types";
 import {Type} from "@chainsafe/ssz";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
+import {getConfig} from "./util";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
 import {IBaseSpecTest} from "../type";
-import {getConfig} from "./util";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

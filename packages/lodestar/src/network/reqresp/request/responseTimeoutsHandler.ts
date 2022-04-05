@@ -1,9 +1,9 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import pipe from "it-pipe";
+import {AbortController} from "@chainsafe/abort-controller";
+import {RequestErrorCode, RequestInternalError} from "./errors";
 import {timeoutOptions} from "../../../constants";
 import {abortableSource} from "../../../util/abortableSource";
 import {onChunk} from "../utils";
-import {RequestErrorCode, RequestInternalError} from "./errors";
 
 /** Returns the maximum total timeout possible for a response. See @responseTimeoutsHandler */
 export function maxTotalResponseTimeout(maxResponses = 1, options?: Partial<typeof timeoutOptions>): number {

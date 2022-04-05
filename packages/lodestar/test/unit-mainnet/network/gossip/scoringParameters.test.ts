@@ -1,11 +1,11 @@
+import {expect} from "chai";
+import {TopicScoreParams} from "libp2p-gossipsub/src/score";
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
 import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
-import {expect} from "chai";
 import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
 import {GossipType} from "../../../../src/network";
-import {TopicScoreParams} from "libp2p-gossipsub/src/score";
 import {ZERO_HASH} from "../../../../src/constants";
 
 /**

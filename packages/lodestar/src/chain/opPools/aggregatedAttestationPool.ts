@@ -15,9 +15,9 @@ import {
   phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
+import {MapDef} from "../../util/map";
 
 type DataRootHex = string;
 

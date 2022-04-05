@@ -2,9 +2,9 @@ import {join} from "node:path";
 import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import {ACTIVE_PRESET} from "@chainsafe/lodestar-params";
+import {bnToNum, fromHex} from "@chainsafe/lodestar-utils";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
-import {bnToNum, fromHex} from "@chainsafe/lodestar-utils";
 
 describeDirectorySpecTest<IShufflingTestCase, number[]>(
   `${ACTIVE_PRESET}/phase0/shuffling/`,

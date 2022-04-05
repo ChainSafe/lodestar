@@ -1,8 +1,8 @@
+import {expect} from "chai";
 import {AbortController} from "@chainsafe/abort-controller";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {IEth1Provider} from "../../../src";
 import {ZERO_HASH} from "../../../src/constants";
 import {Eth1MergeBlockTracker, StatusCode, toPowBlock} from "../../../src/eth1/eth1MergeBlockTracker";

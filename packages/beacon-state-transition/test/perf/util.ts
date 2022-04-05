@@ -4,26 +4,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
 import {BitArray, fromHexString} from "@chainsafe/ssz";
-import {
-  allForks,
-  interopSecretKey,
-  computeEpochAtSlot,
-  getActiveValidatorIndices,
-  PubkeyIndexMap,
-  newFilledArray,
-  createCachedBeaconState,
-  computeCommitteeCount,
-} from "../../src";
 import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {
-  CachedBeaconStateAllForks,
-  CachedBeaconStatePhase0,
-  CachedBeaconStateAltair,
-  BeaconStatePhase0,
-  BeaconStateAltair,
-} from "../../src/types";
-import {profilerLogger} from "../utils/logger";
-import {interopPubkeysCached} from "../utils/interop";
 import {
   EPOCHS_PER_ETH1_VOTING_PERIOD,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -35,6 +16,25 @@ import {
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {getClient} from "@chainsafe/lodestar-api";
 import {getInfuraBeaconUrl} from "./infura";
+import {interopPubkeysCached} from "../utils/interop";
+import {profilerLogger} from "../utils/logger";
+import {
+  CachedBeaconStateAllForks,
+  CachedBeaconStatePhase0,
+  CachedBeaconStateAltair,
+  BeaconStatePhase0,
+  BeaconStateAltair,
+} from "../../src/types";
+import {
+  allForks,
+  interopSecretKey,
+  computeEpochAtSlot,
+  getActiveValidatorIndices,
+  PubkeyIndexMap,
+  newFilledArray,
+  createCachedBeaconState,
+  computeCommitteeCount,
+} from "../../src";
 import {testCachePath} from "../cache";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee";
 import {createCachedBeaconStateTest} from "../utils/state";

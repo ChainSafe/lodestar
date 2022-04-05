@@ -1,19 +1,19 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {IChainConfig} from "@chainsafe/lodestar-config";
+import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
+import {logFilesDir} from "./params";
 import {getDevBeaconNode} from "../utils/node/beacon";
 import {waitForEvent} from "../utils/events/resolver";
 import {getAndInitDevValidators} from "../utils/node/validator";
 import {ChainEvent} from "../../src/chain";
 import {RestApiOptions} from "../../src/api/rest";
 import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
-import {logFilesDir} from "./params";
 import {simTestInfoTracker} from "../utils/node/simTest";
-import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
-import {IChainConfig} from "@chainsafe/lodestar-config";
 import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
-import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

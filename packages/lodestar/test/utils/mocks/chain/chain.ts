@@ -1,5 +1,5 @@
-import {AbortController} from "@chainsafe/abort-controller";
 import sinon from "sinon";
+import {AbortController} from "@chainsafe/abort-controller";
 
 import {toHexString} from "@chainsafe/ssz";
 import {allForks, UintNum64, Root, Slot, ssz, Uint16, UintBn64} from "@chainsafe/lodestar-types";
@@ -8,6 +8,7 @@ import {BeaconStateAllForks, CachedBeaconStateAllForks} from "@chainsafe/lodesta
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {CheckpointWithHex, IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 
+import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
 import {ChainEventEmitter, IBeaconChain} from "../../../../src/chain";
 import {IBeaconClock} from "../../../../src/chain/clock/interface";
 import {generateEmptySignedBlock} from "../../block";
@@ -36,7 +37,6 @@ import {ExecutionEngineDisabled} from "../../../../src/executionEngine";
 import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 import {testLogger} from "../../logger";
 import {ReprocessController} from "../../../../src/chain/reprocess";
-import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 

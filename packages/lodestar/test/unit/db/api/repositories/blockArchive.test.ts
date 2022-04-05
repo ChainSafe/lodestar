@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import rimraf from "rimraf";
+import sinon from "sinon";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {intToBytes} from "@chainsafe/lodestar-utils";
@@ -7,7 +8,6 @@ import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 
 import {generateEmptySignedBlock} from "../../../../utils/block";
 import {BlockArchiveRepository} from "../../../../../src/db/repositories";
-import sinon from "sinon";
 import {testLogger} from "../../../../utils/logger";
 
 describe("block archive repository", function () {

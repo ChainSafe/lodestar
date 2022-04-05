@@ -1,7 +1,7 @@
-import chaiAsPromised from "chai-as-promised";
-import chai, {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
+import chaiAsPromised from "chai-as-promised";
+import chai, {expect} from "chai";
 import tmp from "tmp";
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {KeymanagerApi, KeymanagerServer} from "@chainsafe/lodestar-keymanager-server";
