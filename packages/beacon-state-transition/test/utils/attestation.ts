@@ -1,5 +1,5 @@
-import {BitArray} from "@chainsafe/ssz";
 import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
+import {BitArray} from "@chainsafe/ssz";
 
 /**
  * Generates a fake attestation data for test purposes.

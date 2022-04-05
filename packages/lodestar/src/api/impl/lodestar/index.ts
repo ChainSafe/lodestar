@@ -2,6 +2,7 @@ import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
 import {
+  computeEndSlotForEpoch,
   computeStartSlotAtEpoch,
   getLatestWeakSubjectivityCheckpointEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
@@ -10,7 +11,6 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types/src";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
-import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconChain, IBeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
