@@ -7171,9 +7171,10 @@ libp2p-crypto@^0.21.2:
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-libp2p-gossipsub@tuyennhv/js-libp2p-gossipsub#a9f7839295c12bd8a2a8d6003a19382783a147ba:
-  version "0.13.1"
-  resolved "https://codeload.github.com/tuyennhv/js-libp2p-gossipsub/tar.gz/a9f7839295c12bd8a2a8d6003a19382783a147ba"
+libp2p-gossipsub@^0.14.0:
+  version "0.14.0"
+  resolved "https://registry.yarnpkg.com/libp2p-gossipsub/-/libp2p-gossipsub-0.14.0.tgz#a05ce2a41b3aa6640f723f0d0363ad2808d56946"
+  integrity sha512-70YnK/zwYbAx2xx7CqPROje37AVLAu8OUgWJ3cSMN6AmCVvUMepebXbQvfnDg2+uLkNnnr1huaqHsceN2BYnkQ==
   dependencies:
     "@types/debug" "^4.1.7"
     debug "^4.3.1"
