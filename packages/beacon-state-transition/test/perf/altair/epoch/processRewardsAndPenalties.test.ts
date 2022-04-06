@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {altair} from "../../../../src";
+import {altair} from "../../../../src/index.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util";
-import {StateAltairEpoch} from "../../types";
-import {mutateInactivityScores} from "./util";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util.js";
+import {StateAltairEpoch} from "../../types.js";
+import {mutateInactivityScores} from "./util.js";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set
 

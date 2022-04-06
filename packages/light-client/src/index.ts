@@ -7,21 +7,21 @@ import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/l
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
-import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock";
-import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
-import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
-import {pruneSetToMax} from "./utils/map";
-import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
-import {SyncCommitteeFast} from "./types";
-import {chunkifyInclusiveRange} from "./utils/chunkify";
-import {LightclientEmitter, LightclientEvent} from "./events";
-import {assertValidSignedHeader, assertValidLightClientUpdate, activeHeader} from "./validation";
-import {GenesisData} from "./networks";
-import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
-import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
+import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock.js";
+import {isBetterUpdate, LightclientUpdateStats} from "./utils/update.js";
+import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils.js";
+import {pruneSetToMax} from "./utils/map.js";
+import {isValidMerkleBranch} from "./utils/verifyMerkleBranch.js";
+import {SyncCommitteeFast} from "./types.js";
+import {chunkifyInclusiveRange} from "./utils/chunkify.js";
+import {LightclientEmitter, LightclientEvent} from "./events.js";
+import {assertValidSignedHeader, assertValidLightClientUpdate, activeHeader} from "./validation.js";
+import {GenesisData} from "./networks.js";
+import {getLcLoggerConsole, ILcLogger} from "./utils/logger.js";
+import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock.js";
 
 // Re-export event types
-export {LightclientEvent} from "./events";
+export {LightclientEvent} from "./events.js";
 
 export type LightclientInitArgs = {
   config: IChainForkConfig;

@@ -1,11 +1,11 @@
 import {altair} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateAltair} from "../../types";
-import {processProposerSlashing} from "./processProposerSlashing";
-import {processAttesterSlashing} from "./processAttesterSlashing";
-import {processAttestations} from "./processAttestation";
-import {processDeposit} from "./processDeposit";
-import {processVoluntaryExit} from "./processVoluntaryExit";
+import {CachedBeaconStateAltair} from "../../types.js";
+import {processProposerSlashing} from "./processProposerSlashing.js";
+import {processAttesterSlashing} from "./processAttesterSlashing.js";
+import {processAttestations} from "./processAttestation.js";
+import {processDeposit} from "./processDeposit.js";
+import {processVoluntaryExit} from "./processVoluntaryExit.js";
 import {MAX_DEPOSITS} from "@chainsafe/lodestar-params";
 
 export function processOperations(

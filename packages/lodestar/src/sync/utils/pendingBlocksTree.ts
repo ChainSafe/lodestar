@@ -1,6 +1,6 @@
 import {RootHex} from "@chainsafe/lodestar-types";
-import {MapDef} from "../../util/map";
-import {PendingBlock, PendingBlockStatus} from "../interface";
+import {MapDef} from "../../util/map.js";
+import {PendingBlock, PendingBlockStatus} from "../interface.js";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent

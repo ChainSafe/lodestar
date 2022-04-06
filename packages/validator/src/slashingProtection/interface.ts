@@ -1,6 +1,6 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {Interchange, InterchangeFormatVersion} from "./interchange/types";
-import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types";
+import {Interchange, InterchangeFormatVersion} from "./interchange/types.js";
+import {SlashingProtectionBlock, SlashingProtectionAttestation} from "./types.js";
 
 export interface ISlashingProtection {
   /**

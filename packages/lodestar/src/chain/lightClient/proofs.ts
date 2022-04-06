@@ -1,7 +1,7 @@
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_GINDEX} from "@chainsafe/lodestar-params";
 import {Tree} from "@chainsafe/persistent-merkle-tree";
-import {SyncCommitteeWitness} from "./types";
+import {SyncCommitteeWitness} from "./types.js";
 
 export function getSyncCommitteesWitness(state: BeaconStateAllForks): SyncCommitteeWitness {
   state.commit();

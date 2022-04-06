@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import {ACTIVE_PRESET, EFFECTIVE_BALANCE_INCREMENT, PresetName} from "@chainsafe/lodestar-params";
-import {beforeProcessEpoch} from "../../src";
+import {beforeProcessEpoch} from "../../src/index.js";
 import {generatePerfTestCachedStateAltair, generatePerfTestCachedStatePhase0, perfStateId} from "./util";
 
 describe("Perf test sanity check", function () {

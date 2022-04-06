@@ -3,7 +3,16 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Bytes32, UintNum64, phase0, ssz} from "@chainsafe/lodestar-types";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {ByteVectorType, ContainerType} from "@chainsafe/ssz";
-import {ArrayOf, ContainerData, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType} from "../utils";
+import {
+  ArrayOf,
+  ContainerData,
+  ReqEmpty,
+  reqEmpty,
+  ReturnTypes,
+  ReqSerializers,
+  RoutesData,
+  sameType,
+} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

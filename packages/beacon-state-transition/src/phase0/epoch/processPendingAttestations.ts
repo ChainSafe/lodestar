@@ -1,7 +1,7 @@
 import {Epoch, phase0} from "@chainsafe/lodestar-types";
 import {byteArrayEquals} from "@chainsafe/ssz";
-import {CachedBeaconStatePhase0} from "../../types";
-import {computeStartSlotAtEpoch, getBlockRootAtSlot, IAttesterStatus} from "../../util";
+import {CachedBeaconStatePhase0} from "../../types.js";
+import {computeStartSlotAtEpoch, getBlockRootAtSlot, IAttesterStatus} from "../../util/index.js";
 
 /**
  * Mutates `statuses` from all pending attestations.

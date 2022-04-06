@@ -1,8 +1,8 @@
 import deepmerge from "deepmerge";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject, RecursivePartial} from "@chainsafe/lodestar-utils";
-import {writeFile, readFile} from "../util";
-import {getInjectableBootEnrs, getNetworkBeaconNodeOptions, NetworkName} from "../networks";
+import {writeFile, readFile} from "../util/index.js";
+import {getInjectableBootEnrs, getNetworkBeaconNodeOptions, NetworkName} from "../networks/index.js";
 
 export class BeaconNodeOptions {
   private beaconNodeOptions: RecursivePartial<IBeaconNodeOptions>;

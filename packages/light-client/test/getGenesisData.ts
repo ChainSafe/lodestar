@@ -1,7 +1,7 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {getInfuraBeaconUrl} from "@chainsafe/lodestar-beacon-state-transition/test/perf/infura";
-import {NetworkName} from "@chainsafe/lodestar-config/networks";
+import {NetworkName} from "@chainsafe/lodestar-config/networks.js";
 
 // To populate packages/light-client/src/networks.ts
 //

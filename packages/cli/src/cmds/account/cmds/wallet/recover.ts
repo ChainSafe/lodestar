@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
-import {ICliCommand, initBLS} from "../../../../util";
-import {IGlobalArgs} from "../../../../options";
+import {ICliCommand} from "../../../../util/index.js";
+import {IGlobalArgs} from "../../../../options/index.js";
 import inquirer from "inquirer";
-import {createWalletFromArgsAndMnemonic} from "./utils";
-import {IWalletCreateArgs, walletCreateOptions} from "./create";
+import {createWalletFromArgsAndMnemonic} from "./utils.js";
+import {IWalletCreateArgs, walletCreateOptions} from "./create.js";
 
 /* eslint-disable no-console */
 
@@ -34,8 +34,6 @@ export const recover: ICliCommand<IWalletRecoverArgs, IGlobalArgs, ReturnType> =
   },
 
   handler: async (args) => {
-    await initBLS();
-
     const {mnemonicInputPath} = args;
     let mnemonic;
 

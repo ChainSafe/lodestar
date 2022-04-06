@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {Genesis} from "@chainsafe/lodestar-types/phase0";
+import {Genesis} from "@chainsafe/lodestar-types/phase0.js";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
 

@@ -1,7 +1,7 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Bucket, Db, IDbMetrics, Repository} from "@chainsafe/lodestar-db";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {getSignedBlockTypeFromBytes} from "../../util/multifork";
+import {ssz} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 /**
  * Blocks by root
@@ -26,6 +26,6 @@ export class BlockRepository extends Repository<Uint8Array, allForks.SignedBeaco
   }
 
   decodeValue(data: Buffer): allForks.SignedBeaconBlock {
-    return getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
+    return allForks.getSignedBlockTypeFromBytes(this.config, data).deserialize(data);
   }
 }

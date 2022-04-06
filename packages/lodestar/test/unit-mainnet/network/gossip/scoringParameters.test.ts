@@ -1,12 +1,12 @@
 import {ATTESTATION_SUBNET_COUNT, ForkName, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {mainnetChainConfig} from "@chainsafe/lodestar-config/presets";
-import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters";
+import {computeGossipPeerScoreParams, gossipScoreThresholds} from "../../../../src/network/gossip/scoringParameters.js";
 import {expect} from "chai";
-import {stringifyGossipTopic} from "../../../../src/network/gossip/topic";
-import {GossipType} from "../../../../src/network";
-import {TopicScoreParams} from "libp2p-gossipsub/src/score";
-import {ZERO_HASH} from "../../../../src/constants";
+import {stringifyGossipTopic} from "../../../../src/network/gossip/topic.js";
+import {GossipType} from "../../../../src/network/index.js";
+import {TopicScoreParams} from "libp2p-gossipsub/src/score/index.js";
+import {ZERO_HASH} from "../../../../src/constants/index.js";
 
 /**
  * Refer to Teku tests at

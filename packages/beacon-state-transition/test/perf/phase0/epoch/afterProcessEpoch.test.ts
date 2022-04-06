@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch} from "../../../../src";
-import {StateEpoch} from "../../types";
+import {beforeProcessEpoch} from "../../../../src/index.js";
+import {StateEpoch} from "../../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
 // PERF: Cost = compute attester and proposer shufflings ~ 'proportional' to $VALIDATOR_COUNT, but independent of

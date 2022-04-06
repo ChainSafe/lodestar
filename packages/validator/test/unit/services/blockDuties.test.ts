@@ -5,11 +5,11 @@ import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
 import {Root} from "@chainsafe/lodestar-types";
 import {routes} from "@chainsafe/lodestar-api";
-import {BlockDutiesService} from "../../../src/services/blockDuties";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {loggerVc} from "../../utils/logger";
-import {ClockMock} from "../../utils/clock";
+import {BlockDutiesService} from "../../../src/services/blockDuties.js";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {loggerVc} from "../../utils/logger.js";
+import {ClockMock} from "../../utils/clock.js";
 
 type ProposerDutiesRes = {dependentRoot: Root; data: routes.validator.ProposerDuty[]};
 

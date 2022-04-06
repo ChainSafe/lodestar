@@ -5,9 +5,9 @@ import {
   CachedBeaconStatePhase0,
   CachedBeaconStateAllForks,
   EpochProcess,
-} from "../../../../src";
+} from "../../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
-import {StateEpoch} from "../../types";
+import {StateEpoch} from "../../types.js";
 
 // PERF: Cost 'proportional' to only validators that are slashed. For mainnet conditions:
 // - indicesToSlash: max len is 8704. But it's very unlikely since it would require all validators on the same

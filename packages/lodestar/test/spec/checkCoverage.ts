@@ -1,7 +1,10 @@
 import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
-import {SPEC_TEST_LOCATION} from "./specTestVersioning";
+import {SPEC_TEST_LOCATION} from "./specTestVersioning.js";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // TEMP TEMP
 const forksToIgnore = new Set<string>([]);

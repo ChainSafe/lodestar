@@ -1,4 +1,4 @@
-import {getLodestarCli} from "../../src/cli";
+import {getLodestarCli} from "../../src/cli.js";
 
 export function getLodestarCliTestRunner() {
   return async <T = any>(arg: string | readonly string[], context?: Record<string, unknown>): Promise<T> => {

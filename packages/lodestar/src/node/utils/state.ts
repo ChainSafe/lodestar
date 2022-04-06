@@ -1,10 +1,10 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {interopDeposits} from "./interop/deposits";
-import {getInteropState, InteropStateOpts} from "./interop/state";
-import {IBeaconDb} from "../../db";
-import {GENESIS_SLOT} from "../../constants";
+import {interopDeposits} from "./interop/deposits.js";
+import {getInteropState, InteropStateOpts} from "./interop/state.js";
+import {IBeaconDb} from "../../db/index.js";
+import {GENESIS_SLOT} from "../../constants/index.js";
 
 export async function initDevState(
   config: IChainForkConfig,

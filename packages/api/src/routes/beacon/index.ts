@@ -1,17 +1,17 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
-import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils";
-import * as block from "./block";
-import * as pool from "./pool";
-import * as state from "./state";
+import {RoutesData, ReturnTypes, reqEmpty, ContainerData} from "../../utils/index.js";
+import * as block from "./block.js";
+import * as pool from "./pool.js";
+import * as state from "./state.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
 // NOTE: We choose to split the block, pool, and state namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
 
-export {BlockId, BlockHeaderResponse} from "./block";
-export {AttestationFilters} from "./pool";
+export {BlockId, BlockHeaderResponse} from "./block.js";
+export {AttestationFilters} from "./pool.js";
 // TODO: Review if re-exporting all these types is necessary
 export {
   StateId,
@@ -24,7 +24,7 @@ export {
   ValidatorBalance,
   EpochCommitteeResponse,
   EpochSyncCommitteeResponse,
-} from "./state";
+} from "./state.js";
 
 export type Api = block.Api &
   pool.Api &

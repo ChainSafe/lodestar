@@ -1,5 +1,5 @@
 import {toHexString} from "@chainsafe/lodestar-utils";
-import {Method, RequestBodyByMethod, RequestBody} from "../types";
+import {Method, RequestBodyByMethod, RequestBody} from "../types.js";
 
 /**
  * Render requestBody as a succint string for debug purposes

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client";
+import {clientFromAgentVersion, ClientKind} from "../../../../src/network/peers/client.js";
 
 describe("clientFromAgentVersion", () => {
   const testCases: {name: string; agentVersion: string; client: ClientKind}[] = [

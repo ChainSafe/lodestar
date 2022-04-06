@@ -1,4 +1,4 @@
-import {RegistryMetricCreator} from "../utils/registryMetricCreator";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
 
 export type IBeaconMetrics = ReturnType<typeof createBeaconMetrics>;
 

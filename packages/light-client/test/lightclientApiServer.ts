@@ -7,7 +7,7 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {JsonPath} from "@chainsafe/ssz";
 import {altair, RootHex, SyncPeriod} from "@chainsafe/lodestar-types";
 import {Proof} from "@chainsafe/persistent-merkle-tree";
-import {BeaconStateAltair} from "./types";
+import {BeaconStateAltair} from "./types.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 

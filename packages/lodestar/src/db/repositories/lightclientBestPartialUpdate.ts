@@ -3,7 +3,7 @@ import {Bucket, IDatabaseController, IDbMetrics, Repository} from "@chainsafe/lo
 import {FINALIZED_ROOT_DEPTH} from "@chainsafe/lodestar-params";
 import {ssz, SyncPeriod} from "@chainsafe/lodestar-types";
 import {BooleanType, ContainerType, VectorCompositeType} from "@chainsafe/ssz";
-import {PartialLightClientUpdate} from "../../chain/lightClient/types";
+import {PartialLightClientUpdate} from "../../chain/lightClient/types.js";
 
 /**
  * Best PartialLightClientUpdate in each SyncPeriod

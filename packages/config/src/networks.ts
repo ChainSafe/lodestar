@@ -1,7 +1,7 @@
-import {IChainConfig} from "./chainConfig";
-import {mainnetChainConfig} from "./chainConfig/networks/mainnet";
-import {praterChainConfig} from "./chainConfig/networks/prater";
-import {kilnChainConfig} from "./chainConfig/networks/kiln";
+import {IChainConfig} from "./chainConfig/index.js";
+import {mainnetChainConfig} from "./chainConfig/networks/mainnet.js";
+import {praterChainConfig} from "./chainConfig/networks/prater.js";
+import {kilnChainConfig} from "./chainConfig/networks/kiln.js";
 
 export {mainnetChainConfig, praterChainConfig, kilnChainConfig};
 

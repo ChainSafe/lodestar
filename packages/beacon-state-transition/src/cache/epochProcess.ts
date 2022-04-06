@@ -19,10 +19,10 @@ import {
   FLAG_CURR_SOURCE_ATTESTER,
   FLAG_CURR_TARGET_ATTESTER,
   FLAG_CURR_HEAD_ATTESTER,
-} from "../util/attesterStatus";
-import {statusProcessEpoch} from "../phase0/epoch/processPendingAttestations";
+} from "../util/attesterStatus.js";
+import {statusProcessEpoch} from "../phase0/epoch/processPendingAttestations.js";
 import {CachedBeaconStateAllForks, CachedBeaconStateAltair, CachedBeaconStatePhase0} from "..";
-import {computeBaseRewardPerIncrement} from "../util/altair";
+import {computeBaseRewardPerIncrement} from "../util/altair.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

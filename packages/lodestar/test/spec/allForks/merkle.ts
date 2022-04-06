@@ -5,8 +5,8 @@ import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-tes
 import {ProofType, SingleProof, Tree} from "@chainsafe/persistent-merkle-tree";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
+import {IBaseSpecTest} from "../type.js";
 import {verifyMerkleBranch} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
 

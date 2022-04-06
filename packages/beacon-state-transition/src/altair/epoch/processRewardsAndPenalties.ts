@@ -1,7 +1,7 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {processRewardsAndPenaltiesAllForks} from "../../allForks/epoch/processRewardsAndPenalties";
-import {EpochProcess} from "../../cache/epochProcess";
-import {CachedBeaconStateAltair} from "../../types";
+import {processRewardsAndPenaltiesAllForks} from "../../allForks/epoch/processRewardsAndPenalties.js";
+import {EpochProcess} from "../../cache/epochProcess.js";
+import {CachedBeaconStateAltair} from "../../types.js";
 
 /**
  * Iterate over all validator and compute rewards and penalties to apply to balances.

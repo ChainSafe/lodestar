@@ -4,8 +4,8 @@
 
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {IBeaconDb} from "../../db";
-import {CheckpointStateCache} from "../stateCache";
+import {IBeaconDb} from "../../db/index.js";
+import {CheckpointStateCache} from "../stateCache/index.js";
 import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 
 /**

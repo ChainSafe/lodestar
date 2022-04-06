@@ -9,16 +9,16 @@ import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IMetrics} from "../../metrics";
-import {IExecutionEngine} from "../../executionEngine";
-import {BlockError, BlockErrorCode} from "../errors";
-import {IBeaconClock} from "../clock";
-import {BlockProcessOpts} from "../options";
-import {IStateRegenerator, RegenCaller} from "../regen";
-import {IBlsVerifier} from "../bls";
-import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
-import {ExecutePayloadStatus} from "../../executionEngine/interface";
-import {byteArrayEquals} from "../../util/bytes";
+import {IMetrics} from "../../metrics/index.js";
+import {IExecutionEngine} from "../../executionEngine/index.js";
+import {BlockError, BlockErrorCode} from "../errors/index.js";
+import {IBeaconClock} from "../clock/index.js";
+import {BlockProcessOpts} from "../options.js";
+import {IStateRegenerator, RegenCaller} from "../regen/index.js";
+import {IBlsVerifier} from "../bls/index.js";
+import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types.js";
+import {ExecutePayloadStatus} from "../../executionEngine/interface.js";
+import {byteArrayEquals} from "../../util/bytes.js";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;

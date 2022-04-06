@@ -27,7 +27,7 @@ import {
   SLOTS_PER_HISTORICAL_ROOT,
   VALIDATOR_REGISTRY_LIMIT,
 } from "@chainsafe/lodestar-params";
-import * as primitiveSsz from "../primitive/sszTypes";
+import * as primitiveSsz from "../primitive/sszTypes.js";
 
 const {
   Boolean,

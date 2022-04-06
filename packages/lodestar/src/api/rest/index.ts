@@ -6,8 +6,8 @@ import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {IMetrics} from "../../metrics";
-import {ApiError, NodeIsSyncing} from "../impl/errors";
+import {IMetrics} from "../../metrics/index.js";
+import {ApiError, NodeIsSyncing} from "../impl/errors.js";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {

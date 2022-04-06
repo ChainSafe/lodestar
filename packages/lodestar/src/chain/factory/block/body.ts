@@ -24,9 +24,9 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 
-import {IBeaconChain} from "../../interface";
-import {PayloadId} from "../../../executionEngine/interface";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants";
+import {IBeaconChain} from "../../interface.js";
+import {PayloadId} from "../../../executionEngine/interface.js";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../../../constants/index.js";
 
 export async function assembleBody(
   chain: IBeaconChain,

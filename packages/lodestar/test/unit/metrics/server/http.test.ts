@@ -1,7 +1,7 @@
 import request from "supertest";
-import {HttpMetricsServer} from "../../../../src/metrics";
-import {testLogger} from "../../../utils/logger";
-import {createMetricsTest} from "../utils";
+import {HttpMetricsServer} from "../../../../src/metrics/index.js";
+import {testLogger} from "../../../utils/logger.js";
+import {createMetricsTest} from "../utils.js";
 
 describe("HttpMetricsServer", () => {
   const logger = testLogger();

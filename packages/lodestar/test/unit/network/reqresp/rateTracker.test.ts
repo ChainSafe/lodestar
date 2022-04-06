@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {RateTracker} from "../../../../src/network/reqresp/rateTracker";
+import {RateTracker} from "../../../../src/network/reqresp/rateTracker.js";
 
 describe("RateTracker", () => {
   let rateTracker: RateTracker;

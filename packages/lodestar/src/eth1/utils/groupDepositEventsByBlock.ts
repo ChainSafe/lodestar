@@ -1,5 +1,5 @@
 import {phase0} from "@chainsafe/lodestar-types";
-import {IBatchDepositEvents} from "../interface";
+import {IBatchDepositEvents} from "../interface.js";
 
 /**
  * Return deposit events of blocks grouped/sorted by block number and deposit index

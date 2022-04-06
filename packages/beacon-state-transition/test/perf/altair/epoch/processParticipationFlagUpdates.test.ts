@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {altair} from "../../../../src";
-import {StateAltair} from "../../types";
+import {altair} from "../../../../src/index.js";
+import {StateAltair} from "../../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
 
 // PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Just copies a tree and recreates another

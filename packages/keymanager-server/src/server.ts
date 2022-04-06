@@ -8,7 +8,7 @@ import fs from "node:fs";
 import {toHexString} from "@chainsafe/ssz";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 import {Api} from "@chainsafe/lodestar-api/keymanager";
-import {getRoutes} from "@chainsafe/lodestar-api/keymanager_server";
+import {getRoutes} from "@chainsafe/lodestar-api/keymanager/server";
 import {registerRoutesGroup, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";

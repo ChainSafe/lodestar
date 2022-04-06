@@ -6,8 +6,8 @@ import {
   ISignatureSet,
   SignatureSetType,
   verifySignatureSet,
-} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
+} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
 
 export function verifyIndexedAttestationSignature(
   state: CachedBeaconStateAllForks,

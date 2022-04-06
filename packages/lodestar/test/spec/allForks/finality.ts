@@ -3,12 +3,12 @@ import {allForks, altair, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest, shouldVerify} from "../type";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
-import {getConfig} from "./util";
-import {generateBlocksSZZTypeMapping} from "./sanity";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
+import {IBaseSpecTest, shouldVerify} from "../type.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util.js";
+import {getConfig} from "./util.js";
+import {generateBlocksSZZTypeMapping} from "./sanity.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

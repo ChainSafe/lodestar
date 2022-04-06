@@ -1,7 +1,7 @@
 import {ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {createCachedBeaconStateTest} from "../utils/state";
+import {createCachedBeaconStateTest} from "../utils/state.js";
 
 describe("CachedBeaconState", () => {
   it("Clone and mutate", () => {

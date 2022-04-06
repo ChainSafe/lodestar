@@ -1,4 +1,7 @@
 import path from "node:path";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Full link: https://github.com/eth2-clients/slashing-protection-interchange-tests/releases/download/v5.1.0/eip-3076-tests-v5.1.0.tar.gz
 export const SPEC_TEST_VERSION = "v5.1.0";

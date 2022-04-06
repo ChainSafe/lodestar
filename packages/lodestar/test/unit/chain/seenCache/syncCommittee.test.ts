@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache";
+import {SeenSyncCommitteeMessages, SeenContributionAndProof} from "../../../../src/chain/seenCache/index.js";
 
 const NUM_SLOTS_IN_CACHE = 3;
 

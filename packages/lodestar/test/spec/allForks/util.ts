@@ -1,8 +1,8 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {config as phase0Config} from "../phase0/util";
-import {config as altairConfig} from "../altair/util";
-import {config as bellatrixConfig} from "../bellatrix/util";
+import {config as phase0Config} from "../phase0/util.js";
+import {config as altairConfig} from "../altair/util.js";
+import {config as bellatrixConfig} from "../bellatrix/util.js";
 
 export function getConfig(fork: ForkName): IChainForkConfig {
   switch (fork) {

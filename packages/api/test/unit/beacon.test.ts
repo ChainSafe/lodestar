@@ -2,10 +2,10 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {config} from "@chainsafe/lodestar-config/default";
 import {toHexString} from "@chainsafe/ssz";
-import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../src/routes/beacon";
-import {getClient} from "../../src/client/beacon";
-import {getRoutes} from "../../src/server/beacon";
-import {runGenericServerTest} from "../utils/genericServerTest";
+import {Api, ReqTypes, BlockHeaderResponse, ValidatorResponse} from "../../src/routes/beacon/index.js";
+import {getClient} from "../../src/client/beacon.js";
+import {getRoutes} from "../../src/server/beacon.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
 
 describe("beacon", () => {
   const root = Buffer.alloc(32, 1);

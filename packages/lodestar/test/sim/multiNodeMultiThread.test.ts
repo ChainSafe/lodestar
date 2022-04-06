@@ -3,12 +3,15 @@ import os from "node:os";
 import {Worker} from "worker_threads";
 import {phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {waitForEvent} from "../utils/events/resolver";
-import {ChainEvent} from "../../src/chain";
-import {createPeerId} from "../../src/network";
-import {logFilesDir} from "./params";
-import {NodeWorkerOptions} from "./threaded/types";
+import {waitForEvent} from "../utils/events/resolver.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {createPeerId} from "../../src/network/index.js";
+import {logFilesDir} from "./params.js";
+import {NodeWorkerOptions} from "./threaded/types.js";
 import {IChainConfig} from "@chainsafe/lodestar-config";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 

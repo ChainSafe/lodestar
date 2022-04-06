@@ -57,6 +57,8 @@ jobs:
         run: yarn run check-readme
       - name: Lint
         run: yarn lint
+      - name: Check Build
+        run: yarn check-build
       - name: Unit tests
         run: yarn test:unit
       - name: Upload coverage data

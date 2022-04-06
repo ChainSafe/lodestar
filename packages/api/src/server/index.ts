@@ -1,17 +1,17 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import {FastifyInstance} from "fastify";
-import {Api} from "../interface";
-import {ServerRoute} from "./utils";
+import {Api} from "../interface.js";
+import {ServerRoute} from "./utils/index.js";
 
-import * as beacon from "./beacon";
-import * as configApi from "./config";
-import * as debug from "./debug";
-import * as events from "./events";
-import * as lightclient from "./lightclient";
-import * as lodestar from "./lodestar";
-import * as node from "./node";
-import * as validator from "./validator";
+import * as beacon from "./beacon.js";
+import * as configApi from "./config.js";
+import * as debug from "./debug.js";
+import * as events from "./events.js";
+import * as lightclient from "./lightclient.js";
+import * as lodestar from "./lodestar.js";
+import * as node from "./node.js";
+import * as validator from "./validator.js";
 
 export type RouteConfig = {
   operationId: ServerRoute["id"];

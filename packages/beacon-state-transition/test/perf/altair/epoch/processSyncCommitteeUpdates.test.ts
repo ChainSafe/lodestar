@@ -1,7 +1,7 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD} from "@chainsafe/lodestar-params";
 import {itBench} from "@dapplion/benchmark";
-import {processSyncCommitteeUpdates} from "../../../../src/altair";
-import {StateAltair} from "../../types";
+import {processSyncCommitteeUpdates} from "../../../../src/altair/index.js";
+import {StateAltair} from "../../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
 
 // PERF: Cost = once per epoch compute committee, proportional to $VALIDATOR_COUNT

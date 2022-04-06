@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {getTestdirPath} from "../../utils";
-import {createPeerId, createEnr, writeEnr, readEnr} from "../../../src/config";
+import {getTestdirPath} from "../../utils.js";
+import {createPeerId, createEnr, writeEnr, readEnr} from "../../../src/config/index.js";
 
 describe("config / enr", () => {
   const enrFilepath = getTestdirPath("./test-enr.json");

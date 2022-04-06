@@ -1,9 +1,9 @@
 import PeerId from "peer-id";
 import {altair, phase0} from "@chainsafe/lodestar-types";
-import {shuffle} from "../../../util/shuffle";
-import {sortBy} from "../../../util/sortBy";
-import {SubnetType} from "../../metadata";
-import {RequestedSubnet} from "./subnetMap";
+import {shuffle} from "../../../util/shuffle.js";
+import {sortBy} from "../../../util/sortBy.js";
+import {SubnetType} from "../../metadata.js";
+import {RequestedSubnet} from "./subnetMap.js";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
 const MAX_TARGET_SUBNET_PEERS = 6;

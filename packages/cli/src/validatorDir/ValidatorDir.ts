@@ -1,12 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import bls, {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import type {SecretKey} from "@chainsafe/bls/types";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getLockFile} from "@chainsafe/lodestar-keymanager-server";
-import {YargsError, readValidatorPassphrase} from "../util";
-import {decodeEth1TxData} from "../depositContract/depositData";
-import {add0xPrefix} from "../util/format";
+import {getLockFile, Lockfile} from "@chainsafe/lodestar-keymanager-server";
+import {YargsError, readValidatorPassphrase} from "../util/index.js";
+import {decodeEth1TxData} from "../depositContract/depositData.js";
+import {add0xPrefix} from "../util/format.js";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
@@ -14,7 +15,7 @@ import {
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
-} from "./paths";
+} from "./paths.js";
 
 export interface IValidatorDirOptions {
   force: boolean;
@@ -52,21 +53,22 @@ export interface IEth1DepositData {
 export class ValidatorDir {
   dir: string;
   private lockfilePath: string;
+  private lockfile: Lockfile;
 
   /**
    * Open `dir`, creating a lockfile to prevent concurrent access.
    * Errors if there is a filesystem error or if a lockfile already exists
    * @param dir
    */
-  constructor(baseDir: string, pubkey: string, options?: IValidatorDirOptions) {
+  constructor(baseDir: string, lockfile: Lockfile, pubkey: string, options?: IValidatorDirOptions) {
     this.dir = path.join(baseDir, add0xPrefix(pubkey));
     this.lockfilePath = path.join(this.dir, LOCK_FILE);
+    this.lockfile = lockfile;
 
     if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
 
-    const lockFile = getLockFile();
     try {
-      lockFile.lockSync(this.lockfilePath);
+      this.lockfile.lockSync(this.lockfilePath);
     } catch (e) {
       if (options && options.force) {
         // Ignore error, maybe log?
@@ -76,11 +78,15 @@ export class ValidatorDir {
     }
   }
 
+  static async create(baseDir: string, pubkey: string, options?: IValidatorDirOptions): Promise<ValidatorDir> {
+    return new ValidatorDir(baseDir, await getLockFile(), pubkey, options);
+  }
+
   /**
    * Removes the lockfile associated with this validator dir
    */
   close(): void {
-    getLockFile().unlockSync(this.lockfilePath);
+    this.lockfile.unlockSync(this.lockfilePath);
   }
 
   /**

@@ -1,9 +1,11 @@
 // Must not use `* as yargs`, see https://github.com/yargs/yargs/issues/1131
 import yargs from "yargs";
-import {cmds} from "./cmds";
-import {globalOptions, rcConfigOption} from "./options";
-import {registerCommandToYargs} from "./util";
-import {getVersion} from "./util/version";
+// @ts-expect-error no type
+import {hideBin} from "yargs/helpers";
+import {cmds} from "./cmds/index.js";
+import {globalOptions, rcConfigOption} from "./options/index.js";
+import {registerCommandToYargs} from "./util/index.js";
+import {getVersion} from "./util/version.js";
 
 const version = getVersion();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
@@ -15,12 +17,14 @@ const bottomBanner = `📖 For more information, check the CLI reference:
 ✍️ Give feedback and report issues on GitHub:
   * https://github.com/ChainSafe/lodestar`;
 
+export const yarg = yargs(hideBin(process.argv));
+
 /**
  * Common factory for running the CLI and running integration tests
  * The CLI must actually be executed in a different script
  */
 export function getLodestarCli(): yargs.Argv {
-  const lodestar = yargs
+  const lodestar = yarg
     .env("LODESTAR")
     .parserConfiguration({
       // As of yargs v16.1.0 dot-notation breaks strictOptions()

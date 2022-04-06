@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {IInterchangeLodestar} from "../types";
-import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils";
+import {IInterchangeLodestar} from "../types.js";
+import {fromOptionalHexString, numToString, toOptionalHexString} from "../../utils.js";
 
 /**
  * A complete record of all blocks and attestations signed by a set of validators

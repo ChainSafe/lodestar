@@ -4,11 +4,11 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {notNullish, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {IBeaconChain} from "../../../src/chain";
-import {INetwork, IReqResp, NetworkEvent, NetworkEventBus} from "../../../src/network";
-import {UnknownBlockSync} from "../../../src/sync/unknownBlock";
-import {testLogger} from "../../utils/logger";
-import {getValidPeerId} from "../../utils/peer";
+import {IBeaconChain} from "../../../src/chain/index.js";
+import {INetwork, IReqResp, NetworkEvent, NetworkEventBus} from "../../../src/network/index.js";
+import {UnknownBlockSync} from "../../../src/sync/unknownBlock.js";
+import {testLogger} from "../../utils/logger.js";
+import {getValidPeerId} from "../../utils/peer.js";
 
 describe("sync / UnknownBlockSync", () => {
   const logger = testLogger();

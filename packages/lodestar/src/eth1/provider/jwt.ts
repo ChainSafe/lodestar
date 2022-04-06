@@ -1,4 +1,7 @@
-import {encode, decode, TAlgorithm} from "jwt-simple";
+import type {TAlgorithm} from "jwt-simple";
+import jwt from "jwt-simple";
+
+const {encode, decode} = jwt;
 
 /** jwt token has iat which is issued at unix timestamp, and an optional exp for expiry */
 type JwtClaim = {iat: number; exp?: number};

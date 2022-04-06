@@ -1,4 +1,4 @@
-import {getVersion} from "./version";
+import {getVersion} from "./version.js";
 
 const lodestarPackageName = "Lodestar";
 

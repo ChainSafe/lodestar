@@ -1,10 +1,10 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {isSlashableValidator} from "../../util";
-import {CachedBeaconStateAllForks} from "../../types";
-import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets";
-import {slashValidatorAllForks} from "../../allForks/block/slashValidator";
-import {verifySignatureSet} from "../../util/signatureSets";
+import {isSlashableValidator} from "../../util/index.js";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {getProposerSlashingSignatureSets} from "../../allForks/signatureSets/index.js";
+import {slashValidatorAllForks} from "../../allForks/block/slashValidator.js";
+import {verifySignatureSet} from "../../util/signatureSets.js";
 
 /**
  * Process a ProposerSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed

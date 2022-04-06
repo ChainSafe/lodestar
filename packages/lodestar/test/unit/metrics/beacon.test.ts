@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {createMetricsTest} from "./utils";
+import {createMetricsTest} from "./utils.js";
 
 describe("BeaconMetrics", () => {
   it("updated metrics should be reflected in the register", async () => {

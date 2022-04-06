@@ -1,6 +1,8 @@
 // Forked from https://github.com/nodeca/js-yaml/blob/master/lib/js-yaml/type/int.js
 // Currently only supports loading ints
-import {Type} from "js-yaml";
+import yaml from "js-yaml";
+
+const {Type} = yaml;
 
 function isHexCode(c: number): boolean {
   return (

@@ -3,22 +3,20 @@ import {getClient} from "@chainsafe/lodestar-api";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
-import {getBeaconConfigFromArgs} from "../../config";
-import {IGlobalArgs} from "../../options";
-import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
-import {onGracefulShutdown} from "../../util";
-import {getBeaconPaths} from "../beacon/paths";
-import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs} from "./options";
-import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
-import {getVersion} from "../../util/version";
+import {getBeaconConfigFromArgs} from "../../config/index.js";
+import {IGlobalArgs} from "../../options/index.js";
+import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
+import {onGracefulShutdown} from "../../util/index.js";
+import {getBeaconPaths} from "../beacon/paths.js";
+import {getValidatorPaths} from "./paths.js";
+import {IValidatorCliArgs} from "./options.js";
+import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
+import {getVersion} from "../../util/version.js";
 
 /**
  * Runs a validator client.
  */
 export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): Promise<void> {
-  await initBLS();
-
   const graffiti = args.graffiti || getDefaultGraffiti();
 
   const validatorPaths = getValidatorPaths(args);

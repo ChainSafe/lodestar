@@ -3,15 +3,15 @@ import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, IClock, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
-import {groupAttDutiesByCommitteeIndex} from "./utils";
-import {IndicesService} from "./indices";
+import {extendError, IClock, ILoggerVc} from "../util/index.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties.js";
+import {groupAttDutiesByCommitteeIndex} from "./utils.js";
+import {IndicesService} from "./indices.js";
 import {toHexString} from "@chainsafe/ssz";
-import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
-import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
-import {PubkeyHex} from "../types";
+import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
+import {ValidatorEvent, ValidatorEventEmitter} from "./emitter.js";
+import {PubkeyHex} from "../types.js";
 
 /**
  * Service that sets up and handles validator attester duties.

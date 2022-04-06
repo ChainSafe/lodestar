@@ -1,10 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {unlinkSync, writeFileSync} from "node:fs";
-import {join} from "node:path";
+import path, {join} from "node:path";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import {ContainerType, Type} from "@chainsafe/ssz";
 import {ssz} from "@chainsafe/lodestar-types";
-import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single";
+import {describeDirectorySpecTest, InputType, loadYamlFile} from "../../../src/single.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

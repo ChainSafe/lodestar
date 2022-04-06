@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import {SecretKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {
   Api,
@@ -13,7 +13,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {Interchange, SignerType, Validator} from "@chainsafe/lodestar-validator";
 import {PubkeyHex} from "@chainsafe/lodestar-validator/src/types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile";
+import {LOCK_FILE_EXT, getLockFile} from "./util/lockfile.js";
 
 export const KEY_IMPORTED_PREFIX = "key_imported";
 
@@ -101,7 +101,7 @@ export class KeymanagerApi implements Api {
           continue;
         }
 
-        const secretKey = SecretKey.fromBytes(await keystore.decrypt(password));
+        const secretKey = bls.SecretKey.fromBytes(await keystore.decrypt(password));
         const pubKey = secretKey.toPublicKey().toHex();
         this.validator.validatorStore.addSigner({type: SignerType.Local, secretKey});
 
@@ -109,7 +109,7 @@ export class KeymanagerApi implements Api {
 
         // Persist keys for latter restarts
         await fs.promises.writeFile(keystorePathInfo.keystoreFilePath, keystoreStr, {encoding: "utf8"});
-        const lockFile = getLockFile();
+        const lockFile = await getLockFile();
         lockFile.lockSync(keystorePathInfo.lockFilePath);
 
         statuses[i] = {status: ImportStatus.imported};

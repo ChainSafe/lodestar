@@ -1,3 +1,3 @@
-export * from "./ValidatorDir";
-export * from "./ValidatorDirBuilder";
-export * from "./ValidatorDirManager";
+export * from "./ValidatorDir.js";
+export * from "./ValidatorDirBuilder.js";
+export * from "./ValidatorDirManager.js";

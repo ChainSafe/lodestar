@@ -1,7 +1,11 @@
 import fs from "node:fs";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
 import findUp from "find-up";
-import {readLodestarGitData} from "./gitData";
-import {GitData} from "./gitData/gitDataPath";
+import {readLodestarGitData} from "./gitData/index.js";
+import {GitData} from "./gitData/gitDataPath.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type VersionJson = {
   /** "0.28.2" */

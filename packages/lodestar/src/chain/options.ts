@@ -1,5 +1,5 @@
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY} from "@chainsafe/lodestar-params";
-import {ForkChoiceOpts} from "./forkChoice";
+import {ForkChoiceOpts} from "./forkChoice/index.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export type IChainOptions = BlockProcessOpts &

@@ -2,7 +2,7 @@
  * @module db/schema
  */
 import {intToBytes} from "@chainsafe/lodestar-utils";
-import {BUCKET_LENGTH} from "./const";
+import {BUCKET_LENGTH} from "./const.js";
 
 // Buckets are separate database namespaces
 export enum Bucket {

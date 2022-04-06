@@ -1,4 +1,4 @@
-import {MapDef} from "../../util/map";
+import {MapDef} from "../../util/map.js";
 
 type RateTrackerOpts = {
   limit: number;

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {shuffle} from "../../../src/util/shuffle";
+import {shuffle} from "../../../src/util/shuffle.js";
 
 describe("util / shuffle", () => {
   function shuffleUntilDifferent<T>(arr: T[]): T[] {

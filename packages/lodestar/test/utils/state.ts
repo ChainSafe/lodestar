@@ -18,11 +18,10 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 
-import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants";
-import {generateEmptyBlock} from "./block";
-import {generateValidator, generateValidators} from "./validator";
-import {SecretKey} from "@chainsafe/bls";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
+import {GENESIS_EPOCH, GENESIS_SLOT, ZERO_HASH} from "../../src/constants/index.js";
+import {generateEmptyBlock} from "./block.js";
+import {generateValidator, generateValidators} from "./validator.js";
+import bls from "@chainsafe/bls";
 
 /**
  * Copy of BeaconState, but all fields are marked optional to allow for swapping out variables as needed.
@@ -53,7 +52,7 @@ export function generateState(
   const numValidators = 16;
   const validators = withPubkey
     ? Array.from({length: numValidators}, (_, i) => {
-        const sk = SecretKey.fromBytes(Buffer.alloc(32, i + 1));
+        const sk = bls.SecretKey.fromBytes(Buffer.alloc(32, i + 1));
         return generateValidator({
           ...validatorOpts,
           pubkey: sk.toPublicKey().toBytes(),
@@ -155,7 +154,5 @@ export async function generateCachedStateWithPubkeys(
   config = minimalConfig,
   isAltair = false
 ): Promise<CachedBeaconStateAllForks> {
-  // somehow this is called in the test but BLS isn't init
-  await initBLS();
   return generateCachedState(opts, config, isAltair);
 }

@@ -1,9 +1,9 @@
 import {itBench} from "@dapplion/benchmark";
-import {altair} from "../../../../src";
-import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util";
-import {StateAltairEpoch} from "../../types";
+import {altair} from "../../../../src/index.js";
+import {FlagFactors, generateBalanceDeltasEpochProcess} from "../../phase0/epoch/util.js";
+import {StateAltairEpoch} from "../../types.js";
 import {generatePerfTestCachedStateAltair, numValidators} from "../../util";
-import {mutateInactivityScores} from "./util";
+import {mutateInactivityScores} from "./util.js";
 
 // PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
 // have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators

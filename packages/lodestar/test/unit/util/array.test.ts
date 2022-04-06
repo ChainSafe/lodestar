@@ -1,6 +1,6 @@
 import {expect} from "chai";
 
-import {findLastIndex, LinkedList} from "../../../src/util/array";
+import {findLastIndex, LinkedList} from "../../../src/util/array.js";
 
 describe("findLastIndex", () => {
   it("should return the last index that matches a predicate", () => {

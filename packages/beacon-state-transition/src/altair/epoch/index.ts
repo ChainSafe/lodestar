@@ -1,4 +1,4 @@
-import {CachedBeaconStateAltair, EpochProcess} from "../../types";
+import {CachedBeaconStateAltair, EpochProcess} from "../../types.js";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -7,15 +7,15 @@ import {
   processSlashingsReset,
   processRandaoMixesReset,
   processHistoricalRootsUpdate,
-} from "../../allForks/epoch";
-import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
-import {processSlashings} from "./processSlashings";
-import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates";
-import {processInactivityUpdates} from "./processInactivityUpdates";
-import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates";
+} from "../../allForks/epoch/index.js";
+import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
+import {processSlashings} from "./processSlashings.js";
+import {processParticipationFlagUpdates} from "./processParticipationFlagUpdates.js";
+import {processInactivityUpdates} from "./processInactivityUpdates.js";
+import {processSyncCommitteeUpdates} from "./processSyncCommitteeUpdates.js";
 
 // For spec tests
-export {getRewardsAndPenalties} from "./getRewardsAndPenalties";
+export {getRewardsAndPenalties} from "./getRewardsAndPenalties.js";
 
 export {
   processInactivityUpdates,

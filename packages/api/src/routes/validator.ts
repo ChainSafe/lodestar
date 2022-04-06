@@ -23,7 +23,7 @@ import {
   WithVersion,
   reqOnlyBody,
   ReqSerializers,
-} from "../utils";
+} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

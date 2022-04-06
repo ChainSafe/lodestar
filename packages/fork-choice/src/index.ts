@@ -1,15 +1,15 @@
-export {ProtoArray} from "./protoArray/protoArray";
-export {IProtoBlock, IProtoNode, ExecutionStatus} from "./protoArray/interface";
+export {ProtoArray} from "./protoArray/protoArray.js";
+export {IProtoBlock, IProtoNode, ExecutionStatus} from "./protoArray/interface.js";
 
-export {ForkChoice} from "./forkChoice/forkChoice";
+export {ForkChoice} from "./forkChoice/forkChoice.js";
 export {
   IForkChoice,
   OnBlockPrecachedData,
   PowBlockHex,
   ILatestMessage,
   IQueuedAttestation,
-} from "./forkChoice/interface";
-export {ForkChoiceStore, IForkChoiceStore, CheckpointWithHex} from "./forkChoice/store";
+} from "./forkChoice/interface.js";
+export {ForkChoiceStore, IForkChoiceStore, CheckpointWithHex} from "./forkChoice/store.js";
 export {
   InvalidAttestation,
   InvalidAttestationCode,
@@ -17,6 +17,6 @@ export {
   InvalidBlockCode,
   ForkChoiceError,
   ForkChoiceErrorCode,
-} from "./forkChoice/errors";
+} from "./forkChoice/errors.js";
 
-export {IForkChoiceMetrics} from "./metrics";
+export {IForkChoiceMetrics} from "./metrics.js";

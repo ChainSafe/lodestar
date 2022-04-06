@@ -1,11 +1,11 @@
 import {GENESIS_SLOT, MAX_REQUEST_BLOCKS} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {fromHexString} from "@chainsafe/ssz";
-import {IBeaconChain} from "../../../chain";
-import {IBeaconDb} from "../../../db";
-import {RespStatus} from "../../../constants";
-import {ResponseError} from "../response";
-import {ReqRespBlockResponse} from "../types";
+import {IBeaconChain} from "../../../chain/index.js";
+import {IBeaconDb} from "../../../db/index.js";
+import {RespStatus} from "../../../constants/index.js";
+import {ResponseError} from "../response/index.js";
+import {ReqRespBlockResponse} from "../types.js";
 
 // TODO: Unit test
 

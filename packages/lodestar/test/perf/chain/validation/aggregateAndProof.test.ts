@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
+import {validateGossipAggregateAndProof} from "../../../../src/chain/validation/index.js";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
-import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof";
+import {getAggregateAndProofValidData} from "../../../utils/validationData/aggregateAndProof.js";
 
 describe("validate gossip signedAggregateAndProof", () => {
   const vc = 64;

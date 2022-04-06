@@ -1,1 +1,2 @@
-export * from "./lib/bellatrix/types";
+// eslint-disable-next-line import/export
+export * from "./lib/bellatrix/types.js";

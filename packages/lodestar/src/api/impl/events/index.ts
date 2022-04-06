@@ -3,10 +3,10 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ApiModules} from "../types";
-import {ChainEvent, IChainEvents} from "../../../chain";
+import {ApiModules} from "../types.js";
+import {ChainEvent, IChainEvents} from "../../../chain/index.js";
 import {routes} from "@chainsafe/lodestar-api";
-import {ApiError} from "../errors";
+import {ApiError} from "../errors.js";
 import {toHexString} from "@chainsafe/ssz";
 
 /**

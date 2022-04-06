@@ -5,10 +5,10 @@ import {config} from "@chainsafe/lodestar-config/default";
 import {intToBytes} from "@chainsafe/lodestar-utils";
 import {LevelDbController, Bucket, encodeKey} from "@chainsafe/lodestar-db";
 
-import {generateEmptySignedBlock} from "../../../../utils/block";
-import {BlockArchiveRepository} from "../../../../../src/db/repositories";
+import {generateEmptySignedBlock} from "../../../../utils/block.js";
+import {BlockArchiveRepository} from "../../../../../src/db/repositories/index.js";
 import sinon from "sinon";
-import {testLogger} from "../../../../utils/logger";
+import {testLogger} from "../../../../utils/logger.js";
 
 describe("block archive repository", function () {
   const testDir = "./.tmp";

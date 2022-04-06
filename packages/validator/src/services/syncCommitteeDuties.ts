@@ -8,10 +8,10 @@ import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {BLSSignature, Epoch, Root, Slot, SyncPeriod, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {Api, routes} from "@chainsafe/lodestar-api";
-import {IndicesService} from "./indices";
-import {IClock, extendError, ILoggerVc} from "../util";
-import {ValidatorStore} from "./validatorStore";
-import {PubkeyHex} from "../types";
+import {IndicesService} from "./indices.js";
+import {IClock, extendError, ILoggerVc} from "../util/index.js";
+import {ValidatorStore} from "./validatorStore.js";
+import {PubkeyHex} from "../types.js";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;

@@ -8,7 +8,8 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "homepage": "https://github.com/ChainSafe/lodestar#readme",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": "./lib/index.js",
   "types": "lib/index.d.ts",
   "files": [
     "lib/**/*.js",
@@ -27,6 +28,7 @@
     "build:types:watch": "yarn run build:types --watch",
     "build:lib:watch": "yarn run build:lib --watch",
     "build:typedocs": "typedoc --out typedocs src",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
@@ -60,6 +62,6 @@
   },
   "peerDependencies": {
     "chai": "^4.2.0",
-    "mocha": "^8.1.1"
+    "mocha": "^9.2.2"
   }
 }

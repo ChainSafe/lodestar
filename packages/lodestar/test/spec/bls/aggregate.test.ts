@@ -5,8 +5,8 @@ import {EmptyAggregateError} from "@chainsafe/bls/lib/errors";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 
-import {SPEC_TEST_LOCATION} from "../specTestVersioning";
-import {IBaseSpecTest} from "../type";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
+import {IBaseSpecTest} from "../type.js";
 
 interface IAggregateSigsTestCase extends IBaseSpecTest {
   data: {

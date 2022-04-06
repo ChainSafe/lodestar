@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 
-import {byteArrayConcat, byteArrayEquals} from "../../../src/util/bytes";
+import {byteArrayConcat, byteArrayEquals} from "../../../src/util/bytes.js";
 
 describe("util / bytes", () => {
   describe("byteArrayConcat", () => {

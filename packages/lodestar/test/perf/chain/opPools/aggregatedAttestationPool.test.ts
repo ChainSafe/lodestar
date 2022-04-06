@@ -6,7 +6,7 @@ import {
   computeStartSlotAtEpoch,
   getBlockRootAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool";
+import {AggregatedAttestationPool} from "../../../../src/chain/opPools/aggregatedAttestationPool.js";
 import {SLOTS_PER_EPOCH, TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {BitArray} from "@chainsafe/ssz";

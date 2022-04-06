@@ -3,7 +3,7 @@ import {SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
 import {altair, ssz} from "@chainsafe/lodestar-types";
 import {verifyMerkleBranch, hash} from "@chainsafe/lodestar-utils";
 import {expect} from "chai";
-import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs";
+import {getNextSyncCommitteeBranch, getSyncCommitteesWitness} from "../../../../src/chain/lightClient/proofs.js";
 
 const currentSyncCommitteeGindex = 54;
 const nextSyncCommitteeGindex = 55;

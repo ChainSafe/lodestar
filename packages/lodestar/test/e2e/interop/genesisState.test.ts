@@ -2,10 +2,10 @@ import {expect} from "chai";
 import {toHexString} from "@chainsafe/ssz";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {config} from "@chainsafe/lodestar-config/default";
-import {BeaconDb} from "../../../src";
-import {initDevState} from "../../../src/node/utils/state";
-import {testLogger} from "../../utils/logger";
-import {interopDeposits} from "../../../src/node/utils/interop/deposits";
+import {BeaconDb} from "../../../src/index.js";
+import {initDevState} from "../../../src/node/utils/state.js";
+import {testLogger} from "../../utils/logger.js";
+import {interopDeposits} from "../../../src/node/utils/interop/deposits.js";
 import {ssz} from "@chainsafe/lodestar-types";
 
 describe("interop / initDevState", () => {

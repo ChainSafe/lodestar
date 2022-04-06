@@ -1,6 +1,6 @@
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {EpochContext, EpochContextImmutableData, EpochContextOpts} from "./epochContext";
-import {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateAllForks} from "./types";
+import {EpochContext, EpochContextImmutableData, EpochContextOpts} from "./epochContext.js";
+import {BeaconStatePhase0, BeaconStateAltair, BeaconStateBellatrix, BeaconStateAllForks} from "./types.js";
 
 export type BeaconStateCache = {
   config: IBeaconConfig;

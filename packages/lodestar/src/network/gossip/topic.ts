@@ -4,8 +4,8 @@
 
 import {ssz} from "@chainsafe/lodestar-types";
 import {IForkDigestContext} from "@chainsafe/lodestar-config";
-import {GossipType, GossipTopic, GossipEncoding} from "./interface";
-import {DEFAULT_ENCODING} from "./constants";
+import {GossipType, GossipTopic, GossipEncoding} from "./interface.js";
+import {DEFAULT_ENCODING} from "./constants.js";
 
 export interface IGossipTopicCache {
   getTopic(topicStr: string): GossipTopic;

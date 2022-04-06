@@ -2,15 +2,15 @@
 import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
-import {validateGossipAttestation} from "../../../../chain/validation";
-import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing";
-import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing";
-import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
-import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
-import {ApiModules} from "../../types";
-import {OpSource} from "../../../../metrics/validatorMonitor";
+import {validateGossipAttestation} from "../../../../chain/validation/index.js";
+import {validateGossipAttesterSlashing} from "../../../../chain/validation/attesterSlashing.js";
+import {validateGossipProposerSlashing} from "../../../../chain/validation/proposerSlashing.js";
+import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit.js";
+import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee.js";
+import {ApiModules} from "../../types.js";
+import {OpSource} from "../../../../metrics/validatorMonitor.js";
 import {toHexString} from "@chainsafe/ssz";
-import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
+import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors/index.js";
 
 export function getBeaconPoolApi({
   chain,

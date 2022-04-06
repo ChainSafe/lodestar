@@ -1,7 +1,7 @@
 import {toHexString, byteArrayEquals} from "@chainsafe/ssz";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAllForks} from "../../types";
-import {ZERO_HASH} from "../../constants";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {ZERO_HASH} from "../../constants/index.js";
 
 /**
  * Converts a Deposit record (created by the eth-execution deposit contract) into a Validator object that goes into the eth-consensus state.

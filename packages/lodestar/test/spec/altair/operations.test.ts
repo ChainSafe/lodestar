@@ -1,8 +1,8 @@
 import {CachedBeaconStateAltair, allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBaseSpecTest, shouldVerify} from "../type";
-import {operations, BlockProcessFn} from "../allForks/operations";
+import {IBaseSpecTest, shouldVerify} from "../type.js";
+import {operations, BlockProcessFn} from "../allForks/operations.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

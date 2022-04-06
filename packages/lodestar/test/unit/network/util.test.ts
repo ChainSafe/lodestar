@@ -2,12 +2,17 @@ import {Multiaddr} from "multiaddr";
 import {expect} from "chai";
 import {config} from "@chainsafe/lodestar-config/default";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {createEnr, createPeerId} from "@chainsafe/lodestar-cli/src/config";
-import {Method, Version, Encoding} from "../../../src/network/reqresp/types";
-import {defaultNetworkOptions} from "../../../src/network/options";
-import {formatProtocolId, parseProtocolId} from "../../../src/network/reqresp/utils";
-import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network";
-import {getCurrentAndNextFork} from "../../../src/network/forks";
+import {Method, Version, Encoding} from "../../../src/network/reqresp/types.js";
+import {defaultNetworkOptions} from "../../../src/network/options.js";
+import {formatProtocolId, parseProtocolId} from "../../../src/network/reqresp/utils/index.js";
+import {createNodeJsLibp2p, isLocalMultiAddr} from "../../../src/network/index.js";
+import {getCurrentAndNextFork} from "../../../src/network/forks.js";
+import {ENR} from "@chainsafe/discv5";
+import PeerId from "peer-id";
+
+async function createPeerId(): Promise<PeerId> {
+  return await PeerId.create({keyType: "secp256k1"});
+}
 
 describe("Test isLocalMultiAddr", () => {
   it("should return true for 127.0.0.1", () => {
@@ -96,7 +101,7 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enabled: false,
-          enr: createEnr(peerId),
+          enr: new ENR(),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithTcp,
         },
@@ -126,7 +131,7 @@ describe("createNodeJsLibp2p", () => {
         connectToDiscv5Bootnodes: true,
         discv5: {
           enabled: false,
-          enr: createEnr(peerId),
+          enr: new ENR(),
           bindAddr: "/ip4/127.0.0.1/udp/0",
           bootEnrs: enrWithoutTcp,
         },

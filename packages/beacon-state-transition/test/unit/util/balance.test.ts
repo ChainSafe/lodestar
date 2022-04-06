@@ -4,11 +4,11 @@ import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
 
-import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util";
-import {getEffectiveBalanceIncrementsZeroed, getEffectiveBalanceIncrementsZeroInactive} from "../../../src";
+import {increaseBalance, decreaseBalance, getTotalBalance, isActiveValidator} from "../../../src/util/index.js";
+import {getEffectiveBalanceIncrementsZeroed, getEffectiveBalanceIncrementsZeroInactive} from "../../../src/index.js";
 
-import {generateValidators} from "../../utils/validator";
-import {generateCachedState, generateState} from "../../utils/state";
+import {generateValidators} from "../../utils/validator.js";
+import {generateCachedState, generateState} from "../../utils/state.js";
 
 describe("getTotalBalance", () => {
   it("should return correct balances", () => {

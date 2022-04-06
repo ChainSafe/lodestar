@@ -10,9 +10,9 @@ import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
 import {GossipsubMessage, MessageAcceptance, PeerIdStr} from "libp2p-gossipsub/src/types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IBeaconChain} from "../../chain";
-import {NetworkEvent} from "../events";
-import {JobItemQueue} from "../../util/queue";
+import {IBeaconChain} from "../../chain/index.js";
+import {NetworkEvent} from "../events.js";
+import {JobItemQueue} from "../../util/queue/index.js";
 
 export enum GossipType {
   // phase0

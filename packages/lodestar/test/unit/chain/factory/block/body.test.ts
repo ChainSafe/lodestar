@@ -3,15 +3,15 @@ import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {config} from "@chainsafe/lodestar-config/default";
-import {assembleBody} from "../../../../../src/chain/factory/block/body";
-import {generateCachedState} from "../../../../utils/state";
-import {generateEmptyAttestation} from "../../../../utils/attestation";
-import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits";
-import {generateDeposit} from "../../../../utils/deposit";
-import {StubbedBeaconDb} from "../../../../utils/stub";
-import {Eth1ForBlockProduction} from "../../../../../src/eth1";
-import {BeaconChain} from "../../../../../src/chain";
-import {AggregatedAttestationPool, OpPool} from "../../../../../src/chain/opPools";
+import {assembleBody} from "../../../../../src/chain/factory/block/body.js";
+import {generateCachedState} from "../../../../utils/state.js";
+import {generateEmptyAttestation} from "../../../../utils/attestation.js";
+import {generateEmptySignedVoluntaryExit} from "../../../../utils/voluntaryExits.js";
+import {generateDeposit} from "../../../../utils/deposit.js";
+import {StubbedBeaconDb} from "../../../../utils/stub/index.js";
+import {Eth1ForBlockProduction} from "../../../../../src/eth1/index.js";
+import {BeaconChain} from "../../../../../src/chain/index.js";
+import {AggregatedAttestationPool, OpPool} from "../../../../../src/chain/opPools/index.js";
 
 describe("blockAssembly - body", function () {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type

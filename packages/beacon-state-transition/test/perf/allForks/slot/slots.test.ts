@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {generatePerfTestCachedStatePhase0} from "../../util";
-import {processSlot} from "../../../../src/allForks/slot";
-import {State} from "../../types";
+import {processSlot} from "../../../../src/allForks/slot/index.js";
+import {State} from "../../types.js";
 
 // Test advancing through an empty slot, without any epoch transition
 

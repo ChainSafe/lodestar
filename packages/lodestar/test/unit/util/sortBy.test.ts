@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {sortBy} from "../../../src/util/sortBy";
+import {sortBy} from "../../../src/util/sortBy.js";
 
 describe("util / sortBy", () => {
   const a = {id: "a", x: 1, y: 2};

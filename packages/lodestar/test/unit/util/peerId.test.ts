@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {createFromPrivKey} from "peer-id";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {createPeerId} from "../../../src/network";
+import {createPeerId} from "../../../src/network/index.js";
 
 describe("PeerId util - for multithread sim test", () => {
   it("Should serialize and deserialize privKey", async () => {

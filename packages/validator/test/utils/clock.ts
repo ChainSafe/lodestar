@@ -1,6 +1,6 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {Epoch, Slot} from "@chainsafe/lodestar-types";
-import {IClock} from "../../src/util";
+import {IClock} from "../../src/util/index.js";
 
 type RunEveryFn = (slot: Slot, signal: AbortSignal) => Promise<void>;
 

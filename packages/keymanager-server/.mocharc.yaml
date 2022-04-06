@@ -1,4 +1,6 @@
+exit: true
+extension: ["ts"]
 colors: true
-require:
-  - ts-node/register
-  - ./test/setup.ts
+node-option:
+  - "experimental-specifier-resolution=node"
+  - "loader=ts-node/esm"

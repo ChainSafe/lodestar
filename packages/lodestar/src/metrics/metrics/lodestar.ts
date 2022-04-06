@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
-import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {IMetricsOptions} from "../options";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator.js";
+import {IMetricsOptions} from "../options.js";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 

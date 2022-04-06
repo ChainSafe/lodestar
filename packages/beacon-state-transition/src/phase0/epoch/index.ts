@@ -1,4 +1,4 @@
-import {CachedBeaconStatePhase0, EpochProcess} from "../../types";
+import {CachedBeaconStatePhase0, EpochProcess} from "../../types.js";
 import {
   processJustificationAndFinalization,
   processRegistryUpdates,
@@ -7,11 +7,11 @@ import {
   processSlashingsReset,
   processRandaoMixesReset,
   processHistoricalRootsUpdate,
-} from "../../allForks/epoch";
-import {processRewardsAndPenalties} from "./processRewardsAndPenalties";
-import {processSlashings} from "./processSlashings";
-import {getAttestationDeltas} from "./getAttestationDeltas";
-import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates";
+} from "../../allForks/epoch/index.js";
+import {processRewardsAndPenalties} from "./processRewardsAndPenalties.js";
+import {processSlashings} from "./processSlashings.js";
+import {getAttestationDeltas} from "./getAttestationDeltas.js";
+import {processParticipationRecordUpdates} from "./processParticipationRecordUpdates.js";
 
 export {processRewardsAndPenalties, processSlashings, getAttestationDeltas, processParticipationRecordUpdates};
 

@@ -1,4 +1,4 @@
-import {VerifySignatureOpts} from "../interface";
+import {VerifySignatureOpts} from "../interface.js";
 
 export type WorkerData = {
   implementation: "herumi" | "blst-native";

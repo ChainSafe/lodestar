@@ -1,7 +1,7 @@
-export * from "./block";
-export * from "./epoch";
-export * from "./upgradeState";
-export * from "./utils";
+export * from "./block/index.js";
+export * from "./epoch/index.js";
+export * from "./upgradeState.js";
+export * from "./utils.js";
 
 // re-export bellatrix lodestar types for ergonomic usage downstream
 // eg:

@@ -1,13 +1,13 @@
-import {preset as mainnetParams} from "../../src/presets/mainnet";
-import {preset as minimalParams} from "../../src/presets/minimal";
-import {ACTIVE_PRESET, PresetName} from "../../src";
-import {setActivePreset} from "../../src/setPreset";
-import {setActivePreset as setActivePresetLib} from "../../setPreset";
+import {preset as mainnetParams} from "../../src/presets/mainnet/index.js";
+import {preset as minimalParams} from "../../src/presets/minimal/index.js";
+import {ACTIVE_PRESET, PresetName} from "../../src/index.js";
+import {setActivePreset} from "../../src/setPreset.js";
+import {setActivePreset as setActivePresetLib} from "../../src/setPreset.js";
 import {expect} from "chai";
 
-describe("active preset", () => {
+describe("active preset", async () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
-  const exports = require("../../src") as Record<string, unknown>;
+  const exports = (await import("../../src")) as Record<string, unknown>;
   const params = {
     [PresetName.mainnet]: mainnetParams,
     [PresetName.minimal]: minimalParams,

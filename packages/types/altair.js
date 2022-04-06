@@ -1,2 +1,2 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-module.exports = require("./lib/altair/types");
+// eslint-disable-next-line import/export
+export * from "./lib/altair/types.js";

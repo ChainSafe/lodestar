@@ -1,6 +1,6 @@
 import {BLSPubkey} from "@chainsafe/lodestar-types";
-import {IMinMaxSurround, IDistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface";
-import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors";
+import {IMinMaxSurround, IDistanceEntry, IDistanceStore, MinMaxSurroundAttestation} from "./interface.js";
+import {SurroundAttestationError, SurroundAttestationErrorCode} from "./errors.js";
 
 // surround vote checking with min-max surround
 // https://github.com/protolambda/eth2-surround#min-max-surround

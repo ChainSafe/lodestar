@@ -1,7 +1,7 @@
 import {BLSPubkey, Root} from "@chainsafe/lodestar-types";
-import {SlashingProtectionAttestation, SlashingProtectionBlock} from "../types";
-import {IInterchangeCompleteV4} from "./formats/completeV4";
-import {IInterchangeV5} from "./formats/v5";
+import {SlashingProtectionAttestation, SlashingProtectionBlock} from "../types.js";
+import {IInterchangeCompleteV4} from "./formats/completeV4.js";
+import {IInterchangeV5} from "./formats/v5.js";
 
 export type Interchange = IInterchangeV5 | IInterchangeCompleteV4;
 

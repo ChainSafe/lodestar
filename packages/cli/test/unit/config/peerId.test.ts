@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {getTestdirPath} from "../../utils";
-import {createPeerId, writePeerId, readPeerId} from "../../../src/config";
+import {getTestdirPath} from "../../utils.js";
+import {createPeerId, writePeerId, readPeerId} from "../../../src/config/index.js";
 
 describe("config / peerId", () => {
   const peerIdFilepath = getTestdirPath("./test-peer-id.json");

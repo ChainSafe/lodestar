@@ -1,3 +1,3 @@
-export * from "./interface";
-export * from "./attnetsService";
-export * from "./syncnetsService";
+export * from "./interface.js";
+export * from "./attnetsService.js";
+export * from "./syncnetsService.js";

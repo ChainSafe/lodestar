@@ -2,7 +2,7 @@
 
 module.exports = {
   colors: true,
-  require: ["ts-node/register", "./test/setupBLS.ts"],
+  require: ["ts-node/register", "./test/setupPreset.ts"],
   timeout: 60_000,
   // Disable parallel locally for easier debugging
   parallel: Boolean(process.env.CI),

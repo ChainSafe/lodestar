@@ -5,11 +5,11 @@ import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beac
 import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
-import {BeaconChain} from "../../../chain";
-import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
-import {GossipType} from "../../../network";
-import {ApiModules} from "../types";
-import {formatNodePeer} from "../node/utils";
+import {BeaconChain} from "../../../chain/index.js";
+import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen/index.js";
+import {GossipType} from "../../../network/index.js";
+import {ApiModules} from "../types.js";
+import {formatNodePeer} from "../node/utils.js";
 
 export function getLodestarApi({
   chain,

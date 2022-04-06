@@ -10,19 +10,19 @@ import {IChainConfig} from "@chainsafe/lodestar-config";
 import {Epoch} from "@chainsafe/lodestar-types";
 import {bellatrix} from "@chainsafe/lodestar-beacon-state-transition";
 
-import {ExecutePayloadStatus} from "../../src/executionEngine/interface";
-import {ExecutionEngineHttp} from "../../src/executionEngine/http";
-import {shell} from "./shell";
-import {ChainEvent} from "../../src/chain";
-import {testLogger, TestLoggerOpts} from "../utils/logger";
-import {logFilesDir} from "./params";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {RestApiOptions} from "../../src/api";
-import {simTestInfoTracker} from "../utils/node/simTest";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {Eth1Provider} from "../../src";
-import {ZERO_HASH} from "../../src/constants";
-import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils";
+import {ExecutePayloadStatus} from "../../src/executionEngine/interface.js";
+import {ExecutionEngineHttp} from "../../src/executionEngine/http.js";
+import {shell} from "./shell.js";
+import {ChainEvent} from "../../src/chain/index.js";
+import {testLogger, TestLoggerOpts} from "../utils/logger.js";
+import {logFilesDir} from "./params.js";
+import {getDevBeaconNode} from "../utils/node/beacon.js";
+import {RestApiOptions} from "../../src/api/index.js";
+import {simTestInfoTracker} from "../utils/node/simTest.js";
+import {getAndInitDevValidators} from "../utils/node/validator.js";
+import {Eth1Provider} from "../../src/index.js";
+import {ZERO_HASH} from "../../src/constants/index.js";
+import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/utils.js";
 
 // NOTE: Must specify
 // EL_BINARY_DIR: File path to locate the EL executable

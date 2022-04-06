@@ -5,7 +5,7 @@ import {routes} from "@chainsafe/lodestar-api";
 import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
-import {AttestationError, BlockError} from "./errors";
+import {AttestationError, BlockError} from "./errors/index.js";
 
 /**
  * Important chain events that occur during normal chain operation.

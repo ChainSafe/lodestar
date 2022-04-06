@@ -1,11 +1,11 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {PendingBlock, PendingBlockStatus} from "../../../../src/sync";
+import {PendingBlock, PendingBlockStatus} from "../../../../src/sync/index.js";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
   getLowestPendingUnknownParents,
-} from "../../../../src/sync/utils/pendingBlocksTree";
+} from "../../../../src/sync/utils/pendingBlocksTree.js";
 
 describe("sync / pendingBlocksTree", () => {
   const testCases: {

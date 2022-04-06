@@ -12,7 +12,33 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "version": "0.36.0",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./allForks": {
+      "import": "./lib/allForks/index.js"
+    },
+    "./phase0": {
+      "import": "./lib/phase0/index.js"
+    },
+    "./altair": {
+      "import": "./lib/altair/index.js"
+    },
+    "./bellatrix": {
+      "import": "./lib/bellatrix/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -27,6 +53,7 @@
     "build:lib:watch": "yarn run build:lib --watch",
     "build:release": "yarn clean && yarn build",
     "build:types:watch": "yarn run build:types --watch",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "lint": "eslint --color --ext .ts src/ test/",
     "lint:fix": "yarn run lint --fix",
@@ -36,7 +63,7 @@
   "types": "lib/index.d.ts",
   "dependencies": {
     "@chainsafe/as-sha256": "^0.3.0",
-    "@chainsafe/bls": "6.0.3",
+    "@chainsafe/bls": "7.0.0",
     "@chainsafe/lodestar-config": "^0.36.0",
     "@chainsafe/lodestar-params": "^0.36.0",
     "@chainsafe/lodestar-types": "^0.36.0",

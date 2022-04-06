@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/strict-boolean-expressions */
 import worker from "worker_threads";
-import {expose} from "threads/worker";
-import {bls, init, CoordType} from "@chainsafe/bls";
-import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch";
-import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types";
-import {chunkifyMaximizeChunkSize} from "./utils";
+import {expose} from "@chainsafe/threads/worker";
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/bls/types";
+import {verifySignatureSetsMaybeBatch, SignatureSetDeserialized} from "../maybeBatch.js";
+import {WorkerData, BlsWorkReq, WorkResult, WorkResultCode, SerializedSet, BlsWorkResult} from "./types.js";
+import {chunkifyMaximizeChunkSize} from "./utils.js";
 
 /**
  * Split batchable sets in chunks of minimum size 16.
@@ -20,11 +21,10 @@ const BATCHABLE_MIN_PER_CHUNK = 16;
 // Cloned data from instatiation
 const workerData = worker.workerData as WorkerData;
 if (!workerData) throw Error("workerData must be defined");
-const {implementation, workerId} = workerData || {};
+const {workerId} = workerData || {};
 
 expose({
   async verifyManySignatureSets(workReqArr: BlsWorkReq[]): Promise<BlsWorkResult> {
-    await init(implementation);
     return verifyManySignatureSets(workReqArr);
   },
 });

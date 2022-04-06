@@ -2,14 +2,14 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {config} from "@chainsafe/lodestar-config/default";
-import {Api, ReqTypes, routesData} from "../../src/routes/debug";
-import {getClient} from "../../src/client/debug";
-import {getRoutes} from "../../src/server/debug";
-import {runGenericServerTest} from "../utils/genericServerTest";
-import {getMockApi, getTestServer} from "../utils/utils";
-import {registerRoutesGroup} from "../../src/server";
+import {Api, ReqTypes, routesData} from "../../src/routes/debug.js";
+import {getClient} from "../../src/client/debug.js";
+import {getRoutes} from "../../src/server/debug.js";
+import {runGenericServerTest} from "../utils/genericServerTest.js";
+import {getMockApi, getTestServer} from "../utils/utils.js";
+import {registerRoutesGroup} from "../../src/server/index.js";
 import {expect} from "chai";
-import {HttpClient} from "../../src";
+import {HttpClient} from "../../src/index.js";
 
 describe("debug", function () {
   // Extend timeout since states are very big

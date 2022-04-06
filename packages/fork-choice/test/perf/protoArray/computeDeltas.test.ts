@@ -8,9 +8,9 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {generatePerfTestCachedStateAltair} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {TIMELY_SOURCE_FLAG_INDEX} from "@chainsafe/lodestar-params";
-import {IVoteTracker} from "../../../src/protoArray/interface";
-import {computeDeltas} from "../../../src/protoArray/computeDeltas";
-import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice";
+import {IVoteTracker} from "../../../src/protoArray/interface.js";
+import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
+import {computeProposerBoostScoreFromBalances} from "../../../src/forkChoice/forkChoice.js";
 
 /** Same to https://github.com/ethereum/eth2.0-specs/blob/v1.1.0-alpha.5/specs/altair/beacon-chain.md#has_flag */
 const TIMELY_SOURCE = 1 << TIMELY_SOURCE_FLAG_INDEX;

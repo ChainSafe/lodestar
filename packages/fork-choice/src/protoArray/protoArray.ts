@@ -1,7 +1,7 @@
 import {Epoch, RootHex} from "@chainsafe/lodestar-types";
 
-import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface";
-import {ProtoArrayError, ProtoArrayErrorCode} from "./errors";
+import {IProtoBlock, IProtoNode, HEX_ZERO_HASH} from "./interface.js";
+import {ProtoArrayError, ProtoArrayErrorCode} from "./errors.js";
 
 export const DEFAULT_PRUNE_THRESHOLD = 0;
 type ProposerBoost = {root: RootHex; score: number};

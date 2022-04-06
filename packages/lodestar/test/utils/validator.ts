@@ -1,6 +1,6 @@
 import {fromHexString} from "@chainsafe/ssz";
 import {phase0} from "@chainsafe/lodestar-types";
-import {FAR_FUTURE_EPOCH} from "../../src/constants";
+import {FAR_FUTURE_EPOCH} from "../../src/constants/index.js";
 
 /**
  * Generates a single fake validator, for tests purposes only.

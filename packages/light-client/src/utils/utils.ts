@@ -1,8 +1,9 @@
-import {PublicKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import type {PublicKey} from "@chainsafe/bls/types";
 import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
 import {BitArray} from "@chainsafe/ssz";
-import {SyncCommitteeFast} from "../types";
+import {SyncCommitteeFast} from "../types.js";
 
 export function sumBits(bits: BitArray): number {
   return bits.getTrueBitIndexes().length;
@@ -48,7 +49,7 @@ export function toBlockHeader(block: altair.BeaconBlock): BeaconBlockHeader {
 }
 
 function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
-  return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk));
+  return Array.from(pubkeys).map((pk) => bls.PublicKey.fromBytes(pk));
 }
 
 function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"] {
@@ -58,7 +59,7 @@ function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextS
 export function deserializeSyncCommittee(syncCommittee: altair.SyncCommittee): SyncCommitteeFast {
   return {
     pubkeys: deserializePubkeys(syncCommittee.pubkeys),
-    aggregatePubkey: PublicKey.fromBytes(syncCommittee.aggregatePubkey),
+    aggregatePubkey: bls.PublicKey.fromBytes(syncCommittee.aggregatePubkey),
   };
 }
 

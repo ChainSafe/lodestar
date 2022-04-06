@@ -1,7 +1,7 @@
 import {allForks, altair} from "@chainsafe/lodestar-beacon-state-transition";
 import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {EpochProcessFn, epochProcessing} from "../allForks/epochProcessing";
+import {EpochProcessFn, epochProcessing} from "../allForks/epochProcessing.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

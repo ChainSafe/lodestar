@@ -1,8 +1,8 @@
 import {Root, phase0} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {Libp2pStream} from "../../../../src/network";
-import {generateEmptySignedBlock} from "../../../utils/block";
+import {Libp2pStream} from "../../../../src/network/index.js";
+import {generateEmptySignedBlock} from "../../../utils/block.js";
 
 export function createStatus(): phase0.Status {
   return {

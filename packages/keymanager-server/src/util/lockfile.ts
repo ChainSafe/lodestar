@@ -1,4 +1,4 @@
-type Lockfile = {
+export type Lockfile = {
   lockSync(path: string): void;
   unlockSync(path: string): void;
 };
@@ -6,14 +6,13 @@ type Lockfile = {
 let lockFile: Lockfile | null = null;
 export const LOCK_FILE_EXT = ".lock";
 /**
- * When lockfile it's required it registers listeners to process
+ * When lockfile is imported, it registers listeners to process
  * Since it's only used by the validator client, require lazily to not pollute
  * beacon_node client context
  */
-export function getLockFile(): Lockfile {
+export async function getLockFile(): Promise<Lockfile> {
   if (!lockFile) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
-    lockFile = require("lockfile") as Lockfile;
+    lockFile = (await import("lockfile")) as Lockfile;
   }
   return lockFile;
 }

@@ -4,7 +4,7 @@ import {execSync} from "node:child_process";
  * This file is created in the build step and is distributed through NPM
  * MUST be in sync with `-/gitDataPath.ts` and `package.json` files.
  */
-import {readGitDataFile, GitData} from "./gitDataPath";
+import {readGitDataFile, GitData} from "./gitDataPath.js";
 
 /** Silent shell that won't pollute stdout, or stderr */
 function shell(cmd: string): string {

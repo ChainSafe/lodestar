@@ -1,8 +1,8 @@
 import PeerId from "peer-id";
-import {PeerMap} from "../../../util/peerMap";
-import {shuffle} from "../../../util/shuffle";
-import {sortBy} from "../../../util/sortBy";
-import {Batch, BatchStatus} from "../batch";
+import {PeerMap} from "../../../util/peerMap.js";
+import {shuffle} from "../../../util/shuffle.js";
+import {sortBy} from "../../../util/sortBy.js";
+import {Batch, BatchStatus} from "../batch.js";
 
 /**
  * Balance and organize peers to perform requests with a SyncChain

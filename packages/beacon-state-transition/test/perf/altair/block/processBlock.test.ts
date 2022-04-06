@@ -10,10 +10,10 @@ import {
   PresetName,
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
-import {allForks, CachedBeaconStateAltair} from "../../../../src";
+import {allForks, CachedBeaconStateAltair} from "../../../../src/index.js";
 import {cachedStateAltairPopulateCaches, generatePerfTestCachedStateAltair, perfStateId} from "../../util";
-import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
-import {StateBlock} from "../../types";
+import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
+import {StateBlock} from "../../types.js";
 
 // As of Jun 12 2021
 // Process block

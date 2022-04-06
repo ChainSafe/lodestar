@@ -1,18 +1,18 @@
 import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
-import {pick} from "lodash";
+import _ from "lodash";
 import {Root, phase0, ssz} from "@chainsafe/lodestar-types";
 import {toHex} from "@chainsafe/lodestar-utils";
-import {iteratorFromArray} from "../../../utils/interator";
+import {iteratorFromArray} from "../../../utils/interator.js";
 import {
   getEth1DataForBlocks,
   getDepositsByBlockNumber,
   getDepositRootByDepositCount,
-} from "../../../../src/eth1/utils/eth1Data";
-import {Eth1Block} from "../../../../src/eth1/interface";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {Eth1ErrorCode} from "../../../../src/eth1/errors";
-import {DepositTree} from "../../../../src/db/repositories/depositDataRoot";
+} from "../../../../src/eth1/utils/eth1Data.js";
+import {Eth1Block} from "../../../../src/eth1/interface.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
+import {Eth1ErrorCode} from "../../../../src/eth1/errors.js";
+import {DepositTree} from "../../../../src/db/repositories/depositDataRoot.js";
 
 chai.use(chaiAsPromised);
 
@@ -117,7 +117,7 @@ describe("eth1 / util / getEth1DataForBlocks", function () {
 
       if (expectedEth1Data) {
         const eth1Datas = await eth1DatasPromise;
-        const eth1DatasPartial = eth1Datas.map((eth1Data) => pick(eth1Data, Object.keys(expectedEth1Data[0])));
+        const eth1DatasPartial = eth1Datas.map((eth1Data) => _.pick(eth1Data, Object.keys(expectedEth1Data[0])));
         expect(eth1DatasPartial).to.deep.equal(expectedEth1Data);
       } else if (error) {
         await expectRejectedWithLodestarError(eth1DatasPromise, error);

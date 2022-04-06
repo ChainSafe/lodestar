@@ -1,4 +1,4 @@
-import {IBaseSpecTest} from "../type";
+import {IBaseSpecTest} from "../type.js";
 
 export interface IBaseSSZStaticTestCase<T> extends IBaseSpecTest {
   roots: {

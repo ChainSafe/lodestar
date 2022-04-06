@@ -5,9 +5,9 @@ import http from "node:http";
 import {createHttpTerminator, HttpTerminator} from "http-terminator";
 import {Registry} from "prom-client";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IMetricsOptions} from "../options";
-import {wrapError} from "../../util/wrapError";
-import {HistogramExtra} from "../utils/histogram";
+import {IMetricsOptions} from "../options.js";
+import {wrapError} from "../../util/wrapError.js";
+import {HistogramExtra} from "../utils/histogram.js";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface IMetricsServer {}

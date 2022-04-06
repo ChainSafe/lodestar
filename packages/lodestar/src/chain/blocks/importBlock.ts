@@ -19,18 +19,18 @@ import {
 } from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {IMetrics} from "../../metrics";
-import {IEth1ForBlockProduction} from "../../eth1";
-import {IExecutionEngine} from "../../executionEngine";
-import {IBeaconDb} from "../../db";
-import {ZERO_HASH_HEX} from "../../constants";
-import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache";
-import {ChainEvent} from "../emitter";
-import {ChainEventEmitter} from "../emitter";
-import {LightClientServer} from "../lightClient";
-import {getCheckpointFromState} from "./utils/checkpoint";
-import {PendingEvents} from "./utils/pendingEvents";
-import {FullyVerifiedBlock} from "./types";
+import {IMetrics} from "../../metrics/index.js";
+import {IEth1ForBlockProduction} from "../../eth1/index.js";
+import {IExecutionEngine} from "../../executionEngine/index.js";
+import {IBeaconDb} from "../../db/index.js";
+import {ZERO_HASH_HEX} from "../../constants/index.js";
+import {CheckpointStateCache, StateContextCache, toCheckpointHex} from "../stateCache/index.js";
+import {ChainEvent} from "../emitter.js";
+import {ChainEventEmitter} from "../emitter.js";
+import {LightClientServer} from "../lightClient/index.js";
+import {getCheckpointFromState} from "./utils/checkpoint.js";
+import {PendingEvents} from "./utils/pendingEvents.js";
+import {FullyVerifiedBlock} from "./types.js";
 // import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 /**

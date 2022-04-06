@@ -1,10 +1,9 @@
-import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Root, Slot, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {bytesToInt} from "@chainsafe/lodestar-utils";
 import {Db, Bucket, Repository, IDbMetrics} from "@chainsafe/lodestar-db";
-import {getStateTypeFromBytes} from "../../util/multifork";
-import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex";
+import {getRootIndexKey, storeRootIndex} from "./stateArchiveIndex.js";
 
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call */
 
@@ -23,7 +22,7 @@ export class StateArchiveRepository extends Repository<Slot, BeaconStateAllForks
   }
 
   decodeValue(data: Uint8Array): BeaconStateAllForks {
-    return getStateTypeFromBytes(this.config, data).deserializeToViewDU(data);
+    return allForks.getStateTypeFromBytes(this.config, data).deserializeToViewDU(data);
   }
 
   // Handle key as slot

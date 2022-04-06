@@ -3,7 +3,7 @@ import axios from "axios";
 import * as mainnet from "../../src/presets/mainnet";
 import * as minimal from "../../src/presets/minimal";
 import {ForkName, BeaconPreset} from "../../src";
-import {loadConfigYaml} from "../yaml";
+import {loadConfigYaml} from "../yaml.js";
 
 // Not e2e, but slow. Run with e2e tests
 

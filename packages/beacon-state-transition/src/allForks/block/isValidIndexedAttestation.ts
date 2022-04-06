@@ -1,7 +1,7 @@
 import {MAX_VALIDATORS_PER_COMMITTEE} from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {CachedBeaconStateAllForks} from "../../types";
-import {verifyIndexedAttestationSignature} from "../signatureSets";
+import {CachedBeaconStateAllForks} from "../../types.js";
+import {verifyIndexedAttestationSignature} from "../signatureSets/index.js";
 
 /**
  * Check if `indexedAttestation` has sorted and unique indices and a valid aggregate signature.

@@ -11,11 +11,11 @@ import {
   isPassphraseFile,
   writeValidatorPassphrase,
   ICliCommand,
-} from "../../../../util";
-import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths";
-import {IAccountValidatorArgs} from "./options";
-import {getAccountPaths} from "../../paths";
-import {IGlobalArgs} from "../../../../options";
+} from "../../../../util/index.js";
+import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../../../validatorDir/paths.js";
+import {IAccountValidatorArgs} from "./options.js";
+import {getAccountPaths} from "../../paths.js";
+import {IGlobalArgs} from "../../../../options/index.js";
 
 /* eslint-disable no-console */
 

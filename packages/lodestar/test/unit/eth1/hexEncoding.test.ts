@@ -6,7 +6,7 @@ import {
   quantityToBigint,
   numToQuantity,
   bytesToQuantity,
-} from "../../../src/eth1/provider/utils";
+} from "../../../src/eth1/provider/utils.js";
 
 describe("eth1 / hex encoding", () => {
   describe("QUANTITY", () => {

@@ -11,12 +11,12 @@ import {
   ISlashingProtection,
   SignerLocal,
 } from "@chainsafe/lodestar-validator";
-import {BeaconNode} from "../../../src/node";
-import {testLogger, TestLoggerOpts} from "../logger";
-import {SecretKey} from "@chainsafe/bls";
-import {getLocalSecretKeys} from "@chainsafe/lodestar-cli/src/cmds/validator/keys";
-import {IValidatorCliArgs} from "@chainsafe/lodestar-cli/src/cmds/validator/options";
-import {IGlobalArgs} from "@chainsafe/lodestar-cli/src/options";
+import {BeaconNode} from "../../../src/node/index.js";
+import {testLogger, TestLoggerOpts} from "../logger.js";
+import type {SecretKey} from "@chainsafe/bls/types";
+import {getLocalSecretKeys} from "../../../../cli/src/cmds/validator/keys.js";
+import {IValidatorCliArgs} from "../../../../cli/src/cmds/validator/options.js";
+import {IGlobalArgs} from "../../../../cli/src/options/index.js";
 import {KEY_IMPORTED_PREFIX} from "@chainsafe/lodestar-keymanager-server";
 
 export async function getAndInitValidatorsWithKeystore({

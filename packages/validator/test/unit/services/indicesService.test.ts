@@ -3,10 +3,10 @@ import {expect} from "chai";
 import sinon from "sinon";
 import bls from "@chainsafe/bls";
 import {toHexString} from "@chainsafe/ssz";
-import {ValidatorStore} from "../../../src/services/validatorStore";
-import {getApiClientStub} from "../../utils/apiStub";
-import {testLogger} from "../../utils/logger";
-import {IndicesService} from "../../../src/services/indices";
+import {ValidatorStore} from "../../../src/services/validatorStore.js";
+import {getApiClientStub} from "../../utils/apiStub.js";
+import {testLogger} from "../../utils/logger.js";
+import {IndicesService} from "../../../src/services/indices.js";
 
 describe("IndicesService", function () {
   const sandbox = sinon.createSandbox();

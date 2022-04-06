@@ -5,9 +5,9 @@
 import {EFFECTIVE_BALANCE_INCREMENT} from "@chainsafe/lodestar-params";
 import {Gwei, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntMax} from "@chainsafe/lodestar-utils";
-import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
+import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements.js";
 import {BeaconStateAllForks} from "..";
-import {CachedBeaconStateAllForks} from "../types";
+import {CachedBeaconStateAllForks} from "../types.js";
 
 /**
  * Return the combined effective balance of the [[indices]].

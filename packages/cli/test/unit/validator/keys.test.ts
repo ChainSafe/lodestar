@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import sinon from "sinon";
 import fs, {Dirent, Stats} from "node:fs";
-import {resolveKeystorePaths} from "../../../src/cmds/validator/keys";
+import {resolveKeystorePaths} from "../../../src/cmds/validator/keys.js";
 
 describe("validator / keys / resolveKeystorePaths", () => {
   beforeEach(() => {

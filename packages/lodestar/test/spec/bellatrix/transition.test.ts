@@ -1,5 +1,5 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {transition} from "../allForks/transition";
+import {transition} from "../allForks/transition.js";
 
 transition(
   // eslint-disable-next-line @typescript-eslint/naming-convention

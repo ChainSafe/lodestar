@@ -9,15 +9,11 @@ import {Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
-import {
-  getActiveValidatorIndices,
-  getCurrentEpoch,
-  computeEpochAtSlot,
-  ZERO_HASH,
-  getChurnLimit,
-  getCurrentSlot,
-} from "..";
+import {ZERO_HASH} from "../constants/constants.js";
+import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types.js";
+import {computeEpochAtSlot, getCurrentEpoch} from "./epoch.js";
+import {getCurrentSlot} from "./slot.js";
+import {getActiveValidatorIndices, getChurnLimit} from "./validator.js";
 
 export const ETH_TO_GWEI = 10 ** 9;
 const SAFETY_DECAY = 10;

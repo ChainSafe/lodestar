@@ -9,9 +9,9 @@ import {
   CachedBeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
-import {AttestationError, AttestationErrorCode, GossipAction} from "../errors";
-import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants";
-import {RegenCaller} from "../regen";
+import {AttestationError, AttestationErrorCode, GossipAction} from "../errors/index.js";
+import {MAXIMUM_GOSSIP_CLOCK_DISPARITY_SEC} from "../../constants/index.js";
+import {RegenCaller} from "../regen/index.js";
 
 const {getIndexedAttestationSignatureSet} = allForks;
 

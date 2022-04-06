@@ -1,7 +1,7 @@
 import {CachedBeaconStatePhase0, allForks, phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {IBaseSpecTest, shouldVerify} from "../type";
-import {operations} from "../allForks/operations";
+import {IBaseSpecTest, shouldVerify} from "../type.js";
+import {operations} from "../allForks/operations.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

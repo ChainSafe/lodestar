@@ -1,4 +1,4 @@
-import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray, ExecutionStatus} from "../../../src";
+import {ForkChoice, IForkChoiceStore, IProtoBlock, ProtoArray, ExecutionStatus} from "../../../src/index.js";
 import {config} from "@chainsafe/lodestar-config/default";
 import {expect} from "chai";
 import {fromHexString} from "@chainsafe/ssz";

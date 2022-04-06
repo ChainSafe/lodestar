@@ -11,7 +11,9 @@
   "bugs": {
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -26,6 +28,7 @@
     "build:lib:watch": "yarn run build:lib --watch",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
     "build:types:watch": "yarn run build:types --watch",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "coverage": "codecov -F lodestar-fork-choice",
     "lint": "eslint --color --ext .ts src/ test/",

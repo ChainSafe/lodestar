@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {unshuffleList} from "../../../src";
+import {unshuffleList} from "../../../src/index.js";
 
 describe("util / shuffle", () => {
   const testCases: {

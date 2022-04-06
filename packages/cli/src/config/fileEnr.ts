@@ -1,5 +1,5 @@
 import {createKeypairFromPeerId, ENR, ENRKey, ENRValue} from "@chainsafe/discv5";
-import {writeFile, readFile} from "../util";
+import {writeFile, readFile} from "../util/index.js";
 import PeerId from "peer-id";
 
 /**

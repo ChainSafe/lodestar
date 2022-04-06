@@ -1,6 +1,6 @@
 import {expect} from "chai";
-import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses";
-import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types";
+import {collectResponses} from "../../../../../src/network/reqresp/request/collectResponses.js";
+import {Method, IncomingResponseBody} from "../../../../../src/network/reqresp/types.js";
 import {arrToSource} from "../utils";
 
 describe("network / reqresp / request / collectResponses", () => {

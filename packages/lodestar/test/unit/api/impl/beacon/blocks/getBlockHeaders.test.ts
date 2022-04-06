@@ -5,7 +5,7 @@ import {
   generateEmptyProtoBlock,
   generateEmptySignedBlock,
   generateSignedBlock,
-} from "../../../../../utils/block";
+} from "../../../../../utils/block.js";
 import {expect} from "chai";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
 import {toHexString} from "@chainsafe/ssz";

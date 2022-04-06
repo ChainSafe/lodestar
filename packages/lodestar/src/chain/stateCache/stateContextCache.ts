@@ -2,8 +2,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {Epoch, Root, RootHex} from "@chainsafe/lodestar-types";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {routes} from "@chainsafe/lodestar-api";
-import {IMetrics} from "../../metrics";
-import {MapTracker} from "./mapMetrics";
+import {IMetrics} from "../../metrics/index.js";
+import {MapTracker} from "./mapMetrics.js";
 
 const MAX_STATES = 3 * 32;
 

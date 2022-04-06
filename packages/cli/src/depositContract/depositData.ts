@@ -3,7 +3,8 @@ import {digest} from "@chainsafe/as-sha256";
 import {toHexString} from "@chainsafe/ssz";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import bls, {SecretKey, PublicKey} from "@chainsafe/bls";
+import bls from "@chainsafe/bls";
+import type {SecretKey, PublicKey} from "@chainsafe/bls/types";
 import {computeSigningRoot, computeDomain, ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLS_WITHDRAWAL_PREFIX, DOMAIN_DEPOSIT} from "@chainsafe/lodestar-params";
 

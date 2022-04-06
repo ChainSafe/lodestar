@@ -1,5 +1,5 @@
 import path from "node:path";
-import {add0xPrefix} from "../util/format";
+import {add0xPrefix} from "../util/format.js";
 
 export const VOTING_KEYSTORE_FILE = "voting-keystore.json";
 export const WITHDRAWAL_KEYSTORE_FILE = "withdrawal-keystore.json";

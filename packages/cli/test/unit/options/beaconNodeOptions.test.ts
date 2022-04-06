@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {LogLevel, RecursivePartial} from "@chainsafe/lodestar-utils";
-import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions";
+import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions/index.js";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {

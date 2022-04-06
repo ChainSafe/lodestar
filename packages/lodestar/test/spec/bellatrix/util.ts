@@ -1,6 +1,6 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 import {createIChainForkConfig} from "@chainsafe/lodestar-config";
-import {IBaseSpecTest} from "../type";
+import {IBaseSpecTest} from "../type.js";
 
 export interface IBellatrixStateTestCase extends IBaseSpecTest {
   pre: bellatrix.BeaconState;

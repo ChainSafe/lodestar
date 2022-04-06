@@ -1,5 +1,5 @@
 import {Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {MapDef} from "../../util/map";
+import {MapDef} from "../../util/map.js";
 
 /**
  * SyncCommittee aggregates are only useful for the next block they have signed.

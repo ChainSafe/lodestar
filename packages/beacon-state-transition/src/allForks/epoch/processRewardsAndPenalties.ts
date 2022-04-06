@@ -1,9 +1,9 @@
 import {ForkName, GENESIS_EPOCH} from "@chainsafe/lodestar-params";
 import {ssz} from "@chainsafe/lodestar-types";
-import {EpochProcess} from "../../cache/epochProcess";
-import {getAttestationDeltas as getAttestationDeltasPhase0} from "../../phase0/epoch/getAttestationDeltas";
-import {getRewardsAndPenalties as getRewardsPenaltiesAltair} from "../../altair/epoch/getRewardsAndPenalties";
-import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../cache/stateCache";
+import {EpochProcess} from "../../cache/epochProcess.js";
+import {getAttestationDeltas as getAttestationDeltasPhase0} from "../../phase0/epoch/getAttestationDeltas.js";
+import {getRewardsAndPenalties as getRewardsPenaltiesAltair} from "../../altair/epoch/getRewardsAndPenalties.js";
+import {CachedBeaconStateAllForks, CachedBeaconStatePhase0, CachedBeaconStateAltair} from "../../cache/stateCache.js";
 
 /**
  * Iterate over all validator and compute rewards and penalties to apply to balances.

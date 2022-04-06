@@ -1,7 +1,11 @@
 colors: true
 require:
-  - ts-node/register
-  - ./test/setupBLS.ts
   - ./test/setupPreset.ts
 timeout: 5000
 exit: true
+extension: ["ts"]
+node-option:
+  - "experimental-specifier-resolution=node"
+  - "loader=ts-node/esm"
+
+

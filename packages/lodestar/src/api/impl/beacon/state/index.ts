@@ -7,15 +7,15 @@ import {
   computeEpochAtSlot,
   getCurrentEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {ApiError} from "../../errors";
-import {ApiModules} from "../../types";
+import {ApiError} from "../../errors.js";
+import {ApiModules} from "../../types.js";
 import {
   filterStateValidatorsByStatuses,
   getStateValidatorIndex,
   getValidatorStatus,
   resolveStateId,
   toValidatorResponse,
-} from "./utils";
+} from "./utils.js";
 
 export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): IBeaconStateApi {
   async function getState(stateId: routes.beacon.StateId): Promise<BeaconStateAllForks> {

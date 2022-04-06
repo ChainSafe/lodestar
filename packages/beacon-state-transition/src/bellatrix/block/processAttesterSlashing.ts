@@ -1,7 +1,7 @@
 import {phase0} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {CachedBeaconStateBellatrix} from "../../types";
-import {processAttesterSlashing as processAttesterSlashingAllForks} from "../../allForks/block";
+import {CachedBeaconStateBellatrix} from "../../types.js";
+import {processAttesterSlashing as processAttesterSlashingAllForks} from "../../allForks/block/index.js";
 
 export function processAttesterSlashing(
   state: CachedBeaconStateBellatrix,

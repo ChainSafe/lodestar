@@ -1,7 +1,7 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {bytesToBigInt, bigIntToBytes} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {ErrorParseJson} from "./jsonRpcHttpClient";
+import {ErrorParseJson} from "./jsonRpcHttpClient.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

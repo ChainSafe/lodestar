@@ -1,14 +1,14 @@
 import {expect} from "chai";
 import sinon, {SinonStubbedInstance} from "sinon";
 import {ssz} from "@chainsafe/lodestar-types";
-import {ZERO_HASH_HEX} from "../../../../src/constants";
+import {ZERO_HASH_HEX} from "../../../../src/constants/index.js";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {generateProtoBlock, generateEmptySignedBlock} from "../../../utils/block";
-import {StubbedBeaconDb} from "../../../utils/stub";
-import {testLogger} from "../../../utils/logger";
-import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks";
-import {LightClientServer} from "../../../../src/chain/lightClient";
+import {generateProtoBlock, generateEmptySignedBlock} from "../../../utils/block.js";
+import {StubbedBeaconDb} from "../../../utils/stub/index.js";
+import {testLogger} from "../../../utils/logger.js";
+import {archiveBlocks} from "../../../../src/chain/archiver/archiveBlocks.js";
+import {LightClientServer} from "../../../../src/chain/lightClient/index.js";
 
 describe("block archiver task", function () {
   const logger = testLogger();

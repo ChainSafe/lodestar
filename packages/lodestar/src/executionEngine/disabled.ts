@@ -1,4 +1,4 @@
-import {IExecutionEngine} from "./interface";
+import {IExecutionEngine} from "./interface.js";
 
 export class ExecutionEngineDisabled implements IExecutionEngine {
   async notifyNewPayload(): Promise<never> {

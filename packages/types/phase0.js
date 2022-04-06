@@ -1,2 +1,2 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-module.exports = require("./lib/phase0/types");
+// eslint-disable-next-line import/export
+export * from "./lib/phase0/types.js";

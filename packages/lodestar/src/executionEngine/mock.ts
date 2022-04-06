@@ -1,14 +1,14 @@
 import crypto from "node:crypto";
 import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
-import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
+import {ZERO_HASH, ZERO_HASH_HEX} from "../constants/index.js";
 import {
   ExecutePayloadStatus,
   ExecutePayloadResponse,
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
-} from "./interface";
+} from "./interface.js";
 import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
 const INTEROP_GAS_LIMIT = 30e6;
 

@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {toGraffitiBuffer} from "../../../src/util/graffiti";
+import {toGraffitiBuffer} from "../../../src/util/graffiti.js";
 
 describe("Graffiti helper", () => {
   describe("toGraffitiBuffer", () => {

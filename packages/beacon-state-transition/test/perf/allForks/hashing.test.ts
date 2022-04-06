@@ -1,7 +1,7 @@
 import {itBench} from "@dapplion/benchmark";
 import {ssz} from "@chainsafe/lodestar-types";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../util";
-import {unshuffleList} from "../../../src";
+import {unshuffleList} from "../../../src/index.js";
 
 // Test cost of hashing state after some modifications
 

@@ -11,10 +11,11 @@ module.exports = {
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaVersion: 10,
+    ecmaVersion: "latest",
     project: "./tsconfig.json",
+    sourceType: "module",
   },
-  plugins: ["@typescript-eslint", "eslint-plugin-import", "eslint-plugin-node", "no-only-tests", "prettier"],
+  plugins: ["@typescript-eslint", "eslint-plugin-import", "@chainsafe/eslint-plugin-node", "no-only-tests", "prettier"],
   extends: [
     "eslint:recommended",
     "plugin:import/errors",
@@ -112,7 +113,7 @@ module.exports = {
     //if --fix is run it messes imports like /lib/presets/minimal & /lib/presets/mainnet
     "import/no-duplicates": "off",
     "import/no-relative-packages": "error",
-    "node/no-deprecated-api": "error",
+    "@chainsafe/node/no-deprecated-api": "error",
     "new-parens": "error",
     "no-caller": "error",
     "no-bitwise": "off",
@@ -149,6 +150,17 @@ module.exports = {
 
     // Prevents accidentally pushing a commit with .only in Mocha tests
     "no-only-tests/no-only-tests": "error",
+
+    // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
+    "import/no-unresolved": "off",
+
+    "@chainsafe/node/file-extension-in-import": [
+      "error",
+      "always",
+      {
+        "esm": true
+      }
+    ],
   },
   settings: {
     "import/core-modules": [

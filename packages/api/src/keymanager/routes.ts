@@ -1,4 +1,4 @@
-import {ReturnTypes, RoutesData, Schema, reqEmpty, ReqSerializers, ReqEmpty, jsonType} from "../utils";
+import {ReturnTypes, RoutesData, Schema, reqEmpty, ReqSerializers, ReqEmpty, jsonType} from "../utils/index.js";
 
 export enum ImportStatus {
   /** Keystore successfully decrypted and imported to keymanager permanent storage */

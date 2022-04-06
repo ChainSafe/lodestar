@@ -1,17 +1,17 @@
 import PeerId from "peer-id";
-import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface";
-import {INetwork, NetworkEvent} from "../network";
+import {IBeaconSync, ISyncModules, SyncingStatus} from "./interface.js";
+import {INetwork, NetworkEvent} from "../network/index.js";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {Slot, phase0} from "@chainsafe/lodestar-types";
-import {IMetrics} from "../metrics";
-import {ChainEvent, IBeaconChain} from "../chain";
-import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range";
-import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType";
-import {MIN_EPOCH_TO_START_GOSSIP} from "./constants";
-import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface";
-import {SyncOptions} from "./options";
-import {UnknownBlockSync} from "./unknownBlock";
+import {IMetrics} from "../metrics/index.js";
+import {ChainEvent, IBeaconChain} from "../chain/index.js";
+import {RangeSync, RangeSyncStatus, RangeSyncEvent} from "./range/range.js";
+import {getPeerSyncType, PeerSyncType, peerSyncTypes} from "./utils/remoteSyncType.js";
+import {MIN_EPOCH_TO_START_GOSSIP} from "./constants.js";
+import {SyncState, SyncChainDebugState, syncStateMetric} from "./interface.js";
+import {SyncOptions} from "./options.js";
+import {UnknownBlockSync} from "./unknownBlock.js";
 
 export class BeaconSync implements IBeaconSync {
   private readonly logger: ILogger;

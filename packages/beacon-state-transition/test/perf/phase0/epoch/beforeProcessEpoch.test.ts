@@ -1,6 +1,6 @@
 import {itBench} from "@dapplion/benchmark";
-import {beforeProcessEpoch} from "../../../../src";
-import {State} from "../../types";
+import {beforeProcessEpoch} from "../../../../src/index.js";
+import {State} from "../../types.js";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 
 // PERF: Two major steps:

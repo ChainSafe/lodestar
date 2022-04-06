@@ -5,9 +5,9 @@ import {
   CachedBeaconStateAllForks,
   computeEpochShuffling,
   getNextSyncCommittee,
-} from "../../../../src";
+} from "../../../../src/index.js";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
-import {computeProposers} from "../../../../src/util/seed";
+import {computeProposers} from "../../../../src/util/seed.js";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;

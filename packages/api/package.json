@@ -12,7 +12,31 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "version": "0.36.0",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./keymanager": {
+      "import": "./lib/keymanager/index.js"
+    },
+    "./keymanager/server": {
+      "import": "./lib/keymanager/server.js"
+    },
+    "./server": {
+      "import": "./lib/server/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
+  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -25,6 +49,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "coverage": "codecov -F lodestar-api",
     "lint": "eslint --color --ext .ts src/ test/",

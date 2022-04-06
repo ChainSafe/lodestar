@@ -12,7 +12,9 @@
     "url": "https://github.com/ChainSafe/lodestar/issues"
   },
   "version": "0.36.0",
-  "main": "lib/index.js",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
     "lib/**/*.js",
@@ -25,6 +27,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
     "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
+    "check-build": "node -e \"(async function() { await import('./lib/index.js') })()\"",
     "check-types": "tsc",
     "coverage": "codecov -F lodestar-light-client",
     "lint": "eslint --color --ext .ts src/ test/",
@@ -36,7 +39,7 @@
   },
   "dependencies": {
     "@chainsafe/abort-controller": "^3.0.1",
-    "@chainsafe/bls": "6.0.3",
+    "@chainsafe/bls": "7.0.0",
     "@chainsafe/lodestar-api": "^0.36.0",
     "@chainsafe/lodestar-config": "^0.36.0",
     "@chainsafe/lodestar-params": "^0.36.0",

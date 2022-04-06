@@ -7,10 +7,10 @@ import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lode
 import {Lightclient} from "@chainsafe/lodestar-light-client";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {ChainEvent} from "../../../src/chain";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {ChainEvent} from "../../../src/chain/index.js";
 
 describe("chain / lightclient", function () {
   /**

@@ -2,11 +2,11 @@ import chai, {expect} from "chai";
 import chaiAsPromised from "chai-as-promised";
 import all from "it-all";
 import pipe from "it-pipe";
-import {Method, Encoding, RequestBody} from "../../../../../src/network/reqresp/types";
-import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy";
-import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode";
-import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode";
-import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData";
+import {Method, Encoding, RequestBody} from "../../../../../src/network/reqresp/types.js";
+import {SszSnappyErrorCode} from "../../../../../src/network/reqresp/encodingStrategies/sszSnappy/index.js";
+import {requestEncode} from "../../../../../src/network/reqresp/encoders/requestEncode.js";
+import {requestDecode} from "../../../../../src/network/reqresp/encoders/requestDecode.js";
+import {sszSnappyPing} from "../encodingStrategies/sszSnappy/testData.js";
 import {arrToSource, expectEqualByteChunks} from "../utils";
 
 chai.use(chaiAsPromised);

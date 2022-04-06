@@ -1,11 +1,10 @@
 import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
-import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {getClient} from "@chainsafe/lodestar-api";
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {LogLevel, testLogger, TestLoggerOpts} from "../../utils/logger.js";
 
 chai.use(chaiAsPromised);
 
@@ -32,10 +31,6 @@ describe("lodestar / sync", function () {
         const callback = afterEachCallbacks.pop();
         if (callback) await callback();
       }
-    });
-
-    before(async function () {
-      await initBLS();
     });
 
     it("getSyncingStatus", async function () {

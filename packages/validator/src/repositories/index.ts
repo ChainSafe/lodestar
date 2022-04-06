@@ -1,1 +1,1 @@
-export * from "./metaDataRepository";
+export * from "./metaDataRepository.js";

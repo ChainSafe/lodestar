@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {getGlobalPaths} from "../../../src/paths/global";
+import {getGlobalPaths} from "../../../src/paths/global.js";
 
 describe("paths / global", () => {
   process.env.XDG_DATA_HOME = "/my-root-dir";

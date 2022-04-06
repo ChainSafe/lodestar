@@ -11,10 +11,10 @@ import {
   SYNC_COMMITTEE_SIZE,
 } from "@chainsafe/lodestar-params";
 import {phase0} from "@chainsafe/lodestar-types";
-import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src";
+import {altair, CachedBeaconStateAllForks, CachedBeaconStateAltair} from "../../../../src/index.js";
 import {generatePerfTestCachedStateAltair, perfStateId} from "../../util";
-import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util";
-import {StateAltair} from "../../types";
+import {BlockAltairOpts, getBlockAltair} from "../../phase0/block/util.js";
+import {StateAltair} from "../../types.js";
 
 type StateAttestations = {
   state: CachedBeaconStateAllForks;

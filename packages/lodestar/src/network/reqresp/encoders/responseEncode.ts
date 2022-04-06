@@ -1,8 +1,8 @@
 import {ForkName} from "@chainsafe/lodestar-params";
-import {RespStatus, RpcResponseStatusError} from "../../../constants";
+import {RespStatus, RpcResponseStatusError} from "../../../constants/index.js";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {writeEncodedPayload} from "../encodingStrategies";
-import {encodeErrorMessage} from "../utils";
+import {writeEncodedPayload} from "../encodingStrategies/index.js";
+import {encodeErrorMessage} from "../utils/index.js";
 import {
   Method,
   Protocol,
@@ -13,7 +13,7 @@ import {
   contextBytesTypeByProtocol,
   IncomingResponseBodyByMethod,
   getOutgoingSerializerByMethod,
-} from "../types";
+} from "../types.js";
 
 /**
  * Yields byte chunks for a `<response>` with a zero response code `<result>`

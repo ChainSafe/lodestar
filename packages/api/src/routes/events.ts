@@ -1,6 +1,6 @@
 import {Epoch, phase0, Slot, ssz, StringType, RootHex, altair, UintNum64} from "@chainsafe/lodestar-types";
 import {ContainerType, Type} from "@chainsafe/ssz";
-import {RouteDef, TypeJson} from "../utils";
+import {RouteDef, TypeJson} from "../utils/index.js";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 

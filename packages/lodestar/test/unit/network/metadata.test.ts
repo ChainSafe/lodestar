@@ -1,7 +1,7 @@
 import {expect} from "chai";
 import {ssz} from "@chainsafe/lodestar-types";
-import {getENRForkID} from "../../../src/network/metadata";
-import {config} from "../../utils/config";
+import {getENRForkID} from "../../../src/network/metadata.js";
+import {config} from "../../utils/config.js";
 
 describe("network / metadata / getENRForkID", function () {
   it("should get enr fork id if not found next fork", () => {

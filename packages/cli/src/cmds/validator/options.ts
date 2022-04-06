@@ -1,9 +1,9 @@
-import {ICliCommandOptions, ILogArgs} from "../../util";
-import {defaultValidatorPaths} from "./paths";
-import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options";
-import {logOptions, beaconPathsOptions} from "../beacon/options";
-import {IBeaconPaths} from "../beacon/paths";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
+import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
+import {defaultValidatorPaths} from "./paths.js";
+import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/validator/options.js";
+import {logOptions, beaconPathsOptions} from "../beacon/options.js";
+import {IBeaconPaths} from "../beacon/paths.js";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
 
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {

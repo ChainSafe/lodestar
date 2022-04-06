@@ -2,7 +2,10 @@ import {expect} from "chai";
 import fs from "node:fs";
 import path from "node:path";
 import findUp from "find-up";
-import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath";
+import {gitDataPath, readGitDataFile} from "../../../src/util/gitData/gitDataPath.js";
+import {fileURLToPath} from "node:url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 describe("util / gitData", () => {
   it("gitData file must exist", () => {

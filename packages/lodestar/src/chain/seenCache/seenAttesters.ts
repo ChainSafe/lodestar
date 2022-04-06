@@ -1,5 +1,5 @@
 import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
-import {MapDef} from "../../util/map";
+import {MapDef} from "../../util/map.js";
 
 // The next, current and previous epochs. We require the next epoch due to the
 // `MAXIMUM_GOSSIP_CLOCK_DISPARITY`. We require the previous epoch since the

@@ -2,20 +2,19 @@
 // NOTE: @typescript*no-unsafe* rules are disabled above because `workerData` is typed as `any`
 import {parentPort, workerData} from "worker_threads";
 
-import {init} from "@chainsafe/bls";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 
-import {getDevBeaconNode} from "../../utils/node/beacon";
-import {getAndInitDevValidators} from "../../utils/node/validator";
-import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger";
-import {connect} from "../../utils/network";
-import {Network} from "../../../src/network";
-import {NodeWorkerOptions, Message} from "./types";
+import {getDevBeaconNode} from "../../utils/node/beacon.js";
+import {getAndInitDevValidators} from "../../utils/node/validator.js";
+import {testLogger, LogLevel, TestLoggerOpts} from "../../utils/logger.js";
+import {connect} from "../../utils/network.js";
+import {Network} from "../../../src/network/index.js";
+import {NodeWorkerOptions, Message} from "./types.js";
 import {Multiaddr} from "multiaddr";
 import {sleep, TimestampFormatCode, withTimeout} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
 import {createFromPrivKey} from "peer-id";
-import {simTestInfoTracker} from "../../utils/node/simTest";
+import {simTestInfoTracker} from "../../utils/node/simTest.js";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /* eslint-disable no-console */
@@ -23,14 +22,6 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 async function runWorker(): Promise<void> {
   const parent = parentPort;
   if (!parent) throw Error("Must be run in worker_thread");
-
-  // blst Native bindings do work in multi-thread now but sometimes they randomnly fail on Github Actions runners when stopping the test
-  // ```
-  // Segmentation fault (core dumped)
-  // error Command failed with exit code 139.
-  // ```
-  // Since we really need stability in tests we will use herumi until this test fails <1% of times on GA runners
-  await init("herumi");
 
   const options = workerData.options as NodeWorkerOptions;
   const {nodeIndex, validatorsPerNode, startIndex, checkpointEvent, logFile, nodes} = options;

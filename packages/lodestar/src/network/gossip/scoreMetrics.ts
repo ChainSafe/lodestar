@@ -1,8 +1,8 @@
 import {PeerScoreParams} from "libp2p-gossipsub/src/score";
 import {PeerStats} from "libp2p-gossipsub/src/score/peer-stats";
-import {MapDef} from "../../util/map";
-import {GossipType} from "./interface";
-import {GossipTopicCache} from "./topic";
+import {MapDef} from "../../util/map.js";
+import {GossipType} from "./interface.js";
+import {GossipTopicCache} from "./topic.js";
 
 export type TopicScoreWeights<T> = {p1w: T; p2w: T; p3w: T; p3bw: T; p4w: T};
 export type ScoreWeights<T> = {

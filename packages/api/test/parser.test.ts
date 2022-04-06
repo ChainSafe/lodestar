@@ -1,4 +1,4 @@
-import {compileRouteUrlFormater} from "../src/utils/urlFormat";
+import {compileRouteUrlFormater} from "../src/utils/urlFormat.js";
 
 /* eslint-disable no-console */
 

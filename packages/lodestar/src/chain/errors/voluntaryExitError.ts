@@ -1,4 +1,4 @@
-import {GossipActionError} from "./gossipValidation";
+import {GossipActionError} from "./gossipValidation.js";
 
 export enum VoluntaryExitErrorCode {
   ALREADY_EXISTS = "VOLUNTARY_EXIT_ERROR_ALREADY_EXISTS",

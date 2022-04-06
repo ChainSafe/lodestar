@@ -1,6 +1,6 @@
 import {routes} from "@chainsafe/lodestar-api";
 import {Connection} from "libp2p";
-import {PeerStatus} from "../../../network";
+import {PeerStatus} from "../../../network/index.js";
 
 /**
  * Format a list of connections from libp2p connections manager into the API's format NodePeer

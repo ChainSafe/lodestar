@@ -1,7 +1,7 @@
 import {getEffectiveBalanceIncrementsZeroed} from "@chainsafe/lodestar-beacon-state-transition";
 import {expect} from "chai";
 
-import {computeDeltas} from "../../../src/protoArray/computeDeltas";
+import {computeDeltas} from "../../../src/protoArray/computeDeltas.js";
 
 describe("computeDeltas", () => {
   it("zero hash", () => {

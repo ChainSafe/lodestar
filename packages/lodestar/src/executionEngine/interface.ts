@@ -1,6 +1,6 @@
 import {bellatrix, Root, RootHex} from "@chainsafe/lodestar-types";
 
-import {DATA, QUANTITY} from "../eth1/provider/utils";
+import {DATA, QUANTITY} from "../eth1/provider/utils.js";
 // An execution engine can produce a payload id anywhere the the uint64 range
 // Since we do no processing with this id, we have no need to deserialize it
 export type PayloadId = string;

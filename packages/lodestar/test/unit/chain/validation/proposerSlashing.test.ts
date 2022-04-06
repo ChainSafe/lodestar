@@ -4,13 +4,13 @@ import {phase0} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz} from "@chainsafe/lodestar-types";
 
-import {BeaconChain} from "../../../../src/chain";
-import {StubbedChain} from "../../../utils/stub";
-import {generateCachedState} from "../../../utils/state";
-import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError";
-import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing";
-import {OpPool} from "../../../../src/chain/opPools";
-import {expectRejectedWithLodestarError} from "../../../utils/errors";
+import {BeaconChain} from "../../../../src/chain/index.js";
+import {StubbedChain} from "../../../utils/stub/index.js";
+import {generateCachedState} from "../../../utils/state.js";
+import {ProposerSlashingErrorCode} from "../../../../src/chain/errors/proposerSlashingError.js";
+import {validateGossipProposerSlashing} from "../../../../src/chain/validation/proposerSlashing.js";
+import {OpPool} from "../../../../src/chain/opPools/index.js";
+import {expectRejectedWithLodestarError} from "../../../utils/errors.js";
 
 describe("validate proposer slashing", () => {
   const sandbox = sinon.createSandbox();

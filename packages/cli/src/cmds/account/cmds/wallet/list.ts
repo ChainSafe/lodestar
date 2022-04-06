@@ -1,8 +1,8 @@
-import {ICliCommand} from "../../../../util";
-import {WalletManager} from "../../../../wallet";
-import {getAccountPaths} from "../../paths";
-import {IGlobalArgs} from "../../../../options";
-import {IAccountWalletArgs} from "./options";
+import {ICliCommand} from "../../../../util/index.js";
+import {WalletManager} from "../../../../wallet/index.js";
+import {getAccountPaths} from "../../paths.js";
+import {IGlobalArgs} from "../../../../options/index.js";
+import {IAccountWalletArgs} from "./options.js";
 
 export type ReturnType = string[];
 

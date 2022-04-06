@@ -2,7 +2,7 @@
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 import {LodestarError} from "../../../src";
-import {logCtxToJson, logCtxToString} from "../../../src/logger/json";
+import {logCtxToJson, logCtxToString} from "../../../src/logger/json.js";
 
 describe("Json helper", () => {
   const circularReference = {};
