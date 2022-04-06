@@ -15,7 +15,12 @@ import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {SyncCommitteeFast} from "./types";
 import {chunkifyInclusiveRange} from "./utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
-import {assertValidSignedHeader, assertValidLightClientUpdate, activeHeader} from "./validation";
+import {
+  assertValidSignedHeader,
+  assertValidLightClientUpdate,
+  activeHeader,
+  assertValidFinalityProof,
+} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
@@ -128,6 +133,12 @@ export class Lightclient {
     header: phase0.BeaconBlockHeader;
     blockRoot: RootHex;
   };
+
+  private finalized: {
+    participation: number;
+    header: phase0.BeaconBlockHeader;
+    blockRoot: RootHex;
+  } | null = null;
 
   private status: RunStatus = {code: RunStatusCode.stopped};
 
@@ -300,6 +311,11 @@ export class Lightclient {
         // Subscribe to head updates over SSE
         // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
         this.api.events.eventstream([routes.events.EventType.lightclientHeaderUpdate], controller.signal, this.onSSE);
+        this.api.events.eventstream(
+          [routes.events.EventType.lightclientFinalizedUpdate],
+          controller.signal,
+          this.onSSE
+        );
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -338,6 +354,10 @@ export class Lightclient {
       switch (event.type) {
         case routes.events.EventType.lightclientHeaderUpdate:
           this.processHeaderUpdate(event.message);
+          break;
+
+        case routes.events.EventType.lightclientFinalizedUpdate:
+          this.processFinalizedUpdate(event.message);
           break;
 
         default:
@@ -422,6 +442,59 @@ export class Lightclient {
       this.logger.debug("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
         eventHead: `${header.slot} ${headerBlockRootHex}`,
+      });
+    }
+  }
+
+  /**
+   * Processes new header updates in only known synced sync periods.
+   * This headerUpdate may update the head if there's enough participation.
+   */
+  private processFinalizedUpdate(finalizedUpdate: routes.events.LightclientFinalizedUpdate): void {
+    // Validate sync aggregate of the attested header and other conditions like future update, period etc
+    // and may be move head
+    this.processHeaderUpdate(finalizedUpdate);
+    assertValidFinalityProof(finalizedUpdate);
+
+    const {finalizedHeader, syncAggregate} = finalizedUpdate;
+    const finalizedBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader);
+    const participation = sumBits(syncAggregate.syncCommitteeBits);
+    // Maybe update the finalized
+    if (
+      this.finalized === null ||
+      // Advance head
+      finalizedHeader.slot > this.finalized.header.slot ||
+      // Replace same slot head
+      (finalizedHeader.slot === this.finalized.header.slot && participation > this.head.participation)
+    ) {
+      // TODO: Do metrics for each case (advance vs replace same slot)
+      const prevFinalized = this.finalized;
+      const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
+
+      this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
+
+      // This is not an error, but a problematic network condition worth knowing about
+      if (
+        prevFinalized &&
+        finalizedHeader.slot === prevFinalized.header.slot &&
+        prevFinalized.blockRoot !== finalizedBlockRootHex
+      ) {
+        this.logger.warn("Finalized update on same slot", {
+          prevHeadSlot: prevFinalized.header.slot,
+          prevHeadRoot: prevFinalized.blockRoot,
+        });
+      }
+      this.logger.info("Head updated", {
+        slot: finalizedHeader.slot,
+        root: finalizedBlockRootHex,
+      });
+
+      // Emit to consumers
+      this.emitter.emit(LightclientEvent.finalized, finalizedHeader);
+    } else {
+      this.logger.debug("Received valid finalized update did not update finalized", {
+        currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
+        eventHead: `${finalizedHeader.slot} ${finalizedBlockRoot}`,
       });
     }
   }

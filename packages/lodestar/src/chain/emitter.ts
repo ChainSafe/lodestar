@@ -100,6 +100,9 @@ export enum ChainEvent {
    * A new lightclient header update is available to be broadcasted to connected light-clients
    */
   lightclientHeaderUpdate = "lightclient:header_update",
+  /**
+   * A new lightclient finalized header update is available to be broadcasted to connected light-clients
+   */
   lightclientFinalizedUpdate = "lightclient:finalized_update",
 }
 

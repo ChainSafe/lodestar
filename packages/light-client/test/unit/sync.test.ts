@@ -11,7 +11,8 @@ import {
   computeLightClientSnapshot,
   getInteropSyncCommittee,
   testLogger,
-  committeeUpdateToHeadUpdate,
+  committeeUpdateToLatestHeadUpdate,
+  committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
 } from "../utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -65,7 +66,10 @@ describe("Lightclient sync", () => {
     }
 
     // So the first call to getLatestHeadUpdate() doesn't error, store the latest snapshot as latest header update
-    lightclientServerApi.latestHeadUpdate = committeeUpdateToHeadUpdate(lastInMap(lightclientServerApi.updates));
+    lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
+    lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
+      lastInMap(lightclientServerApi.updates)
+    );
 
     // Initilize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
