@@ -424,13 +424,17 @@ export class Eth2Gossipsub extends Gossipsub {
         // Ignore topics with 0 peers. May prevent overriding after a fork
         if (peers.size === 0) continue;
 
-        const topic = this.gossipTopicCache.getTopic(topicString);
-        if (topic.type === GossipType.beacon_attestation) {
-          peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
-        } else if (topic.type === GossipType.sync_committee) {
-          peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
-        } else {
-          peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+        // there are some new topics in the network so `getKnownTopic()` returns undefined
+        // for example in prater: /eth2/82f4a72b/optimistic_light_client_update_v0/ssz_snappy
+        const topic = this.gossipTopicCache.getKnownTopic(topicString);
+        if (topic !== undefined) {
+          if (topic.type === GossipType.beacon_attestation) {
+            peersByBeaconAttSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+          } else if (topic.type === GossipType.sync_committee) {
+            peersByBeaconSyncSubnetByFork.set(topic.fork, topic.subnet, peers.size);
+          } else {
+            peersByTypeByFork.set(topic.fork, topic.type, peers.size);
+          }
         }
       }
 
