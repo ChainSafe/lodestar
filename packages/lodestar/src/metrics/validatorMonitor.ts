@@ -4,6 +4,7 @@ import {
   IAttesterStatus,
   parseAttesterFlags,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -26,11 +27,13 @@ export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
+  submitUnaggregatedAttestation(indexedAttestation: IndexedAttestation, subnet: number, sentPeers: number): void;
   registerUnaggregatedAttestation(
     src: OpSource,
     seenTimestampSec: Seconds,
     indexedAttestation: IndexedAttestation
   ): void;
+  submitAggregatedAttestation(indexedAttestation: IndexedAttestation, sentPeers: number): void;
   registerAggregatedAttestation(
     src: OpSource,
     seenTimestampSec: Seconds,
@@ -166,7 +169,8 @@ type MonitoredValidator = {
 export function createValidatorMonitor(
   metrics: ILodestarMetrics,
   config: IChainForkConfig,
-  genesisTime: number
+  genesisTime: number,
+  logger: ILogger
 ): IValidatorMonitor {
   /** The validators that require additional monitoring. */
   const validators = new Map<ValidatorIndex, MonitoredValidator>();
@@ -201,21 +205,35 @@ export function createValidatorMonitor(
         }
 
         const summary = statusToSummary(status);
+        let failedAttestation = false;
 
         if (summary.isPrevSourceAttester) {
           metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
         } else {
+          failedAttestation = true;
           metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
         }
         if (summary.isPrevHeadAttester) {
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc({index});
         } else {
+          failedAttestation = true;
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc({index});
         }
         if (summary.isPrevTargetAttester) {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc({index});
         } else {
+          failedAttestation = true;
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
+        }
+
+        if (failedAttestation) {
+          logger.verbose("Failed attestation in previous epoch", {
+            validatorIndex: index,
+            currentEpoch,
+            isPrevSourceAttester: summary.isPrevSourceAttester,
+            isPrevHeadAttester: summary.isPrevHeadAttester,
+            isPrevTargetAttester: summary.isPrevTargetAttester,
+          });
         }
 
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
@@ -257,6 +275,25 @@ export function createValidatorMonitor(
       }
     },
 
+    submitUnaggregatedAttestation(indexedAttestation, subnet, sentPeers) {
+      const data = indexedAttestation.data;
+      for (const index of indexedAttestation.attestingIndices) {
+        const validator = validators.get(index);
+        if (validator) {
+          if (sentPeers <= 0) {
+            metrics.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe({index}, sentPeers);
+          }
+          logger.verbose("Local validator published unaggregated attestation", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            subnet,
+            sentPeers,
+          });
+        }
+      }
+    },
+
     registerUnaggregatedAttestation(src, seenTimestampSec, indexedAttestation) {
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
@@ -271,6 +308,21 @@ export function createValidatorMonitor(
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestations += 1;
             summary.attestationMinDelay = Math.min(delaySec, summary.attestationMinDelay ?? Infinity);
+          });
+        }
+      }
+    },
+
+    submitAggregatedAttestation(indexedAttestation, sentPeers) {
+      const data = indexedAttestation.data;
+      for (const index of indexedAttestation.attestingIndices) {
+        const validator = validators.get(index);
+        if (validator) {
+          logger.verbose("Local validator published aggregated attestation", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            sentPeers,
           });
         }
       }
@@ -301,6 +353,11 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src, index}, delaySec);
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationAggregateIncusions += 1;
+          });
+          logger.verbose("Local validator attestation is included in AggregatedAndProof", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
           });
         }
       }
@@ -335,6 +392,14 @@ export function createValidatorMonitor(
               correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
             }
             summary.attestationCorrectHead = correctHead;
+          });
+
+          logger.verbose("Local validator attestation is included in block", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            inclusionDistance,
+            correctHead,
           });
         }
       }

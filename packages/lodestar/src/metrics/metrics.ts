@@ -1,6 +1,7 @@
 /**
  * @module metrics
  */
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {BeaconStateAllForks, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {collectDefaultMetrics, Counter, Metric, Registry} from "prom-client";
@@ -18,14 +19,15 @@ export function createMetrics(
   opts: IMetricsOptions,
   config: IChainForkConfig,
   anchorState: BeaconStateAllForks,
-  externalRegistries: Registry[] = []
+  logger: ILogger,
+  externalRegistries: Registry[] = [],
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
   const lodestar = createLodestarMetrics(register, opts.metadata, anchorState);
 
   const genesisTime = anchorState.genesisTime;
-  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime);
+  const validatorMonitor = createValidatorMonitor(lodestar, config, genesisTime, logger);
   // Register a single collect() function to run all validatorMonitor metrics
   lodestar.validatorMonitor.validatorsTotal.addCollect(() => {
     const clockSlot = getCurrentSlot(config, genesisTime);

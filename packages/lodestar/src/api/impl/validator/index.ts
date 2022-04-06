@@ -25,7 +25,6 @@ import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {CommitteeSubscription} from "../../../network/subnets";
-import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
@@ -424,7 +423,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
-      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -436,21 +434,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               signedAggregateAndProof
             );
 
-            metrics?.registerAggregatedAttestation(
-              OpSource.api,
-              seenTimestampSec,
-              signedAggregateAndProof,
-              indexedAttestation
+            chain.aggregatedAttestationPool.add(
+              signedAggregateAndProof.message.aggregate,
+              indexedAttestation.attestingIndices,
+              committeeIndices
             );
-
-            await Promise.all([
-              chain.aggregatedAttestationPool.add(
-                signedAggregateAndProof.message.aggregate,
-                indexedAttestation.attestingIndices,
-                committeeIndices
-              ),
-              network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-            ]);
+            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");
