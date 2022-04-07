@@ -14,7 +14,6 @@ import {
 } from "../interface";
 import {GossipActionError, GossipAction} from "../../../chain/errors";
 import {createValidationQueues} from "./queue";
-import {getGossipAcceptMetadataByType, GetGossipAcceptMetadataFn} from "./onAccept";
 
 type ValidatorFnModules = {
   config: IChainForkConfig;
@@ -68,8 +67,7 @@ function getGossipValidatorFn<K extends GossipType>(
   type: K,
   modules: ValidatorFnModules
 ): GossipValidatorFn {
-  const {config, logger, metrics} = modules;
-  const getGossipObjectAcceptMetadata = getGossipAcceptMetadataByType[type] as GetGossipAcceptMetadataFn;
+  const {logger, metrics} = modules;
 
   return async function gossipValidatorFn(topic, msg, propagationSource, seenTimestampSec) {
     // Define in scope above try {} to be used in catch {} if object was parsed
@@ -86,8 +84,6 @@ function getGossipValidatorFn<K extends GossipType>(
 
       await (gossipHandler as GossipHandlerFn)(gossipObject, topic, propagationSource, seenTimestampSec);
 
-      const metadata = getGossipObjectAcceptMetadata(config, gossipObject, topic);
-      logger.debug(`gossip - ${type} - accept`, metadata);
       metrics?.gossipValidationAccept.inc({topic: type});
 
       return MessageAcceptance.Accept;
@@ -97,22 +93,16 @@ function getGossipValidatorFn<K extends GossipType>(
         return MessageAcceptance.Ignore;
       }
 
-      // If the gossipObject was deserialized include its short metadata with the error data
-      const metadata = gossipObject && getGossipObjectAcceptMetadata(config, gossipObject, topic);
-      const errorData = {...metadata, ...e.getMetadata()};
-
       // Metrics on specific error reason
       // Note: LodestarError.code are bounded pre-declared error messages, not from arbitrary error.message
       metrics?.gossipValidationError.inc({topic: type, error: (e as GossipActionError<{code: string}>).type.code});
 
       switch (e.action) {
         case GossipAction.IGNORE:
-          logger.debug(`gossip - ${type} - ignore`, errorData);
           metrics?.gossipValidationIgnore.inc({topic: type});
           return MessageAcceptance.Ignore;
 
         case GossipAction.REJECT:
-          logger.debug(`gossip - ${type} - reject`, errorData);
           metrics?.gossipValidationReject.inc({topic: type});
           return MessageAcceptance.Reject;
       }
