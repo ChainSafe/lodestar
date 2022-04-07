@@ -542,12 +542,23 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
-        help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is included in some blocks",
         labelNames: ["index"],
       }),
       prevEpochOnChainAttesterMiss: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is not included in any blocks",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterHit: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+        help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterMiss: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge<"index">({

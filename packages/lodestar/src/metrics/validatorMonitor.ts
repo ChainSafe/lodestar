@@ -208,10 +208,10 @@ export function createValidatorMonitor(
         let failedAttestation = false;
 
         if (summary.isPrevSourceAttester) {
-          metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
+          metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc({index});
         } else {
           failedAttestation = true;
-          metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
+          metrics.validatorMonitor.prevEpochOnChainSourceAttesterMiss.inc({index});
         }
         if (summary.isPrevHeadAttester) {
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc({index});
@@ -255,6 +255,9 @@ export function createValidatorMonitor(
 
         if (inclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, inclusionDistance);
+          metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
+        } else {
+          metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
         }
 
         const balance = balances && balances[index];
