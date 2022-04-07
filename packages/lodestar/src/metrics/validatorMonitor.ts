@@ -229,10 +229,11 @@ export function createValidatorMonitor(
         if (failedAttestation) {
           logger.verbose("Failed attestation in previous epoch", {
             validatorIndex: index,
-            currentEpoch,
+            prevEpoch: currentEpoch - 1,
             isPrevSourceAttester: summary.isPrevSourceAttester,
             isPrevHeadAttester: summary.isPrevHeadAttester,
             isPrevTargetAttester: summary.isPrevTargetAttester,
+            inclusionDistance: summary.inclusionDistance,
           });
         }
 

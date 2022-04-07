@@ -20,7 +20,7 @@ export function createMetrics(
   config: IChainForkConfig,
   anchorState: BeaconStateAllForks,
   logger: ILogger,
-  externalRegistries: Registry[] = [],
+  externalRegistries: Registry[] = []
 ): IMetrics {
   const register = new RegistryMetricCreator();
   const beacon = createBeaconMetrics(register);
