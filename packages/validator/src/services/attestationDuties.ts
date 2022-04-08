@@ -1,6 +1,10 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+  isAggregatorFromCommitteeLength,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
@@ -31,6 +35,11 @@ export class AttestationDutiesService {
    * so we have to wait for getting close to the next epoch to redownload new attesterDuties.
    */
   private readonly pendingDependentRootByEpoch = new Map<Epoch, RootHex>();
+  /**
+   * We poll duties twice per epoch, in normal condition for each validator, we'll have to sign selection proof
+   * twice for the same slot. This cache should help save half of the time for that.
+   */
+  private readonly selectionProofs = new Map<Slot, Map<PubkeyHex, Uint8Array>>();
 
   constructor(
     private readonly logger: ILoggerVc,
@@ -56,6 +65,17 @@ export class AttestationDutiesService {
             this.dutiesByIndexByEpoch.delete(epoch);
           }
         }
+      }
+    }
+
+    for (const [slot, selectionProofByPubkey] of this.selectionProofs) {
+      for (const pubkeyHex of selectionProofByPubkey.keys()) {
+        if (pubkeyHex === pubkey) {
+          selectionProofByPubkey.delete(pubkeyHex);
+        }
+      }
+      if (selectionProofByPubkey.size === 0) {
+        this.selectionProofs.delete(slot);
       }
     }
   }
@@ -311,7 +331,18 @@ export class AttestationDutiesService {
   }
 
   private async getDutyAndProof(duty: routes.validator.AttesterDuty): Promise<AttDutyAndProof> {
-    const selectionProof = await this.validatorStore.signAttestationSelectionProof(duty.pubkey, duty.slot);
+    const pubkeyHex = toHexString(duty.pubkey);
+    const dutySlot = duty.slot;
+    let proofByPubkey = this.selectionProofs.get(dutySlot);
+    if (!proofByPubkey) {
+      proofByPubkey = new Map<PubkeyHex, Uint8Array>();
+      this.selectionProofs.set(dutySlot, proofByPubkey);
+    }
+    let selectionProof = proofByPubkey.get(pubkeyHex);
+    if (!selectionProof) {
+      selectionProof = await this.validatorStore.signAttestationSelectionProof(pubkeyHex, dutySlot);
+      proofByPubkey.set(pubkeyHex, selectionProof);
+    }
     const isAggregator = isAggregatorFromCommitteeLength(duty.committeeLength, selectionProof);
 
     return {
@@ -328,6 +359,16 @@ export class AttestationDutiesService {
         if (epoch + HISTORICAL_DUTIES_EPOCHS < currentEpoch) {
           byEpochMap.delete(epoch);
         }
+      }
+    }
+
+    // prune cached selection proofs
+    const currentSlot = computeStartSlotAtEpoch(currentEpoch);
+    for (const slot of this.selectionProofs.keys()) {
+      if (slot < currentSlot) {
+        this.selectionProofs.delete(slot);
+      } else {
+        break;
       }
     }
   }

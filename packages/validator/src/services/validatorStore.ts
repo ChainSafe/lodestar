@@ -230,11 +230,11 @@ export class ValidatorStore {
     };
   }
 
-  async signAttestationSelectionProof(pubkey: BLSPubkey, slot: Slot): Promise<BLSSignature> {
+  async signAttestationSelectionProof(pubkeyHex: PubkeyHex, slot: Slot): Promise<BLSSignature> {
     const domain = this.config.getDomain(DOMAIN_SELECTION_PROOF, slot);
     const signingRoot = computeSigningRoot(ssz.Slot, slot, domain);
 
-    return await this.getSignature(pubkey, signingRoot);
+    return await this.getSignature(pubkeyHex, signingRoot);
   }
 
   async signSyncCommitteeSelectionProof(

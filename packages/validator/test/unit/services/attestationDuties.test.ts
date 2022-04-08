@@ -115,6 +115,12 @@ describe("AttestationDutiesService", function () {
       },
       "Wrong dutiesService.attesters Map at next epoch"
     );
+    expect(Object.fromEntries(dutiesService["selectionProofs"].get(duty.slot) || new Map())).to.deep.equal(
+      {
+        [toHexString(pubkeys[0])]: ZERO_HASH,
+      },
+      "Wrong dutiesService.selectionProofs"
+    );
 
     expect(dutiesService.getDutiesAtSlot(slot)).to.deep.equal(
       [{duty, selectionProof: null}],
@@ -180,11 +186,23 @@ describe("AttestationDutiesService", function () {
       },
       "Wrong dutiesService.attesters Map at current epoch"
     );
+
+    expect(Object.fromEntries(dutiesService["selectionProofs"].get(duty.slot) || new Map())).to.deep.equal(
+      {
+        [toHexString(pubkeys[0])]: ZERO_HASH,
+      },
+      "Wrong dutiesService.selectionProofs at current epoch"
+    );
+
     // then remove
     dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
     expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).to.deep.equal(
       {},
       "Wrong dutiesService.attesters Map at current epoch after removal"
+    );
+    expect(Object.fromEntries(dutiesService["selectionProofs"])).to.deep.equal(
+      {},
+      "Wrong dutiesService.selectionProofs at current epoch after removal"
     );
   });
 });
