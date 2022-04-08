@@ -226,17 +226,6 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
         }
 
-        if (failedAttestation) {
-          logger.verbose("Failed attestation in previous epoch", {
-            validatorIndex: index,
-            prevEpoch: currentEpoch - 1,
-            isPrevSourceAttester: summary.isPrevSourceAttester,
-            isPrevHeadAttester: summary.isPrevHeadAttester,
-            isPrevTargetAttester: summary.isPrevTargetAttester,
-            inclusionDistance: summary.inclusionDistance,
-          });
-        }
-
         const prevEpochSummary = monitoredValidator.summaries.get(previousEpoch);
         const attestationCorrectHead = prevEpochSummary?.attestationCorrectHead;
         if (attestationCorrectHead !== null && attestationCorrectHead !== undefined) {
@@ -263,6 +252,18 @@ export function createValidatorMonitor(
         const balance = balances && balances[index];
         if (balance !== undefined) {
           metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
+        }
+
+        if (failedAttestation) {
+          logger.verbose("Failed attestation in previous epoch", {
+            validatorIndex: index,
+            prevEpoch: currentEpoch - 1,
+            isPrevSourceAttester: summary.isPrevSourceAttester,
+            isPrevHeadAttester: summary.isPrevHeadAttester,
+            isPrevTargetAttester: summary.isPrevTargetAttester,
+            // inclusionDistance is not available in summary since altair
+            inclusionDistance,
+          });
         }
       }
     },
