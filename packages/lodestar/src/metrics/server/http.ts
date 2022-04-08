@@ -56,7 +56,7 @@ export class HttpMetricsServer implements IMetricsServer {
         help: "Metrics server total count of bytes read on all sockets",
       }),
       socketsBytesWritten: this.httpServerRegister.gauge({
-        name: "lodestar_metrics_server_sockets_bytes_read_total",
+        name: "lodestar_metrics_server_sockets_bytes_written_total",
         help: "Metrics server total count of bytes written on all sockets",
       }),
       socketsBuffer: this.httpServerRegister.gauge({

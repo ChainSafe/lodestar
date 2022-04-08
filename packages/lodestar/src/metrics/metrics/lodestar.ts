@@ -349,7 +349,7 @@ export function createLodestarMetrics(
         help: "REST API total count of bytes read on all sockets",
       }),
       socketsBytesWritten: register.gauge({
-        name: "lodestar_api_rest_sockets_bytes_read_total",
+        name: "lodestar_api_rest_sockets_bytes_written_total",
         help: "REST API total count of bytes written on all sockets",
       }),
       socketsBuffer: register.gauge({
