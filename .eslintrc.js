@@ -40,8 +40,6 @@ module.exports = {
       //classes and types must be in PascalCase
       {selector: ["typeLike", "enum"], format: ["PascalCase"]},
       {selector: "enumMember", format: null},
-      //interface must start with I
-      {selector: "interface", format: ["PascalCase"], prefix: ["I"]},
       //ignore rule for quoted stuff
       {
         selector: [
