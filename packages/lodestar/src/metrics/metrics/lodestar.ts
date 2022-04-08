@@ -318,13 +318,29 @@ export function createLodestarMetrics(
       }),
     },
 
-    apiRestResponseTime: register.histogram<"operationId">({
-      name: "lodestar_api_rest_response_time_seconds",
-      help: "Time to fullfill a request to the REST api labeled by operationId",
-      labelNames: ["operationId"],
-      // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 1],
-    }),
+    apiRest: {
+      responseTime: register.histogram<"operationId">({
+        name: "lodestar_api_rest_response_time_seconds",
+        help: "REST API time to fullfill a request by operationId",
+        labelNames: ["operationId"],
+        // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+        buckets: [0.01, 0.1, 1],
+      }),
+      requests: register.gauge<"operationId">({
+        name: "lodestar_api_rest_requests_total",
+        help: "REST API total count requests by operationId",
+        labelNames: ["operationId"],
+      }),
+      errors: register.gauge<"operationId">({
+        name: "lodestar_api_rest_errors_total",
+        help: "REST API total count of errors by operationId",
+        labelNames: ["operationId"],
+      }),
+      activeSockets: register.gauge({
+        name: "lodestar_api_rest_active_sockets_count",
+        help: "REST API current count of active sockets",
+      }),
+    },
 
     // Beacon state transition metrics
 
