@@ -9,6 +9,7 @@ import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -38,6 +39,7 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService,
+    private readonly metrics: Metrics | null,
     chainHeadTracker: ChainHeaderTracker
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
@@ -45,6 +47,17 @@ export class AttestationDutiesService {
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+
+    if (metrics) {
+      metrics.attesterDutiesCount.addCollect(() => {
+        let duties = 0;
+        for (const attDutiesAtEpoch of this.dutiesByIndexByEpoch.values()) {
+          duties += attDutiesAtEpoch.dutiesByIndex.size;
+        }
+        metrics.attesterDutiesCount.set(duties);
+        metrics.attesterDutiesEpochCount.set(this.dutiesByIndexByEpoch.size);
+      });
+    }
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -216,6 +229,7 @@ export class AttestationDutiesService {
     }
 
     if (priorDependentRoot && dependentRootChanged) {
+      this.metrics?.attesterDutiesReorg.inc();
       this.logger.warn("Attester duties re-org. This may happen from time to time", {
         priorDependentRoot: priorDependentRoot,
         dependentRoot: dependentRoot,
@@ -292,13 +306,8 @@ export class AttestationDutiesService {
     oldDependentRoot: RootHex,
     newDependentRoot: RootHex
   ): Promise<void> {
-    const logContext = {
-      dutyEpoch,
-      slot,
-      oldDependentRoot,
-      newDependentRoot,
-    };
-
+    this.metrics?.attesterDutiesReorg.inc();
+    const logContext = {dutyEpoch, slot, oldDependentRoot, newDependentRoot};
     this.logger.debug("Redownload attester duties", logContext);
 
     await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())

@@ -8,6 +8,7 @@ import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
 import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -21,9 +22,17 @@ export class BlockProposingService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null,
     private readonly graffiti?: string
   ) {
-    this.dutiesService = new BlockDutiesService(logger, api, clock, validatorStore, this.notifyBlockProductionFn);
+    this.dutiesService = new BlockDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      this.notifyBlockProductionFn
+    );
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -65,14 +74,17 @@ export class BlockProposingService {
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", debugLogCtx);
+      this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
+      this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
+      this.metrics?.blockProposingErrors.inc();
     }
   }
 

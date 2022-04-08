@@ -11,6 +11,7 @@ import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils";
 import {IndicesService} from "./indices";
 import {ChainHeaderTracker} from "./chainHeaderTracker";
 import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /**
  * Service that sets up and handles validator sync duties.
@@ -24,10 +25,19 @@ export class SyncCommitteeService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null,
     private readonly chainHeaderTracker: ChainHeaderTracker,
     indicesService: IndicesService
   ) {
-    this.dutiesService = new SyncCommitteeDutiesService(config, logger, api, clock, validatorStore, indicesService);
+    this.dutiesService = new SyncCommitteeDutiesService(
+      config,
+      logger,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      metrics
+    );
 
     // At most every slot, check existing duties from SyncCommitteeDutiesService and run tasks
     clock.runEverySlot(this.runSyncCommitteeTasks);
@@ -123,6 +133,7 @@ export class SyncCommitteeService {
       try {
         await this.api.beacon.submitPoolSyncCommitteeSignatures(signatures);
         this.logger.info("Published SyncCommitteeMessage", {...logCtx, count: signatures.length});
+        this.metrics?.publishedSyncCommitteeMessage.inc(signatures.length);
       } catch (e) {
         this.logger.error("Error publishing SyncCommitteeMessage", logCtx, e as Error);
       }
@@ -182,6 +193,7 @@ export class SyncCommitteeService {
       try {
         await this.api.validator.publishContributionAndProofs(signedContributions);
         this.logger.info("Published SyncCommitteeContribution", {...logCtx, count: signedContributions.length});
+        this.metrics?.publishedSyncCommitteeContribution.inc(signedContributions.length);
       } catch (e) {
         this.logger.error("Error publishing SyncCommitteeContribution", logCtx, e as Error);
       }

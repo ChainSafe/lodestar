@@ -12,6 +12,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
 import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -24,6 +25,7 @@ export class AttestationService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null,
     private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker
@@ -34,6 +36,7 @@ export class AttestationService {
       clock,
       validatorStore,
       indicesService,
+      metrics,
       chainHeadTracker
     );
 
@@ -56,6 +59,8 @@ export class AttestationService {
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
     await Promise.race([sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal), this.waitForBlockSlot(slot)]);
+
+    this.metrics?.blockReceivedTimeDiff.observe(slot, Date.now());
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
     // Produce a single attestation for all committees, and clone mutate before signing
@@ -167,6 +172,7 @@ export class AttestationService {
       try {
         await this.api.beacon.submitPoolAttestations(signedAttestations);
         this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
+        this.metrics?.publishedAttestations.inc(signedAttestations.length);
       } catch (e) {
         this.logger.error("Error publishing attestations", logCtx, e as Error);
       }
@@ -224,6 +230,7 @@ export class AttestationService {
       try {
         await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
+        this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
       }
