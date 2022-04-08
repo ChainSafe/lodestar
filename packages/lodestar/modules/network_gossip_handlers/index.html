@@ -402,7 +402,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="gossiphandleropts">GossipHandlerOpts<a class="headerlink" href="#gossiphandleropts" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>GossipHandlerOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L36">packages/lodestar/src/network/gossip/handlers/index.ts:36</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L36">packages/lodestar/src/network/gossip/handlers/index.ts:36</a></em></p>
 <p>Gossip handler options as part of network options</p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
@@ -411,7 +411,7 @@
 <hr/>
 <h3 id="validatorfnsmodules">ValidatorFnsModules<a class="headerlink" href="#validatorfnsmodules" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ValidatorFnsModules</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L48">packages/lodestar/src/network/gossip/handlers/index.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L48">packages/lodestar/src/network/gossip/handlers/index.ts:48</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -433,11 +433,11 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-max_unknown_block_root_retries"><code>Const</code> MAX_UNKNOWN_BLOCK_ROOT_RETRIES<a class="headerlink" href="#const-max_unknown_block_root_retries" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_UNKNOWN_BLOCK_ROOT_RETRIES</strong>: <em>1</em> = 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L56">packages/lodestar/src/network/gossip/handlers/index.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L56">packages/lodestar/src/network/gossip/handlers/index.ts:56</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="getgossiphandlers">getGossipHandlers<a class="headerlink" href="#getgossiphandlers" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getGossipHandlers</strong>(<code>modules</code>: <a href="./#validatorfnsmodules">ValidatorFnsModules</a>, <code>options</code>: <a href="./#gossiphandleropts">GossipHandlerOpts</a>): <em><a href="../network_gossip/#gossiphandlers">GossipHandlers</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L72">packages/lodestar/src/network/gossip/handlers/index.ts:72</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L72">packages/lodestar/src/network/gossip/handlers/index.ts:72</a></em></p>
 <p>Gossip handlers perform validation + handling in a single function.
 - This gossip handlers MUST only be registered as validator functions. No handler is registered for any topic.
 - All <code>chain/validation/*</code> functions MUST throw typed GossipActionError instances so they gossip action is captured
@@ -472,7 +472,7 @@ This approach is not suitable for us because:
 <hr/>
 <h3 id="validategossipaggregateandproofretryunknownroot">validateGossipAggregateAndProofRetryUnknownRoot<a class="headerlink" href="#validategossipaggregateandproofretryunknownroot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validateGossipAggregateAndProofRetryUnknownRoot</strong>(<code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>signedAggregateAndProof</code>: phase0.SignedAggregateAndProof): <em>Promise‹ReturnType‹typeof validateGossipAggregateAndProof››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L326">packages/lodestar/src/network/gossip/handlers/index.ts:326</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L326">packages/lodestar/src/network/gossip/handlers/index.ts:326</a></em></p>
 <p>If an attestation refers to a block root that's not known, it will wait for 1 slot max
 See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
 Waiting here requires minimal code and automatically affects attestation, and aggregate validation
@@ -500,7 +500,7 @@ both from gossip and the API. I also prevents having to catch and re-throw in mu
 <hr/>
 <h3 id="validategossipattestationretryunknownroot">validateGossipAttestationRetryUnknownRoot<a class="headerlink" href="#validategossipattestationretryunknownroot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validateGossipAttestationRetryUnknownRoot</strong>(<code>chain</code>: <a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a>, <code>attestation</code>: phase0.Attestation, <code>subnet</code>: number | null): <em>Promise‹ReturnType‹typeof validateGossipAttestation››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L364">packages/lodestar/src/network/gossip/handlers/index.ts:364</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L364">packages/lodestar/src/network/gossip/handlers/index.ts:364</a></em></p>
 <p>If an attestation refers to a block root that's not known, it will wait for 1 slot max
 See https://github.com/ChainSafe/lodestar/pull/3564 for reasoning and results
 Waiting here requires minimal code and automatically affects attestation, and aggregate validation
@@ -532,12 +532,12 @@ both from gossip and the API. I also prevents having to catch and re-throw in mu
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-defaultgossiphandleropts"><code>Const</code> defaultGossipHandlerOpts<a class="headerlink" href="#const-defaultgossiphandleropts" title="Permanent link">¶</a></h3>
 <h3 id="defaultgossiphandleropts-object">▪ <strong>defaultGossipHandlerOpts</strong>: <em>object</em><a class="headerlink" href="#defaultgossiphandleropts-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L44">packages/lodestar/src/network/gossip/handlers/index.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L44">packages/lodestar/src/network/gossip/handlers/index.ts:44</a></em></p>
 <p>By default:
 + pass gossip attestations to forkchoice</p>
 <h3 id="dontsendgossipattestationstoforkchoice">dontSendGossipAttestationsToForkchoice<a class="headerlink" href="#dontsendgossipattestationstoforkchoice" title="Permanent link">¶</a></h3>
 <p>• <strong>dontSendGossipAttestationsToForkchoice</strong>: <em>boolean</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bdae023/packages/lodestar/src/network/gossip/handlers/index.ts#L45">packages/lodestar/src/network/gossip/handlers/index.ts:45</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/bc9afa7/packages/lodestar/src/network/gossip/handlers/index.ts#L45">packages/lodestar/src/network/gossip/handlers/index.ts:45</a></em></p>
 </article>
 </div>
 </div>
