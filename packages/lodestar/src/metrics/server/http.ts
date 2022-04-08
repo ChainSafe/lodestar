@@ -8,7 +8,7 @@ import {IMetricsOptions} from "../options";
 import {wrapError} from "../../util/wrapError";
 import {HistogramExtra} from "../utils/histogram";
 import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets";
-import {GaugeExtra} from "../utils/gauge";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface IMetricsServer {}
@@ -24,7 +24,7 @@ export class HttpMetricsServer implements IMetricsServer {
   private readonly logger: ILogger;
   private readonly activeSockets: HttpActiveSocketsTracker;
 
-  private readonly httpServerRegister: Registry;
+  private readonly httpServerRegister: RegistryMetricCreator;
   private readonly scrapeTimeMetric: HistogramExtra<"status">;
 
   constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: RegistryHolder; logger: ILogger}) {
@@ -32,25 +32,40 @@ export class HttpMetricsServer implements IMetricsServer {
     this.logger = logger;
     this.register = metrics.register;
     this.server = http.createServer(this.onRequest.bind(this));
-    this.activeSockets = new HttpActiveSocketsTracker(this.server);
 
     // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
-    this.httpServerRegister = new Registry();
-    this.scrapeTimeMetric = new HistogramExtra<"status">({
+    this.httpServerRegister = new RegistryMetricCreator();
+    this.scrapeTimeMetric = this.httpServerRegister.histogram<"status">({
       name: "lodestar_metrics_scrape_seconds",
       help: "Lodestar metrics server async time to scrape metrics",
       labelNames: ["status"],
       buckets: [0.1, 1, 10],
     });
 
-    const activeSocketsMetric = new GaugeExtra({
-      name: "lodestar_metrics_active_sockets_count",
-      help: "Lodestar metrics server active sockets count",
-    });
-    activeSocketsMetric.addCollect(() => activeSocketsMetric.set(this.activeSockets.count));
+    const socketsMetrics = {
+      activeSockets: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_active_sockets_count",
+        help: "Metrics server current count of active sockets",
+      }),
+      connections: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_connections_count",
+        help: "Metrics server current count of connections",
+      }),
+      socketsBytesRead: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_sockets_bytes_read_total",
+        help: "Metrics server total count of bytes read on all sockets",
+      }),
+      socketsBytesWritten: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_sockets_bytes_read_total",
+        help: "Metrics server total count of bytes written on all sockets",
+      }),
+      socketsBuffer: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_sockets_bytes_buffer_current",
+        help: "Metrics server current buffer bytes in all active sockets",
+      }),
+    };
 
-    this.httpServerRegister.registerMetric(this.scrapeTimeMetric);
-    this.httpServerRegister.registerMetric(activeSocketsMetric);
+    this.activeSockets = new HttpActiveSocketsTracker(this.server, socketsMetrics);
   }
 
   async start(): Promise<void> {

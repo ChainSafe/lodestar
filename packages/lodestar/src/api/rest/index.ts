@@ -54,7 +54,7 @@ export class RestApi {
       querystringParser: querystring.parse,
     });
 
-    this.activeSockets = new HttpActiveSocketsTracker(server.server);
+    this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics ? metrics.apiRest : null);
 
     // Instantiate and register the routes with matching namespace in `opts.api`
     registerRoutes(server, config, api, opts.api);
@@ -98,10 +98,6 @@ export class RestApi {
       this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
       metrics?.apiRest.errors.inc({operationId});
     });
-
-    if (metrics) {
-      metrics.apiRest.activeSockets.addCollect(() => metrics.apiRest.activeSockets.set(this.activeSockets.count));
-    }
 
     this.opts = opts;
     this.server = server;

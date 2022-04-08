@@ -1,5 +1,14 @@
 import http, {Server} from "node:http";
 import {Socket} from "node:net";
+import {IGauge} from "../../metrics";
+
+type SocketMetrics = {
+  activeSockets: IGauge;
+  connections: IGauge;
+  socketsBytesRead: IGauge;
+  socketsBytesWritten: IGauge;
+  socketsBuffer: IGauge;
+};
 
 /**
  * From https://github.com/nodejs/node/blob/57bd715d527aba8dae56b975056961b0e429e91e/lib/_http_client.js#L363-L413
@@ -9,7 +18,7 @@ export class HttpActiveSocketsTracker {
   private sockets = new Set<Socket>();
   private terminated = false;
 
-  constructor(server: Server) {
+  constructor(server: Server, metrics: SocketMetrics | null) {
     server.on("connection", (socket) => {
       if (this.terminated) {
         socket.destroy(Error("Closing"));
@@ -18,13 +27,26 @@ export class HttpActiveSocketsTracker {
 
         socket.once("close", () => {
           this.sockets.delete(socket);
+          if (metrics) {
+            metrics.socketsBytesRead.inc(socket.bytesRead);
+            metrics.socketsBytesRead.inc(socket.bytesWritten);
+          }
         });
       }
     });
-  }
 
-  get count(): number {
-    return this.sockets.size;
+    if (metrics) {
+      metrics.activeSockets.addCollect(() => {
+        metrics.activeSockets.set(this.sockets.size);
+        metrics.connections.set(server.connections);
+
+        let bufferSize = 0;
+        for (const socket of this.sockets) {
+          bufferSize += socket.writableLength;
+        }
+        metrics.socketsBuffer.set(bufferSize);
+      });
+    }
   }
 
   destroyAll(): void {
