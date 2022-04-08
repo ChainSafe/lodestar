@@ -375,7 +375,7 @@ reprocess attestations, it should control when the attestations are ready to rep
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new ReprocessController</strong>(<code>metrics</code>: <a href="../../modules/metrics/#imetrics">IMetrics</a> | null): <em><a href="./">ReprocessController</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L53">packages/lodestar/src/chain/reprocess.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L53">packages/lodestar/src/chain/reprocess.ts:53</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -395,19 +395,19 @@ reprocess attestations, it should control when the attestations are ready to rep
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-readonly-awaitingpromisesbyrootbyslot"><code>Private</code> <code>Readonly</code> awaitingPromisesByRootBySlot<a class="headerlink" href="#private-readonly-awaitingpromisesbyrootbyslot" title="Permanent link">¶</a></h3>
 <p>• <strong>awaitingPromisesByRootBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹Slot, <a href="../chain_statecache.maptracker/#static-map">Map</a>‹RootHex, <a href="../../modules/chain/#awaitingattestationpromise">AwaitingAttestationPromise</a>››</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L52">packages/lodestar/src/chain/reprocess.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L52">packages/lodestar/src/chain/reprocess.ts:52</a></em></p>
 <hr/>
 <h3 id="private-awaitingpromisescount"><code>Private</code> awaitingPromisesCount<a class="headerlink" href="#private-awaitingpromisescount" title="Permanent link">¶</a></h3>
 <p>• <strong>awaitingPromisesCount</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L53">packages/lodestar/src/chain/reprocess.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L53">packages/lodestar/src/chain/reprocess.ts:53</a></em></p>
 <hr/>
 <h3 id="private-readonly-metrics"><code>Private</code> <code>Readonly</code> metrics<a class="headerlink" href="#private-readonly-metrics" title="Permanent link">¶</a></h3>
 <p>• <strong>metrics</strong>: <em><a href="../../modules/metrics/#imetrics">IMetrics</a> | null</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L55">packages/lodestar/src/chain/reprocess.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L55">packages/lodestar/src/chain/reprocess.ts:55</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="onblockimported">onBlockImported<a class="headerlink" href="#onblockimported" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onBlockImported</strong>(<code>__namedParameters</code>: object, <code>advancedSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L109">packages/lodestar/src/chain/reprocess.ts:109</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L109">packages/lodestar/src/chain/reprocess.ts:109</a></em></p>
 <p>It's important to make sure our node is synced before we reprocess,
 it means the processed slot is same to clock slot
 Note that we want to use clock advanced by REPROCESS_MIN_TIME_TO_NEXT_SLOT instead of
@@ -439,7 +439,7 @@ is struggling and we don't want to reprocess anything at that time.</p>
 <hr/>
 <h3 id="onslot">onSlot<a class="headerlink" href="#onslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>onSlot</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L135">packages/lodestar/src/chain/reprocess.ts:135</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L135">packages/lodestar/src/chain/reprocess.ts:135</a></em></p>
 <p>It's important to make sure our node is synced before reprocessing attestations,
 it means clockSlot is the same to last processed block's slot, and we don't reprocess
 attestations of old slots.
@@ -465,7 +465,7 @@ So we reject and prune all old awaiting promises per clock slot.</p>
 <hr/>
 <h3 id="waitforblockofattestation">waitForBlockOfAttestation<a class="headerlink" href="#waitforblockofattestation" title="Permanent link">¶</a></h3>
 <p>▸ <strong>waitForBlockOfAttestation</strong>(<code>slot</code>: Slot, <code>root</code>: RootHex): <em>Promise‹boolean›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/4311180/packages/lodestar/src/chain/reprocess.ts#L64">packages/lodestar/src/chain/reprocess.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/6df28de/packages/lodestar/src/chain/reprocess.ts#L64">packages/lodestar/src/chain/reprocess.ts:64</a></em></p>
 <p>Returns Promise that resolves either on block found or once 1 slot passes.
 Used to handle unknown block root for both unaggregated and aggregated attestations.</p>
 <p><strong>Parameters:</strong></p>
