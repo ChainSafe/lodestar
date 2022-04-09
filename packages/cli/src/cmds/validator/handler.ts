@@ -2,6 +2,7 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {getMetrics} from "@chainsafe/lodestar-validator/src/index";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
@@ -12,6 +13,8 @@ import {getValidatorPaths} from "./paths";
 import {IValidatorCliArgs} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
 import {getVersion} from "../../util/version";
+import {RegistryMetricCreator} from "@chainsafe/lodestar/lib/metrics/utils/registryMetricCreator";
+import {HttpMetricsServer} from "@chainsafe/lodestar/lib/metrics";
 
 /**
  * Runs a validator client.
@@ -96,12 +99,34 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   };
   const slashingProtection = new SlashingProtection(dbOps);
 
+  if (metricsEnabled) {
+    const register = new RegistryMetricCreator();
+    const metrics = getMetrics(register);
+    collectDefaultMetrics({
+      register,
+      // eventLoopMonitoringPrecision with sampling rate in milliseconds
+      eventLoopMonitoringPrecision: 10,
+    });
+
+    // Collects GC metrics using a native binding module
+    // - nodejs_gc_runs_total: Counts the number of time GC is invoked
+    // - nodejs_gc_pause_seconds_total: Time spent in GC in seconds
+    // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
+    gcStats(register)();
+
+    const metricsServer = new HttpMetricsServer(opts, {metrics: {register}, logger});
+
+    onGracefulShutdownCbs.push(() => metricsServer.stop());
+    await metricsServer.start();
+  }
+
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},
-    controller.signal
+    controller.signal,
+    metrics
   );
 
-  onGracefulShutdownCbs.push(async () => await validator.stop());
+  onGracefulShutdownCbs.push(() => validator.stop());
   await validator.start();
 
   // Start keymanager API backend

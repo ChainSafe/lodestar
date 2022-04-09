@@ -50,7 +50,6 @@ export function createMetrics(
   gcStats(register)();
 
   // Merge external registries
-  register;
   for (const externalRegister of externalRegistries) {
     // Wrong types, does not return a promise
     const metrics = (externalRegister.getMetricsAsArray() as unknown) as Resolves<

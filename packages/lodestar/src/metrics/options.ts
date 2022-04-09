@@ -3,6 +3,7 @@
  */
 
 export interface IMetricsOptions {
+  metricsPrefix: string;
   enabled: boolean;
   timeout?: number;
   serverPort?: number;
