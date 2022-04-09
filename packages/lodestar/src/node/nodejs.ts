@@ -197,7 +197,7 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {metrics, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
       : undefined;
     if (metricsServer) {
       await metricsServer.start();

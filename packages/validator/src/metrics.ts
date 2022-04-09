@@ -59,12 +59,34 @@ export interface MetricsRegister {
 
 export type Metrics = ReturnType<typeof getMetrics>;
 
+export type LodestarGitData = {
+  /** "0.16.0" */
+  semver: string;
+  /** "developer/feature-1" */
+  branch: string;
+  /** "4f816b16dfde718e2d74f95f2c8292596138c248" */
+  commit: string;
+  /** "0.16.0 developer/feature-1 ac99f2b5" */
+  version: string;
+  /** "prater" */
+  network: string;
+};
+
 /**
  * A collection of metrics used throughout the Gossipsub behaviour.
  */
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
-export function getMetrics(register: MetricsRegister) {
+export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) {
   // Using function style instead of class to prevent having to re-declare all MetricsPrometheus types.
+
+  // Track version, same as https://github.com/ChainSafe/lodestar/blob/6df28de64f12ea90b341b219229a47c8a25c9343/packages/lodestar/src/metrics/metrics/lodestar.ts#L17
+  register
+    .gauge<LodestarGitData>({
+      name: "lodestar_version",
+      help: "Lodestar version",
+      labelNames: Object.keys(gitData) as (keyof LodestarGitData)[],
+    })
+    .set(gitData, 1);
 
   return {
     // AttestationService

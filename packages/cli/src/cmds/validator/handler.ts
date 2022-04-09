@@ -2,19 +2,18 @@ import {AbortController} from "@chainsafe/abort-controller";
 import {getClient} from "@chainsafe/lodestar-api";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
-import {getMetrics} from "@chainsafe/lodestar-validator/src/index";
+import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
+import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
 import {getBeaconConfigFromArgs} from "../../config";
 import {IGlobalArgs} from "../../options";
 import {YargsError, getDefaultGraffiti, initBLS, mkdir, getCliLogger} from "../../util";
 import {onGracefulShutdown} from "../../util";
+import {getVersion, getVersionGitData} from "../../util/version";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "./paths";
-import {IValidatorCliArgs} from "./options";
+import {IValidatorCliArgs, validatorMetricsDefaultOptions} from "./options";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys";
-import {getVersion} from "../../util/version";
-import {RegistryMetricCreator} from "@chainsafe/lodestar/lib/metrics/utils/registryMetricCreator";
-import {HttpMetricsServer} from "@chainsafe/lodestar/lib/metrics";
 
 /**
  * Runs a validator client.
@@ -31,6 +30,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const logger = getCliLogger(args, beaconPaths, config);
 
   const version = getVersion();
+  const gitData = getVersionGitData();
   logger.info("Lodestar", {version: version, network: args.network});
 
   const dbPath = validatorPaths.validatorsDbDir;
@@ -99,26 +99,37 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   };
   const slashingProtection = new SlashingProtection(dbOps);
 
-  if (metricsEnabled) {
-    const register = new RegistryMetricCreator();
-    const metrics = getMetrics(register);
-    collectDefaultMetrics({
-      register,
-      // eventLoopMonitoringPrecision with sampling rate in milliseconds
-      eventLoopMonitoringPrecision: 10,
+  // Create metrics registry if metrics are enabled
+  // Send version and network data for static registries
+
+  const register = args["metrics.enabled"] ? new RegistryMetricCreator() : null;
+  const metrics =
+    register &&
+    getMetrics((register as unknown) as MetricsRegister, {
+      semver: gitData.semver ?? "-",
+      branch: gitData.branch ?? "-",
+      commit: gitData.commit ?? "-",
+      version,
+      network: args.network,
     });
 
-    // Collects GC metrics using a native binding module
-    // - nodejs_gc_runs_total: Counts the number of time GC is invoked
-    // - nodejs_gc_pause_seconds_total: Time spent in GC in seconds
-    // - nodejs_gc_reclaimed_bytes_total: The number of bytes GC has freed
-    gcStats(register)();
+  // Start metrics server if metrics are enabled.
+  // Collect NodeJS metrics defined in the Lodestar repo
 
-    const metricsServer = new HttpMetricsServer(opts, {metrics: {register}, logger});
+  if (metrics) {
+    collectNodeJSMetrics(register);
+
+    const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
+    const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
+    const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
+    logger.info("Starting metrics HTTP server", {port, address});
 
     onGracefulShutdownCbs.push(() => metricsServer.stop());
     await metricsServer.start();
   }
+
+  // This promise resolves once genesis is available.
+  // It will wait for genesis, so this promise can be potentially very long
 
   const validator = await Validator.initializeFromBeaconNode(
     {dbOps, slashingProtection, api, logger, signers, graffiti},
