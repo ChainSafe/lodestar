@@ -4,7 +4,6 @@ import {IGauge} from "../../metrics";
 
 type SocketMetrics = {
   activeSockets: IGauge;
-  connections: IGauge;
   socketsBytesRead: IGauge;
   socketsBytesWritten: IGauge;
   socketsBuffer: IGauge;
@@ -38,7 +37,6 @@ export class HttpActiveSocketsTracker {
     if (metrics) {
       metrics.activeSockets.addCollect(() => {
         metrics.activeSockets.set(this.sockets.size);
-        metrics.connections.set(server.connections);
 
         let bufferSize = 0;
         for (const socket of this.sockets) {

@@ -47,10 +47,6 @@ export class HttpMetricsServer implements IMetricsServer {
         name: "lodestar_metrics_server_active_sockets_count",
         help: "Metrics server current count of active sockets",
       }),
-      connections: this.httpServerRegister.gauge({
-        name: "lodestar_metrics_server_connections_count",
-        help: "Metrics server current count of connections",
-      }),
       socketsBytesRead: this.httpServerRegister.gauge({
         name: "lodestar_metrics_server_sockets_bytes_read_total",
         help: "Metrics server total count of bytes read on all sockets",
