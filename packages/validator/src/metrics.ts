@@ -92,147 +92,147 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     // AttestationService
 
     blockReceivedTimeDiff: register.histogram({
-      name: "validator_block_received_slot_delay_seconds",
+      name: "vc_block_received_slot_delay_seconds",
       help: "Time between start of slot and block received time",
       // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
       buckets: [0.5, 1, 2, 3, 4],
     }),
 
     publishedAttestations: register.gauge({
-      name: "validator_published_attestations_total",
+      name: "vc_published_attestations_total",
       help: "Total published attestations",
     }),
 
     publishedAggregates: register.gauge({
-      name: "validator_published_aggregates_total",
+      name: "vc_published_aggregates_total",
       help: "Total published aggregates",
     }),
 
     // AttestationDutiesService
 
     attesterDutiesCount: register.gauge({
-      name: "validator_attester_duties_count",
+      name: "vc_attester_duties_count",
       help: "Current count of duties in AttestationDutiesService",
     }),
 
     attesterDutiesEpochCount: register.gauge({
-      name: "validator_attester_duties_epoch_count",
+      name: "vc_attester_duties_epoch_count",
       help: "Current count of epoch duties in AttestationDutiesService",
     }),
 
     attesterDutiesReorg: register.gauge({
-      name: "validator_attestation_duties_reorg_total",
+      name: "vc_attestation_duties_reorg_total",
       help: "Total count of instances the attester duties dependant root changed",
     }),
 
     // BlockProposingService
 
     blocksProduced: register.gauge({
-      name: "validator_block_produced_total",
+      name: "vc_block_produced_total",
       help: "Total count of blocks produced",
     }),
 
     blocksPublished: register.gauge({
-      name: "validator_block_published_total",
+      name: "vc_block_published_total",
       help: "Total count of blocks published",
     }),
 
     blockProposingErrors: register.gauge({
-      name: "validator_block_proposing_errors_total",
+      name: "vc_block_proposing_errors_total",
       help: "Total count of errors producing or publishing a block",
     }),
 
     // BlockDutiesService
 
     proposerDutiesEpochCount: register.gauge({
-      name: "validator_proposer_duties_epoch_count",
+      name: "vc_proposer_duties_epoch_count",
       help: "Current count of epoch duties in BlockDutiesService",
     }),
 
     proposerDutiesReorg: register.gauge({
-      name: "validator_proposer_duties_reorg_total",
+      name: "vc_proposer_duties_reorg_total",
       help: "Total count of instances the proposer duties dependant root changed",
     }),
 
     // IndicesService
 
     indices: register.gauge({
-      name: "validator_indices_count",
+      name: "vc_indices_count",
       help: "Current count of indices in IndicesService",
     }),
 
     discoveredIndices: register.gauge({
-      name: "validator_discovered_indices_total",
+      name: "vc_discovered_indices_total",
       help: "Total count of validator indices discovered",
     }),
 
     // SyncCommitteeService
 
     publishedSyncCommitteeMessage: register.gauge({
-      name: "validator_published_sync_committee_message_total",
+      name: "vc_published_sync_committee_message_total",
       help: "Total published SyncCommitteeMessage",
     }),
 
     publishedSyncCommitteeContribution: register.gauge({
-      name: "validator_published_sync_committee_contribution_total",
+      name: "vc_published_sync_committee_contribution_total",
       help: "Total published SyncCommitteeContribution",
     }),
 
     // SyncCommitteeDutiesService
 
     syncCommitteeDutiesCount: register.gauge({
-      name: "validator_sync_committee_duties_count",
+      name: "vc_sync_committee_duties_count",
       help: "Current count of duties in SyncCommitteeDutiesService",
     }),
 
     syncCommitteeDutiesEpochCount: register.gauge({
-      name: "validator_sync_committee_duties_epoch_count",
+      name: "vc_sync_committee_duties_epoch_count",
       help: "Current count of epoch duties in SyncCommitteeDutiesService",
     }),
 
     syncCommitteeDutiesReorg: register.gauge({
-      name: "validator_sync_committee_duties_reorg_total",
+      name: "vc_sync_committee_duties_reorg_total",
       help: "Total count of instances the sync committee duties dependant root changed",
     }),
 
     // ValidatorStore
 
     signers: register.gauge({
-      name: "validator_signers_count",
+      name: "vc_signers_count",
       help: "Total count of instances the sync committee duties dependant root changed",
     }),
 
     localSignTime: register.histogram({
-      name: "validator_local_sign_time_seconds",
+      name: "vc_local_sign_time_seconds",
       help: "Histogram of sign time for any signature with local signer",
       // When using a local keystores, signing time is ~ 1ms
       buckets: [0.0001, 0.001, 0.01, 0.1],
     }),
 
     remoteSignTime: register.histogram({
-      name: "validator_remote_sign_time_seconds",
+      name: "vc_remote_sign_time_seconds",
       help: "Histogram of sign time for any signature with remote signer",
       // When using a remote signer sign time can be ~ 50-500ms
       buckets: [0.01, 0.1, 1, 5],
     }),
 
     remoteSignErrors: register.gauge({
-      name: "validator_remote_sign_errors_total",
+      name: "vc_remote_sign_errors_total",
       help: "Total count of errors calling a remote signer",
     }),
 
     signError: register.gauge({
-      name: "validator_sign_errors_total",
+      name: "vc_sign_errors_total",
       help: "Total count of errors calling a signer",
     }),
 
     slashingProtectionBlockError: register.gauge({
-      name: "validator_slashing_protection_block_errors_total",
+      name: "vc_slashing_protection_block_errors_total",
       help: "Total count of errors on slashingProtection.checkAndInsertBlockProposal",
     }),
 
     slashingProtectionAttestationError: register.gauge({
-      name: "validator_slashing_protection_attestation_errors_total",
+      name: "vc_slashing_protection_attestation_errors_total",
       help: "Total count of errors on slashingProtection.checkAndInsertAttestation",
     }),
 
@@ -240,7 +240,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
 
     restApiClient: {
       requestTime: register.histogram<{routeId: string}>({
-        name: "validator_rest_api_client_request_time_seconds",
+        name: "vc_rest_api_client_request_time_seconds",
         help: "Histogram of REST API client request time by routeId",
         labelNames: ["routeId"],
         // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
@@ -248,7 +248,7 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       }),
 
       errors: register.gauge<{routeId: string}>({
-        name: "validator_rest_api_client_errors_total",
+        name: "vc_rest_api_client_errors_total",
         help: "Total count of errors calling the REST API client by routeId",
         labelNames: ["routeId"],
       }),
