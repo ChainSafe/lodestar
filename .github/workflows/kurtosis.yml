@@ -1,9 +1,9 @@
 name: Scheduled kurtosis run
 # This workflow is triggered on pushes to the repository.
-on:
- workflow_dispatch:
- schedule:
-   - cron: '0 3 * * *'
+on: [pull_request, push]
+        # workflow_dispatch:
+        # schedule:
+        #- cron: '0 3 * * *'
 
 env:
     TEKU_IMAGE: "consensys/teku"
