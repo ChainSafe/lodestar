@@ -25,10 +25,10 @@ export class AttestationService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
     private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
-    chainHeadTracker: ChainHeaderTracker
+    chainHeadTracker: ChainHeaderTracker,
+    private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new AttestationDutiesService(
       logger,
@@ -36,8 +36,8 @@ export class AttestationService {
       clock,
       validatorStore,
       indicesService,
-      metrics,
-      chainHeadTracker
+      chainHeadTracker,
+      metrics
     );
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks

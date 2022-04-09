@@ -59,7 +59,7 @@ export class Validator {
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis, private readonly metrics: Metrics | null) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
@@ -95,10 +95,10 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      metrics,
       this.emitter,
       this.indicesService,
-      this.chainHeaderTracker
+      this.chainHeaderTracker,
+      metrics
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
@@ -107,9 +107,9 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      metrics,
       this.chainHeaderTracker,
-      this.indicesService
+      this.indicesService,
+      metrics
     );
 
     this.config = config;
@@ -122,8 +122,8 @@ export class Validator {
   /** Waits for genesis and genesis time */
   static async initializeFromBeaconNode(
     opts: ValidatorOptions,
-    metrics: Metrics | null,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    metrics?: Metrics | null
   ): Promise<Validator> {
     const {config} = opts.dbOps;
     const api =

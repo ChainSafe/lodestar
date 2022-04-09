@@ -81,8 +81,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(config, loggerVc, api, clock, validatorStore, indicesService);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -149,8 +157,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(config, loggerVc, api, clock, validatorStore, indicesService);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);
@@ -208,8 +224,16 @@ describe("SyncCommitteeDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
-    const dutiesService = new SyncCommitteeDutiesService(config, loggerVc, api, clock, validatorStore, indicesService);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
+    const dutiesService = new SyncCommitteeDutiesService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      null
+    );
 
     // Trigger clock onSlot for slot 0
     await clock.tickEpochFns(0, controller.signal);

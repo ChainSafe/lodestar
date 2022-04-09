@@ -39,8 +39,8 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService,
-    private readonly metrics: Metrics | null,
-    chainHeadTracker: ChainHeaderTracker
+    chainHeadTracker: ChainHeaderTracker,
+    private readonly metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then

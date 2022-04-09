@@ -25,9 +25,9 @@ export class SyncCommitteeService {
     private readonly api: Api,
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly metrics: Metrics | null,
     private readonly chainHeaderTracker: ChainHeaderTracker,
-    indicesService: IndicesService
+    indicesService: IndicesService,
+    private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new SyncCommitteeDutiesService(
       config,
