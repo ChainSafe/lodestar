@@ -70,6 +70,7 @@ export class Validator {
             // Validator would need the beacon to respond within the slot
             timeoutMs: config.SECONDS_PER_SLOT * 1000,
             getAbortSignal: this.getAbortSignal,
+            metrics: metrics?.restApiClient,
           })
         : opts.api;
 

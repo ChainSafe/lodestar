@@ -21,7 +21,7 @@ interface Gauge<Labels extends LabelsGeneric = never> {
 }
 
 interface Histogram<Labels extends LabelsGeneric = never> {
-  startTimer(): () => void;
+  startTimer(): () => number;
 
   observe(value: number): void;
   observe(labels: Labels, values: number): void;
@@ -235,5 +235,23 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       name: "validator_slashing_protection_attestation_errors_total",
       help: "Total count of errors on slashingProtection.checkAndInsertAttestation",
     }),
+
+    // REST API client
+
+    restApiClient: {
+      requestTime: register.histogram<{routeId: string}>({
+        name: "validator_rest_api_client_request_time_seconds",
+        help: "Histogram of REST API client request time by routeId",
+        labelNames: ["routeId"],
+        // Expected times are ~ 50-500ms, but in an overload NodeJS they can be greater
+        buckets: [0.01, 0.1, 1, 5],
+      }),
+
+      errors: register.gauge<{routeId: string}>({
+        name: "validator_rest_api_client_errors_total",
+        help: "Total count of errors calling the REST API client by routeId",
+        labelNames: ["routeId"],
+      }),
+    },
   };
 }
