@@ -28,14 +28,9 @@ export interface IValidatorMonitor {
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
   submitUnaggregatedAttestation(indexedAttestation: IndexedAttestation, subnet: number, sentPeers: number): void;
-  registerUnaggregatedAttestation(
-    src: OpSource,
-    seenTimestampSec: Seconds,
-    indexedAttestation: IndexedAttestation
-  ): void;
+  registerGossipUnaggregatedAttestation(seenTimestampSec: Seconds, indexedAttestation: IndexedAttestation): void;
   submitAggregatedAttestation(indexedAttestation: IndexedAttestation, sentPeers: number): void;
-  registerAggregatedAttestation(
-    src: OpSource,
+  registerGossipAggregatedAttestation(
     seenTimestampSec: Seconds,
     signedAggregateAndProof: SignedAggregateAndProof,
     indexedAttestation: IndexedAttestation
@@ -282,24 +277,29 @@ export function createValidatorMonitor(
 
     submitUnaggregatedAttestation(indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
+      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
+      const delaySec = Math.floor(Date.now() / 1000) - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
           if (sentPeers <= 0) {
             metrics.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe({index}, sentPeers);
           }
+          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api, index}, delaySec);
           logger.verbose("Local validator published unaggregated attestation", {
             validatorIndex: validator.index,
             slot: data.slot,
             committeeIndex: data.index,
             subnet,
             sentPeers,
+            delaySec,
           });
         }
       }
     },
 
-    registerUnaggregatedAttestation(src, seenTimestampSec, indexedAttestation) {
+    registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation) {
+      const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
@@ -320,20 +320,26 @@ export function createValidatorMonitor(
 
     submitAggregatedAttestation(indexedAttestation, sentPeers) {
       const data = indexedAttestation.data;
+      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
+      const delaySec = Math.floor(Date.now() / 1000) - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
+          metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api, index}, delaySec);
           logger.verbose("Local validator published aggregated attestation", {
             validatorIndex: validator.index,
             slot: data.slot,
             committeeIndex: data.index,
             sentPeers,
+            delaySec,
           });
         }
       }
     },
 
-    registerAggregatedAttestation(src, seenTimestampSec, signedAggregateAndProof, indexedAttestation) {
+    registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation) {
+      const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
