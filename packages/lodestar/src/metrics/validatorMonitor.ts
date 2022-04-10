@@ -278,7 +278,7 @@ export function createValidatorMonitor(
     submitUnaggregatedAttestation(indexedAttestation, subnet, sentPeers) {
       const data = indexedAttestation.data;
       // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
-      const delaySec = Math.floor(Date.now() / 1000) - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      const delaySec = Date.now() / 1000 - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
         if (validator) {
@@ -321,7 +321,7 @@ export function createValidatorMonitor(
     submitAggregatedAttestation(indexedAttestation, sentPeers) {
       const data = indexedAttestation.data;
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
-      const delaySec = Math.floor(Date.now() / 1000) - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+      const delaySec = Date.now() / 1000 - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
 
       for (const index of indexedAttestation.attestingIndices) {
         const validator = validators.get(index);
