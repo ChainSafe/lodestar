@@ -489,7 +489,7 @@ Use an in-memory datastore with last accessed time and _maxMemoryItems, on start
 <h2 id="constructors_1">Constructors<a class="headerlink" href="#constructors_1" title="Permanent link">¶</a></h2>
 <h3 id="constructor">constructor<a class="headerlink" href="#constructor" title="Permanent link">¶</a></h3>
 <p>+ <strong>new Eth2PeerDataStore</strong>(<code>dbDatastore</code>: LevelDatastore | string, <code>__namedParameters</code>: object): <em><a href="./">Eth2PeerDataStore</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L31">packages/lodestar/src/network/peers/datastore.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L31">packages/lodestar/src/network/peers/datastore.ts:31</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>dbDatastore</strong>: <em>LevelDatastore | string</em></p>
 <p>▪<code>Default value</code> <strong>__namedParameters</strong>: <em>object</em>= {}</p>
@@ -518,30 +518,30 @@ Use an in-memory datastore with last accessed time and _maxMemoryItems, on start
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="private-_dbdatastore"><code>Private</code> _dbDatastore<a class="headerlink" href="#private-_dbdatastore" title="Permanent link">¶</a></h3>
 <p>• <strong>_dbDatastore</strong>: <em>LevelDatastore</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L24">packages/lodestar/src/network/peers/datastore.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L24">packages/lodestar/src/network/peers/datastore.ts:24</a></em></p>
 <hr/>
 <h3 id="private-_dirtyitems"><code>Private</code> _dirtyItems<a class="headerlink" href="#private-_dirtyitems" title="Permanent link">¶</a></h3>
 <p>• <strong>_dirtyItems</strong>: <em>Set‹string›</em> = new Set<string>()</string></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L27">packages/lodestar/src/network/peers/datastore.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L27">packages/lodestar/src/network/peers/datastore.ts:27</a></em></p>
 <p>Same to PersistentPeerStore of the old libp2p implementation</p>
 <hr/>
 <h3 id="private-_maxmemoryitems"><code>Private</code> _maxMemoryItems<a class="headerlink" href="#private-_maxmemoryitems" title="Permanent link">¶</a></h3>
 <p>• <strong>_maxMemoryItems</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L31">packages/lodestar/src/network/peers/datastore.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L31">packages/lodestar/src/network/peers/datastore.ts:31</a></em></p>
 <p>If there are more memory items than this, prune oldest ones from memory and move to db</p>
 <hr/>
 <h3 id="private-_memorydatastore"><code>Private</code> _memoryDatastore<a class="headerlink" href="#private-_memorydatastore" title="Permanent link">¶</a></h3>
 <p>• <strong>_memoryDatastore</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../../modules/network_peers/#memoryitem">MemoryItem</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L25">packages/lodestar/src/network/peers/datastore.ts:25</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L25">packages/lodestar/src/network/peers/datastore.ts:25</a></em></p>
 <hr/>
 <h3 id="private-_threshold"><code>Private</code> _threshold<a class="headerlink" href="#private-_threshold" title="Permanent link">¶</a></h3>
 <p>• <strong>_threshold</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L29">packages/lodestar/src/network/peers/datastore.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L29">packages/lodestar/src/network/peers/datastore.ts:29</a></em></p>
 <p>If there are more dirty items than threshold, commit data to db</p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
 <h3 id="private-_adddirtyitem"><code>Private</code> _addDirtyItem<a class="headerlink" href="#private-_adddirtyitem" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_addDirtyItem</strong>(<code>keyStr</code>: string): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L144">packages/lodestar/src/network/peers/datastore.ts:144</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L144">packages/lodestar/src/network/peers/datastore.ts:144</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -562,7 +562,7 @@ Use an in-memory datastore with last accessed time and _maxMemoryItems, on start
 <h3 id="_all">_all<a class="headerlink" href="#_all" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_all</strong>(<code>q</code>: Query, <code>options?</code>: Options): <em>AsyncIterable‹Pair›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L127">packages/lodestar/src/network/peers/datastore.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L127">packages/lodestar/src/network/peers/datastore.ts:127</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -587,7 +587,7 @@ Use an in-memory datastore with last accessed time and _maxMemoryItems, on start
 <h3 id="_allkeys">_allKeys<a class="headerlink" href="#_allkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_allKeys</strong>(<code>q</code>: KeyQuery, <code>options?</code>: Options): <em>AsyncIterable‹Key›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L137">packages/lodestar/src/network/peers/datastore.ts:137</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L137">packages/lodestar/src/network/peers/datastore.ts:137</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -611,12 +611,12 @@ Use an in-memory datastore with last accessed time and _maxMemoryItems, on start
 <hr/>
 <h3 id="private-_commitdata"><code>Private</code> _commitData<a class="headerlink" href="#private-_commitdata" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_commitData</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L154">packages/lodestar/src/network/peers/datastore.ts:154</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L154">packages/lodestar/src/network/peers/datastore.ts:154</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="_put">_put<a class="headerlink" href="#_put" title="Permanent link">¶</a></h3>
 <p>▸ <strong>_put</strong>(<code>key</code>: Key, <code>val</code>: Uint8Array, <code>fromDb</code>: boolean): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L68">packages/lodestar/src/network/peers/datastore.ts:68</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L68">packages/lodestar/src/network/peers/datastore.ts:68</a></em></p>
 <p>Same interface to put with "fromDb" option, if this item is updated back from db
 Move oldest items from memory data store to db if it's over this._maxMemoryItems</p>
 <p><strong>Parameters:</strong></p>
@@ -657,13 +657,13 @@ Move oldest items from memory data store to db if it's over this._maxMemoryItems
 <h3 id="close">close<a class="headerlink" href="#close" title="Permanent link">¶</a></h3>
 <p>▸ <strong>close</strong>(): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L56">packages/lodestar/src/network/peers/datastore.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L56">packages/lodestar/src/network/peers/datastore.ts:56</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">¶</a></h3>
 <p>▸ <strong>delete</strong>(<code>key</code>: Key): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L122">packages/lodestar/src/network/peers/datastore.ts:122</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L122">packages/lodestar/src/network/peers/datastore.ts:122</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -709,7 +709,7 @@ Move oldest items from memory data store to db if it's over this._maxMemoryItems
 <h3 id="get">get<a class="headerlink" href="#get" title="Permanent link">¶</a></h3>
 <p>▸ <strong>get</strong>(<code>key</code>: Key): <em>Promise‹Uint8Array›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L94">packages/lodestar/src/network/peers/datastore.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L94">packages/lodestar/src/network/peers/datastore.ts:94</a></em></p>
 <p>Check memory datastore - update lastAccessedMs, then db datastore
 If found in db datastore then update back the memory datastore
 This throws error if not found
@@ -759,7 +759,7 @@ see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8e
 <h3 id="has">has<a class="headerlink" href="#has" title="Permanent link">¶</a></h3>
 <p>▸ <strong>has</strong>(<code>key</code>: Key): <em>Promise‹boolean›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L110">packages/lodestar/src/network/peers/datastore.ts:110</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L110">packages/lodestar/src/network/peers/datastore.ts:110</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -780,19 +780,19 @@ see https://github.com/ipfs/js-datastore-level/blob/38f44058dd6be858e757a1c90b8e
 <h3 id="open">open<a class="headerlink" href="#open" title="Permanent link">¶</a></h3>
 <p>▸ <strong>open</strong>(): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L52">packages/lodestar/src/network/peers/datastore.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L52">packages/lodestar/src/network/peers/datastore.ts:52</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="private-prunememorydatastore"><code>Private</code> pruneMemoryDatastore<a class="headerlink" href="#private-prunememorydatastore" title="Permanent link">¶</a></h3>
 <p>▸ <strong>pruneMemoryDatastore</strong>(): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L169">packages/lodestar/src/network/peers/datastore.ts:169</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L169">packages/lodestar/src/network/peers/datastore.ts:169</a></em></p>
 <p>Prune from memory and move to db</p>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
 <hr/>
 <h3 id="put">put<a class="headerlink" href="#put" title="Permanent link">¶</a></h3>
 <p>▸ <strong>put</strong>(<code>key</code>: Key, <code>val</code>: Uint8Array): <em>Promise‹void›</em></p>
 <p><em>Overrides void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/5518087/packages/lodestar/src/network/peers/datastore.ts#L60">packages/lodestar/src/network/peers/datastore.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/d0a78a2/packages/lodestar/src/network/peers/datastore.ts#L60">packages/lodestar/src/network/peers/datastore.ts:60</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
