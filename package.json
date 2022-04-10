@@ -29,8 +29,7 @@
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)",
-    "check-readme": "lerna run check-readme",
-    "validate-gdash": "node scripts/validate-grafana-dashboard.js"
+    "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
     "@dapplion/benchmark": "^0.2.2",
