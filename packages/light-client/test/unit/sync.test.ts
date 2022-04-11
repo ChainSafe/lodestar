@@ -18,7 +18,6 @@ import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
-
 describe("Lightclient sync", () => {
   const afterEachCbs: (() => Promise<unknown> | unknown)[] = [];
   afterEach(async () => {

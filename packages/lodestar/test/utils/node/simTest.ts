@@ -8,7 +8,7 @@ import {
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {SLOTS_PER_EPOCH, SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
-import {Epoch, Slot} from "@chainsafe/lodestar-types";
+import {altair, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {ILogger, mapValues} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
@@ -23,6 +23,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
   let lastSeenEpoch = 0;
 
   const attestationsPerBlock = new Map<Slot, number>();
+  const syncCommitteePerBlock = new Map<Slot, number>();
   const inclusionDelayPerBlock = new Map<Slot, number>();
   const prevParticipationPerEpoch = new Map<Epoch, number>();
   const currParticipationPerEpoch = new Map<Epoch, number>();
@@ -36,8 +37,10 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     if (block) {
       const bits = sumAttestationBits(block.message);
       const inclDelay = avgInclusionDelay(block.message);
+      const syncCommitteesBits = sumSynCommitteeBits(block.message as altair.BeaconBlock);
       attestationsPerBlock.set(slot, bits);
       inclusionDelayPerBlock.set(slot, inclDelay);
+      syncCommitteePerBlock.set(slot, syncCommitteesBits);
       logger.info("> Block attestations", {slot, bits, inclDelay});
     }
   }
@@ -84,6 +87,7 @@ export function simTestInfoTracker(bn: BeaconNode, logger: ILogger): () => void 
     // Write report
     console.log("\nEnd of sim test report\n");
     printEpochSlotGrid(attestationsPerBlock, bn.config, "Attestations per block");
+    printEpochSlotGrid(syncCommitteePerBlock, bn.config, "Sync Committees per block");
     printEpochSlotGrid(inclusionDelayPerBlock, bn.config, "Inclusion delay per block");
     printEpochGrid({curr: currParticipationPerEpoch, prev: prevParticipationPerEpoch}, "Participation per epoch");
   };
@@ -94,6 +98,10 @@ function sumAttestationBits(block: allForks.BeaconBlock): number {
     (total, att) => total + att.aggregationBits.getTrueBitIndexes().length,
     0
   );
+}
+
+function sumSynCommitteeBits(block: altair.BeaconBlock): number {
+  return block.body.syncAggregate.syncCommitteeBits.getTrueBitIndexes().length;
 }
 
 function avgInclusionDelay(block: allForks.BeaconBlock): number {

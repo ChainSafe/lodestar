@@ -12,7 +12,7 @@ export type IChainForkConfig = IChainConfig & IForkConfig;
 export type IBeaconConfig = IChainForkConfig & ICachedGenesis;
 
 /**
- * Create an `IBeaconConfig`, filling in missing values with preset defaults
+ * Create an `IChainForkConfig`, filling in missing values with preset defaults
  */
 export function createIChainForkConfig(chainConfig: Partial<IChainConfig>): IChainForkConfig {
   const fullChainConfig = createIChainConfig(chainConfig);
@@ -22,6 +22,9 @@ export function createIChainForkConfig(chainConfig: Partial<IChainConfig>): ICha
   };
 }
 
+/**
+ * Create an `IBeaconConfig`, filling in missing values with preset defaults
+ */
 export function createIBeaconConfig(chainConfig: Partial<IChainConfig>, genesisValidatorsRoot: Root): IBeaconConfig {
   const chainForkConfig = createIChainForkConfig(chainConfig);
   return {
