@@ -58,7 +58,7 @@ export class HttpMetricsServer {
 
   async start(): Promise<void> {
     const {port, address} = this.opts;
-    this.logger.info("Starting metrics HTTP server", {port, address});
+    this.logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
     const listen = this.server.listen.bind(this.server);
     return new Promise((resolve, reject) => {
       listen(port, address).once("listening", resolve).once("error", reject);

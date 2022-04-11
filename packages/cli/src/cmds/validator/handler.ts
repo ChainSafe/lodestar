@@ -122,7 +122,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     const port = args["metrics.port"] ?? validatorMetricsDefaultOptions.port;
     const address = args["metrics.address"] ?? validatorMetricsDefaultOptions.address;
     const metricsServer = new HttpMetricsServer({port, address}, {register, logger});
-    logger.info("Starting metrics HTTP server", {port, address});
 
     onGracefulShutdownCbs.push(() => metricsServer.stop());
     await metricsServer.start();
