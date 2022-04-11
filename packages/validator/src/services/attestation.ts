@@ -59,7 +59,6 @@ export class AttestationService {
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
     await Promise.race([sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal), this.waitForBlockSlot(slot)]);
-
     this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.msToSlotFraction(slot, 0));
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
@@ -111,7 +110,6 @@ export class AttestationService {
     // Step 2. If an attestation was produced, make an aggregate.
     // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
     await sleep(this.clock.msToSlotFraction(slot, 2 / 3), signal);
-
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.msToSlotFraction(slot, 0));
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each

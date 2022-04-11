@@ -95,29 +95,51 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     // - Wait 2/3, call prepare aggregate
     // - Get aggregate, sign, call publish
 
+    // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
     attesterStepCallProduceAttestation: register.histogram({
       name: "vc_attester_step_call_produce_attestation_seconds",
       help: "Time between start of slot and call produce attestation",
-      // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
       buckets: [0.5, 1, 2, 3, 4, 6, 8],
     }),
     attesterStepCallPublishAttestation: register.histogram({
       name: "vc_attester_step_call_publish_attestation_seconds",
       help: "Time between start of slot and call publish attestation",
-      // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
       buckets: [0.5, 1, 2, 3, 4, 6, 8],
     }),
 
+    // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
     attesterStepCallProduceAggregate: register.histogram({
       name: "vc_attester_step_call_produce_aggregate_seconds",
       help: "Time between start of slot and call produce aggregate",
-      // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
       buckets: [6, 8, 10],
     }),
     attesterStepCallPublishAggregate: register.histogram({
       name: "vc_attester_step_call_publish_aggregate_seconds",
       help: "Time between start of slot and call publish aggregate",
-      // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
+      buckets: [6, 8, 10],
+    }),
+
+    // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
+    syncCommitteeStepCallProduceMessage: register.histogram({
+      name: "vc_sync_committee_step_call_produce_message_seconds",
+      help: "Time between start of slot and call produce message",
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+    }),
+    syncCommitteeStepCallPublishMessage: register.histogram({
+      name: "vc_sync_committee_step_call_publish_message_seconds",
+      help: "Time between start of slot and call publish message",
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+    }),
+
+    // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
+    syncCommitteeStepCallProduceAggregate: register.histogram({
+      name: "vc_sync_committee_step_call_produce_aggregate_seconds",
+      help: "Time between start of slot and call produce aggregate",
+      buckets: [6, 8, 10],
+    }),
+    syncCommitteeStepCallPublishAggregate: register.histogram({
+      name: "vc_sync_committee_step_call_publish_aggregate_seconds",
+      help: "Time between start of slot and call publish aggregate",
       buckets: [6, 8, 10],
     }),
 

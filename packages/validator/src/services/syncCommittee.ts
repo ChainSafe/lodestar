@@ -62,6 +62,7 @@ export class SyncCommitteeService {
 
       // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
       await sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal);
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.msToSlotFraction(slot, 0));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
@@ -70,6 +71,7 @@ export class SyncCommitteeService {
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
       await sleep(this.clock.msToSlotFraction(slot, 2 / 3), signal);
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.msToSlotFraction(slot, 0));
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is convervative to reduce the node's load, review
@@ -128,6 +130,8 @@ export class SyncCommitteeService {
         this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e as Error);
       }
     }
+
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.msToSlotFraction(slot, 0));
 
     if (signatures.length > 0) {
       try {
@@ -188,6 +192,8 @@ export class SyncCommitteeService {
         this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e as Error);
       }
     }
+
+    this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.msToSlotFraction(slot, 0));
 
     if (signedContributions.length > 0) {
       try {
