@@ -89,14 +89,39 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     .set(gitData, 1);
 
   return {
-    // AttestationService
+    // Attestation journey:
+    // - Wait for block or 1/3, call prepare attestation
+    // - Get attestation, sign, call publish
+    // - Wait 2/3, call prepare aggregate
+    // - Get aggregate, sign, call publish
 
-    blockReceivedTimeDiff: register.histogram({
-      name: "vc_block_received_slot_delay_seconds",
-      help: "Time between start of slot and block received time",
+    attesterStepCallProduceAttestation: register.histogram({
+      name: "vc_attester_step_call_produce_attestation_seconds",
+      help: "Time between start of slot and call produce attestation",
       // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
-      buckets: [0.5, 1, 2, 3, 4],
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
     }),
+    attesterStepCallPublishAttestation: register.histogram({
+      name: "vc_attester_step_call_publish_attestation_seconds",
+      help: "Time between start of slot and call publish attestation",
+      // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+    }),
+
+    attesterStepCallProduceAggregate: register.histogram({
+      name: "vc_attester_step_call_produce_aggregate_seconds",
+      help: "Time between start of slot and call produce aggregate",
+      // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
+      buckets: [6, 8, 10],
+    }),
+    attesterStepCallPublishAggregate: register.histogram({
+      name: "vc_attester_step_call_publish_aggregate_seconds",
+      help: "Time between start of slot and call publish aggregate",
+      // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
+      buckets: [6, 8, 10],
+    }),
+
+    // AttestationService
 
     publishedAttestations: register.gauge({
       name: "vc_published_attestations_total",
