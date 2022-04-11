@@ -70,7 +70,7 @@ export class BlockProposingService {
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);
-      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.msToSlotFraction(slot, 0));
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
         throw extendError(e, "Failed to produce block");
@@ -80,7 +80,7 @@ export class BlockProposingService {
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
 
-      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.msToSlotFraction(slot, 0));
+      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
 
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
         throw extendError(e, "Failed to publish block");

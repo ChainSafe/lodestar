@@ -14,7 +14,8 @@ export class ClockMock implements IClock {
   start = (): void => {};
   runEverySlot = (fn: RunEveryFn): number => this.everySlot.push(fn);
   runEveryEpoch = (fn: RunEveryFn): number => this.everyEpoch.push(fn);
-  msToSlotFraction = (): number => 0;
+  msToSlot = (): number => 0;
+  secFromSlot = (): number => 0;
 
   async tickSlotFns(slot: Slot, signal: AbortSignal): Promise<void> {
     for (const fn of this.everySlot) await fn(slot, signal);
