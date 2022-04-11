@@ -1,5 +1,4 @@
 import {AbortController} from "@chainsafe/abort-controller";
-import {getClient} from "@chainsafe/lodestar-api";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
@@ -92,7 +91,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   const controller = new AbortController();
   onGracefulShutdownCbs.push(async () => controller.abort());
 
-  const api = getClient(config, {baseUrl: args.server});
   const dbOps = {
     config: config,
     controller: new LevelDbController({name: dbPath}, {logger}),
@@ -131,7 +129,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // It will wait for genesis, so this promise can be potentially very long
 
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api, logger, signers, graffiti},
+    {dbOps, slashingProtection, api: args.server, logger, signers, graffiti},
     controller.signal,
     metrics
   );
