@@ -5,7 +5,7 @@ import {PeerScoreThresholds} from "libp2p-gossipsub/src/score";
 import {defaultTopicScoreParams, PeerScoreParams, TopicScoreParams} from "libp2p-gossipsub/src/score/peer-score-params";
 import {Eth2Context} from "../../chain";
 import {getActiveForks} from "../forks";
-import {IGossipsubModules} from "./gossipsub";
+import {Eth2GossipsubModules} from "./gossipsub";
 import {GossipType} from "./interface";
 import {stringifyGossipTopic} from "./topic";
 
@@ -71,7 +71,7 @@ type TopicScoreInput = {
 export function computeGossipPeerScoreParams({
   config,
   eth2Context,
-}: Pick<IGossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
+}: Pick<Eth2GossipsubModules, "config" | "eth2Context">): Partial<PeerScoreParams> {
   const decayIntervalMs = config.SECONDS_PER_SLOT * 1000;
   const decayToZero = 0.01;
   const epochDurationMs = config.SECONDS_PER_SLOT * SLOTS_PER_EPOCH * 1000;
@@ -99,6 +99,7 @@ export function computeGossipPeerScoreParams({
     // js-gossipsub doesn't have behaviourPenaltiesThreshold
     behaviourPenaltyDecay,
     behaviourPenaltyWeight: gossipScoreThresholds.gossipThreshold / (targetValue * targetValue),
+    behaviourPenaltyThreshold,
     topicScoreCap,
     IPColocationFactorWeight: -1 * topicScoreCap,
   };
@@ -245,7 +246,8 @@ function getTopicScoreParams(
     params.meshMessageDeliveriesThreshold = threshold(params.meshMessageDeliveriesDecay, expectedMessageRate / 50);
     params.meshMessageDeliveriesCap = Math.max(capFactor * params.meshMessageDeliveriesThreshold, 2);
     params.meshMessageDeliveriesActivation = activationWindow;
-    params.meshMessageDeliveriesWindow = 2 * 1000; // 2s
+    // the default in gossipsub is 2s is not enough since lodestar suffers from I/O lag
+    params.meshMessageDeliveriesWindow = 12 * 1000; // 12s
     params.meshFailurePenaltyDecay = params.meshMessageDeliveriesDecay;
     params.meshMessageDeliveriesWeight =
       (-1 * maxPositiveScore) / (params.topicWeight * Math.pow(params.meshMessageDeliveriesThreshold, 2));

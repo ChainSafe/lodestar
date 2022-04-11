@@ -8,8 +8,8 @@ import StrictEventEmitter from "strict-event-emitter-types";
 import {EventEmitter} from "events";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import LibP2p from "libp2p";
+import {GossipsubMessage, MessageAcceptance, PeerIdStr} from "libp2p-gossipsub/src/types";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {InMessage} from "libp2p-interfaces/src/pubsub";
 import {IBeaconChain} from "../../chain";
 import {NetworkEvent} from "../events";
 import {JobItemQueue} from "../../util/queue";
@@ -104,15 +104,6 @@ export interface IGossipModules {
 }
 
 /**
- * Extend the standard InMessage with additional fields so that we don't have to compute them twice.
- * When we send messages to other peers, protobuf will just ignore these fields.
- */
-export type Eth2InMessage = InMessage & {
-  msgId?: Uint8Array;
-  uncompressedData?: Uint8Array;
-};
-
-/**
  * Contains various methods for validation of incoming gossip topic data.
  * The conditions for valid gossip topics and how they are handled are specified here:
  * https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#global-topics
@@ -123,11 +114,18 @@ export type Eth2InMessage = InMessage & {
  *
  * js-libp2p-gossipsub expects validation functions that look like this
  */
-export type GossipValidatorFn = (topic: GossipTopic, message: Eth2InMessage, seenTimestampSec: number) => Promise<void>;
+export type GossipValidatorFn = (
+  topic: GossipTopic,
+  msg: GossipsubMessage,
+  propagationSource: PeerIdStr,
+  seenTimestampSec: number
+) => Promise<MessageAcceptance>;
 
 export type ValidatorFnsByType = {[K in GossipType]: GossipValidatorFn};
 
-export type GossipJobQueues = {[K in GossipType]: JobItemQueue<[GossipTopic, InMessage, number], void>};
+export type GossipJobQueues = {
+  [K in GossipType]: JobItemQueue<Parameters<GossipValidatorFn>, ResolvedType<GossipValidatorFn>>;
+};
 
 export type GossipHandlerFn = (
   object: GossipTypeMap[GossipType],
@@ -144,6 +142,7 @@ export type GossipHandlers = {
   ) => Promise<void>;
 };
 
-export type InMessageTimestamp = InMessage & {
-  seenTimestampMs: number;
-};
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ResolvedType<F extends (...args: any) => Promise<any>> = F extends (...args: any) => Promise<infer T>
+  ? T
+  : never;

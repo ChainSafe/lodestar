@@ -1,6 +1,7 @@
 import {expect} from "chai";
 import PeerId from "peer-id";
-import {PeerAction, ScoreState, PeerRpcScoreStore} from "../../../../src/network/peers/score";
+import sinon from "sinon";
+import {PeerAction, ScoreState, PeerRpcScoreStore, updateGossipsubScores} from "../../../../src/network/peers/score";
 
 describe("simple block provider score tracking", function () {
   const peer = PeerId.createFromB58String("Qma9T5YraSnpRDZqRR4krcSJabThc8nwZuJV3LercPHufi");
@@ -8,7 +9,9 @@ describe("simple block provider score tracking", function () {
 
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
   function mockStore() {
-    return {scoreStore: new PeerRpcScoreStore()};
+    const scoreStore = new PeerRpcScoreStore();
+    const peerScores = scoreStore["scores"];
+    return {scoreStore, peerScores};
   }
 
   it("Should return default score, without any previous action", function () {
@@ -40,17 +43,48 @@ describe("simple block provider score tracking", function () {
   ];
   for (const [minScore, timeToDecay] of decayTimes)
     it(`Should decay MIN_SCORE to ${minScore} after ${timeToDecay} ms`, () => {
-      const {scoreStore} = mockStore();
-      scoreStore["scores"].set(peer.toB58String(), MIN_SCORE);
-      scoreStore["lastUpdate"].set(peer.toB58String(), Date.now() - timeToDecay * factorForJsBadMath);
+      const {scoreStore, peerScores} = mockStore();
+      const peerScore = peerScores.get(peer.toB58String());
+      if (peerScore) {
+        peerScore["lastUpdate"] = Date.now() - timeToDecay * factorForJsBadMath;
+        peerScore["lodestarScore"] = MIN_SCORE;
+      }
       scoreStore.update();
       expect(scoreStore.getScore(peer)).to.be.greaterThan(minScore);
     });
 
-  it("should not go belove min score", function () {
+  it("should not go below min score", function () {
     const {scoreStore} = mockStore();
     scoreStore.applyAction(peer, PeerAction.Fatal);
     scoreStore.applyAction(peer, PeerAction.Fatal);
     expect(scoreStore.getScore(peer)).to.be.gte(MIN_SCORE);
+  });
+});
+
+describe("updateGossipsubScores", function () {
+  const sandbox = sinon.createSandbox();
+  const peerRpcScoresStub = sandbox.createStubInstance(PeerRpcScoreStore);
+
+  this.afterEach(() => {
+    sandbox.restore();
+  });
+
+  it("should update gossipsub peer scores", () => {
+    updateGossipsubScores(
+      peerRpcScoresStub,
+      new Map([
+        ["a", 10],
+        ["b", -10],
+        ["c", -20],
+        ["d", -5],
+      ]),
+      2
+    );
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("a", 10, false)).to.be.true;
+    // should ignore b d since they are 2 biggest negative scores
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("b", -10, true)).to.be.true;
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("d", -5, true)).to.be.true;
+    // should not ignore c as it's lowest negative scores
+    expect(peerRpcScoresStub.updateGossipsubScore.calledWith("c", -20, false)).to.be.true;
   });
 });

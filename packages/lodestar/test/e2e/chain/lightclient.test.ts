@@ -69,6 +69,7 @@ describe("chain / lightclient", function () {
       params: testParams,
       options: {
         sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient"], port: restPort}},
       },
       validatorCount,
@@ -94,6 +95,9 @@ describe("chain / lightclient", function () {
     });
 
     await Promise.all(validators.map((validator) => validator.start()));
+    afterEachCallbacks.push(async () => {
+      await Promise.all(validators.map((v) => v.stop()));
+    });
 
     // This promise chain does:
     // 1. Wait for the beacon node to emit one head that has a snapshot associated to it

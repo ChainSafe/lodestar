@@ -131,7 +131,7 @@ describe("computeGossipPeerScoreParams", function () {
     expect(params.meshMessageDeliveriesDecay).closeTo(0.930572, TOLERANCE);
     expect(params.meshMessageDeliveriesCap).closeTo(68.6255, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).to.be.equal(384 * 1000);
-    expect(params.meshMessageDeliveriesWindow).to.be.equal(2 * 1000);
+    expect(params.meshMessageDeliveriesWindow).to.be.equal(12 * 1000);
     expect(params.meshFailurePenaltyWeight).closeTo(-0.73044, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.93057, TOLERANCE);
 
@@ -165,7 +165,7 @@ describe("computeGossipPeerScoreParams", function () {
     expect(params.meshMessageDeliveriesDecay).closeTo(0.97163, TOLERANCE);
     expect(params.meshMessageDeliveriesCap).closeTo(2.0547574, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).to.be.equal(384 * 1000);
-    expect(params.meshMessageDeliveriesWindow).to.be.equal(2 * 1000);
+    expect(params.meshMessageDeliveriesWindow).to.be.equal(12 * 1000);
     expect(params.meshFailurePenaltyWeight).closeTo(-458.31055, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.97163, TOLERANCE);
 
@@ -207,7 +207,7 @@ describe("computeGossipPeerScoreParams", function () {
     expect(params.meshMessageDeliveriesDecay).closeTo(0.96466, TOLERANCE);
     expect(params.meshMessageDeliveriesCap).closeTo(69.88248, TOLERANCE);
     expect(params.meshMessageDeliveriesActivation).to.be.equal(204 * 1000);
-    expect(params.meshMessageDeliveriesWindow).to.be.equal(2 * 1000);
+    expect(params.meshMessageDeliveriesWindow).to.be.equal(12 * 1000);
     expect(params.meshFailurePenaltyWeight).closeTo(-360.6548, TOLERANCE);
     expect(params.meshFailurePenaltyDecay).closeTo(0.96466, TOLERANCE);
 

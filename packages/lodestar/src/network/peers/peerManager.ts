@@ -15,7 +15,7 @@ import {prettyPrintPeerId} from "../util";
 import {PeersData, PeerData} from "./peersData";
 import {ISubnetsService} from "../subnets";
 import {PeerDiscovery, SubnetDiscvQueryMs} from "./discover";
-import {IPeerRpcScoreStore, ScoreState} from "./score";
+import {IPeerRpcScoreStore, ScoreState, updateGossipsubScores} from "./score";
 import {clientFromAgentVersion, ClientKind} from "./client";
 import {
   getConnectedPeerIds,
@@ -25,6 +25,7 @@ import {
   renderIrrelevantPeerType,
 } from "./utils";
 import {SubnetType} from "../metadata";
+import {Eth2Gossipsub} from "../gossip/gossipsub";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -39,6 +40,11 @@ const STATUS_INBOUND_GRACE_PERIOD = 15 * 1000;
 const CHECK_PING_STATUS_INTERVAL = 10 * 1000;
 /** A peer is considered long connection if it's >= 1 day */
 const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Relative factor of peers that are allowed to have a negative gossipsub score without penalizing them in lodestar.
+ */
+const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
@@ -70,6 +76,7 @@ export type PeerManagerModules = {
   logger: ILogger;
   metrics: IMetrics | null;
   reqResp: IReqResp;
+  gossip: Eth2Gossipsub;
   attnetsService: ISubnetsService;
   syncnetsService: ISubnetsService;
   chain: IBeaconChain;
@@ -100,6 +107,7 @@ export class PeerManager {
   private logger: ILogger;
   private metrics: IMetrics | null;
   private reqResp: IReqResp;
+  private gossipsub: Eth2Gossipsub;
   private attnetsService: ISubnetsService;
   private syncnetsService: ISubnetsService;
   private chain: IBeaconChain;
@@ -120,6 +128,7 @@ export class PeerManager {
     this.logger = modules.logger;
     this.metrics = modules.metrics;
     this.reqResp = modules.reqResp;
+    this.gossipsub = modules.gossip;
     this.attnetsService = modules.attnetsService;
     this.syncnetsService = modules.syncnetsService;
     this.chain = modules.chain;
@@ -156,6 +165,10 @@ export class PeerManager {
     this.intervals = [
       setInterval(this.pingAndStatusTimeouts.bind(this), CHECK_PING_STATUS_INTERVAL),
       setInterval(this.heartbeat.bind(this), HEARTBEAT_INTERVAL_MS),
+      setInterval(
+        this.updateGossipsubScores.bind(this),
+        this.gossipsub.scoreParams.decayInterval ?? HEARTBEAT_INTERVAL_MS
+      ),
     ];
   }
 
@@ -449,6 +462,16 @@ export class PeerManager {
         }
       }
     }
+  }
+
+  private updateGossipsubScores(): void {
+    const gossipsubScores = new Map<string, number>();
+    for (const peerIdStr of this.connectedPeers.keys()) {
+      gossipsubScores.set(peerIdStr, this.gossipsub.getScore(peerIdStr));
+    }
+
+    const toIgnoreNegativePeers = Math.ceil(this.opts.targetPeers * ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR);
+    updateGossipsubScores(this.peerRpcScores, gossipsubScores, toIgnoreNegativePeers);
   }
 
   private pingAndStatusTimeouts(): void {

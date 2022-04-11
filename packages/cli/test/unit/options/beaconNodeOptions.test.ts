@@ -55,6 +55,7 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
+      "network.allowPublishToZeroPeers": true,
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
@@ -120,6 +121,7 @@ describe("options / beaconNodeOptions", () => {
         blockCountPeerLimit: 500,
         rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
+        allowPublishToZeroPeers: true,
       },
       sync: {
         isSingleNode: true,
