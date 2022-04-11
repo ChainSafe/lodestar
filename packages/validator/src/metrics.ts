@@ -143,6 +143,18 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       buckets: [6, 8, 10],
     }),
 
+    // Min wait time it 0. CallProduceBlock step is a bit redundant since it must be 0, but let's check
+    proposerStepCallProduceBlock: register.histogram({
+      name: "vc_proposer_step_call_produce_block_seconds",
+      help: "Time between start of slot and call produce block",
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+    }),
+    proposerStepCallPublishBlock: register.histogram({
+      name: "vc_proposer_step_call_publish_block_seconds",
+      help: "Time between start of slot and call publish block",
+      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+    }),
+
     // AttestationService
 
     publishedAttestations: register.gauge({

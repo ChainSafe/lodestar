@@ -20,7 +20,7 @@ export class BlockProposingService {
     private readonly config: IChainForkConfig,
     private readonly logger: ILoggerVc,
     private readonly api: Api,
-    clock: IClock,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
     private readonly graffiti?: string
@@ -70,6 +70,8 @@ export class BlockProposingService {
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.msToSlotFraction(slot, 0));
+
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
         throw extendError(e, "Failed to produce block");
       });
@@ -77,6 +79,9 @@ export class BlockProposingService {
       this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+
+      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.msToSlotFraction(slot, 0));
+
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
         throw extendError(e, "Failed to publish block");
       });
