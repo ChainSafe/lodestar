@@ -38,7 +38,6 @@ describe("syncCommittee / sync committee", function () {
       validatorCount,
       logger: loggerNodeA,
     });
-
     afterEachCallbacks.push(() => bn.close());
 
     const {validators} = await getAndInitDevValidators({
@@ -49,13 +48,9 @@ describe("syncCommittee / sync committee", function () {
       useRestApi: false,
       testLoggerOpts,
     });
-
     afterEachCallbacks.push(() => Promise.all(validators.map((validator) => validator.stop())));
 
     await Promise.all(validators.map((validator) => validator.start()));
-    afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
-    // stop beacon node after validators
-    afterEachCallbacks.push(() => bn.close());
 
     await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.finalized, 240000);
     loggerNodeA.important("Node A emitted finalized checkpoint event");
