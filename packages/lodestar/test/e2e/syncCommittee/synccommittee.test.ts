@@ -34,7 +34,10 @@ describe("syncCommittee / sync committee", function () {
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
-      options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
+      options: {
+        sync: {isSingleNode: true},
+        api: {rest: {enabled: true, port: 9596}},
+      },
       validatorCount,
       logger: loggerNodeA,
     });
