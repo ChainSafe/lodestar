@@ -1,13 +1,13 @@
 import fastify, {FastifyError, FastifyInstance} from "fastify";
 import fastifyCors from "fastify-cors";
 import querystring from "querystring";
-import {IncomingMessage} from "node:http";
 import {Api} from "@chainsafe/lodestar-api";
 import {registerRoutes, RouteConfig} from "@chainsafe/lodestar-api/server";
 import {ErrorAborted, ILogger} from "@chainsafe/lodestar-utils";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics";
 import {ApiError, NodeIsSyncing} from "../impl/errors";
+import {HttpActiveSocketsTracker} from "./activeSockets";
 export {allNamespaces} from "@chainsafe/lodestar-api";
 
 export type RestApiOptions = {
@@ -41,11 +41,12 @@ export class RestApi {
   private readonly opts: RestApiOptions;
   private readonly server: FastifyInstance;
   private readonly logger: ILogger;
-  private readonly activeRequests = new Set<IncomingMessage>();
+  private readonly activeSockets: HttpActiveSocketsTracker;
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     // Apply opts defaults
     const opts = {...restApiOptionsDefault, ...optsArg};
+    const {config, logger, api, metrics} = modules;
 
     const server = fastify({
       logger: false,
@@ -53,8 +54,10 @@ export class RestApi {
       querystringParser: querystring.parse,
     });
 
+    this.activeSockets = new HttpActiveSocketsTracker(server.server, metrics ? metrics.apiRest : null);
+
     // Instantiate and register the routes with matching namespace in `opts.api`
-    registerRoutes(server, modules.config, modules.api, opts.api);
+    registerRoutes(server, config, api, opts.api);
 
     // To parse our ApiError -> statusCode
     server.setErrorHandler((err, req, res) => {
@@ -73,37 +76,32 @@ export class RestApi {
 
     // Log all incoming request to debug (before parsing). TODO: Should we hook latter in the lifecycle? https://www.fastify.io/docs/latest/Lifecycle/
     // Note: Must be an async method so fastify can continue the release lifecycle. Otherwise we must call done() or the request stalls
-    server.addHook("onRequest", async (req) => {
-      this.activeRequests.add(req.raw);
-      const url = req.raw.url ? req.raw.url.split("?")[0] : "-";
-      this.logger.debug(`Req ${req.id} ${req.ip} ${req.raw.method}:${url}`);
+    server.addHook("onRequest", async (req, res) => {
+      const {operationId} = res.context.config as RouteConfig;
+      this.logger.debug(`Req ${req.id} ${req.ip} ${operationId}`);
+      metrics?.apiRest.requests.inc({operationId});
     });
 
     // Log after response
     server.addHook("onResponse", async (req, res) => {
-      this.activeRequests.delete(req.raw);
       const {operationId} = res.context.config as RouteConfig;
       this.logger.debug(`Res ${req.id} ${operationId} - ${res.raw.statusCode}`);
-
-      if (modules.metrics) {
-        modules.metrics?.apiRestResponseTime.observe({operationId}, res.getResponseTime() / 1000);
-      }
+      metrics?.apiRest.responseTime.observe({operationId}, res.getResponseTime() / 1000);
     });
 
     server.addHook("onError", async (req, res, err) => {
-      this.activeRequests.delete(req.raw);
       // Don't log ErrorAborted errors, they happen on node shutdown and are not usefull
-      if (err instanceof ErrorAborted) return;
       // Don't log NodeISSyncing errors, they happen very frequently while syncing and the validator polls duties
-      if (err instanceof NodeIsSyncing) return;
+      if (err instanceof ErrorAborted || err instanceof NodeIsSyncing) return;
 
       const {operationId} = res.context.config as RouteConfig;
       this.logger.error(`Req ${req.id} ${operationId} error`, {}, err);
+      metrics?.apiRest.errors.inc({operationId});
     });
 
     this.opts = opts;
     this.server = server;
-    this.logger = modules.logger;
+    this.logger = logger;
   }
 
   /**
@@ -131,9 +129,8 @@ export class RestApi {
     // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
     // all existing connections for a fast shutdown.
     // Inspired by https://github.com/gajus/http-terminator/
-    for (const req of this.activeRequests) {
-      req.destroy(Error("Closing"));
-    }
+    this.activeSockets.destroyAll();
+
     await this.server.close();
   }
 }
