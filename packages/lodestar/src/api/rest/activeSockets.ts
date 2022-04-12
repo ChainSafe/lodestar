@@ -28,7 +28,7 @@ export class HttpActiveSocketsTracker {
           this.sockets.delete(socket);
           if (metrics) {
             metrics.socketsBytesRead.inc(socket.bytesRead);
-            metrics.socketsBytesRead.inc(socket.bytesWritten);
+            metrics.socketsBytesWritten.inc(socket.bytesWritten);
           }
         });
       }
