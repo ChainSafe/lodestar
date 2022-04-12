@@ -5,6 +5,13 @@ import {RequestOrOutgoingResponseBody, OutgoingSerializer} from "../../types";
 import {SszSnappyError, SszSnappyErrorCode} from "./errors";
 
 /**
+ * As per the snappy framing format for streams, the size of any uncompressed chunk can be
+ * no longer than 65536 bytes.
+ *
+ * From: https://github.com/google/snappy/blob/main/framing_format.txt#L90:L92
+ */
+const UNCOMPRESSED_CHUNK_SIZE = 65536;
+/**
  * ssz_snappy encoding strategy writer.
  * Yields byte chunks for encoded header and payload as defined in the spec:
  * ```
@@ -30,7 +37,11 @@ export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponse
  */
 function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
   const stream = createCompressStream();
-  stream.write(bytes);
+  for (let startFrom = 0; startFrom < bytes.length; startFrom += UNCOMPRESSED_CHUNK_SIZE) {
+    const endAt = startFrom + Math.min(bytes.length - startFrom, UNCOMPRESSED_CHUNK_SIZE);
+    const bytesChunk = bytes.slice(startFrom, endAt);
+    stream.write(bytesChunk);
+  }
   stream.end();
   return source<Buffer>(stream);
 }
