@@ -4,9 +4,6 @@ import path from "node:path";
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
 
-// This test data generated with code from 'master' at Jan 1st 2021
-// commit: ea3ffab1ffb8093b61a8ebfa4b4432c604c10819
-
 export interface ISszSnappyTestBlockData<T extends RequestOrIncomingResponseBody> {
   id: string;
   type: RequestOrResponseType;
@@ -17,7 +14,7 @@ export interface ISszSnappyTestBlockData<T extends RequestOrIncomingResponseBody
 
 /**
  * A real big bellatrix block from goerli-shadow-fork-2 devnet, which is expected to be
- * encoded in multiple chunks (apart from the legngth prefix and the snappy frames header)
+ * encoded in multiple chunks.
  */
 
 export const goerliShadowForkBlock13249: ISszSnappyTestBlockData<bellatrix.SignedBeaconBlock> = {
