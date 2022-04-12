@@ -48,6 +48,9 @@ export class AttestationService {
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     // Fetch info first so a potential delay is absorved by the sleep() below
     const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
+    if (dutiesByCommitteeIndex.size === 0) {
+      return;
+    }
 
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
