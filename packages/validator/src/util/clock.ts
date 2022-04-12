@@ -50,10 +50,13 @@ export class Clock implements IClock {
     this.fns.push({timeItem: TimeItem.Epoch, fn});
   }
 
-  /** Miliseconds from now to a specific slot fraction */
+  /**
+   * Miliseconds from now to a specific slot fraction.
+   * If it's negative, return 0.
+   **/
   msToSlotFraction(slot: Slot, fraction: number): number {
     const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * (slot + fraction);
-    return timeAt * 1000 - Date.now();
+    return Math.max(timeAt * 1000 - Date.now(), 0);
   }
 
   /**
