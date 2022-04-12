@@ -1026,6 +1026,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_rest.httpactivesocketstracker/</loc>
+         <lastmod>2022-04-12</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/classes/api_rest.restapi/</loc>
          <lastmod>2022-04-12</lastmod>
          <changefreq>daily</changefreq>

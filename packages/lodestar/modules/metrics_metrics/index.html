@@ -294,6 +294,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#apirest-object">
+    apiRest: object
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#backfillsync-object">
     backfillSync: object
   </a>
@@ -417,15 +422,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fc2c2e/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50b1307/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr/>
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fc2c2e/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50b1307/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fc2c2e/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50b1307/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/beacon-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -705,7 +710,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr/>
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">¶</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata</code>: IMetricsOptions["metadata"], <code>anchorState?</code>: Pick‹allForks.BeaconState, "genesisTime"›): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8fc2c2e/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/50b1307/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -732,15 +737,6 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 </table>
 <p><strong>Returns:</strong> <em>object</em></p>
 <ul>
-<li>
-<p><strong>apiRestResponseTime</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹"operationId"›</em> = register.histogram&lt;"operationId"&gt;({
-      name: "lodestar_api_rest_response_time_seconds",
-      help: "Time to fullfill a request to the REST api labeled by operationId",
-      labelNames: ["operationId"],
-      // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 1],
-    })</p>
-</li>
 <li>
 <p><strong>clockSlot</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
       name: "lodestar_clock_slot",
@@ -978,6 +974,50 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
       name: "lodestar_unhandeled_promise_rejections_total",
       help: "UnhandeledPromiseRejection total count",
     })</p>
+</li>
+<li>
+<h3 id="apirest-object"><strong>apiRest</strong>: <em>object</em><a class="headerlink" href="#apirest-object" title="Permanent link">¶</a></h3>
+</li>
+<li>
+<p><strong>activeSockets</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_api_rest_active_sockets_count",
+        help: "REST API current count of active sockets",
+      })</p>
+</li>
+<li>
+<p><strong>errors</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"operationId"›</em> = register.gauge&lt;"operationId"&gt;({
+        name: "lodestar_api_rest_errors_total",
+        help: "REST API total count of errors by operationId",
+        labelNames: ["operationId"],
+      })</p>
+</li>
+<li>
+<p><strong>requests</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"operationId"›</em> = register.gauge&lt;"operationId"&gt;({
+        name: "lodestar_api_rest_requests_total",
+        help: "REST API total count requests by operationId",
+        labelNames: ["operationId"],
+      })</p>
+</li>
+<li>
+<p><strong>responseTime</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹"operationId"›</em> = register.histogram&lt;"operationId"&gt;({
+        name: "lodestar_api_rest_response_time_seconds",
+        help: "REST API time to fullfill a request by operationId",
+        labelNames: ["operationId"],
+        // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+        buckets: [0.01, 0.1, 1],
+      })</p>
+</li>
+<li>
+<p><strong>socketsBytesRead</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_read_total",
+        help: "REST API total count of bytes read on all sockets",
+      })</p>
+</li>
+<li>
+<p><strong>socketsBytesWritten</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_written_total",
+        help: "REST API total count of bytes written on all sockets",
+      })</p>
 </li>
 <li>
 <h3 id="backfillsync-object"><strong>backfillSync</strong>: <em>object</em><a class="headerlink" href="#backfillsync-object" title="Permanent link">¶</a></h3>
