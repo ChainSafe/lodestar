@@ -336,13 +336,10 @@ export function createLodestarMetrics(
         help: "REST API total count of errors by operationId",
         labelNames: ["operationId"],
       }),
+      // Metrics for HttpActiveSocketsTracker, defined there
       activeSockets: register.gauge({
         name: "lodestar_api_rest_active_sockets_count",
         help: "REST API current count of active sockets",
-      }),
-      connections: register.gauge({
-        name: "lodestar_api_rest_connections_count",
-        help: "REST API current count of connections",
       }),
       socketsBytesRead: register.gauge({
         name: "lodestar_api_rest_sockets_bytes_read_total",
@@ -351,10 +348,6 @@ export function createLodestarMetrics(
       socketsBytesWritten: register.gauge({
         name: "lodestar_api_rest_sockets_bytes_written_total",
         help: "REST API total count of bytes written on all sockets",
-      }),
-      socketsBuffer: register.gauge({
-        name: "lodestar_api_rest_sockets_bytes_buffer_current",
-        help: "REST API current buffer bytes in all active sockets",
       }),
     },
 

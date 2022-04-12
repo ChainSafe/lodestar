@@ -55,10 +55,6 @@ export class HttpMetricsServer implements IMetricsServer {
         name: "lodestar_metrics_server_sockets_bytes_written_total",
         help: "Metrics server total count of bytes written on all sockets",
       }),
-      socketsBuffer: this.httpServerRegister.gauge({
-        name: "lodestar_metrics_server_sockets_bytes_buffer_current",
-        help: "Metrics server current buffer bytes in all active sockets",
-      }),
     };
 
     this.activeSockets = new HttpActiveSocketsTracker(this.server, socketsMetrics);

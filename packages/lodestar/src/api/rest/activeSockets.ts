@@ -6,7 +6,6 @@ type SocketMetrics = {
   activeSockets: IGauge;
   socketsBytesRead: IGauge;
   socketsBytesWritten: IGauge;
-  socketsBuffer: IGauge;
 };
 
 /**
@@ -35,15 +34,8 @@ export class HttpActiveSocketsTracker {
     });
 
     if (metrics) {
-      metrics.activeSockets.addCollect(() => {
-        metrics.activeSockets.set(this.sockets.size);
-
-        let bufferSize = 0;
-        for (const socket of this.sockets) {
-          bufferSize += socket.writableLength;
-        }
-        metrics.socketsBuffer.set(bufferSize);
-      });
+      metrics.activeSockets.addCollect(() => metrics.activeSockets.set(this.sockets.size));
+      // Note: After some testing seems that `socket.writableLength` does not provide useful data, it's always 0
     }
   }
 
