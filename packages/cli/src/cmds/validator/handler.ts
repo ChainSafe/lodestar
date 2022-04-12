@@ -105,10 +105,17 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   await validator.start();
 
   // Start keymanager API backend
-  // Only if keymanagerEnabled flag is set to true and at least one keystore path is supplied
-  const firstImportKeystorePath = args.importKeystoresPath?.[0];
-  if (args.keymanagerEnabled && firstImportKeystorePath) {
-    const keymanagerApi = new KeymanagerApi(logger, validator, firstImportKeystorePath);
+  // Only if keymanagerEnabled flag is set to true
+  if (args.keymanagerEnabled) {
+    if (!args.importKeystoresPath || args.importKeystoresPath.length === 0) {
+      throw new YargsError("For keymanagerEnabled must set importKeystoresPath to at least 1 path");
+    }
+
+    // Use the first path in importKeystoresPath as directory to write keystores
+    // KeymanagerApi must ensure that the path is a directory and not a file
+    const firstImportKeystorePath = args.importKeystoresPath[0];
+
+    const keymanagerApi = new KeymanagerApi(validator, firstImportKeystorePath);
 
     const keymanagerServer = new KeymanagerServer(
       {
