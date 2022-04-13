@@ -19,14 +19,11 @@ export type LodestarMetadata = {
 
 export type MetricsOptions = HttpMetricsServerOpts & {
   enabled: boolean;
-  timeout?: number;
-  listenAddr?: string;
   /** Optional metadata to send to Prometheus */
   metadata?: LodestarMetadata;
 };
 
 export const defaultMetricsOptions: MetricsOptions = {
   enabled: false,
-  timeout: 5000,
   port: 8008,
 };
