@@ -95,64 +95,66 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     // - Wait 2/3, call prepare aggregate
     // - Get aggregate, sign, call publish
 
-    // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
     attesterStepCallProduceAttestation: register.histogram({
       name: "vc_attester_step_call_produce_attestation_seconds",
-      help: "Time between start of slot and call produce attestation",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      help: "Time between 1/3 of slot and call produce attestation",
+      // Attester flow can start early if block is imported before 1/3 of the slot
+      // This measure is critical so we need very good resolution around the 0 second mark
+      buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
     attesterStepCallPublishAttestation: register.histogram({
       name: "vc_attester_step_call_publish_attestation_seconds",
-      help: "Time between start of slot and call publish attestation",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      help: "Time between 1/3 of slot and call publish attestation",
+      buckets: [-3, -1, 0, 1, 2, 3, 6, 12],
     }),
 
-    // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
     attesterStepCallProduceAggregate: register.histogram({
       name: "vc_attester_step_call_produce_aggregate_seconds",
-      help: "Time between start of slot and call produce aggregate",
-      buckets: [6, 8, 10],
+      help: "Time between 2/3 of slot and call produce aggregate",
+      // Aggregate production starts at 2/3 the earliest.
+      // Track values close to 0 (expected) in greater resolution, values over 12 overflow into the next slot.
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     attesterStepCallPublishAggregate: register.histogram({
       name: "vc_attester_step_call_publish_aggregate_seconds",
-      help: "Time between start of slot and call publish aggregate",
-      buckets: [6, 8, 10],
+      help: "Time between 2/3 of slot and call publish aggregate",
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
-    // Max wait time is 1 / 3 of slot = 12 / 3 = 4 sec
     syncCommitteeStepCallProduceMessage: register.histogram({
       name: "vc_sync_committee_step_call_produce_message_seconds",
-      help: "Time between start of slot and call produce message",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      help: "Time between 1/3 of slot and call produce message",
+      // Max wait time is 1 / 3 of slot
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishMessage: register.histogram({
       name: "vc_sync_committee_step_call_publish_message_seconds",
-      help: "Time between start of slot and call publish message",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      help: "Time between 1/3 of slot and call publish message",
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
-    // Min wait time is 2 / 3 of slot = 2 * 12 / 3 = 8 sec
     syncCommitteeStepCallProduceAggregate: register.histogram({
       name: "vc_sync_committee_step_call_produce_aggregate_seconds",
-      help: "Time between start of slot and call produce aggregate",
-      buckets: [6, 8, 10],
+      help: "Time between 2/3 of slot and call produce aggregate",
+      // Min wait time is 2 / 3 of slot
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
     syncCommitteeStepCallPublishAggregate: register.histogram({
       name: "vc_sync_committee_step_call_publish_aggregate_seconds",
-      help: "Time between start of slot and call publish aggregate",
-      buckets: [6, 8, 10],
+      help: "Time between 2/3 of slot and call publish aggregate",
+      buckets: [0.5, 1, 2, 3, 6, 12],
     }),
 
     // Min wait time it 0. CallProduceBlock step is a bit redundant since it must be 0, but let's check
     proposerStepCallProduceBlock: register.histogram({
       name: "vc_proposer_step_call_produce_block_seconds",
       help: "Time between start of slot and call produce block",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      buckets: [0.5, 1, 2, 3, 6, 8],
     }),
     proposerStepCallPublishBlock: register.histogram({
       name: "vc_proposer_step_call_publish_block_seconds",
       help: "Time between start of slot and call publish block",
-      buckets: [0.5, 1, 2, 3, 4, 6, 8],
+      buckets: [0.5, 1, 2, 3, 6, 8],
     }),
 
     // AttestationService
@@ -165,6 +167,12 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
     publishedAggregates: register.gauge({
       name: "vc_published_aggregates_total",
       help: "Total published aggregates",
+    }),
+
+    attestaterError: register.gauge<{error: "produce" | "sign" | "publish"}>({
+      name: "vc_attestation_service_errors",
+      help: "Total errors in AttestationService",
+      labelNames: ["error"],
     }),
 
     // AttestationDutiesService
@@ -196,9 +204,10 @@ export function getMetrics(register: MetricsRegister, gitData: LodestarGitData) 
       help: "Total count of blocks published",
     }),
 
-    blockProposingErrors: register.gauge({
+    blockProposingErrors: register.gauge<{error: "produce" | "publish"}>({
       name: "vc_block_proposing_errors_total",
       help: "Total count of errors producing or publishing a block",
+      labelNames: ["error"],
     }),
 
     // BlockDutiesService

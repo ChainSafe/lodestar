@@ -62,7 +62,7 @@ export class SyncCommitteeService {
 
       // Lighthouse recommends to always wait to 1/3 of the slot, even if the block comes early
       await sleep(this.clock.msToSlot(slot + 1 / 3), signal);
-      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot));
+      this.metrics?.syncCommitteeStepCallProduceMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
       // Step 1. Download, sign and publish an `SyncCommitteeMessage` for each validator.
       //         Differs from AttestationService, `SyncCommitteeMessage` are equal for all
@@ -71,7 +71,7 @@ export class SyncCommitteeService {
       // Step 2. If an attestation was produced, make an aggregate.
       // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
       await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot));
+      this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
       // await for all so if the Beacon node is overloaded it auto-throttles
       // TODO: This approach is convervative to reduce the node's load, review
@@ -131,7 +131,7 @@ export class SyncCommitteeService {
       }
     }
 
-    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot));
+    this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     if (signatures.length > 0) {
       try {
@@ -193,7 +193,7 @@ export class SyncCommitteeService {
       }
     }
 
-    this.metrics?.syncCommitteeStepCallProduceAggregate.observe(this.clock.secFromSlot(slot));
+    this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
     if (signedContributions.length > 0) {
       try {

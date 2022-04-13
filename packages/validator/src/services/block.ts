@@ -73,6 +73,7 @@ export class BlockProposingService {
       this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
 
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", debugLogCtx);
@@ -83,13 +84,13 @@ export class BlockProposingService {
       this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
 
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
       this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
-      this.metrics?.blockProposingErrors.inc();
     }
   }
 
