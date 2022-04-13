@@ -147,7 +147,7 @@ export class AttestationService {
     const currentEpoch = computeEpochAtSlot(slot);
     const signedAttestations: phase0.Attestation[] = [];
 
-    const attestation = {...attestationNoCommittee, committeeIndex};
+    const attestation: phase0.AttestationData = {...attestationNoCommittee, index: committeeIndex};
 
     for (const {duty} of duties) {
       const logCtxValidator = {
