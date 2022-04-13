@@ -12,6 +12,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker";
 import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
 import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /**
  * Service that sets up and handles validator attester duties.
@@ -26,7 +27,8 @@ export class AttestationService {
     private readonly validatorStore: ValidatorStore,
     private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
-    chainHeadTracker: ChainHeaderTracker
+    chainHeadTracker: ChainHeaderTracker,
+    private readonly metrics: Metrics | null
   ) {
     this.dutiesService = new AttestationDutiesService(
       logger,
@@ -34,7 +36,8 @@ export class AttestationService {
       clock,
       validatorStore,
       indicesService,
-      chainHeadTracker
+      chainHeadTracker,
+      metrics
     );
 
     // At most every slot, check existing duties from AttestationDutiesService and run tasks
@@ -55,7 +58,8 @@ export class AttestationService {
     // A validator should create and broadcast the attestation to the associated attestation subnet when either
     // (a) the validator has received a valid block from the expected block proposer for the assigned slot or
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
-    await Promise.race([sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal), this.waitForBlockSlot(slot)]);
+    await Promise.race([sleep(this.clock.msToSlot(slot + 1 / 3), signal), this.waitForBlockSlot(slot)]);
+    this.metrics?.attesterStepCallProduceAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
     // Produce a single attestation for all committees, and clone mutate before signing
@@ -105,7 +109,8 @@ export class AttestationService {
 
     // Step 2. If an attestation was produced, make an aggregate.
     // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
-    await sleep(this.clock.msToSlotFraction(slot, 2 / 3), signal);
+    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and
@@ -122,6 +127,7 @@ export class AttestationService {
   private async produceAttestation(slot: Slot): Promise<phase0.AttestationData> {
     // Produce one attestation data per slot and committeeIndex
     const attestationRes = await this.api.validator.produceAttestationData(0, slot).catch((e: Error) => {
+      this.metrics?.attestaterError.inc({error: "produce"});
       throw extendError(e, "Error producing attestation");
     });
     return attestationRes.data;
@@ -159,15 +165,20 @@ export class AttestationService {
         signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
         this.logger.debug("Signed attestation", logCtxValidator);
       } catch (e) {
+        this.metrics?.attestaterError.inc({error: "sign"});
         this.logger.error("Error signing attestation", logCtxValidator, e as Error);
       }
     }
+
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(attestation.slot + 1 / 3));
 
     if (signedAttestations.length > 0) {
       try {
         await this.api.beacon.submitPoolAttestations(signedAttestations);
         this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
+        this.metrics?.publishedAttestations.inc(signedAttestations.length);
       } catch (e) {
+        this.metrics?.attestaterError.inc({error: "publish"});
         this.logger.error("Error publishing attestations", logCtx, e as Error);
       }
     }
@@ -220,10 +231,13 @@ export class AttestationService {
       }
     }
 
+    this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot + 2 / 3));
+
     if (signedAggregateAndProofs.length > 0) {
       try {
         await this.api.validator.publishAggregateAndProofs(signedAggregateAndProofs);
         this.logger.info("Published aggregateAndProofs", {...logCtx, count: signedAggregateAndProofs.length});
+        this.metrics?.publishedAggregates.inc(signedAggregateAndProofs.length);
       } catch (e) {
         this.logger.error("Error publishing aggregateAndProofs", logCtx, e as Error);
       }

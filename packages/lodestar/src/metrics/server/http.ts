@@ -4,22 +4,18 @@
 import http from "node:http";
 import {Registry} from "prom-client";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IMetricsOptions} from "../options";
 import {wrapError} from "../../util/wrapError";
 import {HistogramExtra} from "../utils/histogram";
 import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface IMetricsServer {}
-
-type RegistryHolder = {
-  register: Registry;
+export type HttpMetricsServerOpts = {
+  port: number;
+  address?: string;
 };
 
-export class HttpMetricsServer implements IMetricsServer {
+export class HttpMetricsServer {
   private readonly server: http.Server;
-  private readonly opts: IMetricsOptions;
   private readonly register: Registry;
   private readonly logger: ILogger;
   private readonly activeSockets: HttpActiveSocketsTracker;
@@ -27,14 +23,14 @@ export class HttpMetricsServer implements IMetricsServer {
   private readonly httpServerRegister: RegistryMetricCreator;
   private readonly scrapeTimeMetric: HistogramExtra<"status">;
 
-  constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: RegistryHolder; logger: ILogger}) {
-    this.opts = opts;
+  constructor(private readonly opts: HttpMetricsServerOpts, {register, logger}: {register: Registry; logger: ILogger}) {
     this.logger = logger;
-    this.register = metrics.register;
+    this.register = register;
     this.server = http.createServer(this.onRequest.bind(this));
 
     // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
     this.httpServerRegister = new RegistryMetricCreator();
+
     this.scrapeTimeMetric = this.httpServerRegister.histogram<"status">({
       name: "lodestar_metrics_scrape_seconds",
       help: "Lodestar metrics server async time to scrape metrics",
@@ -61,11 +57,11 @@ export class HttpMetricsServer implements IMetricsServer {
   }
 
   async start(): Promise<void> {
-    const {serverPort, listenAddr} = this.opts;
-    this.logger.info("Starting metrics HTTP server", {port: serverPort ?? null});
+    const {port, address} = this.opts;
+    this.logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
     const listen = this.server.listen.bind(this.server);
     return new Promise((resolve, reject) => {
-      listen(serverPort, listenAddr).once("listening", resolve).once("error", reject);
+      listen(port, address).once("listening", resolve).once("error", reject);
     });
   }
 

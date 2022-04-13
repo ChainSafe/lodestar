@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {IMetricsOptions} from "../options";
+import {LodestarMetadata} from "../options";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -10,11 +10,11 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
-  metadata: IMetricsOptions["metadata"],
+  metadata?: LodestarMetadata,
   anchorState?: Pick<allForks.BeaconState, "genesisTime">
 ) {
   if (metadata) {
-    register.static<"semver" | "branch" | "commit" | "version" | "network">({
+    register.static<keyof LodestarMetadata>({
       name: "lodestar_version",
       help: "Lodestar version",
       value: metadata,

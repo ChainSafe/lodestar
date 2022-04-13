@@ -77,14 +77,15 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,
       clock,
       validatorStore,
       indicesService,
-      chainHeadTracker
+      chainHeadTracker,
+      null
     );
 
     // Trigger clock onSlot for slot 0
@@ -154,14 +155,15 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,
       clock,
       validatorStore,
       indicesService,
-      chainHeadTracker
+      chainHeadTracker,
+      null
     );
 
     // Trigger clock onSlot for slot 0

@@ -6,5 +6,5 @@ import {createMetrics, IMetrics} from "../../../src/metrics";
 export function createMetricsTest(): IMetrics {
   const state = ssz.phase0.BeaconState.defaultViewDU();
   const logger = new WinstonLogger();
-  return createMetrics({enabled: true, timeout: 12000}, config, state, logger);
+  return createMetrics({enabled: true, port: 0}, config, state, logger);
 }

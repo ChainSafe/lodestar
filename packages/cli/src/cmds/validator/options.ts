@@ -5,6 +5,12 @@ import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
+export const validatorMetricsDefaultOptions = {
+  enabled: false,
+  port: 5064,
+  address: "127.0.0.1",
+};
+
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
     logFile: IBeaconPaths["logFile"];
@@ -20,6 +26,10 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
+
+    "metrics.enabled"?: boolean;
+    "metrics.port"?: number;
+    "metrics.address"?: string;
   } & KeymanagerArgs;
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -87,6 +97,29 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "External signer",
+  },
+
+  // Metrics
+
+  "metrics.enabled": {
+    type: "boolean",
+    description: "Enable the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.enabled),
+    group: "metrics",
+  },
+
+  "metrics.port": {
+    type: "number",
+    description: "Listen TCP port for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.port),
+    group: "metrics",
+  },
+
+  "metrics.address": {
+    type: "string",
+    description: "Listen address for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.address),
+    group: "metrics",
   },
 
   // For testing only

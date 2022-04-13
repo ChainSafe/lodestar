@@ -20,6 +20,7 @@ import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PubkeyHex} from "./types";
+import {Metrics} from "./metrics";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -58,7 +59,7 @@ export class Validator {
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
@@ -69,17 +70,26 @@ export class Validator {
             // Validator would need the beacon to respond within the slot
             timeoutMs: config.SECONDS_PER_SLOT * 1000,
             getAbortSignal: this.getAbortSignal,
+            metrics: metrics?.restApiClient,
           })
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
-    this.indicesService = new IndicesService(logger, api, validatorStore);
+    const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
+    this.indicesService = new IndicesService(logger, api, validatorStore, metrics);
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
 
-    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
+    this.blockProposingService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      graffiti
+    );
 
     this.attestationService = new AttestationService(
       loggerVc,
@@ -88,7 +98,8 @@ export class Validator {
       validatorStore,
       this.emitter,
       this.indicesService,
-      this.chainHeaderTracker
+      this.chainHeaderTracker,
+      metrics
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
@@ -98,7 +109,8 @@ export class Validator {
       clock,
       validatorStore,
       this.chainHeaderTracker,
-      this.indicesService
+      this.indicesService,
+      metrics
     );
 
     this.config = config;
@@ -109,7 +121,11 @@ export class Validator {
   }
 
   /** Waits for genesis and genesis time */
-  static async initializeFromBeaconNode(opts: ValidatorOptions, signal?: AbortSignal): Promise<Validator> {
+  static async initializeFromBeaconNode(
+    opts: ValidatorOptions,
+    signal?: AbortSignal,
+    metrics?: Metrics | null
+  ): Promise<Validator> {
     const {config} = opts.dbOps;
     const api =
       typeof opts.api === "string"
@@ -128,7 +144,7 @@ export class Validator {
     await assertEqualGenesis(opts, genesis);
     opts.logger.info("Verified node and validator have same genesisValidatorRoot");
 
-    return new Validator(opts, genesis);
+    return new Validator(opts, genesis, metrics);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
