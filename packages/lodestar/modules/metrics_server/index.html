@@ -256,11 +256,6 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#interfaces">
-    Interfaces
-  </a>
-</li>
-<li class="md-nav__item">
 <a class="md-nav__link" href="#type-aliases">
     Type aliases
   </a>
@@ -280,8 +275,8 @@
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#imetricsserver">
-    IMetricsServer
+<a class="md-nav__link" href="#httpmetricsserveropts">
+    HttpMetricsServerOpts
   </a>
 </li>
 </ul>
@@ -294,10 +289,10 @@
 <nav aria-label="Type aliases" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#registryholder">
-    RegistryHolder
+<a class="md-nav__link" href="#httpmetricsserveropts_1">
+    HttpMetricsServerOpts
   </a>
-<nav aria-label="RegistryHolder" class="md-nav">
+<nav aria-label="HttpMetricsServerOpts" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
 <a class="md-nav__link" href="#type-declaration">
@@ -326,33 +321,34 @@
 <h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#httpmetricsserver">HttpMetricsServer</a></li>
-<li><a href="./#imetricsserver">IMetricsServer</a></li>
+<li><a href="./#httpmetricsserveropts">HttpMetricsServerOpts</a></li>
 </ul>
 <h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="../../classes/metrics_server.httpmetricsserver/">HttpMetricsServer</a></li>
 </ul>
-<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
-<ul>
-<li><a href="../../interfaces/metrics_server.imetricsserver/">IMetricsServer</a></li>
-</ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#registryholder">RegistryHolder</a></li>
+<li><a href="./#httpmetricsserveropts">HttpMetricsServerOpts</a></li>
 </ul>
 <h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
 <h3 id="httpmetricsserver">HttpMetricsServer<a class="headerlink" href="#httpmetricsserver" title="Permanent link">¶</a></h3>
 <p>• <strong>HttpMetricsServer</strong>:</p>
 <hr/>
-<h3 id="imetricsserver">IMetricsServer<a class="headerlink" href="#imetricsserver" title="Permanent link">¶</a></h3>
-<p>• <strong>IMetricsServer</strong>:</p>
+<h3 id="httpmetricsserveropts">HttpMetricsServerOpts<a class="headerlink" href="#httpmetricsserveropts" title="Permanent link">¶</a></h3>
+<p>• <strong>HttpMetricsServerOpts</strong>:</p>
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
-<h3 id="registryholder">RegistryHolder<a class="headerlink" href="#registryholder" title="Permanent link">¶</a></h3>
-<p>Ƭ <strong>RegistryHolder</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/server/http.ts#L16">packages/lodestar/src/metrics/server/http.ts:16</a></em></p>
+<h3 id="httpmetricsserveropts_1">HttpMetricsServerOpts<a class="headerlink" href="#httpmetricsserveropts_1" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>HttpMetricsServerOpts</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/lodestar/src/metrics/server/http.ts#L12">packages/lodestar/src/metrics/server/http.ts:12</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
-<li><strong>register</strong>: <em>Registry</em></li>
+<li>
+<p><strong>address</strong>? : <em>undefined | string</em></p>
+</li>
+<li>
+<p><strong>port</strong>: <em>number</em></p>
+</li>
 </ul>
 </article>
 </div>

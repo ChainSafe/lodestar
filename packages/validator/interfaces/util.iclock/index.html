@@ -289,8 +289,8 @@
 <nav aria-label="Methods" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#mstoslotfraction">
-    msToSlotFraction
+<a class="md-nav__link" href="#mstoslot">
+    msToSlot
   </a>
 </li>
 <li class="md-nav__item">
@@ -301,6 +301,11 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#runeveryslot">
     runEverySlot
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#secfromslot">
+    secFromSlot
   </a>
 </li>
 <li class="md-nav__item">
@@ -338,19 +343,20 @@
 </ul>
 <h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#mstoslotfraction">msToSlotFraction</a></li>
+<li><a href="./#mstoslot">msToSlot</a></li>
 <li><a href="./#runeveryepoch">runEveryEpoch</a></li>
 <li><a href="./#runeveryslot">runEverySlot</a></li>
+<li><a href="./#secfromslot">secFromSlot</a></li>
 <li><a href="./#start">start</a></li>
 </ul>
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
 <h3 id="readonly-genesistime"><code>Readonly</code> genesisTime<a class="headerlink" href="#readonly-genesistime" title="Permanent link">¶</a></h3>
 <p>• <strong>genesisTime</strong>: <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/validator/src/util/clock.ts#L11">packages/validator/src/util/clock.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L11">packages/validator/src/util/clock.ts:11</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
-<h3 id="mstoslotfraction">msToSlotFraction<a class="headerlink" href="#mstoslotfraction" title="Permanent link">¶</a></h3>
-<p>▸ <strong>msToSlotFraction</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>, <code>fraction</code>: number): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/validator/src/util/clock.ts#L15">packages/validator/src/util/clock.ts:15</a></em></p>
+<h3 id="mstoslot">msToSlot<a class="headerlink" href="#mstoslot" title="Permanent link">¶</a></h3>
+<p>▸ <strong>msToSlot</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>number</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L15">packages/validator/src/util/clock.ts:15</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -364,17 +370,13 @@
 <td><code>slot</code></td>
 <td><a href="../../enums/util.timeitem/#slot">Slot</a></td>
 </tr>
-<tr>
-<td><code>fraction</code></td>
-<td>number</td>
-</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>number</em></p>
 <hr/>
 <h3 id="runeveryepoch">runEveryEpoch<a class="headerlink" href="#runeveryepoch" title="Permanent link">¶</a></h3>
 <p>▸ <strong>runEveryEpoch</strong>(<code>fn</code>: function): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/validator/src/util/clock.ts#L14">packages/validator/src/util/clock.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L14">packages/validator/src/util/clock.ts:14</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
 <p>▸ (<code>epoch</code>: <a href="../../enums/util.timeitem/#epoch">Epoch</a>, <code>signal</code>: AbortSignal): <em>Promise‹void›</em></p>
@@ -401,7 +403,7 @@
 <hr/>
 <h3 id="runeveryslot">runEverySlot<a class="headerlink" href="#runeveryslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>runEverySlot</strong>(<code>fn</code>: function): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/validator/src/util/clock.ts#L13">packages/validator/src/util/clock.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L13">packages/validator/src/util/clock.ts:13</a></em></p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>fn</strong>: <em>function</em></p>
 <p>▸ (<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>, <code>signal</code>: AbortSignal): <em>Promise‹void›</em></p>
@@ -426,9 +428,29 @@
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
+<h3 id="secfromslot">secFromSlot<a class="headerlink" href="#secfromslot" title="Permanent link">¶</a></h3>
+<p>▸ <strong>secFromSlot</strong>(<code>slot</code>: <a href="../../enums/util.timeitem/#slot">Slot</a>): <em>number</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L16">packages/validator/src/util/clock.ts:16</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>slot</code></td>
+<td><a href="../../enums/util.timeitem/#slot">Slot</a></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>number</em></p>
+<hr/>
 <h3 id="start">start<a class="headerlink" href="#start" title="Permanent link">¶</a></h3>
 <p>▸ <strong>start</strong>(<code>signal</code>: AbortSignal): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/validator/src/util/clock.ts#L12">packages/validator/src/util/clock.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/util/clock.ts#L12">packages/validator/src/util/clock.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>

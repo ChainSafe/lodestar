@@ -81,6 +81,16 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/api/interfaces/client_utils.igauge/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/api/interfaces/client_utils.ihistogram/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/api/interfaces/client_utils.ihttpclient/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
@@ -581,27 +591,27 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2183/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2198/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2183.reflection-2184._/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2198.reflection-2199._/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2183.reflection-2184._.reflection-2186._validator_src/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2198.reflection-2199._.reflection-2201._validator_src/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2183.reflection-2184._.reflection-2186/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2198.reflection-2199._.reflection-2201/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2183.reflection-2184/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2198.reflection-2199/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -2131,17 +2141,7 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics.imetricsoptions/</loc>
-         <lastmod>2022-04-13</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics.ivalidatormonitor/</loc>
-         <lastmod>2022-04-13</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_server.imetricsserver/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>
@@ -3031,6 +3031,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/root.messagesource/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/root.status/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
@@ -3077,6 +3082,26 @@
     </url>
     <url>
          <loc>https://chainsafe.github.io/lodestar/packages/validator/enums/util.timeitem/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/root.avgminmax/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/root.gauge/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/root.histogram/</loc>
+         <lastmod>2022-04-13</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/validator/interfaces/root.metricsregister/</loc>
          <lastmod>2022-04-13</lastmod>
          <changefreq>daily</changefreq>
     </url>

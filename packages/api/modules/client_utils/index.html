@@ -356,6 +356,25 @@
 </ul>
 </nav>
 </li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#labelvalues">
+    LabelValues
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#metrics">
+    Metrics
+  </a>
+<nav aria-label="Metrics" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#type-declaration_2">
+    Type declaration:
+  </a>
+</li>
+</ul>
+</nav>
+</li>
 </ul>
 </nav>
 </li>
@@ -434,12 +453,16 @@
 </ul>
 <h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
 <ul>
+<li><a href="../../interfaces/client_utils.igauge/">IGauge</a></li>
+<li><a href="../../interfaces/client_utils.ihistogram/">IHistogram</a></li>
 <li><a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a></li>
 </ul>
 <h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
 <ul>
 <li><a href="./#fetchopts">FetchOpts</a></li>
 <li><a href="./#httpclientoptions">HttpClientOptions</a></li>
+<li><a href="./#labelvalues">LabelValues</a></li>
+<li><a href="./#metrics">Metrics</a></li>
 </ul>
 <h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
 <ul>
@@ -478,7 +501,7 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="fetchopts_1">FetchOpts<a class="headerlink" href="#fetchopts_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>FetchOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/httpClient.ts#L18">packages/api/src/client/utils/httpClient.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/httpClient.ts#L19">packages/api/src/client/utils/httpClient.ts:19</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -494,13 +517,16 @@
 <p><strong>query</strong>? : <em>ReqGeneric["query"]</em></p>
 </li>
 <li>
+<p><strong>routeId</strong>? : <em>undefined | string</em></p>
+</li>
+<li>
 <p><strong>url</strong>: <em>RouteDef["url"]</em></p>
 </li>
 </ul>
 <hr/>
 <h3 id="httpclientoptions_1">HttpClientOptions<a class="headerlink" href="#httpclientoptions_1" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>HttpClientOptions</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/httpClient.ts#L32">packages/api/src/client/utils/httpClient.ts:32</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/httpClient.ts#L35">packages/api/src/client/utils/httpClient.ts:35</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -513,13 +539,33 @@
 <p><strong>getAbortSignal</strong>? : <em>undefined | function</em></p>
 </li>
 <li>
+<p><strong>metrics</strong>? : <em>null | <a href="./#metrics">Metrics</a></em></p>
+</li>
+<li>
 <p><strong>timeoutMs</strong>? : <em>undefined | number</em></p>
+</li>
+</ul>
+<hr/>
+<h3 id="labelvalues">LabelValues<a class="headerlink" href="#labelvalues" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>LabelValues</strong>: <em>Partial‹Record‹T, string | number››</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/metrics.ts#L6">packages/api/src/client/utils/metrics.ts:6</a></em></p>
+<hr/>
+<h3 id="metrics">Metrics<a class="headerlink" href="#metrics" title="Permanent link">¶</a></h3>
+<p>Ƭ <strong>Metrics</strong>: <em>object</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/metrics.ts#L1">packages/api/src/client/utils/metrics.ts:1</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<ul>
+<li>
+<p><strong>errors</strong>: <em><a href="../../interfaces/client_utils.igauge/">IGauge</a>‹"routeId"›</em></p>
+</li>
+<li>
+<p><strong>requestTime</strong>: <em><a href="../../interfaces/client_utils.ihistogram/">IHistogram</a>‹"routeId"›</em></p>
 </li>
 </ul>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="generategenericjsonclient_1">generateGenericJsonClient<a class="headerlink" href="#generategenericjsonclient_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>generateGenericJsonClient</strong>‹<strong>Api</strong>, <strong>ReqTypes</strong>›(<code>routesData</code>: <a href="../utils/#routesdata">RoutesData</a>‹Api›, <code>reqSerializers</code>: <a href="../utils/#reqserializers">ReqSerializers</a>‹Api, ReqTypes›, <code>returnTypes</code>: <a href="../utils/#returntypes">ReturnTypes</a>‹Api›, <code>fetchFn</code>: <a href="../../interfaces/client_utils.ihttpclient/">IHttpClient</a>): <em>Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/client.ts#L56">packages/api/src/client/utils/client.ts:56</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/client.ts#L60">packages/api/src/client/utils/client.ts:60</a></em></p>
 <p>Get a generic JSON client from route definition, request serializer and return types.</p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>Api</strong>: <em>Record‹string, <a href="../utils/#routegeneric">RouteGeneric</a>›</em></p>
@@ -555,7 +601,7 @@
 <hr/>
 <h3 id="geterrormessage">getErrorMessage<a class="headerlink" href="#geterrormessage" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getErrorMessage</strong>(<code>errBody</code>: string): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/httpClient.ts#L120">packages/api/src/client/utils/httpClient.ts:120</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/httpClient.ts#L135">packages/api/src/client/utils/httpClient.ts:135</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -574,8 +620,8 @@
 <p><strong>Returns:</strong> <em>string</em></p>
 <hr/>
 <h3 id="getfetchoptsserializer_1">getFetchOptsSerializer<a class="headerlink" href="#getfetchoptsserializer_1" title="Permanent link">¶</a></h3>
-<p>▸ <strong>getFetchOptsSerializer</strong>‹<strong>Fn</strong>, <strong>ReqType</strong>›(<code>routeDef</code>: <a href="../utils/#routedef">RouteDef</a>, <code>reqSerializer</code>: <a href="../utils/#reqserializer">ReqSerializer</a>‹Fn, ReqType›): <em>getFetchOpts</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/client.ts#L24">packages/api/src/client/utils/client.ts:24</a></em></p>
+<p>▸ <strong>getFetchOptsSerializer</strong>‹<strong>Fn</strong>, <strong>ReqType</strong>›(<code>routeDef</code>: <a href="../utils/#routedef">RouteDef</a>, <code>reqSerializer</code>: <a href="../utils/#reqserializer">ReqSerializer</a>‹Fn, ReqType›, <code>routeId</code>: string): <em>getFetchOpts</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/client.ts#L24">packages/api/src/client/utils/client.ts:24</a></em></p>
 <p>Format FetchFn opts from Fn arguments given a route definition and request serializer.
 For routes that return only JSOn use @see getGenericJsonClient</p>
 <p><strong>Type parameters:</strong></p>
@@ -598,13 +644,17 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <td><code>reqSerializer</code></td>
 <td><a href="../utils/#reqserializer">ReqSerializer</a>‹Fn, ReqType›</td>
 </tr>
+<tr>
+<td><code>routeId</code></td>
+<td>string</td>
+</tr>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>getFetchOpts</em></p>
 <hr/>
 <h3 id="getfetchoptsserializers_1">getFetchOptsSerializers<a class="headerlink" href="#getfetchoptsserializers_1" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getFetchOptsSerializers</strong>‹<strong>Api</strong>, <strong>ReqTypes</strong>›(<code>routesData</code>: <a href="../utils/#routesdata">RoutesData</a>‹Api›, <code>reqSerializers</code>: <a href="../utils/#reqserializers">ReqSerializers</a>‹Api, ReqTypes›): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/client.ts#L46">packages/api/src/client/utils/client.ts:46</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/client.ts#L48">packages/api/src/client/utils/client.ts:48</a></em></p>
 <p>Generate <code>getFetchOptsSerializer()</code> functions for all routes in <code>Api</code></p>
 <p><strong>Type parameters:</strong></p>
 <p>▪ <strong>Api</strong>: <em>Record‹string, <a href="../utils/#routegeneric">RouteGeneric</a>›</em></p>
@@ -632,7 +682,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="isabortederror">isAbortedError<a class="headerlink" href="#isabortederror" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isAbortedError</strong>(<code>e</code>: <a href="../../classes/client_utils.httperror/#static-error">Error</a>): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/httpClient.ts#L116">packages/api/src/client/utils/httpClient.ts:116</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/httpClient.ts#L131">packages/api/src/client/utils/httpClient.ts:131</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -652,7 +702,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="stringifyquery">stringifyQuery<a class="headerlink" href="#stringifyquery" title="Permanent link">¶</a></h3>
 <p>▸ <strong>stringifyQuery</strong>(<code>query</code>: unknown): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/format.ts#L7">packages/api/src/client/utils/format.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/format.ts#L7">packages/api/src/client/utils/format.ts:7</a></em></p>
 <p>Ethereum Beacon API requires the query with format:
 - arrayFormat: repeat <code>topic=topic1&amp;topic=topic2</code></p>
 <p><strong>Parameters:</strong></p>
@@ -674,7 +724,7 @@ For routes that return only JSOn use @see getGenericJsonClient</p>
 <hr/>
 <h3 id="urljoin">urlJoin<a class="headerlink" href="#urljoin" title="Permanent link">¶</a></h3>
 <p>▸ <strong>urlJoin</strong>(...<code>args</code>: string[]): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/api/src/client/utils/format.ts#L14">packages/api/src/client/utils/format.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/format.ts#L14">packages/api/src/client/utils/format.ts:14</a></em></p>
 <p>TODO: Optimize, two regex is a bit wasteful</p>
 <p><strong>Parameters:</strong></p>
 <table>

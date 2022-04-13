@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics_server.imetricsserver/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/api/interfaces/client_utils.ihistogram/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.3.0, mkdocs-material-8.2.9" name="generator"/>
-<title>Metrics server.imetricsserver - Lodestar documentation</title>
+<title>Client utils.ihistogram - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.120efc48.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9647289d.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-imetricsserver">
+<a class="md-skip" href="#interface-ihistogram-t">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Metrics server.imetricsserver
+              Client utils.ihistogram
             
           </span>
 </div>
@@ -240,14 +240,42 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#type-parameters">
+    Type parameters
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#hierarchy">
     Hierarchy
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#implemented-by">
-    Implemented by
+<a class="md-nav__link" href="#index">
+    Index
   </a>
+<nav aria-label="Index" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#methods">
+    Methods
+  </a>
+</li>
+</ul>
+</nav>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#methods_1">
+    Methods
+  </a>
+<nav aria-label="Methods" class="md-nav">
+<ul class="md-nav__list">
+<li class="md-nav__item">
+<a class="md-nav__link" href="#starttimer">
+    startTimer
+  </a>
+</li>
+</ul>
+</nav>
 </li>
 </ul>
 </nav>
@@ -256,19 +284,62 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/interfaces/metrics_server.imetricsserver.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/api/interfaces/client_utils.ihistogram.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/metrics_server/">metrics/server</a> › <a href="./">IMetricsServer</a></p>
-<h1 id="interface-imetricsserver">Interface: IMetricsServer<a class="headerlink" href="#interface-imetricsserver" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-api</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/client_utils/">client/utils</a> › <a href="./">IHistogram</a></p>
+<h1 id="interface-ihistogram-t">Interface: IHistogram ‹<strong>T</strong>›<a class="headerlink" href="#interface-ihistogram-t" title="Permanent link">¶</a></h1>
+<h2 id="type-parameters">Type parameters<a class="headerlink" href="#type-parameters" title="Permanent link">¶</a></h2>
+<p>▪ <strong>T</strong>: <em>string</em></p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li><strong>IMetricsServer</strong></li>
+<li><strong>IHistogram</strong></li>
 </ul>
-<h2 id="implemented-by">Implemented by<a class="headerlink" href="#implemented-by" title="Permanent link">¶</a></h2>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
+<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="../../classes/metrics_server.httpmetricsserver/">HttpMetricsServer</a></li>
+<li><a href="./#starttimer">startTimer</a></li>
 </ul>
+<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
+<h3 id="starttimer">startTimer<a class="headerlink" href="#starttimer" title="Permanent link">¶</a></h3>
+<p>▸ <strong>startTimer</strong>(<code>labels?</code>: <a href="../../modules/client_utils/#labelvalues">LabelValues</a>‹T›): <em>function</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/api/src/client/utils/metrics.ts#L42">packages/api/src/client/utils/metrics.ts:42</a></em></p>
+<p>Start a timer where the value in seconds will observed</p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>labels?</code></td>
+<td><a href="../../modules/client_utils/#labelvalues">LabelValues</a>‹T›</td>
+<td>Object with label keys and values</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>function</em></p>
+<p>Function to invoke when timer should be stopped</p>
+<p>▸ (<code>labels?</code>: <a href="../../modules/client_utils/#labelvalues">LabelValues</a>‹T›): <em>number</em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>labels?</code></td>
+<td><a href="../../modules/client_utils/#labelvalues">LabelValues</a>‹T›</td>
+</tr>
+</tbody>
+</table>
 </article>
 </div>
 </div>

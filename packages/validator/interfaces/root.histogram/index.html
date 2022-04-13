@@ -6,10 +6,10 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/lodestar/interfaces/metrics.imetricsoptions/" rel="canonical"/>
+<link href="https://chainsafe.github.io/lodestar/packages/validator/interfaces/root.histogram/" rel="canonical"/>
 <link href="../../../../assets/round-icon.ico" rel="icon"/>
 <meta content="mkdocs-1.3.0, mkdocs-material-8.2.9" name="generator"/>
-<title>Metrics.imetricsoptions - Lodestar documentation</title>
+<title>Root.histogram - Lodestar documentation</title>
 <link href="../../../../assets/stylesheets/main.120efc48.min.css" rel="stylesheet"/>
 <link href="../../../../assets/stylesheets/palette.9647289d.min.css" rel="stylesheet"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
@@ -24,7 +24,7 @@
 <input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
 <label class="md-overlay" for="__drawer"></label>
 <div data-md-component="skip">
-<a class="md-skip" href="#interface-imetricsoptions">
+<a class="md-skip" href="#interface-histogram-labels">
           Skip to content
         </a>
 </div>
@@ -48,7 +48,7 @@
 <div class="md-header__topic" data-md-component="header-topic">
 <span class="md-ellipsis">
             
-              Metrics.imetricsoptions
+              Root.histogram
             
           </span>
 </div>
@@ -240,6 +240,11 @@
     </label>
 <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
 <li class="md-nav__item">
+<a class="md-nav__link" href="#type-parameters">
+    Type parameters
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#hierarchy">
     Hierarchy
   </a>
@@ -251,47 +256,32 @@
 <nav aria-label="Index" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties">
-    Properties
+<a class="md-nav__link" href="#methods">
+    Methods
   </a>
 </li>
 </ul>
 </nav>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#properties_1">
-    Properties
+<a class="md-nav__link" href="#methods_1">
+    Methods
   </a>
-<nav aria-label="Properties" class="md-nav">
+<nav aria-label="Methods" class="md-nav">
 <ul class="md-nav__list">
 <li class="md-nav__item">
-<a class="md-nav__link" href="#enabled">
-    enabled
+<a class="md-nav__link" href="#observe">
+    observe
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#optional-gatewayurl">
-    Optional gatewayUrl
+<a class="md-nav__link" href="#reset">
+    reset
   </a>
 </li>
 <li class="md-nav__item">
-<a class="md-nav__link" href="#optional-listenaddr">
-    Optional listenAddr
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#optional-metadata">
-    Optional metadata
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#optional-serverport">
-    Optional serverPort
-  </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#optional-timeout">
-    Optional timeout
+<a class="md-nav__link" href="#starttimer">
+    startTimer
   </a>
 </li>
 </ul>
@@ -304,50 +294,99 @@
 </div>
 <div class="md-content" data-md-component="content">
 <article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/interfaces/metrics.imetricsoptions.md" title="Edit this page">
+<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/validator/interfaces/root.histogram.md" title="Edit this page">
 <svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"></path></svg>
 </a>
-<p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/metrics/">metrics</a> › <a href="./">IMetricsOptions</a></p>
-<h1 id="interface-imetricsoptions">Interface: IMetricsOptions<a class="headerlink" href="#interface-imetricsoptions" title="Permanent link">¶</a></h1>
+<p><a href="../../">@chainsafe/lodestar-validator</a> › <a href="../../globals/">Globals</a> › <a href="../../modules/root/">root</a> › <a href="./">Histogram</a></p>
+<h1 id="interface-histogram-labels">Interface: Histogram ‹<strong>Labels</strong>›<a class="headerlink" href="#interface-histogram-labels" title="Permanent link">¶</a></h1>
+<h2 id="type-parameters">Type parameters<a class="headerlink" href="#type-parameters" title="Permanent link">¶</a></h2>
+<p>▪ <strong>Labels</strong>: <em><a href="../../modules/root/#labelsgeneric">LabelsGeneric</a></em></p>
 <h2 id="hierarchy">Hierarchy<a class="headerlink" href="#hierarchy" title="Permanent link">¶</a></h2>
 <ul>
-<li><strong>IMetricsOptions</strong></li>
+<li><strong>Histogram</strong></li>
 </ul>
 <h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="properties">Properties<a class="headerlink" href="#properties" title="Permanent link">¶</a></h3>
+<h3 id="methods">Methods<a class="headerlink" href="#methods" title="Permanent link">¶</a></h3>
 <ul>
-<li><a href="./#enabled">enabled</a></li>
-<li><a href="./#optional-gatewayurl">gatewayUrl</a></li>
-<li><a href="./#optional-listenaddr">listenAddr</a></li>
-<li><a href="./#optional-metadata">metadata</a></li>
-<li><a href="./#optional-serverport">serverPort</a></li>
-<li><a href="./#optional-timeout">timeout</a></li>
+<li><a href="./#observe">observe</a></li>
+<li><a href="./#reset">reset</a></li>
+<li><a href="./#starttimer">startTimer</a></li>
 </ul>
-<h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">¶</a></h2>
-<h3 id="enabled">enabled<a class="headerlink" href="#enabled" title="Permanent link">¶</a></h3>
-<p>• <strong>enabled</strong>: <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L6">packages/lodestar/src/metrics/options.ts:6</a></em></p>
+<h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">¶</a></h2>
+<h3 id="observe">observe<a class="headerlink" href="#observe" title="Permanent link">¶</a></h3>
+<p>▸ <strong>observe</strong>(<code>value</code>: number): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/metrics.ts#L26">packages/validator/src/metrics.ts:26</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>value</code></td>
+<td>number</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<p>▸ <strong>observe</strong>(<code>labels</code>: Labels, <code>values</code>: number): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/metrics.ts#L27">packages/validator/src/metrics.ts:27</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>labels</code></td>
+<td>Labels</td>
+</tr>
+<tr>
+<td><code>values</code></td>
+<td>number</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
+<p>▸ <strong>observe</strong>(<code>arg1</code>: Labels | number, <code>arg2?</code>: undefined | number): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/metrics.ts#L28">packages/validator/src/metrics.ts:28</a></em></p>
+<p><strong>Parameters:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>arg1</code></td>
+<td>Labels | number</td>
+</tr>
+<tr>
+<td><code>arg2?</code></td>
+<td>undefined | number</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="optional-gatewayurl"><code>Optional</code> gatewayUrl<a class="headerlink" href="#optional-gatewayurl" title="Permanent link">¶</a></h3>
-<p>• <strong>gatewayUrl</strong>? : <em>undefined | string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L9">packages/lodestar/src/metrics/options.ts:9</a></em></p>
+<h3 id="reset">reset<a class="headerlink" href="#reset" title="Permanent link">¶</a></h3>
+<p>▸ <strong>reset</strong>(): <em>void</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/metrics.ts#L30">packages/validator/src/metrics.ts:30</a></em></p>
+<p><strong>Returns:</strong> <em>void</em></p>
 <hr/>
-<h3 id="optional-listenaddr"><code>Optional</code> listenAddr<a class="headerlink" href="#optional-listenaddr" title="Permanent link">¶</a></h3>
-<p>• <strong>listenAddr</strong>? : <em>undefined | string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L10">packages/lodestar/src/metrics/options.ts:10</a></em></p>
-<hr/>
-<h3 id="optional-metadata"><code>Optional</code> metadata<a class="headerlink" href="#optional-metadata" title="Permanent link">¶</a></h3>
-<p>• <strong>metadata</strong>? : <em><a href="../../modules/metrics/#lodestargitdata">LodestarGitData</a> &amp; object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L12">packages/lodestar/src/metrics/options.ts:12</a></em></p>
-<p>Optional metadata to send to Prometheus</p>
-<hr/>
-<h3 id="optional-serverport"><code>Optional</code> serverPort<a class="headerlink" href="#optional-serverport" title="Permanent link">¶</a></h3>
-<p>• <strong>serverPort</strong>? : <em>undefined | number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L8">packages/lodestar/src/metrics/options.ts:8</a></em></p>
-<hr/>
-<h3 id="optional-timeout"><code>Optional</code> timeout<a class="headerlink" href="#optional-timeout" title="Permanent link">¶</a></h3>
-<p>• <strong>timeout</strong>? : <em>undefined | number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efa138b/packages/lodestar/src/metrics/options.ts#L7">packages/lodestar/src/metrics/options.ts:7</a></em></p>
+<h3 id="starttimer">startTimer<a class="headerlink" href="#starttimer" title="Permanent link">¶</a></h3>
+<p>▸ <strong>startTimer</strong>(): <em>function</em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/06a40d3/packages/validator/src/metrics.ts#L24">packages/validator/src/metrics.ts:24</a></em></p>
+<p><strong>Returns:</strong> <em>function</em></p>
+<p>▸ (): <em>number</em></p>
 </article>
 </div>
 </div>
