@@ -659,6 +659,9 @@ export function createLodestarMetrics(
         name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
         help: "Number of peers that an unaggregated attestation sent to",
         labelNames: ["index"],
+        // as of Apr 2022, most of the time we sent to >30 peers per attestations
+        // these bucket values just base on that fact to get equal range
+        // refine if we want more reasonable values
         buckets: [0, 10, 20, 30],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
