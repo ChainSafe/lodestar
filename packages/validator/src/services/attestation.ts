@@ -57,14 +57,20 @@ export class AttestationService {
     // (b) one-third of the slot has transpired (SECONDS_PER_SLOT / 3 seconds after the start of slot) -- whichever comes first.
     await Promise.race([sleep(this.clock.msToSlotFraction(slot, 1 / 3), signal), this.waitForBlockSlot(slot)]);
 
+    // Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+    // Produce a single attestation for all committees, and clone mutate before signing
+    const attestationNoCommittee = await this.produceAttestation(slot);
+
     // await for all so if the Beacon node is overloaded it auto-throttles
     // TODO: This approach is convervative to reduce the node's load, review
     await Promise.all(
       Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
         if (duties.length === 0) return;
-        await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, signal).catch((e: Error) => {
-          this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
-        });
+        await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, attestationNoCommittee, signal).catch(
+          (e: Error) => {
+            this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
+          }
+        );
       })
     );
   };
@@ -91,10 +97,11 @@ export class AttestationService {
     slot: Slot,
     committeeIndex: CommitteeIndex,
     duties: AttDutyAndProof[],
+    attestationNoCommittee: phase0.AttestationData,
     signal: AbortSignal
   ): Promise<void> {
-    // Step 1. Download, sign and publish an `Attestation` for each validator.
-    const attestation = await this.produceAndPublishAttestations(slot, committeeIndex, duties);
+    // Step 1. Mutate, sign and publish `Attestation` for each validator.
+    const attestation = await this.publishAttestations(slot, committeeIndex, attestationNoCommittee, duties);
 
     // Step 2. If an attestation was produced, make an aggregate.
     // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
@@ -107,6 +114,20 @@ export class AttestationService {
   }
 
   /**
+   * Performs the first step of the attesting process: downloading one `Attestation` object.
+   * Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
+   * For a validator client with many validators this allows to do a single call for all committees
+   * in a slot, saving resources in both the vc and beacon node
+   */
+  private async produceAttestation(slot: Slot): Promise<phase0.AttestationData> {
+    // Produce one attestation data per slot and committeeIndex
+    const attestationRes = await this.api.validator.produceAttestationData(0, slot).catch((e: Error) => {
+      throw extendError(e, "Error producing attestation");
+    });
+    return attestationRes.data;
+  }
+
+  /**
    * Performs the first step of the attesting process: downloading `Attestation` objects,
    * signing them and returning them to the validator.
    *
@@ -115,21 +136,18 @@ export class AttestationService {
    * Only one `Attestation` is downloaded from the BN. It is then signed by each
    * validator and the list of individually-signed `Attestation` objects is returned to the BN.
    */
-  private async produceAndPublishAttestations(
+  private async publishAttestations(
     slot: Slot,
     committeeIndex: CommitteeIndex,
+    attestationNoCommittee: phase0.AttestationData,
     duties: AttDutyAndProof[]
   ): Promise<phase0.AttestationData> {
     const logCtx = {slot, index: committeeIndex};
 
-    // Produce one attestation data per slot and committeeIndex
-    const attestationRes = await this.api.validator.produceAttestationData(committeeIndex, slot).catch((e: Error) => {
-      throw extendError(e, "Error producing attestation");
-    });
-    const attestation = attestationRes.data;
-
     const currentEpoch = computeEpochAtSlot(slot);
     const signedAttestations: phase0.Attestation[] = [];
+
+    const attestation = {...attestationNoCommittee, committeeIndex};
 
     for (const {duty} of duties) {
       const logCtxValidator = {
