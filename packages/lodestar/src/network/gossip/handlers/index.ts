@@ -328,7 +328,10 @@ async function validateGossipAggregateAndProofRetryUnknownRoot(
     try {
       return await validateGossipAggregateAndProof(chain, signedAggregateAndProof);
     } catch (e) {
-      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+      if (
+        e instanceof AttestationError &&
+        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
+      ) {
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           // Trigger unknown block root search here
 
@@ -367,7 +370,10 @@ async function validateGossipAttestationRetryUnknownRoot(
     try {
       return await validateGossipAttestation(chain, attestation, subnet);
     } catch (e) {
-      if (e instanceof AttestationError && e.type.code === AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT) {
+      if (
+        e instanceof AttestationError &&
+        e.type.code === AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT
+      ) {
         if (unknownBlockRootRetries++ < MAX_UNKNOWN_BLOCK_ROOT_RETRIES) {
           // Trigger unknown block root search here
 

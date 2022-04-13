@@ -71,7 +71,7 @@ export async function validateGossipAttestation(
   // [REJECT] The block being voted for (attestation.data.beacon_block_root) passes validation.
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
-  // [REJECT] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
+  // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by attestation.data.beacon_block_root
   // -- i.e. get_ancestor(store, attestation.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `verifyHeadBlockAndTargetRoot()`
 
@@ -217,7 +217,7 @@ export function verifyHeadBlockAndTargetRoot(
  * 2. The block is prior to the latest finalized block.
  *
  * Case (1) is the exact thing we're trying to detect. However case (2) is a little different, but
- * it's still fine to reject here because there's no need for us to handle attestations that are
+ * it's still fine to ignore here because there's no need for us to handle attestations that are
  * already finalized.
  */
 function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IProtoBlock {
@@ -226,7 +226,7 @@ function verifyHeadBlockIsKnown(chain: IBeaconChain, beaconBlockRoot: Root): IPr
   const headBlock = chain.forkChoice.getBlock(beaconBlockRoot);
   if (headBlock === null) {
     throw new AttestationError(GossipAction.IGNORE, {
-      code: AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT,
+      code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT,
       root: toHexString(beaconBlockRoot as typeof beaconBlockRoot),
     });
   }
