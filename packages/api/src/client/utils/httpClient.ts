@@ -3,6 +3,7 @@ import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
 import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
 import {stringifyQuery, urlJoin} from "./format";
+import {Metrics} from "./metrics";
 
 export class HttpError extends Error {
   status: number;
@@ -21,6 +22,8 @@ export type FetchOpts = {
   query?: ReqGeneric["query"];
   body?: ReqGeneric["body"];
   headers?: ReqGeneric["headers"];
+  /** Optional, for metrics */
+  routeId?: string;
 };
 
 export interface IHttpClient {
@@ -36,6 +39,8 @@ export type HttpClientOptions = {
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
   fetch?: typeof fetch;
+  /** Optional metrics */
+  metrics?: null | Metrics;
 };
 
 export class HttpClient implements IHttpClient {
@@ -43,6 +48,7 @@ export class HttpClient implements IHttpClient {
   private readonly timeoutMs: number;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
+  private readonly metrics: null | Metrics;
 
   /**
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
@@ -53,6 +59,7 @@ export class HttpClient implements IHttpClient {
     this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
+    this.metrics = opts.metrics ?? null;
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
@@ -73,6 +80,9 @@ export class HttpClient implements IHttpClient {
     if (signalGlobal) {
       signalGlobal.addEventListener("abort", () => controller.abort());
     }
+
+    const routeId = opts.routeId; // TODO: Should default to "unknown"?
+    const timer = this.metrics?.requestTime.startTimer({routeId});
 
     try {
       const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
@@ -103,8 +113,13 @@ export class HttpClient implements IHttpClient {
           throw Error("Unknown aborted error");
         }
       }
+
+      this.metrics?.errors.inc({routeId});
+
       throw e;
     } finally {
+      timer?.();
+
       clearTimeout(timeout);
       if (signalGlobal) {
         signalGlobal.removeEventListener("abort", controller.abort);

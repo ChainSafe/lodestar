@@ -12,7 +12,8 @@ export interface IClock {
   start(signal: AbortSignal): void;
   runEverySlot(fn: (slot: Slot, signal: AbortSignal) => Promise<void>): void;
   runEveryEpoch(fn: (epoch: Epoch, signal: AbortSignal) => Promise<void>): void;
-  msToSlotFraction(slot: Slot, fraction: number): number;
+  msToSlot(slot: Slot): number;
+  secFromSlot(slot: Slot): number;
 }
 
 export enum TimeItem {
@@ -50,10 +51,15 @@ export class Clock implements IClock {
     this.fns.push({timeItem: TimeItem.Epoch, fn});
   }
 
-  /** Miliseconds from now to a specific slot fraction */
-  msToSlotFraction(slot: Slot, fraction: number): number {
-    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * (slot + fraction);
+  /** Miliseconds from now to a specific slot */
+  msToSlot(slot: Slot): number {
+    const timeAt = this.genesisTime + this.config.SECONDS_PER_SLOT * slot;
     return timeAt * 1000 - Date.now();
+  }
+
+  /** Seconds elapsed from a specific slot to now */
+  secFromSlot(slot: Slot): number {
+    return Date.now() / 1000 - (this.genesisTime + this.config.SECONDS_PER_SLOT * slot);
   }
 
   /**

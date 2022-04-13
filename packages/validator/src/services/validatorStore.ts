@@ -34,6 +34,7 @@ import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../sla
 import {prettyBytes} from "@chainsafe/lodestar-utils";
 import {PubkeyHex} from "../types";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
+import {Metrics} from "../metrics";
 import {DoppelgangerService} from "./doppelgangerService";
 
 export enum SignerType {
@@ -69,6 +70,7 @@ export class ValidatorStore {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
+    private readonly metrics: Metrics | null,
     signers: Signer[],
     genesis: phase0.Genesis,
     private doppelgangerService?: DoppelgangerService
@@ -77,8 +79,11 @@ export class ValidatorStore {
       this.addSigner(signer);
     }
 
-    this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+
+    if (metrics) {
+      metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
+    }
   }
 
   setDoppelganger(doppelgangerService: DoppelgangerService): void {
@@ -134,7 +139,12 @@ export class ValidatorStore {
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-    await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+    try {
+      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+    } catch (e) {
+      this.metrics?.slashingProtectionBlockError.inc();
+      throw e;
+    }
 
     return {
       message: block,
@@ -169,11 +179,16 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-    await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
-      sourceEpoch: attestationData.source.epoch,
-      targetEpoch: attestationData.target.epoch,
-      signingRoot,
-    });
+    try {
+      await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
+        sourceEpoch: attestationData.source.epoch,
+        targetEpoch: attestationData.target.epoch,
+        signingRoot,
+      });
+    } catch (e) {
+      this.metrics?.slashingProtectionAttestationError.inc();
+      throw e;
+    }
 
     return {
       aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
@@ -310,16 +325,28 @@ export class ValidatorStore {
     }
 
     switch (signer.type) {
-      case SignerType.Local:
-        return signer.secretKey.sign(signingRoot).toBytes();
+      case SignerType.Local: {
+        const timer = this.metrics?.localSignTime.startTimer();
+        const signature = signer.secretKey.sign(signingRoot).toBytes();
+        timer?.();
+        return signature;
+      }
 
       case SignerType.Remote: {
-        const signatureHex = await externalSignerPostSignature(
-          signer.externalSignerUrl,
-          pubkeyHex,
-          toHexString(signingRoot)
-        );
-        return fromHexString(signatureHex);
+        const timer = this.metrics?.remoteSignTime.startTimer();
+        try {
+          const signatureHex = await externalSignerPostSignature(
+            signer.externalSignerUrl,
+            pubkeyHex,
+            toHexString(signingRoot)
+          );
+          return fromHexString(signatureHex);
+        } catch (e) {
+          this.metrics?.remoteSignErrors.inc();
+          throw e;
+        } finally {
+          timer?.();
+        }
       }
     }
   }

@@ -161,12 +161,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation, committeeIndices} = validationResult;
-      metrics?.registerAggregatedAttestation(
-        OpSource.gossip,
-        seenTimestampSec,
-        signedAggregateAndProof,
-        indexedAttestation
-      );
+      metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
       chain.aggregatedAttestationPool.add(
@@ -206,7 +201,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
 
       // Handler
       const {indexedAttestation} = validationResult;
-      metrics?.registerUnaggregatedAttestation(OpSource.gossip, seenTimestampSec, indexedAttestation);
+      metrics?.registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation);
 
       // Node may be subscribe to extra subnets (long-lived random subnets). For those, validate the messages
       // but don't import them, to save CPU and RAM

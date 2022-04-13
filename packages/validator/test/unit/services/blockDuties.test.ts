@@ -46,7 +46,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);
@@ -81,7 +81,7 @@ describe("BlockDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     api.validator.getProposerDuties.resolves(dutiesBeforeReorg);
@@ -136,7 +136,7 @@ describe("BlockDutiesService", function () {
     const notifyBlockProductionFn = sinon.stub(); // Returns void
 
     const clock = new ClockMock();
-    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, notifyBlockProductionFn);
+    const dutiesService = new BlockDutiesService(loggerVc, api, clock, validatorStore, null, notifyBlockProductionFn);
 
     // Trigger clock onSlot for slot 0
     await clock.tickSlotFns(0, controller.signal);

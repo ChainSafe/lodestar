@@ -48,7 +48,7 @@ describe("BlockDutiesService", function () {
     api.validator.getProposerDuties.resolves(duties);
 
     const clock = new ClockMock();
-    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore);
+    const blockService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, null);
 
     const signedBlock = generateEmptySignedBlock();
     validatorStore.signRandao.resolves(signedBlock.message.body.randaoReveal);

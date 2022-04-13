@@ -148,12 +148,13 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Publish a `GossipObject` on a `GossipTopic`
    */
-  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<void> {
+  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<number> {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
     const sentPeers = await this.publish(topicStr, messageData);
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    return sentPeers;
   }
 
   /**
@@ -182,17 +183,17 @@ export class Eth2Gossipsub extends Gossipsub {
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
-  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
+  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
-    await this.publishObject<GossipType.beacon_aggregate_and_proof>(
+    return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, fork},
       aggregateAndProof
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
+  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
-    await this.publishObject<GossipType.beacon_attestation>(
+    return await this.publishObject<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
       attestation
     );

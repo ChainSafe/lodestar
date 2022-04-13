@@ -7,7 +7,7 @@ import {defaultChainOptions, IChainOptions} from "../chain/options";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options";
 import {defaultEth1Options, Eth1Options} from "../eth1/options";
 import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions";
-import {defaultMetricsOptions, IMetricsOptions} from "../metrics/options";
+import {defaultMetricsOptions, MetricsOptions} from "../metrics/options";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options";
 import {defaultSyncOptions, SyncOptions} from "../sync/options";
 import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngine";
@@ -21,7 +21,7 @@ export interface IBeaconNodeOptions {
   eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
   logger: IBeaconLoggerOptions;
-  metrics: IMetricsOptions;
+  metrics: MetricsOptions;
   network: INetworkOptions;
   sync: SyncOptions;
 }

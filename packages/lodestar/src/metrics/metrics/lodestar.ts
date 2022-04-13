@@ -1,6 +1,6 @@
 import {allForks} from "@chainsafe/lodestar-types";
 import {RegistryMetricCreator} from "../utils/registryMetricCreator";
-import {IMetricsOptions} from "../options";
+import {LodestarMetadata} from "../options";
 
 export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 
@@ -10,11 +10,11 @@ export type ILodestarMetrics = ReturnType<typeof createLodestarMetrics>;
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function createLodestarMetrics(
   register: RegistryMetricCreator,
-  metadata: IMetricsOptions["metadata"],
+  metadata?: LodestarMetadata,
   anchorState?: Pick<allForks.BeaconState, "genesisTime">
 ) {
   if (metadata) {
-    register.static<"semver" | "branch" | "commit" | "version" | "network">({
+    register.static<keyof LodestarMetadata>({
       name: "lodestar_version",
       help: "Lodestar version",
       value: metadata,
@@ -318,13 +318,38 @@ export function createLodestarMetrics(
       }),
     },
 
-    apiRestResponseTime: register.histogram<"operationId">({
-      name: "lodestar_api_rest_response_time_seconds",
-      help: "Time to fullfill a request to the REST api labeled by operationId",
-      labelNames: ["operationId"],
-      // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
-      buckets: [0.01, 0.1, 1],
-    }),
+    apiRest: {
+      responseTime: register.histogram<"operationId">({
+        name: "lodestar_api_rest_response_time_seconds",
+        help: "REST API time to fullfill a request by operationId",
+        labelNames: ["operationId"],
+        // Request times range between 1ms to 100ms in normal conditions. Can get to 1-5 seconds if overloaded
+        buckets: [0.01, 0.1, 1],
+      }),
+      requests: register.gauge<"operationId">({
+        name: "lodestar_api_rest_requests_total",
+        help: "REST API total count requests by operationId",
+        labelNames: ["operationId"],
+      }),
+      errors: register.gauge<"operationId">({
+        name: "lodestar_api_rest_errors_total",
+        help: "REST API total count of errors by operationId",
+        labelNames: ["operationId"],
+      }),
+      // Metrics for HttpActiveSocketsTracker, defined there
+      activeSockets: register.gauge({
+        name: "lodestar_api_rest_active_sockets_count",
+        help: "REST API current count of active sockets",
+      }),
+      socketsBytesRead: register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_read_total",
+        help: "REST API total count of bytes read on all sockets",
+      }),
+      socketsBytesWritten: register.gauge({
+        name: "lodestar_api_rest_sockets_bytes_written_total",
+        help: "REST API total count of bytes written on all sockets",
+      }),
+    },
 
     // Beacon state transition metrics
 
@@ -542,12 +567,23 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
-        help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is included in some blocks",
         labelNames: ["index"],
       }),
       prevEpochOnChainAttesterMiss: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is not included in any blocks",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterHit: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+        help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterMiss: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge<"index">({
@@ -643,6 +679,15 @@ export function createLodestarMetrics(
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
+      }),
+      unaggregatedAttestationSubmittedSentPeers: register.histogram<"index">({
+        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
+        help: "Number of peers that an unaggregated attestation sent to",
+        labelNames: ["index"],
+        // as of Apr 2022, most of the time we sent to >30 peers per attestations
+        // these bucket values just base on that fact to get equal range
+        // refine if we want more reasonable values
+        buckets: [0, 10, 20, 30],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",

@@ -32,7 +32,7 @@ export async function deleteOldPeerstorePreV036(peerStoreDir: string, logger: IL
     if (peerStoreDir.endsWith("/")) {
       peerStoreDir = peerStoreDir.slice(0, peerStoreDir.length - 1);
     }
-    fs.renameSync(peerStoreDir, peerStoreDir + ".pre-0.36.0.bak");
-    logger.info("Migrated old peerstore");
+    fs.rmSync(peerStoreDir, {recursive: true, force: true});
+    logger.info("Deleted old peerstore");
   }
 }

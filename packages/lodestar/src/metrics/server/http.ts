@@ -2,64 +2,83 @@
  * @module metrics/server
  */
 import http from "node:http";
-import {createHttpTerminator, HttpTerminator} from "http-terminator";
 import {Registry} from "prom-client";
 import {ILogger} from "@chainsafe/lodestar-utils";
-import {IMetricsOptions} from "../options";
 import {wrapError} from "../../util/wrapError";
 import {HistogramExtra} from "../utils/histogram";
+import {HttpActiveSocketsTracker} from "../../api/rest/activeSockets";
+import {RegistryMetricCreator} from "../utils/registryMetricCreator";
 
-// eslint-disable-next-line @typescript-eslint/no-empty-interface
-export interface IMetricsServer {}
-
-type RegistryHolder = {
-  register: Registry;
+export type HttpMetricsServerOpts = {
+  port: number;
+  address?: string;
 };
 
-export class HttpMetricsServer implements IMetricsServer {
-  http: http.Server;
-  private terminator: HttpTerminator;
-  private opts: IMetricsOptions;
-  private register: Registry;
-  private logger: ILogger;
+export class HttpMetricsServer {
+  private readonly server: http.Server;
+  private readonly register: Registry;
+  private readonly logger: ILogger;
+  private readonly activeSockets: HttpActiveSocketsTracker;
 
-  private httpServerRegister: Registry;
-  private scrapeTimeMetric: HistogramExtra<"status">;
+  private readonly httpServerRegister: RegistryMetricCreator;
+  private readonly scrapeTimeMetric: HistogramExtra<"status">;
 
-  constructor(opts: IMetricsOptions, {metrics, logger}: {metrics: RegistryHolder; logger: ILogger}) {
-    this.opts = opts;
+  constructor(private readonly opts: HttpMetricsServerOpts, {register, logger}: {register: Registry; logger: ILogger}) {
     this.logger = logger;
-    this.register = metrics.register;
-    this.http = http.createServer(this.onRequest.bind(this));
-    this.terminator = createHttpTerminator({server: this.http});
+    this.register = register;
+    this.server = http.createServer(this.onRequest.bind(this));
 
     // New registry to metric the metrics. Using the same registry would deadlock the .metrics promise
-    this.httpServerRegister = new Registry();
-    this.scrapeTimeMetric = new HistogramExtra<"status">({
+    this.httpServerRegister = new RegistryMetricCreator();
+
+    this.scrapeTimeMetric = this.httpServerRegister.histogram<"status">({
       name: "lodestar_metrics_scrape_seconds",
-      help: "Time async to scrape metrics",
+      help: "Lodestar metrics server async time to scrape metrics",
       labelNames: ["status"],
       buckets: [0.1, 1, 10],
     });
 
-    this.httpServerRegister.registerMetric(this.scrapeTimeMetric);
+    const socketsMetrics = {
+      activeSockets: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_active_sockets_count",
+        help: "Metrics server current count of active sockets",
+      }),
+      socketsBytesRead: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_sockets_bytes_read_total",
+        help: "Metrics server total count of bytes read on all sockets",
+      }),
+      socketsBytesWritten: this.httpServerRegister.gauge({
+        name: "lodestar_metrics_server_sockets_bytes_written_total",
+        help: "Metrics server total count of bytes written on all sockets",
+      }),
+    };
+
+    this.activeSockets = new HttpActiveSocketsTracker(this.server, socketsMetrics);
   }
 
   async start(): Promise<void> {
-    const {serverPort, listenAddr} = this.opts;
-    this.logger.info("Starting metrics HTTP server", {port: serverPort ?? null});
-    const listen = this.http.listen.bind(this.http);
+    const {port, address} = this.opts;
+    this.logger.info("Starting metrics HTTP server", {port, address: address ?? "127.0.0.1"});
+    const listen = this.server.listen.bind(this.server);
     return new Promise((resolve, reject) => {
-      listen(serverPort, listenAddr).once("listening", resolve).once("error", reject);
+      listen(port, address).once("listening", resolve).once("error", reject);
     });
   }
 
   async stop(): Promise<void> {
-    try {
-      await this.terminator.terminate();
-    } catch (e) {
-      this.logger.warn("Failed to stop metrics server", {}, e as Error);
-    }
+    // In NodeJS land calling close() only causes new connections to be rejected.
+    // Existing connections can prevent .close() from resolving for potentially forever.
+    // In Lodestar case when the BeaconNode wants to close we will just abruptly terminate
+    // all existing connections for a fast shutdown.
+    // Inspired by https://github.com/gajus/http-terminator/
+    this.activeSockets.destroyAll();
+
+    await new Promise<void>((resolve, reject) => {
+      this.server.close((err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
   }
 
   private async onRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {

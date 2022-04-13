@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
 import {batchItems} from "../util/batch";
+import {Metrics} from "../metrics";
 
 /**
  * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
@@ -24,8 +25,13 @@ export class IndicesService {
   constructor(
     private readonly logger: ILogger,
     private readonly api: Api,
-    private readonly validatorStore: ValidatorStore
-  ) {}
+    private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null
+  ) {
+    if (metrics) {
+      metrics.indices.addCollect(() => metrics.indices.set(this.index2pubkey.size));
+    }
+  }
 
   /** Returns the validator index for a given validator pubkey */
   getValidatorIndex(pubKey: PubkeyHex): ValidatorIndex | undefined {
@@ -86,7 +92,10 @@ export class IndicesService {
       const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
       newIndices.push(...validatorIndicesArr);
     }
+
     this.logger.info("Discovered new validators", {count: newIndices.length});
+    this.metrics?.discoveredIndices.inc(newIndices.length);
+
     return newIndices;
   }
 

@@ -10,10 +10,10 @@ describe("HttpMetricsServer", () => {
 
   it("should serve metrics on /metrics", async () => {
     const metrics = createMetricsTest();
-    server = new HttpMetricsServer({enabled: true, timeout: 5000, serverPort: 0}, {metrics, logger});
+    server = new HttpMetricsServer({port: 0}, {register: metrics.register, logger});
 
     await server.start();
-    await request(server.http).get("/metrics").expect(200);
+    await request(server["server"]).get("/metrics").expect(200);
   });
 
   after(async () => {
