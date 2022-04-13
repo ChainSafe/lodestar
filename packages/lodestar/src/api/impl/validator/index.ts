@@ -423,6 +423,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     async publishAggregateAndProofs(signedAggregateAndProofs) {
       notWhileSyncing();
 
+      const seenTimestampSec = Date.now() / 1000;
       const errors: Error[] = [];
 
       await Promise.all(
@@ -440,7 +441,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               committeeIndices
             );
             const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
-            metrics?.submitAggregatedAttestation(indexedAttestation, sentPeers);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");

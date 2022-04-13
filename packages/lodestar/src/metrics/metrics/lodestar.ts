@@ -656,10 +656,10 @@ export function createLodestarMetrics(
         buckets: [0.1, 1],
       }),
       unaggregatedAttestationSubmittedSentPeers: register.histogram<"index">({
-        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_total",
-        help: "Number of unaggregated attestations submitted by local validator that has no subnet peers",
+        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
+        help: "Number of peers that an unaggregated attestation sent to",
         labelNames: ["index"],
-        buckets: [0, 2, 5, 10],
+        buckets: [0, 10, 20, 30],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",
