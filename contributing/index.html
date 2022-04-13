@@ -314,6 +314,11 @@
   </a>
 </li>
 <li class="md-nav__item">
+<a class="md-nav__link" href="#contributing-to-grafana-dashboards">
+    Contributing to Grafana dashboards
+  </a>
+</li>
+<li class="md-nav__item">
 <a class="md-nav__link" href="#label-guide">
     Label Guide
   </a>
@@ -455,6 +460,11 @@
 <li class="md-nav__item">
 <a class="md-nav__link" href="#style-guide">
     Style Guide
+  </a>
+</li>
+<li class="md-nav__item">
+<a class="md-nav__link" href="#contributing-to-grafana-dashboards">
+    Contributing to Grafana dashboards
   </a>
 </li>
 <li class="md-nav__item">
@@ -624,6 +634,16 @@
 <li>Make sure that the tests are still passing:</li>
 <li>run <code>yarn test:unit</code> from the command line</li>
 </ul>
+<h2 id="contributing-to-grafana-dashboards">Contributing to Grafana dashboards<a class="headerlink" href="#contributing-to-grafana-dashboards" title="Permanent link">¶</a></h2>
+<p>To edit or extend an existing Grafana dashboard with minimal diff:</p>
+<ol>
+<li>Grab the .json dashboard file from current master</li>
+<li>Import file to Grafana via the web UI at <code>/dashboard/import</code>. Give it some temporal name relevant to your work (i.e. the branch name)</li>
+<li>Do edits on the Dashboard</li>
+<li>Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.</li>
+<li>Click the "share dashboard" icon next to the title at the top left corner. Go to the "Export" tab, set "Export for sharing externally" to true and click "Save to file"</li>
+<li>Paste the contents of the downloaded file in the Github repo, commit and open your PR</li>
+</ol>
 <h2 id="label-guide">Label Guide<a class="headerlink" href="#label-guide" title="Permanent link">¶</a></h2>
 <p>Issues and pull-requests are subject to the following labeling guidelines.</p>
 <ul>
@@ -698,12 +718,14 @@
 <li><code>q9-epic</code>: Can only be fixed by John Skeet. ;)</li>
 </ul>
 <h6 id="spec-ethereum-consensus-spec-version-target"><code>spec.*</code> Ethereum Consensus Spec Version Target<a class="headerlink" href="#spec-ethereum-consensus-spec-version-target" title="Permanent link">¶</a></h6>
-<p>Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.
-* <code>spec0-phase0</code>: Issues targeting the initial Ethereum consensus spec version.
-* <code>spec1-altair</code>: Issues targeting the Altair Ethereum consensus spec version.
-* <code>spec3-bellatrix</code>: Issues targeting the Bellatrix Ethereum consensus spec version.
-* <code>spec5-phase1</code>: Issues targeting the Phase1 Ethereum consensus spec version.
-* <code>spec7-phase2</code>: Issues targeting the Phase2 Ethereum consensus spec version.</p>
+<p>Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.</p>
+<ul>
+<li><code>spec0-phase0</code>: Issues targeting the initial Ethereum consensus spec version.</li>
+<li><code>spec1-altair</code>: Issues targeting the Altair Ethereum consensus spec version.</li>
+<li><code>spec3-bellatrix</code>: Issues targeting the Bellatrix Ethereum consensus spec version.</li>
+<li><code>spec5-phase1</code>: Issues targeting the Phase1 Ethereum consensus spec version.</li>
+<li><code>spec7-phase2</code>: Issues targeting the Phase2 Ethereum consensus spec version.</li>
+</ul>
 <h6 id="meta-meta-labels-to-organize-miscelaneous-issues"><code>meta.*</code> Meta Labels to organize Miscelaneous Issues<a class="headerlink" href="#meta-meta-labels-to-organize-miscelaneous-issues" title="Permanent link">¶</a></h6>
 <ul>
 <li><code>meta0-goodfirstissue</code>: Good first issues for newcomers and first-time contributors.</li>
