@@ -4,6 +4,7 @@ import {
   IAttesterStatus,
   parseAttesterFlags,
 } from "@chainsafe/lodestar-beacon-state-transition";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {MIN_ATTESTATION_INCLUSION_DELAY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
@@ -26,13 +27,19 @@ export interface IValidatorMonitor {
   registerLocalValidator(index: number): void;
   registerValidatorStatuses(currentEpoch: Epoch, statuses: IAttesterStatus[], balances?: number[]): void;
   registerBeaconBlock(src: OpSource, seenTimestampSec: Seconds, block: allForks.BeaconBlock): void;
-  registerUnaggregatedAttestation(
-    src: OpSource,
-    seenTimestampSec: Seconds,
-    indexedAttestation: IndexedAttestation
+  submitUnaggregatedAttestation(
+    seenTimestampSec: number,
+    indexedAttestation: IndexedAttestation,
+    subnet: number,
+    sentPeers: number
   ): void;
-  registerAggregatedAttestation(
-    src: OpSource,
+  registerGossipUnaggregatedAttestation(seenTimestampSec: Seconds, indexedAttestation: IndexedAttestation): void;
+  submitAggregatedAttestation(
+    seenTimestampSec: number,
+    indexedAttestation: IndexedAttestation,
+    sentPeers: number
+  ): void;
+  registerGossipAggregatedAttestation(
     seenTimestampSec: Seconds,
     signedAggregateAndProof: SignedAggregateAndProof,
     indexedAttestation: IndexedAttestation
@@ -166,7 +173,8 @@ type MonitoredValidator = {
 export function createValidatorMonitor(
   metrics: ILodestarMetrics,
   config: IChainForkConfig,
-  genesisTime: number
+  genesisTime: number,
+  logger: ILogger
 ): IValidatorMonitor {
   /** The validators that require additional monitoring. */
   const validators = new Map<ValidatorIndex, MonitoredValidator>();
@@ -201,20 +209,24 @@ export function createValidatorMonitor(
         }
 
         const summary = statusToSummary(status);
+        let failedAttestation = false;
 
         if (summary.isPrevSourceAttester) {
-          metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
+          metrics.validatorMonitor.prevEpochOnChainSourceAttesterHit.inc({index});
         } else {
-          metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
+          failedAttestation = true;
+          metrics.validatorMonitor.prevEpochOnChainSourceAttesterMiss.inc({index});
         }
         if (summary.isPrevHeadAttester) {
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterHit.inc({index});
         } else {
+          failedAttestation = true;
           metrics.validatorMonitor.prevEpochOnChainHeadAttesterMiss.inc({index});
         }
         if (summary.isPrevTargetAttester) {
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterHit.inc({index});
         } else {
+          failedAttestation = true;
           metrics.validatorMonitor.prevEpochOnChainTargetAttesterMiss.inc({index});
         }
 
@@ -236,11 +248,26 @@ export function createValidatorMonitor(
 
         if (inclusionDistance !== null) {
           metrics.validatorMonitor.prevEpochOnChainInclusionDistance.set({index}, inclusionDistance);
+          metrics.validatorMonitor.prevEpochOnChainAttesterHit.inc({index});
+        } else {
+          metrics.validatorMonitor.prevEpochOnChainAttesterMiss.inc({index});
         }
 
         const balance = balances && balances[index];
         if (balance !== undefined) {
           metrics.validatorMonitor.prevEpochOnChainBalance.set({index}, balance);
+        }
+
+        if (failedAttestation) {
+          logger.debug("Failed attestation in previous epoch", {
+            validatorIndex: index,
+            prevEpoch: currentEpoch - 1,
+            isPrevSourceAttester: summary.isPrevSourceAttester,
+            isPrevHeadAttester: summary.isPrevHeadAttester,
+            isPrevTargetAttester: summary.isPrevTargetAttester,
+            // inclusionDistance is not available in summary since altair
+            inclusionDistance,
+          });
         }
       }
     },
@@ -257,7 +284,29 @@ export function createValidatorMonitor(
       }
     },
 
-    registerUnaggregatedAttestation(src, seenTimestampSec, indexedAttestation) {
+    submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers) {
+      const data = indexedAttestation.data;
+      // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 1 / 3) * config.SECONDS_PER_SLOT);
+      for (const index of indexedAttestation.attestingIndices) {
+        const validator = validators.get(index);
+        if (validator) {
+          metrics.validatorMonitor.unaggregatedAttestationSubmittedSentPeers.observe({index}, sentPeers);
+          metrics.validatorMonitor.unaggregatedAttestationDelaySeconds.observe({src: OpSource.api, index}, delaySec);
+          logger.debug("Local validator published unaggregated attestation", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            subnet,
+            sentPeers,
+            delaySec,
+          });
+        }
+      }
+    },
+
+    registerGossipUnaggregatedAttestation(seenTimestampSec, indexedAttestation) {
+      const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when the attestation `data` could be produced (1/3rd through the slot) and `seenTimestamp`.
@@ -276,7 +325,28 @@ export function createValidatorMonitor(
       }
     },
 
-    registerAggregatedAttestation(src, seenTimestampSec, signedAggregateAndProof, indexedAttestation) {
+    submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers) {
+      const data = indexedAttestation.data;
+      // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
+      const delaySec = seenTimestampSec - (genesisTime + (data.slot + 2 / 3) * config.SECONDS_PER_SLOT);
+
+      for (const index of indexedAttestation.attestingIndices) {
+        const validator = validators.get(index);
+        if (validator) {
+          metrics.validatorMonitor.aggregatedAttestationDelaySeconds.observe({src: OpSource.api, index}, delaySec);
+          logger.debug("Local validator published aggregated attestation", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            sentPeers,
+            delaySec,
+          });
+        }
+      }
+    },
+
+    registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation) {
+      const src = OpSource.gossip;
       const data = indexedAttestation.data;
       const epoch = computeEpochAtSlot(data.slot);
       // Returns the duration between when a `AggregateAndproof` with `data` could be produced (2/3rd through the slot) and `seenTimestamp`.
@@ -301,6 +371,11 @@ export function createValidatorMonitor(
           metrics.validatorMonitor.attestationInAggregateDelaySeconds.observe({src, index}, delaySec);
           withEpochSummary(validator, epoch, (summary) => {
             summary.attestationAggregateIncusions += 1;
+          });
+          logger.debug("Local validator attestation is included in AggregatedAndProof", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
           });
         }
       }
@@ -335,6 +410,14 @@ export function createValidatorMonitor(
               correctHead = ssz.Root.equals(rootCache.getBlockRootAtSlot(data.slot), data.beaconBlockRoot);
             }
             summary.attestationCorrectHead = correctHead;
+          });
+
+          logger.debug("Local validator attestation is included in block", {
+            validatorIndex: validator.index,
+            slot: data.slot,
+            committeeIndex: data.index,
+            inclusionDistance,
+            correctHead,
           });
         }
       }

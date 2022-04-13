@@ -567,12 +567,23 @@ export function createLodestarMetrics(
       }),
       prevEpochOnChainAttesterHit: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_hit_total",
-        help: "Incremented if the validator is flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is included in some blocks",
         labelNames: ["index"],
       }),
       prevEpochOnChainAttesterMiss: register.gauge<"index">({
         name: "validator_monitor_prev_epoch_on_chain_attester_miss_total",
-        help: "Incremented if the validator is not flagged as a previous epoch attester during per epoch processing",
+        help: "Incremented if validator's submitted attestation is not included in any blocks",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterHit: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_hit_total",
+        help: "Incremented if the validator is flagged as a previous epoch source attester during per epoch processing",
+        labelNames: ["index"],
+      }),
+      prevEpochOnChainSourceAttesterMiss: register.gauge<"index">({
+        name: "validator_monitor_prev_epoch_on_chain_source_attester_miss_total",
+        help:
+          "Incremented if the validator is not flagged as a previous epoch source attester during per epoch processing",
         labelNames: ["index"],
       }),
       prevEpochOnChainHeadAttesterHit: register.gauge<"index">({
@@ -668,6 +679,15 @@ export function createLodestarMetrics(
         help: "The delay between when the validator should send the attestation and when it was received",
         labelNames: ["index", "src"],
         buckets: [0.1, 1],
+      }),
+      unaggregatedAttestationSubmittedSentPeers: register.histogram<"index">({
+        name: "validator_monitor_unaggregated_attestation_submited_sent_peers_count",
+        help: "Number of peers that an unaggregated attestation sent to",
+        labelNames: ["index"],
+        // as of Apr 2022, most of the time we sent to >30 peers per attestations
+        // these bucket values just base on that fact to get equal range
+        // refine if we want more reasonable values
+        buckets: [0, 10, 20, 30],
       }),
       aggregatedAttestationTotal: register.gauge<"index" | "src">({
         name: "validator_monitor_aggregated_attestation_total",
