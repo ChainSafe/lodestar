@@ -1,4 +1,4 @@
-import {Epoch, RootHex, Slot, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, RootHex, Slot} from "@chainsafe/lodestar-types";
 import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType, Schema} from "../utils";
 import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 
@@ -48,12 +48,6 @@ export type LodestarNodePeer = NodePeer & {
   agentVersion: string;
 };
 
-export type LivenessResponseData = {
-  index: ValidatorIndex;
-  epoch: Epoch;
-  isLive: boolean;
-};
-
 export type Api = {
   /** TODO: description */
   getWtfNode(): Promise<{data: string}>;
@@ -89,9 +83,6 @@ export type Api = {
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
-
-  /** Returns validator indices that has been observed to be active on the network */
-  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 
 /**
@@ -114,7 +105,6 @@ export const routesData: RoutesData<Api> = {
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
   getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
-  getLiveness: {url: "/eth/v1/lodestar/liveness", method: "GET"},
 };
 
 export type ReqTypes = {
@@ -134,7 +124,6 @@ export type ReqTypes = {
   disconnectPeer: {query: {peerId: string}};
   getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
   discv5GetKadValues: ReqEmpty;
-  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -175,12 +164,6 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
     },
     discv5GetKadValues: reqEmpty,
-
-    getLiveness: {
-      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
-      parseReq: ({query}) => [query.indices, query.epoch],
-      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
-    },
   };
 }
 
@@ -199,6 +182,5 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getGossipPeerScoreStats: jsonType("camel"),
     getPeers: jsonType("camel"),
     discv5GetKadValues: jsonType("camel"),
-    getLiveness: jsonType("camel"),
   };
 }

@@ -6,6 +6,7 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
+  computeEndSlotForEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -30,6 +31,9 @@ import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {Epoch} from "@chainsafe/lodestar-types/src";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
+import {IBeaconChain} from "../../../chain";
 
 /**
  * Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
@@ -589,5 +593,48 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 
       network.prepareSyncCommitteeSubnets(subs);
     },
+
+    async getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}> {
+      if (indices.length === 0) {
+        return {
+          data: [],
+        };
+      }
+      const state = await chain.getHeadStateAtCurrentEpoch();
+      const epochCtx = state.epochCtx;
+      if (epoch < epochCtx.previousShuffling.epoch || epoch > epochCtx.nextShuffling.epoch) {
+        throw new Error(
+          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${epochCtx.currentShuffling.epoch}`
+        );
+      }
+
+      return {
+        data: indices.map((index: ValidatorIndex) => {
+          return {
+            index,
+            epoch,
+            isLive: isLive(chain, index, epoch),
+          };
+        }),
+      };
+    },
   };
+}
+
+function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch): boolean {
+  const startSlot = computeStartSlotAtEpoch(epoch);
+  const endSlot = computeEndSlotForEpoch(epoch);
+
+  let proposedBlock = false;
+  for (let slot = startSlot; slot <= endSlot; slot++) {
+    if (chain.seenBlockProposers.isKnown(slot, index)) {
+      proposedBlock = true;
+      break;
+    }
+  }
+
+  const hasAggregated = chain.seenAggregators.isKnown(epoch, index);
+  const hasAttested = chain.seenAttesters.isKnown(epoch, index);
+
+  return proposedBlock || hasAggregated || hasAttested;
 }

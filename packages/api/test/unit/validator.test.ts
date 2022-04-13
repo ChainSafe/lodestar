@@ -74,6 +74,10 @@ describe("validator", () => {
       args: [[{validatorIndex: 1, syncCommitteeIndices: [2], untilEpoch: 3}]],
       res: undefined,
     },
+    getLiveness: {
+      args: [[0], 0],
+      res: {data: []},
+    },
   });
 
   // TODO: Extra tests to implement maybe

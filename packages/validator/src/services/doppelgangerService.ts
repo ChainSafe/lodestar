@@ -2,12 +2,12 @@ import {Epoch, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {Api} from "@chainsafe/lodestar-api";
 import {ILogger, sleep} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/lodestar";
 import {computeEndSlotForEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {AbortController} from "@chainsafe/abort-controller";
 import {PubkeyHex} from "../types";
 import {IClock} from "../util";
 import {IndicesService} from "./indices";
+import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 
 type DoppelgangerState = {
   epochRegistered: Epoch;
@@ -79,7 +79,7 @@ export class DoppelgangerService {
       const previous =
         previousEpoch >= 0
           ? (
-              await this.api.lodestar.getLiveness(indices, previousEpoch).catch((e) => {
+              await this.api.validator.getLiveness(indices, previousEpoch).catch((e) => {
                 this.logger.error(`Error getting liveness data for previous epoch ${previousEpoch}`, {}, e as Error);
                 return Promise.resolve({data: []});
               })
@@ -87,7 +87,7 @@ export class DoppelgangerService {
           : [];
 
       const current: LivenessResponseData[] = (
-        await this.api.lodestar.getLiveness(indices, currentEpoch).catch((e) => {
+        await this.api.validator.getLiveness(indices, currentEpoch).catch((e) => {
           this.logger.error("Error getting liveness data for current epoch `${currentEpoch}`", {}, e as Error);
           return Promise.resolve({data: []});
         })

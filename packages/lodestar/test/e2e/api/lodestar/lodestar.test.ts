@@ -2,7 +2,7 @@ import chaiAsPromised from "chai-as-promised";
 import chai, {expect} from "chai";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {HttpClient} from "@chainsafe/lodestar-api/src";
-import {getClient} from "@chainsafe/lodestar-api/src/client/lodestar";
+import {getClient} from "@chainsafe/lodestar-api/src/client/validator";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {phase0} from "@chainsafe/lodestar-types";
 import {LogLevel, testLogger, TestLoggerOpts} from "../../../utils/logger";

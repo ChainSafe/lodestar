@@ -23,6 +23,7 @@ import {
   WithVersion,
   reqOnlyBody,
   ReqSerializers,
+  jsonType,
 } from "../utils";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
@@ -75,6 +76,12 @@ export type SyncDuty = {
   validatorIndex: ValidatorIndex;
   /** The indices of the validator in the sync committee. */
   validatorSyncCommitteeIndices: number[];
+};
+
+export type LivenessResponseData = {
+  index: ValidatorIndex;
+  epoch: Epoch;
+  isLive: boolean;
 };
 
 export type Api = {
@@ -197,6 +204,9 @@ export type Api = {
   prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void>;
 
   prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
+
+  /** Returns validator indices that has been observed to be active on the network */
+  getLiveness(indices: ValidatorIndex[], epoch: Epoch): Promise<{data: LivenessResponseData[]}>;
 };
 
 /**
@@ -215,6 +225,7 @@ export const routesData: RoutesData<Api> = {
   publishContributionAndProofs: {url: "/eth/v1/validator/contribution_and_proofs", method: "POST"},
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
+  getLiveness: {url: "/eth/v1/lodestar/liveness", method: "GET"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -231,6 +242,7 @@ export type ReqTypes = {
   publishContributionAndProofs: {body: unknown};
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
+  getLiveness: {query: {indices: ValidatorIndex[]; epoch: Epoch}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -330,6 +342,11 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
+    getLiveness: {
+      writeReq: (indices, epoch) => ({query: {indices, epoch}}),
+      parseReq: ({query}) => [query.indices, query.epoch],
+      schema: {query: {indices: Schema.UintArray, epoch: Schema.Uint}},
+    },
   };
 }
 
@@ -377,5 +394,6 @@ export function getReturnTypes(): ReturnTypes<Api> {
     produceAttestationData: ContainerData(ssz.phase0.AttestationData),
     produceSyncCommitteeContribution: ContainerData(ssz.altair.SyncCommitteeContribution),
     getAggregatedAttestation: ContainerData(ssz.phase0.Attestation),
+    getLiveness: jsonType("camel"),
   };
 }
