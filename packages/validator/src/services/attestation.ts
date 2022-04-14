@@ -1,5 +1,5 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
-import {phase0, Slot, CommitteeIndex, ssz} from "@chainsafe/lodestar-types";
+import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
@@ -65,17 +65,43 @@ export class AttestationService {
     // Produce a single attestation for all committees, and clone mutate before signing
     const attestationNoCommittee = await this.produceAttestation(slot);
 
-    // await for all so if the Beacon node is overloaded it auto-throttles
-    // TODO: This approach is convervative to reduce the node's load, review
+    // Step 1. Mutate, and sign `Attestation` for each validator.
+    const dutiesByAttestationData = new Map<phase0.AttestationData, AttDutyAndProof[]>();
+    const signedAttestations = (
+      await Promise.all(
+        Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
+          const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: committeeIndex};
+          dutiesByAttestationData.set(attestationData, duties);
+          return await this.signAttestations(slot, attestationData, duties);
+        })
+      )
+    ).flat();
+
+    // Step 2. Publish all `Attestations` in one go
+    const attestationCount = signedAttestations.length;
+    if (attestationCount > 0) {
+      try {
+        await this.api.beacon.submitPoolAttestations(signedAttestations);
+        this.logger.info("Published attestations", {slot, attestationCount});
+        this.metrics?.publishedAttestations.inc(attestationCount);
+      } catch (e) {
+        this.metrics?.attestaterError.inc({error: "publish"}, attestationCount);
+        this.logger.error("Error publishing attestations", {slot, attestationCount}, e as Error);
+      }
+    }
+
+    // Step 3. after all attestations are submitted, make an aggregate.
+    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
+    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
+    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+    // Then download, sign and publish a `SignedAggregateAndProof` for each
+    // validator that is elected to aggregate for this `slot` and
+    // `committeeIndex`.
     await Promise.all(
-      Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
-        if (duties.length === 0) return;
-        await this.publishAttestationsAndAggregates(slot, committeeIndex, duties, attestationNoCommittee, signal).catch(
-          (e: Error) => {
-            this.logger.error("Error on attestations routine", {slot, committeeIndex}, e);
-          }
-        );
-      })
+      Array.from(dutiesByAttestationData.entries()).map(([attestation, duties]) =>
+        this.produceAndPublishAggregates(attestation, duties)
+      )
     );
   };
 
@@ -97,25 +123,39 @@ export class AttestationService {
     });
   }
 
-  private async publishAttestationsAndAggregates(
+  /**
+   * Only one `Attestation` is downloaded from the BN. It is then signed by each
+   * validator and the list of individually-signed `Attestation` objects is returned to the BN.
+   */
+  private async signAttestations(
     slot: Slot,
-    committeeIndex: CommitteeIndex,
-    duties: AttDutyAndProof[],
-    attestationNoCommittee: phase0.AttestationData,
-    signal: AbortSignal
-  ): Promise<void> {
-    // Step 1. Mutate, sign and publish `Attestation` for each validator.
-    const attestation = await this.publishAttestations(slot, committeeIndex, attestationNoCommittee, duties);
+    attestationData: phase0.AttestationData,
+    duties: AttDutyAndProof[]
+  ): Promise<phase0.Attestation[]> {
+    if (duties.length === 0) return [];
 
-    // Step 2. If an attestation was produced, make an aggregate.
-    // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
-    await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
-    this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+    const logCtx = {slot, index: attestationData.index};
 
-    // Then download, sign and publish a `SignedAggregateAndProof` for each
-    // validator that is elected to aggregate for this `slot` and
-    // `committeeIndex`.
-    await this.produceAndPublishAggregates(attestation, duties);
+    const currentEpoch = computeEpochAtSlot(slot);
+    const signedAttestations: phase0.Attestation[] = [];
+
+    for (const {duty} of duties) {
+      const logCtxValidator = {
+        ...logCtx,
+        head: toHexString(attestationData.beaconBlockRoot),
+        validatorIndex: duty.validatorIndex,
+      };
+      try {
+        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
+        this.logger.debug("Signed attestation", logCtxValidator);
+      } catch (e) {
+        this.metrics?.attestaterError.inc({error: "sign"});
+        this.logger.error("Error signing attestation", logCtxValidator, e as Error);
+      }
+    }
+
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(attestationData.slot + 1 / 3));
+    return signedAttestations;
   }
 
   /**
@@ -131,59 +171,6 @@ export class AttestationService {
       throw extendError(e, "Error producing attestation");
     });
     return attestationRes.data;
-  }
-
-  /**
-   * Performs the first step of the attesting process: downloading `Attestation` objects,
-   * signing them and returning them to the validator.
-   *
-   * https://github.com/ethereum/eth2.0-specs/blob/v0.12.1/specs/phase0/validator.md#attesting
-   *
-   * Only one `Attestation` is downloaded from the BN. It is then signed by each
-   * validator and the list of individually-signed `Attestation` objects is returned to the BN.
-   */
-  private async publishAttestations(
-    slot: Slot,
-    committeeIndex: CommitteeIndex,
-    attestationNoCommittee: phase0.AttestationData,
-    duties: AttDutyAndProof[]
-  ): Promise<phase0.AttestationData> {
-    const logCtx = {slot, index: committeeIndex};
-
-    const currentEpoch = computeEpochAtSlot(slot);
-    const signedAttestations: phase0.Attestation[] = [];
-
-    const attestation: phase0.AttestationData = {...attestationNoCommittee, index: committeeIndex};
-
-    for (const {duty} of duties) {
-      const logCtxValidator = {
-        ...logCtx,
-        head: toHexString(attestation.beaconBlockRoot),
-        validatorIndex: duty.validatorIndex,
-      };
-      try {
-        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestation, currentEpoch));
-        this.logger.debug("Signed attestation", logCtxValidator);
-      } catch (e) {
-        this.metrics?.attestaterError.inc({error: "sign"});
-        this.logger.error("Error signing attestation", logCtxValidator, e as Error);
-      }
-    }
-
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(attestation.slot + 1 / 3));
-
-    if (signedAttestations.length > 0) {
-      try {
-        await this.api.beacon.submitPoolAttestations(signedAttestations);
-        this.logger.info("Published attestations", {...logCtx, count: signedAttestations.length});
-        this.metrics?.publishedAttestations.inc(signedAttestations.length);
-      } catch (e) {
-        this.metrics?.attestaterError.inc({error: "publish"});
-        this.logger.error("Error publishing attestations", logCtx, e as Error);
-      }
-    }
-
-    return attestation;
   }
 
   /**
