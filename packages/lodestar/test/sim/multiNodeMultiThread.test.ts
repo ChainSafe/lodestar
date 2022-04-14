@@ -45,7 +45,7 @@ describe("Run multi node multi thread interop validators (no eth1) until checkpo
   for (const testCase of testCases) {
     runMultiNodeMultiThreadTest({
       nodeCount: 4,
-      validatorsPerNode: 8,
+      validatorsPerNode: 32,
       event: ChainEvent.justified,
       altairForkEpoch: testCase.altairForkEpoch,
     });
