@@ -16,7 +16,7 @@ import {getInfuraBeaconUrl} from "./infura";
 // aggregationBitsAvg: 87.88991645944512
 
 const network = "mainnet";
-const client = getClient(config, {baseUrl: getInfuraBeaconUrl(network)});
+const client = getClient({baseUrl: getInfuraBeaconUrl(network)}, {config});
 
 async function run(): Promise<void> {
   const {data: headBlock} = await client.beacon.getBlockHeader("head");

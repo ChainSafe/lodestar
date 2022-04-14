@@ -11,12 +11,22 @@ import * as lightclient from "./lightclient";
 import * as lodestar from "./lodestar";
 import * as node from "./node";
 import * as validator from "./validator";
+import {ILogger} from "@chainsafe/lodestar-utils";
+import {Metrics} from "./utils/metrics";
+
+type ClientModule = {
+  config: IChainForkConfig;
+  logger?: ILogger;
+  httpClient?: IHttpClient;
+  metrics?: Metrics;
+};
 
 /**
  * REST HTTP client for all routes
  */
-export function getClient(config: IChainForkConfig, opts: HttpClientOptions, httpClient?: IHttpClient): Api {
-  if (!httpClient) httpClient = new HttpClient(opts);
+export function getClient(opts: HttpClientOptions, modules: ClientModule): Api {
+  const {config} = modules;
+  const httpClient = modules.httpClient ?? new HttpClient(opts, modules);
 
   return {
     beacon: beacon.getClient(config, httpClient),

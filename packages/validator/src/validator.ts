@@ -65,13 +65,15 @@ export class Validator {
 
     const api =
       typeof opts.api === "string"
-        ? getClient(config, {
-            baseUrl: opts.api,
-            // Validator would need the beacon to respond within the slot
-            timeoutMs: config.SECONDS_PER_SLOT * 1000,
-            getAbortSignal: this.getAbortSignal,
-            metrics: metrics?.restApiClient,
-          })
+        ? getClient(
+            {
+              baseUrl: opts.api,
+              // Validator would need the beacon to respond within the slot
+              timeoutMs: config.SECONDS_PER_SLOT * 1000,
+              getAbortSignal: this.getAbortSignal,
+            },
+            {config, logger, metrics: metrics?.restApiClient}
+          )
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
@@ -127,22 +129,23 @@ export class Validator {
     metrics?: Metrics | null
   ): Promise<Validator> {
     const {config} = opts.dbOps;
+    const {logger} = opts;
     const api =
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient(config, {baseUrl: opts.api, getAbortSignal: () => signal})
+          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);
-    opts.logger.info("Genesis available");
+    logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
-    opts.logger.info("Verified node and validator have same config");
+    logger.info("Verified node and validator have same config");
 
     await assertEqualGenesis(opts, genesis);
-    opts.logger.info("Verified node and validator have same genesisValidatorRoot");
+    logger.info("Verified node and validator have same genesisValidatorRoot");
 
     return new Validator(opts, genesis, metrics);
   }

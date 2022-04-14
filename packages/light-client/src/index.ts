@@ -142,7 +142,7 @@ export class Lightclient {
     this.logger = logger ?? getLcLoggerConsole();
 
     this.beaconApiUrl = beaconApiUrl;
-    this.api = getClient(config, {baseUrl: beaconApiUrl});
+    this.api = getClient({baseUrl: beaconApiUrl}, {config});
 
     const periodCurr = computeSyncPeriodAtSlot(snapshot.header.slot);
     this.syncCommitteeByPeriod.set(periodCurr, {
@@ -172,7 +172,7 @@ export class Lightclient {
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
   }): Promise<Lightclient> {
-    const api = getClient(config, {baseUrl: beaconApiUrl});
+    const api = getClient({baseUrl: beaconApiUrl}, {config});
 
     // Fetch snapshot with proof at the trusted block root
     const {data: snapshotWithProof} = await api.lightclient.getSnapshot(toHexString(checkpointRoot));

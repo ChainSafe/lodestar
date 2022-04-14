@@ -110,7 +110,7 @@ async function writePubkeys(): Promise<void> {
 `);
   }
 
-  const client = getClient(config, {baseUrl});
+  const client = getClient({baseUrl}, {config});
 
   const {data: state} = await client.debug.getStateV2("finalized");
 

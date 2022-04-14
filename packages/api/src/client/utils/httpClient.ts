@@ -1,6 +1,6 @@
 import {fetch} from "cross-fetch";
 import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
-import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
 import {stringifyQuery, urlJoin} from "./format";
 import {Metrics} from "./metrics";
@@ -39,8 +39,6 @@ export type HttpClientOptions = {
   getAbortSignal?: () => AbortSignal | undefined;
   /** Override fetch function */
   fetch?: typeof fetch;
-  /** Optional metrics */
-  metrics?: null | Metrics;
 };
 
 export class HttpClient implements IHttpClient {
@@ -49,17 +47,19 @@ export class HttpClient implements IHttpClient {
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
   private readonly metrics: null | Metrics;
+  private readonly logger: null | ILogger;
 
   /**
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
-  constructor(opts: HttpClientOptions) {
+  constructor(opts: HttpClientOptions, {logger, metrics}: {logger?: ILogger; metrics?: Metrics} = {}) {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
-    this.metrics = opts.metrics ?? null;
+    this.metrics = metrics ?? null;
+    this.logger = logger ?? null;
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
@@ -90,6 +90,8 @@ export class HttpClient implements IHttpClient {
       const headers = opts.headers || {};
       if (opts.body) headers["Content-Type"] = "application/json";
 
+      this.logger?.debug("HttpClient request", {url, method: opts.method, routeId});
+
       const res = await this.fetch(url, {
         method: opts.method,
         headers: headers as Record<string, string>,
@@ -101,6 +103,8 @@ export class HttpClient implements IHttpClient {
         const errBody = await res.text();
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
+
+      this.logger?.debug("HttpClient response", {url, method: opts.method, routeId});
 
       return await getBody(res);
     } catch (e) {
