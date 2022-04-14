@@ -380,10 +380,10 @@
   dependencies:
     event-target-shim "^5.0.0"
 
-"@chainsafe/as-sha256@^0.3.0":
-  version "0.3.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.3.0.tgz#ba7d4b85a77c51a50c071856ea6ead4066583b74"
-  integrity sha512-X0Yaz1H9ByEelnrG2Q76aEmLmlsjZe8905n6Eez8wmV2E1TvBnY2AFYYy2U52dkaGrWrG4MHYKLo4NJcSqkFeg==
+"@chainsafe/as-sha256@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/as-sha256/-/as-sha256-0.3.1.tgz#3639df0e1435cab03f4d9870cc3ac079e57a6fc9"
+  integrity sha512-hldFFYuf49ed7DAakWVXSJODuq3pzJEguD8tQ7h+sGkM18vja+OFoJI9krnGmgzyuZC2ETX0NOIcCTy31v2Mtg==
 
 "@chainsafe/bls-hd-key@^0.2.0":
   version "0.2.1"
@@ -481,12 +481,12 @@
     protobufjs "^6.11.2"
     uint8arrays "^3.0.0"
 
-"@chainsafe/persistent-merkle-tree@^0.4.0":
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.0.tgz#249abef9623d45889d71f0f7e807d3aa93472d21"
-  integrity sha512-xf/DfSAAeAnFOIlNG+m0IvaVK3ccc47vSLEPi0IgbOslXWa540Zxrr33PHbByKI4OhKBp+Zi58WHZAe5O/s2nQ==
+"@chainsafe/persistent-merkle-tree@^0.4.1":
+  version "0.4.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/persistent-merkle-tree/-/persistent-merkle-tree-0.4.1.tgz#b14163eb7f0240e5b821ced17355bd957704c110"
+  integrity sha512-/eDoJoj8Od4Wp7OSvwRRhl01mm4U0EGjh314/oV3JYS5pU92qPDvO4YRO68IEDvMzp0ewGSoC8muDQ5iArcwlw==
   dependencies:
-    "@chainsafe/as-sha256" "^0.3.0"
+    "@chainsafe/as-sha256" "^0.3.1"
 
 "@chainsafe/persistent-ts@^0.19.1":
   version "0.19.1"
@@ -505,13 +505,13 @@
     buffer-from "^1.1.1"
     snappy "^6.3.5"
 
-"@chainsafe/ssz@^0.9.0":
-  version "0.9.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.0.tgz#27e40fa3316ef8736bbae898bdf90c1dce4a7045"
-  integrity sha512-QTLxxcknbiFrpgK2FplAxqxAyi0AGDNoAyxaUUJGdG0mXU4WWIKKLXtYATAXOHVruTzKZeydHatkrpKyYRdyjw==
+"@chainsafe/ssz@^0.9.1":
+  version "0.9.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/ssz/-/ssz-0.9.1.tgz#dda45ae135089eb1754a5f21adb52b70a7fe6718"
+  integrity sha512-TstYq9W0Rh76sh8Ajj9nT54qGEikBN3vrHj/L607paf4dly+iNS1mn80W50z+LEKFK3/w3QnsZiL3bAnoXv0lA==
   dependencies:
-    "@chainsafe/as-sha256" "^0.3.0"
-    "@chainsafe/persistent-merkle-tree" "^0.4.0"
+    "@chainsafe/as-sha256" "^0.3.1"
+    "@chainsafe/persistent-merkle-tree" "^0.4.1"
     case "^1.6.3"
 
 "@cspotcode/source-map-consumer@0.8.0":
