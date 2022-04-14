@@ -41,6 +41,11 @@ export type HttpClientOptions = {
   fetch?: typeof fetch;
 };
 
+export type HttpClientModules = {
+  logger?: ILogger;
+  metrics?: Metrics;
+};
+
 export class HttpClient implements IHttpClient {
   readonly baseUrl: string;
   private readonly timeoutMs: number;
@@ -52,7 +57,7 @@ export class HttpClient implements IHttpClient {
   /**
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
-  constructor(opts: HttpClientOptions, {logger, metrics}: {logger?: ILogger; metrics?: Metrics} = {}) {
+  constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
@@ -90,7 +95,7 @@ export class HttpClient implements IHttpClient {
       const headers = opts.headers || {};
       if (opts.body) headers["Content-Type"] = "application/json";
 
-      this.logger?.debug("HttpClient request", {url, method: opts.method, routeId});
+      this.logger?.debug("HttpClient request", {routeId});
 
       const res = await this.fetch(url, {
         method: opts.method,
@@ -104,7 +109,7 @@ export class HttpClient implements IHttpClient {
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
-      this.logger?.debug("HttpClient response", {url, method: opts.method, routeId});
+      this.logger?.debug("HttpClient response", {routeId});
 
       return await getBody(res);
     } catch (e) {
