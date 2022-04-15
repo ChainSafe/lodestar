@@ -194,20 +194,22 @@ export class AttestationService {
 
     const signedAggregateAndProofs: phase0.SignedAggregateAndProof[] = [];
 
-    for (const {duty, selectionProof} of duties) {
-      const logCtxValidator = {...logCtx, validator: toHexString(duty.pubkey), validatorIndex: duty.validatorIndex};
-      try {
-        // Produce signed aggregates only for validators that are subscribed aggregators.
-        if (selectionProof !== null) {
-          signedAggregateAndProofs.push(
-            await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
-          );
-          this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
+    await Promise.all(
+      duties.map(async ({duty, selectionProof}) => {
+        const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
+        try {
+          // Produce signed aggregates only for validators that are subscribed aggregators.
+          if (selectionProof !== null) {
+            signedAggregateAndProofs.push(
+              await this.validatorStore.signAggregateAndProof(duty, selectionProof, aggregate.data)
+            );
+            this.logger.debug("Signed aggregateAndProofs", logCtxValidator);
+          }
+        } catch (e) {
+          this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e as Error);
         }
-      } catch (e) {
-        this.logger.error("Error signing aggregateAndProofs", logCtxValidator, e as Error);
-      }
-    }
+      })
+    );
 
     this.metrics?.attesterStepCallPublishAggregate.observe(this.clock.secFromSlot(attestation.slot + 2 / 3));
 

@@ -109,27 +109,29 @@ export class SyncCommitteeService {
     // Spec: the validator should prepare a SyncCommitteeMessage for the previous slot (slot - 1)
     // as soon as they have determined the head block of slot - 1
 
-    let blockRoot = this.chainHeaderTracker.getCurrentChainHead(slot);
-    if (blockRoot === null) {
-      const blockRootData = await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
-        throw extendError(e, "Error producing SyncCommitteeMessage");
-      });
-      blockRoot = blockRootData.data;
-    }
+    const blockRoot =
+      this.chainHeaderTracker.getCurrentChainHead(slot) ??
+      (
+        await this.api.beacon.getBlockRoot("head").catch((e: Error) => {
+          throw extendError(e, "Error producing SyncCommitteeMessage");
+        })
+      ).data;
 
     const signatures: altair.SyncCommitteeMessage[] = [];
 
-    for (const {duty} of duties) {
-      const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
-      try {
-        signatures.push(
-          await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, blockRoot)
-        );
-        this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
-      } catch (e) {
-        this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e as Error);
-      }
-    }
+    await Promise.all(
+      duties.map(async ({duty}) => {
+        const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
+        try {
+          signatures.push(
+            await this.validatorStore.signSyncCommitteeSignature(duty.pubkey, duty.validatorIndex, slot, blockRoot)
+          );
+          this.logger.debug("Signed SyncCommitteeMessage", logCtxValidator);
+        } catch (e) {
+          this.logger.error("Error signing SyncCommitteeMessage", logCtxValidator, e as Error);
+        }
+      })
+    );
 
     this.metrics?.syncCommitteeStepCallPublishMessage.observe(this.clock.secFromSlot(slot + 1 / 3));
 
@@ -178,20 +180,22 @@ export class SyncCommitteeService {
 
     const signedContributions: altair.SignedContributionAndProof[] = [];
 
-    for (const {duty, selectionProof} of duties) {
-      const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
-      try {
-        // Produce signed contributions only for validators that are subscribed aggregators.
-        if (selectionProof !== null) {
-          signedContributions.push(
-            await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution.data)
-          );
-          this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
+    await Promise.all(
+      duties.map(async ({duty, selectionProof}) => {
+        const logCtxValidator = {...logCtx, validatorIndex: duty.validatorIndex};
+        try {
+          // Produce signed contributions only for validators that are subscribed aggregators.
+          if (selectionProof !== null) {
+            signedContributions.push(
+              await this.validatorStore.signContributionAndProof(duty, selectionProof, contribution.data)
+            );
+            this.logger.debug("Signed SyncCommitteeContribution", logCtxValidator);
+          }
+        } catch (e) {
+          this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e as Error);
         }
-      } catch (e) {
-        this.logger.error("Error signing SyncCommitteeContribution", logCtxValidator, e as Error);
-      }
-    }
+      })
+    );
 
     this.metrics?.syncCommitteeStepCallPublishAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
 
