@@ -108,8 +108,7 @@ export class QueuedStateRegenerator implements IStateRegenerator {
     this.metrics?.regenFnCallTotal.inc({caller: rCaller, entrypoint: RegenFnName.getBlockSlotState});
 
     // The state is not immediately available in the caches, enqueue the job
-    const promise = this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
-    return promise;
+    return this.jobQueue.push({key: "getBlockSlotState", args: [blockRoot, slot, rCaller]});
   }
 
   async getState(stateRoot: RootHex, rCaller: RegenCaller): Promise<CachedBeaconStateAllForks> {

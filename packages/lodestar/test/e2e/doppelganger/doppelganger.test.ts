@@ -26,11 +26,10 @@ describe("doppelganger / doppelganger test", function () {
   });
 
   const validatorCount = 1;
-  const SECONDS_PER_SLOT = 2;
   const genesisSlotsDelay = 5;
   const beaconParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     // eslint-disable-next-line @typescript-eslint/naming-convention
-    SECONDS_PER_SLOT: SECONDS_PER_SLOT,
+    SECONDS_PER_SLOT: 2,
   };
 
   const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SECONDS_PER_SLOT * 1000;
@@ -87,21 +86,21 @@ describe("doppelganger / doppelganger test", function () {
 
     await Promise.all([...validatorsWithDoppelganger, ...validators].map((validator) => validator.start()));
 
-    expect(validators[0].getStatus()).to.be.equals(
+    expect(validators[0].getStatus()).to.be.equal(
       "running",
       "validator without doppelganger protection should be running"
     );
-    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equals(
+    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equal(
       "running",
       "validator with doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
     // After first checkpoint doppelganger protection should have stopped the validatorsWithDoppelganger
-    expect(validators[0].getStatus()).to.be.equals(
+    expect(validators[0].getStatus()).to.be.equal(
       "running",
       "validator without doppelganger protection should still be running after first epoch"
     );
-    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equals(
+    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equal(
       "stopped",
       "validator with doppelganger protection should be stopped after first epoch"
     );
@@ -159,20 +158,20 @@ describe("doppelganger / doppelganger test", function () {
 
     await Promise.all([...validatorsWithDoppelganger, ...validators].map((validator) => validator.start()));
 
-    expect(validators[0].getStatus()).to.be.equals(
+    expect(validators[0].getStatus()).to.be.equal(
       "running",
       "validator without doppelganger protection should be running"
     );
-    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equals(
+    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equal(
       "running",
       "validator with doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
-    expect(validators[0].getStatus()).to.be.equals(
+    expect(validators[0].getStatus()).to.be.equal(
       "running",
       "validator without doppelganger protection should still be running after first epoch"
     );
-    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equals(
+    expect(validatorsWithDoppelganger[0].getStatus()).to.be.equal(
       "running",
       "validator with doppelganger protection should still be active after first epoch"
     );

@@ -113,19 +113,19 @@ describe("api / impl / lodestar", function () {
       const previousEpoch = currentEpoch - 1;
 
       // current epoch is fine
-      await expect(client.getLiveness([1], currentEpoch)).to.eventually.not.be.rejected;
+      await expect(client.getLiveness([1], currentEpoch)).to.not.be.rejected;
       // next epoch is fine
-      await expect(client.getLiveness([1], nextEpoch)).to.eventually.not.be.rejected;
+      await expect(client.getLiveness([1], nextEpoch)).to.not.be.rejected;
       // previous epoch is fine
-      await expect(client.getLiveness([1], previousEpoch)).to.eventually.not.be.rejected;
+      await expect(client.getLiveness([1], previousEpoch)).to.not.be.rejected;
       // more than next epoch is not fine
-      await expect(client.getLiveness([1], currentEpoch + 2)).to.eventually.be.rejectedWith(
+      await expect(client.getLiveness([1], currentEpoch + 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch + 2
         } is more than one epoch previous or after from the current epoch ${currentEpoch}`
       );
       // more than previous epoch is not fine
-      await expect(client.getLiveness([1], currentEpoch - 2)).to.eventually.be.rejectedWith(
+      await expect(client.getLiveness([1], currentEpoch - 2)).to.be.rejectedWith(
         `Request epoch ${
           currentEpoch - 2
         } is more than one epoch previous or after from the current epoch ${currentEpoch}`

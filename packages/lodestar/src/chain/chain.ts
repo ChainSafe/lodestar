@@ -242,8 +242,7 @@ export class BeaconChain implements IBeaconChain {
     const currentEpochStartSlot = computeStartSlotAtEpoch(this.clock.currentEpoch);
     const head = this.forkChoice.getHead();
     const bestSlot = currentEpochStartSlot > head.slot ? currentEpochStartSlot : head.slot;
-    const beaconState = await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
-    return beaconState;
+    return await this.regen.getBlockSlotState(head.blockRoot, bestSlot, RegenCaller.getDuties);
   }
 
   async getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null> {

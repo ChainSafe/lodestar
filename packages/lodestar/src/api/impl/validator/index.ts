@@ -591,11 +591,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           data: [],
         };
       }
-      const state = await chain.getHeadStateAtCurrentEpoch();
-      const epochCtx = state.epochCtx;
-      if (epoch < epochCtx.previousShuffling.epoch || epoch > epochCtx.nextShuffling.epoch) {
+      const currentEpoch = chain.clock.currentEpoch;
+      if (epoch < currentEpoch - 1 || epoch > currentEpoch + 1) {
         throw new Error(
-          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${epochCtx.currentShuffling.epoch}`
+          `Request epoch ${epoch} is more than one epoch previous or after from the current epoch ${currentEpoch}`
         );
       }
 
