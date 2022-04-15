@@ -5,7 +5,7 @@ import {config} from "@chainsafe/lodestar-config/default";
 export function getApiClientStub(
   sandbox: SinonSandbox = sinon
 ): Api & {[K in keyof Api]: sinon.SinonStubbedInstance<Api[K]>} {
-  const api = getClient(config, {baseUrl: ""});
+  const api = getClient({baseUrl: ""}, {config});
 
   return {
     beacon: sandbox.stub(api.beacon),
