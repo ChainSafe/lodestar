@@ -149,9 +149,11 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
+  const delaySec = Date.now() / 1000 - (this.genesisTime + head.slot * this.config.SECONDS_PER_SLOT);
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
     headRoot: head.blockRoot,
+    delaySec,
   });
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
@@ -181,9 +183,11 @@ export async function onBlock(
 
   this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
 
+  const delaySec = Date.now() / 1000 - (this.genesisTime + block.message.slot * this.config.SECONDS_PER_SLOT);
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: blockRoot,
+    delaySec,
   });
 }
 
