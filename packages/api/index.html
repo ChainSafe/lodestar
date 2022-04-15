@@ -258,9 +258,9 @@
 <div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">getClient</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-api"</span><span class="p">;</span>
 <span class="k">import</span> <span class="p">{</span><span class="nx">config</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">"@chainsafe/lodestar-config/default"</span><span class="p">;</span>
 
-<span class="kd">const</span> <span class="nx">api</span> <span class="o">=</span> <span class="nx">getClient</span><span class="p">(</span><span class="nx">config</span><span class="p">,</span> <span class="p">{</span>
+<span class="kd">const</span> <span class="nx">api</span> <span class="o">=</span> <span class="nx">getClient</span><span class="p">({</span>
   <span class="nx">baseUrl</span><span class="o">:</span> <span class="s2">"http://localhost:9596"</span><span class="p">,</span>
-<span class="p">});</span>
+<span class="p">},</span> <span class="p">{</span><span class="nx">config</span><span class="p">});</span>
 
 <span class="nx">api</span><span class="p">.</span><span class="nx">beacon</span>
   <span class="p">.</span><span class="nx">getStateValidator</span><span class="p">(</span>

@@ -512,11 +512,11 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
 <h3 id="ivalidatorcliargs">IValidatorCliArgs<a class="headerlink" href="#ivalidatorcliargs" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IValidatorCliArgs</strong>: <em><a href="../../interfaces/cmds_account_cmds_validator.iaccountvalidatorargs/">IAccountValidatorArgs</a> &amp; <a href="../../interfaces/util.ilogargs/">ILogArgs</a> &amp; object &amp; <a href="../options/#keymanagerargs">KeymanagerArgs</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L14">packages/cli/src/cmds/validator/options.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L14">packages/cli/src/cmds/validator/options.ts:14</a></em></p>
 <hr/>
 <h3 id="ivalidatorpaths">IValidatorPaths<a class="headerlink" href="#ivalidatorpaths" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>IValidatorPaths</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/paths.ts#L5">packages/cli/src/cmds/validator/paths.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/paths.ts#L5">packages/cli/src/cmds/validator/paths.ts:5</a></em></p>
 <h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
 <ul>
 <li><strong>validatorsDbDir</strong>: <em>string</em></li>
@@ -524,7 +524,7 @@
 <hr/>
 <h3 id="signerremote">SignerRemote<a class="headerlink" href="#signerremote" title="Permanent link">¶</a></h3>
 <p>Ƭ <strong>SignerRemote</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L86">packages/cli/src/cmds/validator/keys.ts:86</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L86">packages/cli/src/cmds/validator/keys.ts:86</a></em></p>
 <h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
 <ul>
 <li>
@@ -537,16 +537,16 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-defaultvalidatorpaths"><code>Const</code> defaultValidatorPaths<a class="headerlink" href="#const-defaultvalidatorpaths" title="Permanent link">¶</a></h3>
 <p>• <strong>defaultValidatorPaths</strong>: <em><a href="./#ivalidatorpaths">IValidatorPaths</a> &amp; <a href="../../interfaces/paths.iglobalpaths/">IGlobalPaths</a></em> = getValidatorPaths({rootDir: "$rootDir"})</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/paths.ts#L35">packages/cli/src/cmds/validator/paths.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/paths.ts#L35">packages/cli/src/cmds/validator/paths.ts:35</a></em></p>
 <p>Constructs representations of the path structure to show in command's description</p>
 <hr/>
 <h3 id="const-depositdatapattern"><code>Const</code> depositDataPattern<a class="headerlink" href="#const-depositdatapattern" title="Permanent link">¶</a></h3>
 <p>• <strong>depositDataPattern</strong>: <em>RegExp‹›</em> = new RegExp(/^deposit_data-\d+.json$/gi)</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L16">packages/cli/src/cmds/validator/keys.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L16">packages/cli/src/cmds/validator/keys.ts:16</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="assertvalidexternalsignerurl">assertValidExternalSignerUrl<a class="headerlink" href="#assertvalidexternalsignerurl" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertValidExternalSignerUrl</strong>(<code>urlStr</code>: string): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L156">packages/cli/src/cmds/validator/keys.ts:156</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L156">packages/cli/src/cmds/validator/keys.ts:156</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -566,7 +566,7 @@
 <hr/>
 <h3 id="assertvalidpubkeyshex">assertValidPubkeysHex<a class="headerlink" href="#assertvalidpubkeyshex" title="Permanent link">¶</a></h3>
 <p>▸ <strong>assertValidPubkeysHex</strong>(<code>pubkeysHex</code>: string[]): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L149">packages/cli/src/cmds/validator/keys.ts:149</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L149">packages/cli/src/cmds/validator/keys.ts:149</a></em></p>
 <p>Ensure pubkeysHex are valid BLS pubkey (validate hex encoding and point)</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -587,7 +587,7 @@
 <hr/>
 <h3 id="getexternalsigners">getExternalSigners<a class="headerlink" href="#getexternalsigners" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getExternalSigners</strong>(<code>args</code>: <a href="./#ivalidatorcliargs">IValidatorCliArgs</a> &amp; <a href="../options/#iglobalargs">IGlobalArgs</a>): <em>Promise‹<a href="./#signerremote">SignerRemote</a>[]›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L94">packages/cli/src/cmds/validator/keys.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L94">packages/cli/src/cmds/validator/keys.ts:94</a></em></p>
 <p>Gets SignerRemote objects from CLI args</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -608,7 +608,7 @@
 <hr/>
 <h3 id="getlocalsecretkeys">getLocalSecretKeys<a class="headerlink" href="#getlocalsecretkeys" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getLocalSecretKeys</strong>(<code>args</code>: <a href="./#ivalidatorcliargs">IValidatorCliArgs</a> &amp; <a href="../options/#iglobalargs">IGlobalArgs</a>): <em>Promise‹object›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L18">packages/cli/src/cmds/validator/keys.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L18">packages/cli/src/cmds/validator/keys.ts:18</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -628,7 +628,7 @@
 <hr/>
 <h3 id="getvalidatorpaths">getValidatorPaths<a class="headerlink" href="#getvalidatorpaths" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getValidatorPaths</strong>(<code>args</code>: Partial‹<a href="./#ivalidatorpaths">IValidatorPaths</a>› &amp; Pick‹<a href="../options/#iglobalargs">IGlobalArgs</a>, "rootDir"›): <em><a href="./#ivalidatorpaths">IValidatorPaths</a> &amp; <a href="../../interfaces/paths.iglobalpaths/">IGlobalPaths</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/paths.ts#L18">packages/cli/src/cmds/validator/paths.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/paths.ts#L18">packages/cli/src/cmds/validator/paths.ts:18</a></em></p>
 <p>Defines the path structure of the validator files</p>
 <div class="highlight"><pre><span></span><code><span class="nv">$validatorRootDir</span>
 └── validator-db
@@ -653,7 +653,7 @@
 <hr/>
 <h3 id="groupexternalsignersbyurl">groupExternalSignersByUrl<a class="headerlink" href="#groupexternalsignersbyurl" title="Permanent link">¶</a></h3>
 <p>▸ <strong>groupExternalSignersByUrl</strong>(<code>externalSigners</code>: <a href="./#signerremote">SignerRemote</a>[]): <em>object[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L129">packages/cli/src/cmds/validator/keys.ts:129</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L129">packages/cli/src/cmds/validator/keys.ts:129</a></em></p>
 <p>Only used for logging remote signers grouped by URL</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -674,7 +674,7 @@
 <hr/>
 <h3 id="isvalidhttpurl">isValidHttpUrl<a class="headerlink" href="#isvalidhttpurl" title="Permanent link">¶</a></h3>
 <p>▸ <strong>isValidHttpUrl</strong>(<code>urlStr</code>: string): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L162">packages/cli/src/cmds/validator/keys.ts:162</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L162">packages/cli/src/cmds/validator/keys.ts:162</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -694,7 +694,7 @@
 <hr/>
 <h3 id="resolvekeystorepaths">resolveKeystorePaths<a class="headerlink" href="#resolvekeystorepaths" title="Permanent link">¶</a></h3>
 <p>▸ <strong>resolveKeystorePaths</strong>(<code>fileOrDirPath</code>: string): <em>string[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/keys.ts#L173">packages/cli/src/cmds/validator/keys.ts:173</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/keys.ts#L173">packages/cli/src/cmds/validator/keys.ts:173</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -714,7 +714,7 @@
 <hr/>
 <h3 id="validatorhandler">validatorHandler<a class="headerlink" href="#validatorhandler" title="Permanent link">¶</a></h3>
 <p>▸ <strong>validatorHandler</strong>(<code>args</code>: <a href="./#ivalidatorcliargs">IValidatorCliArgs</a> &amp; <a href="../options/#iglobalargs">IGlobalArgs</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/handler.ts#L20">packages/cli/src/cmds/validator/handler.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/handler.ts#L20">packages/cli/src/cmds/validator/handler.ts:20</a></em></p>
 <p>Runs a validator client.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -735,13 +735,13 @@
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
 <h3 id="const-validator"><code>Const</code> validator<a class="headerlink" href="#const-validator" title="Permanent link">¶</a></h3>
 <h3 id="validator-object">▪ <strong>validator</strong>: <em>object</em><a class="headerlink" href="#validator-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L7">packages/cli/src/cmds/validator/index.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L7">packages/cli/src/cmds/validator/index.ts:7</a></em></p>
 <h3 id="command">command<a class="headerlink" href="#command" title="Permanent link">¶</a></h3>
 <p>• <strong>command</strong>: <em>string</em> = "validator"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L8">packages/cli/src/cmds/validator/index.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L8">packages/cli/src/cmds/validator/index.ts:8</a></em></p>
 <h3 id="describe">describe<a class="headerlink" href="#describe" title="Permanent link">¶</a></h3>
 <p>• <strong>describe</strong>: <em>string</em> = "Run one or multiple validator clients"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L9">packages/cli/src/cmds/validator/index.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L9">packages/cli/src/cmds/validator/index.ts:9</a></em></p>
 <h3 id="examples">examples<a class="headerlink" href="#examples" title="Permanent link">¶</a></h3>
 <p>• <strong>examples</strong>: <em>object[]</em> = [
     {
@@ -751,35 +751,35 @@
         <code>${getAccountPaths({rootDir: ".prater"}).keystoresDir}</code>,
     },
   ]</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L10">packages/cli/src/cmds/validator/index.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L10">packages/cli/src/cmds/validator/index.ts:10</a></em></p>
 <h3 id="handler">handler<a class="headerlink" href="#handler" title="Permanent link">¶</a></h3>
 <p>• <strong>handler</strong>: <em><a href="./#validatorhandler">validatorHandler</a></em> = validatorHandler</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L19">packages/cli/src/cmds/validator/index.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L19">packages/cli/src/cmds/validator/index.ts:19</a></em></p>
 <h3 id="options">options<a class="headerlink" href="#options" title="Permanent link">¶</a></h3>
 <p>• <strong>options</strong>: <em>Required‹object›</em> = validatorOptions</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/index.ts#L18">packages/cli/src/cmds/validator/index.ts:18</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/index.ts#L18">packages/cli/src/cmds/validator/index.ts:18</a></em></p>
 <hr/>
 <h3 id="const-validatormetricsdefaultoptions"><code>Const</code> validatorMetricsDefaultOptions<a class="headerlink" href="#const-validatormetricsdefaultoptions" title="Permanent link">¶</a></h3>
 <h3 id="validatormetricsdefaultoptions-object">▪ <strong>validatorMetricsDefaultOptions</strong>: <em>object</em><a class="headerlink" href="#validatormetricsdefaultoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L8">packages/cli/src/cmds/validator/options.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L8">packages/cli/src/cmds/validator/options.ts:8</a></em></p>
 <h3 id="address">address<a class="headerlink" href="#address" title="Permanent link">¶</a></h3>
 <p>• <strong>address</strong>: <em>string</em> = "127.0.0.1"</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L11">packages/cli/src/cmds/validator/options.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L11">packages/cli/src/cmds/validator/options.ts:11</a></em></p>
 <h3 id="enabled">enabled<a class="headerlink" href="#enabled" title="Permanent link">¶</a></h3>
 <p>• <strong>enabled</strong>: <em>boolean</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L9">packages/cli/src/cmds/validator/options.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L9">packages/cli/src/cmds/validator/options.ts:9</a></em></p>
 <h3 id="port">port<a class="headerlink" href="#port" title="Permanent link">¶</a></h3>
 <p>• <strong>port</strong>: <em>number</em> = 5064</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L10">packages/cli/src/cmds/validator/options.ts:10</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L10">packages/cli/src/cmds/validator/options.ts:10</a></em></p>
 <hr/>
 <h3 id="const-validatoroptions"><code>Const</code> validatorOptions<a class="headerlink" href="#const-validatoroptions" title="Permanent link">¶</a></h3>
 <h3 id="validatoroptions-object">▪ <strong>validatorOptions</strong>: <em>object</em><a class="headerlink" href="#validatoroptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L35">packages/cli/src/cmds/validator/options.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L35">packages/cli/src/cmds/validator/options.ts:35</a></em></p>
 <h3 id="logfile">logFile<a class="headerlink" href="#logfile" title="Permanent link">¶</a></h3>
 <p>• <strong>logFile</strong>: <em>Options</em> = beaconPathsOptions.logFile</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L39">packages/cli/src/cmds/validator/options.ts:39</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L39">packages/cli/src/cmds/validator/options.ts:39</a></em></p>
 <p>▪ <strong>externalSignerFetchPubkeys</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L96">packages/cli/src/cmds/validator/options.ts:96</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L96">packages/cli/src/cmds/validator/options.ts:96</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Fetch then list of pubkeys to validate from an external signer"</p>
@@ -792,7 +792,7 @@
 </li>
 </ul>
 <p>▪ <strong>externalSignerPublicKeys</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L86">packages/cli/src/cmds/validator/options.ts:86</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L86">packages/cli/src/cmds/validator/options.ts:86</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "List of validator public keys used by an external signer. May also provide a single string a comma separated public keys"</p>
@@ -808,7 +808,7 @@
 </li>
 </ul>
 <p>▪ <strong>externalSignerUrl</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L80">packages/cli/src/cmds/validator/options.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L80">packages/cli/src/cmds/validator/options.ts:80</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "URL to connect to an external signing server"</p>
@@ -821,7 +821,7 @@
 </li>
 </ul>
 <p>▪ <strong>force</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L53">packages/cli/src/cmds/validator/options.ts:53</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L53">packages/cli/src/cmds/validator/options.ts:53</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Open validators even if there's a lockfile. Use with caution"</p>
@@ -831,7 +831,7 @@
 </li>
 </ul>
 <p>▪ <strong>fromMnemonic</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L133">packages/cli/src/cmds/validator/options.ts:133</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L133">packages/cli/src/cmds/validator/options.ts:133</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "UNSAFE. Run keys from a mnemonic. Requires mnemonicIndexes option"</p>
@@ -844,7 +844,7 @@
 </li>
 </ul>
 <p>▪ <strong>graffiti</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L58">packages/cli/src/cmds/validator/options.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L58">packages/cli/src/cmds/validator/options.ts:58</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)"</p>
@@ -854,7 +854,7 @@
 </li>
 </ul>
 <p>▪ <strong>importKeystoresPassword</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L70">packages/cli/src/cmds/validator/options.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L70">packages/cli/src/cmds/validator/options.ts:70</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = "./password.txt"</p>
@@ -867,7 +867,7 @@
 </li>
 </ul>
 <p>▪ <strong>importKeystoresPath</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L64">packages/cli/src/cmds/validator/options.ts:64</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L64">packages/cli/src/cmds/validator/options.ts:64</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = "./keystores/*.json"</p>
@@ -880,7 +880,7 @@
 </li>
 </ul>
 <p>▪ <strong>interopIndexes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L127">packages/cli/src/cmds/validator/options.ts:127</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L127">packages/cli/src/cmds/validator/options.ts:127</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "Range (inclusive) of interop key indexes to validate with: 0..16"</p>
@@ -893,7 +893,7 @@
 </li>
 </ul>
 <p>▪ <strong>metrics.address</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L118">packages/cli/src/cmds/validator/options.ts:118</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L118">packages/cli/src/cmds/validator/options.ts:118</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = String(validatorMetricsDefaultOptions.address)</p>
@@ -909,7 +909,7 @@
 </li>
 </ul>
 <p>▪ <strong>metrics.enabled</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L104">packages/cli/src/cmds/validator/options.ts:104</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L104">packages/cli/src/cmds/validator/options.ts:104</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = String(validatorMetricsDefaultOptions.enabled)</p>
@@ -925,7 +925,7 @@
 </li>
 </ul>
 <p>▪ <strong>metrics.port</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L111">packages/cli/src/cmds/validator/options.ts:111</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L111">packages/cli/src/cmds/validator/options.ts:111</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = String(validatorMetricsDefaultOptions.port)</p>
@@ -941,7 +941,7 @@
 </li>
 </ul>
 <p>▪ <strong>mnemonicIndexes</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L139">packages/cli/src/cmds/validator/options.ts:139</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L139">packages/cli/src/cmds/validator/options.ts:139</a></em></p>
 <ul>
 <li>
 <p><strong>description</strong>: <em>string</em> = "UNSAFE. Range (inclusive) of mnemonic key indexes to validate with: 0..16"</p>
@@ -954,7 +954,7 @@
 </li>
 </ul>
 <p>▪ <strong>server</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L47">packages/cli/src/cmds/validator/options.ts:47</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L47">packages/cli/src/cmds/validator/options.ts:47</a></em></p>
 <ul>
 <li>
 <p><strong>default</strong>: <em>string</em> = "http://127.0.0.1:9596"</p>
@@ -967,7 +967,7 @@
 </li>
 </ul>
 <p>▪ <strong>validatorsDbDir</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/540ec10/packages/cli/src/cmds/validator/options.ts#L41">packages/cli/src/cmds/validator/options.ts:41</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/cli/src/cmds/validator/options.ts#L41">packages/cli/src/cmds/validator/options.ts:41</a></em></p>
 <ul>
 <li>
 <p><strong>defaultDescription</strong>: <em>string</em> = defaultValidatorPaths.validatorsDbDir</p>
