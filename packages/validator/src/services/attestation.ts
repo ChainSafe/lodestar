@@ -50,8 +50,8 @@ export class AttestationService {
 
   private runAttestationTasks = async (slot: Slot, signal: AbortSignal): Promise<void> => {
     // Fetch info first so a potential delay is absorved by the sleep() below
-    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
-    if (dutiesByCommitteeIndex.size === 0) {
+    const duties = this.dutiesService.getDutiesAtSlot(slot);
+    if (duties.length === 0) {
       return;
     }
 
@@ -65,43 +65,24 @@ export class AttestationService {
     // Produce a single attestation for all committees, and clone mutate before signing
     const attestationNoCommittee = await this.produceAttestation(slot);
 
-    // Step 1. Mutate, and sign `Attestation` for each validator.
-    const dutiesByAttestationData = new Map<phase0.AttestationData, AttDutyAndProof[]>();
-    const signedAttestations = (
-      await Promise.all(
-        Array.from(dutiesByCommitteeIndex.entries()).map(async ([committeeIndex, duties]) => {
-          const attestationData: phase0.AttestationData = {...attestationNoCommittee, index: committeeIndex};
-          dutiesByAttestationData.set(attestationData, duties);
-          return await this.signAttestations(slot, attestationData, duties);
-        })
-      )
-    ).flat();
+    // Step 1. Mutate, and sign `Attestation` for each validator. Then publish all `Attestations` in one go
+    await this.signAndPublishAttestations(slot, attestationNoCommittee, duties);
 
-    // Step 2. Publish all `Attestations` in one go
-    const attestationCount = signedAttestations.length;
-    if (attestationCount > 0) {
-      try {
-        await this.api.beacon.submitPoolAttestations(signedAttestations);
-        this.logger.info("Published attestations", {slot, attestationCount});
-        this.metrics?.publishedAttestations.inc(attestationCount);
-      } catch (e) {
-        this.metrics?.attestaterError.inc({error: "publish"}, attestationCount);
-        this.logger.error("Error publishing attestations", {slot, attestationCount}, e as Error);
-      }
-    }
-
-    // Step 3. after all attestations are submitted, make an aggregate.
+    // Step 2. after all attestations are submitted, make an aggregate.
     // First, wait until the `aggregation_production_instant` (2/3rds of the way though the slot)
     await sleep(this.clock.msToSlot(slot + 2 / 3), signal);
     this.metrics?.attesterStepCallProduceAggregate.observe(this.clock.secFromSlot(slot + 2 / 3));
+
+    const dutiesByCommitteeIndex = groupAttDutiesByCommitteeIndex(this.dutiesService.getDutiesAtSlot(slot));
 
     // Then download, sign and publish a `SignedAggregateAndProof` for each
     // validator that is elected to aggregate for this `slot` and
     // `committeeIndex`.
     await Promise.all(
-      Array.from(dutiesByAttestationData.entries()).map(([attestation, duties]) =>
-        this.produceAndPublishAggregates(attestation, duties)
-      )
+      Array.from(dutiesByCommitteeIndex.entries()).map(([index, duties]) => {
+        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
+        return this.produceAndPublishAggregates(attestationData, duties);
+      })
     );
   };
 
@@ -124,41 +105,6 @@ export class AttestationService {
   }
 
   /**
-   * Only one `Attestation` is downloaded from the BN. It is then signed by each
-   * validator and the list of individually-signed `Attestation` objects is returned to the BN.
-   */
-  private async signAttestations(
-    slot: Slot,
-    attestationData: phase0.AttestationData,
-    duties: AttDutyAndProof[]
-  ): Promise<phase0.Attestation[]> {
-    if (duties.length === 0) return [];
-
-    const logCtx = {slot, index: attestationData.index};
-
-    const currentEpoch = computeEpochAtSlot(slot);
-    const signedAttestations: phase0.Attestation[] = [];
-
-    for (const {duty} of duties) {
-      const logCtxValidator = {
-        ...logCtx,
-        head: toHexString(attestationData.beaconBlockRoot),
-        validatorIndex: duty.validatorIndex,
-      };
-      try {
-        signedAttestations.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
-        this.logger.debug("Signed attestation", logCtxValidator);
-      } catch (e) {
-        this.metrics?.attestaterError.inc({error: "sign"});
-        this.logger.error("Error signing attestation", logCtxValidator, e as Error);
-      }
-    }
-
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(attestationData.slot + 1 / 3));
-    return signedAttestations;
-  }
-
-  /**
    * Performs the first step of the attesting process: downloading one `Attestation` object.
    * Beacon node's endpoint produceAttestationData return data is not dependant on committeeIndex.
    * For a validator client with many validators this allows to do a single call for all committees
@@ -171,6 +117,51 @@ export class AttestationService {
       throw extendError(e, "Error producing attestation");
     });
     return attestationRes.data;
+  }
+
+  /**
+   * Only one `Attestation` is downloaded from the BN. It is then signed by each
+   * validator and the list of individually-signed `Attestation` objects is returned to the BN.
+   */
+  private async signAndPublishAttestations(
+    slot: Slot,
+    attestationNoCommittee: phase0.AttestationData,
+    duties: AttDutyAndProof[]
+  ): Promise<void> {
+    const signedAttestations: phase0.Attestation[] = [];
+    const headRootHex = toHexString(attestationNoCommittee.beaconBlockRoot);
+    const currentEpoch = computeEpochAtSlot(slot);
+
+    await Promise.all(
+      duties.map(async ({duty}) => {
+        const index = duty.committeeIndex;
+        const attestationData: phase0.AttestationData = {...attestationNoCommittee, index};
+        const logCtxValidator = {slot, index, head: headRootHex, validatorIndex: duty.validatorIndex};
+
+        try {
+          signedAttestations.push(await this.validatorStore.signAttestation(duty, attestationData, currentEpoch));
+          this.logger.debug("Signed attestation", logCtxValidator);
+        } catch (e) {
+          this.metrics?.attestaterError.inc({error: "sign"});
+          this.logger.error("Error signing attestation", logCtxValidator, e as Error);
+        }
+      })
+    );
+
+    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
+
+    // Step 2. Publish all `Attestations` in one go
+    if (signedAttestations.length > 0) {
+      try {
+        await this.api.beacon.submitPoolAttestations(signedAttestations);
+        this.logger.info("Published attestations", {slot, count: signedAttestations.length});
+        this.metrics?.publishedAttestations.inc(signedAttestations.length);
+      } catch (e) {
+        // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
+        this.metrics?.attestaterError.inc({error: "publish"});
+        this.logger.error("Error publishing attestations", {slot}, e as Error);
+      }
+    }
   }
 
   /**
