@@ -328,13 +328,13 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
 <h3 id="const-max_api_clock_disparity_ms"><code>Const</code> MAX_API_CLOCK_DISPARITY_MS<a class="headerlink" href="#const-max_api_clock_disparity_ms" title="Permanent link">¶</a></h3>
 <p>• <strong>MAX_API_CLOCK_DISPARITY_MS</strong>: <em>1000</em> = 1000</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/lodestar/src/api/impl/validator/index.ts#L37">packages/lodestar/src/api/impl/validator/index.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9f0c7a6/packages/lodestar/src/api/impl/validator/index.ts#L37">packages/lodestar/src/api/impl/validator/index.ts:37</a></em></p>
 <p>Validator clock may be advanced from beacon's clock. If the validator requests a resource in a
 future slot, wait some time instead of rejecting the request because it's in the future</p>
 <hr/>
 <h3 id="const-sync_tolerance_epochs"><code>Const</code> SYNC_TOLERANCE_EPOCHS<a class="headerlink" href="#const-sync_tolerance_epochs" title="Permanent link">¶</a></h3>
 <p>• <strong>SYNC_TOLERANCE_EPOCHS</strong>: <em>1</em> = 1</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/lodestar/src/api/impl/validator/index.ts#L52">packages/lodestar/src/api/impl/validator/index.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9f0c7a6/packages/lodestar/src/api/impl/validator/index.ts#L52">packages/lodestar/src/api/impl/validator/index.ts:52</a></em></p>
 <p>If the node is within this many epochs from the head, we declare it to be synced regardless of
 the network sync state.</p>
 <p>This helps prevent attacks where nodes can convince us that we're syncing some non-existent
@@ -347,7 +347,7 @@ caches are better.</p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
 <h3 id="computesubnetforcommitteesatslot">computeSubnetForCommitteesAtSlot<a class="headerlink" href="#computesubnetforcommitteesatslot" title="Permanent link">¶</a></h3>
 <p>▸ <strong>computeSubnetForCommitteesAtSlot</strong>(<code>slot</code>: Slot, <code>committeesAtSlot</code>: number, <code>committeeIndex</code>: CommitteeIndex): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/lodestar/src/api/impl/validator/utils.ts#L5">packages/lodestar/src/api/impl/validator/utils.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9f0c7a6/packages/lodestar/src/api/impl/validator/utils.ts#L5">packages/lodestar/src/api/impl/validator/utils.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -375,7 +375,7 @@ caches are better.</p>
 <hr/>
 <h3 id="getpubkeysforindices">getPubkeysForIndices<a class="headerlink" href="#getpubkeysforindices" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getPubkeysForIndices</strong>(<code>validators</code>: BeaconStateAllForks["validators"], <code>indexes</code>: ValidatorIndex[]): <em>BLSPubkey[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/lodestar/src/api/impl/validator/utils.ts#L24">packages/lodestar/src/api/impl/validator/utils.ts:24</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9f0c7a6/packages/lodestar/src/api/impl/validator/utils.ts#L24">packages/lodestar/src/api/impl/validator/utils.ts:24</a></em></p>
 <p>Precompute all pubkeys for given <code>validatorIndices</code>. Ensures that all <code>validatorIndices</code> are known
 before doing other expensive logic.</p>
 <p>Uses special BranchNodeStruct state.validators data structure to optimize getting pubkeys.
@@ -405,7 +405,7 @@ Note: This is the fastest way of getting compressed pubkeys.
 <hr/>
 <h3 id="getvalidatorapi">getValidatorApi<a class="headerlink" href="#getvalidatorapi" title="Permanent link">¶</a></h3>
 <p>▸ <strong>getValidatorApi</strong>(<code>__namedParameters</code>: object): <em>routes.validator.Api</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/8898b2a/packages/lodestar/src/api/impl/validator/index.ts#L58">packages/lodestar/src/api/impl/validator/index.ts:58</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/9f0c7a6/packages/lodestar/src/api/impl/validator/index.ts#L58">packages/lodestar/src/api/impl/validator/index.ts:58</a></em></p>
 <p>Server implementation for handling validator duties.
 See <code>@chainsafe/lodestar-validator/src/api</code> for the client implementation).</p>
 <p><strong>Parameters:</strong></p>
