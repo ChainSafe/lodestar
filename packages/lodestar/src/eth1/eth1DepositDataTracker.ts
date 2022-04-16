@@ -152,7 +152,12 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
-    const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE);
+    const remoteFollowBlock = remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE;
+
+    // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
+    // fetch and track any deposit data yet
+    if (remoteFollowBlock < this.eth1Provider.deployBlock ?? 0) return true;
+
     const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
     return hasCaughtUpDeposits && hasCaughtUpBlocks;
@@ -194,10 +199,17 @@ export class Eth1DepositDataTracker {
     // lowestEventBlockNumber set a lower bound of possible block range to fetch in this update
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
 
-    // If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
-    // So there's not useful blocks to fetch until at least 1 deposit is found. So updateBlockCache() returns true
-    // because is has caught up to all possible data to fetch which is none.
-    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
+    // We are all caught up if:
+    //  1. If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
+    //     So there's not useful blocks to fetch until at least 1 deposit is found.
+    //  2. If the remoteFollowBlock is behind the lowestEventBlockNumber. This can happen
+    //     if the EL's data was wiped and restarted. Not exiting here would other wise
+    //     cause a NO_DEPOSITS_FOR_BLOCK_RANGE error
+    if (
+      lowestEventBlockNumber === null ||
+      lastProcessedDepositBlockNumber === null ||
+      remoteFollowBlock < lowestEventBlockNumber
+    ) {
       return true;
     }
 
