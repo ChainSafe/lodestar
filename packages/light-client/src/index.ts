@@ -484,7 +484,7 @@ export class Lightclient {
           prevHeadRoot: prevFinalized.blockRoot,
         });
       }
-      this.logger.info("Head updated", {
+      this.logger.info("Finalized updated", {
         slot: finalizedHeader.slot,
         root: finalizedBlockRootHex,
       });
