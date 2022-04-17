@@ -1,21 +1,30 @@
-import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
-import {toHexString} from "@chainsafe/ssz";
-import {getDevBeaconNode} from "../utils/node/beacon";
-import {waitForEvent} from "../utils/events/resolver";
-import {getAndInitDevValidators} from "../utils/node/validator";
-import {ChainEvent} from "../../src/chain";
-import {RestApiOptions} from "../../src/api/rest";
-import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
-import {logFilesDir} from "./params";
-import {simTestInfoTracker} from "../utils/node/simTest";
-import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
+import {expect} from "chai";
+import {SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE} from "@chainsafe/lodestar-params";
+import {altair, phase0} from "@chainsafe/lodestar-types";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
 import {IChainConfig} from "@chainsafe/lodestar-config";
-import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {sleep, TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {createExternalSignerServer} from "@chainsafe/lodestar-validator/test/utils/createExternalSignerServer";
+import {logFilesDir} from "./params";
+import {getDevBeaconNode} from "../utils/node/beacon";
+import {simTestInfoTracker} from "../utils/node/simTest";
+import {waitForEvent} from "../utils/events/resolver";
+import {testLogger, TestLoggerOpts, LogLevel} from "../utils/logger";
+import {getAndInitDevValidators} from "../utils/node/validator";
+import {ChainEvent} from "../../src/chain";
+import {RestApiOptions} from "../../src/api";
+import {INTEROP_BLOCK_HASH} from "../../src/node/utils/interop/state";
+import {BeaconNode} from "../../src";
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
+
+type TestCase = {
+  event: ChainEvent.justified | ChainEvent.finalized;
+  altairEpoch: number;
+  bellatrixEpoch: number;
+  withExternalSigner?: boolean;
+};
 
 describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
@@ -25,12 +34,7 @@ describe("Run single node single thread interop validators (no eth1) until check
   const validatorClientCount = 1;
   const validatorsPerClient = 32;
 
-  const testCases: {
-    event: ChainEvent.justified | ChainEvent.finalized;
-    altairEpoch: number;
-    bellatrixEpoch: number;
-    withExternalSigner?: boolean;
-  }[] = [
+  const testCases: TestCase[] = [
     // phase0 fork only
     {event: ChainEvent.finalized, altairEpoch: Infinity, bellatrixEpoch: Infinity},
     // altair fork only
@@ -57,7 +61,8 @@ describe("Run single node single thread interop validators (no eth1) until check
     afterEachCallbacks.length = 0;
   });
 
-  for (const {event, altairEpoch, bellatrixEpoch, withExternalSigner} of testCases) {
+  for (const testCase of testCases) {
+    const {event, altairEpoch, bellatrixEpoch, withExternalSigner} = testCase;
     const testIdStr = [
       `altair-${altairEpoch}`,
       `bellatrix-${bellatrixEpoch}`,
@@ -142,12 +147,32 @@ describe("Run single node single thread interop validators (no eth1) until check
       // Wait for test to complete
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, event, timeout);
 
-      console.log(`\nGot event ${event}, stopping validators and nodes\n`);
+      console.log(`\nGot event ${event}, Running assertations\n`);
+
+      await runAssertions(bn, testCase);
+
+      console.log("\nStopping validators and nodes\n");
 
       // wait for 1 slot
-      await sleep(1 * bn.config.SECONDS_PER_SLOT * 1000);
+      await sleep(bn.config.SECONDS_PER_SLOT * 1000);
       console.log("\n\nDone\n\n");
       await sleep(1000);
     });
   }
 });
+
+async function assertSyncCommitteeParticipation(bn: BeaconNode): Promise<void> {
+  const headSummary = bn.chain.forkChoice.getHead();
+  const head = (await bn.db.block.get(fromHexString(headSummary.blockRoot))) as altair.SignedBeaconBlock;
+
+  expect(head.message.body.syncAggregate.syncCommitteeBits.getTrueBitIndexes().length).to.equal(
+    SYNC_COMMITTEE_SIZE,
+    "Wrong sync committee size"
+  );
+}
+
+async function runAssertions(bn: BeaconNode, testCase: TestCase): Promise<void> {
+  if (testCase.altairEpoch != Infinity) {
+    await assertSyncCommitteeParticipation(bn);
+  }
+}
