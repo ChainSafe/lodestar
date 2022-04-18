@@ -1,9 +1,9 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {phase0, Slot, ssz} from "@chainsafe/lodestar-types";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {extendError, sleep} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
-import {extendError, IClock, ILoggerVc} from "../util";
+import {IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {AttestationDutiesService, AttDutyAndProof} from "./attestationDuties";
 import {groupAttDutiesByCommitteeIndex} from "./utils";

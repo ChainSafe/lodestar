@@ -1,10 +1,10 @@
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Slot, CommitteeIndex, altair, Root} from "@chainsafe/lodestar-types";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {extendError, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, ILoggerVc} from "../util";
+import {IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {SyncCommitteeDutiesService, SyncDutyAndProofs} from "./syncCommitteeDuties";
 import {groupSyncDutiesBySubcommitteeIndex, SubcommitteeDuty} from "./utils";

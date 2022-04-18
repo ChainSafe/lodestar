@@ -1,10 +1,10 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {prettyBytes} from "@chainsafe/lodestar-utils";
+import {extendError, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, ILoggerVc} from "../util";
+import {IClock, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
 import {PubkeyHex} from "../types";
