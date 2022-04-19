@@ -203,8 +203,9 @@ export class LightClientServer {
     // In skipped slots the next value of blockRoots is set to the last block root.
     // So rootSigned will always equal to the parentBlock.
     const signedBlockRoot = block.parentRoot;
+    const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(block.body.syncAggregate, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
     });
 
@@ -419,7 +420,11 @@ export class LightClientServer {
    *
    * 3. On new blocks use `block.body.sync_aggregate`, `block.parent_root` and `block.slot - 1`
    */
-  private async onSyncAggregate(syncAggregate: altair.SyncAggregate, signedBlockRoot: Root): Promise<void> {
+  private async onSyncAggregate(
+    syncPeriod: SyncPeriod,
+    syncAggregate: altair.SyncAggregate,
+    signedBlockRoot: Root
+  ): Promise<void> {
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
@@ -448,7 +453,7 @@ export class LightClientServer {
     }
 
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncAggregate, attestedData);
+    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
   }
 
   /**
@@ -456,11 +461,11 @@ export class LightClientServer {
    * that sync period.
    */
   private async maybeStoreNewBestPartialUpdate(
+    syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const period = computeSyncPeriodAtSlot(attestedData.attestedHeader.slot);
-    const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten
       return;
@@ -484,9 +489,12 @@ export class LightClientServer {
       newPartialUpdate = {...attestedData, syncAggregate};
     }
 
-    await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
+    // attestedData and the block of syncAggregate may not be in same sync period
+    // should not use attested data slot as sync period
+    // see https://github.com/ChainSafe/lodestar/issues/3933
+    await this.db.bestPartialLightClientUpdate.put(syncPeriod, newPartialUpdate);
     this.logger.debug("Stored new PartialLightClientUpdate", {
-      period,
+      syncPeriod,
       isFinalized: attestedData.isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
