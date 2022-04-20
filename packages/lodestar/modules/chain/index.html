@@ -1,697 +1,1142 @@
 
-<!DOCTYPE html>
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Lodestar documentation - Typescript Ethereum Consensus client">
+      
+      
+      
+        <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain/">
+      
+      <link rel="icon" href="../../../../assets/round-icon.ico">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.9">
+    
+    
+      
+        <title>Chain - Lodestar documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.120efc48.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../../assets/stylesheets/palette.9647289d.min.css">
+        
+      
+    
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../../stylesheets/extras.css">
+    
+    <script>__md_scope=new URL("../../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
 
-<html class="no-js" lang="en">
-<head>
-<meta charset="utf-8"/>
-<meta content="width=device-width,initial-scale=1" name="viewport"/>
-<meta content="Lodestar documentation - Typescript Ethereum Consensus client" name="description"/>
-<link href="https://chainsafe.github.io/lodestar/packages/lodestar/modules/chain/" rel="canonical"/>
-<link href="../../../../assets/round-icon.ico" rel="icon"/>
-<meta content="mkdocs-1.3.0, mkdocs-material-8.2.9" name="generator"/>
-<title>Chain - Lodestar documentation</title>
-<link href="../../../../assets/stylesheets/main.120efc48.min.css" rel="stylesheet"/>
-<link href="../../../../assets/stylesheets/palette.9647289d.min.css" rel="stylesheet"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&amp;display=fallback" rel="stylesheet"/>
-<style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
-<link href="../../../../stylesheets/extras.css" rel="stylesheet"/>
-<script>__md_scope=new URL("../../../..",location),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
-</head>
-<body data-md-color-accent="deep-purple" data-md-color-primary="black" data-md-color-scheme="preference" dir="ltr">
-<script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
-<input autocomplete="off" class="md-toggle" data-md-toggle="drawer" id="__drawer" type="checkbox"/>
-<input autocomplete="off" class="md-toggle" data-md-toggle="search" id="__search" type="checkbox"/>
-<label class="md-overlay" for="__drawer"></label>
-<div data-md-component="skip">
-<a class="md-skip" href="#module-chain">
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="preference" data-md-color-primary="black" data-md-color-accent="deep-purple">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#module-chain" class="md-skip">
           Skip to content
         </a>
-</div>
-<div data-md-component="announce">
-</div>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
 <header class="md-header" data-md-component="header">
-<nav aria-label="Header" class="md-header__inner md-grid">
-<a aria-label="Lodestar documentation" class="md-header__button md-logo" data-md-component="logo" href="../../../.." title="Lodestar documentation">
-<img alt="logo" src="../../../../assets/lodestar_icon_300.png"/>
-</a>
-<label class="md-header__button md-icon" for="__drawer">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"></path></svg>
-</label>
-<div class="md-header__title" data-md-component="header-title">
-<div class="md-header__ellipsis">
-<div class="md-header__topic">
-<span class="md-ellipsis">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../../.." title="Lodestar documentation" class="md-header__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+      
+  <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
             Lodestar documentation
           </span>
-</div>
-<div class="md-header__topic" data-md-component="header-topic">
-<span class="md-ellipsis">
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
             
               Chain
             
           </span>
-</div>
-</div>
-</div>
-<form class="md-header__option" data-md-component="palette">
-<input aria-label="Switch to dark mode" class="md-option" data-md-color-accent="deep-purple" data-md-color-media="(prefers-color-scheme: light)" data-md-color-primary="black" data-md-color-scheme="preference" id="__palette_1" name="__palette" type="radio"/>
-<label class="md-header__button md-icon" for="__palette_2" hidden="" title="Switch to dark mode">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"></path></svg>
-</label>
-<input aria-label="Switch to light mode" class="md-option" data-md-color-accent="deep-purple" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-primary="black" data-md-color-scheme="slate" id="__palette_2" name="__palette" type="radio"/>
-<label class="md-header__button md-icon" for="__palette_1" hidden="" title="Switch to light mode">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"></path></svg>
-</label>
-</form>
-<label class="md-header__button md-icon" for="__search">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"></path></svg>
-</label>
-<div class="md-search" data-md-component="search" role="dialog">
-<label class="md-search__overlay" for="__search"></label>
-<div class="md-search__inner" role="search">
-<form class="md-search__form" name="search">
-<input aria-label="Search" autocapitalize="off" autocomplete="off" autocorrect="off" class="md-search__input" data-md-component="search-query" name="query" placeholder="Search" required="" spellcheck="false" type="text"/>
-<label class="md-search__icon md-icon" for="__search">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"></path></svg>
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"></path></svg>
-</label>
-<nav aria-label="Search" class="md-search__options">
-<button aria-label="Clear" class="md-search__icon md-icon" tabindex="-1" type="reset">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"></path></svg>
-</button>
-</nav>
-</form>
-<div class="md-search__output">
-<div class="md-search__scrollwrap" data-md-scrollfix="">
-<div class="md-search-result" data-md-component="search-result">
-<div class="md-search-result__meta">
+        </div>
+      </div>
+    </div>
+    
+      <form class="md-header__option" data-md-component="palette">
+        
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="preference" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+          
+            <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3 3.19.09m3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95 2.06.05m-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31Z"/></svg>
+            </label>
+          
+        
+          
+          
+          <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="deep-purple"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+          
+            <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5c-.84 0-1.65.15-2.39.42L12 2M3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29L3.34 7m.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14L3.36 17M20.65 7l-1.77 3.79a7.023 7.023 0 0 0-2.38-4.15l4.15.36m-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29L20.64 17M12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44L12 22Z"/></svg>
+            </label>
+          
+        
+      </form>
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" aria-label="Clear" tabindex="-1">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
             Initializing search
           </div>
-<ol class="md-search-result__list"></ol>
+          <ol class="md-search-result__list"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
-</div>
-</div>
-</div>
-</div>
-<div class="md-header__source">
-<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar" title="Go to repository">
-<div class="md-source__icon md-icon">
-<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
-</div>
-<div class="md-source__repository">
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/chainsafe/lodestar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
     chainsafe/lodestar
   </div>
 </a>
-</div>
-</nav>
+      </div>
+    
+  </nav>
+  
 </header>
-<div class="md-container" data-md-component="container">
-<main class="md-main" data-md-component="main">
-<div class="md-main__inner md-grid">
-<div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation">
-<div class="md-sidebar__scrollwrap">
-<div class="md-sidebar__inner">
-<nav aria-label="Navigation" class="md-nav md-nav--primary" data-md-level="0">
-<label class="md-nav__title" for="__drawer">
-<a aria-label="Lodestar documentation" class="md-nav__button md-logo" data-md-component="logo" href="../../../.." title="Lodestar documentation">
-<img alt="logo" src="../../../../assets/lodestar_icon_300.png"/>
-</a>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../../.." title="Lodestar documentation" class="md-nav__button md-logo" aria-label="Lodestar documentation" data-md-component="logo">
+      
+  <img src="../../../../assets/lodestar_icon_300.png" alt="logo">
+
+    </a>
     Lodestar documentation
   </label>
-<div class="md-nav__source">
-<a class="md-source" data-md-component="source" href="https://github.com/chainsafe/lodestar" title="Go to repository">
-<div class="md-source__icon md-icon">
-<svg viewbox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"></path></svg>
-</div>
-<div class="md-source__repository">
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/chainsafe/lodestar" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
     chainsafe/lodestar
   </div>
 </a>
-</div>
-<ul class="md-nav__list" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../..">
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../.." class="md-nav__link">
         Getting started
       </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../installation/">
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../installation/" class="md-nav__link">
         Installation
       </a>
-</li>
-<li class="md-nav__item md-nav__item--nested">
-<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" id="__nav_3" type="checkbox"/>
-<label class="md-nav__link" for="__nav_3">
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_3" type="checkbox" id="__nav_3" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_3">
           CLI Usage
           <span class="md-nav__icon md-icon"></span>
-</label>
-<nav aria-label="CLI Usage" class="md-nav" data-md-level="1">
-<label class="md-nav__title" for="__nav_3">
-<span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="CLI Usage" data-md-level="1">
+        <label class="md-nav__title" for="__nav_3">
+          <span class="md-nav__icon md-icon"></span>
           CLI Usage
         </label>
-<ul class="md-nav__list" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../usage/testnet/">
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../usage/testnet/" class="md-nav__link">
         Mainnet or public testnet
       </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../usage/local/">
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../usage/local/" class="md-nav__link">
         Local testnet
       </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../usage/key-management/">
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../usage/key-management/" class="md-nav__link">
         Key management
       </a>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../usage/prometheus-grafana/">
-        Prometheus &amp; Grafana Setup
+    </li>
+  
+
+            
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../usage/prometheus-grafana/" class="md-nav__link">
+        Prometheus & Grafana Setup
       </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item md-nav__item--nested">
-<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" id="__nav_4" type="checkbox"/>
-<label class="md-nav__link" for="__nav_4">
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_4" type="checkbox" id="__nav_4" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_4">
           Reference
           <span class="md-nav__icon md-icon"></span>
-</label>
-<nav aria-label="Reference" class="md-nav" data-md-level="1">
-<label class="md-nav__title" for="__nav_4">
-<span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Reference" data-md-level="1">
+        <label class="md-nav__title" for="__nav_4">
+          <span class="md-nav__icon md-icon"></span>
           Reference
         </label>
-<ul class="md-nav__list" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../reference/cli/">
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../reference/cli/" class="md-nav__link">
         Command line
       </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../libraries/">
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../libraries/" class="md-nav__link">
         Libraries
       </a>
-</li>
-<li class="md-nav__item md-nav__item--nested">
-<input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" id="__nav_6" type="checkbox"/>
-<label class="md-nav__link" for="__nav_6">
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+      
+        <input class="md-nav__toggle md-toggle" data-md-toggle="__nav_6" type="checkbox" id="__nav_6" >
+      
+      
+      
+      
+        <label class="md-nav__link" for="__nav_6">
           Design
           <span class="md-nav__icon md-icon"></span>
-</label>
-<nav aria-label="Design" class="md-nav" data-md-level="1">
-<label class="md-nav__title" for="__nav_6">
-<span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <nav class="md-nav" aria-label="Design" data-md-level="1">
+        <label class="md-nav__title" for="__nav_6">
+          <span class="md-nav__icon md-icon"></span>
           Design
         </label>
-<ul class="md-nav__list" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../design/depgraph/">
+        <ul class="md-nav__list" data-md-scrollfix>
+          
+            
+              
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../design/depgraph/" class="md-nav__link">
         Lodestar package structure
       </a>
-</li>
-</ul>
-</nav>
-</li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="../../../../contributing/">
+    </li>
+  
+
+            
+          
+        </ul>
+      </nav>
+    </li>
+  
+
+    
+      
+      
+      
+
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../../contributing/" class="md-nav__link">
         Contributing
       </a>
-</li>
-</ul>
+    </li>
+  
+
+    
+  </ul>
 </nav>
-</div>
-</div>
-</div>
-<div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc">
-<div class="md-sidebar__scrollwrap">
-<div class="md-sidebar__inner">
-<nav aria-label="Table of contents" class="md-nav md-nav--secondary">
-<label class="md-nav__title" for="__toc">
-<span class="md-nav__icon md-icon"></span>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
       Table of contents
     </label>
-<ul class="md-nav__list" data-md-component="toc" data-md-scrollfix="">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#index">
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#index" class="md-nav__link">
     Index
   </a>
-<nav aria-label="Index" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#references">
+  
+    <nav class="md-nav" aria-label="Index">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
     References
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#enumerations">
+        
+          <li class="md-nav__item">
+  <a href="#enumerations" class="md-nav__link">
     Enumerations
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#classes">
+        
+          <li class="md-nav__item">
+  <a href="#classes" class="md-nav__link">
     Classes
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#interfaces">
+        
+          <li class="md-nav__item">
+  <a href="#interfaces" class="md-nav__link">
     Interfaces
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-aliases">
+        
+          <li class="md-nav__item">
+  <a href="#type-aliases" class="md-nav__link">
     Type aliases
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables">
+        
+          <li class="md-nav__item">
+  <a href="#variables" class="md-nav__link">
     Variables
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#functions">
+        
+          <li class="md-nav__item">
+  <a href="#functions" class="md-nav__link">
     Functions
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#object-literals">
+        
+          <li class="md-nav__item">
+  <a href="#object-literals" class="md-nav__link">
     Object literals
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#references_1">
+      
+        <li class="md-nav__item">
+  <a href="#references_1" class="md-nav__link">
     References
   </a>
-<nav aria-label="References" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#beaconchain">
+  
+    <nav class="md-nav" aria-label="References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#beaconchain" class="md-nav__link">
     BeaconChain
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#chainevent">
+        
+          <li class="md-nav__item">
+  <a href="#chainevent" class="md-nav__link">
     ChainEvent
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#chaineventemitter">
+        
+          <li class="md-nav__item">
+  <a href="#chaineventemitter" class="md-nav__link">
     ChainEventEmitter
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#eth2context">
+        
+          <li class="md-nav__item">
+  <a href="#eth2context" class="md-nav__link">
     Eth2Context
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#forkchoiceopts">
+        
+          <li class="md-nav__item">
+  <a href="#forkchoiceopts" class="md-nav__link">
     ForkChoiceOpts
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#ibeaconchain">
+        
+          <li class="md-nav__item">
+  <a href="#ibeaconchain" class="md-nav__link">
     IBeaconChain
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#ibeaconclock">
+        
+          <li class="md-nav__item">
+  <a href="#ibeaconclock" class="md-nav__link">
     IBeaconClock
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#ichainevents">
+        
+          <li class="md-nav__item">
+  <a href="#ichainevents" class="md-nav__link">
     IChainEvents
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#sszobjecttype">
+        
+          <li class="md-nav__item">
+  <a href="#sszobjecttype" class="md-nav__link">
     SSZObjectType
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#computeanchorcheckpoint">
+        
+          <li class="md-nav__item">
+  <a href="#computeanchorcheckpoint" class="md-nav__link">
     computeAnchorCheckpoint
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#creategenesisblock">
+        
+          <li class="md-nav__item">
+  <a href="#creategenesisblock" class="md-nav__link">
     createGenesisBlock
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initbeaconmetrics">
+        
+          <li class="md-nav__item">
+  <a href="#initbeaconmetrics" class="md-nav__link">
     initBeaconMetrics
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefromanchorstate">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefromanchorstate" class="md-nav__link">
     initStateFromAnchorState
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefromdb">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefromdb" class="md-nav__link">
     initStateFromDb
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefrometh1">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefrometh1" class="md-nav__link">
     initStateFromEth1
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initializeforkchoice">
+        
+          <li class="md-nav__item">
+  <a href="#initializeforkchoice" class="md-nav__link">
     initializeForkChoice
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistanchorstate">
+        
+          <li class="md-nav__item">
+  <a href="#persistanchorstate" class="md-nav__link">
     persistAnchorState
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistgenesisresult">
+        
+          <li class="md-nav__item">
+  <a href="#persistgenesisresult" class="md-nav__link">
     persistGenesisResult
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-aliases_1">
+      
+        <li class="md-nav__item">
+  <a href="#type-aliases_1" class="md-nav__link">
     Type aliases
   </a>
-<nav aria-label="Type aliases" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#anycallback">
+  
+    <nav class="md-nav" aria-label="Type aliases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#anycallback" class="md-nav__link">
     AnyCallback
   </a>
-<nav aria-label="AnyCallback" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration">
+  
+    <nav class="md-nav" aria-label="AnyCallback">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration" class="md-nav__link">
     Type declaration:
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#awaitingattestationpromise">
+        
+          <li class="md-nav__item">
+  <a href="#awaitingattestationpromise" class="md-nav__link">
     AwaitingAttestationPromise
   </a>
-<nav aria-label="AwaitingAttestationPromise" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_1">
+  
+    <nav class="md-nav" aria-label="AwaitingAttestationPromise">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_1" class="md-nav__link">
     Type declaration:
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#blockprocessopts">
+        
+          <li class="md-nav__item">
+  <a href="#blockprocessopts" class="md-nav__link">
     BlockProcessOpts
   </a>
-<nav aria-label="BlockProcessOpts" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_2">
+  
+    <nav class="md-nav" aria-label="BlockProcessOpts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_2" class="md-nav__link">
     Type declaration:
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#eth2context_1">
+        
+          <li class="md-nav__item">
+  <a href="#eth2context_1" class="md-nav__link">
     Eth2Context
   </a>
-<nav aria-label="Eth2Context" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_3">
+  
+    <nav class="md-nav" aria-label="Eth2Context">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_3" class="md-nav__link">
     Type declaration:
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#ichainoptions">
+        
+          <li class="md-nav__item">
+  <a href="#ichainoptions" class="md-nav__link">
     IChainOptions
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#sszobjecttype_1">
+        
+          <li class="md-nav__item">
+  <a href="#sszobjecttype_1" class="md-nav__link">
     SSZObjectType
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#slotroot">
+        
+          <li class="md-nav__item">
+  <a href="#slotroot" class="md-nav__link">
     SlotRoot
   </a>
-<nav aria-label="SlotRoot" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#type-declaration_4">
+  
+    <nav class="md-nav" aria-label="SlotRoot">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#type-declaration_4" class="md-nav__link">
     Type declaration:
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#variables_1">
+      
+        <li class="md-nav__item">
+  <a href="#variables_1" class="md-nav__link">
     Variables
   </a>
-<nav aria-label="Variables" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-maximum_queued_attestations">
+  
+    <nav class="md-nav" aria-label="Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#const-maximum_queued_attestations" class="md-nav__link">
     Const MAXIMUM_QUEUED_ATTESTATIONS
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-reprocess_min_time_to_next_slot_sec">
+        
+          <li class="md-nav__item">
+  <a href="#const-reprocess_min_time_to_next_slot_sec" class="md-nav__link">
     Const REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#functions_1">
+      
+        <li class="md-nav__item">
+  <a href="#functions_1" class="md-nav__link">
     Functions
   </a>
-<nav aria-label="Functions" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#computeanchorcheckpoint_1">
+  
+    <nav class="md-nav" aria-label="Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#computeanchorcheckpoint_1" class="md-nav__link">
     computeAnchorCheckpoint
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#creategenesisblock_1">
+        
+          <li class="md-nav__item">
+  <a href="#creategenesisblock_1" class="md-nav__link">
     createGenesisBlock
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#handlechainevents">
+        
+          <li class="md-nav__item">
+  <a href="#handlechainevents" class="md-nav__link">
     handleChainEvents
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initbeaconmetrics_1">
+        
+          <li class="md-nav__item">
+  <a href="#initbeaconmetrics_1" class="md-nav__link">
     initBeaconMetrics
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefromanchorstate_1">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefromanchorstate_1" class="md-nav__link">
     initStateFromAnchorState
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefromdb_1">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefromdb_1" class="md-nav__link">
     initStateFromDb
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#initstatefrometh1_1">
+        
+          <li class="md-nav__item">
+  <a href="#initstatefrometh1_1" class="md-nav__link">
     initStateFromEth1
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onattestation">
+        
+          <li class="md-nav__item">
+  <a href="#onattestation" class="md-nav__link">
     onAttestation
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onblock">
+        
+          <li class="md-nav__item">
+  <a href="#onblock" class="md-nav__link">
     onBlock
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#oncheckpoint">
+        
+          <li class="md-nav__item">
+  <a href="#oncheckpoint" class="md-nav__link">
     onCheckpoint
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onclockepoch">
+        
+          <li class="md-nav__item">
+  <a href="#onclockepoch" class="md-nav__link">
     onClockEpoch
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onclockslot">
+        
+          <li class="md-nav__item">
+  <a href="#onclockslot" class="md-nav__link">
     onClockSlot
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onerrorattestation">
+        
+          <li class="md-nav__item">
+  <a href="#onerrorattestation" class="md-nav__link">
     onErrorAttestation
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onerrorblock">
+        
+          <li class="md-nav__item">
+  <a href="#onerrorblock" class="md-nav__link">
     onErrorBlock
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onfinalized">
+        
+          <li class="md-nav__item">
+  <a href="#onfinalized" class="md-nav__link">
     onFinalized
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onforkchoicefinalized">
+        
+          <li class="md-nav__item">
+  <a href="#onforkchoicefinalized" class="md-nav__link">
     onForkChoiceFinalized
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onforkchoicehead">
+        
+          <li class="md-nav__item">
+  <a href="#onforkchoicehead" class="md-nav__link">
     onForkChoiceHead
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onforkchoicejustified">
+        
+          <li class="md-nav__item">
+  <a href="#onforkchoicejustified" class="md-nav__link">
     onForkChoiceJustified
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onforkchoicereorg">
+        
+          <li class="md-nav__item">
+  <a href="#onforkchoicereorg" class="md-nav__link">
     onForkChoiceReorg
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onforkversion">
+        
+          <li class="md-nav__item">
+  <a href="#onforkversion" class="md-nav__link">
     onForkVersion
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#onjustified">
+        
+          <li class="md-nav__item">
+  <a href="#onjustified" class="md-nav__link">
     onJustified
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistanchorstate_1">
+        
+          <li class="md-nav__item">
+  <a href="#persistanchorstate_1" class="md-nav__link">
     persistAnchorState
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistgenesisresult_1">
+        
+          <li class="md-nav__item">
+  <a href="#persistgenesisresult_1" class="md-nav__link">
     persistGenesisResult
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#wraphandler">
+        
+          <li class="md-nav__item">
+  <a href="#wraphandler" class="md-nav__link">
     wrapHandler
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#object-literals_1">
+      
+        <li class="md-nav__item">
+  <a href="#object-literals_1" class="md-nav__link">
     Object literals
   </a>
-<nav aria-label="Object literals" class="md-nav">
-<ul class="md-nav__list">
-<li class="md-nav__item">
-<a class="md-nav__link" href="#const-defaultchainoptions">
+  
+    <nav class="md-nav" aria-label="Object literals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#const-defaultchainoptions" class="md-nav__link">
     Const defaultChainOptions
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#defaultchainoptions-object">
+        
+          <li class="md-nav__item">
+  <a href="#defaultchainoptions-object" class="md-nav__link">
     ▪ defaultChainOptions: object
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#blsverifyallmainthread">
+        
+          <li class="md-nav__item">
+  <a href="#blsverifyallmainthread" class="md-nav__link">
     blsVerifyAllMainThread
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#blsverifyallmultithread">
+        
+          <li class="md-nav__item">
+  <a href="#blsverifyallmultithread" class="md-nav__link">
     blsVerifyAllMultiThread
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#disableblsbatchverify">
+        
+          <li class="md-nav__item">
+  <a href="#disableblsbatchverify" class="md-nav__link">
     disableBlsBatchVerify
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistinvalidsszobjects">
+        
+          <li class="md-nav__item">
+  <a href="#persistinvalidsszobjects" class="md-nav__link">
     persistInvalidSszObjects
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#persistinvalidsszobjectsdir">
+        
+          <li class="md-nav__item">
+  <a href="#persistinvalidsszobjectsdir" class="md-nav__link">
     persistInvalidSszObjectsDir
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#proposerboostenabled">
+        
+          <li class="md-nav__item">
+  <a href="#proposerboostenabled" class="md-nav__link">
     proposerBoostEnabled
   </a>
+  
 </li>
-<li class="md-nav__item">
-<a class="md-nav__link" href="#safeslotstoimportoptimistically">
+        
+          <li class="md-nav__item">
+  <a href="#safeslotstoimportoptimistically" class="md-nav__link">
     safeSlotsToImportOptimistically
   </a>
+  
 </li>
-</ul>
-</nav>
+        
+      </ul>
+    </nav>
+  
 </li>
-</ul>
+      
+    </ul>
+  
 </nav>
-</div>
-</div>
-</div>
-<div class="md-content" data-md-component="content">
-<article class="md-content__inner md-typeset">
-<a class="md-content__button md-icon" href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/modules/chain.md" title="Edit this page">
-<svg viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"></path></svg>
-</a>
+                  </div>
+                </div>
+              </div>
+            
+          
+          <div class="md-content" data-md-component="content">
+            <article class="md-content__inner md-typeset">
+              
+                
+  <a href="https://github.com/chainsafe/lodestar/edit/master/docs/packages/lodestar/modules/chain.md" title="Edit this page" class="md-content__button md-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg>
+  </a>
+
+
+
 <p><a href="../../">@chainsafe/lodestar</a> › <a href="../../globals/">Globals</a> › <a href="./">chain</a></p>
-<h1 id="module-chain">Module: chain<a class="headerlink" href="#module-chain" title="Permanent link">¶</a></h1>
-<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">¶</a></h2>
-<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">¶</a></h3>
+<h1 id="module-chain">Module: chain<a class="headerlink" href="#module-chain" title="Permanent link">&para;</a></h1>
+<h2 id="index">Index<a class="headerlink" href="#index" title="Permanent link">&para;</a></h2>
+<h3 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#beaconchain">BeaconChain</a></li>
 <li><a href="./#chainevent">ChainEvent</a></li>
@@ -712,24 +1157,24 @@
 <li><a href="./#persistanchorstate">persistAnchorState</a></li>
 <li><a href="./#persistgenesisresult">persistGenesisResult</a></li>
 </ul>
-<h3 id="enumerations">Enumerations<a class="headerlink" href="#enumerations" title="Permanent link">¶</a></h3>
+<h3 id="enumerations">Enumerations<a class="headerlink" href="#enumerations" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../enums/chain.chainevent/">ChainEvent</a></li>
 <li><a href="../../enums/chain.reprocessstatus/">ReprocessStatus</a></li>
 </ul>
-<h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">¶</a></h3>
+<h3 id="classes">Classes<a class="headerlink" href="#classes" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../classes/chain.beaconchain/">BeaconChain</a></li>
 <li><a href="../../classes/chain.chaineventemitter/">ChainEventEmitter</a></li>
 <li><a href="../../classes/chain.precomputenextepochtransitionscheduler/">PrecomputeNextEpochTransitionScheduler</a></li>
 <li><a href="../../classes/chain.reprocesscontroller/">ReprocessController</a></li>
 </ul>
-<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">¶</a></h3>
+<h3 id="interfaces">Interfaces<a class="headerlink" href="#interfaces" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="../../interfaces/chain.ibeaconchain/">IBeaconChain</a></li>
 <li><a href="../../interfaces/chain.ichainevents/">IChainEvents</a></li>
 </ul>
-<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">¶</a></h3>
+<h3 id="type-aliases">Type aliases<a class="headerlink" href="#type-aliases" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#anycallback">AnyCallback</a></li>
 <li><a href="./#awaitingattestationpromise">AwaitingAttestationPromise</a></li>
@@ -739,12 +1184,12 @@
 <li><a href="./#sszobjecttype">SSZObjectType</a></li>
 <li><a href="./#slotroot">SlotRoot</a></li>
 </ul>
-<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">¶</a></h3>
+<h3 id="variables">Variables<a class="headerlink" href="#variables" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#const-maximum_queued_attestations">MAXIMUM_QUEUED_ATTESTATIONS</a></li>
 <li><a href="./#const-reprocess_min_time_to_next_slot_sec">REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC</a></li>
 </ul>
-<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">¶</a></h3>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#computeanchorcheckpoint">computeAnchorCheckpoint</a></li>
 <li><a href="./#creategenesisblock">createGenesisBlock</a></li>
@@ -771,75 +1216,75 @@
 <li><a href="./#persistgenesisresult">persistGenesisResult</a></li>
 <li><a href="./#wraphandler">wrapHandler</a></li>
 </ul>
-<h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">¶</a></h3>
+<h3 id="object-literals">Object literals<a class="headerlink" href="#object-literals" title="Permanent link">&para;</a></h3>
 <ul>
 <li><a href="./#const-defaultchainoptions">defaultChainOptions</a></li>
 </ul>
-<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">¶</a></h2>
-<h3 id="beaconchain">BeaconChain<a class="headerlink" href="#beaconchain" title="Permanent link">¶</a></h3>
+<h2 id="references_1">References<a class="headerlink" href="#references_1" title="Permanent link">&para;</a></h2>
+<h3 id="beaconchain">BeaconChain<a class="headerlink" href="#beaconchain" title="Permanent link">&para;</a></h3>
 <p>• <strong>BeaconChain</strong>:</p>
-<hr/>
-<h3 id="chainevent">ChainEvent<a class="headerlink" href="#chainevent" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="chainevent">ChainEvent<a class="headerlink" href="#chainevent" title="Permanent link">&para;</a></h3>
 <p>• <strong>ChainEvent</strong>:</p>
-<hr/>
-<h3 id="chaineventemitter">ChainEventEmitter<a class="headerlink" href="#chaineventemitter" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="chaineventemitter">ChainEventEmitter<a class="headerlink" href="#chaineventemitter" title="Permanent link">&para;</a></h3>
 <p>• <strong>ChainEventEmitter</strong>:</p>
-<hr/>
-<h3 id="eth2context">Eth2Context<a class="headerlink" href="#eth2context" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="eth2context">Eth2Context<a class="headerlink" href="#eth2context" title="Permanent link">&para;</a></h3>
 <p>• <strong>Eth2Context</strong>:</p>
-<hr/>
-<h3 id="forkchoiceopts">ForkChoiceOpts<a class="headerlink" href="#forkchoiceopts" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="forkchoiceopts">ForkChoiceOpts<a class="headerlink" href="#forkchoiceopts" title="Permanent link">&para;</a></h3>
 <p>• <strong>ForkChoiceOpts</strong>:</p>
-<hr/>
-<h3 id="ibeaconchain">IBeaconChain<a class="headerlink" href="#ibeaconchain" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="ibeaconchain">IBeaconChain<a class="headerlink" href="#ibeaconchain" title="Permanent link">&para;</a></h3>
 <p>• <strong>IBeaconChain</strong>:</p>
-<hr/>
-<h3 id="ibeaconclock">IBeaconClock<a class="headerlink" href="#ibeaconclock" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="ibeaconclock">IBeaconClock<a class="headerlink" href="#ibeaconclock" title="Permanent link">&para;</a></h3>
 <p>• <strong>IBeaconClock</strong>:</p>
-<hr/>
-<h3 id="ichainevents">IChainEvents<a class="headerlink" href="#ichainevents" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="ichainevents">IChainEvents<a class="headerlink" href="#ichainevents" title="Permanent link">&para;</a></h3>
 <p>• <strong>IChainEvents</strong>:</p>
-<hr/>
-<h3 id="sszobjecttype">SSZObjectType<a class="headerlink" href="#sszobjecttype" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="sszobjecttype">SSZObjectType<a class="headerlink" href="#sszobjecttype" title="Permanent link">&para;</a></h3>
 <p>• <strong>SSZObjectType</strong>:</p>
-<hr/>
-<h3 id="computeanchorcheckpoint">computeAnchorCheckpoint<a class="headerlink" href="#computeanchorcheckpoint" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="computeanchorcheckpoint">computeAnchorCheckpoint<a class="headerlink" href="#computeanchorcheckpoint" title="Permanent link">&para;</a></h3>
 <p>• <strong>computeAnchorCheckpoint</strong>:</p>
-<hr/>
-<h3 id="creategenesisblock">createGenesisBlock<a class="headerlink" href="#creategenesisblock" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="creategenesisblock">createGenesisBlock<a class="headerlink" href="#creategenesisblock" title="Permanent link">&para;</a></h3>
 <p>• <strong>createGenesisBlock</strong>:</p>
-<hr/>
-<h3 id="initbeaconmetrics">initBeaconMetrics<a class="headerlink" href="#initbeaconmetrics" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initbeaconmetrics">initBeaconMetrics<a class="headerlink" href="#initbeaconmetrics" title="Permanent link">&para;</a></h3>
 <p>• <strong>initBeaconMetrics</strong>:</p>
-<hr/>
-<h3 id="initstatefromanchorstate">initStateFromAnchorState<a class="headerlink" href="#initstatefromanchorstate" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefromanchorstate">initStateFromAnchorState<a class="headerlink" href="#initstatefromanchorstate" title="Permanent link">&para;</a></h3>
 <p>• <strong>initStateFromAnchorState</strong>:</p>
-<hr/>
-<h3 id="initstatefromdb">initStateFromDb<a class="headerlink" href="#initstatefromdb" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefromdb">initStateFromDb<a class="headerlink" href="#initstatefromdb" title="Permanent link">&para;</a></h3>
 <p>• <strong>initStateFromDb</strong>:</p>
-<hr/>
-<h3 id="initstatefrometh1">initStateFromEth1<a class="headerlink" href="#initstatefrometh1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefrometh1">initStateFromEth1<a class="headerlink" href="#initstatefrometh1" title="Permanent link">&para;</a></h3>
 <p>• <strong>initStateFromEth1</strong>:</p>
-<hr/>
-<h3 id="initializeforkchoice">initializeForkChoice<a class="headerlink" href="#initializeforkchoice" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initializeforkchoice">initializeForkChoice<a class="headerlink" href="#initializeforkchoice" title="Permanent link">&para;</a></h3>
 <p>• <strong>initializeForkChoice</strong>:</p>
-<hr/>
-<h3 id="persistanchorstate">persistAnchorState<a class="headerlink" href="#persistanchorstate" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="persistanchorstate">persistAnchorState<a class="headerlink" href="#persistanchorstate" title="Permanent link">&para;</a></h3>
 <p>• <strong>persistAnchorState</strong>:</p>
-<hr/>
-<h3 id="persistgenesisresult">persistGenesisResult<a class="headerlink" href="#persistgenesisresult" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="persistgenesisresult">persistGenesisResult<a class="headerlink" href="#persistgenesisresult" title="Permanent link">&para;</a></h3>
 <p>• <strong>persistGenesisResult</strong>:</p>
-<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">¶</a></h2>
-<h3 id="anycallback">AnyCallback<a class="headerlink" href="#anycallback" title="Permanent link">¶</a></h3>
+<h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
+<h3 id="anycallback">AnyCallback<a class="headerlink" href="#anycallback" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AnyCallback</strong>: <em>function</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L14">packages/lodestar/src/chain/eventHandlers.ts:14</a></em></p>
-<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L14">packages/lodestar/src/chain/eventHandlers.ts:14</a></em></p>
+<h4 id="type-declaration">Type declaration:<a class="headerlink" href="#type-declaration" title="Permanent link">&para;</a></h4>
 <p>▸ (): <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="awaitingattestationpromise">AwaitingAttestationPromise<a class="headerlink" href="#awaitingattestationpromise" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="awaitingattestationpromise">AwaitingAttestationPromise<a class="headerlink" href="#awaitingattestationpromise" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>AwaitingAttestationPromise</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/reprocess.ts#L25">packages/lodestar/src/chain/reprocess.ts:25</a></em></p>
-<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/reprocess.ts#L25">packages/lodestar/src/chain/reprocess.ts:25</a></em></p>
+<h4 id="type-declaration_1">Type declaration:<a class="headerlink" href="#type-declaration_1" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
 <p><strong>addedTimeMs</strong>: <em>number</em></p>
@@ -857,11 +1302,11 @@
 <p>(<code>foundBlock</code>: boolean): <em>void</em></p>
 </li>
 </ul>
-<hr/>
-<h3 id="blockprocessopts">BlockProcessOpts<a class="headerlink" href="#blockprocessopts" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="blockprocessopts">BlockProcessOpts<a class="headerlink" href="#blockprocessopts" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>BlockProcessOpts</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L13">packages/lodestar/src/chain/options.ts:13</a></em></p>
-<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L13">packages/lodestar/src/chain/options.ts:13</a></em></p>
+<h4 id="type-declaration_2">Type declaration:<a class="headerlink" href="#type-declaration_2" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
 <p><strong>disableBlsBatchVerify</strong>? : <em>undefined | false | true</em></p>
@@ -870,11 +1315,11 @@
 <p><strong>safeSlotsToImportOptimistically</strong>: <em>number</em></p>
 </li>
 </ul>
-<hr/>
-<h3 id="eth2context_1">Eth2Context<a class="headerlink" href="#eth2context_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="eth2context_1">Eth2Context<a class="headerlink" href="#eth2context_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>Eth2Context</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/interface.ts#L26">packages/lodestar/src/chain/interface.ts:26</a></em></p>
-<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/interface.ts#L26">packages/lodestar/src/chain/interface.ts:26</a></em></p>
+<h4 id="type-declaration_3">Type declaration:<a class="headerlink" href="#type-declaration_3" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
 <p><strong>activeValidatorCount</strong>: <em>number</em></p>
@@ -886,19 +1331,19 @@
 <p><strong>currentSlot</strong>: <em>number</em></p>
 </li>
 </ul>
-<hr/>
-<h3 id="ichainoptions">IChainOptions<a class="headerlink" href="#ichainoptions" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="ichainoptions">IChainOptions<a class="headerlink" href="#ichainoptions" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IChainOptions</strong>: <em><a href="./#blockprocessopts">BlockProcessOpts</a> &amp; <a href="./#forkchoiceopts">ForkChoiceOpts</a> &amp; object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L5">packages/lodestar/src/chain/options.ts:5</a></em></p>
-<hr/>
-<h3 id="sszobjecttype_1">SSZObjectType<a class="headerlink" href="#sszobjecttype_1" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L5">packages/lodestar/src/chain/options.ts:5</a></em></p>
+<hr />
+<h3 id="sszobjecttype_1">SSZObjectType<a class="headerlink" href="#sszobjecttype_1" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>SSZObjectType</strong>: <em>"state" | "signedBlock" | "block" | "attestation" | "signedAggregatedAndProof" | "syncCommittee" | "contributionAndProof"</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/interface.ts#L102">packages/lodestar/src/chain/interface.ts:102</a></em></p>
-<hr/>
-<h3 id="slotroot">SlotRoot<a class="headerlink" href="#slotroot" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/interface.ts#L102">packages/lodestar/src/chain/interface.ts:102</a></em></p>
+<hr />
+<h3 id="slotroot">SlotRoot<a class="headerlink" href="#slotroot" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>SlotRoot</strong>: <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/reprocess.ts#L38">packages/lodestar/src/chain/reprocess.ts:38</a></em></p>
-<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">¶</a></h4>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/reprocess.ts#L38">packages/lodestar/src/chain/reprocess.ts:38</a></em></p>
+<h4 id="type-declaration_4">Type declaration:<a class="headerlink" href="#type-declaration_4" title="Permanent link">&para;</a></h4>
 <ul>
 <li>
 <p><strong>root</strong>: <em>RootHex</em></p>
@@ -907,20 +1352,20 @@
 <p><strong>slot</strong>: <em>Slot</em></p>
 </li>
 </ul>
-<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">¶</a></h2>
-<h3 id="const-maximum_queued_attestations"><code>Const</code> MAXIMUM_QUEUED_ATTESTATIONS<a class="headerlink" href="#const-maximum_queued_attestations" title="Permanent link">¶</a></h3>
+<h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
+<h3 id="const-maximum_queued_attestations"><code>Const</code> MAXIMUM_QUEUED_ATTESTATIONS<a class="headerlink" href="#const-maximum_queued_attestations" title="Permanent link">&para;</a></h3>
 <p>• <strong>MAXIMUM_QUEUED_ATTESTATIONS</strong>: <em>16384</em> = 16384</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/reprocess.ts#L36">packages/lodestar/src/chain/reprocess.ts:36</a></em></p>
-<hr/>
-<h3 id="const-reprocess_min_time_to_next_slot_sec"><code>Const</code> REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC<a class="headerlink" href="#const-reprocess_min_time_to_next_slot_sec" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/reprocess.ts#L36">packages/lodestar/src/chain/reprocess.ts:36</a></em></p>
+<hr />
+<h3 id="const-reprocess_min_time_to_next_slot_sec"><code>Const</code> REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC<a class="headerlink" href="#const-reprocess_min_time_to_next_slot_sec" title="Permanent link">&para;</a></h3>
 <p>• <strong>REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC</strong>: <em>2</em> = 2</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/reprocess.ts#L9">packages/lodestar/src/chain/reprocess.ts:9</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/reprocess.ts#L9">packages/lodestar/src/chain/reprocess.ts:9</a></em></p>
 <p>To prevent our node from having to reprocess while struggling to sync,
 we only want to reprocess attestations if block reaches our node before this time.</p>
-<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">¶</a></h2>
-<h3 id="computeanchorcheckpoint_1">computeAnchorCheckpoint<a class="headerlink" href="#computeanchorcheckpoint_1" title="Permanent link">¶</a></h3>
+<h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
+<h3 id="computeanchorcheckpoint_1">computeAnchorCheckpoint<a class="headerlink" href="#computeanchorcheckpoint_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>computeAnchorCheckpoint</strong>(<code>config</code>: IChainForkConfig, <code>anchorState</code>: BeaconStateAllForks): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L190">packages/lodestar/src/chain/initState.ts:190</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L190">packages/lodestar/src/chain/initState.ts:190</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -949,10 +1394,10 @@ we only want to reprocess attestations if block reaches our node before this tim
 <p><strong>checkpoint</strong>: <em>phase0.Checkpoint</em></p>
 </li>
 </ul>
-<hr/>
-<h3 id="creategenesisblock_1">createGenesisBlock<a class="headerlink" href="#creategenesisblock_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="creategenesisblock_1">createGenesisBlock<a class="headerlink" href="#creategenesisblock_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createGenesisBlock</strong>(<code>config</code>: IChainForkConfig, <code>genesisState</code>: BeaconStateAllForks): <em>allForks.SignedBeaconBlock</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L60">packages/lodestar/src/chain/initState.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L60">packages/lodestar/src/chain/initState.ts:60</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -973,10 +1418,10 @@ we only want to reprocess attestations if block reaches our node before this tim
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>allForks.SignedBeaconBlock</em></p>
-<hr/>
-<h3 id="handlechainevents">handleChainEvents<a class="headerlink" href="#handlechainevents" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="handlechainevents">handleChainEvents<a class="headerlink" href="#handlechainevents" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>handleChainEvents</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>signal</code>: AbortSignal): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L38">packages/lodestar/src/chain/eventHandlers.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L38">packages/lodestar/src/chain/eventHandlers.ts:38</a></em></p>
 <p>Attach ChainEventEmitter event handlers
 Listen on <code>signal</code> to remove event handlers</p>
 <p><strong>Parameters:</strong></p>
@@ -999,10 +1444,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="initbeaconmetrics_1">initBeaconMetrics<a class="headerlink" href="#initbeaconmetrics_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initbeaconmetrics_1">initBeaconMetrics<a class="headerlink" href="#initbeaconmetrics_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initBeaconMetrics</strong>(<code>metrics</code>: <a href="../metrics/#imetrics">IMetrics</a>, <code>state</code>: BeaconStateAllForks): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L183">packages/lodestar/src/chain/initState.ts:183</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L183">packages/lodestar/src/chain/initState.ts:183</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1023,10 +1468,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="initstatefromanchorstate_1">initStateFromAnchorState<a class="headerlink" href="#initstatefromanchorstate_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefromanchorstate_1">initStateFromAnchorState<a class="headerlink" href="#initstatefromanchorstate_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initStateFromAnchorState</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>logger</code>: ILogger, <code>anchorState</code>: BeaconStateAllForks): <em>Promise‹BeaconStateAllForks›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L166">packages/lodestar/src/chain/initState.ts:166</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L166">packages/lodestar/src/chain/initState.ts:166</a></em></p>
 <p>Initialize and persist an anchor state (either weak subjectivity or genesis)</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1056,10 +1501,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹BeaconStateAllForks›</em></p>
-<hr/>
-<h3 id="initstatefromdb_1">initStateFromDb<a class="headerlink" href="#initstatefromdb_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefromdb_1">initStateFromDb<a class="headerlink" href="#initstatefromdb_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initStateFromDb</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>logger</code>: ILogger): <em>Promise‹BeaconStateAllForks›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L144">packages/lodestar/src/chain/initState.ts:144</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L144">packages/lodestar/src/chain/initState.ts:144</a></em></p>
 <p>Restore the latest beacon state from db</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1085,10 +1530,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹BeaconStateAllForks›</em></p>
-<hr/>
-<h3 id="initstatefrometh1_1">initStateFromEth1<a class="headerlink" href="#initstatefrometh1_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="initstatefrometh1_1">initStateFromEth1<a class="headerlink" href="#initstatefrometh1_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initStateFromEth1</strong>(<code>__namedParameters</code>: object): <em>Promise‹CachedBeaconStateAllForks›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L74">packages/lodestar/src/chain/initState.ts:74</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L74">packages/lodestar/src/chain/initState.ts:74</a></em></p>
 <p>Initialize and persist a genesis state and related data</p>
 <p><strong>Parameters:</strong></p>
 <p>▪ <strong>__namedParameters</strong>: <em>object</em></p>
@@ -1123,10 +1568,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹CachedBeaconStateAllForks›</em></p>
-<hr/>
-<h3 id="onattestation">onAttestation<a class="headerlink" href="#onattestation" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onattestation">onAttestation<a class="headerlink" href="#onattestation" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onAttestation</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>attestation</code>: phase0.Attestation): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L165">packages/lodestar/src/chain/eventHandlers.ts:165</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L165">packages/lodestar/src/chain/eventHandlers.ts:165</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1147,10 +1592,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onblock">onBlock<a class="headerlink" href="#onblock" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onblock">onBlock<a class="headerlink" href="#onblock" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onBlock</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>block</code>: allForks.SignedBeaconBlock, <code>_postState</code>: CachedBeaconStateAllForks): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L174">packages/lodestar/src/chain/eventHandlers.ts:174</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L174">packages/lodestar/src/chain/eventHandlers.ts:174</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1175,10 +1620,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="oncheckpoint">onCheckpoint<a class="headerlink" href="#oncheckpoint" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="oncheckpoint">onCheckpoint<a class="headerlink" href="#oncheckpoint" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onCheckpoint</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>cp</code>: phase0.Checkpoint, <code>state</code>: CachedBeaconStateAllForks): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L103">packages/lodestar/src/chain/eventHandlers.ts:103</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L103">packages/lodestar/src/chain/eventHandlers.ts:103</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1203,10 +1648,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onclockepoch">onClockEpoch<a class="headerlink" href="#onclockepoch" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onclockepoch">onClockEpoch<a class="headerlink" href="#onclockepoch" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onClockEpoch</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>currentEpoch</code>: Epoch): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L94">packages/lodestar/src/chain/eventHandlers.ts:94</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L94">packages/lodestar/src/chain/eventHandlers.ts:94</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1227,10 +1672,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onclockslot">onClockSlot<a class="headerlink" href="#onclockslot" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onclockslot">onClockSlot<a class="headerlink" href="#onclockslot" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onClockSlot</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>slot</code>: Slot): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L79">packages/lodestar/src/chain/eventHandlers.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L79">packages/lodestar/src/chain/eventHandlers.ts:79</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1251,10 +1696,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="onerrorattestation">onErrorAttestation<a class="headerlink" href="#onerrorattestation" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onerrorattestation">onErrorAttestation<a class="headerlink" href="#onerrorattestation" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onErrorAttestation</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>err</code>: <a href="../../classes/chain_errors.attestationerror/">AttestationError</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L190">packages/lodestar/src/chain/eventHandlers.ts:190</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L190">packages/lodestar/src/chain/eventHandlers.ts:190</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1275,10 +1720,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="onerrorblock">onErrorBlock<a class="headerlink" href="#onerrorblock" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onerrorblock">onErrorBlock<a class="headerlink" href="#onerrorblock" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onErrorBlock</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>err</code>: <a href="../../classes/chain_errors.blockerror/">BlockError</a>): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L199">packages/lodestar/src/chain/eventHandlers.ts:199</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L199">packages/lodestar/src/chain/eventHandlers.ts:199</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1299,10 +1744,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="onfinalized">onFinalized<a class="headerlink" href="#onfinalized" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onfinalized">onFinalized<a class="headerlink" href="#onfinalized" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onFinalized</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>cp</code>: phase0.Checkpoint): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L131">packages/lodestar/src/chain/eventHandlers.ts:131</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L131">packages/lodestar/src/chain/eventHandlers.ts:131</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1323,10 +1768,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="onforkchoicefinalized">onForkChoiceFinalized<a class="headerlink" href="#onforkchoicefinalized" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onforkchoicefinalized">onForkChoiceFinalized<a class="headerlink" href="#onforkchoicefinalized" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onForkChoiceFinalized</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>cp</code>: CheckpointWithHex): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L140">packages/lodestar/src/chain/eventHandlers.ts:140</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L140">packages/lodestar/src/chain/eventHandlers.ts:140</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1347,10 +1792,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="onforkchoicehead">onForkChoiceHead<a class="headerlink" href="#onforkchoicehead" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onforkchoicehead">onForkChoiceHead<a class="headerlink" href="#onforkchoicehead" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onForkChoiceHead</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>head</code>: IProtoBlock): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L151">packages/lodestar/src/chain/eventHandlers.ts:151</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L151">packages/lodestar/src/chain/eventHandlers.ts:151</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1371,10 +1816,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onforkchoicejustified">onForkChoiceJustified<a class="headerlink" href="#onforkchoicejustified" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onforkchoicejustified">onForkChoiceJustified<a class="headerlink" href="#onforkchoicejustified" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onForkChoiceJustified</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>cp</code>: CheckpointWithHex): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L136">packages/lodestar/src/chain/eventHandlers.ts:136</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L136">packages/lodestar/src/chain/eventHandlers.ts:136</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1395,10 +1840,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onforkchoicereorg">onForkChoiceReorg<a class="headerlink" href="#onforkchoicereorg" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onforkchoicereorg">onForkChoiceReorg<a class="headerlink" href="#onforkchoicereorg" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onForkChoiceReorg</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>head</code>: IProtoBlock, <code>oldHead</code>: IProtoBlock, <code>depth</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L161">packages/lodestar/src/chain/eventHandlers.ts:161</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L161">packages/lodestar/src/chain/eventHandlers.ts:161</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1427,10 +1872,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onforkversion">onForkVersion<a class="headerlink" href="#onforkversion" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onforkversion">onForkVersion<a class="headerlink" href="#onforkversion" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onForkVersion</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>version</code>: <a href="../../enums/network_reqresp.version/">Version</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L99">packages/lodestar/src/chain/eventHandlers.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L99">packages/lodestar/src/chain/eventHandlers.ts:99</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1451,10 +1896,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="onjustified">onJustified<a class="headerlink" href="#onjustified" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="onjustified">onJustified<a class="headerlink" href="#onjustified" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>onJustified</strong>(<code>this</code>: <a href="../../classes/chain.beaconchain/">BeaconChain</a>, <code>cp</code>: phase0.Checkpoint, <code>state</code>: CachedBeaconStateAllForks): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L125">packages/lodestar/src/chain/eventHandlers.ts:125</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L125">packages/lodestar/src/chain/eventHandlers.ts:125</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1479,10 +1924,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>void</em></p>
-<hr/>
-<h3 id="persistanchorstate_1">persistAnchorState<a class="headerlink" href="#persistanchorstate_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="persistanchorstate_1">persistAnchorState<a class="headerlink" href="#persistanchorstate_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>persistAnchorState</strong>(<code>config</code>: IChainForkConfig, <code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>anchorState</code>: BeaconStateAllForks): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L43">packages/lodestar/src/chain/initState.ts:43</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L43">packages/lodestar/src/chain/initState.ts:43</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1507,10 +1952,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="persistgenesisresult_1">persistGenesisResult<a class="headerlink" href="#persistgenesisresult_1" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="persistgenesisresult_1">persistGenesisResult<a class="headerlink" href="#persistgenesisresult_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>persistGenesisResult</strong>(<code>db</code>: <a href="../../interfaces/db.ibeacondb/">IBeaconDb</a>, <code>genesisResult</code>: <a href="../../interfaces/chain_genesis.igenesisresult/">IGenesisResult</a>, <code>genesisBlock</code>: allForks.SignedBeaconBlock): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/initState.ts#L26">packages/lodestar/src/chain/initState.ts:26</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/initState.ts#L26">packages/lodestar/src/chain/initState.ts:26</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1535,10 +1980,10 @@ Listen on <code>signal</code> to remove event handlers</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>Promise‹void›</em></p>
-<hr/>
-<h3 id="wraphandler">wrapHandler<a class="headerlink" href="#wraphandler" title="Permanent link">¶</a></h3>
+<hr />
+<h3 id="wraphandler">wrapHandler<a class="headerlink" href="#wraphandler" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>wrapHandler</strong>‹<strong>Event</strong>, <strong>Callback</strong>›(<code>event</code>: Event, <code>logger</code>: ILogger, <code>handler</code>: function): <em>(Anonymous function)</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/eventHandlers.ts#L21">packages/lodestar/src/chain/eventHandlers.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/eventHandlers.ts#L21">packages/lodestar/src/chain/eventHandlers.ts:21</a></em></p>
 <p>Returns a function that runs an async handler function with input args,
 If the handler function successfully completes,
 then emits the event on the event emitter using the same args</p>
@@ -1566,68 +2011,106 @@ then emits the event on the event emitter using the same args</p>
 </tbody>
 </table>
 <p><strong>Returns:</strong> <em>(Anonymous function)</em></p>
-<h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">¶</a></h2>
-<h3 id="const-defaultchainoptions"><code>Const</code> defaultChainOptions<a class="headerlink" href="#const-defaultchainoptions" title="Permanent link">¶</a></h3>
-<h3 id="defaultchainoptions-object">▪ <strong>defaultChainOptions</strong>: <em>object</em><a class="headerlink" href="#defaultchainoptions-object" title="Permanent link">¶</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L25">packages/lodestar/src/chain/options.ts:25</a></em></p>
-<h3 id="blsverifyallmainthread">blsVerifyAllMainThread<a class="headerlink" href="#blsverifyallmainthread" title="Permanent link">¶</a></h3>
+<h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
+<h3 id="const-defaultchainoptions"><code>Const</code> defaultChainOptions<a class="headerlink" href="#const-defaultchainoptions" title="Permanent link">&para;</a></h3>
+<h3 id="defaultchainoptions-object">▪ <strong>defaultChainOptions</strong>: <em>object</em><a class="headerlink" href="#defaultchainoptions-object" title="Permanent link">&para;</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L25">packages/lodestar/src/chain/options.ts:25</a></em></p>
+<h3 id="blsverifyallmainthread">blsVerifyAllMainThread<a class="headerlink" href="#blsverifyallmainthread" title="Permanent link">&para;</a></h3>
 <p>• <strong>blsVerifyAllMainThread</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L26">packages/lodestar/src/chain/options.ts:26</a></em></p>
-<h3 id="blsverifyallmultithread">blsVerifyAllMultiThread<a class="headerlink" href="#blsverifyallmultithread" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L26">packages/lodestar/src/chain/options.ts:26</a></em></p>
+<h3 id="blsverifyallmultithread">blsVerifyAllMultiThread<a class="headerlink" href="#blsverifyallmultithread" title="Permanent link">&para;</a></h3>
 <p>• <strong>blsVerifyAllMultiThread</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L27">packages/lodestar/src/chain/options.ts:27</a></em></p>
-<h3 id="disableblsbatchverify">disableBlsBatchVerify<a class="headerlink" href="#disableblsbatchverify" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L27">packages/lodestar/src/chain/options.ts:27</a></em></p>
+<h3 id="disableblsbatchverify">disableBlsBatchVerify<a class="headerlink" href="#disableblsbatchverify" title="Permanent link">&para;</a></h3>
 <p>• <strong>disableBlsBatchVerify</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L28">packages/lodestar/src/chain/options.ts:28</a></em></p>
-<h3 id="persistinvalidsszobjects">persistInvalidSszObjects<a class="headerlink" href="#persistinvalidsszobjects" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L28">packages/lodestar/src/chain/options.ts:28</a></em></p>
+<h3 id="persistinvalidsszobjects">persistInvalidSszObjects<a class="headerlink" href="#persistinvalidsszobjects" title="Permanent link">&para;</a></h3>
 <p>• <strong>persistInvalidSszObjects</strong>: <em>true</em> = true</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L29">packages/lodestar/src/chain/options.ts:29</a></em></p>
-<h3 id="persistinvalidsszobjectsdir">persistInvalidSszObjectsDir<a class="headerlink" href="#persistinvalidsszobjectsdir" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L29">packages/lodestar/src/chain/options.ts:29</a></em></p>
+<h3 id="persistinvalidsszobjectsdir">persistInvalidSszObjectsDir<a class="headerlink" href="#persistinvalidsszobjectsdir" title="Permanent link">&para;</a></h3>
 <p>• <strong>persistInvalidSszObjectsDir</strong>: <em>string</em> = ""</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L30">packages/lodestar/src/chain/options.ts:30</a></em></p>
-<h3 id="proposerboostenabled">proposerBoostEnabled<a class="headerlink" href="#proposerboostenabled" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L30">packages/lodestar/src/chain/options.ts:30</a></em></p>
+<h3 id="proposerboostenabled">proposerBoostEnabled<a class="headerlink" href="#proposerboostenabled" title="Permanent link">&para;</a></h3>
 <p>• <strong>proposerBoostEnabled</strong>: <em>false</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L31">packages/lodestar/src/chain/options.ts:31</a></em></p>
-<h3 id="safeslotstoimportoptimistically">safeSlotsToImportOptimistically<a class="headerlink" href="#safeslotstoimportoptimistically" title="Permanent link">¶</a></h3>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L31">packages/lodestar/src/chain/options.ts:31</a></em></p>
+<h3 id="safeslotstoimportoptimistically">safeSlotsToImportOptimistically<a class="headerlink" href="#safeslotstoimportoptimistically" title="Permanent link">&para;</a></h3>
 <p>• <strong>safeSlotsToImportOptimistically</strong>: <em>number</em> = SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/eef2c86/packages/lodestar/src/chain/options.ts#L32">packages/lodestar/src/chain/options.ts:32</a></em></p>
-</article>
-</div>
-</div>
-</main>
-<footer class="md-footer">
-<div class="md-footer-meta md-typeset">
-<div class="md-footer-meta__inner md-grid">
-<div class="md-copyright">
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e12ab97/packages/lodestar/src/chain/options.ts#L32">packages/lodestar/src/chain/options.ts:32</a></em></p>
+
+              
+            </article>
+          </div>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
   
   
     Made with
-    <a href="https://squidfunk.github.io/mkdocs-material/" rel="noopener" target="_blank">
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
       Material for MkDocs
     </a>
+  
 </div>
-<div class="md-social">
-<a class="md-social__link" href="https://github.com/ChainSafe/lodestar" rel="noopener" target="_blank" title="github.com">
-<svg viewbox="0 0 480 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"></path></svg>
-</a>
-<a class="md-social__link" href="https://twitter.com/ChainSafe" rel="noopener" target="_blank" title="twitter.com">
-<svg viewbox="0 0 512 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"></path></svg>
-</a>
-<a class="md-social__link" href="https://discord.gg/yjyvFRP" rel="noopener" target="_blank" title="discord.gg">
-<svg viewbox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"></path></svg>
-</a>
-<a class="md-social__link" href="https://medium.com/ChainSafe" rel="noopener" target="_blank" title="medium.com">
-<svg viewbox="0 0 640 512" xmlns="http://www.w3.org/2000/svg"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"></path></svg>
-</a>
+      
+        <div class="md-social">
+  
+    
+    
+      
+      
+    
+    <a href="https://github.com/ChainSafe/lodestar" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M186.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1zM480 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2zm-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3zm-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1z"/></svg>
+    </a>
+  
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/ChainSafe" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/yjyvFRP" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+    
+    
+      
+      
+    
+    <a href="https://medium.com/ChainSafe" target="_blank" rel="noopener" title="medium.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.1.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M180.5 74.262C80.813 74.262 0 155.633 0 256s80.819 181.738 180.5 181.738S361 356.373 361 256 280.191 74.262 180.5 74.262Zm288.25 10.646c-49.845 0-90.245 76.619-90.245 171.095s40.406 171.1 90.251 171.1 90.251-76.619 90.251-171.1H559c0-94.503-40.4-171.095-90.248-171.095Zm139.506 17.821c-17.526 0-31.735 68.628-31.735 153.274s14.2 153.274 31.735 153.274S640 340.631 640 256c0-84.649-14.215-153.271-31.742-153.271Z"/></svg>
+    </a>
+  
 </div>
-</div>
-</div>
+      
+    </div>
+  </div>
 </footer>
-</div>
-<div class="md-dialog" data-md-component="dialog">
-<div class="md-dialog__inner md-typeset"></div>
-</div>
-<script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
-<script src="../../../../assets/javascripts/bundle.6e54b5cd.min.js"></script>
-</body>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
+    
+    
+      <script src="../../../../assets/javascripts/bundle.6e54b5cd.min.js"></script>
+      
+    
+  </body>
 </html>
