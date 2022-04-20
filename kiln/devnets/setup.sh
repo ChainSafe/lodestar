@@ -132,22 +132,19 @@ bootEnr=($bootEnr)
 bootEnr=$(IFS=" " ; echo "${bootEnr[*]}")
 
 depositContractDeployBlock=$(cat $dataDir/$configGitDir/deposit_contract_block.txt)
-clName="$DEVNET_NAME-lodestar"
 
 if [ $platform == 'Darwin' ]
 then
-  clCmd="$dockerCmd --name $clName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clDockerNetwork="--net=container:$elName"
 else
-  clCmd="$dockerCmd --name $clName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+  clDockerNetwork="--network host"
 fi
 
+clName="$DEVNET_NAME-lodestar"
+clCmd="$dockerCmd --name $clName $clDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE beacon --rootDir /data/lodestar --paramsFile /config/config.yaml --genesisStateFile /config/genesis.ssz --network.connectToDiscv5Bootnodes --network.discv5.enabled true --eth1.enabled true --eth1.depositContractDeployBlock $depositContractDeployBlock  $LODESTAR_EXTRA_ARGS --bootnodesFile /config/boot_enr.yaml --jwt-secret /data/jwtsecret"
+
 valName="$DEVNET_NAME-validator"
-if [ $platform == 'Darwin' ]
-then
-  valCmd="$dockerCmd --name $valName --net=container:$elName -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
-else
-  valCmd="$dockerCmd --name $valName --network host -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
-fi;
+valCmd="$dockerCmd --name $valName $clDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $LODESTAR_IMAGE validator --rootDir /data/lodestar --paramsFile /config/config.yaml $LODESTAR_VALIDATOR_ARGS"
 
 echo -n $JWT_SECRET > $dataDir/jwtsecret
 run_cmd "$elCmd"
