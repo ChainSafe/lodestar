@@ -76,7 +76,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
     [GossipType.beacon_block]: async (signedBlock, topic, peerIdStr, seenTimestampSec) => {
       const slot = signedBlock.message.slot;
       const blockHex = prettyBytes(config.getForkTypes(slot).BeaconBlock.hashTreeRoot(signedBlock.message));
-      const delaySec = seenTimestampSec - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+      const delaySec = chain.clock.secFromSlot(slot, seenTimestampSec);
       logger.verbose("Received gossip block", {
         slot: slot,
         root: blockHex,
@@ -122,7 +122,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
         .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
-          const delaySec = Date.now() / 1000 - (chain.genesisTime + slot * config.SECONDS_PER_SLOT);
+          const delaySec = chain.clock.secFromSlot(slot);
           metrics?.gossipBlock.elapsedTimeTillProcessed.observe(delaySec);
         })
         .catch((e) => {
