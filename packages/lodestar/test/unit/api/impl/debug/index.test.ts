@@ -1,4 +1,6 @@
 import {config} from "@chainsafe/lodestar-config/default";
+import {config as minimalConfig} from "@chainsafe/lodestar-config/default";
+import {altair, phase0, ssz} from "@chainsafe/lodestar-types";
 import {ZERO_HASH} from "@chainsafe/lodestar-beacon-state-transition";
 import {ForkChoice, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {toHexString} from "@chainsafe/ssz";
@@ -48,5 +50,17 @@ describe("api - debug - beacon", function () {
     resolveStateIdStub.resolves(generateState());
     const {data: state} = await debugApi.getState("something");
     expect(state).to.not.be.null;
+  });
+
+  it("getState - should be able to convert to json", async function () {
+    resolveStateIdStub.resolves(generateState());
+    const {data: state} = await debugApi.getState("something");
+    expect(() => ssz.phase0.BeaconState.toJson(state as phase0.BeaconState)).to.not.throw();
+  });
+
+  it("getStateV2 - should be able to convert to json", async function () {
+    resolveStateIdStub.resolves(generateState({}, minimalConfig, true));
+    const {data: state} = await debugApi.getStateV2("something");
+    expect(() => ssz.altair.BeaconState.toJson(state as altair.BeaconState)).to.not.throw();
   });
 });
