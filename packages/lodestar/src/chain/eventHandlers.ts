@@ -158,7 +158,7 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
-  this.metrics?.gossipBlock.elappsedTimeTillBecomeHead.observe(delaySec);
+  this.metrics?.gossipBlock.elapsedTimeTillBecomeHead.observe(delaySec);
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
