@@ -8,6 +8,7 @@ import {generateEmptySignedBlock} from "../../../../../utils/block";
 import {allForks} from "@chainsafe/lodestar-types";
 import {BeaconSync} from "../../../../../../src/sync";
 import {setupApiImplTestServer, ApiImplTestModules} from "../../index.test";
+import {BlockSource} from "../../../../../../src/chain/blocks/types";
 
 use(chaiAsPromised);
 
@@ -43,7 +44,7 @@ describe("api - beacon - publishBlock", function () {
 
     syncStub.isSynced.returns(true);
     await expect(blockApi.publishBlock(block)).to.be.fulfilled;
-    expect(chainStub.processBlock.calledOnceWith(block)).to.be.true;
+    expect(chainStub.processBlock.calledOnceWith(block, {source: BlockSource.API})).to.be.true;
     expect(gossipStub.publishBeaconBlock.calledOnceWith(block)).to.be.true;
   });
 });

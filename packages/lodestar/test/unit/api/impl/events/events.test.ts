@@ -9,6 +9,7 @@ import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from 
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateCachedState} from "../../../../utils/state";
 import {StateContextCache} from "../../../../../src/chain/stateCache";
+import {BlockSource} from "../../../../../src/chain/blocks/types";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
@@ -44,7 +45,7 @@ describe("Events api impl", function () {
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
       chainEventEmmitter.emit(ChainEvent.forkChoiceReorg, headBlock, headBlock, 2);
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock, BlockSource.GOSSIP);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);
@@ -56,7 +57,7 @@ describe("Events api impl", function () {
 
       const headBlock = generateProtoBlock();
       stateCacheStub.get.withArgs(headBlock.stateRoot).returns(generateCachedState({slot: 1000}));
-      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock);
+      chainEventEmmitter.emit(ChainEvent.forkChoiceHead, headBlock, BlockSource.GOSSIP);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.head);

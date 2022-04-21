@@ -8639,7 +8639,7 @@
                 "uid": "${DS_PROMETHEUS}"
               },
               "exemplar": false,
-              "expr": "delta(lodestar_gossip_block_elapsed_time_till_become_head_sum[$__rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_become_head_count[$__rate_interval])",
+              "expr": "delta(lodestar_block_elapsed_time_till_become_head_sum{src=\"BLOCK_SOURCE_GOSSIP\"}[$__rate_interval])\n/\ndelta(lodestar_block_elapsed_time_till_become_head_count[$__rate_interval])",
               "hide": false,
               "interval": "",
               "legendFormat": "till become head",

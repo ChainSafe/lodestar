@@ -14,6 +14,7 @@ import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
 import {SyncOptions} from "./options";
+import {BlockSource} from "../chain/blocks/types";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -171,7 +172,11 @@ export class UnknownBlockSync {
     // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
     // See https://github.com/ChainSafe/lodestar/issues/3792
     const res = await wrapError(
-      this.chain.processBlock(pendingBlock.signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
+      this.chain.processBlock(pendingBlock.signedBlock, {
+        ignoreIfKnown: true,
+        blsVerifyOnMainThread: true,
+        source: BlockSource.UNKNOWN_BLOCK_SYNC,
+      })
     );
     pendingBlock.status = PendingBlockStatus.pending;
 

@@ -201,7 +201,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   const newHead = chain.forkChoice.getHead();
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
-    pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
+    pendingEvents.push(ChainEvent.forkChoiceHead, newHead, fullyVerifiedBlock.source);
     chain.metrics?.forkChoiceChangedHead.inc();
 
     const distance = chain.forkChoice.getCommonAncestorDistance(oldHead, newHead);

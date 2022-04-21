@@ -514,11 +514,6 @@ export function createLodestarMetrics(
 
     // Gossip block
     gossipBlock: {
-      elapsedTimeTillBecomeHead: register.histogram({
-        name: "lodestar_gossip_block_elapsed_time_till_become_head",
-        help: "Time elappsed between block slot time and the time block becomes head",
-        buckets: [0.1, 1, 10],
-      }),
       elapsedTimeTillReceived: register.histogram({
         name: "lodestar_gossip_block_elappsed_time_till_received",
         help: "Time elappsed between block slot time and the time block received via gossip",
@@ -875,5 +870,12 @@ export function createLodestarMetrics(
         labelNames: ["type"],
       }),
     },
+
+    blockElapsedTimeTillBecomeHead: register.histogram<"src">({
+      name: "lodestar_block_elapsed_time_till_become_head",
+      help: "Time elappsed between block slot time and the time block becomes head",
+      buckets: [0.5, 1, 2, 4, 6, 12],
+      labelNames: ["src"],
+    }),
   };
 }
