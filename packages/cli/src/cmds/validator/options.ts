@@ -18,6 +18,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     server: string;
     force: boolean;
     graffiti: string;
+    dontSubmitAttestationEarly?: boolean;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -59,6 +60,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
     type: "string",
+  },
+
+  dontSubmitAttestationEarly: {
+    description: "Wait for 1/3 of slot to submit attestation, by default submit attestation early if possible",
+    type: "boolean",
+    default: false,
   },
 
   importKeystoresPath: {

@@ -129,7 +129,15 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   // It will wait for genesis, so this promise can be potentially very long
 
   const validator = await Validator.initializeFromBeaconNode(
-    {dbOps, slashingProtection, api: args.server, logger, signers, graffiti},
+    {
+      dbOps,
+      slashingProtection,
+      api: args.server,
+      logger,
+      signers,
+      graffiti,
+      dontSubmitAttestationEarly: args.dontSubmitAttestationEarly,
+    },
     controller.signal,
     metrics
   );

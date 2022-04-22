@@ -28,7 +28,8 @@ export class AttestationService {
     private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private dontSubmitAttestationEarly = false
   ) {
     this.dutiesService = new AttestationDutiesService(
       logger,
@@ -148,13 +149,23 @@ export class AttestationService {
       })
     );
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
-
     // Step 2. Publish all `Attestations` in one go
     if (signedAttestations.length > 0) {
       try {
+        const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+        // as monitored in hetzner nodes, most of the time we're before 1/3 of slot at this time
+        // i.e. msToOneThirdSlot > 0
+        if (msToOneThirdSlot > 0 && this.dontSubmitAttestationEarly) {
+          // wait for 1/3 of slot
+          await sleep(msToOneThirdSlot);
+        }
+        this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
         await this.api.beacon.submitPoolAttestations(signedAttestations);
-        this.logger.info("Published attestations", {slot, count: signedAttestations.length});
+        this.logger.info("Published attestations", {
+          slot,
+          count: signedAttestations.length,
+          dontSubmitAttestationEarly: this.dontSubmitAttestationEarly,
+        });
         this.metrics?.publishedAttestations.inc(signedAttestations.length);
       } catch (e) {
         // Note: metric counts only 1 since we don't know how many signedAttestations are invalid

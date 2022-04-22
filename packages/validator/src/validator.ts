@@ -28,6 +28,7 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  dontSubmitAttestationEarly?: boolean;
   graffiti?: string;
 };
 
@@ -60,7 +61,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti, dontSubmitAttestationEarly} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -101,7 +102,8 @@ export class Validator {
       this.emitter,
       this.indicesService,
       this.chainHeaderTracker,
-      metrics
+      metrics,
+      dontSubmitAttestationEarly
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
