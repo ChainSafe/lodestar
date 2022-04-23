@@ -81,7 +81,11 @@ export class Validator {
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
     const indicesService = new IndicesService(logger, api, validatorStore, metrics);
-    if (opts.enableDoppelganger) {
+    // Do not enable doppelganger when started before genesis or first slot of genesis, because
+    // there would not have been any activity/signing in the network, so it is pointless to wait.
+    // Doppelganger should be enabled at slot > genesis slot, for example at slot 1, because
+    // same validator could have been started at slot 0 with signature already published to the network
+    if (opts.enableDoppelganger && getCurrentSlot(config, genesis.genesisTime) > 0) {
       const doppelgangerService = new DoppelgangerService(
         config,
         logger,

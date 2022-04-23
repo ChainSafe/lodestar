@@ -34,7 +34,63 @@ describe("doppelganger / doppelganger test", function () {
 
   const timeout = (SLOTS_PER_EPOCH + genesisSlotsDelay) * beaconParams.SECONDS_PER_SLOT * 1000;
 
-  it("should shut down validator if same key is active", async function () {
+  it("should not have doppelganger protection if started before genesis", async function () {
+    this.timeout("10 min");
+
+    const enableDoppelganger = true;
+    const doppelgangerEpochsToCheck = 2;
+    const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
+    const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+
+    const committeeIndex = 0;
+    const validatorIndex = 0;
+
+    const bn = await getDevBeaconNode({
+      params: beaconParams,
+      options: {sync: {isSingleNode: true}},
+      validatorCount,
+      logger: loggerNodeA,
+    });
+    afterEachCallbacks.push(() => bn.close());
+
+    const {validators: validatorsWithDoppelganger} = await getAndInitDevValidators({
+      node: bn,
+      validatorsPerClient: validatorCount,
+      validatorClientCount: 1,
+      startIndex: 0,
+      useRestApi: false,
+      testLoggerOpts,
+      enableDoppelganger,
+      doppelgangerEpochsToCheck,
+    });
+    afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
+
+    await Promise.all(validatorsWithDoppelganger.map((validator) => validator.start()));
+
+    const validatorUnderTest = validatorsWithDoppelganger[0];
+    const pubKey = validatorUnderTest.validatorStore.votingPubkeys()[0];
+    const beaconBlock = ssz.allForks.phase0.BeaconBlock.defaultValue();
+
+    await expect(
+      validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot),
+      "Signing should be possible if starting at genesis since doppelganger should be off"
+    ).to.eventually.be.fulfilled;
+
+    await expect(
+      validatorUnderTest.validatorStore.signAttestation(
+        createAttesterDuty(fromHexString(pubKey), bn.chain.clock.currentSlot, committeeIndex, validatorIndex),
+        generateAttestationData(
+          bn.chain.clock.currentEpoch - 1,
+          bn.chain.clock.currentEpoch,
+          bn.chain.clock.currentSlot
+        ),
+        bn.chain.clock.currentEpoch
+      ),
+      "Signing should be possible if starting at genesis since doppelganger should be off"
+    ).to.eventually.be.fulfilled;
+  });
+
+  it("should shut down validator if same key is active and started after genesis", async function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
@@ -43,11 +99,14 @@ describe("doppelganger / doppelganger test", function () {
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
 
+    // set genesis time 2 slots in the past
+    const genesisTime = Math.floor(Date.now() / 1000) - 2 * beaconParams.SECONDS_PER_SLOT;
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
+      genesisTime,
     });
     afterEachCallbacks.push(() => bn.close());
 
@@ -95,7 +154,7 @@ describe("doppelganger / doppelganger test", function () {
       "validator with doppelganger protection should be running before first epoch"
     );
     await waitForEvent<phase0.Checkpoint>(bn2.chain.emitter, ChainEvent.clockEpoch, timeout);
-    // After first checkpoint doppelganger protection should have stopped the validatorsWithDoppelganger
+    // After first epoch doppelganger protection should have stopped the validatorsWithDoppelganger
     expect(validators[0].getStatus()).to.be.equal(
       "running",
       "validator without doppelganger protection should still be running after first epoch"
@@ -177,7 +236,7 @@ describe("doppelganger / doppelganger test", function () {
     );
   });
 
-  it("should not sign block if doppelganger period has not passed", async function () {
+  it("should not sign block if doppelganger period has not passed and not started at genesis", async function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
@@ -185,11 +244,14 @@ describe("doppelganger / doppelganger test", function () {
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
+    // set genesis time 2 slots in the past
+    const genesisTime = Math.floor(Date.now() / 1000) - 2 * beaconParams.SECONDS_PER_SLOT;
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
+      genesisTime,
     });
     afterEachCallbacks.push(() => bn.close());
 
@@ -229,19 +291,22 @@ describe("doppelganger / doppelganger test", function () {
     ).to.eventually.be.fulfilled;
   });
 
-  it("should not sign attestations if doppelganger period has not passed", async function () {
+  it("should not sign attestations if doppelganger period has not passed and started after genesis", async function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
     const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
+    // set genesis time 2 slots in the past
+    const genesisTime = Math.floor(Date.now() / 1000) - 2 * beaconParams.SECONDS_PER_SLOT;
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {isSingleNode: true}},
       validatorCount,
       logger: loggerNodeA,
+      genesisTime,
     });
     afterEachCallbacks.push(() => bn.close());
 
