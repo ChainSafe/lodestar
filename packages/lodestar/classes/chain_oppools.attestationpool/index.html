@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/lodestar/classes/chain_oppools.attestationpool/">
       
       <link rel="icon" href="../../../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.9">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
     
     
       
@@ -21,7 +21,7 @@
       
     
     
-      <link rel="stylesheet" href="../../../../assets/stylesheets/main.120efc48.min.css">
+      <link rel="stylesheet" href="../../../../assets/stylesheets/main.8c5ef100.min.css">
       
         
         <link rel="stylesheet" href="../../../../assets/stylesheets/palette.9647289d.min.css">
@@ -663,15 +663,15 @@ receives and it can be triggered manually.</p>
 <p>• <strong>attestationByRootBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../../modules/chain_oppools/#aggregatefast">AggregateFast</a>››</em> = new MapDef<Slot, Map\<DataRootHex, AggregateFast>>(
     () =&gt; new Map<DataRootHex, AggregateFast>()
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L57">packages/lodestar/src/chain/opPools/attestationPool.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L57">packages/lodestar/src/chain/opPools/attestationPool.ts:57</a></em></p>
 <hr />
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L60">packages/lodestar/src/chain/opPools/attestationPool.ts:60</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L60">packages/lodestar/src/chain/opPools/attestationPool.ts:60</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>attestation</code>: phase0.Attestation): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L80">packages/lodestar/src/chain/opPools/attestationPool.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L80">packages/lodestar/src/chain/opPools/attestationPool.ts:80</a></em></p>
 <p>Accepts an <code>VerifiedUnaggregatedAttestation</code> and attempts to apply it to the "naive
 aggregation pool".</p>
 <p>The naive aggregation pool is used by local validators to produce
@@ -702,7 +702,7 @@ and no error is returned.</p>
 <hr />
 <h3 id="getaggregate">getAggregate<a class="headerlink" href="#getaggregate" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAggregate</strong>(<code>slot</code>: Slot, <code>dataRoot</code>: Root): <em>phase0.Attestation</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L113">packages/lodestar/src/chain/opPools/attestationPool.ts:113</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L113">packages/lodestar/src/chain/opPools/attestationPool.ts:113</a></em></p>
 <p>For validator API to get an aggregate</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -727,7 +727,7 @@ and no error is returned.</p>
 <hr />
 <h3 id="getall">getAll<a class="headerlink" href="#getall" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAll</strong>(<code>bySlot?</code>: Slot): <em>phase0.Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L137">packages/lodestar/src/chain/opPools/attestationPool.ts:137</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L137">packages/lodestar/src/chain/opPools/attestationPool.ts:137</a></em></p>
 <p>Get all attestations optionally filtered by <code>attestation.data.slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -750,7 +750,7 @@ and no error is returned.</p>
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/97f6012/packages/lodestar/src/chain/opPools/attestationPool.ts#L128">packages/lodestar/src/chain/opPools/attestationPool.ts:128</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/67fb374/packages/lodestar/src/chain/opPools/attestationPool.ts#L128">packages/lodestar/src/chain/opPools/attestationPool.ts:128</a></em></p>
 <p>Removes any attestations with a slot lower than <code>current_slot</code> and bars any future
 attestations with a slot lower than <code>current_slot - SLOTS_RETAINED</code>.</p>
 <p><strong>Parameters:</strong></p>
@@ -842,7 +842,7 @@ attestations with a slot lower than <code>current_slot - SLOTS_RETAINED</code>.<
     <script id="__config" type="application/json">{"base": "../../../..", "features": [], "search": "../../../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../../../assets/javascripts/bundle.6e54b5cd.min.js"></script>
+      <script src="../../../../assets/javascripts/bundle.748e2769.min.js"></script>
       
     
   </body>

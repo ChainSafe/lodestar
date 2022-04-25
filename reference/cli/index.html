@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/reference/cli/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.9">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
     
     
       
@@ -21,7 +21,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.120efc48.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.8c5ef100.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.9647289d.min.css">
@@ -435,6 +435,13 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#lightclient" class="md-nav__link">
+    lightclient
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#account" class="md-nav__link">
     account
   </a>
@@ -713,6 +720,13 @@
         <li class="md-nav__item">
   <a href="#validator" class="md-nav__link">
     validator
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#lightclient" class="md-nav__link">
+    lightclient
   </a>
   
 </li>
@@ -1402,6 +1416,67 @@
 <td>string</td>
 <td>Listen address for the Prometheus metrics HTTP server</td>
 <td>127.0.0.1</td>
+</tr>
+</tbody>
+</table>
+<h2 id="lightclient"><code>lightclient</code><a class="headerlink" href="#lightclient" title="Permanent link">&para;</a></h2>
+<p>Run lightclient</p>
+<p><strong>Examples</strong></p>
+<p>Run lightclient with prater network</p>
+<div class="highlight"><pre><span></span><code>lightclient --network prater
+</code></pre></div>
+<p><strong>Options</strong></p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--logLevel</code></td>
+<td>string</td>
+<td>Logging verbosity level</td>
+<td>info</td>
+</tr>
+<tr>
+<td><code>--logLevelFile</code></td>
+<td>string</td>
+<td>Logging verbosity level for file transport</td>
+<td>info</td>
+</tr>
+<tr>
+<td><code>--logRotate</code></td>
+<td>boolean</td>
+<td>Daily rotate log files</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--logMaxFiles</code></td>
+<td>number</td>
+<td>Number of log files to maintain while rotating logs(if provided with logRotate)</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--logFile</code></td>
+<td>string</td>
+<td>Path to output all logs to a persistent log file</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--beaconApiUrl</code></td>
+<td>string</td>
+<td>Url to a beacon node that support lightclient API</td>
+<td></td>
+</tr>
+<tr>
+<td><code>--checkpointRoot</code></td>
+<td>string</td>
+<td>Checkpoint root hex string to sync the lightclient from, start with 0x</td>
+<td></td>
 </tr>
 </tbody>
 </table>
@@ -2179,7 +2254,7 @@
     <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.6e54b5cd.min.js"></script>
+      <script src="../../assets/javascripts/bundle.748e2769.min.js"></script>
       
     
   </body>
