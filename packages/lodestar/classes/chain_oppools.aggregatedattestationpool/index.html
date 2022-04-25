@@ -660,15 +660,15 @@ Note that we want to remove attestations with attesters that were included in th
 <p>• <strong>attestationGroupByDataHashBySlot</strong>: <em><a href="../util.mapdef/">MapDef</a>‹number, <a href="../chain_statecache.maptracker/#static-map">Map</a>‹string, <a href="../chain_oppools.matchingdataattestationgroup/">MatchingDataAttestationGroup</a>‹›››</em> = new MapDef<Slot, Map\<DataRootHex, MatchingDataAttestationGroup>>(
     () =&gt; new Map<DataRootHex, MatchingDataAttestationGroup>()
   )</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L52">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L52">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:52</a></em></p>
 <hr />
 <h3 id="private-lowestpermissibleslot"><code>Private</code> lowestPermissibleSlot<a class="headerlink" href="#private-lowestpermissibleslot" title="Permanent link">&para;</a></h3>
 <p>• <strong>lowestPermissibleSlot</strong>: <em>number</em> = 0</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L55">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:55</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L55">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:55</a></em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="add">add<a class="headerlink" href="#add" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>add</strong>(<code>attestation</code>: phase0.Attestation, <code>attestingIndices</code>: ValidatorIndex[], <code>committee</code>: ValidatorIndex[]): <em><a href="../../enums/chain_oppools.insertoutcome/">InsertOutcome</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L57">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:57</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L57">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:57</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -696,7 +696,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="getall">getAll<a class="headerlink" href="#getall" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAll</strong>(<code>bySlot?</code>: Slot): <em>phase0.Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L168">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:168</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L168">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:168</a></em></p>
 <p>Get all attestations optionally filtered by <code>attestation.data.slot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -719,7 +719,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="getattestationsforblock">getAttestationsForBlock<a class="headerlink" href="#getattestationsforblock" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAttestationsForBlock</strong>(<code>state</code>: CachedBeaconStateAllForks): <em>phase0.Attestation[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L89">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:89</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L89">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:89</a></em></p>
 <p>Get attestations to be included in a block. Returns $MAX_ATTESTATIONS items</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -740,7 +740,7 @@ Note that we want to remove attestations with attesters that were included in th
 <hr />
 <h3 id="private-getparticipationaltair"><code>Private</code> getParticipationAltair<a class="headerlink" href="#private-getparticipationaltair" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getParticipationAltair</strong>(<code>state</code>: CachedBeaconStateAllForks): <em><a href="../../modules/chain_oppools/#getparticipationfn">GetParticipationFn</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L217">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:217</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L217">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:217</a></em></p>
 <p>Get attestations to be included in an altair block.
 Attestations are sorted by inclusion distance then number of attesters.
 Attestations should pass the validation when processing attestations in beacon-state-transition.</p>
@@ -763,7 +763,7 @@ Attestations should pass the validation when processing attestations in beacon-s
 <hr />
 <h3 id="private-getparticipationphase0"><code>Private</code> getParticipationPhase0<a class="headerlink" href="#private-getparticipationphase0" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getParticipationPhase0</strong>(<code>state</code>: CachedBeaconStateAllForks): <em><a href="../../modules/chain_oppools/#getparticipationfn">GetParticipationFn</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L192">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:192</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L192">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:192</a></em></p>
 <p>Get attestations to be included in a phase0 block.
 As we are close to altair, this is not really important, it's mainly for e2e.
 The performance is not great due to the different BeaconState data structure to altair.</p>
@@ -786,7 +786,7 @@ The performance is not great due to the different BeaconState data structure to 
 <hr />
 <h3 id="prune">prune<a class="headerlink" href="#prune" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>prune</strong>(<code>clockSlot</code>: Slot): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/21f8ec2/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L80">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:80</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/e448ece/packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts#L80">packages/lodestar/src/chain/opPools/aggregatedAttestationPool.ts:80</a></em></p>
 <p>Remove attestations which are too old to be included in a block.</p>
 <p><strong>Parameters:</strong></p>
 <table>
