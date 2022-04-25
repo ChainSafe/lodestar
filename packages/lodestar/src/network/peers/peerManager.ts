@@ -414,7 +414,9 @@ export class PeerManager {
     );
 
     // Register results to metrics
-    this.metrics?.peersRequestedToDisconnect.inc(peersToDisconnect.length);
+    for (const [reason, peers] of peersToDisconnect) {
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+    }
     this.metrics?.peersRequestedToConnect.inc(peersToConnect);
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
@@ -447,7 +449,7 @@ export class PeerManager {
       }
     }
 
-    for (const peer of peersToDisconnect) {
+    for (const peer of Array.from(peersToDisconnect.values()).flat()) {
       void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
     }
 

@@ -41,6 +41,12 @@ type PeerInfo = {
   score: number;
 };
 
+export enum ExcessPeerDisconnectReason {
+  LOW_SCORE = "low_score",
+  NO_LONG_LIVED_SUBNET = "no_long_lived_subnet",
+  TOO_GROUPED_SUBNET = "too_grouped_subnet",
+}
+
 /**
  * Prioritize which peers to disconect and which to connect. Conditions:
  * - Reach `targetPeers`
@@ -55,12 +61,12 @@ export function prioritizePeers(
   {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number}
 ): {
   peersToConnect: number;
-  peersToDisconnect: PeerId[];
+  peersToDisconnect: Map<string, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
 } {
   let peersToConnect = 0;
-  const peersToDisconnect = new Set<PeerId>();
+  const peersToDisconnect = new MapDef<string, PeerId[]>(() => []);
   const attnetQueries: SubnetDiscvQuery[] = [];
   const syncnetQueries: SubnetDiscvQuery[] = [];
   const attnetTruebitIndices = new Map<PeerInfo, number[]>();
@@ -153,7 +159,7 @@ export function prioritizePeers(
 
   return {
     peersToConnect,
-    peersToDisconnect: Array.from(peersToDisconnect),
+    peersToDisconnect,
     attnetQueries,
     syncnetQueries,
   };
@@ -187,22 +193,34 @@ function pruneExcessPeers({
   targetPeers: number;
   targetPeersPerAttnetSubnet: number;
   activeAttnets: RequestedSubnet[];
-  peersToDisconnect: Set<PeerId>;
+  peersToDisconnect: MapDef<string, PeerId[]>;
 }): void {
   const connectedPeerCount = connectedPeers.length;
   const connectedPeersWithoutDuty = connectedPeers.filter((peer) => !peerHasDuty.get(peer));
   // sort from least score to high
   const worstPeers = sortBy(shuffle(connectedPeersWithoutDuty), (peer) => peer.score);
 
-  // Remove peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS or not have long lived subnet
+  // Lodestar prefers disconnecting peers that does not have long lived subnets
+  // See https://github.com/ChainSafe/lodestar/issues/3940
+  // peers with low score will be disconnected through heartbeat in the end
   for (const peer of worstPeers) {
     const hasLongLivedSubnet =
       (attnetTruebitIndices.get(peer)?.length ?? 0) > 0 || (syncnetTruebitIndices.get(peer)?.length ?? 0) > 0;
     if (
-      (!hasLongLivedSubnet || peer.score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS) &&
-      peersToDisconnect.size < connectedPeerCount - targetPeers
+      !hasLongLivedSubnet &&
+      Array.from(peersToDisconnect.values()).flat().length < connectedPeerCount - targetPeers
     ) {
-      peersToDisconnect.add(peer.id);
+      peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET).push(peer.id);
+    }
+  }
+
+  // Remove peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS
+  for (const peer of worstPeers) {
+    if (
+      peer.score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS &&
+      Array.from(peersToDisconnect.values()).flat().length < connectedPeerCount - targetPeers
+    ) {
+      peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.LOW_SCORE).push(peer.id);
     }
   }
 
@@ -216,7 +234,7 @@ function pruneExcessPeers({
 
     // populate the above variables
     for (const peer of connectedPeers) {
-      if (peersToDisconnect.has(peer.id)) {
+      if (Array.from(peersToDisconnect.values()).flat().includes(peer.id)) {
         continue;
       }
       for (const subnet of attnetTruebitIndices.get(peer) ?? []) {
@@ -274,7 +292,7 @@ function pruneExcessPeers({
           }
         }
 
-        peersToDisconnect.add(removedPeer.id);
+        peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET).push(removedPeer.id);
       } else {
         // should continue with the 2nd biggest maxPeersSubnet
         subnetToPeers.delete(maxPeersSubnet);

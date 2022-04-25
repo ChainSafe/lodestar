@@ -94,9 +94,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_to_connect",
       help: "Priorization results total peers count requested to connect",
     }),
-    peersRequestedToDisconnect: register.gauge({
+    peersRequestedToDisconnect: register.gauge<"reason">({
       name: "lodestar_peers_requested_total_to_disconnect",
       help: "Priorization results total peers count requested to disconnect",
+      labelNames: ["reason"],
     }),
     peersRequestedSubnetsToQuery: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_to_query",
