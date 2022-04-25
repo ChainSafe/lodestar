@@ -4,7 +4,7 @@ import {phase0, altair} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {prioritizePeers} from "../../../../src/network/peers/utils/prioritizePeers";
-import {getAttnets} from "../../../utils/network";
+import {getAttnets, getSyncnets} from "../../../utils/network";
 import {RequestedSubnet} from "../../../../src/network/peers/utils";
 
 type Result = ReturnType<typeof prioritizePeers>;
@@ -53,10 +53,10 @@ describe("network / peers / priorization", () => {
       },
     },
     {
-      id: "Disconnect worst peers without duty",
+      id: "Disconnect bad score peers without duty",
       connectedPeers: [
         {id: peers[0], syncnets: none, attnets: getAttnets([3]), score: 0},
-        {id: peers[1], syncnets: none, attnets: none, score: 0},
+        {id: peers[1], syncnets: none, attnets: none, score: -5},
         {id: peers[2], syncnets: none, attnets: none, score: -20},
         {id: peers[3], syncnets: none, attnets: none, score: -40},
       ],
@@ -66,6 +66,74 @@ describe("network / peers / priorization", () => {
       expectedResult: {
         // Peers sorted by score, excluding with future duties
         peersToDisconnect: [peers[3], peers[2], peers[1]],
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+      },
+    },
+    {
+      id: "Disconnect no long-lived-subnet peers without duty",
+      connectedPeers: [
+        {id: peers[0], syncnets: none, attnets: getAttnets([3]), score: 0},
+        {id: peers[1], syncnets: none, attnets: none, score: -0.1},
+        {id: peers[2], syncnets: none, attnets: none, score: -0.2},
+        {id: peers[3], syncnets: none, attnets: none, score: -0.3},
+      ],
+      activeAttnets: [3],
+      activeSyncnets: [],
+      opts: {targetPeers: 1, maxPeers: 1},
+      expectedResult: {
+        // Peers sorted by score, excluding with future duties
+        peersToDisconnect: [peers[3], peers[2], peers[1]],
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+      },
+    },
+    {
+      id: "Disconnect no-duty peers that's too grouped in a subnet",
+      connectedPeers: [
+        // should not drop this peer or duty peers drop below min value
+        {id: peers[0], syncnets: none, attnets: getAttnets([1, 3]), score: 0},
+        // below peers are too grouped into subnet 1
+        {id: peers[1], syncnets: none, attnets: getAttnets([1, 4, 6]), score: 0},
+        {id: peers[2], syncnets: none, attnets: getAttnets([1, 4]), score: 0},
+        {id: peers[3], syncnets: none, attnets: getAttnets([1]), score: 0},
+        // should not remove this peer due or syncnet peers would drop below min value
+        {id: peers[4], syncnets: getSyncnets([2, 3]), attnets: getAttnets([1]), score: 0},
+      ],
+      activeAttnets: [3],
+      activeSyncnets: [2],
+      opts: {targetPeers: 1, maxPeers: 1},
+      expectedResult: {
+        // Peers sorted by long lived subnets
+        peersToDisconnect: [peers[3], peers[2], peers[1]],
+        peersToConnect: 0,
+        attnetQueries: [],
+        syncnetQueries: [],
+      },
+    },
+    {
+      id: "Disconnect no-duty peers that's too grouped in a subnet - ignore maxPeersSubnet",
+      connectedPeers: [
+        // should not drop this peer or duty peers drop below min value
+        {id: peers[0], syncnets: none, attnets: getAttnets([1, 3]), score: 0},
+        // below peers are too grouped into subnet 1
+        // but cannot remove them due to syncnet requirement
+        {id: peers[1], syncnets: getSyncnets([2]), attnets: getAttnets([1, 4, 6]), score: 0},
+        {id: peers[2], syncnets: getSyncnets([2]), attnets: getAttnets([1, 4]), score: 0},
+        // biggest maxPeerSubnet is 1 (3 peers) but cannot remove all of them
+        // 2nd biggest maxPeerSubnet is 7, should remove peers from that subnet
+        {id: peers[3], syncnets: none, attnets: getAttnets([7]), score: 0},
+        // peer 4 has more long lived subnets than peer 3, should not remove it
+        {id: peers[4], syncnets: none, attnets: getAttnets([7, 8]), score: 0},
+      ],
+      activeAttnets: [3],
+      activeSyncnets: [2],
+      opts: {targetPeers: 1, maxPeers: 1},
+      expectedResult: {
+        // Peers sorted by long lived subnets
+        peersToDisconnect: [peers[3]],
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
