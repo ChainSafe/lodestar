@@ -4,7 +4,6 @@ import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
-import {extendError} from "@chainsafe/lodestar-utils";
 import {YargsError, readValidatorPassphrase, add0xPrefix} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {
@@ -67,7 +66,7 @@ export class ValidatorDir {
       if (options && options.force) {
         // Ignore error, maybe log?
       } else {
-        throw extendError(e as Error, "use --force to override");
+        throw e;
       }
     }
   }

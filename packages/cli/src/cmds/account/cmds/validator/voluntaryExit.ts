@@ -91,7 +91,16 @@ BE UNTIL AT LEAST TWO YEARS AFTER THE PHASE 0 MAINNET LAUNCH.
 
     console.log(`Initiating voluntary exit for validator ${publicKey}`);
 
-    const secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    let secretKey;
+    try {
+      secretKey = await validatorDirManager.decryptValidator(publicKey, {force});
+    } catch (e) {
+      if ((e as Error).message.indexOf("EEXIST") !== -1) {
+        console.log(`Decrypting keystore failed with error ${e}. use --force to override`);
+      }
+      throw e;
+    }
+
     console.log(`Decrypted keystore for validator ${publicKey}`);
 
     const validatorPaths = getValidatorPaths(args);
