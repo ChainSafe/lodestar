@@ -4,7 +4,7 @@ on: [pull_request, push]
 
 env:
   GETH_COMMIT: bb5633c5ee3975ce016636066ec790054ec469e4
-  NETHERMIND_COMMIT: 8567e71c0a1a6b0645edffc6cb1a1443c9a5f379
+  NETHERMIND_COMMIT: 00b50532543824dbac65e8b7ab09484e44992c27
 
 jobs:
   sim-merge-tests:
