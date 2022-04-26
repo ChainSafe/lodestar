@@ -478,6 +478,18 @@ export class EpochContext {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
+  getNextEpochBeaconProposer(state: BeaconStateAllForks): ValidatorIndex[] {
+    const nextShuffling = this.nextShuffling;
+    let nextProposers = this.nextEpochProposers.get(nextShuffling.epoch);
+    if (!nextProposers) {
+      nextProposers = computeProposers(state, nextShuffling, this.effectiveBalanceIncrements);
+      // Only keep proposers for one epoch in the future, so clear before setting new value
+      this.nextEpochProposers.clear();
+      this.nextEpochProposers.set(nextShuffling.epoch, nextProposers);
+    }
+    return nextProposers;
+  }
+
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {

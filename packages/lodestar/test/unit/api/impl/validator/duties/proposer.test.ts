@@ -78,7 +78,7 @@ describe("get proposers api impl", function () {
     expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.true;
   });
 
-  it.skip("should get proposers for next epoch", async function () {
+  it("should get proposers for next epoch", async function () {
     syncStub.isSynced.returns(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
@@ -98,12 +98,15 @@ describe("get proposers api impl", function () {
 
     const cachedState = createCachedBeaconStateTest(state, config);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    // TODO DA
+    const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getNextEpochBeaconProposer");
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
-    stubGetBeaconProposer.returns(1);
+    stubGetNextBeaconProposer.returns([1]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
     const {data: result} = await api.getProposerDuties(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
-    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.false;
+    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.true;
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.false;
   });
 
   it("should have different proposer for current and next epoch", async function () {
