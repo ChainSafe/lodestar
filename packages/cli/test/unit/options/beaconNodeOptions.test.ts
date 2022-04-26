@@ -6,10 +6,6 @@ import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconN
 import {getTestdirPath} from "../../utils";
 
 describe("options / beaconNodeOptions", () => {
-  const jwtSecretFile = getTestdirPath("./jwtsecret");
-  const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
-  fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
-
   it("Should parse BeaconNodeArgs", () => {
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
@@ -136,7 +132,11 @@ describe("options / beaconNodeOptions", () => {
     expect(options).to.deep.equal(expectedOptions);
   });
 
-  it("Should use execution endpoint for eth1", () => {
+  it("Should use execution endpoint & jwt for eth1", () => {
+    const jwtSecretFile = getTestdirPath("./jwtsecret");
+    const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+    fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
+
     // Cast to match the expected fully defined type
     const beaconNodeArgsPartial = {
       "eth1.enabled": true,
