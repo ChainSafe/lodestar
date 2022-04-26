@@ -167,8 +167,8 @@ export function prioritizePeers(
 
 /**
  * Remove excess peers back down to our target values.
- * 1. Remove worst scoring peers
- * 2. Remove peers that are not subscribed to a subnet (they have less value)
+ * 1. Remove peers that are not subscribed to a subnet (they have less value)
+ * 2. Remove worst scoring peers
  * 3. Remove peers that we have many on any particular subnet
  *   - Only consider removing peers on subnet that has > MAX_TARGET_SUBNET_PEERS to be safe
  *   - If we have a choice, do not remove peer that would drop us below targetPeersPerAttnetSubnet
@@ -199,42 +199,48 @@ function pruneExcessPeers({
   const connectedPeersWithoutDuty = connectedPeers.filter((peer) => !peerHasDuty.get(peer));
   // sort from least score to high
   const worstPeers = sortBy(shuffle(connectedPeersWithoutDuty), (peer) => peer.score);
+  let peersToDisconnectCount = 0;
+  const noLongLivedSubnetPeersToDisconnect: PeerId[] = [];
+  const peersToDisconnectTarget = connectedPeerCount - targetPeers;
 
-  // Lodestar prefers disconnecting peers that does not have long lived subnets
+  // 1. Lodestar prefers disconnecting peers that does not have long lived subnets
   // See https://github.com/ChainSafe/lodestar/issues/3940
   // peers with low score will be disconnected through heartbeat in the end
   for (const peer of worstPeers) {
     const hasLongLivedSubnet =
       (attnetTruebitIndices.get(peer)?.length ?? 0) > 0 || (syncnetTruebitIndices.get(peer)?.length ?? 0) > 0;
-    if (
-      !hasLongLivedSubnet &&
-      Array.from(peersToDisconnect.values()).flat().length < connectedPeerCount - targetPeers
-    ) {
-      peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET).push(peer.id);
+    if (!hasLongLivedSubnet && peersToDisconnectCount < peersToDisconnectTarget) {
+      noLongLivedSubnetPeersToDisconnect.push(peer.id);
+      peersToDisconnectCount++;
     }
   }
+  peersToDisconnect.set(ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET, noLongLivedSubnetPeersToDisconnect);
 
-  // Remove peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS
+  // 2. Disconnect peers that have score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS
+  const badScorePeersToDisconnect: PeerId[] = [];
   for (const peer of worstPeers) {
     if (
       peer.score < LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS &&
-      Array.from(peersToDisconnect.values()).flat().length < connectedPeerCount - targetPeers
+      peersToDisconnectCount < peersToDisconnectTarget &&
+      !noLongLivedSubnetPeersToDisconnect.includes(peer.id)
     ) {
-      peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.LOW_SCORE).push(peer.id);
+      badScorePeersToDisconnect.push(peer.id);
+      peersToDisconnectCount++;
     }
   }
+  peersToDisconnect.set(ExcessPeerDisconnectReason.LOW_SCORE, badScorePeersToDisconnect);
 
-  // Remove peers that are too grouped on any given subnet
-  if (peersToDisconnect.size < connectedPeerCount - targetPeers) {
+  // 3. Disconnect peers that are too grouped on any given subnet
+  const tooGroupedPeersToDisconnect: PeerId[] = [];
+  if (peersToDisconnectCount < peersToDisconnectTarget) {
     // PeerInfo array by attestation subnet
     const subnetToPeers = new MapDef<number, PeerInfo[]>(() => []);
     // number of peers per long lived sync committee
     const syncCommitteePeerCount = new MapDef<number, number>(() => 0);
-    // no need to create peerToSyncCommittee, use syncnetTruebitIndices
 
     // populate the above variables
     for (const peer of connectedPeers) {
-      if (Array.from(peersToDisconnect.values()).flat().includes(peer.id)) {
+      if (noLongLivedSubnetPeersToDisconnect.includes(peer.id) || badScorePeersToDisconnect.includes(peer.id)) {
         continue;
       }
       for (const subnet of attnetTruebitIndices.get(peer) ?? []) {
@@ -245,24 +251,14 @@ function pruneExcessPeers({
       }
     }
 
-    while (peersToDisconnect.size < connectedPeerCount - targetPeers) {
-      let maxPeersSubnet: number | null = null;
-      let maxPeerCountPerSubnet = -1;
-      // find subnet that has the most peers and > MAX_TARGET_SUBNET_PEERS
-      // prater has up to 15-20 peers per subnet at most
-      // however mainnet has up to 6-10 peers per subnet at most
-      for (const [subnet, peers] of subnetToPeers) {
-        if (peers.length > Math.min(targetPeers, MAX_TARGET_SUBNET_PEERS) && peers.length > maxPeerCountPerSubnet) {
-          maxPeersSubnet = subnet;
-          maxPeerCountPerSubnet = peers.length;
-        }
-      }
-
-      // peers are NOT too grouped on any given subnet, finish this function
+    while (peersToDisconnectCount < peersToDisconnectTarget) {
+      const maxPeersSubnet: number | null = findMaxPeersSubnet(subnetToPeers, targetPeers);
+      // peers are NOT too grouped on any given subnet, finish this loop
       if (maxPeersSubnet === null) break;
       const peersOnMostGroupedSubnet = subnetToPeers.get(maxPeersSubnet);
       if (peersOnMostGroupedSubnet === undefined) break;
 
+      // Find peers to remove from the current maxPeersSubnet
       const removedPeer = findPeerToRemove(
         subnetToPeers,
         syncCommitteePeerCount,
@@ -278,27 +274,40 @@ function pruneExcessPeers({
       // In this case, we remove all peers from the pruning logic and try another subnet.
       if (removedPeer != null) {
         // recalculate variables
-        for (const peers of subnetToPeers.values()) {
-          const index = peers.findIndex((peer) => peer === removedPeer);
-          if (index >= 0) peers.splice(index, 1);
-        }
-        const knownSyncCommittees = syncnetTruebitIndices.get(removedPeer);
-        if (knownSyncCommittees) {
-          for (const syncCommittee of knownSyncCommittees) {
-            syncCommitteePeerCount.set(
-              syncCommittee,
-              Math.max(syncCommitteePeerCount.getOrDefault(syncCommittee) - 1, 0)
-            );
-          }
-        }
+        removePeerFromSubnetToPeers(subnetToPeers, removedPeer);
+        decreaseSynccommitteePeerCount(syncCommitteePeerCount, syncnetTruebitIndices.get(removedPeer));
 
-        peersToDisconnect.getOrDefault(ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET).push(removedPeer.id);
+        tooGroupedPeersToDisconnect.push(removedPeer.id);
+        peersToDisconnectCount++;
       } else {
+        // no peer to remove from the maxPeersSubnet
         // should continue with the 2nd biggest maxPeersSubnet
         subnetToPeers.delete(maxPeersSubnet);
       }
     }
+
+    peersToDisconnect.set(ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET, tooGroupedPeersToDisconnect);
   }
+}
+
+/**
+ * Find subnet that has the most peers and > MAX_TARGET_SUBNET_PEERS, return null if peers are not grouped
+ * to any subnets.
+ * Prater has up to 15-20 peers per subnet at most
+ * However mainnet has up to 6-10 peers per subnet at most
+ */
+function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetPeers: number): number | null {
+  let maxPeersSubnet: number | null = null;
+  let maxPeerCountPerSubnet = -1;
+
+  for (const [subnet, peers] of subnetToPeers) {
+    if (peers.length > Math.min(targetPeers, MAX_TARGET_SUBNET_PEERS) && peers.length > maxPeerCountPerSubnet) {
+      maxPeersSubnet = subnet;
+      maxPeerCountPerSubnet = peers.length;
+    }
+  }
+
+  return maxPeersSubnet;
 }
 
 /**
@@ -350,4 +359,30 @@ function findPeerToRemove(
   }
 
   return removedPeer;
+}
+
+/**
+ * Remove a peer from subnetToPeers map.
+ */
+function removePeerFromSubnetToPeers(subnetToPeers: Map<number, PeerInfo[]>, removedPeer: PeerInfo): void {
+  for (const peers of subnetToPeers.values()) {
+    const index = peers.findIndex((peer) => peer === removedPeer);
+    if (index >= 0) {
+      peers.splice(index, 1);
+    }
+  }
+}
+
+/**
+ * Decrease the syncCommitteePeerCount from the specified committees set
+ */
+function decreaseSynccommitteePeerCount(
+  syncCommitteePeerCount: MapDef<number, number>,
+  committees: number[] | undefined
+): void {
+  if (committees) {
+    for (const syncCommittee of committees) {
+      syncCommitteePeerCount.set(syncCommittee, Math.max(syncCommitteePeerCount.getOrDefault(syncCommittee) - 1, 0));
+    }
+  }
 }

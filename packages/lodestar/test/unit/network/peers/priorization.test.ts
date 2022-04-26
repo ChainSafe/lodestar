@@ -193,14 +193,14 @@ describe("network / peers / priorization", () => {
     });
   }
 
-  function cleanResult(res: Result): Omit<Result, "peersToDisconnect"> & {peersToDisconnect: Map<string, string[]>} {
-    const toCleanResult = (peersToDisconnect: Map<string, PeerId[]>): Map<string, string[]> => {
-      const result = new Map<string, string[]>();
+  function cleanResult(res: Result): Omit<Result, "peersToDisconnect"> & {peersToDisconnect: string[]} {
+    const toCleanResult = (peersToDisconnect: Map<string, PeerId[]>): string[] => {
+      const result: string[] = [];
       for (const [reason, peers] of peersToDisconnect) {
-        result.set(
-          reason,
-          peers.map((peer) => peer.toB58String())
-        );
+        if (peers.length > 0) {
+          result.push(reason);
+        }
+        result.push(...peers.map((peer) => peer.toB58String()));
       }
       return result;
     };
