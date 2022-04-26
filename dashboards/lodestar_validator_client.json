@@ -155,7 +155,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "12 * rate(vc_published_sync_committee_message_total[$__rate_interval])",
           "interval": "",
           "legendFormat": "sync_committee_message",
@@ -166,7 +166,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "12 * rate(vc_published_sync_committee_contribution_total[32m])",
           "hide": false,
           "interval": "",
@@ -178,7 +178,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "12 * rate(vc_published_attestations_total[32m])",
           "hide": false,
           "interval": "",
@@ -190,7 +190,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "12 * rate(vc_published_aggregates_total[32m])",
           "hide": false,
           "interval": "",
@@ -318,7 +318,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "nodejs_version_info{scrape_location=\"validator\"}",
           "interval": "",
           "legendFormat": "{{version}}",
@@ -451,7 +451,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "vc_indices_count",
           "interval": "",
           "legendFormat": "",
@@ -517,7 +517,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "process_heap_bytes{scrape_location=\"validator\"}",
           "interval": "",
           "legendFormat": "",
@@ -583,7 +583,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "nodejs_heap_size_used_bytes{scrape_location=\"validator\"}",
           "interval": "",
           "legendFormat": "",
@@ -688,7 +688,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_attester_step_call_produce_attestation_seconds_sum[32m])\n/\nrate(vc_attester_step_call_produce_attestation_seconds_count[32m])",
           "interval": "",
           "legendFormat": "call_produce_attestation",
@@ -699,7 +699,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_attester_step_call_publish_attestation_seconds_sum[32m])\n/\nrate(vc_attester_step_call_publish_attestation_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -711,7 +711,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_attester_step_call_produce_aggregate_seconds_sum[32m])\n/\nrate(vc_attester_step_call_produce_aggregate_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -723,7 +723,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_attester_step_call_publish_aggregate_seconds_sum[32m])\n/\nrate(vc_attester_step_call_publish_aggregate_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -735,7 +735,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_sync_committee_step_call_produce_message_seconds_sum[32m])\n/\nrate(vc_sync_committee_step_call_produce_message_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -747,7 +747,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_sync_committee_step_call_publish_message_seconds_sum[32m])\n/\nrate(vc_sync_committee_step_call_publish_message_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -759,7 +759,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_sync_committee_step_call_produce_aggregate_seconds_sum[32m])\n/\nrate(vc_sync_committee_step_call_produce_aggregate_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -771,7 +771,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_sync_committee_step_call_publish_aggregate_seconds_sum[32m])\n/\nrate(vc_sync_committee_step_call_publish_aggregate_seconds_count[32m])",
           "hide": false,
           "interval": "",
@@ -862,7 +862,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_proposer_step_call_produce_block_seconds_sum[$__rate_interval])\n/\nrate(vc_proposer_step_call_produce_block_seconds_count[$__rate_interval])",
           "hide": false,
           "interval": "",
@@ -874,7 +874,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "deriv(vc_proposer_step_call_publish_block_seconds_sum[$__rate_interval])\n/\nrate(vc_proposer_step_call_publish_block_seconds_count[$__rate_interval])",
           "hide": false,
           "interval": "",
@@ -1201,7 +1201,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_rest_api_client_request_time_seconds_sum[32m])\n/\nrate(vc_rest_api_client_request_time_seconds_count[32m])",
           "interval": "",
           "legendFormat": "{{routeId}}",
@@ -1291,7 +1291,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(lodestar_api_rest_response_time_seconds_sum[32m])\n/\nrate(lodestar_api_rest_response_time_seconds_count[32m])",
           "interval": "",
           "legendFormat": "{{operationId}}",
@@ -1383,7 +1383,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "delta(vc_block_produced_total[$__rate_interval])",
           "interval": "",
           "legendFormat": "block produced",
@@ -1394,7 +1394,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "delta(vc_block_published_total[$__rate_interval])",
           "hide": false,
           "interval": "",
@@ -1406,7 +1406,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_block_proposing_errors_total[$__rate_interval])",
           "hide": false,
           "interval": "",
@@ -1497,7 +1497,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_local_sign_time_seconds_sum[32m])",
           "interval": "",
           "legendFormat": "",
@@ -1587,7 +1587,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_local_sign_time_seconds_sum[32m])\n/\nrate(vc_local_sign_time_seconds_count[32m])",
           "interval": "",
           "legendFormat": "",
@@ -1747,7 +1747,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "vc_sync_committee_duties_count",
           "hide": false,
           "interval": "",
@@ -1759,7 +1759,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "vc_proposer_duties_epoch_count",
           "hide": false,
           "interval": "",
@@ -1771,7 +1771,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "vc_attester_duties_epoch_count",
           "hide": false,
           "interval": "",
@@ -1783,7 +1783,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "vc_attester_duties_count",
           "hide": false,
           "interval": "",
@@ -1873,7 +1873,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_proposer_duties_reorg_total[$__rate_interval])",
           "interval": "",
           "legendFormat": "proposer duties",
@@ -1884,7 +1884,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_attestation_duties_reorg_total[$__rate_interval])",
           "hide": false,
           "interval": "",
@@ -1896,7 +1896,7 @@
             "type": "prometheus",
             "uid": "${DS_PROMETHEUS}"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "rate(vc_sync_committee_duties_reorg_total[$__rate_interval])",
           "hide": false,
           "interval": "",
