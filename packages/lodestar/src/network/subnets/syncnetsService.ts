@@ -103,7 +103,7 @@ export class SyncnetsService implements ISubnetsService {
   private updateMetadata(): void {
     const subnets = ssz.altair.SyncSubnets.defaultValue();
     for (const subnet of this.subscriptionsCommittee.getAll()) {
-      subnets[subnet] = true;
+      subnets.set(subnet, true);
     }
 
     // Only update metadata if necessary, setting `metadata.[key]` triggers a write to disk

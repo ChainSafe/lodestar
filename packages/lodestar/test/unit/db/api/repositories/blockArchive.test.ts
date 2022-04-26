@@ -121,7 +121,7 @@ describe("block archive repository", function () {
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot.valueOf() as Uint8Array),
+        encodeKey(Bucket.index_blockArchiveParentRootIndex, block.message.parentRoot),
         intToBytes(block.message.slot, 8, "be")
       ).calledOnce
     ).to.be.true;
@@ -139,7 +139,7 @@ describe("block archive repository", function () {
     ).to.be.true;
     expect(
       spy.withArgs(
-        encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot.valueOf() as Uint8Array),
+        encodeKey(Bucket.index_blockArchiveParentRootIndex, blocks[0].message.parentRoot),
         intToBytes(blocks[0].message.slot, 8, "be")
       ).calledTwice
     ).to.be.true;

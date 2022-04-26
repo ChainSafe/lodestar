@@ -18,8 +18,8 @@
     "lint": "lerna run lint --no-bail",
     "check-types": "lerna run check-types --no-bail",
     "coverage": "lerna run coverage --no-bail",
-    "test:unit": "lerna run test:unit --no-bail",
-    "test:e2e": "lerna run test:e2e --no-bail",
+    "test:unit": "lerna run test:unit --no-bail --concurrency 1",
+    "test:e2e": "lerna run test:e2e --no-bail --concurrency 1",
     "test:e2e:sim": "lerna run test:e2e:sim --no-bail",
     "test:spec-min": "lerna run test:spec-min --no-bail",
     "test:spec-fast": "lerna run test:spec-fast --no-bail",
@@ -29,8 +29,7 @@
     "publish:release": "lerna publish from-package --yes --no-verify-access",
     "release": "lerna version --no-push --sign-git-commit",
     "postrelease": "git tag -d $(git describe --abbrev=0)",
-    "check-readme": "lerna run check-readme",
-    "validate-gdash": "node scripts/validate-grafana-dashboard.js"
+    "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
     "@dapplion/benchmark": "^0.2.2",

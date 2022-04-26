@@ -1,4 +1,5 @@
 import {EffectiveBalanceIncrements} from "@chainsafe/lodestar-beacon-state-transition";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {Epoch, Slot, ValidatorIndex, phase0, allForks, Root, RootHex} from "@chainsafe/lodestar-types";
 import {IProtoBlock, ExecutionStatus} from "../protoArray/interface";
 import {CheckpointWithHex} from "./store";
@@ -57,7 +58,7 @@ export interface IForkChoice {
    * `preCachedData` includes data necessary for validation included in the spec but some data is
    * pre-fetched in advance to keep the fork-choice fully syncronous
    */
-  onBlock(block: allForks.BeaconBlock, state: allForks.BeaconState, preCachedData?: OnBlockPrecachedData): void;
+  onBlock(block: allForks.BeaconBlock, state: BeaconStateAllForks, preCachedData?: OnBlockPrecachedData): void;
   /**
    * Register `attestation` with the fork choice DAG so that it may influence future calls to `getHead`.
    *

@@ -1,7 +1,7 @@
-import SHA256 from "@chainsafe/as-sha256";
+import {digest, digest64} from "@chainsafe/as-sha256";
 
 export function hash(...inputs: Uint8Array[]): Uint8Array {
-  return SHA256.digest(Buffer.concat(inputs));
+  return digest(Buffer.concat(inputs));
 }
 
 /**
@@ -18,9 +18,9 @@ export function verifyMerkleBranch(
   let value = leaf;
   for (let i = 0; i < depth; i++) {
     if (Math.floor(index / 2 ** i) % 2) {
-      value = SHA256.digest64(Buffer.concat([proof[i], value]));
+      value = digest64(Buffer.concat([proof[i], value]));
     } else {
-      value = SHA256.digest64(Buffer.concat([value, proof[i]]));
+      value = digest64(Buffer.concat([value, proof[i]]));
     }
   }
   return Buffer.from(value).equals(root);

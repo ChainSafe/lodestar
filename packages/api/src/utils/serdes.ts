@@ -1,11 +1,11 @@
-import {Path} from "@chainsafe/ssz";
+import {JsonPath} from "@chainsafe/ssz";
 
 /**
  * Serialize proof path to JSON.
  * @param paths `[["finalized_checkpoint", 0, "root", 12000]]`
  * @returns `['["finalized_checkpoint",0,"root",12000]']`
  */
-export function querySerializeProofPathsArr(paths: Path[]): string[] {
+export function querySerializeProofPathsArr(paths: JsonPath[]): string[] {
   return paths.map((path) => JSON.stringify(path));
 }
 
@@ -14,11 +14,11 @@ export function querySerializeProofPathsArr(paths: Path[]): string[] {
  * @param pathStrs `['["finalized_checkpoint",0,"root",12000]']`
  * @returns `[["finalized_checkpoint", 0, "root", 12000]]`
  */
-export function queryParseProofPathsArr(pathStrs: string | string[]): Path[] {
+export function queryParseProofPathsArr(pathStrs: string | string[]): JsonPath[] {
   if (Array.isArray(pathStrs)) {
     return pathStrs.map((pathStr) => queryParseProofPaths(pathStr));
   } else {
-    return [queryParseProofPaths(pathStrs) as Path];
+    return [queryParseProofPaths(pathStrs) as JsonPath];
   }
 }
 
@@ -27,8 +27,8 @@ export function queryParseProofPathsArr(pathStrs: string | string[]): Path[] {
  * @param pathStr `'["finalized_checkpoint",0,"root",12000]'`
  * @returns `["finalized_checkpoint", 0, "root", 12000]`
  */
-export function queryParseProofPaths(pathStr: string): Path {
-  const path = JSON.parse(pathStr) as Path;
+export function queryParseProofPaths(pathStr: string): JsonPath {
+  const path = JSON.parse(pathStr) as JsonPath;
 
   if (!Array.isArray(path)) {
     throw Error("Proof pathStr is not an array");

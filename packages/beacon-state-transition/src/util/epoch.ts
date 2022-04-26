@@ -34,14 +34,14 @@ export function computeActivationExitEpoch(epoch: Epoch): Epoch {
 /**
  * Return the current epoch of the given state.
  */
-export function getCurrentEpoch(state: allForks.BeaconState): Epoch {
+export function getCurrentEpoch(state: Pick<allForks.BeaconState, "slot">): Epoch {
   return computeEpochAtSlot(state.slot);
 }
 
 /**
  * Return the previous epoch of the given state.
  */
-export function getPreviousEpoch(state: allForks.BeaconState): Epoch {
+export function getPreviousEpoch(state: Pick<allForks.BeaconState, "slot">): Epoch {
   const currentEpoch = getCurrentEpoch(state);
   if (currentEpoch === GENESIS_EPOCH) {
     return GENESIS_EPOCH;

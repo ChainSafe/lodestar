@@ -7,7 +7,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {routes} from "@chainsafe/lodestar-api";
-import {BitVector, toHexString} from "@chainsafe/ssz";
+import {BitArray, CompositeViewDU, toHexString} from "@chainsafe/ssz";
 import {IBeaconDb} from "../../db";
 import {IMetrics} from "../../metrics";
 import {MapDef, pruneSetToMax} from "../../util/map";
@@ -169,6 +169,7 @@ export class LightClientServer {
   private latestHeadUpdate: routes.lightclient.LightclientHeaderUpdate | null = null;
 
   private readonly zero: Pick<altair.LightClientUpdate, "finalityBranch" | "finalizedHeader">;
+  private finalized: routes.lightclient.LightclientFinalizedUpdate | null = null;
 
   constructor(modules: LightClientServerModules) {
     const {config, db, metrics, emitter, logger} = modules;
@@ -180,9 +181,7 @@ export class LightClientServer {
 
     this.zero = {
       finalizedHeader: ssz.phase0.BeaconBlockHeader.defaultValue(),
-      finalityBranch: ssz.altair.LightClientUpdate.getPropertyType(
-        "finalityBranch"
-      ).defaultValue() as altair.LightClientUpdate["finalityBranch"],
+      finalityBranch: ssz.altair.LightClientUpdate.fields["finalityBranch"].defaultValue(),
     };
   }
 
@@ -205,8 +204,9 @@ export class LightClientServer {
     // In skipped slots the next value of blockRoots is set to the last block root.
     // So rootSigned will always equal to the parentBlock.
     const signedBlockRoot = block.parentRoot;
+    const syncPeriod = computeSyncPeriodAtSlot(block.slot);
 
-    this.onSyncAggregate(block.body.syncAggregate, signedBlockRoot).catch((e) => {
+    this.onSyncAggregate(syncPeriod, block.body.syncAggregate, signedBlockRoot).catch((e) => {
       this.logger.error("Error onSyncAggregate", {}, e);
     });
 
@@ -302,11 +302,19 @@ export class LightClientServer {
    * API ROUTE to poll LightclientHeaderUpdate.
    * Clients should use the SSE type `lightclient_header_update` if available
    */
-  async getHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
+  async getLatestHeadUpdate(): Promise<routes.lightclient.LightclientHeaderUpdate> {
     if (this.latestHeadUpdate === null) {
       throw Error("No latest header update available");
     }
     return this.latestHeadUpdate;
+  }
+
+  async getLatestFinalizedHeadUpdate(): Promise<routes.lightclient.LightclientFinalizedUpdate> {
+    // Signature data
+    if (this.finalized === null) {
+      throw Error("No latest header update available");
+    }
+    return this.finalized;
   }
 
   /**
@@ -421,7 +429,11 @@ export class LightClientServer {
    *
    * 3. On new blocks use `block.body.sync_aggregate`, `block.parent_root` and `block.slot - 1`
    */
-  private async onSyncAggregate(syncAggregate: altair.SyncAggregate, signedBlockRoot: Root): Promise<void> {
+  private async onSyncAggregate(
+    syncPeriod: SyncPeriod,
+    syncAggregate: altair.SyncAggregate,
+    signedBlockRoot: Root
+  ): Promise<void> {
     const signedBlockRootHex = toHexString(signedBlockRoot);
     const attestedData = this.prevHeadData.get(signedBlockRootHex);
     if (!attestedData) {
@@ -443,14 +455,33 @@ export class LightClientServer {
     // - After a new update has INCREMENT_THRESHOLD == 32 bits more than the previous emitted threshold
     this.emitter.emit(ChainEvent.lightclientHeaderUpdate, headerUpdate);
 
-    // Persist latest best update for getHeadUpdate()
+    // Persist latest best update for getLatestHeadUpdate()
     // TODO: Once SyncAggregate are constructed from P2P too, count bits to decide "best"
     if (!this.latestHeadUpdate || attestedData.attestedHeader.slot > this.latestHeadUpdate.attestedHeader.slot) {
       this.latestHeadUpdate = headerUpdate;
     }
 
+    if (attestedData.isFinalized) {
+      const finalizedCheckpointRoot = attestedData.finalizedCheckpoint.root as Uint8Array;
+      const finalizedHeader = await this.getFinalizedHeader(finalizedCheckpointRoot);
+      if (
+        finalizedHeader &&
+        (!this.finalized ||
+          finalizedHeader.slot > this.finalized.finalizedHeader.slot ||
+          sumBits(syncAggregate.syncCommitteeBits) > sumBits(this.finalized.syncAggregate.syncCommitteeBits))
+      ) {
+        this.finalized = {
+          attestedHeader: attestedData.attestedHeader,
+          finalizedHeader,
+          syncAggregate,
+          finalityBranch: attestedData.finalityBranch,
+        };
+        this.emitter.emit(ChainEvent.lightclientFinalizedUpdate, this.finalized);
+      }
+    }
+
     // Check if this update is better, otherwise ignore
-    await this.maybeStoreNewBestPartialUpdate(syncAggregate, attestedData);
+    await this.maybeStoreNewBestPartialUpdate(syncPeriod, syncAggregate, attestedData);
   }
 
   /**
@@ -458,11 +489,11 @@ export class LightClientServer {
    * that sync period.
    */
   private async maybeStoreNewBestPartialUpdate(
+    syncPeriod: SyncPeriod,
     syncAggregate: altair.SyncAggregate,
     attestedData: SyncAttestedData
   ): Promise<void> {
-    const period = computeSyncPeriodAtSlot(attestedData.attestedHeader.slot);
-    const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(period);
+    const prevBestUpdate = await this.db.bestPartialLightClientUpdate.get(syncPeriod);
     if (prevBestUpdate && !isBetterUpdate(prevBestUpdate, syncAggregate, attestedData)) {
       // TODO: Do metrics on how often updates are overwritten
       return;
@@ -486,9 +517,12 @@ export class LightClientServer {
       newPartialUpdate = {...attestedData, syncAggregate};
     }
 
-    await this.db.bestPartialLightClientUpdate.put(period, newPartialUpdate);
+    // attestedData and the block of syncAggregate may not be in same sync period
+    // should not use attested data slot as sync period
+    // see https://github.com/ChainSafe/lodestar/issues/3933
+    await this.db.bestPartialLightClientUpdate.put(syncPeriod, newPartialUpdate);
     this.logger.debug("Stored new PartialLightClientUpdate", {
-      period,
+      syncPeriod,
       isFinalized: attestedData.isFinalized,
       participation: sumBits(syncAggregate.syncCommitteeBits) / SYNC_COMMITTEE_SIZE,
     });
@@ -500,10 +534,13 @@ export class LightClientServer {
     });
   }
 
-  private async storeSyncCommittee(syncCommittee: altair.SyncCommittee, syncCommitteeRoot: Uint8Array): Promise<void> {
+  private async storeSyncCommittee(
+    syncCommittee: CompositeViewDU<typeof ssz.altair.SyncCommittee>,
+    syncCommitteeRoot: Uint8Array
+  ): Promise<void> {
     const isKnown = await this.db.syncCommittee.has(syncCommitteeRoot);
     if (!isKnown) {
-      await this.db.syncCommittee.put(syncCommitteeRoot, syncCommittee);
+      await this.db.syncCommittee.putBinary(syncCommitteeRoot, syncCommittee.serialize());
     }
   }
 
@@ -563,12 +600,6 @@ export function isBetterUpdate(
   return prevUpdate.attestedHeader.slot > nextSyncAttestedData.attestedHeader.slot;
 }
 
-export function sumBits(bits: BitVector): number {
-  let sum = 0;
-  for (const bit of bits) {
-    if (bit) {
-      sum++;
-    }
-  }
-  return sum;
+export function sumBits(bits: BitArray): number {
+  return bits.getTrueBitIndexes().length;
 }

@@ -6,7 +6,7 @@ import {altair, phase0, RootHex, ssz, SyncPeriod} from "@chainsafe/lodestar-type
 import {createIBeaconConfig, IBeaconConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
 import {TreeOffsetProof} from "@chainsafe/persistent-merkle-tree";
 import {isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
-import {fromHexString, Path, toHexString} from "@chainsafe/ssz";
+import {fromHexString, JsonPath, toHexString} from "@chainsafe/ssz";
 import {getCurrentSlot, slotWithFutureTolerance, timeUntilNextEpoch} from "./utils/clock";
 import {isBetterUpdate, LightclientUpdateStats} from "./utils/update";
 import {deserializeSyncCommittee, isEmptyHeader, sumBits} from "./utils/utils";
@@ -15,7 +15,12 @@ import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {SyncCommitteeFast} from "./types";
 import {chunkifyInclusiveRange} from "./utils/chunkify";
 import {LightclientEmitter, LightclientEvent} from "./events";
-import {assertValidSignedHeader, assertValidLightClientUpdate, activeHeader} from "./validation";
+import {
+  assertValidSignedHeader,
+  assertValidLightClientUpdate,
+  activeHeader,
+  assertValidFinalityProof,
+} from "./validation";
 import {GenesisData} from "./networks";
 import {getLcLoggerConsole, ILcLogger} from "./utils/logger";
 import {computeSyncPeriodAtEpoch, computeSyncPeriodAtSlot, computeEpochAtSlot} from "./utils/clock";
@@ -129,6 +134,12 @@ export class Lightclient {
     blockRoot: RootHex;
   };
 
+  private finalized: {
+    participation: number;
+    header: phase0.BeaconBlockHeader;
+    blockRoot: RootHex;
+  } | null = null;
+
   private status: RunStatus = {code: RunStatusCode.stopped};
 
   constructor({config, logger, genesisData, beaconApiUrl, snapshot}: LightclientInitArgs) {
@@ -142,7 +153,7 @@ export class Lightclient {
     this.logger = logger ?? getLcLoggerConsole();
 
     this.beaconApiUrl = beaconApiUrl;
-    this.api = getClient(config, {baseUrl: beaconApiUrl});
+    this.api = getClient({baseUrl: beaconApiUrl}, {config});
 
     const periodCurr = computeSyncPeriodAtSlot(snapshot.header.slot);
     this.syncCommitteeByPeriod.set(periodCurr, {
@@ -172,7 +183,7 @@ export class Lightclient {
     genesisData: GenesisData;
     checkpointRoot: phase0.Checkpoint["root"];
   }): Promise<Lightclient> {
-    const api = getClient(config, {baseUrl: beaconApiUrl});
+    const api = getClient({baseUrl: beaconApiUrl}, {config});
 
     // Fetch snapshot with proof at the trusted block root
     const {data: snapshotWithProof} = await api.lightclient.getSnapshot(toHexString(checkpointRoot));
@@ -229,7 +240,7 @@ export class Lightclient {
   }
 
   /** Returns header since head may change during request */
-  async getHeadStateProof(paths: Path[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
+  async getHeadStateProof(paths: JsonPath[]): Promise<{proof: TreeOffsetProof; header: phase0.BeaconBlockHeader}> {
     const header = this.head.header;
     const stateId = toHexString(header.stateRoot);
     const res = await this.api.lightclient.getStateProof(stateId, paths);
@@ -284,10 +295,10 @@ export class Lightclient {
         // Fetch latest head to prevent a potential 12 seconds lag between syncing and getting the first head,
         // Don't retry, this is a non-critical UX improvement
         try {
-          const {data: latestHeadUpdate} = await this.api.lightclient.getHeadUpdate();
+          const {data: latestHeadUpdate} = await this.api.lightclient.getLatestHeadUpdate();
           this.processHeaderUpdate(latestHeadUpdate);
         } catch (e) {
-          this.logger.error("Error fetching getHeadUpdate", {currentPeriod}, e as Error);
+          this.logger.error("Error fetching getLatestHeadUpdate", {currentPeriod}, e as Error);
         }
       }
 
@@ -298,8 +309,13 @@ export class Lightclient {
         this.logger.debug("Started tracking the head");
 
         // Subscribe to head updates over SSE
-        // TODO: Use polling for getHeadUpdate() is SSE is unavailable
+        // TODO: Use polling for getLatestHeadUpdate() is SSE is unavailable
         this.api.events.eventstream([routes.events.EventType.lightclientHeaderUpdate], controller.signal, this.onSSE);
+        this.api.events.eventstream(
+          [routes.events.EventType.lightclientFinalizedUpdate],
+          controller.signal,
+          this.onSSE
+        );
       }
 
       // When close to the end of a sync period poll for sync committee updates
@@ -338,6 +354,10 @@ export class Lightclient {
       switch (event.type) {
         case routes.events.EventType.lightclientHeaderUpdate:
           this.processHeaderUpdate(event.message);
+          break;
+
+        case routes.events.EventType.lightclientFinalizedUpdate:
+          this.processFinalizedUpdate(event.message);
           break;
 
         default:
@@ -422,6 +442,59 @@ export class Lightclient {
       this.logger.debug("Received valid head update did not update head", {
         currentHead: `${this.head.header.slot} ${this.head.blockRoot}`,
         eventHead: `${header.slot} ${headerBlockRootHex}`,
+      });
+    }
+  }
+
+  /**
+   * Processes new header updates in only known synced sync periods.
+   * This headerUpdate may update the head if there's enough participation.
+   */
+  private processFinalizedUpdate(finalizedUpdate: routes.events.LightclientFinalizedUpdate): void {
+    // Validate sync aggregate of the attested header and other conditions like future update, period etc
+    // and may be move head
+    this.processHeaderUpdate(finalizedUpdate);
+    assertValidFinalityProof(finalizedUpdate);
+
+    const {finalizedHeader, syncAggregate} = finalizedUpdate;
+    const finalizedBlockRoot = ssz.phase0.BeaconBlockHeader.hashTreeRoot(finalizedHeader);
+    const participation = sumBits(syncAggregate.syncCommitteeBits);
+    // Maybe update the finalized
+    if (
+      this.finalized === null ||
+      // Advance head
+      finalizedHeader.slot > this.finalized.header.slot ||
+      // Replace same slot head
+      (finalizedHeader.slot === this.finalized.header.slot && participation > this.head.participation)
+    ) {
+      // TODO: Do metrics for each case (advance vs replace same slot)
+      const prevFinalized = this.finalized;
+      const finalizedBlockRootHex = toHexString(finalizedBlockRoot);
+
+      this.finalized = {header: finalizedHeader, participation, blockRoot: finalizedBlockRootHex};
+
+      // This is not an error, but a problematic network condition worth knowing about
+      if (
+        prevFinalized &&
+        finalizedHeader.slot === prevFinalized.header.slot &&
+        prevFinalized.blockRoot !== finalizedBlockRootHex
+      ) {
+        this.logger.warn("Finalized update on same slot", {
+          prevHeadSlot: prevFinalized.header.slot,
+          prevHeadRoot: prevFinalized.blockRoot,
+        });
+      }
+      this.logger.info("Finalized updated", {
+        slot: finalizedHeader.slot,
+        root: finalizedBlockRootHex,
+      });
+
+      // Emit to consumers
+      this.emitter.emit(LightclientEvent.finalized, finalizedHeader);
+    } else {
+      this.logger.debug("Received valid finalized update did not update finalized", {
+        currentHead: `${this.finalized.header.slot} ${this.finalized.blockRoot}`,
+        eventHead: `${finalizedHeader.slot} ${finalizedBlockRoot}`,
       });
     }
   }

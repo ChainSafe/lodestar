@@ -1,6 +1,6 @@
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {CachedBeaconStateAllForks, allForks} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {ErrorAborted, ILogger, isErrorAborted, sleep} from "@chainsafe/lodestar-utils";
 import {AbortSignal} from "@chainsafe/abort-controller";
 import {IBeaconDb} from "../db";
@@ -72,7 +72,7 @@ export class Eth1DepositDataTracker {
   /**
    * Return eth1Data and deposits ready for block production for a given state
    */
-  async getEth1DataAndDeposits(state: CachedBeaconStateAllForks): Promise<Eth1DataAndDeposits> {
+  async getEth1DataAndDeposits(state: BeaconStateAllForks): Promise<Eth1DataAndDeposits> {
     const eth1Data = await this.getEth1Data(state);
     const deposits = await this.getDeposits(state, eth1Data);
     return {eth1Data, deposits};
@@ -82,7 +82,7 @@ export class Eth1DepositDataTracker {
    * Returns an eth1Data vote for a given state.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getEth1Data(state: allForks.BeaconState): Promise<phase0.Eth1Data> {
+  private async getEth1Data(state: BeaconStateAllForks): Promise<phase0.Eth1Data> {
     try {
       const eth1VotesToConsider = await getEth1VotesToConsider(
         this.config,
@@ -101,10 +101,7 @@ export class Eth1DepositDataTracker {
    * Returns deposits to be included for a given state and eth1Data vote.
    * Requires internal caches to be updated regularly to return good results
    */
-  private async getDeposits(
-    state: CachedBeaconStateAllForks,
-    eth1DataVote: phase0.Eth1Data
-  ): Promise<phase0.Deposit[]> {
+  private async getDeposits(state: BeaconStateAllForks, eth1DataVote: phase0.Eth1Data): Promise<phase0.Deposit[]> {
     // No new deposits have to be included, continue
     if (eth1DataVote.depositCount === state.eth1DepositIndex) {
       return [];
@@ -112,7 +109,7 @@ export class Eth1DepositDataTracker {
 
     // TODO: Review if this is optimal
     // Convert to view first to hash once and compare hashes
-    const eth1DataVoteView = ssz.phase0.Eth1Data.createTreeBackedFromStruct(eth1DataVote);
+    const eth1DataVoteView = ssz.phase0.Eth1Data.toViewDU(eth1DataVote);
 
     // Eth1 data may change due to the vote included in this block
     const newEth1Data = allForks.becomesNewEth1Data(state, eth1DataVoteView) ? eth1DataVoteView : state.eth1Data;
@@ -155,7 +152,12 @@ export class Eth1DepositDataTracker {
    */
   private async update(): Promise<boolean> {
     const remoteHighestBlock = await this.eth1Provider.getBlockNumber();
-    const remoteFollowBlock = Math.max(0, remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE);
+    const remoteFollowBlock = remoteHighestBlock - this.config.ETH1_FOLLOW_DISTANCE;
+
+    // If remoteFollowBlock is not at or beyond deployBlock, there is no need to
+    // fetch and track any deposit data yet
+    if (remoteFollowBlock < this.eth1Provider.deployBlock ?? 0) return true;
+
     const hasCaughtUpDeposits = await this.updateDepositCache(remoteFollowBlock);
     const hasCaughtUpBlocks = await this.updateBlockCache(remoteFollowBlock);
     return hasCaughtUpDeposits && hasCaughtUpBlocks;
@@ -197,10 +199,17 @@ export class Eth1DepositDataTracker {
     // lowestEventBlockNumber set a lower bound of possible block range to fetch in this update
     const lowestEventBlockNumber = await this.depositsCache.getLowestDepositEventBlockNumber();
 
-    // If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
-    // So there's not useful blocks to fetch until at least 1 deposit is found. So updateBlockCache() returns true
-    // because is has caught up to all possible data to fetch which is none.
-    if (lowestEventBlockNumber === null || lastProcessedDepositBlockNumber === null) {
+    // We are all caught up if:
+    //  1. If lowestEventBlockNumber is null = no deposits have been fetch or found yet.
+    //     So there's not useful blocks to fetch until at least 1 deposit is found.
+    //  2. If the remoteFollowBlock is behind the lowestEventBlockNumber. This can happen
+    //     if the EL's data was wiped and restarted. Not exiting here would other wise
+    //     cause a NO_DEPOSITS_FOR_BLOCK_RANGE error
+    if (
+      lowestEventBlockNumber === null ||
+      lastProcessedDepositBlockNumber === null ||
+      remoteFollowBlock < lowestEventBlockNumber
+    ) {
       return true;
     }
 

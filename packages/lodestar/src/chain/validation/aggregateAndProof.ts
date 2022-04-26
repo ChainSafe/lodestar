@@ -1,11 +1,9 @@
 import {ValidatorIndex} from "@chainsafe/lodestar-types";
-import {List} from "@chainsafe/ssz";
 import {
   phase0,
   allForks,
   computeEpochAtSlot,
   isAggregatorFromCommitteeLength,
-  zipIndexesCommitteeBits,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {IBeaconChain} from "..";
 import {getSelectionProofSignatureSet, getAggregateAndProofSignatureSet} from "./signatureSets";
@@ -57,7 +55,7 @@ export async function validateGossipAggregateAndProof(
   // and non-gossip sources) (a client MAY queue attestations for processing once block is retrieved).
   const attHeadBlock = verifyHeadBlockAndTargetRoot(chain, attData.beaconBlockRoot, attTarget.root, attEpoch);
 
-  // [REJECT] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
+  // [IGNORE] The current finalized_checkpoint is an ancestor of the block defined by aggregate.data.beacon_block_root
   // -- i.e. get_ancestor(store, aggregate.data.beacon_block_root, compute_start_slot_at_epoch(store.finalized_checkpoint.epoch)) == store.finalized_checkpoint.root
   // > Altready check in `chain.forkChoice.hasBlock(attestation.data.beaconBlockRoot)`
 
@@ -71,9 +69,9 @@ export async function validateGossipAggregateAndProof(
     });
 
   const committeeIndices = getCommitteeIndices(attHeadState, attSlot, attData.index);
-  const attestingIndices = zipIndexesCommitteeBits(committeeIndices, aggregate.aggregationBits);
+  const attestingIndices = aggregate.aggregationBits.intersectValues(committeeIndices);
   const indexedAttestation: phase0.IndexedAttestation = {
-    attestingIndices: attestingIndices as List<number>,
+    attestingIndices,
     data: attData,
     signature: aggregate.signature,
   };
@@ -102,7 +100,7 @@ export async function validateGossipAggregateAndProof(
   // by the validator with index aggregate_and_proof.aggregator_index.
   // [REJECT] The aggregator signature, signed_aggregate_and_proof.signature, is valid.
   // [REJECT] The signature of aggregate is valid.
-  const aggregator = attHeadState.index2pubkey[aggregateAndProof.aggregatorIndex];
+  const aggregator = attHeadState.epochCtx.index2pubkey[aggregateAndProof.aggregatorIndex];
   const signatureSets = [
     getSelectionProofSignatureSet(attHeadState, attSlot, aggregator, signedAggregateAndProof),
     getAggregateAndProofSignatureSet(attHeadState, attEpoch, aggregator, signedAggregateAndProof),

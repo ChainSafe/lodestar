@@ -9,6 +9,8 @@ import {
   DOMAIN_SYNC_COMMITTEE,
 } from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
+import {routes} from "@chainsafe/lodestar-api";
+
 import {isValidMerkleBranch} from "./utils/verifyMerkleBranch";
 import {assertZeroHashes, getParticipantPubkeys, isEmptyHeader} from "./utils/utils";
 import {SyncCommitteeFast} from "./types";
@@ -62,14 +64,14 @@ export function assertValidLightClientUpdate(
  *
  * Where `hashTreeRoot(state) == update.finalityHeader.stateRoot`
  */
-export function assertValidFinalityProof(update: altair.LightClientUpdate): void {
+export function assertValidFinalityProof(update: routes.lightclient.LightclientFinalizedUpdate): void {
   if (
     !isValidMerkleBranch(
       ssz.phase0.BeaconBlockHeader.hashTreeRoot(update.finalizedHeader),
-      Array.from(update.finalityBranch).map((i) => i.valueOf() as Uint8Array),
+      update.finalityBranch,
       FINALIZED_ROOT_DEPTH,
       FINALIZED_ROOT_INDEX,
-      update.attestedHeader.stateRoot.valueOf() as Uint8Array
+      update.attestedHeader.stateRoot
     )
   ) {
     throw Error("Invalid finality header merkle branch");
@@ -96,10 +98,10 @@ export function assertValidSyncCommitteeProof(update: altair.LightClientUpdate):
   if (
     !isValidMerkleBranch(
       ssz.altair.SyncCommittee.hashTreeRoot(update.nextSyncCommittee),
-      Array.from(update.nextSyncCommitteeBranch).map((i) => i.valueOf() as Uint8Array),
+      update.nextSyncCommitteeBranch,
       NEXT_SYNC_COMMITTEE_DEPTH,
       NEXT_SYNC_COMMITTEE_INDEX,
-      activeHeader(update).stateRoot.valueOf() as Uint8Array
+      activeHeader(update).stateRoot
     )
   ) {
     throw Error("Invalid next sync committee merkle branch");
@@ -155,9 +157,7 @@ export function assertValidSignedHeader(
     domain: config.getDomain(DOMAIN_SYNC_COMMITTEE, signedHeaderSlot),
   });
 
-  if (
-    !isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature.valueOf() as Uint8Array)
-  ) {
+  if (!isValidBlsAggregate(participantPubkeys, signingRoot, syncAggregate.syncCommitteeSignature)) {
     throw Error("Invalid aggregate signature");
   }
 }

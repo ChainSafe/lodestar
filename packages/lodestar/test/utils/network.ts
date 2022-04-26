@@ -1,6 +1,7 @@
 import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {BitArray} from "@chainsafe/ssz";
 import {Network} from "../../src/network";
 import {NodejsNode} from "../../src/network/nodejs";
 import {createPeerId} from "../../src/network";
@@ -41,10 +42,10 @@ export function onPeerDisconnect(network: Network): Promise<void> {
 /**
  * Generate valid filled attnets BitVector
  */
-export function getAttnets(subnetIds: number[] = []): boolean[] {
-  const attnets = new Array<boolean>(ATTESTATION_SUBNET_COUNT).fill(false);
+export function getAttnets(subnetIds: number[] = []): BitArray {
+  const attnets = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
   for (const subnetId of subnetIds) {
-    attnets[subnetId] = true;
+    attnets.set(subnetId, true);
   }
   return attnets;
 }
@@ -52,10 +53,10 @@ export function getAttnets(subnetIds: number[] = []): boolean[] {
 /**
  * Generate valid filled syncnets BitVector
  */
-export function getSyncnets(subnetIds: number[] = []): boolean[] {
-  const attnets = new Array<boolean>(SYNC_COMMITTEE_SUBNET_COUNT).fill(false);
+export function getSyncnets(subnetIds: number[] = []): BitArray {
+  const syncnets = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
   for (const subnetId of subnetIds) {
-    attnets[subnetId] = true;
+    syncnets.set(subnetId, true);
   }
-  return attnets;
+  return syncnets;
 }

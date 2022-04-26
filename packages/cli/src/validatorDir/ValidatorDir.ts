@@ -3,14 +3,13 @@ import path from "node:path";
 import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
+import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
 import {YargsError, readValidatorPassphrase} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
 import {add0xPrefix} from "../util/format";
-import {getLockFile} from "../util/lockfile";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
-  LOCK_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
   ETH1_DEPOSIT_TX_HASH_FILE,
@@ -50,23 +49,21 @@ export interface IEth1DepositData {
  * ```
  */
 export class ValidatorDir {
-  dir: string;
-  private lockfilePath: string;
+  private readonly dirpath: string;
 
   /**
    * Open `dir`, creating a lockfile to prevent concurrent access.
    * Errors if there is a filesystem error or if a lockfile already exists
-   * @param dir
    */
   constructor(baseDir: string, pubkey: string, options?: IValidatorDirOptions) {
-    this.dir = path.join(baseDir, add0xPrefix(pubkey));
-    this.lockfilePath = path.join(this.dir, LOCK_FILE);
+    this.dirpath = path.join(baseDir, add0xPrefix(pubkey));
 
-    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
+    if (!fs.existsSync(this.dirpath)) {
+      throw new YargsError(`Validator directory ${this.dirpath} does not exist`);
+    }
 
-    const lockFile = getLockFile();
     try {
-      lockFile.lockSync(this.lockfilePath);
+      lockFilepath(this.dirpath);
     } catch (e) {
       if (options && options.force) {
         // Ignore error, maybe log?
@@ -80,7 +77,7 @@ export class ValidatorDir {
    * Removes the lockfile associated with this validator dir
    */
   close(): void {
-    getLockFile().unlockSync(this.lockfilePath);
+    unlockFilepath(this.dirpath);
   }
 
   /**
@@ -91,7 +88,7 @@ export class ValidatorDir {
    * @param secretsDir
    */
   async votingKeypair(secretsDir: string): Promise<SecretKey> {
-    const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
+    const keystorePath = path.join(this.dirpath, VOTING_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
@@ -103,7 +100,7 @@ export class ValidatorDir {
    * @param secretsDir
    */
   async withdrawalKeypair(secretsDir: string): Promise<SecretKey> {
-    const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
+    const keystorePath = path.join(this.dirpath, WITHDRAWAL_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
@@ -127,14 +124,14 @@ export class ValidatorDir {
    * when relying upon this value.
    */
   eth1DepositTxHashExists(): boolean {
-    return fs.existsSync(path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE));
+    return fs.existsSync(path.join(this.dirpath, ETH1_DEPOSIT_TX_HASH_FILE));
   }
 
   /**
    * Saves the `tx_hash` to a file in `this.dir`.
    */
   saveEth1DepositTxHash(txHash: string): void {
-    const filepath = path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE);
+    const filepath = path.join(this.dirpath, ETH1_DEPOSIT_TX_HASH_FILE);
 
     if (fs.existsSync(filepath)) throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
 
@@ -146,8 +143,8 @@ export class ValidatorDir {
    * submitting an Eth1 deposit.
    */
   eth1DepositData(): IEth1DepositData {
-    const depositDataPath = path.join(this.dir, ETH1_DEPOSIT_DATA_FILE);
-    const depositAmountPath = path.join(this.dir, ETH1_DEPOSIT_AMOUNT_FILE);
+    const depositDataPath = path.join(this.dirpath, ETH1_DEPOSIT_DATA_FILE);
+    const depositAmountPath = path.join(this.dirpath, ETH1_DEPOSIT_AMOUNT_FILE);
     const depositDataRlp = fs.readFileSync(depositDataPath, "utf8");
     const depositAmount = fs.readFileSync(depositAmountPath, "utf8");
 

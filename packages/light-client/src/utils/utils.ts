@@ -1,17 +1,11 @@
 import {PublicKey} from "@chainsafe/bls";
 import {altair, Root, ssz} from "@chainsafe/lodestar-types";
 import {BeaconBlockHeader} from "@chainsafe/lodestar-types/phase0";
-import {ArrayLike, BitVector} from "@chainsafe/ssz";
+import {BitArray} from "@chainsafe/ssz";
 import {SyncCommitteeFast} from "../types";
 
-export function sumBits(bits: ArrayLike<boolean>): number {
-  let sum = 0;
-  for (const bit of bits) {
-    if (bit) {
-      sum++;
-    }
-  }
-  return sum;
+export function sumBits(bits: BitArray): number {
+  return bits.getTrueBitIndexes().length;
 }
 
 export function isZeroHash(root: Root): boolean {
@@ -23,7 +17,7 @@ export function isZeroHash(root: Root): boolean {
   return true;
 }
 
-export function assertZeroHashes(rootArray: ArrayLike<Root>, expectedLength: number, errorMessage: string): void {
+export function assertZeroHashes(rootArray: Root[], expectedLength: number, errorMessage: string): void {
   if (rootArray.length !== expectedLength) {
     throw Error(`Wrong length ${errorMessage}`);
   }
@@ -38,16 +32,9 @@ export function assertZeroHashes(rootArray: ArrayLike<Root>, expectedLength: num
 /**
  * Util to guarantee that all bits have a corresponding pubkey
  */
-export function getParticipantPubkeys<T>(pubkeys: ArrayLike<T>, bits: BitVector): T[] {
-  const participantPubkeys: T[] = [];
-  for (let i = 0; i < bits.length; i++) {
-    if (bits[i]) {
-      if (pubkeys[i] === undefined) throw Error(`No pubkey ${i} in syncCommittee`);
-      participantPubkeys.push(pubkeys[i]);
-    }
-  }
-
-  return participantPubkeys;
+export function getParticipantPubkeys<T>(pubkeys: T[], bits: BitArray): T[] {
+  // BitArray.intersectValues() checks the length is correct
+  return bits.intersectValues(pubkeys);
 }
 
 export function toBlockHeader(block: altair.BeaconBlock): BeaconBlockHeader {
@@ -61,7 +48,7 @@ export function toBlockHeader(block: altair.BeaconBlock): BeaconBlockHeader {
 }
 
 function deserializePubkeys(pubkeys: altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"]): PublicKey[] {
-  return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk.valueOf() as Uint8Array));
+  return Array.from(pubkeys).map((pk) => PublicKey.fromBytes(pk));
 }
 
 function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextSyncCommittee"]["pubkeys"] {
@@ -71,7 +58,7 @@ function serializePubkeys(pubkeys: PublicKey[]): altair.LightClientUpdate["nextS
 export function deserializeSyncCommittee(syncCommittee: altair.SyncCommittee): SyncCommitteeFast {
   return {
     pubkeys: deserializePubkeys(syncCommittee.pubkeys),
-    aggregatePubkey: PublicKey.fromBytes(syncCommittee.aggregatePubkey.valueOf() as Uint8Array),
+    aggregatePubkey: PublicKey.fromBytes(syncCommittee.aggregatePubkey),
   };
 }
 

@@ -7,8 +7,9 @@ import {
   SYNC_REWARD_WEIGHT,
   WEIGHT_DENOMINATOR,
 } from "@chainsafe/lodestar-params";
-import {allForks, altair, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {altair, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {bigIntSqrt} from "@chainsafe/lodestar-utils";
+import {BeaconStateAllForks} from "../types";
 import {EffectiveBalanceIncrements} from "../cache/effectiveBalanceIncrements";
 import {getNextSyncCommitteeIndices} from "./seed";
 
@@ -18,16 +19,21 @@ import {getNextSyncCommitteeIndices} from "./seed";
  * SLOW CODE - 🐢
  */
 export function getNextSyncCommittee(
-  state: allForks.BeaconState,
+  state: BeaconStateAllForks,
   activeValidatorIndices: ValidatorIndex[],
   effectiveBalanceIncrements: EffectiveBalanceIncrements
-): altair.SyncCommittee {
+): {indices: ValidatorIndex[]; syncCommittee: altair.SyncCommittee} {
   const indices = getNextSyncCommitteeIndices(state, activeValidatorIndices, effectiveBalanceIncrements);
+
   // Using the index2pubkey cache is slower because it needs the serialized pubkey.
-  const pubkeys = indices.map((index) => state.validators[index].pubkey);
+  const pubkeys = indices.map((index) => state.validators.get(index).pubkey);
+
   return {
-    pubkeys,
-    aggregatePubkey: aggregatePublicKeys(pubkeys.map((pubkey) => pubkey.valueOf() as Uint8Array)),
+    indices,
+    syncCommittee: {
+      pubkeys,
+      aggregatePubkey: aggregatePublicKeys(pubkeys),
+    },
   };
 }
 

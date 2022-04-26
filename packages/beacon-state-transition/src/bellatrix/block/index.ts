@@ -1,6 +1,6 @@
 import {bellatrix} from "@chainsafe/lodestar-types";
 
-import {CachedBeaconStateAltair, CachedBeaconStateBellatrix, CachedBeaconStateAllForks} from "../../types";
+import {CachedBeaconStateBellatrix} from "../../types";
 import {processBlockHeader, processEth1Data, processRandao} from "../../allForks/block";
 import {processOperations} from "./processOperations";
 import {processSyncAggregate} from "../../altair/block/processSyncCommittee";
@@ -18,15 +18,15 @@ export function processBlock(
   verifySignatures = true,
   executionEngine: ExecutionEngine | null
 ): void {
-  processBlockHeader(state as CachedBeaconStateAllForks, block);
+  processBlockHeader(state, block);
   // The call to the process_execution_payload must happen before the call to the process_randao as the former depends
   // on the randao_mix computed with the reveal of the previous block.
   if (isExecutionEnabled(state, block.body)) {
     processExecutionPayload(state, block.body.executionPayload, executionEngine);
   }
 
-  processRandao(state as CachedBeaconStateAllForks, block, verifySignatures);
-  processEth1Data(state as CachedBeaconStateAllForks, block.body);
+  processRandao(state, block, verifySignatures);
+  processEth1Data(state, block.body.eth1Data);
   processOperations(state, block.body, verifySignatures);
-  processSyncAggregate((state as unknown) as CachedBeaconStateAltair, block, verifySignatures);
+  processSyncAggregate(state, block, verifySignatures);
 }

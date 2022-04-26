@@ -1,25 +1,25 @@
 import {join} from "node:path";
-import {TreeBacked} from "@chainsafe/ssz";
-import {allForks, phase0, createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {allForks, phase0, BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
+import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ACTIVE_PRESET, ForkName} from "@chainsafe/lodestar-params";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning";
 import {IBaseSpecTest} from "../type";
-import {expectEqualBeaconState, inputTypeSszTreeBacked} from "../util";
-import {createIChainForkConfig, IChainConfig} from "@chainsafe/lodestar-config";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../util";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 
 export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exclude<ForkName, ForkName.phase0>): void {
   const testConfig = createIChainForkConfig(forkConfig);
-  describeDirectorySpecTest<IUpgradeStateCase, allForks.BeaconState>(
+  describeDirectorySpecTest<IUpgradeStateCase, BeaconStateAllForks>(
     `${ACTIVE_PRESET}/${fork}/fork/fork`,
     join(SPEC_TEST_LOCATION, `/tests/${ACTIVE_PRESET}/${fork}/fork/fork/pyspec_tests`),
     (testcase) => {
-      const preState = createCachedBeaconState(testConfig, testcase.pre as TreeBacked<allForks.BeaconState>);
+      const preState = createCachedBeaconStateTest(testcase.pre, testConfig);
       return allForks.upgradeStateByFork[fork](preState);
     },
     {
-      inputTypes: inputTypeSszTreeBacked,
+      inputTypes: inputTypeSszTreeViewDU,
       sszTypes: {
         pre: ssz[pre].BeaconState,
         post: ssz[fork].BeaconState,
@@ -35,9 +35,9 @@ export function fork(forkConfig: Partial<IChainConfig>, pre: ForkName, fork: Exc
   );
 }
 
-type PostBeaconState = Exclude<allForks.BeaconState, phase0.BeaconState>;
+type PostBeaconState = Exclude<BeaconStateAllForks, phase0.BeaconState>;
 
 interface IUpgradeStateCase extends IBaseSpecTest {
-  pre: allForks.BeaconState;
+  pre: BeaconStateAllForks;
   post: PostBeaconState;
 }

@@ -7,6 +7,8 @@ import {Api} from "@chainsafe/lodestar-api";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
+import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -18,11 +20,23 @@ export class BlockProposingService {
     private readonly config: IChainForkConfig,
     private readonly logger: ILoggerVc,
     private readonly api: Api,
-    clock: IClock,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null,
     private readonly graffiti?: string
   ) {
-    this.dutiesService = new BlockDutiesService(logger, api, clock, validatorStore, this.notifyBlockProductionFn);
+    this.dutiesService = new BlockDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      this.notifyBlockProductionFn
+    );
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.dutiesService.removeDutiesForKey(pubkey);
   }
 
   /**
@@ -56,16 +70,25 @@ export class BlockProposingService {
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", debugLogCtx);
+      this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+
+      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
+
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
+      this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }

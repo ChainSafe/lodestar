@@ -3,6 +3,7 @@
 import {Connection} from "libp2p";
 import {getNodeApi} from "../../../../../src/api/impl/node";
 import sinon, {SinonStubbedInstance} from "sinon";
+import {BitArray} from "@chainsafe/ssz";
 import {createPeerId, INetwork, Network} from "../../../../../src/network";
 import {BeaconSync, IBeaconSync} from "../../../../../src/sync";
 import {createKeypairFromPeerId, ENR} from "@chainsafe/discv5/lib";
@@ -58,8 +59,8 @@ describe("node api implementation", function () {
       networkStub.metadata = {
         get json(): altair.Metadata {
           return {
-            attnets: [true],
-            syncnets: [],
+            attnets: BitArray.fromBoolArray([true]),
+            syncnets: BitArray.fromBitLen(0),
             seqNumber: BigInt(1),
           };
         },
@@ -78,6 +79,47 @@ describe("node api implementation", function () {
       networkStub.getEnr.returns((null as unknown) as ENR);
       const {data: identity} = await api.getNetworkIdentity();
       expect(identity.enr).equal("");
+    });
+  });
+
+  describe("getPeerCount", function () {
+    let peer1: PeerId, peer2: PeerId, peer3: PeerId;
+
+    before(async function () {
+      peer1 = await createPeerId();
+      peer2 = await createPeerId();
+      peer3 = await createPeerId();
+    });
+
+    it("it should return peer count", async function () {
+      const connectionsByPeer = new Map<string, Connection[]>([
+        [peer1.toB58String(), [libp2pConnection(peer1, "open", "outbound")]],
+        [
+          peer2.toB58String(),
+          [libp2pConnection(peer2, "closing", "inbound"), libp2pConnection(peer2, "closing", "inbound")],
+        ],
+        [
+          peer3.toB58String(),
+          [
+            libp2pConnection(peer3, "closed", "inbound"),
+            libp2pConnection(peer3, "closed", "inbound"),
+            libp2pConnection(peer3, "closed", "inbound"),
+          ],
+        ],
+      ]);
+
+      networkStub.getConnectionsByPeer.returns(connectionsByPeer);
+
+      const {data: count} = await api.getPeerCount();
+      expect(count).to.be.deep.equal(
+        {
+          connected: 1,
+          disconnecting: 1, // picks most relevant connection to count
+          disconnected: 1, // picks most relevant connection to count
+          connecting: 0,
+        },
+        "getPeerCount incorrect"
+      );
     });
   });
 

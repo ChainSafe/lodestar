@@ -2,12 +2,11 @@ import {SLOTS_PER_EPOCH, ForkName} from "@chainsafe/lodestar-params";
 import {getClient} from "@chainsafe/lodestar-api";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {IChainConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
-import {allForks} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {RecursivePartial, fromHex} from "@chainsafe/lodestar-utils";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 // eslint-disable-next-line no-restricted-imports
 import {getStateTypeFromBytes} from "@chainsafe/lodestar/lib/util/multifork";
-import {TreeBacked} from "@chainsafe/ssz";
 import fs from "node:fs";
 import got from "got";
 import * as mainnet from "./mainnet";
@@ -145,10 +144,10 @@ export function enrsToNetworkConfig(enrs: string[]): RecursivePartial<IBeaconNod
 export async function fetchWeakSubjectivityState(
   config: IChainForkConfig,
   {weakSubjectivityServerUrl, weakSubjectivityCheckpoint}: WeakSubjectivityFetchOptions
-): Promise<{wsState: TreeBacked<allForks.BeaconState>; wsCheckpoint: Checkpoint}> {
+): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint;
-    const api = getClient(config, {baseUrl: weakSubjectivityServerUrl});
+    const api = getClient({baseUrl: weakSubjectivityServerUrl}, {config});
     if (weakSubjectivityCheckpoint) {
       wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
     } else {
@@ -162,7 +161,7 @@ export async function fetchWeakSubjectivityState(
       ? api.debug.getState(`${stateSlot}`, "ssz")
       : api.debug.getStateV2(`${stateSlot}`, "ssz"));
 
-    return {wsState: getStateTypeFromBytes(config, stateBytes).createTreeBackedFromBytes(stateBytes), wsCheckpoint};
+    return {wsState: getStateTypeFromBytes(config, stateBytes).deserializeToViewDU(stateBytes), wsCheckpoint};
   } catch (e) {
     throw new Error("Unable to fetch weak subjectivity state: " + (e as Error).message);
   }

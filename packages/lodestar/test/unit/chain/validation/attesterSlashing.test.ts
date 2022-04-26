@@ -11,7 +11,6 @@ import {validateGossipAttesterSlashing} from "../../../../src/chain/validation/a
 import {AttesterSlashingErrorCode} from "../../../../src/chain/errors/attesterSlashingError";
 import {OpPool} from "../../../../src/chain/opPools";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
-import {List} from "@chainsafe/ssz";
 
 describe("GossipMessageValidator", () => {
   const sandbox = sinon.createSandbox();
@@ -59,12 +58,12 @@ describe("GossipMessageValidator", () => {
         attestation1: {
           data: attestationData,
           signature: Buffer.alloc(96, 0),
-          attestingIndices: [0] as List<number>,
+          attestingIndices: [0],
         },
         attestation2: {
           data: {...attestationData, slot: 1}, // Make it different so it's slashable
           signature: Buffer.alloc(96, 0),
-          attestingIndices: [0] as List<number>,
+          attestingIndices: [0],
         },
       };
 

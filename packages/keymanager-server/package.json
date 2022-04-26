@@ -1,0 +1,65 @@
+{
+  "name": "@chainsafe/lodestar-keymanager-server",
+  "version": "0.36.0",
+  "description": "A Typescript implementation of the keymanager server",
+  "author": "ChainSafe Systems",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/ChainSafe/lodestar/issues"
+  },
+  "homepage": "https://github.com/ChainSafe/lodestar#readme",
+  "main": "lib/index.js",
+  "files": [
+    "lib/**/*.js",
+    "lib/**/*.js.map",
+    "lib/**/*.d.ts",
+    "*.d.ts",
+    "*.js"
+  ],
+  "scripts": {
+    "clean": "rm -rf lib && rm -f *.tsbuildinfo",
+    "build": "tsc -p tsconfig.build.json",
+    "build:release": "yarn clean && yarn run build && yarn run build:typedocs",
+    "build:lib:watch": "yarn run build:lib --watch",
+    "build:typedocs": "typedoc --exclude src/index.ts --out typedocs src",
+    "build:types:watch": "yarn run build:types --watch",
+    "check-types": "tsc",
+    "lint": "eslint --color --ext .ts src/ test/",
+    "lint:fix": "yarn run lint --fix",
+    "pretest": "yarn run check-types",
+    "test": "yarn test:unit",
+    "coverage": "codecov -F lodestar-validator",
+    "check-readme": "typescript-docs-verifier"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com:ChainSafe/lodestar.git"
+  },
+  "keywords": [
+    "ethereum",
+    "eth2",
+    "beacon",
+    "blockchain"
+  ],
+  "dependencies": {
+    "@chainsafe/abort-controller": "^3.0.1",
+    "@chainsafe/bls": "6.0.3",
+    "@chainsafe/bls-keystore": "^2.0.0",
+    "@chainsafe/lodestar-api": "^0.36.0",
+    "@chainsafe/lodestar-config": "^0.36.0",
+    "@chainsafe/lodestar-db": "^0.36.0",
+    "@chainsafe/lodestar-params": "^0.36.0",
+    "@chainsafe/lodestar-types": "^0.36.0",
+    "@chainsafe/lodestar-utils": "^0.36.0",
+    "@chainsafe/lodestar-validator": "^0.36.0",
+    "@chainsafe/ssz": "^0.9.1",
+    "lockfile": "^1.0.4",
+    "fastify": "3.15.1",
+    "fastify-cors": "^6.0.1",
+    "fastify-bearer-auth": "6.1.0"
+  },
+  "devDependencies": {
+    "bigint-buffer": "^1.1.5",
+    "@types/lockfile": "^1.0.1"
+  }
+}

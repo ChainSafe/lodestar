@@ -24,6 +24,7 @@ import {PeerManager} from "./peers/peerManager";
 import {IPeerRpcScoreStore, PeerAction, PeerRpcScoreStore} from "./peers";
 import {INetworkEventBus, NetworkEventBus} from "./events";
 import {AttnetsService, SyncnetsService, CommitteeSubscription} from "./subnets";
+import {PeersData} from "./peers/peersData";
 
 interface INetworkModules {
   config: IBeaconConfig;
@@ -45,6 +46,7 @@ export class Network implements INetwork {
   gossip: Eth2Gossipsub;
   metadata: MetadataController;
   private readonly peerRpcScores: IPeerRpcScoreStore;
+  private readonly peersData: PeersData;
 
   private readonly peerManager: PeerManager;
   private readonly libp2p: LibP2p;
@@ -62,18 +64,29 @@ export class Network implements INetwork {
     this.config = config;
     this.clock = chain.clock;
     this.chain = chain;
+    this.peersData = new PeersData();
     const networkEventBus = new NetworkEventBus();
     const metadata = new MetadataController({}, {config, chain, logger});
-    const peerRpcScores = new PeerRpcScoreStore();
+    const peerRpcScores = new PeerRpcScoreStore(metrics);
     this.events = networkEventBus;
     this.metadata = metadata;
     this.peerRpcScores = peerRpcScores;
     this.reqResp = new ReqResp(
-      {config, libp2p, reqRespHandlers, metadata, peerRpcScores, logger, networkEventBus, metrics},
+      {
+        config,
+        libp2p,
+        reqRespHandlers,
+        metadata,
+        peerRpcScores,
+        logger,
+        networkEventBus,
+        metrics,
+        peersData: this.peersData,
+      },
       opts
     );
 
-    this.gossip = new Eth2Gossipsub({
+    this.gossip = new Eth2Gossipsub(opts, {
       config,
       libp2p,
       logger,
@@ -81,10 +94,11 @@ export class Network implements INetwork {
       signal,
       gossipHandlers: gossipHandlers ?? getGossipHandlers({chain, config, logger, network: this, metrics}, opts),
       eth2Context: {
-        activeValidatorCount: chain.getHeadState().currentShuffling.activeIndices.length,
+        activeValidatorCount: chain.getHeadState().epochCtx.currentShuffling.activeIndices.length,
         currentSlot: this.clock.currentSlot,
         currentEpoch: this.clock.currentEpoch,
       },
+      peersData: this.peersData,
     });
 
     this.attnetsService = new AttnetsService(config, chain, this.gossip, metadata, logger, opts);
@@ -94,6 +108,7 @@ export class Network implements INetwork {
       {
         libp2p,
         reqResp: this.reqResp,
+        gossip: this.gossip,
         attnetsService: this.attnetsService,
         syncnetsService: this.syncnetsService,
         logger,
@@ -102,6 +117,7 @@ export class Network implements INetwork {
         config,
         peerRpcScores,
         networkEventBus,
+        peersData: this.peersData,
       },
       opts
     );
@@ -234,6 +250,10 @@ export class Network implements INetwork {
 
   async disconnectPeer(peer: PeerId): Promise<void> {
     await this.libp2p.hangUp(peer);
+  }
+
+  getAgentVersion(peerIdStr: string): string {
+    return this.peersData.getAgentVersion(peerIdStr);
   }
 
   /**

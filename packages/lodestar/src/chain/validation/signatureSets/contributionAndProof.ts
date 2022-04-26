@@ -21,6 +21,6 @@ export function getContributionAndProofSignatureSet(
     type: SignatureSetType.single,
     pubkey: epochCtx.index2pubkey[signedContributionAndProof.message.aggregatorIndex],
     signingRoot: computeSigningRoot(ssz.altair.ContributionAndProof, signingData, domain),
-    signature: signedContributionAndProof.signature.valueOf() as Uint8Array,
+    signature: signedContributionAndProof.signature,
   };
 }

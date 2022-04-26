@@ -20,7 +20,7 @@ export type ValidatorStatus =
   | "withdrawal_done";
 
 export type ValidatorFilters = {
-  indices?: ValidatorId[];
+  id?: ValidatorId[];
   statuses?: ValidatorStatus[];
 };
 export type CommitteesFilters = {
@@ -153,8 +153,8 @@ export type ReqTypes = {
   getStateFork: StateIdOnlyReq;
   getStateRoot: StateIdOnlyReq;
   getStateValidator: {params: {stateId: StateId; validatorId: ValidatorId}};
-  getStateValidators: {params: {stateId: StateId}; query: {indices?: ValidatorId[]; statuses?: ValidatorStatus[]}};
-  getStateValidatorBalances: {params: {stateId: StateId}; query: {indices?: ValidatorId[]}};
+  getStateValidators: {params: {stateId: StateId}; query: {id?: ValidatorId[]; statuses?: ValidatorStatus[]}};
+  getStateValidatorBalances: {params: {stateId: StateId}; query: {id?: ValidatorId[]}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -200,16 +200,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({params, query}) => [params.stateId, query],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintOrStringArray, statuses: Schema.StringArray},
+        query: {id: Schema.UintOrStringArray, statuses: Schema.StringArray},
       },
     },
 
     getStateValidatorBalances: {
-      writeReq: (stateId, indices) => ({params: {stateId}, query: {indices}}),
-      parseReq: ({params, query}) => [params.stateId, query.indices],
+      writeReq: (stateId, id) => ({params: {stateId}, query: {id}}),
+      parseReq: ({params, query}) => [params.stateId, query.id],
       schema: {
         params: {stateId: Schema.StringRequired},
-        query: {indices: Schema.UintOrStringArray},
+        query: {id: Schema.UintOrStringArray},
       },
     },
   };
@@ -217,54 +217,49 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const FinalityCheckpoints = new ContainerType<FinalityCheckpoints>({
-    fields: {
+  const FinalityCheckpoints = new ContainerType(
+    {
       previousJustified: ssz.phase0.Checkpoint,
       currentJustified: ssz.phase0.Checkpoint,
       finalized: ssz.phase0.Checkpoint,
     },
-    // From beacon apis
-    casingMap: {
-      previousJustified: "previous_justified",
-      currentJustified: "current_justified",
-      finalized: "finalized",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const ValidatorResponse = new ContainerType<ValidatorResponse>({
-    fields: {
+  const ValidatorResponse = new ContainerType(
+    {
       index: ssz.ValidatorIndex,
-      balance: ssz.Number64,
+      balance: ssz.UintNum64,
       status: new StringType<ValidatorStatus>(),
       validator: ssz.phase0.Validator,
     },
-    // From beacon apis
-    expectedCase: "notransform",
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const ValidatorBalance = new ContainerType<ValidatorBalance>({
-    fields: {
+  const ValidatorBalance = new ContainerType(
+    {
       index: ssz.ValidatorIndex,
-      balance: ssz.Number64,
+      balance: ssz.UintNum64,
     },
-    // From beacon apis
-    expectedCase: "notransform",
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const EpochCommitteeResponse = new ContainerType<EpochCommitteeResponse>({
-    fields: {
+  const EpochCommitteeResponse = new ContainerType(
+    {
       index: ssz.CommitteeIndex,
       slot: ssz.Slot,
       validators: ssz.phase0.CommitteeIndices,
     },
-  });
+    {jsonCase: "eth2"}
+  );
 
-  const EpochSyncCommitteesResponse = new ContainerType<EpochSyncCommitteeResponse>({
-    fields: {
+  const EpochSyncCommitteesResponse = new ContainerType(
+    {
       validators: ArrayOf(ssz.ValidatorIndex),
       validatorAggregates: ArrayOf(ssz.ValidatorIndex),
     },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     getStateRoot: ContainerData(ssz.Root),

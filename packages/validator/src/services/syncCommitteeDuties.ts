@@ -11,6 +11,8 @@ import {Api, routes} from "@chainsafe/lodestar-api";
 import {IndicesService} from "./indices";
 import {IClock, extendError, ILoggerVc} from "../util";
 import {ValidatorStore} from "./validatorStore";
+import {PubkeyHex} from "../types";
+import {Metrics} from "../metrics";
 
 /** Only retain `HISTORICAL_DUTIES_PERIODS` duties prior to the current periods. */
 const HISTORICAL_DUTIES_PERIODS = 2;
@@ -58,11 +60,23 @@ export class SyncCommitteeDutiesService {
     private readonly api: Api,
     clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly indicesService: IndicesService
+    private readonly indicesService: IndicesService,
+    private readonly metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of many epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
+
+    if (metrics) {
+      metrics.syncCommitteeDutiesCount.addCollect(() => {
+        let duties = 0;
+        for (const dutiesByIndex of this.dutiesByIndexByPeriod.values()) {
+          duties += dutiesByIndex.size;
+        }
+        metrics.syncCommitteeDutiesCount.set(duties);
+        metrics.syncCommitteeDutiesEpochCount.set(this.dutiesByIndexByPeriod.size);
+      });
+    }
   }
 
   /**
@@ -89,6 +103,19 @@ export class SyncCommitteeDutiesService {
     }
 
     return duties;
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [syncPeriod, validatorDutyAtPeriodMap] of this.dutiesByIndexByPeriod) {
+      for (const [validatorIndex, dutyAtPeriod] of validatorDutyAtPeriodMap) {
+        if (toHexString(dutyAtPeriod.duty.pubkey) === pubkey) {
+          validatorDutyAtPeriodMap.delete(validatorIndex);
+          if (validatorDutyAtPeriodMap.size === 0) {
+            this.dutiesByIndexByPeriod.delete(syncPeriod);
+          }
+        }
+      }
+    }
   }
 
   private runDutiesTasks = async (currentEpoch: Epoch): Promise<void> => {
@@ -210,6 +237,8 @@ export class SyncCommitteeDutiesService {
       //
       // - There were no known duties for this period.
       // - The dependent root has changed, signalling a re-org.
+      //
+      // if (reorg) this.metrics?.syncCommitteeDutiesReorg.inc()
 
       // Using `alreadyWarnedReorg` avoids excessive logs.
       dutiesByIndex.set(validatorIndex, {dependentRoot, duty});
@@ -230,7 +259,7 @@ export class SyncCommitteeDutiesService {
 
   private async getSelectionProofs(slot: Slot, duty: routes.validator.SyncDuty): Promise<SyncSelectionProof[]> {
     // Fast indexing with precomputed pubkeyHex. Fallback to toHexString(duty.pubkey)
-    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? duty.pubkey;
+    const pubkey = this.indicesService.index2pubkey.get(duty.validatorIndex) ?? toHexString(duty.pubkey);
 
     const dutiesAndProofs: SyncSelectionProof[] = [];
     for (const index of duty.validatorSyncCommitteeIndices) {

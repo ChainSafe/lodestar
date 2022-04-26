@@ -1,16 +1,6 @@
-import {Epoch, RootHex, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
-import {ByteVectorType, ContainerType, Json} from "@chainsafe/ssz";
-import {
-  jsonType,
-  ReqEmpty,
-  reqEmpty,
-  ReturnTypes,
-  ReqSerializers,
-  RoutesData,
-  sameType,
-  Schema,
-  ArrayOf,
-} from "../utils";
+import {Epoch, RootHex, Slot} from "@chainsafe/lodestar-types";
+import {jsonType, ReqEmpty, reqEmpty, ReturnTypes, ReqSerializers, RoutesData, sameType, Schema} from "../utils";
+import {FilterGetPeers, NodePeer, PeerDirection, PeerState} from "./node";
 
 // See /packages/api/src/routes/index.ts for reasoning and instructions to add new routes
 
@@ -27,14 +17,15 @@ export type SyncChainDebugState = {
 
 export type GossipQueueItem = {
   topic: unknown;
-  receivedFrom: string;
+  propagationSource: string;
   data: Uint8Array;
   addedTimeMs: number;
+  seenTimestampSec: number;
 };
 
 export type RegenQueueItem = {
   key: string;
-  args: Json;
+  args: unknown;
   addedTimeMs: number;
 };
 
@@ -51,6 +42,10 @@ export type StateCacheItem = {
   reads: number;
   /** Unix timestamp (ms) of the last read */
   lastRead: number;
+};
+
+export type LodestarNodePeer = NodePeer & {
+  agentVersion: string;
 };
 
 export type Api = {
@@ -72,6 +67,8 @@ export type Api = {
   getStateCacheItems(): Promise<StateCacheItem[]>;
   /** Dump a summary of the states in the CheckpointStateCache */
   getCheckpointStateCacheItems(): Promise<StateCacheItem[]>;
+  /** Dump peer gossip stats by peer */
+  getGossipPeerScoreStats(): Promise<Record<string, unknown>>;
   /** Run GC with `global.gc()` */
   runGC(): Promise<void>;
   /** Drop all states in the state cache */
@@ -81,6 +78,8 @@ export type Api = {
   connectPeer(peerId: string, multiaddrStrs: string[]): Promise<void>;
   /** Disconnect peer */
   disconnectPeer(peerId: string): Promise<void>;
+  /** Same to node api with new fields */
+  getPeers(filters?: FilterGetPeers): Promise<{data: LodestarNodePeer[]; meta: {count: number}}>;
 
   /** Dump Discv5 Kad values */
   discv5GetKadValues(): Promise<{data: string[]}>;
@@ -99,10 +98,12 @@ export const routesData: RoutesData<Api> = {
   getBlockProcessorQueueItems: {url: "/eth/v1/lodestar/block-processor-queue-items", method: "GET"},
   getStateCacheItems: {url: "/eth/v1/lodestar/state-cache-items", method: "GET"},
   getCheckpointStateCacheItems: {url: "/eth/v1/lodestar/checkpoint-state-cache-items", method: "GET"},
+  getGossipPeerScoreStats: {url: "/eth/v1/lodestar/gossip-peer-score-stats", method: "GET"},
   runGC: {url: "/eth/v1/lodestar/gc", method: "POST"},
   dropStateCache: {url: "/eth/v1/lodestar/drop-state-cache", method: "POST"},
   connectPeer: {url: "/eth/v1/lodestar/connect_peer", method: "POST"},
   disconnectPeer: {url: "/eth/v1/lodestar/disconnect_peer", method: "POST"},
+  getPeers: {url: "/eth/v1/lodestar/peers", method: "GET"},
   discv5GetKadValues: {url: "/eth/v1/debug/discv5-kad-values", method: "GET"},
 };
 
@@ -116,10 +117,12 @@ export type ReqTypes = {
   getBlockProcessorQueueItems: ReqEmpty;
   getStateCacheItems: ReqEmpty;
   getCheckpointStateCacheItems: ReqEmpty;
+  getGossipPeerScoreStats: ReqEmpty;
   runGC: ReqEmpty;
   dropStateCache: ReqEmpty;
   connectPeer: {query: {peerId: string; multiaddr: string[]}};
   disconnectPeer: {query: {peerId: string}};
+  getPeers: {query: {state?: PeerState[]; direction?: PeerDirection[]}};
   discv5GetKadValues: ReqEmpty;
 };
 
@@ -142,6 +145,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     getBlockProcessorQueueItems: reqEmpty,
     getStateCacheItems: reqEmpty,
     getCheckpointStateCacheItems: reqEmpty,
+    getGossipPeerScoreStats: reqEmpty,
     runGC: reqEmpty,
     dropStateCache: reqEmpty,
     connectPeer: {
@@ -154,39 +158,29 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({query}) => [query.peerId],
       schema: {query: {peerId: Schema.StringRequired}},
     },
+    getPeers: {
+      writeReq: (filters) => ({query: filters || {}}),
+      parseReq: ({query}) => [query],
+      schema: {query: {state: Schema.StringArray, direction: Schema.StringArray}},
+    },
     discv5GetKadValues: reqEmpty,
   };
 }
 
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
-  const stringType = new StringType();
-  const GossipQueueItem = new ContainerType<GossipQueueItem>({
-    fields: {
-      topic: stringType,
-      receivedFrom: stringType,
-      data: new ByteVectorType({length: 256}),
-      addedTimeMs: ssz.Slot,
-    },
-    // Custom type, not in the consensus specs
-    casingMap: {
-      topic: "topic",
-      receivedFrom: "received_from",
-      data: "data",
-      addedTimeMs: "added_time_ms",
-    },
-  });
-
   return {
     getWtfNode: sameType(),
     writeHeapdump: sameType(),
     getLatestWeakSubjectivityCheckpointEpoch: sameType(),
-    getSyncChainsDebugState: jsonType(),
-    getGossipQueueItems: ArrayOf(GossipQueueItem),
-    getRegenQueueItems: jsonType(),
-    getBlockProcessorQueueItems: jsonType(),
-    getStateCacheItems: jsonType(),
-    getCheckpointStateCacheItems: jsonType(),
-    discv5GetKadValues: jsonType(),
+    getSyncChainsDebugState: jsonType("camel"),
+    getGossipQueueItems: jsonType("camel"),
+    getRegenQueueItems: jsonType("camel"),
+    getBlockProcessorQueueItems: jsonType("camel"),
+    getStateCacheItems: jsonType("camel"),
+    getCheckpointStateCacheItems: jsonType("camel"),
+    getGossipPeerScoreStats: jsonType("camel"),
+    getPeers: jsonType("camel"),
+    discv5GetKadValues: jsonType("camel"),
   };
 }

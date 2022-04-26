@@ -1,5 +1,7 @@
 import PeerId from "peer-id";
-import {pruneSetToMax} from "../../util/map";
+import {MapDef, pruneSetToMax} from "../../util/map";
+import {gossipScoreThresholds} from "../gossip/scoringParameters";
+import {IMetrics} from "../../metrics";
 
 /** The default score for new peers */
 const DEFAULT_SCORE = 0;
@@ -7,6 +9,9 @@ const DEFAULT_SCORE = 0;
 const MIN_SCORE_BEFORE_DISCONNECT = -20;
 /** The minimum reputation before a peer is banned */
 const MIN_SCORE_BEFORE_BAN = -50;
+// If a peer has a lodestar score below this constant all other score parts will get ignored and
+// the peer will get banned regardless of the other parts.
+const MIN_LODESTAR_SCORE_BEFORE_BAN = -60.0;
 /** The maximum score a peer can obtain */
 const MAX_SCORE = 100;
 /** The minimum score a peer can obtain */
@@ -20,6 +25,12 @@ const HALFLIFE_DECAY_MS = -Math.log(2) / SCORE_HALFLIFE_MS;
 const BANNED_BEFORE_DECAY_MS = 30 * 60 * 1000;
 /** Limit of entries in the scores map */
 const MAX_ENTRIES = 1000;
+/**
+ * We weight negative gossipsub scores in such a way that they never result in a disconnect by
+ * themselves. This "solves" the problem of non-decaying gossipsub scores for disconnected peers.
+ */
+const GOSSIPSUB_NEGATIVE_SCORE_WEIGHT = (MIN_SCORE_BEFORE_DISCONNECT + 1) / gossipScoreThresholds.graylistThreshold;
+const GOSSIPSUB_POSITIVE_SCORE_WEIGHT = GOSSIPSUB_NEGATIVE_SCORE_WEIGHT;
 
 export enum PeerAction {
   /** Immediately ban peer */
@@ -70,6 +81,11 @@ export interface IPeerRpcScoreStore {
   getScoreState(peer: PeerId): ScoreState;
   applyAction(peer: PeerId, action: PeerAction, actionName?: string): void;
   update(): void;
+  updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void;
+}
+
+export interface IPeerRpcScoreStoreModules {
+  metrics: IMetrics | null;
 }
 
 /**
@@ -78,13 +94,18 @@ export interface IPeerRpcScoreStore {
  * The decay rate applies equally to positive and negative scores.
  */
 export class PeerRpcScoreStore implements IPeerRpcScoreStore {
-  private readonly scores = new Map<string, number>();
+  private readonly scores = new MapDef<PeerIdStr, PeerScore>(() => new PeerScore());
+  private readonly metrics: IMetrics | null;
   private readonly lastUpdate = new Map<string, number>();
 
   // TODO: Persist scores, at least BANNED status to disk
 
+  constructor(metrics: IMetrics | null = null) {
+    this.metrics = metrics;
+  }
+
   getScore(peer: PeerId): number {
-    return this.scores.get(peer.toB58String()) ?? DEFAULT_SCORE;
+    return this.scores.get(peer.toB58String())?.getScore() ?? DEFAULT_SCORE;
   }
 
   getScoreState(peer: PeerId): ScoreState {
@@ -92,65 +113,160 @@ export class PeerRpcScoreStore implements IPeerRpcScoreStore {
   }
 
   applyAction(peer: PeerId, action: PeerAction, actionName?: string): void {
-    this.add(peer, peerActionScore[action]);
+    const peerScore = this.scores.getOrDefault(peer.toB58String());
+    peerScore.add(peerActionScore[action]);
 
-    // TODO: Log action to debug + do metrics
-    actionName;
+    this.metrics?.peersReportPeerCount.inc({reason: actionName});
   }
 
   update(): void {
     // Bound size of data structures
     pruneSetToMax(this.scores, MAX_ENTRIES);
-    pruneSetToMax(this.lastUpdate, MAX_ENTRIES);
 
-    for (const [peerIdStr, prevScore] of this.scores) {
-      const newScore = this.decayScore(peerIdStr, prevScore);
+    for (const [peerIdStr, peerScore] of this.scores) {
+      const newScore = peerScore.update();
 
       // Prune scores below threshold
       if (Math.abs(newScore) < SCORE_THRESHOLD) {
         this.scores.delete(peerIdStr);
-        this.lastUpdate.delete(peerIdStr);
-      }
-
-      // If above threshold, persist decayed value
-      else {
-        this.scores.set(peerIdStr, newScore);
       }
     }
   }
 
-  private decayScore(peer: PeerIdStr, prevScore: number): number {
-    const nowMs = Date.now();
-    const lastUpdate = this.lastUpdate.get(peer) ?? nowMs;
+  updateGossipsubScore(peerId: PeerIdStr, newScore: number, ignore: boolean): void {
+    const peerScore = this.scores.getOrDefault(peerId);
+    peerScore.updateGossipsubScore(newScore, ignore);
+  }
+}
 
-    // Decay the current score
-    // Using exponential decay based on a constant half life.
-    const sinceLastUpdateMs = nowMs - lastUpdate;
-    // If peer was banned, lastUpdate will be in the future
-    if (sinceLastUpdateMs > 0 && prevScore !== 0) {
-      this.lastUpdate.set(peer, nowMs);
-      // e^(-ln(2)/HL*t)
-      const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
-      return prevScore * decayFactor;
-    } else {
-      return prevScore;
-    }
+/**
+ * Manage score of a peer.
+ */
+export class PeerScore {
+  private lodestarScore: number;
+  private gossipScore: number;
+  private ignoreNegativeGossipScore: boolean;
+  /** The final score, computed from the above */
+  private score: number;
+  private lastUpdate: number;
+
+  constructor() {
+    this.lodestarScore = DEFAULT_SCORE;
+    this.gossipScore = DEFAULT_SCORE;
+    this.score = DEFAULT_SCORE;
+    this.ignoreNegativeGossipScore = false;
+    this.lastUpdate = Date.now();
   }
 
-  private add(peer: PeerId, scoreDelta: number): void {
-    const prevScore = this.getScore(peer);
+  getScore(): number {
+    return this.score;
+  }
 
-    let newScore = this.decayScore(peer.toB58String(), prevScore) + scoreDelta;
+  add(scoreDelta: number): void {
+    let newScore = this.lodestarScore + scoreDelta;
     if (newScore > MAX_SCORE) newScore = MAX_SCORE;
     if (newScore < MIN_SCORE) newScore = MIN_SCORE;
 
-    const prevState = scoreToState(prevScore);
-    const newState = scoreToState(newScore);
-    if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
-      // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
-      this.lastUpdate.set(peer.toB58String(), Date.now() + BANNED_BEFORE_DECAY_MS);
+    this.setLodestarScore(newScore);
+  }
+
+  /**
+   * Applies time-based logic such as decay rates to the score.
+   * This function should be called periodically.
+   *
+   * Return the new score.
+   */
+  update(): number {
+    const nowMs = Date.now();
+
+    // Decay the current score
+    // Using exponential decay based on a constant half life.
+    const sinceLastUpdateMs = nowMs - this.lastUpdate;
+    // If peer was banned, lastUpdate will be in the future
+    if (sinceLastUpdateMs > 0 && this.lodestarScore !== 0) {
+      this.lastUpdate = nowMs;
+      // e^(-ln(2)/HL*t)
+      const decayFactor = Math.exp(HALFLIFE_DECAY_MS * sinceLastUpdateMs);
+      this.setLodestarScore(this.lodestarScore * decayFactor);
     }
 
-    this.scores.set(peer.toB58String(), newScore);
+    return this.lodestarScore;
+  }
+
+  updateGossipsubScore(newScore: number, ignore: boolean): void {
+    // we only update gossipsub if last_updated is in the past which means either the peer is
+    // not banned or the BANNED_BEFORE_DECAY time is over.
+    if (this.lastUpdate <= Date.now()) {
+      this.gossipScore = newScore;
+      this.ignoreNegativeGossipScore = ignore;
+    }
+  }
+
+  /**
+   * Updating lodestarScore should always go through this method,
+   * so that we update this.score accordingly.
+   */
+  private setLodestarScore(newScore: number): void {
+    this.lodestarScore = newScore;
+    this.updateState();
+  }
+
+  /**
+   * Compute the final score, ban peer if needed
+   */
+  private updateState(): void {
+    const prevState = scoreToState(this.score);
+    this.recomputeScore();
+    const newState = scoreToState(this.score);
+
+    if (prevState !== ScoreState.Banned && newState === ScoreState.Banned) {
+      // ban this peer for at least BANNED_BEFORE_DECAY_MS seconds
+      this.lastUpdate = Date.now() + BANNED_BEFORE_DECAY_MS;
+    }
+  }
+
+  /**
+   * Compute the final score
+   */
+  private recomputeScore(): void {
+    this.score = this.lodestarScore;
+    if (this.score <= MIN_LODESTAR_SCORE_BEFORE_BAN) {
+      // ignore all other scores, i.e. do nothing here
+      return;
+    }
+
+    if (this.gossipScore >= 0) {
+      this.score += this.gossipScore * GOSSIPSUB_POSITIVE_SCORE_WEIGHT;
+    } else if (!this.ignoreNegativeGossipScore) {
+      this.score += this.gossipScore * GOSSIPSUB_NEGATIVE_SCORE_WEIGHT;
+    }
+  }
+}
+
+/**
+ * Utility to update gossipsub score of connected peers
+ */
+export function updateGossipsubScores(
+  peerRpcScores: IPeerRpcScoreStore,
+  gossipsubScores: Map<string, number>,
+  toIgnoreNegativePeers: number
+): void {
+  // sort by gossipsub score desc
+  const sortedPeerIds = Array.from(gossipsubScores.keys()).sort(
+    (a, b) => (gossipsubScores.get(b) ?? 0) - (gossipsubScores.get(a) ?? 0)
+  );
+  for (const peerId of sortedPeerIds) {
+    const gossipsubScore = gossipsubScores.get(peerId);
+    if (gossipsubScore !== undefined) {
+      let ignore = false;
+      if (gossipsubScore < 0 && toIgnoreNegativePeers > 0) {
+        // We ignore the negative score for the best negative peers so that their
+        // gossipsub score can recover without getting disconnected.
+        ignore = true;
+        toIgnoreNegativePeers -= 1;
+      }
+
+      peerRpcScores.updateGossipsubScore(peerId, gossipsubScore, ignore);
+    }
   }
 }

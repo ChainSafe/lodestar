@@ -2,17 +2,25 @@ import {Options} from "yargs";
 import {ICliCommandOptions} from "../../util";
 import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
+import {IValidatorCliArgs, validatorOptions} from "../validator/options";
+import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
 
-interface IDevOwnArgs {
+type IDevOwnArgs = {
   genesisEth1Hash?: string;
   genesisValidators?: number;
   startValidators?: string;
   genesisTime?: number;
   reset?: boolean;
   server: string;
-}
+} & KeymanagerArgs &
+  Pick<IValidatorCliArgs, "importKeystoresPath" | "importKeystoresPassword">;
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
+  ...keymanagerOptions,
+  ...{
+    importKeystoresPath: validatorOptions["importKeystoresPath"],
+    importKeystoresPassword: validatorOptions["importKeystoresPassword"],
+  },
   genesisEth1Hash: {
     description: "If present it will create genesis with this eth1 hash.",
     type: "string",
@@ -27,8 +35,7 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   },
 
   startValidators: {
-    description: "Start interop validators in given range",
-    default: "0:7",
+    description: "Start interop validators in inclusive range with notation '0:7'",
     type: "string",
     group: "dev",
   },
@@ -63,6 +70,11 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
 const externalOptionsOverrides: {[k: string]: Options} = {
   "sync.isSingleNode": {
     ...beaconNodeOptions["sync.isSingleNode"],
+    defaultDescription: undefined,
+    default: true,
+  },
+  "network.allowPublishToZeroPeers": {
+    ...beaconNodeOptions["network.allowPublishToZeroPeers"],
     defaultDescription: undefined,
     default: true,
   },

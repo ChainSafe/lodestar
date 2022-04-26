@@ -3,15 +3,17 @@ import {FAR_FUTURE_EPOCH, GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodest
 // this will need async once we wan't to resolve archive slot
 import {
   CachedBeaconStateAllForks,
+  BeaconStateAllForks,
   createCachedBeaconState,
+  createEmptyEpochContextImmutableData,
   PubkeyIndexMap,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {phase0} from "@chainsafe/lodestar-types";
+import {BLSPubkey, phase0} from "@chainsafe/lodestar-types";
 import {allForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {Epoch, ValidatorIndex, Slot} from "@chainsafe/lodestar-types";
-import {ByteVector, fromHexString, readonlyValues, TreeBacked} from "@chainsafe/ssz";
+import {fromHexString} from "@chainsafe/ssz";
 import {IBeaconChain} from "../../../../chain";
 import {StateContextCache} from "../../../../chain/stateCache";
 import {IBeaconDb} from "../../../../db";
@@ -33,7 +35,7 @@ export async function resolveStateId(
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
-): Promise<allForks.BeaconState> {
+): Promise<BeaconStateAllForks> {
   const state = await resolveStateIdOrNull(config, chain, db, stateId, opts);
   if (!state) {
     throw new ApiError(404, `No state found for id '${stateId}'`);
@@ -48,7 +50,7 @@ async function resolveStateIdOrNull(
   db: IBeaconDb,
   stateId: routes.beacon.StateId,
   opts?: ResolveStateIdOpts
-): Promise<allForks.BeaconState | null> {
+): Promise<BeaconStateAllForks | null> {
   stateId = stateId.toLowerCase();
   if (stateId === "head" || stateId === "genesis" || stateId === "finalized" || stateId === "justified") {
     return await stateByName(db, chain.stateCache, chain.forkChoice, stateId);
@@ -117,7 +119,7 @@ async function stateByName(
   stateCache: StateContextCache,
   forkChoice: IForkChoice,
   stateId: routes.beacon.StateId
-): Promise<allForks.BeaconState | null> {
+): Promise<CachedBeaconStateAllForks | BeaconStateAllForks | null> {
   switch (stateId) {
     case "head":
       return stateCache.get(forkChoice.getHead().stateRoot) ?? null;
@@ -136,7 +138,7 @@ async function stateByRoot(
   db: IBeaconDb,
   stateCache: StateContextCache,
   stateId: routes.beacon.StateId
-): Promise<allForks.BeaconState | null> {
+): Promise<BeaconStateAllForks | null> {
   if (stateId.startsWith("0x")) {
     const stateRoot = stateId;
     const cachedStateCtx = stateCache.get(stateRoot);
@@ -154,7 +156,7 @@ async function stateBySlot(
   forkChoice: IForkChoice,
   slot: Slot,
   opts?: ResolveStateIdOpts
-): Promise<allForks.BeaconState | null> {
+): Promise<BeaconStateAllForks | null> {
   const blockSummary = forkChoice.getCanonicalBlockAtSlot(slot);
   if (blockSummary) {
     const state = stateCache.get(blockSummary.stateRoot);
@@ -172,17 +174,20 @@ async function stateBySlot(
 
 export function filterStateValidatorsByStatuses(
   statuses: string[],
-  state: allForks.BeaconState,
+  state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap,
   currentEpoch: Epoch
 ): routes.beacon.ValidatorResponse[] {
   const responses: routes.beacon.ValidatorResponse[] = [];
-  const validators = Array.from(state.validators);
-  const filteredValidators = validators.filter((v) => statuses.includes(getValidatorStatus(v, currentEpoch)));
-  for (const validator of readonlyValues(filteredValidators)) {
+  const validatorsArr = state.validators.getAllReadonlyValues();
+  const statusSet = new Set(statuses);
+
+  for (const validator of validatorsArr) {
+    const validatorStatus = getValidatorStatus(validator, currentEpoch);
+
     const validatorIndex = getStateValidatorIndex(validator.pubkey, state, pubkey2index);
-    if (validatorIndex !== undefined && statuses?.includes(getValidatorStatus(validator, currentEpoch))) {
-      responses.push(toValidatorResponse(validatorIndex, validator, state.balances[validatorIndex], currentEpoch));
+    if (validatorIndex !== undefined && statusSet.has(validatorStatus)) {
+      responses.push(toValidatorResponse(validatorIndex, validator, state.balances.get(validatorIndex), currentEpoch));
     }
   }
   return responses;
@@ -197,8 +202,10 @@ async function getNearestArchivedState(
   slot: Slot
 ): Promise<CachedBeaconStateAllForks> {
   const states = db.stateArchive.valuesStream({lte: slot, reverse: true});
-  const state = (await states[Symbol.asyncIterator]().next()).value as TreeBacked<allForks.BeaconState>;
-  return createCachedBeaconState(config, state);
+  const state = (await states[Symbol.asyncIterator]().next()).value as BeaconStateAllForks;
+  // TODO - PENDING: Don't create new immutable caches here
+  // see https://github.com/ChainSafe/lodestar/issues/3683
+  return createCachedBeaconState(state, createEmptyEpochContextImmutableData(config, state));
 }
 
 async function getFinalizedState(
@@ -228,8 +235,8 @@ async function getFinalizedState(
 }
 
 export function getStateValidatorIndex(
-  id: routes.beacon.ValidatorId | ByteVector,
-  state: allForks.BeaconState,
+  id: routes.beacon.ValidatorId | BLSPubkey,
+  state: BeaconStateAllForks,
   pubkey2index: PubkeyIndexMap
 ): number | undefined {
   let validatorIndex: ValidatorIndex | undefined;

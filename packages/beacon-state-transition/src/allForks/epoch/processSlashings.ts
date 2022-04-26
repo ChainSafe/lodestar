@@ -1,5 +1,4 @@
 import {bigIntMin} from "@chainsafe/lodestar-utils";
-import {readonlyValues} from "@chainsafe/ssz";
 import {
   EFFECTIVE_BALANCE_INCREMENT,
   ForkName,
@@ -31,8 +30,14 @@ export function processSlashingsAllForks(
   }
   // TODO: have the regular totalBalance in EpochProcess too?
   const totalBalance = BigInt(process.totalActiveStakeByIncrement) * BigInt(EFFECTIVE_BALANCE_INCREMENT);
-  // TODO: could totalSlashings be number?
-  const totalSlashings = Array.from(readonlyValues(state.slashings)).reduce((a, b) => a + b, BigInt(0));
+
+  // TODO: Could totalSlashings be number?
+  // TODO: Could totalSlashing be cached?
+  let totalSlashings = BigInt(0);
+  const slashings = state.slashings.getAll();
+  for (let i = 0; i < slashings.length; i++) {
+    totalSlashings += slashings[i];
+  }
 
   const proportionalSlashingMultiplier =
     fork === ForkName.phase0

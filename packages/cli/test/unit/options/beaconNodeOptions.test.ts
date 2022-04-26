@@ -35,10 +35,8 @@ describe("options / beaconNodeOptions", () => {
       "logger.unknown.level": "debug",
 
       "metrics.enabled": true,
-      "metrics.gatewayUrl": "http://localhost:8000",
-      "metrics.serverPort": 8765,
-      "metrics.timeout": 5000,
-      "metrics.listenAddr": "0.0.0.0",
+      "metrics.port": 8765,
+      "metrics.address": "0.0.0.0",
 
       "network.discv5.enabled": true,
       "network.discv5.bindAddr": "addr",
@@ -55,6 +53,7 @@ describe("options / beaconNodeOptions", () => {
       "network.blockCountPeerLimit": 500,
       "network.rateTrackerTimeoutMs": 60000,
       "network.dontSendGossipAttestationsToForkchoice": true,
+      "network.allowPublishToZeroPeers": true,
       "sync.isSingleNode": true,
       "sync.disableProcessAsChainSegment": true,
       "sync.backfillBatchSize": 64,
@@ -97,10 +96,8 @@ describe("options / beaconNodeOptions", () => {
       },
       metrics: {
         enabled: true,
-        gatewayUrl: "http://localhost:8000",
-        serverPort: 8765,
-        timeout: 5000,
-        listenAddr: "0.0.0.0",
+        port: 8765,
+        address: "0.0.0.0",
       },
       network: {
         discv5: {
@@ -120,6 +117,7 @@ describe("options / beaconNodeOptions", () => {
         blockCountPeerLimit: 500,
         rateTrackerTimeoutMs: 60000,
         dontSendGossipAttestationsToForkchoice: true,
+        allowPublishToZeroPeers: true,
       },
       sync: {
         isSingleNode: true,

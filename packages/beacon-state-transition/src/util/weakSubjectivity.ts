@@ -5,11 +5,11 @@ import {
   MAX_EFFECTIVE_BALANCE,
   SLOTS_PER_EPOCH,
 } from "@chainsafe/lodestar-params";
-import {allForks, Epoch, Root} from "@chainsafe/lodestar-types";
+import {Epoch, Root} from "@chainsafe/lodestar-types";
 import {ssz} from "@chainsafe/lodestar-types";
 import {Checkpoint} from "@chainsafe/lodestar-types/phase0";
 import {toHexString} from "@chainsafe/ssz";
-import {CachedBeaconStateAllForks} from "../types";
+import {CachedBeaconStateAllForks, BeaconStateAllForks} from "../types";
 import {
   getActiveValidatorIndices,
   getCurrentEpoch,
@@ -20,7 +20,7 @@ import {
 } from "..";
 
 export const ETH_TO_GWEI = 10 ** 9;
-const SAFETY_DECAY = BigInt(10);
+const SAFETY_DECAY = 10;
 
 /**
  * Returns the epoch of the latest weak subjectivity checkpoint for the given
@@ -45,10 +45,10 @@ export function computeWeakSubjectivityPeriodCachedState(
   config: IChainForkConfig,
   state: CachedBeaconStateAllForks
 ): number {
-  const activeValidatorCount = state.currentShuffling.activeIndices.length;
+  const activeValidatorCount = state.epochCtx.currentShuffling.activeIndices.length;
   return computeWeakSubjectivityPeriodFromConstituents(
     activeValidatorCount,
-    state.totalActiveBalanceIncrements,
+    state.epochCtx.totalActiveBalanceIncrements,
     getChurnLimit(config, activeValidatorCount),
     config.MIN_VALIDATOR_WITHDRAWABILITY_DELAY
   );
@@ -58,11 +58,12 @@ export function computeWeakSubjectivityPeriodCachedState(
  * Same to computeWeakSubjectivityPeriodCachedState but for normal state
  * This is called only 1 time at app startup so it's ok to calculate totalActiveBalanceIncrements manually
  */
-export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: allForks.BeaconState): number {
+export function computeWeakSubjectivityPeriod(config: IChainForkConfig, state: BeaconStateAllForks): number {
   const activeIndices = getActiveValidatorIndices(state, getCurrentEpoch(state));
+  const validators = state.validators.getAllReadonlyValues();
   let totalActiveBalanceIncrements = 0;
   for (const index of activeIndices) {
-    totalActiveBalanceIncrements += Math.floor(state.validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
+    totalActiveBalanceIncrements += Math.floor(validators[index].effectiveBalance / EFFECTIVE_BALANCE_INCREMENT);
   }
   if (totalActiveBalanceIncrements <= 1) {
     totalActiveBalanceIncrements = 1;
@@ -86,11 +87,11 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   // totalBalanceByIncrement = totalBalance / MAX_EFFECTIVE_BALANCE and MAX_EFFECTIVE_BALANCE = ETH_TO_GWEI atm
   // we need to change this calculation just in case MAX_EFFECTIVE_BALANCE != ETH_TO_GWEI
   const t = Math.floor(totalBalanceByIncrement / N);
-  const T = Number(MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI);
+  const T = MAX_EFFECTIVE_BALANCE / ETH_TO_GWEI;
   const delta = churnLimit;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   const Delta = MAX_DEPOSITS * SLOTS_PER_EPOCH;
-  const D = Number(SAFETY_DECAY);
+  const D = SAFETY_DECAY;
 
   let wsPeriod = minWithdrawabilityDelay;
   if (T * (200 + 3 * D) < t * (200 + 12 * D)) {
@@ -106,21 +107,21 @@ export function computeWeakSubjectivityPeriodFromConstituents(
   return wsPeriod;
 }
 
-export function getLatestBlockRoot(config: IChainForkConfig, state: allForks.BeaconState): Root {
+export function getLatestBlockRoot(state: BeaconStateAllForks): Root {
   const header = ssz.phase0.BeaconBlockHeader.clone(state.latestBlockHeader);
   if (ssz.Root.equals(header.stateRoot, ZERO_HASH)) {
-    header.stateRoot = config.getForkTypes(state.slot).BeaconState.hashTreeRoot(state);
+    header.stateRoot = state.hashTreeRoot();
   }
   return ssz.phase0.BeaconBlockHeader.hashTreeRoot(header);
 }
 
 export function isWithinWeakSubjectivityPeriod(
   config: IBeaconConfig,
-  wsState: allForks.BeaconState,
+  wsState: BeaconStateAllForks,
   wsCheckpoint: Checkpoint
 ): boolean {
   const wsStateEpoch = computeEpochAtSlot(wsState.slot);
-  const blockRoot = getLatestBlockRoot(config, wsState);
+  const blockRoot = getLatestBlockRoot(wsState);
   if (!ssz.Root.equals(blockRoot, wsCheckpoint.root)) {
     throw new Error(
       `Roots do not match.  expected=${toHexString(wsCheckpoint.root)}, actual=${toHexString(blockRoot)}`

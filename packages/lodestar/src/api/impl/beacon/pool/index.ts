@@ -8,7 +8,6 @@ import {validateGossipProposerSlashing} from "../../../../chain/validation/propo
 import {validateGossipVoluntaryExit} from "../../../../chain/validation/voluntaryExit";
 import {validateSyncCommitteeSigOnly} from "../../../../chain/validation/syncCommittee";
 import {ApiModules} from "../../types";
-import {OpSource} from "../../../../metrics/validatorMonitor";
 import {toHexString} from "@chainsafe/ssz";
 import {AttestationError, GossipAction, SyncCommitteeError} from "../../../../chain/errors";
 
@@ -51,12 +50,9 @@ export function getBeaconPoolApi({
           try {
             const {indexedAttestation, subnet} = await validateGossipAttestation(chain, attestation, null);
 
-            metrics?.registerUnaggregatedAttestation(OpSource.api, seenTimestampSec, indexedAttestation);
-
-            await Promise.all([
-              network.gossip.publishBeaconAttestation(attestation, subnet),
-              chain.attestationPool.add(attestation),
-            ]);
+            chain.attestationPool.add(attestation);
+            const sentPeers = await network.gossip.publishBeaconAttestation(attestation, subnet);
+            metrics?.submitUnaggregatedAttestation(seenTimestampSec, indexedAttestation, subnet, sentPeers);
           } catch (e) {
             errors.push(e as Error);
             logger.error(

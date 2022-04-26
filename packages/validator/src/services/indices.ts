@@ -4,6 +4,7 @@ import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
 import {ValidatorStore} from "./validatorStore";
 import {batchItems} from "../util/batch";
+import {Metrics} from "../metrics";
 
 /**
  * URLs have a limitation on size, adding an unbounded num of pubkeys will break the request.
@@ -24,8 +25,13 @@ export class IndicesService {
   constructor(
     private readonly logger: ILogger,
     private readonly api: Api,
-    private readonly validatorStore: ValidatorStore
-  ) {}
+    private readonly validatorStore: ValidatorStore,
+    private readonly metrics: Metrics | null
+  ) {
+    if (metrics) {
+      metrics.indices.addCollect(() => metrics.indices.set(this.index2pubkey.size));
+    }
+  }
 
   /** Return all known indices from the validatorStore pubkeys */
   getAllLocalIndices(): ValidatorIndex[] {
@@ -53,6 +59,16 @@ export class IndicesService {
     return this.pollValidatorIndicesPromise;
   }
 
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    for (const [key, value] of this.index2pubkey) {
+      if (value === pubkey) {
+        this.index2pubkey.delete(key);
+      }
+    }
+
+    this.pubkey2index.delete(pubkey);
+  }
+
   /** Iterate through all the voting pubkeys in the `ValidatorStore` and attempt to learn any unknown
       validator indices. Returns the new discovered indexes */
   private async pollValidatorIndicesInternal(): Promise<ValidatorIndex[]> {
@@ -71,12 +87,15 @@ export class IndicesService {
       const validatorIndicesArr = await this.fetchValidatorIndices(pubkeysHexBatch);
       newIndices.push(...validatorIndicesArr);
     }
+
     this.logger.info("Discovered new validators", {count: newIndices.length});
+    this.metrics?.discoveredIndices.inc(newIndices.length);
+
     return newIndices;
   }
 
   private async fetchValidatorIndices(pubkeysHex: string[]): Promise<ValidatorIndex[]> {
-    const validatorsState = await this.api.beacon.getStateValidators("head", {indices: pubkeysHex});
+    const validatorsState = await this.api.beacon.getStateValidators("head", {id: pubkeysHex});
     const newIndices = [];
     for (const validatorState of validatorsState.data) {
       const pubkeyHex = toHexString(validatorState.validator.pubkey);

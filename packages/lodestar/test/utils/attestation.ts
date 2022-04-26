@@ -1,9 +1,9 @@
-import {List} from "@chainsafe/ssz";
 import {CommitteeIndex, Epoch, Slot, phase0} from "@chainsafe/lodestar-types";
 import crypto from "node:crypto";
 import deepmerge from "deepmerge";
 import {isPlainObject} from "@chainsafe/lodestar-utils";
 import {RecursivePartial} from "@chainsafe/lodestar-utils";
+import {BitArray} from "@chainsafe/ssz";
 
 /**
  * Generates a fake attestation data for test purposes.
@@ -38,7 +38,7 @@ export function generateAttestationData(
 export function generateAttestation(override: RecursivePartial<phase0.Attestation> = {}): phase0.Attestation {
   return deepmerge<phase0.Attestation, RecursivePartial<phase0.Attestation>>(
     {
-      aggregationBits: Array.from({length: 64}, () => false) as List<boolean>,
+      aggregationBits: BitArray.fromBitLen(64),
       data: {
         slot: 0,
         index: 0,

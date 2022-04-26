@@ -77,14 +77,15 @@ describe("AttestationDutiesService", function () {
 
     // Clock will call runAttesterDutiesTasks() immediatelly
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const dutiesService = new AttestationDutiesService(
       loggerVc,
       api,
       clock,
       validatorStore,
       indicesService,
-      chainHeadTracker
+      chainHeadTracker,
+      null
     );
 
     // Trigger clock onSlot for slot 0
@@ -124,6 +125,68 @@ describe("AttestationDutiesService", function () {
     expect(api.validator.prepareBeaconCommitteeSubnet.callCount).to.equal(
       1,
       "prepareBeaconCommitteeSubnet() must be called once after getting the duties"
+    );
+  });
+
+  it("Should remove signer from attestation duties", async function () {
+    // Reply with an active validator that has an index
+    const validatorResponse = {
+      ...defaultValidator,
+      index,
+      validator: {...defaultValidator.validator, pubkey: pubkeys[0]},
+    };
+    api.beacon.getStateValidators.resolves({data: [validatorResponse]});
+
+    // Reply with some duties
+    const slot = 1;
+    const duty: routes.validator.AttesterDuty = {
+      slot: slot,
+      committeeIndex: 1,
+      committeeLength: 120,
+      committeesAtSlot: 120,
+      validatorCommitteeIndex: 1,
+      validatorIndex: index,
+      pubkey: pubkeys[0],
+    };
+    api.validator.getAttesterDuties.resolves({dependentRoot: ZERO_HASH, data: [duty]});
+
+    // Accept all subscriptions
+    api.validator.prepareBeaconCommitteeSubnet.resolves();
+
+    // Clock will call runAttesterDutiesTasks() immediatelly
+    const clock = new ClockMock();
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
+    const dutiesService = new AttestationDutiesService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      indicesService,
+      chainHeadTracker,
+      null
+    );
+
+    // Trigger clock onSlot for slot 0
+    await clock.tickEpochFns(0, controller.signal);
+
+    // first confirm duties for this and next epoch should be persisted
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(0)?.dutiesByIndex || new Map())).to.deep.equal(
+      {
+        4: {duty: duty, selectionProof: null},
+      },
+      "Wrong dutiesService.attesters Map at current epoch"
+    );
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"].get(1)?.dutiesByIndex || new Map())).to.deep.equal(
+      {
+        4: {duty: duty, selectionProof: null},
+      },
+      "Wrong dutiesService.attesters Map at current epoch"
+    );
+    // then remove
+    dutiesService.removeDutiesForKey(toHexString(pubkeys[0]));
+    expect(Object.fromEntries(dutiesService["dutiesByIndexByEpoch"])).to.deep.equal(
+      {},
+      "Wrong dutiesService.attesters Map at current epoch after removal"
     );
   });
 });

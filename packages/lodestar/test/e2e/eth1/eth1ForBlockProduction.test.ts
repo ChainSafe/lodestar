@@ -13,11 +13,11 @@ import {getTestnetConfig, medallaTestnetConfig} from "../../utils/testnet";
 import {testLogger} from "../../utils/logger";
 import {BeaconDb} from "../../../src/db";
 import {generateState} from "../../utils/state";
-import {fromHexString, List, toHexString} from "@chainsafe/ssz";
-import {Root, ssz} from "@chainsafe/lodestar-types";
-import {createCachedBeaconState} from "@chainsafe/lodestar-beacon-state-transition";
+import {fromHexString, toHexString} from "@chainsafe/ssz";
+import {ssz} from "@chainsafe/lodestar-types";
 import {Eth1Provider} from "../../../src/eth1/provider/eth1Provider";
 import {getGoerliRpcUrl} from "../../testParams";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
 
 const dbLocation = "./.__testdb";
 
@@ -103,8 +103,8 @@ describe("eth1 / Eth1Provider", function () {
     const periodStart = maxTimestamp + SECONDS_PER_ETH1_BLOCK * ETH1_FOLLOW_DISTANCE;
 
     // Compute correct deposit root tree
-    const depositRootTree = ssz.phase0.DepositDataRootList.createTreeBackedFromStruct(
-      pyrmontDepositsDataRoot.map((root) => fromHexString(root)) as List<Root>
+    const depositRootTree = ssz.phase0.DepositDataRootList.toViewDU(
+      pyrmontDepositsDataRoot.map((root) => fromHexString(root))
     );
 
     const tbState = generateState(
@@ -125,7 +125,7 @@ describe("eth1 / Eth1Provider", function () {
       config
     );
 
-    const state = createCachedBeaconState(config, tbState);
+    const state = createCachedBeaconStateTest(tbState, config);
 
     const result = await eth1ForBlockProduction.getEth1DataAndDeposits(state);
     expect(result.eth1Data).to.deep.equal(latestEth1Data, "Wrong eth1Data for block production");

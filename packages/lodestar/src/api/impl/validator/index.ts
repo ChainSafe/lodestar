@@ -25,7 +25,6 @@ import {toGraffitiBuffer} from "../../../util/graffiti";
 import {ApiError, NodeIsSyncing} from "../errors";
 import {validateSyncCommitteeGossipContributionAndProof} from "../../../chain/validation/syncCommitteeContributionAndProof";
 import {CommitteeSubscription} from "../../../network/subnets";
-import {OpSource} from "../../../metrics/validatorMonitor";
 import {computeSubnetForCommitteesAtSlot, getPubkeysForIndices} from "./utils";
 import {ApiModules} from "../types";
 import {RegenCaller} from "../../../chain/regen";
@@ -64,7 +63,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
     if (!genesisBlockRoot) {
       // Close to genesis the genesis block may not be available in the DB
       if (state.slot < SLOTS_PER_HISTORICAL_ROOT) {
-        genesisBlockRoot = state.blockRoots[0];
+        genesisBlockRoot = state.blockRoots.get(0);
       }
 
       const genesisBlock = await chain.getCanonicalBlockAtSlot(GENESIS_SLOT);
@@ -286,13 +285,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Note: There is a small probability that returned validators differs
       // than what is returned when the epoch is reached.
       if (epoch === nextEpoch) {
-        indexes.push(...state.getNextEpochBeaconProposer());
+        // TODO DA
+        //indexes.push(...state.epochCtx.getNextEpochBeaconProposer());
       } else {
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
           // getBeaconProposer ensures the requested epoch is correct
-          // Epoch should be equal to current epoch, if not the getBeaconProposer call throws an error
-          const validatorIndex = state.getBeaconProposer(startSlot + i);
+          const validatorIndex = state.epochCtx.getBeaconProposer(startSlot + i);
           indexes.push(validatorIndex);
         }
       }
@@ -444,21 +443,13 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               signedAggregateAndProof
             );
 
-            metrics?.registerAggregatedAttestation(
-              OpSource.api,
-              seenTimestampSec,
-              signedAggregateAndProof,
-              indexedAttestation
+            chain.aggregatedAttestationPool.add(
+              signedAggregateAndProof.message.aggregate,
+              indexedAttestation.attestingIndices,
+              committeeIndices
             );
-
-            await Promise.all([
-              chain.aggregatedAttestationPool.add(
-                signedAggregateAndProof.message.aggregate,
-                indexedAttestation.attestingIndices.valueOf() as ValidatorIndex[],
-                committeeIndices
-              ),
-              network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof),
-            ]);
+            const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
+            metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {
             if (e instanceof AttestationError && e.type.code === AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN) {
               logger.debug("Ignoring known signedAggregateAndProof");

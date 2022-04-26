@@ -8,15 +8,14 @@ import {
   allForks,
   computeEpochAtSlot,
   computeStartSlotAtEpoch,
-  CachedBeaconStateAllForks,
   AttesterFlags,
-  createCachedBeaconState,
   beforeProcessEpoch,
   parseAttesterFlags,
 } from "../../src";
 import {Validator} from "../../lib/phase0";
 import {csvAppend, readCsv} from "./csv";
 import {getInfuraBeaconUrl} from "./infura";
+import {createCachedBeaconStateTest} from "../utils/state";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
 //
@@ -82,7 +81,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
+  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));
@@ -97,11 +96,11 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
     const preEpoch = computeEpochAtSlot(state.slot);
     const nextEpochSlot = computeStartSlotAtEpoch(preEpoch + 1);
-    const stateTB = ssz.phase0.BeaconState.createTreeBackedFromStruct(state as phase0.BeaconState);
-    const postState = createCachedBeaconState(config, stateTB);
+    const stateTB = ssz.phase0.BeaconState.toViewDU(state as phase0.BeaconState);
+    const postState = createCachedBeaconStateTest(stateTB, config);
 
     const epochProcess = beforeProcessEpoch(postState);
-    allForks.processSlots(postState as CachedBeaconStateAllForks, nextEpochSlot, null);
+    allForks.processSlots(postState, nextEpochSlot, null);
 
     const validatorCount = state.validators.length;
 
@@ -109,7 +108,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
     const validatorKeys = Object.keys(validatorChangesCountZero) as (keyof typeof validatorChangesCountZero)[];
     for (let i = 0; i < validatorCount; i++) {
       const validatorPrev = state.validators[i];
-      const validatorNext = postState.validators[i];
+      const validatorNext = postState.validators.get(i);
       for (const key of validatorKeys) {
         const valuePrev = validatorPrev[key];
         const valueNext = validatorNext[key];
@@ -172,9 +171,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 function countAttBits(atts: phase0.PendingAttestation[]): number {
   let totalBits = 0;
   for (const att of atts) {
-    for (const bit of att.aggregationBits) {
-      if (bit) totalBits++;
-    }
+    totalBits += att.aggregationBits.getTrueBitIndexes().length;
   }
   return totalBits / atts.length;
 }

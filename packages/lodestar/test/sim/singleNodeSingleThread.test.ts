@@ -23,7 +23,7 @@ describe("Run single node single thread interop validators (no eth1) until check
   };
 
   const validatorClientCount = 1;
-  const validatorsPerClient = 32;
+  const validatorsPerClient = 32 * 4;
 
   const testCases: {
     event: ChainEvent.justified | ChainEvent.finalized;
@@ -103,6 +103,7 @@ describe("Run single node single thread interop validators (no eth1) until check
         options: {
           api: {rest: {enabled: true} as RestApiOptions},
           sync: {isSingleNode: true},
+          network: {allowPublishToZeroPeers: true},
           executionEngine: {mode: "mock", genesisBlockHash: toHexString(INTEROP_BLOCK_HASH)},
         },
         validatorCount: validatorClientCount * validatorsPerClient,

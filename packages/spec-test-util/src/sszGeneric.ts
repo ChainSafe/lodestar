@@ -1,65 +1,63 @@
-import path, {join} from "node:path";
-import fs, {readFileSync, readdirSync} from "node:fs";
-import {Json, Type} from "@chainsafe/ssz";
-import {loadYaml, objectToExpectedCase} from "@chainsafe/lodestar-utils";
+import path from "node:path";
+import fs from "node:fs";
+import {loadYaml} from "@chainsafe/lodestar-utils";
 import {uncompress} from "snappyjs";
 
-export interface IValidTestcase<T> {
+/* eslint-disable
+  @typescript-eslint/explicit-module-boundary-types,
+  @typescript-eslint/explicit-function-return-type
+*/
+
+export type ValidTestCaseData = {
   root: string;
   serialized: Uint8Array;
-  value: T;
-}
+  jsonValue: unknown;
+};
 
-export interface IInvalidTestcase {
-  path: string;
-  serialized: Uint8Array;
-}
-
-export function parseValidTestcase<T>(dirpath: string, type: Type<T>): IValidTestcase<T> {
+export function parseSszValidTestcase(dirpath: string, metaFilename: string): ValidTestCaseData {
   // The root is stored in meta.yml as:
   //   root: 0xDEADBEEF
-  const metaStr = fs.readFileSync(path.join(dirpath, "meta.yaml"), "utf8");
-  const meta = loadYaml<{root: string}>(metaStr);
+  const metaStr = fs.readFileSync(path.join(dirpath, metaFilename), "utf8");
+  const meta = loadYaml(metaStr) as {root: string};
   if (typeof meta.root !== "string") {
     throw Error(`meta.root not a string: ${meta.root}\n${fs}`);
   }
+
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompress<Uint8Array>(readFileSync(join(dirpath, "serialized.ssz_snappy")));
+  const serialized = uncompress<Uint8Array>(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   // The value is stored in value.yml
-  const yamlSnake = loadYaml(fs.readFileSync(join(dirpath, "value.yaml"), "utf8"));
-  const yamlCamel = objectToExpectedCase(yamlSnake, "camel");
-  const value = type.fromJson(yamlCamel as Json);
+  const yamlPath = path.join(dirpath, "value.yaml");
+  const yamlStrNumbersAsNumbers = fs.readFileSync(yamlPath, "utf8");
+  const jsonValue = readYamlNumbersAsStrings(yamlStrNumbersAsNumbers);
+
+  // type.fromJson(loadYamlFile(path.join(dirpath, "value.yaml")) as Json) as T;
 
   return {
     root: meta.root,
     serialized,
-    value,
+    jsonValue,
   };
 }
 
-export function parseInvalidTestcase(path: string): IInvalidTestcase {
+/**
+ * ssz_generic
+ * | basic_vector
+ *   | invalid
+ *     | vec_bool_0
+ *       | serialized.ssz_snappy
+ *
+ * Docs: https://github.com/ethereum/eth2.0-specs/blob/master/tests/formats/ssz_generic/README.md
+ */
+export function parseSszGenericInvalidTestcase(dirpath: string) {
   // The serialized value is stored in serialized.ssz_snappy
-  const serialized = uncompress(readFileSync(join(path, "serialized.ssz_snappy")));
+  const serialized = uncompress(fs.readFileSync(path.join(dirpath, "serialized.ssz_snappy")));
 
   return {
-    path,
     serialized,
   };
 }
 
-export function getValidTestcases<T>(path: string, prefix: string, type: Type<T>): IValidTestcase<T>[] {
-  const subdirs = readdirSync(path);
-  return subdirs
-    .filter((dir) => dir.includes(prefix))
-    .map((d) => join(path, d))
-    .map((p) => parseValidTestcase(p, type)) as IValidTestcase<T>[];
-}
-
-export function getInvalidTestcases(path: string, prefix: string): IInvalidTestcase[] {
-  const subdirs = readdirSync(path);
-  return subdirs
-    .filter((dir) => dir.includes(prefix))
-    .map((d) => join(path, d))
-    .map(parseInvalidTestcase);
+export function readYamlNumbersAsStrings(yamlStr: string): unknown {
+  return loadYaml(yamlStr);
 }

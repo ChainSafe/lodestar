@@ -18,7 +18,7 @@ export function processAttesterSlashing(
   attesterSlashing: phase0.AttesterSlashing,
   verifySignatures = true
 ): void {
-  assertValidAttesterSlashing(state as CachedBeaconStateAllForks, attesterSlashing, verifySignatures);
+  assertValidAttesterSlashing(state, attesterSlashing, verifySignatures);
 
   const intersectingIndices = getAttesterSlashableIndices(attesterSlashing);
 
@@ -26,7 +26,7 @@ export function processAttesterSlashing(
   const validators = state.validators; // Get the validators sub tree once for all indices
   // Spec requires to sort indexes beforehand
   for (const index of intersectingIndices.sort((a, b) => a - b)) {
-    if (isSlashableValidator(validators[index], state.epochCtx.currentShuffling.epoch)) {
+    if (isSlashableValidator(validators.get(index), state.epochCtx.currentShuffling.epoch)) {
       slashValidatorAllForks(fork, state, index);
       slashedAny = true;
     }

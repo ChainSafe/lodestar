@@ -2,7 +2,7 @@ import fs from "node:fs";
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 import {newZeroedArray} from "@chainsafe/lodestar-beacon-state-transition";
-import SHA256 from "@chainsafe/as-sha256";
+import {digest} from "@chainsafe/as-sha256";
 
 // Script to analyze if a raw BLS pubkey bytes are sufficiently even distributed.
 // If so, a shorter slice of the pubkey bytes can be used as key for the pubkey to index map.
@@ -82,7 +82,7 @@ function analyzeBytesCollisions(pubkeys: string[]): void {
       let key: string;
       if (useHash) {
         const pubkey = Buffer.from(pubkeyStr, "hex");
-        const pubkeyHash = SHA256.digest(pubkey);
+        const pubkeyHash = digest(pubkey);
         key = Buffer.from(pubkeyHash.slice(offset, offset + i)).toString("hex");
       } else {
         key = pubkeyStr.slice(offset * 2, (offset + i) * 2);
@@ -110,7 +110,7 @@ async function writePubkeys(): Promise<void> {
 `);
   }
 
-  const client = getClient(config, {baseUrl});
+  const client = getClient({baseUrl}, {config});
 
   const {data: state} = await client.debug.getStateV2("finalized");
 

@@ -1,4 +1,3 @@
-import {assert} from "chai";
 import {GENESIS_SLOT, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, Slot} from "@chainsafe/lodestar-types";
 import {initBLS} from "@chainsafe/lodestar-cli/src/util";
@@ -26,13 +25,8 @@ describe("Start from WSS", function () {
     await initBLS();
   });
 
-  const afterEachCallbacks: (() => Promise<unknown> | void)[] = [];
-  afterEach(async () => {
-    while (afterEachCallbacks.length > 0) {
-      const callback = afterEachCallbacks.pop();
-      if (callback) await callback();
-    }
-  });
+  const afterEachCallbacks: (() => Promise<unknown> | unknown)[] = [];
+  afterEach(async () => Promise.all(afterEachCallbacks.splice(0, afterEachCallbacks.length)));
 
   it("using another node", async function () {
     // Should reach justification in 3 epochs max, and finalization in 4 epochs max
@@ -71,6 +65,7 @@ describe("Start from WSS", function () {
           rest: {enabled: true, api: ["debug"]} as RestApiOptions,
         },
         sync: {isSingleNode: true},
+        network: {allowPublishToZeroPeers: true},
       },
       validatorCount: 32,
       logger: loggerNodeA,
@@ -101,7 +96,7 @@ describe("Start from WSS", function () {
       throw e;
     }
 
-    const weakSubjectivityServerUrl = "http://127.0.0.1:9596";
+    const weakSubjectivityServerUrl = "http://127.0.0.1:19596";
     loggerNodeB.important("Fetching weak subjectivity state ", {weakSubjectivityServerUrl});
     const {wsState, wsCheckpoint} = await fetchWeakSubjectivityState(config, {weakSubjectivityServerUrl});
     loggerNodeB.important("Fetched wss state");
@@ -133,10 +128,6 @@ describe("Start from WSS", function () {
 
     await connect(bnStartingFromWSS.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
 
-    try {
-      await waitForSynced;
-    } catch (e) {
-      assert.fail("Failed to backfill sync to other node in time");
-    }
+    await waitForSynced;
   });
 });

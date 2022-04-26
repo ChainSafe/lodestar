@@ -38,7 +38,7 @@
   "dependencies": {
     "@chainsafe/lodestar-config": "^0.36.0",
     "@chainsafe/lodestar-utils": "^0.36.0",
-    "@chainsafe/ssz": "^0.8.20",
+    "@chainsafe/ssz": "^0.9.1",
     "@types/levelup": "^4.3.3",
     "it-all": "^1.0.2",
     "level": "^7.0.0",

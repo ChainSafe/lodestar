@@ -1,4 +1,3 @@
-import {Json} from "@chainsafe/ssz";
 import {mapValues} from "@chainsafe/lodestar-utils";
 import {FetchOpts, IHttpClient} from "./httpClient";
 import {compileRouteUrlFormater} from "../../utils/urlFormat";
@@ -8,7 +7,6 @@ import {
   RouteGeneric,
   ReturnTypes,
   TypeJson,
-  jsonOpts,
   ReqSerializer,
   ReqSerializers,
   RoutesData,
@@ -25,7 +23,8 @@ import {
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types, @typescript-eslint/explicit-function-return-type
 export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType extends ReqGeneric>(
   routeDef: RouteDef,
-  reqSerializer: ReqSerializer<Fn, ReqType>
+  reqSerializer: ReqSerializer<Fn, ReqType>,
+  routeId: string
 ) {
   const urlFormater = compileRouteUrlFormater(routeDef.url);
 
@@ -37,6 +36,7 @@ export function getFetchOptsSerializer<Fn extends (...args: any) => any, ReqType
       query: req.query,
       body: req.body as unknown,
       headers: req.headers,
+      routeId,
     };
   };
 }
@@ -49,7 +49,9 @@ export function getFetchOptsSerializers<
   Api extends Record<string, RouteGeneric>,
   ReqTypes extends {[K in keyof Api]: ReqGeneric}
 >(routesData: RoutesData<Api>, reqSerializers: ReqSerializers<Api, ReqTypes>) {
-  return mapValues(routesData, (routeDef, routeKey) => getFetchOptsSerializer(routeDef, reqSerializers[routeKey]));
+  return mapValues(routesData, (routeDef, routeId) =>
+    getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string)
+  );
 }
 
 /**
@@ -64,15 +66,15 @@ export function generateGenericJsonClient<
   returnTypes: ReturnTypes<Api>,
   fetchFn: IHttpClient
 ): Api {
-  return mapValues(routesData, (routeDef, routeKey) => {
-    const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeKey]);
-    const returnType = returnTypes[routeKey as keyof ReturnTypes<Api>] as TypeJson<any> | null;
+  return mapValues(routesData, (routeDef, routeId) => {
+    const fetchOptsSerializer = getFetchOptsSerializer(routeDef, reqSerializers[routeId], routeId as string);
+    const returnType = returnTypes[routeId as keyof ReturnTypes<Api>] as TypeJson<any> | null;
 
     return async function request(...args: Parameters<Api[keyof Api]>): Promise<any | void> {
-      const res = await fetchFn.json<Json>(fetchOptsSerializer(...args));
+      const res = await fetchFn.json<unknown>(fetchOptsSerializer(...args));
       if (returnType) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-        return returnType.fromJson(res, jsonOpts) as ReturnType<Api[keyof Api]>;
+        return returnType.fromJson(res) as ReturnType<Api[keyof Api]>;
       }
     };
   }) as Api;

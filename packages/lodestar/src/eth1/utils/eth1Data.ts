@@ -1,8 +1,7 @@
 import {Root, phase0} from "@chainsafe/lodestar-types";
-import {List, TreeBacked} from "@chainsafe/ssz";
-import {getTreeAtIndex} from "../../util/tree";
 import {binarySearchLte} from "../../util/binarySearch";
 import {Eth1Error, Eth1ErrorCode} from "../errors";
+import {DepositTree} from "../../db/repositories/depositDataRoot";
 import {Eth1Block} from "../interface";
 
 type BlockNumber = number;
@@ -14,7 +13,7 @@ type BlockNumber = number;
 export async function getEth1DataForBlocks(
   blocks: Eth1Block[],
   depositDescendingStream: AsyncIterable<phase0.DepositEvent>,
-  depositRootTree: TreeBacked<List<Root>>,
+  depositRootTree: DepositTree,
   lastProcessedDepositBlockNumber: BlockNumber | null
 ): Promise<(phase0.Eth1Data & Eth1Block)[]> {
   // Exclude blocks for which there is no valid eth1 data deposit
@@ -80,10 +79,7 @@ export async function getDepositsByBlockNumber(
 /**
  * Precompute a map of depositCount => depositRoot from a depositRootTree filled beforehand
  */
-export function getDepositRootByDepositCount(
-  depositCounts: number[],
-  depositRootTree: TreeBacked<List<Root>>
-): Map<number, Root> {
+export function getDepositRootByDepositCount(depositCounts: number[], depositRootTree: DepositTree): Map<number, Root> {
   // Unique + sort numerically in descending order
   depositCounts = [...new Set(depositCounts)].sort((a, b) => b - a);
 
@@ -97,7 +93,7 @@ export function getDepositRootByDepositCount(
 
   const depositRootByDepositCount = new Map<number, Root>();
   for (const depositCount of depositCounts) {
-    depositRootTree = getTreeAtIndex(depositRootTree, depositCount - 1);
+    depositRootTree = depositRootTree.sliceTo(depositCount - 1);
     depositRootByDepositCount.set(depositCount, depositRootTree.hashTreeRoot());
   }
   return depositRootByDepositCount;

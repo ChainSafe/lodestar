@@ -1,8 +1,9 @@
 import {fetch} from "cross-fetch";
 import {AbortSignal, AbortController} from "@chainsafe/abort-controller";
-import {ErrorAborted, TimeoutError} from "@chainsafe/lodestar-utils";
+import {ErrorAborted, ILogger, TimeoutError} from "@chainsafe/lodestar-utils";
 import {ReqGeneric, RouteDef} from "../../utils";
 import {stringifyQuery, urlJoin} from "./format";
+import {Metrics} from "./metrics";
 
 export class HttpError extends Error {
   status: number;
@@ -21,6 +22,8 @@ export type FetchOpts = {
   query?: ReqGeneric["query"];
   body?: ReqGeneric["body"];
   headers?: ReqGeneric["headers"];
+  /** Optional, for metrics */
+  routeId?: string;
 };
 
 export interface IHttpClient {
@@ -38,21 +41,30 @@ export type HttpClientOptions = {
   fetch?: typeof fetch;
 };
 
+export type HttpClientModules = {
+  logger?: ILogger;
+  metrics?: Metrics;
+};
+
 export class HttpClient implements IHttpClient {
   readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly getAbortSignal?: () => AbortSignal | undefined;
   private readonly fetch: typeof fetch;
+  private readonly metrics: null | Metrics;
+  private readonly logger: null | ILogger;
 
   /**
    * timeoutMs = config.params.SECONDS_PER_SLOT * 1000
    */
-  constructor(opts: HttpClientOptions) {
+  constructor(opts: HttpClientOptions, {logger, metrics}: HttpClientModules = {}) {
     this.baseUrl = opts.baseUrl;
     // A higher default timeout, validator will sets its own shorter timeoutMs
     this.timeoutMs = opts.timeoutMs ?? 60_000;
     this.getAbortSignal = opts.getAbortSignal;
     this.fetch = opts.fetch ?? fetch;
+    this.metrics = metrics ?? null;
+    this.logger = logger ?? null;
   }
 
   async json<T>(opts: FetchOpts): Promise<T> {
@@ -74,11 +86,16 @@ export class HttpClient implements IHttpClient {
       signalGlobal.addEventListener("abort", () => controller.abort());
     }
 
+    const routeId = opts.routeId; // TODO: Should default to "unknown"?
+    const timer = this.metrics?.requestTime.startTimer({routeId});
+
     try {
       const url = urlJoin(this.baseUrl, opts.url) + (opts.query ? "?" + stringifyQuery(opts.query) : "");
 
       const headers = opts.headers || {};
       if (opts.body) headers["Content-Type"] = "application/json";
+
+      this.logger?.debug("HttpClient request", {routeId});
 
       const res = await this.fetch(url, {
         method: opts.method,
@@ -92,6 +109,8 @@ export class HttpClient implements IHttpClient {
         throw new HttpError(`${res.statusText}: ${getErrorMessage(errBody)}`, res.status, url);
       }
 
+      this.logger?.debug("HttpClient response", {routeId});
+
       return await getBody(res);
     } catch (e) {
       if (isAbortedError(e as Error)) {
@@ -103,8 +122,13 @@ export class HttpClient implements IHttpClient {
           throw Error("Unknown aborted error");
         }
       }
+
+      this.metrics?.errors.inc({routeId});
+
       throw e;
     } finally {
+      timer?.();
+
       clearTimeout(timeout);
       if (signalGlobal) {
         signalGlobal.removeEventListener("abort", controller.abort);

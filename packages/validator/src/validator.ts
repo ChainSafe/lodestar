@@ -19,6 +19,8 @@ import {toHexString} from "@chainsafe/ssz";
 import {ValidatorEventEmitter} from "./services/emitter";
 import {ValidatorStore, Signer} from "./services/validatorStore";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
+import {PubkeyHex} from "./types";
+import {Metrics} from "./metrics";
 
 export type ValidatorOptions = {
   slashingProtection: ISlashingProtection;
@@ -44,38 +46,74 @@ type State = {status: Status.running; controller: AbortController} | {status: St
  * Main class for the Validator client.
  */
 export class Validator {
+  readonly validatorStore: ValidatorStore;
+  private readonly blockProposingService: BlockProposingService;
+  private readonly attestationService: AttestationService;
+  private readonly syncCommitteeService: SyncCommitteeService;
+  private readonly indicesService: IndicesService;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
   private readonly emitter: ValidatorEventEmitter;
   private readonly chainHeaderTracker: ChainHeaderTracker;
-  private readonly validatorStore: ValidatorStore;
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, genesis: Genesis) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
       typeof opts.api === "string"
-        ? getClient(config, {
-            baseUrl: opts.api,
-            // Validator would need the beacon to respond within the slot
-            timeoutMs: config.SECONDS_PER_SLOT * 1000,
-            getAbortSignal: this.getAbortSignal,
-          })
+        ? getClient(
+            {
+              baseUrl: opts.api,
+              // Validator would need the beacon to respond within the slot
+              timeoutMs: config.SECONDS_PER_SLOT * 1000,
+              getAbortSignal: this.getAbortSignal,
+            },
+            {config, logger, metrics: metrics?.restApiClient}
+          )
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
+    this.indicesService = new IndicesService(logger, api, validatorStore, metrics);
     this.emitter = new ValidatorEventEmitter();
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
-    new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
-    new AttestationService(loggerVc, api, clock, validatorStore, this.emitter, indicesService, this.chainHeaderTracker);
-    new SyncCommitteeService(config, loggerVc, api, clock, validatorStore, this.chainHeaderTracker, indicesService);
+
+    this.blockProposingService = new BlockProposingService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      graffiti
+    );
+
+    this.attestationService = new AttestationService(
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.emitter,
+      this.indicesService,
+      this.chainHeaderTracker,
+      metrics
+    );
+
+    this.syncCommitteeService = new SyncCommitteeService(
+      config,
+      loggerVc,
+      api,
+      clock,
+      validatorStore,
+      this.chainHeaderTracker,
+      this.indicesService,
+      metrics
+    );
 
     this.config = config;
     this.logger = logger;
@@ -85,26 +123,38 @@ export class Validator {
   }
 
   /** Waits for genesis and genesis time */
-  static async initializeFromBeaconNode(opts: ValidatorOptions, signal?: AbortSignal): Promise<Validator> {
+  static async initializeFromBeaconNode(
+    opts: ValidatorOptions,
+    signal?: AbortSignal,
+    metrics?: Metrics | null
+  ): Promise<Validator> {
     const {config} = opts.dbOps;
+    const {logger} = opts;
     const api =
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient(config, {baseUrl: opts.api, getAbortSignal: () => signal})
+          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);
-    opts.logger.info("Genesis available");
+    logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
-    opts.logger.info("Verified node and validator have same config");
+    logger.info("Verified node and validator have same config");
 
     await assertEqualGenesis(opts, genesis);
-    opts.logger.info("Verified node and validator have same genesisValidatorRoot");
+    logger.info("Verified node and validator have same genesisValidatorRoot");
 
-    return new Validator(opts, genesis);
+    return new Validator(opts, genesis, metrics);
+  }
+
+  removeDutiesForKey(pubkey: PubkeyHex): void {
+    this.indicesService.removeDutiesForKey(pubkey);
+    this.blockProposingService.removeDutiesForKey(pubkey);
+    this.attestationService.removeDutiesForKey(pubkey);
+    this.syncCommitteeService.removeDutiesForKey(pubkey);
   }
 
   /**
@@ -132,7 +182,7 @@ export class Validator {
    * Perform a voluntary exit for the given validator by its key.
    */
   async voluntaryExit(publicKey: string, exitEpoch?: number): Promise<void> {
-    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {indices: [publicKey]});
+    const {data: stateValidators} = await this.api.beacon.getStateValidators("head", {id: [publicKey]});
     const stateValidator = stateValidators[0];
     if (stateValidator === undefined) {
       throw new Error(`Validator pubkey ${publicKey} not found in state`);

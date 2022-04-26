@@ -1,5 +1,6 @@
 import {EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {allForks, phase0, ssz} from "@chainsafe/lodestar-types";
+import {BeaconStateAllForks, BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {routes, Api} from "@chainsafe/lodestar-api";
 import {chainConfig as chainConfigDef} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
@@ -10,10 +11,11 @@ import {
   computeLightClientSnapshot,
   getInteropSyncCommittee,
   testLogger,
-  committeeUpdateToHeadUpdate,
+  committeeUpdateToLatestHeadUpdate,
+  committeeUpdateToLatestFinalizedHeadUpdate,
   lastInMap,
 } from "../utils";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
 
 const SOME_HASH = Buffer.alloc(32, 0xff);
@@ -63,8 +65,11 @@ describe("Lightclient sync", () => {
       lightclientServerApi.updates.set(period, committeeUpdate);
     }
 
-    // So the first call to getHeadUpdate() doesn't error, store the latest snapshot as latest header update
-    lightclientServerApi.latestHeadUpdate = committeeUpdateToHeadUpdate(lastInMap(lightclientServerApi.updates));
+    // So the first call to getLatestHeadUpdate() doesn't error, store the latest snapshot as latest header update
+    lightclientServerApi.latestHeadUpdate = committeeUpdateToLatestHeadUpdate(lastInMap(lightclientServerApi.updates));
+    lightclientServerApi.finalized = committeeUpdateToLatestFinalizedHeadUpdate(
+      lastInMap(lightclientServerApi.updates)
+    );
 
     // Initilize from snapshot
     const lightclient = await Lightclient.initializeFromCheckpointRoot({
@@ -94,7 +99,7 @@ describe("Lightclient sync", () => {
     // Test fetching a proof
     // First create a state with some known data
     const executionStateRoot = Buffer.alloc(32, 0xee);
-    const state = ssz.bellatrix.BeaconState.defaultTreeBacked();
+    const state = ssz.bellatrix.BeaconState.defaultViewDU();
     state.latestExecutionPayloadHeader.stateRoot = executionStateRoot;
 
     // Track head + reference states with some known data
@@ -113,7 +118,7 @@ describe("Lightclient sync", () => {
 
         // Provide the state to the lightclient server impl. Only the last one to test proof fetching
         if (slot === targetSlot) {
-          lightclientServerApi.states.set(toHexString(stateRoot), state as TreeBacked<allForks.BeaconState>);
+          lightclientServerApi.states.set(toHexString(stateRoot), (state as BeaconStateAllForks) as BeaconStateAltair);
         }
 
         // Emit a new head update with the custom state root
@@ -140,7 +145,7 @@ describe("Lightclient sync", () => {
 
     // Fetch proof of "latestExecutionPayloadHeader.stateRoot"
     const {proof, header} = await lightclient.getHeadStateProof([["latestExecutionPayloadHeader", "stateRoot"]]);
-    const recoveredState = ssz.bellatrix.BeaconState.createTreeBackedFromProof(header.stateRoot as Uint8Array, proof);
+    const recoveredState = ssz.bellatrix.BeaconState.createFromProof(proof, header.stateRoot);
     expect(toHexString(recoveredState.latestExecutionPayloadHeader.stateRoot)).to.equal(
       toHexString(executionStateRoot),
       "Recovered executionStateRoot from getHeadStateProof() not correct"

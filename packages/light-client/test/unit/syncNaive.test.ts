@@ -1,7 +1,8 @@
 import {expect} from "chai";
 import {SecretKey} from "@chainsafe/bls";
 import {altair, phase0, Root, ssz, SyncPeriod} from "@chainsafe/lodestar-types";
-import {toHexString, TreeBacked} from "@chainsafe/ssz";
+import {BeaconStateAltair} from "@chainsafe/lodestar-beacon-state-transition";
+import {toHexString} from "@chainsafe/ssz";
 import {chainConfig} from "@chainsafe/lodestar-config/default";
 import {createIBeaconConfig} from "@chainsafe/lodestar-config";
 import {processLightClientUpdate} from "../naive/update";
@@ -121,10 +122,10 @@ class MockBeaconChainLc implements IBeaconChainLc {
     return blockHeader;
   }
 
-  async getStateByRoot(stateRoot: Root): Promise<TreeBacked<altair.BeaconState>> {
+  async getStateByRoot(stateRoot: Root): Promise<BeaconStateAltair> {
     const rootHex = toHexString(stateRoot);
     const state = this.states.get(rootHex);
     if (!state) throw Error(`No state for ${rootHex}`);
-    return ssz.altair.BeaconState.createTreeBackedFromStruct(state);
+    return ssz.altair.BeaconState.toViewDU(state);
   }
 }

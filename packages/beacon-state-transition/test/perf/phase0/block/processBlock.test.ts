@@ -8,7 +8,7 @@ import {
   MAX_VOLUNTARY_EXITS,
   PresetName,
 } from "@chainsafe/lodestar-params";
-import {allForks, CachedBeaconStateAllForks} from "../../../../src";
+import {allForks} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, perfStateId} from "../../util";
 import {BlockOpts, getBlockPhase0} from "./util";
 import {StateBlock} from "../../types";
@@ -30,7 +30,7 @@ import {StateBlock} from "../../types";
 //
 // ### Verifying signatures
 // Signature verification is done in bulk using batch BLS verification. Performance is proportional to the amount of
-// sigs to verify and the cost to construct the signature sets from TreeBacked data.
+// sigs to verify and the cost to construct the signature sets from TreeView data.
 //
 // - Proposer sig:           1 single
 // - RandaoReveal sig:       1 single
@@ -101,7 +101,7 @@ describe("phase0 processBlock", () => {
     itBench<StateBlock, StateBlock>({
       id: `phase0 processBlock - ${perfStateId} ${id}`,
       before: () => {
-        const state = generatePerfTestCachedStatePhase0() as CachedBeaconStateAllForks;
+        const state = generatePerfTestCachedStatePhase0();
         const block = getBlockPhase0(state, opts);
         state.hashTreeRoot();
         return {block, state};

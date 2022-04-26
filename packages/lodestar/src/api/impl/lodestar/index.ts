@@ -2,13 +2,14 @@ import PeerId from "peer-id";
 import {Multiaddr} from "multiaddr";
 import {routes} from "@chainsafe/lodestar-api";
 import {getLatestWeakSubjectivityCheckpointEpoch} from "@chainsafe/lodestar-beacon-state-transition";
-import {Json, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ssz} from "@chainsafe/lodestar-types";
 import {BeaconChain} from "../../../chain";
 import {QueuedStateRegenerator, RegenRequest} from "../../../chain/regen";
 import {GossipType} from "../../../network";
 import {ApiModules} from "../types";
+import {formatNodePeer} from "../node/utils";
 
 export function getLodestarApi({
   chain,
@@ -87,12 +88,13 @@ export function getLodestarApi({
       }
 
       return jobQueue.getItems().map((item) => {
-        const [topic, message] = item.args;
+        const [topic, message, propagationSource, seenTimestampSec] = item.args;
         return {
           topic: topic,
-          receivedFrom: message.receivedFrom,
+          propagationSource,
           data: message.data,
           addedTimeMs: item.addedTimeMs,
+          seenTimestampSec,
         };
       });
     },
@@ -129,6 +131,10 @@ export function getLodestarApi({
       return (chain as BeaconChain)["checkpointStateCache"].dumpSummary();
     },
 
+    async getGossipPeerScoreStats() {
+      return network.gossip.dumpPeerScoreStats();
+    },
+
     async runGC() {
       // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
       if (!global.gc) throw Error("You must expose GC running the Node.js process with 'node --expose_gc'");
@@ -151,6 +157,25 @@ export function getLodestarApi({
       await network.disconnectPeer(peerId);
     },
 
+    async getPeers(filters) {
+      const {state, direction} = filters || {};
+      const peers = Array.from(network.getConnectionsByPeer().entries())
+        .map(([peerIdStr, connections]) => ({
+          ...formatNodePeer(peerIdStr, connections),
+          agentVersion: network.getAgentVersion(peerIdStr),
+        }))
+        .filter(
+          (nodePeer) =>
+            (!state || state.length === 0 || state.includes(nodePeer.state)) &&
+            (!direction || direction.length === 0 || (nodePeer.direction && direction.includes(nodePeer.direction)))
+        );
+
+      return {
+        data: peers,
+        meta: {count: peers.length},
+      };
+    },
+
     async discv5GetKadValues() {
       return {
         data: network.discv5?.kadValues().map((enr) => enr.encodeTxt()) ?? [],
@@ -159,7 +184,7 @@ export function getLodestarApi({
   };
 }
 
-function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): Json {
+function regenRequestToJson(config: IChainForkConfig, regenRequest: RegenRequest): unknown {
   switch (regenRequest.key) {
     case "getBlockSlotState":
       return {

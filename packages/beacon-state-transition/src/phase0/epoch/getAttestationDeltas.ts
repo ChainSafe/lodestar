@@ -1,4 +1,4 @@
-import {bigIntSqrt} from "@chainsafe/lodestar-utils";
+import {bigIntSqrt, bnToNum} from "@chainsafe/lodestar-utils";
 import {BASE_REWARDS_PER_EPOCH as BASE_REWARDS_PER_EPOCH_CONST} from "../../constants";
 import {newZeroedArray} from "../../util";
 import {EpochProcess, CachedBeaconStatePhase0} from "../../types";
@@ -64,11 +64,11 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
   const prevEpochHeadStakeByIncrement = epochProcess.prevEpochUnslashedStake.headStakeByIncrement;
 
   // sqrt first, before factoring out the increment for later usage
-  const balanceSqRoot = Number(bigIntSqrt(totalBalanceInGwei));
+  const balanceSqRoot = bnToNum(bigIntSqrt(totalBalanceInGwei));
   const finalityDelay = epochProcess.prevEpoch - state.finalizedCheckpoint.epoch;
 
   const BASE_REWARDS_PER_EPOCH = BASE_REWARDS_PER_EPOCH_CONST;
-  const proposerRewardQuotient = Number(PROPOSER_REWARD_QUOTIENT);
+  const proposerRewardQuotient = PROPOSER_REWARD_QUOTIENT;
   const isInInactivityLeak = finalityDelay > MIN_EPOCHS_TO_INACTIVITY_PENALTY;
 
   // effectiveBalance is multiple of EFFECTIVE_BALANCE_INCREMENT and less than MAX_EFFECTIVE_BALANCE
@@ -122,6 +122,7 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
       rewards[status.proposerIndex] += proposerReward;
       rewards[i] += Math.floor(maxAttesterReward / status.inclusionDelay);
     }
+
     if (hasMarkers(status.flags, FLAG_ELIGIBLE_ATTESTER)) {
       // expected FFG source
       if (hasMarkers(status.flags, FLAG_PREV_SOURCE_ATTESTER_OR_UNSLASHED)) {
@@ -160,5 +161,6 @@ export function getAttestationDeltas(state: CachedBeaconStatePhase0, epochProces
       }
     }
   }
+
   return [rewards, penalties];
 }

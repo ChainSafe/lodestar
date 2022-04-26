@@ -6,11 +6,11 @@ import {AbortController} from "@chainsafe/abort-controller";
 import LibP2p from "libp2p";
 import {Registry} from "prom-client";
 
-import {TreeBacked} from "@chainsafe/ssz";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {allForks, phase0} from "@chainsafe/lodestar-types";
+import {phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Api} from "@chainsafe/lodestar-api";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 
 import {IBeaconDb} from "../db";
 import {INetwork, Network, getReqRespHandlers} from "../network";
@@ -47,7 +47,7 @@ export interface IBeaconNodeInitModules {
   db: IBeaconDb;
   logger: ILogger;
   libp2p: LibP2p;
-  anchorState: TreeBacked<allForks.BeaconState>;
+  anchorState: BeaconStateAllForks;
   wsCheckpoint?: phase0.Checkpoint;
   metricsRegistries?: Registry[];
 }
@@ -128,7 +128,9 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    const metrics = opts.metrics.enabled ? createMetrics(opts.metrics, config, anchorState, metricsRegistries) : null;
+    const metrics = opts.metrics.enabled
+      ? createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries)
+      : null;
     if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
@@ -195,7 +197,7 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {metrics, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
       : undefined;
     if (metricsServer) {
       await metricsServer.start();

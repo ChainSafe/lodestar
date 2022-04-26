@@ -1,5 +1,4 @@
 import all from "it-all";
-import {ArrayLike} from "@chainsafe/ssz";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {Db, Repository, IKeyValue, IFilterOptions, Bucket, IDbMetrics} from "@chainsafe/lodestar-db";
 import {Slot, Root, allForks, ssz} from "@chainsafe/lodestar-types";
@@ -59,7 +58,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async batchPut(items: ArrayLike<IKeyValue<Slot, allForks.SignedBeaconBlock>>): Promise<void> {
+  async batchPut(items: IKeyValue<Slot, allForks.SignedBeaconBlock>[]): Promise<void> {
     await Promise.all([
       super.batchPut(items),
       Array.from(items).map((item) => {
@@ -75,7 +74,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async batchPutBinary(items: ArrayLike<BlockArchiveBatchPutBinaryItem>): Promise<void> {
+  async batchPutBinary(items: BlockArchiveBatchPutBinaryItem[]): Promise<void> {
     await Promise.all([
       super.batchPutBinary(items),
       Array.from(items).map((item) => storeRootIndex(this.db, item.slot, item.blockRoot)),
@@ -91,7 +90,7 @@ export class BlockArchiveRepository extends Repository<Slot, allForks.SignedBeac
     ]);
   }
 
-  async batchRemove(values: ArrayLike<allForks.SignedBeaconBlock>): Promise<void> {
+  async batchRemove(values: allForks.SignedBeaconBlock[]): Promise<void> {
     await Promise.all([
       super.batchRemove(values),
       Array.from(values).map((value) =>

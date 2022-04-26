@@ -1,5 +1,5 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
@@ -138,7 +138,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // If current epoch is N, and block is epoch X, block may include attestations for epoch X or X - 1.
   // The latest block that is useful is at epoch N - 1 which may include attestations for epoch N - 1 or N - 2.
   if (!skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
-    const attestations = Array.from(readonlyValues(block.message.body.attestations));
+    const attestations = block.message.body.attestations;
     const rootCache = new altair.RootCache(postState);
     const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();

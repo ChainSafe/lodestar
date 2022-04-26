@@ -1,5 +1,4 @@
 import deepmerge from "deepmerge";
-import {Json} from "@chainsafe/ssz";
 import {defaultOptions, IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {isPlainObject, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {writeFile, readFile} from "../util";
@@ -50,14 +49,10 @@ export class BeaconNodeOptions {
   set(beaconNodeOptionsPartial: RecursivePartial<IBeaconNodeOptions>): void {
     this.beaconNodeOptions = mergeBeaconNodeOptions(this.beaconNodeOptions, beaconNodeOptionsPartial);
   }
-
-  writeTo(filepath: string): void {
-    writeFile(filepath, this.beaconNodeOptions as Json);
-  }
 }
 
 export function writeBeaconNodeOptions(filename: string, config: Partial<IBeaconNodeOptions>): void {
-  writeFile(filename, config as Json);
+  writeFile(filename, config);
 }
 
 /**

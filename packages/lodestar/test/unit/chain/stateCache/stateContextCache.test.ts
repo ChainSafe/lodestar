@@ -3,12 +3,13 @@ import {IEpochShuffling} from "@chainsafe/lodestar-beacon-state-transition";
 import {StateContextCache} from "../../../../src/chain/stateCache";
 import {generateCachedState} from "../../../utils/state";
 import {ZERO_HASH} from "../../../../src/constants";
-import {ByteVector, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
+import {Root} from "@chainsafe/lodestar-types";
 
 describe("StateContextCache", function () {
   let cache: StateContextCache;
-  let key1: ByteVector, key2: ByteVector;
+  let key1: Root, key2: Root;
   const shuffling: IEpochShuffling = {
     epoch: 0,
     activeIndices: [],

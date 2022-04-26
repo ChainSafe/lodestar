@@ -1,8 +1,8 @@
 import bls, {Signature} from "@chainsafe/bls";
-import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SIZE, SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {altair, Slot, Root, ssz} from "@chainsafe/lodestar-types";
-import {newFilledArray, G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
-import {readonlyValues, toHexString} from "@chainsafe/ssz";
+import {G2_POINT_AT_INFINITY} from "@chainsafe/lodestar-beacon-state-transition";
+import {BitArray, toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {InsertOutcome, OpPoolError, OpPoolErrorCode} from "./types";
 import {pruneBySlot} from "./utils";
@@ -19,11 +19,14 @@ const SLOTS_RETAINED = 8;
  */
 const MAX_ITEMS_PER_SLOT = 512;
 
+// SyncContributionAndProofPool constructor ensures SYNC_COMMITTEE_SUBNET_SIZE is multiple of 8
+const SYNC_COMMITTEE_SUBNET_BYTES = SYNC_COMMITTEE_SUBNET_SIZE / 8;
+
 /**
  * A one-one mapping to SyncContribution with fast data structure to help speed up the aggregation.
  */
 export type SyncContributionFast = {
-  syncSubcommitteeBits: boolean[];
+  syncSubcommitteeBits: BitArray;
   numParticipants: number;
   syncSubcommitteeSignature: Uint8Array;
 };
@@ -44,6 +47,13 @@ export class SyncContributionAndProofPool {
 
   private lowestPermissibleSlot = 0;
 
+  constructor() {
+    // Param guarantee for optimizations below that merge syncSubcommitteeBits as bytes
+    if (SYNC_COMMITTEE_SUBNET_SIZE % 8 !== 0) {
+      throw Error("SYNC_COMMITTEE_SUBNET_SIZE must be multiple of 8");
+    }
+  }
+
   /**
    * Only call this once we pass all validation.
    */
@@ -55,7 +65,7 @@ export class SyncContributionAndProofPool {
 
     // Reject if too old.
     if (slot < lowestPermissibleSlot) {
-      throw new OpPoolError({code: OpPoolErrorCode.SLOT_TOO_LOW, slot, lowestPermissibleSlot});
+      return InsertOutcome.Old;
     }
 
     // Limit object per slot
@@ -118,9 +128,9 @@ export function replaceIfBetter(
     return InsertOutcome.NotBetterThan;
   }
 
-  bestContribution.syncSubcommitteeBits = Array.from(readonlyValues(newContribution.aggregationBits));
+  bestContribution.syncSubcommitteeBits = newContribution.aggregationBits;
   bestContribution.numParticipants = newNumParticipants;
-  bestContribution.syncSubcommitteeSignature = newContribution.signature as Uint8Array;
+  bestContribution.syncSubcommitteeSignature = newContribution.signature;
   return InsertOutcome.NewData;
 }
 
@@ -133,10 +143,10 @@ export function contributionToFast(
 ): SyncContributionFast {
   return {
     // No need to clone, aggregationBits are not mutated, only replaced
-    syncSubcommitteeBits: Array.from(readonlyValues(contribution.aggregationBits)),
+    syncSubcommitteeBits: contribution.aggregationBits,
     numParticipants,
     // No need to deserialize, signatures are not aggregated until when calling .getAggregate()
-    syncSubcommitteeSignature: contribution.signature as Uint8Array,
+    syncSubcommitteeSignature: contribution.signature,
   };
 }
 
@@ -146,14 +156,14 @@ export function contributionToFast(
  */
 export function aggregate(bestContributionBySubnet: Map<number, SyncContributionFast>): altair.SyncAggregate {
   // check for empty/undefined bestContributionBySubnet earlier
-  const syncCommitteeBits = newFilledArray(SYNC_COMMITTEE_SIZE, false);
-  const subnetSize = Math.floor(SYNC_COMMITTEE_SIZE / SYNC_COMMITTEE_SUBNET_COUNT);
+  const syncCommitteeBits = BitArray.fromBitLen(SYNC_COMMITTEE_SIZE);
+
   const signatures: Signature[] = [];
   for (const [subnet, bestContribution] of bestContributionBySubnet.entries()) {
-    const indexOffset = subnet * subnetSize;
+    const byteOffset = subnet * SYNC_COMMITTEE_SUBNET_BYTES;
 
-    for (const [index, participated] of bestContribution.syncSubcommitteeBits.entries()) {
-      if (participated) syncCommitteeBits[indexOffset + index] = true;
+    for (let i = 0; i < SYNC_COMMITTEE_SUBNET_BYTES; i++) {
+      syncCommitteeBits.uint8Array[byteOffset + i] = bestContribution.syncSubcommitteeBits.uint8Array[i];
     }
 
     signatures.push(bls.Signature.fromBytes(bestContribution.syncSubcommitteeSignature, undefined, true));

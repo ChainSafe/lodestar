@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env ts-node
 
 import {downloadTests, TestToDownload} from "./downloadTests";
 
@@ -12,13 +12,13 @@ async function downloadTestsCli(): Promise<void> {
     return console.log(`
   USAGE: 
   
-  eth2-spec-test-download [specVersion] [outputDir] [testToDownload]
+  ./downloadTestsCli.ts [specVersion] [outputDir] [testToDownload]
 
   Downloads tests to $outputDir/$specVersion 
 
   EXAMPLE:
 
-  eth2-spec-test-download v1.0.0 ./spec-tests general,mainnet
+  ./downloadTestsCli.ts v1.0.0 ./spec-tests general,mainnet
 
   Results in:
 

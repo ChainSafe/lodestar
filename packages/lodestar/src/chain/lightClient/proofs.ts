@@ -1,10 +1,11 @@
-import {altair} from "@chainsafe/lodestar-types";
-import {TreeBacked} from "@chainsafe/ssz";
+import {BeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {FINALIZED_ROOT_GINDEX} from "@chainsafe/lodestar-params";
+import {Tree} from "@chainsafe/persistent-merkle-tree";
 import {SyncCommitteeWitness} from "./types";
 
-export function getSyncCommitteesWitness(state: TreeBacked<altair.BeaconState>): SyncCommitteeWitness {
-  const n1 = state.tree.rootNode;
+export function getSyncCommitteesWitness(state: BeaconStateAllForks): SyncCommitteeWitness {
+  state.commit();
+  const n1 = state.node;
   const n3 = n1.right; // [1]0110
   const n6 = n3.left; // 1[0]110
   const n13 = n6.right; // 10[1]10
@@ -37,6 +38,7 @@ export function getCurrentSyncCommitteeBranch(syncCommitteesWitness: SyncCommitt
   return [syncCommitteesWitness.nextSyncCommitteeRoot, ...syncCommitteesWitness.witness];
 }
 
-export function getFinalizedRootProof(state: TreeBacked<altair.BeaconState>): Uint8Array[] {
-  return state.tree.getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
+export function getFinalizedRootProof(state: BeaconStateAllForks): Uint8Array[] {
+  state.commit();
+  return new Tree(state.node).getSingleProof(BigInt(FINALIZED_ROOT_GINDEX));
 }

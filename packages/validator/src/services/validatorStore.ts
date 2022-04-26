@@ -28,12 +28,12 @@ import {
   ValidatorIndex,
   ssz,
 } from "@chainsafe/lodestar-types";
-import {fromHexString, List, toHexString} from "@chainsafe/ssz";
+import {BitArray, fromHexString, toHexString} from "@chainsafe/ssz";
 import {routes} from "@chainsafe/lodestar-api";
-import {ISlashingProtection} from "../slashingProtection";
+import {Interchange, InterchangeFormatVersion, ISlashingProtection} from "../slashingProtection";
 import {PubkeyHex} from "../types";
-import {getAggregationBits} from "./utils";
 import {externalSignerPostSignature} from "../util/externalSignerClient";
+import {Metrics} from "../metrics";
 
 export enum SignerType {
   Local,
@@ -68,15 +68,31 @@ export class ValidatorStore {
   constructor(
     private readonly config: IBeaconConfig,
     private readonly slashingProtection: ISlashingProtection,
+    private readonly metrics: Metrics | null,
     signers: Signer[],
     genesis: phase0.Genesis
   ) {
     for (const signer of signers) {
-      this.validators.set(getSignerPubkeyHex(signer), signer);
+      this.addSigner(signer);
     }
 
-    this.slashingProtection = slashingProtection;
     this.genesisValidatorsRoot = genesis.genesisValidatorsRoot;
+
+    if (metrics) {
+      metrics.signers.addCollect(() => metrics.signers.set(this.validators.size));
+    }
+  }
+
+  addSigner(signer: Signer): void {
+    this.validators.set(getSignerPubkeyHex(signer), signer);
+  }
+
+  getSigner(pubkeyHex: PubkeyHex): Signer | undefined {
+    return this.validators.get(pubkeyHex);
+  }
+
+  removeSigner(pubkeyHex: PubkeyHex): boolean {
+    return this.validators.delete(pubkeyHex);
   }
 
   /** Return true if there is at least 1 pubkey registered */
@@ -90,6 +106,14 @@ export class ValidatorStore {
 
   hasVotingPubkey(pubkeyHex: PubkeyHex): boolean {
     return this.validators.has(pubkeyHex);
+  }
+
+  async importInterchange(interchange: Interchange): Promise<void> {
+    return this.slashingProtection.importInterchange(interchange, this.genesisValidatorsRoot);
+  }
+
+  async exportInterchange(pubkeys: BLSPubkey[], formatVersion: InterchangeFormatVersion): Promise<Interchange> {
+    return this.slashingProtection.exportInterchange(this.genesisValidatorsRoot, pubkeys, formatVersion);
   }
 
   async signBlock(
@@ -106,7 +130,12 @@ export class ValidatorStore {
     const blockType = this.config.getForkTypes(block.slot).BeaconBlock;
     const signingRoot = computeSigningRoot(blockType, block, proposerDomain);
 
-    await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+    try {
+      await this.slashingProtection.checkAndInsertBlockProposal(pubkey, {slot: block.slot, signingRoot});
+    } catch (e) {
+      this.metrics?.slashingProtectionBlockError.inc();
+      throw e;
+    }
 
     return {
       message: block,
@@ -139,14 +168,19 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_BEACON_ATTESTER, slot);
     const signingRoot = computeSigningRoot(ssz.phase0.AttestationData, attestationData, domain);
 
-    await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
-      sourceEpoch: attestationData.source.epoch,
-      targetEpoch: attestationData.target.epoch,
-      signingRoot,
-    });
+    try {
+      await this.slashingProtection.checkAndInsertAttestation(duty.pubkey, {
+        sourceEpoch: attestationData.source.epoch,
+        targetEpoch: attestationData.target.epoch,
+        signingRoot,
+      });
+    } catch (e) {
+      this.metrics?.slashingProtectionAttestationError.inc();
+      throw e;
+    }
 
     return {
-      aggregationBits: getAggregationBits(duty.committeeLength, duty.validatorCommitteeIndex) as List<boolean>,
+      aggregationBits: BitArray.fromSingleBit(duty.committeeLength, duty.validatorCommitteeIndex),
       data: attestationData,
       signature: await this.getSignature(duty.pubkey, signingRoot),
     };
@@ -226,7 +260,7 @@ export class ValidatorStore {
     const domain = this.config.getDomain(DOMAIN_SYNC_COMMITTEE_SELECTION_PROOF, slot);
     const signingData: altair.SyncAggregatorSelectionData = {
       slot,
-      subcommitteeIndex: subcommitteeIndex,
+      subcommitteeIndex,
     };
 
     const signingRoot = computeSigningRoot(ssz.altair.SyncAggregatorSelectionData, signingData, domain);
@@ -260,16 +294,28 @@ export class ValidatorStore {
     }
 
     switch (signer.type) {
-      case SignerType.Local:
-        return signer.secretKey.sign(signingRoot).toBytes();
+      case SignerType.Local: {
+        const timer = this.metrics?.localSignTime.startTimer();
+        const signature = signer.secretKey.sign(signingRoot).toBytes();
+        timer?.();
+        return signature;
+      }
 
       case SignerType.Remote: {
-        const signatureHex = await externalSignerPostSignature(
-          signer.externalSignerUrl,
-          pubkeyHex,
-          toHexString(signingRoot)
-        );
-        return fromHexString(signatureHex);
+        const timer = this.metrics?.remoteSignTime.startTimer();
+        try {
+          const signatureHex = await externalSignerPostSignature(
+            signer.externalSignerUrl,
+            pubkeyHex,
+            toHexString(signingRoot)
+          );
+          return fromHexString(signatureHex);
+        } catch (e) {
+          this.metrics?.remoteSignErrors.inc();
+          throw e;
+        } finally {
+          timer?.();
+        }
       }
     }
   }

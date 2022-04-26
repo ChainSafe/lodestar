@@ -129,6 +129,17 @@ We're currently experimenting with hosting the majority of lodestar packages and
 - Make sure that the tests are still passing:
   - run `yarn test:unit` from the command line
 
+## Contributing to Grafana dashboards
+
+To edit or extend an existing Grafana dashboard with minimal diff:
+
+1. Grab the .json dashboard file from current master
+2. Import file to Grafana via the web UI at `/dashboard/import`. Give it some temporal name relevant to your work (i.e. the branch name)
+3. Do edits on the Dashboard
+4. Once done make sure to leave the exact same visual aspect as before: same refresh interval, collapsed rows, etc.
+5. Click the "share dashboard" icon next to the title at the top left corner. Go to the "Export" tab, set "Export for sharing externally" to true and click "Save to file"
+6. Paste the contents of the downloaded file in the Github repo, commit and open your PR
+
 ## Label Guide
 
 Issues and pull-requests are subject to the following labeling guidelines.
@@ -212,11 +223,12 @@ Effort estimations can help planning to tackle issues that are particulary easy 
 ###### `spec.*` Ethereum Consensus Spec Version Target
 
 Issues that target a specific version of the Ethereum consensus spec, shall be tagged accordingly.
-* `spec0-phase0`: Issues targeting the initial Ethereum consensus spec version.
-* `spec1-altair`: Issues targeting the Altair Ethereum consensus spec version.
-* `spec3-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
-* `spec5-phase1`: Issues targeting the Phase1 Ethereum consensus spec version.
-* `spec7-phase2`: Issues targeting the Phase2 Ethereum consensus spec version.
+
+- `spec0-phase0`: Issues targeting the initial Ethereum consensus spec version.
+- `spec1-altair`: Issues targeting the Altair Ethereum consensus spec version.
+- `spec3-bellatrix`: Issues targeting the Bellatrix Ethereum consensus spec version.
+- `spec5-phase1`: Issues targeting the Phase1 Ethereum consensus spec version.
+- `spec7-phase2`: Issues targeting the Phase2 Ethereum consensus spec version.
 
 ###### `meta.*` Meta Labels to organize Miscelaneous Issues
 

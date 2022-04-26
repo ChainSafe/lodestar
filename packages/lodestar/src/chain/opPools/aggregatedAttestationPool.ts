@@ -6,16 +6,15 @@ import {
   SLOTS_PER_EPOCH,
   TIMELY_SOURCE_FLAG_INDEX,
 } from "@chainsafe/lodestar-params";
-import {Epoch, ParticipationFlags, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {Epoch, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
   CachedBeaconStateAltair,
   computeEpochAtSlot,
   phase0,
-  zipIndexesCommitteeBits,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {BitList, List, readonlyValues, toHexString} from "@chainsafe/ssz";
+import {toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
@@ -89,7 +88,7 @@ export class AggregatedAttestationPool {
    */
   getAttestationsForBlock(state: CachedBeaconStateAllForks): phase0.Attestation[] {
     const stateSlot = state.slot;
-    const stateEpoch = state.currentShuffling.epoch;
+    const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
     const forkName = state.config.getForkName(stateSlot);
 
@@ -195,8 +194,11 @@ export class AggregatedAttestationPool {
     const phase0State = state as CachedBeaconStatePhase0;
     const stateEpoch = computeEpochAtSlot(state.slot);
 
-    const previousEpochParticipants = extractParticipation(phase0State.previousEpochAttestations, state);
-    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations, state);
+    const previousEpochParticipants = extractParticipation(
+      phase0State.previousEpochAttestations.getAllReadonly(),
+      state
+    );
+    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations.getAllReadonly(), state);
 
     return (epoch: Epoch) => {
       return epoch === stateEpoch
@@ -216,8 +218,8 @@ export class AggregatedAttestationPool {
     // check for altair block already
     const altairState = state as CachedBeaconStateAltair;
     const stateEpoch = computeEpochAtSlot(state.slot);
-    const previousParticipation = altairState.previousEpochParticipation.persistent.toArray();
-    const currentParticipation = altairState.currentEpochParticipation.persistent.toArray();
+    const previousParticipation = altairState.previousEpochParticipation.getAll();
+    const currentParticipation = altairState.currentEpochParticipation.getAll();
 
     return (epoch: Epoch, committee: number[]) => {
       const participationStatus =
@@ -270,6 +272,7 @@ export class MatchingDataAttestationGroup {
     for (const [i, existingAttestation] of this.attestations.entries()) {
       const existingAttestingIndices = existingAttestation.attestingIndices;
       const numIntersection =
+        // TODO: Intersect the uint8arrays from BitArray directly, it's probably much faster
         existingAttestingIndices.size >= attestingIndices.size
           ? intersection(existingAttestingIndices, attestingIndices)
           : intersection(attestingIndices, existingAttestingIndices);
@@ -335,34 +338,26 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
   }
 
   // Merge bits of attestation2 into attestation1
-  bitArrayMergeOrWith(attestation1.attestation.aggregationBits, attestation2.attestation.aggregationBits);
+  attestation1.attestation.aggregationBits.mergeOrWith(attestation2.attestation.aggregationBits);
 
-  const signature1 = bls.Signature.fromBytes(
-    attestation1.attestation.signature.valueOf() as Uint8Array,
-    undefined,
-    true
-  );
-  const signature2 = bls.Signature.fromBytes(
-    attestation2.attestation.signature.valueOf() as Uint8Array,
-    undefined,
-    true
-  );
+  const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature, undefined, true);
+  const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature, undefined, true);
   attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
 }
 
 export function extractParticipation(
-  attestations: List<phase0.PendingAttestation>,
+  attestations: phase0.PendingAttestation[],
   state: CachedBeaconStateAllForks
 ): Set<ValidatorIndex> {
   const {epochCtx} = state;
   const allParticipants = new Set<ValidatorIndex>();
-  for (const att of readonlyValues(attestations)) {
+  for (const att of attestations) {
     const aggregationBits = att.aggregationBits;
     const attData = att.data;
     const attSlot = attData.slot;
     const committeeIndex = attData.index;
     const committee = epochCtx.getBeaconCommittee(attSlot, committeeIndex);
-    const participants = zipIndexesCommitteeBits(committee, aggregationBits);
+    const participants = aggregationBits.intersectValues(committee);
     for (const participant of participants) {
       allParticipants.add(participant);
     }
@@ -398,17 +393,6 @@ export function isValidAttestationData(
   return ssz.phase0.Checkpoint.equals(data.source, justifiedCheckpoint);
 }
 
-/**
- * Returns true if the `TIMELY_SOURCE` bit in a `ParticipationFlags` is set
- */
-export function flagIsTimelySource(flag: ParticipationFlags): boolean {
+function flagIsTimelySource(flag: number): boolean {
   return (flag & TIMELY_SOURCE) === TIMELY_SOURCE;
-}
-
-function bitArrayMergeOrWith(bits1: BitList, bits2: BitList): void {
-  for (let i = 0; i < bits2.length; i++) {
-    if (bits2[i]) {
-      bits1[i] = true;
-    }
-  }
 }

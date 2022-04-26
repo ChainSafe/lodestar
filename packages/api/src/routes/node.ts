@@ -1,4 +1,4 @@
-import {allForks, Slot, ssz, StringType} from "@chainsafe/lodestar-types";
+import {allForks, ssz, StringType} from "@chainsafe/lodestar-types";
 import {ContainerType} from "@chainsafe/ssz";
 import {
   ArrayOf,
@@ -52,9 +52,9 @@ export type FilterGetPeers = {
 
 export type SyncingStatus = {
   /** Head slot node is trying to reach */
-  headSlot: Slot;
+  headSlot: string;
   /** How many slots node needs to process to reach head. 0 if synced. */
-  syncDistance: Slot;
+  syncDistance: string;
   /** Set to true if the node is syncing, false if the node is synced. */
   isSyncing: boolean;
 };
@@ -162,23 +162,16 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 /* eslint-disable @typescript-eslint/naming-convention */
 export function getReturnTypes(): ReturnTypes<Api> {
   const stringType = new StringType();
-  const NetworkIdentity = new ContainerType<NetworkIdentity>({
-    fields: {
+  const NetworkIdentity = new ContainerType(
+    {
       peerId: stringType,
       enr: stringType,
       p2pAddresses: ArrayOf(stringType),
       discoveryAddresses: ArrayOf(stringType),
       metadata: ssz.altair.Metadata,
     },
-    // From beacon apis
-    casingMap: {
-      peerId: "peer_id",
-      enr: "enr",
-      p2pAddresses: "p2p_addresses",
-      discoveryAddresses: "discovery_addresses",
-      metadata: "metadata",
-    },
-  });
+    {jsonCase: "eth2"}
+  );
 
   return {
     //
@@ -187,11 +180,11 @@ export function getReturnTypes(): ReturnTypes<Api> {
     getNetworkIdentity: ContainerData(NetworkIdentity),
     // All these types don't contain any BigInt nor Buffer instances.
     // Use jsonType() to translate the casing in a generic way.
-    getPeers: jsonType(),
-    getPeer: jsonType(),
-    getPeerCount: jsonType(),
-    getNodeVersion: jsonType(),
-    getSyncingStatus: jsonType(),
+    getPeers: jsonType("camel"),
+    getPeer: jsonType("camel"),
+    getPeerCount: jsonType("camel"),
+    getNodeVersion: jsonType("camel"),
+    getSyncingStatus: jsonType("camel"),
     getHealth: sameType(),
   };
 }
