@@ -17,10 +17,10 @@ export function deserializeEnrSubnets(bytes: Uint8Array, subnetCount: number): b
     return getUint8ByteToBitBooleanArray(bytes[0] ?? 0);
   }
 
-  const boolsArr: boolean[] = [];
+  let boolsArr: boolean[] = [];
   const byteCount = Math.ceil(subnetCount / 8);
   for (let i = 0; i < byteCount; i++) {
-    boolsArr.concat(getUint8ByteToBitBooleanArray(bytes[i] ?? 0));
+    boolsArr = boolsArr.concat(getUint8ByteToBitBooleanArray(bytes[i] ?? 0));
   }
 
   return boolsArr;
