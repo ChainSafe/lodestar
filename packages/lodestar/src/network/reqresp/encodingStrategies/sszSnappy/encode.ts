@@ -29,7 +29,7 @@ export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponse
  * Buffered Snappy writer
  */
 function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
-  const stream = createCompressStream();
+  const stream = createCompressStream({asyncCompress: true});
   stream.write(bytes);
   stream.end();
   return source<Buffer>(stream);
