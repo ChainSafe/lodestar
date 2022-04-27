@@ -18,7 +18,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     server: string;
     force: boolean;
     graffiti: string;
-    dontSubmitAttestationEarly?: boolean;
+    earlyAttestationDelayMs?: number;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -62,10 +62,10 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     type: "string",
   },
 
-  dontSubmitAttestationEarly: {
-    description: "Wait for 1/3 of slot to submit attestation, by default submit attestation early if possible",
-    type: "boolean",
-    default: false,
+  earlyAttestationDelayMs: {
+    hidden: true,
+    description: "Delay early attestation in millisecond",
+    type: "number",
   },
 
   importKeystoresPath: {

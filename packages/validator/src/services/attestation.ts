@@ -15,6 +15,11 @@ import {PubkeyHex} from "../types";
 import {Metrics} from "../metrics";
 
 /**
+ * As experiment by Nimbus, a delay of 2000ms is necessary to avoid an attestation to be missed.
+ */
+const DEFAULT_EARLY_ATTESTATION_DELAY_MS = 2000;
+
+/**
  * Service that sets up and handles validator attester duties.
  */
 export class AttestationService {
@@ -29,7 +34,7 @@ export class AttestationService {
     indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
     private readonly metrics: Metrics | null,
-    private dontSubmitAttestationEarly = false
+    private earlyAttestationDelayMs = DEFAULT_EARLY_ATTESTATION_DELAY_MS
   ) {
     this.dutiesService = new AttestationDutiesService(
       logger,
@@ -153,18 +158,20 @@ export class AttestationService {
     if (signedAttestations.length > 0) {
       try {
         const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+        const signedAttestationTime = Date.now();
         // as monitored in hetzner nodes, most of the time we're before 1/3 of slot at this time
         // i.e. msToOneThirdSlot > 0
-        if (msToOneThirdSlot > 0 && this.dontSubmitAttestationEarly) {
-          // wait for 1/3 of slot
-          await sleep(msToOneThirdSlot);
+        if (msToOneThirdSlot > 0) {
+          // for early attestations, wait until now + 2000ms, or 1/3 of slot, whichever comes first
+          await sleep(Math.min(msToOneThirdSlot, this.earlyAttestationDelayMs));
         }
         this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
         await this.api.beacon.submitPoolAttestations(signedAttestations);
+        const delayMs = Date.now() - signedAttestationTime;
         this.logger.info("Published attestations", {
           slot,
           count: signedAttestations.length,
-          dontSubmitAttestationEarly: this.dontSubmitAttestationEarly,
+          delayMs,
         });
         this.metrics?.publishedAttestations.inc(signedAttestations.length);
       } catch (e) {

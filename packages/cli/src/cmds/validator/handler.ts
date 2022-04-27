@@ -136,7 +136,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       logger,
       signers,
       graffiti,
-      dontSubmitAttestationEarly: args.dontSubmitAttestationEarly,
+      earlyAttestationDelayMs: args.earlyAttestationDelayMs,
     },
     controller.signal,
     metrics
