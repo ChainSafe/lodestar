@@ -8,9 +8,7 @@ import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {MapDef} from "../../../util/map";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
-const MAX_TARGET_SUBNET_PEERS = 6;
-/** Minimal number of peers we'd like to have connected to a given long-lived subnet */
-const MIN_TARGET_SUBNET_PEERS = 2;
+const TARGET_SUBNET_PEERS = 6;
 
 /**
  * This is used in the pruning logic. We avoid pruning peers on sync-committees if doing so would
@@ -58,12 +56,14 @@ export function prioritizePeers(
   connectedPeers: PeerInfo[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
-  {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number}
+  {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number},
+  targetSubnetPeers = TARGET_SUBNET_PEERS
 ): {
   peersToConnect: number;
   peersToDisconnect: Map<string, PeerId[]>;
   attnetQueries: SubnetDiscvQuery[];
   syncnetQueries: SubnetDiscvQuery[];
+  targetSubnetPeers?: number;
 } {
   let peersToConnect = 0;
   const peersToDisconnect = new MapDef<string, PeerId[]>(() => []);
@@ -74,33 +74,19 @@ export function prioritizePeers(
 
   // To filter out peers that are part of 1+ attnets of interest from possible disconnection
   const peerHasDuty = new Map<PeerInfo, boolean>();
-  // Dynamically compute MIN_TARGET_SUBNET_PEERS <= TARGET_PEERS_PER_SUBNET <= MAX_TARGET_SUBNET_PEERS
-  // TODO: see if we need to tweak this logic as lighthouse always requires MAX_TARGET_SUBNET_PEERS
-  const targetPeersPerAttnetSubnet = Math.min(
-    MAX_TARGET_SUBNET_PEERS,
-    maxPeers,
-    Math.max(MIN_TARGET_SUBNET_PEERS, Math.floor(maxPeers / activeAttnets.length))
-  );
-  const targetPeersPerSyncnetSubnet = Math.min(
-    MAX_TARGET_SUBNET_PEERS,
-    maxPeers,
-    Math.max(MIN_TARGET_SUBNET_PEERS, Math.floor(maxPeers / activeSyncnets.length))
-  );
 
-  for (const {subnets, subnetKey, queries, bitIndicesByPeer, targetPeersPerSubnet} of [
+  for (const {subnets, subnetKey, queries, bitIndicesByPeer} of [
     {
       subnets: activeAttnets,
       subnetKey: SubnetType.attnets,
       queries: attnetQueries,
       bitIndicesByPeer: attnetTruebitIndices,
-      targetPeersPerSubnet: targetPeersPerAttnetSubnet,
     },
     {
       subnets: activeSyncnets,
       subnetKey: SubnetType.syncnets,
       queries: syncnetQueries,
       bitIndicesByPeer: syncnetTruebitIndices,
-      targetPeersPerSubnet: targetPeersPerSyncnetSubnet,
     },
   ]) {
     if (subnets.length > 0) {
@@ -124,9 +110,9 @@ export function prioritizePeers(
 
       for (const {subnet, toSlot} of subnets) {
         const peersInSubnet = peersPerSubnet.get(subnet) ?? 0;
-        if (peersInSubnet < targetPeersPerSubnet) {
+        if (peersInSubnet < targetSubnetPeers) {
           // We need more peers
-          queries.push({subnet, toSlot, maxPeersToDiscover: targetPeersPerSubnet - peersInSubnet});
+          queries.push({subnet, toSlot, maxPeersToDiscover: targetSubnetPeers - peersInSubnet});
         }
       }
     }
@@ -151,7 +137,7 @@ export function prioritizePeers(
       syncnetTruebitIndices,
       peerHasDuty,
       targetPeers,
-      targetPeersPerAttnetSubnet,
+      targetSubnetPeers,
       activeAttnets,
       peersToDisconnect,
     });
@@ -170,7 +156,7 @@ export function prioritizePeers(
  * 1. Remove peers that are not subscribed to a subnet (they have less value)
  * 2. Remove worst scoring peers
  * 3. Remove peers that we have many on any particular subnet
- *   - Only consider removing peers on subnet that has > MAX_TARGET_SUBNET_PEERS to be safe
+ *   - Only consider removing peers on subnet that has > TARGET_SUBNET_PEERS to be safe
  *   - If we have a choice, do not remove peer that would drop us below targetPeersPerAttnetSubnet
  *   - If we have a choice, do not remove peer that would drop us below MIN_SYNC_COMMITTEE_PEERS
  *
@@ -182,7 +168,7 @@ function pruneExcessPeers({
   syncnetTruebitIndices,
   peerHasDuty,
   targetPeers,
-  targetPeersPerAttnetSubnet,
+  targetSubnetPeers,
   activeAttnets,
   peersToDisconnect,
 }: {
@@ -191,7 +177,7 @@ function pruneExcessPeers({
   syncnetTruebitIndices: Map<PeerInfo, number[]>;
   peerHasDuty: Map<PeerInfo, boolean>;
   targetPeers: number;
-  targetPeersPerAttnetSubnet: number;
+  targetSubnetPeers: number;
   activeAttnets: RequestedSubnet[];
   peersToDisconnect: MapDef<string, PeerId[]>;
 }): void {
@@ -252,7 +238,7 @@ function pruneExcessPeers({
     }
 
     while (peersToDisconnectCount < peersToDisconnectTarget) {
-      const maxPeersSubnet: number | null = findMaxPeersSubnet(subnetToPeers, targetPeers);
+      const maxPeersSubnet: number | null = findMaxPeersSubnet(subnetToPeers, targetSubnetPeers);
       // peers are NOT too grouped on any given subnet, finish this loop
       if (maxPeersSubnet === null) break;
       const peersOnMostGroupedSubnet = subnetToPeers.get(maxPeersSubnet);
@@ -265,7 +251,7 @@ function pruneExcessPeers({
         peersOnMostGroupedSubnet,
         attnetTruebitIndices,
         syncnetTruebitIndices,
-        targetPeersPerAttnetSubnet,
+        targetSubnetPeers,
         activeAttnets
       );
 
@@ -291,17 +277,15 @@ function pruneExcessPeers({
 }
 
 /**
- * Find subnet that has the most peers and > MAX_TARGET_SUBNET_PEERS, return null if peers are not grouped
+ * Find subnet that has the most peers and > TARGET_SUBNET_PEERS, return null if peers are not grouped
  * to any subnets.
- * Prater has up to 15-20 peers per subnet at most
- * However mainnet has up to 6-10 peers per subnet at most
  */
-function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetPeers: number): number | null {
+function findMaxPeersSubnet(subnetToPeers: Map<number, PeerInfo[]>, targetSubnetPeers: number): number | null {
   let maxPeersSubnet: number | null = null;
   let maxPeerCountPerSubnet = -1;
 
   for (const [subnet, peers] of subnetToPeers) {
-    if (peers.length > Math.min(targetPeers, MAX_TARGET_SUBNET_PEERS) && peers.length > maxPeerCountPerSubnet) {
+    if (peers.length > targetSubnetPeers && peers.length > maxPeerCountPerSubnet) {
       maxPeersSubnet = subnet;
       maxPeerCountPerSubnet = peers.length;
     }
@@ -321,7 +305,7 @@ function findPeerToRemove(
   peersOnMostGroupedSubnet: PeerInfo[],
   attnetTruebitIndices: Map<PeerInfo, number[]>,
   syncnetTruebitIndices: Map<PeerInfo, number[]>,
-  targetPeersPerAttnetSubnet: number,
+  targetSubnetPeers: number,
   activeAttnets: RequestedSubnet[]
 ): PeerInfo | null {
   const peersOnSubnet = sortBy(peersOnMostGroupedSubnet, (peer) => attnetTruebitIndices.get(peer)?.length ?? 0);
@@ -332,14 +316,15 @@ function findPeerToRemove(
     if (attnetIndices.length > 0) {
       const requestedSubnets = activeAttnets.map((activeAttnet) => activeAttnet.subnet);
       let minAttnetCount = ATTESTATION_SUBNET_COUNT;
+      // intersection of requested subnets and subnets that peer subscribes to
       for (const subnet of requestedSubnets) {
         const numSubnetPeers = subnetToPeers.get(subnet)?.length;
-        if (attnetIndices.includes(subnet) && numSubnetPeers !== undefined && numSubnetPeers < minAttnetCount) {
+        if (numSubnetPeers !== undefined && numSubnetPeers < minAttnetCount && attnetIndices.includes(subnet)) {
           minAttnetCount = numSubnetPeers;
         }
       }
-      // shouldn't remove this peer because it drops us below targetPeersPerAttnetSubnet
-      if (minAttnetCount <= targetPeersPerAttnetSubnet) continue;
+      // shouldn't remove this peer because it drops us below targetSubnetPeers
+      if (minAttnetCount <= targetSubnetPeers) continue;
     }
 
     // same logic to lighthouse

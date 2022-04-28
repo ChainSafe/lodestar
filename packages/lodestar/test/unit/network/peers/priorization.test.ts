@@ -24,6 +24,7 @@ describe("network / peers / priorization", () => {
     activeAttnets: number[];
     activeSyncnets: number[];
     opts: {targetPeers: number; maxPeers: number};
+    targetSubnetPeers: number;
     expectedResult: Result;
   }[] = [
     {
@@ -38,6 +39,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Don't request a subnet query when enough peers are connected to it",
@@ -51,6 +53,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Disconnect low score peers without duty",
@@ -74,6 +77,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Disconnect no long-lived-subnet peers without duty",
@@ -97,6 +101,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Disconnect no-duty peers that's too grouped in a subnet",
@@ -124,6 +129,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Disconnect no-duty peers that's too grouped in a subnet - ignore maxPeersSubnet",
@@ -154,6 +160,7 @@ describe("network / peers / priorization", () => {
         attnetQueries: [],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 1,
     },
     {
       id: "Complete example: Disconnect peers and request a subnet query",
@@ -178,17 +185,32 @@ describe("network / peers / priorization", () => {
           })
         ),
         peersToConnect: 0,
-        attnetQueries: [{subnet: 3, maxPeersToDiscover: 2, toSlot: 0}],
+        attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
       },
+      targetSubnetPeers: 2,
     },
 
     // TODO: Add a test case with syncnets priorization
   ];
 
-  for (const {id, connectedPeers, activeAttnets, activeSyncnets, opts, expectedResult} of testCases) {
+  for (const {
+    id,
+    connectedPeers,
+    activeAttnets,
+    activeSyncnets,
+    opts,
+    expectedResult,
+    targetSubnetPeers,
+  } of testCases) {
     it(id, () => {
-      const result = prioritizePeers(connectedPeers, toReqSubnet(activeAttnets), toReqSubnet(activeSyncnets), opts);
+      const result = prioritizePeers(
+        connectedPeers,
+        toReqSubnet(activeAttnets),
+        toReqSubnet(activeSyncnets),
+        opts,
+        targetSubnetPeers
+      );
       expect(cleanResult(result)).to.deep.equal(cleanResult(expectedResult));
     });
   }
