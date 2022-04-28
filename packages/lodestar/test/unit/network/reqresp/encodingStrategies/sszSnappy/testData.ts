@@ -9,7 +9,10 @@ export interface ISszSnappyTestData<T extends RequestOrIncomingResponseBody> {
   id: string;
   type: RequestOrResponseType;
   body: T;
+  /** chunks expected in an async compress version of snappy stream */
   chunks: Buffer[];
+  /** chunks expected in a sync compress version of snappy stream  */
+  syncChunks: Buffer[];
 }
 
 export const sszSnappyPing: ISszSnappyTestData<phase0.Ping> = {
@@ -21,6 +24,7 @@ export const sszSnappyPing: ISszSnappyTestData<phase0.Ping> = {
     "0xff060000734e61507059", // snappy frames header
     "0x010c00000175de410100000000000000", // snappy frames content
   ].map(fromHexString) as Buffer[],
+  syncChunks: ["0x08", "0xff060000734e61507059010c00000175de410100000000000000"].map(fromHexString) as Buffer[],
 };
 
 export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
@@ -38,6 +42,9 @@ export const sszSnappyStatus: ISszSnappyTestData<phase0.Status> = {
     "0xff060000734e61507059", // snappy frames header
     "0x001b0000097802c15400da8a010004090009017e2b001c0900000000000000",
   ].map(fromHexString) as Buffer[],
+  syncChunks: ["0x54", "0xff060000734e61507059001b0000097802c15400da8a010004090009017e2b001c0900000000000000"].map(
+    fromHexString
+  ) as Buffer[],
 };
 
 export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedBeaconBlock> = {
@@ -71,6 +78,10 @@ export const sszSnappySignedBeaconBlockPhase0: ISszSnappyTestData<phase0.SignedB
     "0xff060000734e61507059",
     "0x00340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
   ].map(fromHexString) as Buffer[],
+  syncChunks: [
+    "0x9403",
+    "0xff060000734e6150705900340000fff3b3f594031064000000dafe01007a010004090009011108fe6f000054feb4008ab4007e0100fecc0011cc0cdc0000003e0400",
+  ].map(fromHexString) as Buffer[],
 };
 
 export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedBeaconBlock> = {
@@ -91,5 +102,9 @@ export const sszSnappySignedBeaconBlockAltair: ISszSnappyTestData<altair.SignedB
     "0xf803", // length prefix
     "0xff060000734e61507059", // snappy frames header
     "0x003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
+  ].map(fromHexString) as Buffer[],
+  syncChunks: [
+    "0xf803",
+    "0xff060000734e61507059003f0000ee14ab0df8031064000000dafe01007a01000c995f0100010100090105ee70000d700054ee44000d44fe0100fecc0011cc0c400100003e0400fe01008e0100",
   ].map(fromHexString) as Buffer[],
 };
