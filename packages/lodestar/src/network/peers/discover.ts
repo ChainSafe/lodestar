@@ -357,6 +357,8 @@ export class PeerDiscovery {
    * Peers that have been returned by discovery requests are dialed here if they are suitable.
    */
   private async dialPeer(cachedPeer: CachedENR): Promise<void> {
+    this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
+
     const {peerId, multiaddrTCP} = cachedPeer;
 
     // Must add the multiaddrs array to the address book before dialing
@@ -374,7 +376,6 @@ export class PeerDiscovery {
     // Note: You must listen to the connected events to listen for a successful conn upgrade
     try {
       await this.libp2p.dial(peerId);
-      this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
       timer?.({status: "success"});
       this.logger.debug("Dialed discovered peer", {peer: peerIdShort});
     } catch (e) {
