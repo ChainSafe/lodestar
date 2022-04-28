@@ -493,10 +493,10 @@
   resolved "https://registry.yarnpkg.com/@chainsafe/persistent-ts/-/persistent-ts-0.19.1.tgz#53d03aa31ef7698b09327f74eef01e286b97bae3"
   integrity sha512-fUFFFFxdcpYkMAHnjm83EYL/R/smtVmEkJr3FGSI6dwPk4ue9rXjEHf7FTd3V8AbVOcTJGriN4cYf2V+HOYkjQ==
 
-"@chainsafe/snappy-stream@5.1.0":
-  version "5.1.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-5.1.0.tgz#ba1a089615ded69b67840de3f82d913372c8e5d8"
-  integrity sha512-l6GCYv/CvXvt/6pWoS376R2qpRX4vG0RBrtzb6dUmyqJf9aJ8KzZrcQJV20VxY935arEEqC5zhA1QYbYGdM0hw==
+"@chainsafe/snappy-stream@5.1.1":
+  version "5.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/snappy-stream/-/snappy-stream-5.1.1.tgz#9f3c79fd936b591d4a79d1801ffb582df54f1858"
+  integrity sha512-wy1c0RLUttVYMQHN/zs473LIzZ6NEL2xG3T8vJp+Ag99H/lQldnwYY6aKGcMrt6hEhndRx0a4NaUxr70MTzsLg==
   dependencies:
     "@chainsafe/fast-crc32c" "3.0.0"
     bl "^1.0.0"

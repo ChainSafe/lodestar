@@ -76,7 +76,7 @@
     "@chainsafe/lodestar-utils": "^0.36.0",
     "@chainsafe/lodestar-validator": "^0.36.0",
     "@chainsafe/persistent-merkle-tree": "^0.4.1",
-    "@chainsafe/snappy-stream": "5.1.0",
+    "@chainsafe/snappy-stream": "5.1.1",
     "@chainsafe/ssz": "^0.9.1",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^3.0.0",
