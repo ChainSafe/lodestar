@@ -23,7 +23,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
     const testCases = [sszSnappyPing, sszSnappyStatus, sszSnappySignedBeaconBlockPhase0];
 
     for (const testCase of testCases) {
-      const {id, type, syncChunks} = testCase;
+      const {id, type, chunks} = testCase;
       it(id, async () => {
         const body =
           type === ssz.phase0.SignedBeaconBlock
@@ -36,7 +36,7 @@ describe("network / reqresp / sszSnappy / encode", () => {
           ),
           all
         );
-        expectEqualByteChunks(encodedChunks, syncChunks);
+        expectEqualByteChunks(encodedChunks, chunks);
       });
     }
   });
