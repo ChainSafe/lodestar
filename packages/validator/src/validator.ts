@@ -1,6 +1,6 @@
 import {AbortController, AbortSignal} from "@chainsafe/abort-controller";
 import {IDatabaseApiOptions} from "@chainsafe/lodestar-db";
-import {ssz} from "@chainsafe/lodestar-types";
+import {ssz, ExecutionAddress} from "@chainsafe/lodestar-types";
 import {createIBeaconConfig, IBeaconConfig} from "@chainsafe/lodestar-config";
 import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -11,6 +11,7 @@ import {BlockProposingService} from "./services/block";
 import {AttestationService} from "./services/attestation";
 import {IndicesService} from "./services/indices";
 import {SyncCommitteeService} from "./services/syncCommittee";
+import {PrepareBeaconProposerService} from "./services/prepareBeaconProposer";
 import {ISlashingProtection} from "./slashingProtection";
 import {assertEqualParams, getLoggerVc, NotEqualParamsError} from "./util";
 import {ChainHeaderTracker} from "./services/chainHeaderTracker";
@@ -30,6 +31,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
+  defaultSuggestedFeeRecipient?: ExecutionAddress;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -52,6 +54,7 @@ export class Validator {
   private readonly attestationService: AttestationService;
   private readonly syncCommitteeService: SyncCommitteeService;
   private readonly indicesService: IndicesService;
+  private readonly prepareBeaconProposerService: PrepareBeaconProposerService | null;
   private readonly config: IBeaconConfig;
   private readonly api: Api;
   private readonly clock: IClock;
@@ -61,7 +64,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti, defaultSuggestedFeeRecipient} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -110,6 +113,18 @@ export class Validator {
       indicesService,
       metrics
     );
+
+    this.prepareBeaconProposerService = defaultSuggestedFeeRecipient
+      ? new PrepareBeaconProposerService(
+          loggerVc,
+          api,
+          clock,
+          validatorStore,
+          defaultSuggestedFeeRecipient,
+          indicesService,
+          metrics
+        )
+      : null;
 
     this.config = config;
     this.logger = logger;

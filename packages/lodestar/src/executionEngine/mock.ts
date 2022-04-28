@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
-import {bellatrix, RootHex, Root} from "@chainsafe/lodestar-types";
+import {bellatrix, RootHex, Root, Epoch, ValidatorIndex, ExecutionAddress} from "@chainsafe/lodestar-types";
 import {toHexString} from "@chainsafe/ssz";
+import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+
 import {ZERO_HASH, ZERO_HASH_HEX} from "../constants";
 import {
   ExecutePayloadStatus,
@@ -8,8 +10,10 @@ import {
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
+  ProposerPreparationData,
 } from "./interface";
-import {BYTES_PER_LOGS_BLOOM} from "@chainsafe/lodestar-params";
+import {MapDef} from "../util/map";
+
 const INTEROP_GAS_LIMIT = 30e6;
 
 export type ExecutionEngineMockOpts = {
@@ -23,12 +27,17 @@ export class ExecutionEngineMock implements IExecutionEngine {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockRoot = ZERO_HASH_HEX;
   finalizedBlockRoot = ZERO_HASH_HEX;
+  readonly proposers: MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>;
 
   private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
   private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
   private payloadId = 0;
 
   constructor(opts: ExecutionEngineMockOpts) {
+    this.proposers = new MapDef<ValidatorIndex, {epoch: Epoch; feeRecipient: ExecutionAddress}>(() => ({
+      epoch: 0,
+      feeRecipient: Buffer.alloc(20, 0),
+    }));
     this.knownBlocks.set(opts.genesisBlockHash, {
       parentHash: ZERO_HASH,
       feeRecipient: Buffer.alloc(20, 0),
@@ -139,5 +148,9 @@ export class ExecutionEngineMock implements IExecutionEngine {
     }
     this.preparingPayloads.delete(payloadIdNbr);
     return payload;
+  }
+
+  async updateProposerPreparation(_epoch: Epoch, _proposers: ProposerPreparationData[]): Promise<void> {
+    return;
   }
 }

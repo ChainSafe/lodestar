@@ -17,3 +17,4 @@ export * from "./stripOffNewlines";
 export * from "./types";
 export * from "./bls";
 export * from "./jwt";
+export * from "./feeRecipient";

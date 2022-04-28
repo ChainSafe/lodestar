@@ -13,6 +13,7 @@ import {
   ssz,
   UintNum64,
   ValidatorIndex,
+  ExecutionAddress,
 } from "@chainsafe/lodestar-types";
 import {
   RoutesData,
@@ -42,6 +43,11 @@ export type SyncCommitteeSubscription = {
   validatorIndex: ValidatorIndex;
   syncCommitteeIndices: number[];
   untilEpoch: Epoch;
+};
+
+export type ProposerPreparationData = {
+  validatorIndex: ValidatorIndex;
+  feeRecipient: ExecutionAddress;
 };
 
 export type ProposerDuty = {
@@ -197,6 +203,8 @@ export type Api = {
   prepareBeaconCommitteeSubnet(subscriptions: BeaconCommitteeSubscription[]): Promise<void>;
 
   prepareSyncCommitteeSubnets(subscriptions: SyncCommitteeSubscription[]): Promise<void>;
+
+  prepareBeaconProposer(proposers: ProposerPreparationData[]): Promise<void>;
 };
 
 /**
@@ -215,6 +223,7 @@ export const routesData: RoutesData<Api> = {
   publishContributionAndProofs: {url: "/eth/v1/validator/contribution_and_proofs", method: "POST"},
   prepareBeaconCommitteeSubnet: {url: "/eth/v1/validator/beacon_committee_subscriptions", method: "POST"},
   prepareSyncCommitteeSubnets: {url: "/eth/v1/validator/sync_committee_subscriptions", method: "POST"},
+  prepareBeaconProposer: {url: "/eth/v1/validator/prepare_beacon_proposer", method: "POST"},
 };
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -231,6 +240,7 @@ export type ReqTypes = {
   publishContributionAndProofs: {body: unknown};
   prepareBeaconCommitteeSubnet: {body: unknown};
   prepareSyncCommitteeSubnets: {body: unknown};
+  prepareBeaconProposer: {body: unknown};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -250,6 +260,14 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       validatorIndex: ssz.ValidatorIndex,
       syncCommitteeIndices: ArrayOf(ssz.CommitteeIndex),
       untilEpoch: ssz.Epoch,
+    },
+    {jsonCase: "eth2"}
+  );
+
+  const ProposerPreparationData = new ContainerType(
+    {
+      validatorIndex: ssz.ValidatorIndex,
+      feeRecipient: ssz.ExecutionAddress,
     },
     {jsonCase: "eth2"}
   );
@@ -330,6 +348,7 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
     publishContributionAndProofs: reqOnlyBody(ArrayOf(ssz.altair.SignedContributionAndProof), Schema.ObjectArray),
     prepareBeaconCommitteeSubnet: reqOnlyBody(ArrayOf(BeaconCommitteeSubscription), Schema.ObjectArray),
     prepareSyncCommitteeSubnets: reqOnlyBody(ArrayOf(SyncCommitteeSubscription), Schema.ObjectArray),
+    prepareBeaconProposer: reqOnlyBody(ArrayOf(ProposerPreparationData), Schema.ObjectArray),
   };
 }
 

@@ -4,7 +4,9 @@ import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/va
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
+import {defaultDefaultSuggestedFeeRecipient} from "@chainsafe/lodestar";
 
+export {defaultDefaultSuggestedFeeRecipient};
 export const validatorMetricsDefaultOptions = {
   enabled: false,
   port: 5064,
@@ -19,6 +21,8 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     force: boolean;
     graffiti: string;
     afterBlockDelaySlotFraction?: number;
+    defaultSuggestedFeeRecipient?: string;
+
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -66,6 +70,13 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     hidden: true,
     description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
     type: "number",
+  },
+
+  defaultSuggestedFeeRecipient: {
+    description:
+      "Specify fee recipient default for collecting the EL block fees and rewards (a hex string representing 20 bytes address: ^0x[a-fA-F0-9]{40}$). It would be possible (WIP) to override this per validator key using config or keymanager API.",
+    default: defaultDefaultSuggestedFeeRecipient,
+    type: "string",
   },
 
   importKeystoresPath: {

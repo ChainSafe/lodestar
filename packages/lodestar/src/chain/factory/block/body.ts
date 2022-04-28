@@ -13,6 +13,7 @@ import {
   Slot,
   ssz,
   ExecutionAddress,
+  ValidatorIndex,
 } from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
@@ -37,14 +38,14 @@ export async function assembleBody(
     blockSlot,
     parentSlot,
     parentBlockRoot,
-    feeRecipient,
+    proposerIndex,
   }: {
     randaoReveal: Bytes96;
     graffiti: Bytes32;
     blockSlot: Slot;
     parentSlot: Slot;
     parentBlockRoot: Root;
-    feeRecipient: ExecutionAddress;
+    proposerIndex: ValidatorIndex;
   }
 ): Promise<allForks.BeaconBlockBody> {
   // TODO:
@@ -89,9 +90,21 @@ export async function assembleBody(
     // - Call prepareExecutionPayload again if parameters change
 
     const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+    const feeRecipient = chain.executionEngine.proposers.getOrDefault(proposerIndex).feeRecipient;
 
     // prepareExecutionPayload will throw error via notifyForkchoiceUpdate if
     // the EL returns Syncing on this request to prepare a payload
+    //
+    // TODO:
+    // The payloadId should be extracted from the ones cached in the execution engine
+    // by the advance firing of the fcU. If no entry in the cache is available then
+    // continue with the usual firing, but this will most likely not generate a full
+    // block. However some timing consideration can be done here to bundle some time
+    // for the same.
+    //
+    // For MeV boost integration as well, this is where the execution header will be
+    // fetched from the payload id and a blinded block will be produced instead of
+    // fullblock for the validator to sign
     const payloadId = await prepareExecutionPayload(
       chain,
       finalizedBlockHash ?? ZERO_HASH_HEX,

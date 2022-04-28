@@ -183,8 +183,6 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
           slot,
           randaoReveal,
           graffiti: toGraffitiBuffer(graffiti || ""),
-          // TODO - TEMP
-          feeRecipient: Buffer.alloc(20, 0),
         }
       );
       metrics?.blockProductionSuccess.inc();
@@ -583,6 +581,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       }
 
       network.prepareSyncCommitteeSubnets(subs);
+    },
+
+    async prepareBeaconProposer(proposers) {
+      await chain.executionEngine.updateProposerPreparation(chain.clock.currentEpoch, proposers);
     },
   };
 }
