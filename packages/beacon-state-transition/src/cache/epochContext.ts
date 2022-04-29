@@ -3,6 +3,7 @@ import {BLSSignature, CommitteeIndex, Epoch, Slot, ValidatorIndex, phase0, SyncP
 import {createIBeaconConfig, IBeaconConfig, IChainConfig} from "@chainsafe/lodestar-config";
 import {
   ATTESTATION_SUBNET_COUNT,
+  DOMAIN_BEACON_PROPOSER,
   EFFECTIVE_BALANCE_INCREMENT,
   FAR_FUTURE_EPOCH,
   GENESIS_EPOCH,
@@ -20,6 +21,7 @@ import {
   isAggregatorFromCommitteeLength,
   computeProposers,
   computeSyncPeriodAtEpoch,
+  getSeed,
 } from "../util";
 import {computeEpochShuffling, IEpochShuffling} from "../util/epochShuffling";
 import {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsWithLen} from "./effectiveBalanceIncrements";
@@ -161,6 +163,8 @@ export class EpochContext {
   epoch: Epoch;
   syncPeriod: SyncPeriod;
 
+  beaconProposerEpochSeed: Uint8Array;
+
   constructor(data: {
     config: IBeaconConfig;
     pubkey2index: PubkeyIndexMap;
@@ -181,6 +185,7 @@ export class EpochContext {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
+    beaconProposerEpochSeed: Uint8Array;
   }) {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
@@ -201,6 +206,7 @@ export class EpochContext {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
+    this.beaconProposerEpochSeed = data.beaconProposerEpochSeed;
   }
 
   /**
@@ -280,9 +286,13 @@ export class EpochContext {
       : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
     const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
+    const beaconProposerEpochSeed = getSeed(state, currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
+
     // Allow to create CachedBeaconState for empty states
     const proposers =
-      state.validators.length > 0 ? computeProposers(state, currentShuffling, effectiveBalanceIncrements) : [];
+      state.validators.length > 0
+        ? computeProposers(beaconProposerEpochSeed, currentShuffling, effectiveBalanceIncrements)
+        : [];
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
@@ -345,6 +355,7 @@ export class EpochContext {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
+      beaconProposerEpochSeed: beaconProposerEpochSeed,
     });
   }
 
@@ -380,6 +391,7 @@ export class EpochContext {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
+      beaconProposerEpochSeed: this.beaconProposerEpochSeed,
     });
   }
 
@@ -400,7 +412,11 @@ export class EpochContext {
     const nextEpoch = currEpoch + 1;
 
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
-    this.proposers = computeProposers(state, this.currentShuffling, this.effectiveBalanceIncrements);
+    this.proposers = computeProposers(
+      this.beaconProposerEpochSeed,
+      this.currentShuffling,
+      this.effectiveBalanceIncrements
+    );
 
     // TODO: DEDUPLICATE from createEpochContext
     //
@@ -478,11 +494,11 @@ export class EpochContext {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
-  getNextEpochBeaconProposer(state: BeaconStateAllForks): ValidatorIndex[] {
+  getNextEpochBeaconProposer(): ValidatorIndex[] {
     const nextShuffling = this.nextShuffling;
     let nextProposers = this.nextEpochProposers.get(nextShuffling.epoch);
     if (!nextProposers) {
-      nextProposers = computeProposers(state, nextShuffling, this.effectiveBalanceIncrements);
+      nextProposers = computeProposers(this.beaconProposerEpochSeed, nextShuffling, this.effectiveBalanceIncrements);
       // Only keep proposers for one epoch in the future, so clear before setting new value
       this.nextEpochProposers.clear();
       this.nextEpochProposers.set(nextShuffling.epoch, nextProposers);
