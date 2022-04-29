@@ -1,15 +1,13 @@
 import {itBench} from "@dapplion/benchmark";
 import {Epoch} from "@chainsafe/lodestar-types";
-import {DOMAIN_BEACON_PROPOSER} from "@chainsafe/lodestar-params";
 import {
   computeEpochAtSlot,
   CachedBeaconStateAllForks,
   computeEpochShuffling,
   getNextSyncCommittee,
 } from "../../../../src";
-import {computeProposers} from "../../../../src";
-import {getSeed} from "../../../../lib";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
+import {computeProposers} from "../../../../src/util/seed";
 
 describe("epoch shufflings", () => {
   let state: CachedBeaconStateAllForks;
@@ -27,8 +25,7 @@ describe("epoch shufflings", () => {
   itBench({
     id: `computeProposers - vc ${numValidators}`,
     fn: () => {
-      const epochSeed = getSeed(state, state.epochCtx.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-      computeProposers(epochSeed, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
+      computeProposers(state, state.epochCtx.nextShuffling, state.epochCtx.effectiveBalanceIncrements);
     },
   });
 

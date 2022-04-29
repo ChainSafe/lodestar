@@ -285,7 +285,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // Note: There is a small probability that returned validators differs
       // than what is returned when the epoch is reached.
       if (epoch === nextEpoch) {
-        indexes.push(...state.epochCtx.getNextEpochBeaconProposer());
+        indexes.push(...state.epochCtx.getNextEpochBeaconProposer(state));
       } else {
         // Gather indexes to get pubkeys in batch (performance optimization)
         for (let i = 0; i < SLOTS_PER_EPOCH; i++) {

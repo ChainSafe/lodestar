@@ -6,6 +6,7 @@ import {digest} from "@chainsafe/as-sha256";
 import {Epoch, Bytes32, DomainType, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {assert, bytesToBigInt, intToBytes} from "@chainsafe/lodestar-utils";
 import {
+  DOMAIN_BEACON_PROPOSER,
   DOMAIN_SYNC_COMMITTEE,
   EFFECTIVE_BALANCE_INCREMENT,
   EPOCHS_PER_HISTORICAL_VECTOR,
@@ -24,10 +25,11 @@ import {computeEpochAtSlot} from "./epoch";
  * Compute proposer indices for an epoch
  */
 export function computeProposers(
-  epochSeed: Uint8Array,
+  state: BeaconStateAllForks,
   shuffling: {epoch: Epoch; activeIndices: ValidatorIndex[]},
   effectiveBalanceIncrements: EffectiveBalanceIncrements
 ): number[] {
+  const epochSeed = getSeed(state, shuffling.epoch, DOMAIN_BEACON_PROPOSER);
   const startSlot = computeStartSlotAtEpoch(shuffling.epoch);
   const proposers = [];
   for (let slot = startSlot; slot < startSlot + SLOTS_PER_EPOCH; slot++) {
