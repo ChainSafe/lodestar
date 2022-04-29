@@ -518,13 +518,6 @@ export class EpochContext {
         `Requesting beacon proposer for different epoch current shuffling: ${epoch} != ${this.currentShuffling.epoch}`
       );
     }
-
-    for (const cachedEpoch of this.nextEpochProposers.keys()) {
-      // Do not keep past cached future proposal duties.
-      if (cachedEpoch <= epoch) {
-        this.nextEpochProposers.delete(cachedEpoch);
-      }
-    }
     return this.proposers[slot % SLOTS_PER_EPOCH];
   }
 
