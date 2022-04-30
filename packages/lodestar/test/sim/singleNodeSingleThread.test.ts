@@ -23,7 +23,7 @@ describe("Run single node single thread interop validators (no eth1) until check
   };
 
   const validatorClientCount = 1;
-  const validatorsPerClient = 32;
+  const validatorsPerClient = 32 * 4;
 
   const testCases: {
     event: ChainEvent.justified | ChainEvent.finalized;

@@ -54,6 +54,8 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.justified]: onJustified,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     [ChainEvent.lightclientHeaderUpdate]: () => {},
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    [ChainEvent.lightclientFinalizedUpdate]: () => {},
   };
 
   const emitter = this.emitter;

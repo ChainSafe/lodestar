@@ -6,6 +6,10 @@ export enum LightclientEvent {
    */
   head = "head",
   /**
+   * New finalized
+   */
+  finalized = "finalized",
+  /**
    * Stored nextSyncCommittee from an update at period `period`.
    * Note: the SyncCommittee is stored for `period + 1`.
    */
@@ -14,6 +18,7 @@ export enum LightclientEvent {
 
 export type LightclientEvents = {
   [LightclientEvent.head]: (newHeader: phase0.BeaconBlockHeader) => void;
+  [LightclientEvent.finalized]: (newHeader: phase0.BeaconBlockHeader) => void;
   [LightclientEvent.committee]: (updatePeriod: SyncPeriod) => void;
 };
 

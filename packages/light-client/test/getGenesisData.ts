@@ -16,7 +16,7 @@ const networksInInfura: NetworkName[] = ["mainnet", "prater"];
 async function getGenesisData(): Promise<void> {
   for (const network of networksInInfura) {
     const baseUrl = getInfuraBeaconUrl(network);
-    const api = getClient(config, {baseUrl});
+    const api = getClient({baseUrl}, {config});
     const {data: genesis} = await api.beacon.getGenesis();
     console.log(network, {
       genesisTime: Number(genesis.genesisTime),

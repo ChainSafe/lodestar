@@ -52,7 +52,7 @@ describe("lodestar / sync", function () {
 
       afterEachCallbacks.push(() => bn.close());
 
-      const client = getClient(config, {baseUrl: "http://127.0.0.1:9596"}).node;
+      const client = getClient({baseUrl: "http://127.0.0.1:9596"}, {config}).node;
 
       // expect headSlot and syncDistance to be string
       await expect(client.getSyncingStatus()).to.eventually.be.deep.equal({

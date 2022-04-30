@@ -252,11 +252,25 @@ export function computeMerkleBranch(
   return {root: value, proof};
 }
 
-export function committeeUpdateToHeadUpdate(
+export function committeeUpdateToLatestHeadUpdate(
   committeeUpdate: altair.LightClientUpdate
 ): routes.lightclient.LightclientHeaderUpdate {
   return {
     attestedHeader: committeeUpdate.attestedHeader,
+    syncAggregate: {
+      syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
+      syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,
+    },
+  };
+}
+
+export function committeeUpdateToLatestFinalizedHeadUpdate(
+  committeeUpdate: altair.LightClientUpdate
+): routes.lightclient.LightclientFinalizedUpdate {
+  return {
+    attestedHeader: committeeUpdate.attestedHeader,
+    finalizedHeader: committeeUpdate.finalizedHeader,
+    finalityBranch: committeeUpdate.finalityBranch,
     syncAggregate: {
       syncCommitteeBits: committeeUpdate.syncAggregate.syncCommitteeBits,
       syncCommitteeSignature: committeeUpdate.syncAggregate.syncCommitteeSignature,

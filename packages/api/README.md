@@ -15,9 +15,9 @@ Typescript REST client for the [Ethereum Consensus API spec](https://github.com/
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
 
-const api = getClient(config, {
+const api = getClient({
   baseUrl: "http://localhost:9596",
-});
+}, {config});
 
 api.beacon
   .getStateValidator(

@@ -81,7 +81,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
+  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));
