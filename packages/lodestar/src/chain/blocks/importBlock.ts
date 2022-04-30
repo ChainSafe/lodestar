@@ -71,12 +71,10 @@ export type ImportBlockModules = {
  * - head_tracker.register_block(block_root, parent_root, slot)
  * - Send events after everything is done
  */
-export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
+export async function importBlock(modules: ImportBlockModules, fullyVerifiedBlock: FullyVerifiedBlock): Promise<void> {
   const {block, postState, parentBlock, skipImportingAttestations, executionStatus} = fullyVerifiedBlock;
-  const pendingEvents = new PendingEvents(chain.emitter);
+  const pendingEvents = new PendingEvents(modules.emitter);
 
-  // - Observe attestations
-  // TODO
   // - Add validators to the pubkey cache
   // TODO
   // - Load shuffling caches
@@ -93,13 +91,14 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // it should always have epochBalances there bc it's a checkpoint state, ie got through processEpoch
   const justifiedCheckpoint = postState.currentJustifiedCheckpoint;
 
-  const onBlockPrecachedData: OnBlockPrecachedData = {
+  const onBlockPreCachedData: OnBlockPrecachedData = {
     executionStatus,
-    blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % chain.config.SECONDS_PER_SLOT,
+    blockDelaySec: (Math.floor(Date.now() / 1000) - postState.genesisTime) % modules.config.SECONDS_PER_SLOT,
   };
-  if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
-    const state = getStateForJustifiedBalances(chain, postState, block);
-    onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
+
+  if (justifiedCheckpoint.epoch > modules.forkChoice.getJustifiedCheckpoint().epoch) {
+    const state = getStateForJustifiedBalances(modules, postState, block);
+    onBlockPreCachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
   }
 
   if (
@@ -107,27 +106,26 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     bellatrix.isBellatrixBlockBodyType(block.message.body) &&
     bellatrix.isMergeTransitionBlock(postState, block.message.body)
   ) {
-    // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
     const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
-    const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
+    const powBlock = await modules.eth1.getPowBlock(powBlockRootHex);
     if (!powBlock && executionStatus !== ExecutionStatus.Syncing)
       throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
     // pow_parent = get_pow_block(pow_block.parent_hash)
-    const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+    const powBlockParent = powBlock && (await modules.eth1.getPowBlock(powBlock.parentHash));
     if (powBlock && !powBlockParent)
       throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
-    onBlockPrecachedData.powBlock = powBlock;
-    onBlockPrecachedData.powBlockParent = powBlockParent;
-    onBlockPrecachedData.isMergeTransitionBlock = true;
+    onBlockPreCachedData.powBlock = powBlock;
+    onBlockPreCachedData.powBlockParent = powBlockParent;
+    onBlockPreCachedData.isMergeTransitionBlock = true;
   }
 
-  const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
-  chain.forkChoice.onBlock(block.message, postState, onBlockPrecachedData);
+  const prevFinalizedEpoch = modules.forkChoice.getFinalizedCheckpoint().epoch;
+  modules.forkChoice.onBlock(block.message, postState, onBlockPreCachedData);
 
   // - Register state and block to the validator monitor
   // TODO
 
-  const currentEpoch = computeEpochAtSlot(chain.forkChoice.getTime());
+  const currentEpoch = computeEpochAtSlot(modules.forkChoice.getTime());
   const blockEpoch = computeEpochAtSlot(block.message.slot);
 
   // - For each attestation
@@ -140,7 +138,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   if (!skipImportingAttestations && blockEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
     const attestations = block.message.body.attestations;
     const rootCache = new altair.RootCache(postState);
-    const parentSlot = chain.forkChoice.getBlock(block.message.parentRoot)?.slot;
+    const parentSlot = modules.forkChoice.getBlock(block.message.parentRoot)?.slot;
     const invalidAttestationErrorsByCode = new Map<string, {error: Error; count: number}>();
 
     for (const attestation of attestations) {
@@ -151,11 +149,12 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
         if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
-          chain.forkChoice.onAttestation(indexedAttestation);
+          modules.forkChoice.onAttestation(indexedAttestation);
+          // modules.seen
         }
 
         if (parentSlot !== undefined) {
-          chain.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
+          modules.metrics?.registerAttestationInBlock(indexedAttestation, parentSlot, rootCache);
         }
 
         pendingEvents.push(ChainEvent.attestation, attestation);
@@ -171,13 +170,13 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
           }
         } else {
           // always log other errors
-          chain.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
+          modules.logger.warn("Error processing attestation from block", {slot: block.message.slot}, e as Error);
         }
       }
     }
 
     for (const {error, count} of invalidAttestationErrorsByCode.values()) {
-      chain.logger.warn(
+      modules.logger.warn(
         "Error processing attestations from block",
         {slot: block.message.slot, erroredAttestations: count},
         error
@@ -191,30 +190,30 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
     // Cache state to preserve epoch transition work
     const checkpointState = postState.clone();
     const cp = getCheckpointFromState(checkpointState);
-    chain.checkpointStateCache.add(cp, checkpointState);
+    modules.checkpointStateCache.add(cp, checkpointState);
     pendingEvents.push(ChainEvent.checkpoint, cp, checkpointState);
   }
 
   // Emit ChainEvent.forkChoiceHead event
-  const oldHead = chain.forkChoice.getHead();
-  chain.forkChoice.updateHead();
-  const newHead = chain.forkChoice.getHead();
+  const oldHead = modules.forkChoice.getHead();
+  modules.forkChoice.updateHead();
+  const newHead = modules.forkChoice.getHead();
   if (newHead.blockRoot !== oldHead.blockRoot) {
     // new head
     pendingEvents.push(ChainEvent.forkChoiceHead, newHead);
-    chain.metrics?.forkChoiceChangedHead.inc();
+    modules.metrics?.forkChoiceChangedHead.inc();
 
-    const distance = chain.forkChoice.getCommonAncestorDistance(oldHead, newHead);
+    const distance = modules.forkChoice.getCommonAncestorDistance(oldHead, newHead);
     if (distance !== null) {
       // chain reorg
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
-      chain.metrics?.forkChoiceReorg.inc();
+      modules.metrics?.forkChoiceReorg.inc();
     }
   }
 
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
   // Notify execution layer of head and finalized updates
-  const currFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
+  const currFinalizedEpoch = modules.forkChoice.getFinalizedCheckpoint().epoch;
   if (newHead.blockRoot !== oldHead.blockRoot || currFinalizedEpoch !== prevFinalizedEpoch) {
     /**
      * On post BELLATRIX_EPOCH but pre TTD, blocks include empty execution payload with a zero block hash.
@@ -223,16 +222,16 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
      * - `headBlockHash !== null` -> Pre BELLATRIX_EPOCH
      * - `headBlockHash !== ZERO_HASH` -> Pre TTD
      */
-    const headBlockHash = chain.forkChoice.getHead().executionPayloadBlockHash;
+    const headBlockHash = modules.forkChoice.getHead().executionPayloadBlockHash;
     /**
      * After BELLATRIX_EPOCH and TTD it's okay to send a zero hash block hash for the finalized block. This will happen if
      * the current finalized block does not contain any execution payload at all (pre MERGE_EPOCH) or if it contains a
      * zero block hash (pre TTD)
      */
-    const finalizedBlockHash = chain.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
+    const finalizedBlockHash = modules.forkChoice.getFinalizedBlock().executionPayloadBlockHash;
     if (headBlockHash !== null && headBlockHash !== ZERO_HASH_HEX) {
-      chain.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
-        chain.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
+      modules.executionEngine.notifyForkchoiceUpdate(headBlockHash, finalizedBlockHash ?? ZERO_HASH_HEX).catch((e) => {
+        modules.logger.error("Error pushing notifyForkchoiceUpdate()", {headBlockHash, finalizedBlockHash}, e);
       });
     }
   }
@@ -242,21 +241,21 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // TODO: Move internal emitter onBlock() code here
   // MUST happen before any other block is processed
   // This adds the state necessary to process the next block
-  chain.stateCache.add(postState);
-  await chain.db.block.add(block);
+  modules.stateCache.add(postState);
+  await modules.db.block.add(block);
 
   // Lightclient server support (only after altair)
   // - Persist state witness
   // - Use block's syncAggregate
-  if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
+  if (computeEpochAtSlot(block.message.slot) >= modules.config.ALTAIR_FORK_EPOCH) {
     try {
-      chain.lightClientServer.onImportBlock(
+      modules.lightClientServer.onImportBlock(
         block.message as altair.BeaconBlock,
         postState as CachedBeaconStateAltair,
         parentBlock
       );
     } catch (e) {
-      chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+      modules.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
     }
   }
 
@@ -265,7 +264,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Send event after everything is done
 
   // Emit all events at once after fully completing importBlock()
-  chain.emitter.emit(ChainEvent.block, block, postState);
+  modules.emitter.emit(ChainEvent.block, block, postState);
   pendingEvents.emit();
 }
 

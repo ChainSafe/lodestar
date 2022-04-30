@@ -185,6 +185,8 @@ export async function onBlock(
     slot: block.message.slot,
     root: blockRoot,
   });
+  // TODO DA confirm if it is fine to use seenBlockProposers or create another data structure?
+  this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex);
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
