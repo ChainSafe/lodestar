@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://chainsafe.github.io/lodestar/packages/params/">
       
       <link rel="icon" href="../../assets/round-icon.ico">
-      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.11">
+      <meta name="generator" content="mkdocs-1.3.0, mkdocs-material-8.2.12">
     
     
       
@@ -21,10 +21,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.8c5ef100.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.27ad92d8.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.9647289d.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.cc9b2e1e.min.css">
         
       
     
@@ -530,26 +530,26 @@
 </ul>
 <h3 id="fork-names">Fork names<a class="headerlink" href="#fork-names" title="Permanent link">&para;</a></h3>
 <p>Many downstream components are namespaced on fork names, or otherwise rely on knowing the fork names ahead of time. The Lodestar params package exports an enum <code>ForkName</code> the enumerates all known fork names.</p>
-<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">ForkName</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">ForkName</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span><span class="w"></span>
 
-<span class="c1">// dummy data</span>
-<span class="kd">let</span> <span class="nx">forkName</span> <span class="o">=</span> <span class="s2">&quot;phase0&quot;</span><span class="p">;</span>
+<span class="c1">// dummy data</span><span class="w"></span>
+<span class="kd">let</span><span class="w"> </span><span class="nx">forkName</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;phase0&quot;</span><span class="p">;</span><span class="w"></span>
 
-<span class="k">switch</span> <span class="p">(</span><span class="nx">forkName</span><span class="p">)</span> <span class="p">{</span>
-  <span class="k">case</span> <span class="nx">ForkName.phase0</span>:
-  <span class="kt">case</span> <span class="nx">ForkName.altair</span>:
-  <span class="kt">case</span> <span class="nx">ForkName.bellatrix</span>:
-  <span class="kt">default</span><span class="o">:</span>
-<span class="p">}</span>
+<span class="k">switch</span><span class="w"> </span><span class="p">(</span><span class="nx">forkName</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="nx">ForkName.phase0</span><span class="o">:</span><span class="w"></span>
+<span class="w">  </span><span class="kt">case</span><span class="w"> </span><span class="nx">ForkName.altair</span><span class="o">:</span><span class="w"></span>
+<span class="w">  </span><span class="kt">case</span><span class="w"> </span><span class="nx">ForkName.bellatrix</span><span class="o">:</span><span class="w"></span>
+<span class="w">  </span><span class="kt">default</span><span class="o">:</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </code></pre></div>
 <h3 id="constants">Constants<a class="headerlink" href="#constants" title="Permanent link">&para;</a></h3>
 <p>All constants defined in the spec are exported verbatim.</p>
-<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">GENESIS_SLOT</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">GENESIS_SLOT</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <h3 id="presets">Presets<a class="headerlink" href="#presets" title="Permanent link">&para;</a></h3>
 <p>Presets are "constants"-ish defined in the spec that can only be configured at build-time. These are meant to be treated as constants, and indeed are treated as constants by all downstream Lodestar libraries. The default preset is <code>mainnet</code>. The only other preset defined is <code>minimal</code>, used only in testing environments.</p>
 <p>The active preset is exported under the <code>ACTIVE_PRESET</code> named export.</p>
-<div class="highlight"><pre><span></span><code><span class="k">import</span> <span class="p">{</span><span class="nx">ACTIVE_PRESET</span><span class="p">,</span> <span class="nx">SLOTS_PER_EPOCH</span><span class="p">}</span> <span class="kr">from</span> <span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><span class="k">import</span><span class="w"> </span><span class="p">{</span><span class="nx">ACTIVE_PRESET</span><span class="p">,</span><span class="w"> </span><span class="nx">SLOTS_PER_EPOCH</span><span class="p">}</span><span class="w"> </span><span class="kr">from</span><span class="w"> </span><span class="s2">&quot;@chainsafe/lodestar-params&quot;</span><span class="p">;</span><span class="w"></span>
 </code></pre></div>
 <p>The preset may be set in one of two ways:</p>
 <ol>
@@ -637,7 +637,7 @@
     <script id="__config" type="application/json">{"base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2a1c317c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.748e2769.min.js"></script>
+      <script src="../../assets/javascripts/bundle.ed9748b7.min.js"></script>
       
     
   </body>
