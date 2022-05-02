@@ -10,6 +10,7 @@ import {
   IExecutionEngine,
   PayloadId,
   PayloadAttributes,
+  PayloadIdCache,
 } from "./interface";
 
 const INTEROP_GAS_LIMIT = 30e6;
@@ -25,6 +26,7 @@ export class ExecutionEngineMock implements IExecutionEngine {
   // Public state to check if notifyForkchoiceUpdate() is called properly
   headBlockRoot = ZERO_HASH_HEX;
   finalizedBlockRoot = ZERO_HASH_HEX;
+  readonly payloadIdCache = new PayloadIdCache();
 
   private knownBlocks = new Map<RootHex, bellatrix.ExecutionPayload>();
   private preparingPayloads = new Map<number, bellatrix.ExecutionPayload>();
