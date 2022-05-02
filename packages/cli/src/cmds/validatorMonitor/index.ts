@@ -8,7 +8,8 @@ export const validatorMonitor: ICliCommand<IValidatorMonitorArgs, IGlobalArgs> =
   describe: "Monitor validator given a validator index range",
   examples: [
     {
-      command: "validatorMonitor --network prater --beaconApiUrl http://localhost:9596 --validatorIndexes 200008..200015",
+      command:
+        "validatorMonitor --network prater --beaconApiUrl http://localhost:9596 --validatorIndexes 200008..200015",
       description: "Run validatorMonitor with prater network",
     },
   ],
