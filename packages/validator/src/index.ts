@@ -3,7 +3,7 @@
  */
 
 export {Validator, ValidatorOptions} from "./validator";
-export {DutiesWatcher} from "./dutiesWatcher";
+export {ValidatorMonitor} from "./validatorMonitor";
 export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore";
 export {waitForGenesis} from "./genesis";
 export {getMetrics, Metrics, MetricsRegister} from "./metrics";

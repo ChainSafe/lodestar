@@ -2,24 +2,23 @@ import {ICliCommandOptions, ILogArgs} from "../../util";
 import {beaconPathsOptions, logOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 
-export type IDutiesWatcherArgs = ILogArgs & {
+export type IValidatorMonitorArgs = ILogArgs & {
   logFile: IBeaconPaths["logFile"];
   beaconApiUrl: string;
   validatorIndexes: string;
 };
 
-export const dutiesWatcherOptions: ICliCommandOptions<IDutiesWatcherArgs> = {
+export const validatorMonitorOptions: ICliCommandOptions<IValidatorMonitorArgs> = {
   ...logOptions,
   logFile: beaconPathsOptions.logFile,
   beaconApiUrl: {
-    description: "Url to a beacon node that support lightclient API",
+    description: "Url to a beacon node",
     type: "string",
     require: true,
   },
   validatorIndexes: {
-    hidden: false,
-    description: "Range (inclusive) of validator key indexes to validate with: 270000..270016",
+    description: "Range (inclusive) of validator key indexes to monitor",
     type: "string",
-    default: "270000..270016",
+    require: true,
   },
 };

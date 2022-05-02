@@ -6,7 +6,7 @@ import {Genesis} from "@chainsafe/lodestar-types/phase0";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {Clock, extendError} from "./util";
 
-export type DutiesWatcherOptions = {
+export type ValidatorMonitorOptions = {
   api: Api;
   logger: ILogger;
   config: IChainForkConfig;
@@ -19,13 +19,16 @@ enum Status {
 
 type State = {status: Status.running; controller: AbortController} | {status: Status.stopped};
 
-export class DutiesWatcher {
+/**
+ * This helps monitor performance of validators by periodically polling prepareBeaconCommitteeSubnet
+ */
+export class ValidatorMonitor {
   private api: Api;
   private logger: ILogger;
   private clock: Clock;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: DutiesWatcherOptions, readonly genesis: Genesis, readonly validatorIndexes: number[]) {
+  constructor(opts: ValidatorMonitorOptions, readonly genesis: Genesis, readonly validatorIndexes: number[]) {
     this.api = opts.api;
     this.logger = opts.logger;
     const config = createIBeaconConfig(opts.config, genesis.genesisValidatorsRoot);

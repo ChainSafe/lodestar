@@ -1,12 +1,12 @@
 import {getClient} from "@chainsafe/lodestar-api";
-import {DutiesWatcher} from "@chainsafe/lodestar-validator";
+import {ValidatorMonitor} from "@chainsafe/lodestar-validator";
 import {getBeaconConfigFromArgs} from "../../config/beaconParams";
 import {IGlobalArgs} from "../../options";
 import {getCliLogger, initBLS, onGracefulShutdown, parseRange} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
-import {IDutiesWatcherArgs} from "./options";
+import {IValidatorMonitorArgs} from "./options";
 
-export async function dutiesWatcherHandler(args: IDutiesWatcherArgs & IGlobalArgs): Promise<void> {
+export async function validatorMonitorHandler(args: IValidatorMonitorArgs & IGlobalArgs): Promise<void> {
   await initBLS();
 
   const config = getBeaconConfigFromArgs(args);
@@ -24,8 +24,8 @@ export async function dutiesWatcherHandler(args: IDutiesWatcherArgs & IGlobalArg
   onGracefulShutdown(async () => {
     for (const cb of onGracefulShutdownCbs) await cb();
   }, logger.info.bind(logger));
-  const dutiesWatcher = new DutiesWatcher({api, logger, config}, genesisData, validatorIndexes);
-  onGracefulShutdownCbs.push(async () => await dutiesWatcher.stop());
-  await dutiesWatcher.start();
-  logger.info("Hello, I'm DutiesWatcher, I'm gonna watch duties for validator", validatorIndexes);
+  const validatorMonitor = new ValidatorMonitor({api, logger, config}, genesisData, validatorIndexes);
+  onGracefulShutdownCbs.push(async () => await validatorMonitor.stop());
+  await validatorMonitor.start();
+  logger.info("Monitor validators", validatorIndexes);
 }
