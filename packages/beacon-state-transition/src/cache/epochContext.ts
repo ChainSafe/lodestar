@@ -418,6 +418,7 @@ export class EpochContext {
     const nextEpoch = currEpoch + 1;
 
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
+    this.currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
     this.nextProposerSeed = getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
 
     this.proposers = computeProposers(this.currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
