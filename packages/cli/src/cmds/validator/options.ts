@@ -4,6 +4,7 @@ import {accountValidatorOptions, IAccountValidatorArgs} from "../account/cmds/va
 import {logOptions, beaconPathsOptions} from "../beacon/options";
 import {IBeaconPaths} from "../beacon/paths";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
+import {doppelgangerOptions} from "../../options/doppelgangerOptions";
 
 export const validatorMetricsDefaultOptions = {
   enabled: false,
@@ -38,6 +39,7 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...accountValidatorOptions,
   ...logOptions,
   ...keymanagerOptions,
+  ...doppelgangerOptions,
   logFile: beaconPathsOptions.logFile,
 
   validatorsDbDir: {
@@ -124,18 +126,6 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     group: "metrics",
   },
 
-  enableDoppelganger: {
-    description: "Enables Doppelganger protection",
-    defaultDescription: "false",
-    default: false,
-    type: "boolean",
-  },
-
-  doppelgangerEpochsToCheck: {
-    description: "Number of epoch the doppelganger protection should miss validator duties for",
-    default: 3,
-    type: "number",
-  },
   // For testing only
 
   interopIndexes: {

@@ -4,6 +4,7 @@ import {beaconOptions, IBeaconArgs} from "../beacon/options";
 import {beaconNodeOptions} from "../../options";
 import {IValidatorCliArgs, validatorOptions} from "../validator/options";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions";
+import {doppelgangerOptions} from "../../options/doppelgangerOptions";
 
 type IDevOwnArgs = {
   genesisEth1Hash?: string;
@@ -19,6 +20,7 @@ type IDevOwnArgs = {
 
 const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
   ...keymanagerOptions,
+  ...doppelgangerOptions,
   ...{
     importKeystoresPath: validatorOptions["importKeystoresPath"],
     importKeystoresPassword: validatorOptions["importKeystoresPassword"],
@@ -59,18 +61,6 @@ const devOwnOptions: ICliCommandOptions<IDevOwnArgs> = {
     description: "Address to connect to BeaconNode. Pass 'memory' for in memory communication",
     default: "http://127.0.0.1:9596",
     type: "string",
-  },
-
-  enableDoppelganger: {
-    description: "Enables Doppelganger protection",
-    defaultDescription: "false",
-    type: "boolean",
-  },
-
-  doppelgangerEpochsToCheck: {
-    description: "Number of epoch the doppelganger protection should miss validator duties for",
-    default: 3,
-    type: "number",
   },
 };
 
