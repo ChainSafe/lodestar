@@ -49,7 +49,7 @@ export function isVotingKeystore(filename: string): boolean {
       // Key derivation path reference:
       //
       // https://eips.ethereum.org/EIPS/eip-2334
-      /keystore-m_12381_3600_[0-9]+_0_0-[0-9]+.json/.test(filename))
+      /keystore[\w-]*.json/.test(filename))
   );
 }
 
