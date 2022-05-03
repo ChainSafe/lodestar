@@ -181,6 +181,10 @@ export class Network implements INetwork {
     return this.peerManager.getConnectedPeerIds();
   }
 
+  getSyncedPeers(): PeerId[] {
+    return this.peerManager.getSyncedPeers();
+  }
+
   hasSomeConnectedPeer(): boolean {
     return this.peerManager.hasSomeConnectedPeer();
   }

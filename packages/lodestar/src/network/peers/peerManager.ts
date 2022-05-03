@@ -26,6 +26,7 @@ import {
 } from "./utils";
 import {SubnetType} from "../metadata";
 import {Eth2Gossipsub} from "../gossip/gossipsub";
+import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 
 /** heartbeat performs regular updates such as updating reputations and performing discovery requests */
 const HEARTBEAT_INTERVAL_MS = 30 * 1000;
@@ -188,6 +189,15 @@ export class PeerManager {
   }
 
   /**
+   * Return synced peers.
+   */
+  getSyncedPeers(): PeerId[] {
+    return Array.from(this.connectedPeers.values())
+      .filter((peerData) => peerData.isSynced)
+      .map((peerData) => peerData.peerId);
+  }
+
+  /**
    * Efficiently check if there is at least one peer connected
    */
   hasSomeConnectedPeer(): boolean {
@@ -329,6 +339,7 @@ export class PeerManager {
     // NOTE: Peer may not be connected anymore at this point, potential race condition
     // libp2p.connectionManager.get() returns not null if there's +1 open connections with `peer`
     if (peerData) peerData.relevantStatus = RelevantPeerStatus.relevant;
+    if (peerData) peerData.isSynced = status.headSlot >= this.chain.clock.currentSlot - SLOTS_PER_EPOCH;
     if (this.libp2p.connectionManager.get(peer)) {
       this.networkEventBus.emit(NetworkEvent.peerConnected, peer, status);
     }
@@ -531,6 +542,7 @@ export class PeerManager {
         lastStatusUnixTsMs: direction === "outbound" ? 0 : now - STATUS_INTERVAL_MS + STATUS_INBOUND_GRACE_PERIOD,
         connectedUnixTsMs: now,
         relevantStatus: RelevantPeerStatus.Unknown,
+        isSynced: false,
         direction,
         peerId: peer,
         metadata: null,
@@ -649,15 +661,18 @@ export class PeerManager {
       metrics.peersByClient.set({client}, peers);
     }
 
-    let syncPeers = 0;
+    let relevantPeers = 0;
+    let syncedPeers = 0;
     for (const peer of this.connectedPeers.values()) {
       if (peer.relevantStatus === RelevantPeerStatus.relevant) {
-        syncPeers++;
+        relevantPeers++;
       }
+      if (peer.isSynced) syncedPeers++;
     }
 
     metrics.peers.set(total);
-    metrics.peersSync.set(syncPeers);
+    metrics.peersSync.set(syncedPeers);
+    metrics.peersRelevant.set(relevantPeers);
     metrics.peerScore.set(scores);
     metrics.peerConnectionLength.set(connSecs);
     // TODO: Optimize doing observe in batch

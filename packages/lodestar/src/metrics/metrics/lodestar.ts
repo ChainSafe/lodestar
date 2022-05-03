@@ -66,6 +66,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_sync_count",
       help: "Current count of peers useful for sync",
     }),
+    peersRelevant: register.gauge({
+      name: "lodestar_peers_relevant_count",
+      help: "Current count of peers relevant to this node",
+    }),
     peerConnectedEvent: register.gauge<"direction">({
       name: "lodestar_peer_connected_total",
       help: "Total number of peer:connected event, labeled by direction",
@@ -372,6 +376,11 @@ export function createLodestarMetrics(
       help: "Time to process a single block in seconds",
       buckets: [0.1, 1, 10],
     }),
+    stfnElappsedTimeTillProcessed: register.histogram({
+      name: "lodestar_stfn_elappsed_time_until_processed_seconds",
+      help: "Duration from slot time until block is processed in seconds",
+      buckets: [0.1, 1, 10],
+    }),
 
     // BLS verifier thread pool and queue
 
@@ -487,33 +496,49 @@ export function createLodestarMetrics(
     },
 
     syncUnknownBlock: {
-      requests: register.gauge({
+      requests: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_requests_total",
         help: "Total number of unknownBlockParent events or requests",
+        labelNames: ["type"],
       }),
-      pendingBlocks: register.gauge({
+      pendingBlocks: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",
+        labelNames: ["type"],
       }),
-      knownBadBlocks: register.gauge({
+      knownBadBlocks: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",
         help: "Current size of UnknownBlockSync known bad blocks cache",
+        labelNames: ["type"],
       }),
-      processedBlocksSuccess: register.gauge({
+      processedBlocksSuccess: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_processed_blocks_success_total",
         help: "Total number of processed blocks successes in UnknownBlockSync",
+        labelNames: ["type"],
+      }),
+      elappsedTimeTillProcessed: register.gauge<"type">({
+        name: "lodestar_sync_unknown_block_elappsed_time_till_processed",
+        help: "Duration from received time until the block is processed",
+        labelNames: ["type"],
+      }),
+      slotTimeTillProcessed: register.gauge<"type">({
+        name: "lodestar_sync_unknown_block_slot_time_till_processed",
+        help: "Duration from slot time until the block is processed",
+        labelNames: ["type"],
       }),
       processedBlocksError: register.gauge({
         name: "lodestar_sync_unknown_block_processed_blocks_error_total",
         help: "Total number of processed blocks errors in UnknownBlockSync",
       }),
-      downloadedBlocksSuccess: register.gauge({
+      downloadedBlocksSuccess: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_downloaded_blocks_success_total",
         help: "Total number of downloaded blocks successes in UnknownBlockSync",
+        labelNames: ["type"],
       }),
-      downloadedBlocksError: register.gauge({
+      downloadedBlocksError: register.gauge<"type">({
         name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
         help: "Total number of downloaded blocks errors in UnknownBlockSync",
+        labelNames: ["type"],
       }),
       removedBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_removed_blocks_total",

@@ -31,6 +31,7 @@ export interface INetwork {
   getEnr(): ENR | undefined;
   getConnectionsByPeer(): Map<string, Connection[]>;
   getConnectedPeers(): PeerId[];
+  getSyncedPeers(): PeerId[];
   hasSomeConnectedPeer(): boolean;
   /** Subscribe, search peers, join long-lived attnets */
   prepareBeaconCommitteeSubnet(subscriptions: CommitteeSubscription[]): void;

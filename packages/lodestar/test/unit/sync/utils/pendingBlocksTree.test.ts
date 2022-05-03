@@ -1,6 +1,6 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {PendingBlock, PendingBlockStatus} from "../../../../src/sync";
+import {PendingBlock, PendingBlockStatus, PendingBlockType} from "../../../../src/sync";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
@@ -55,6 +55,8 @@ describe("sync / pendingBlocksTree", () => {
         blockRootHex: block.block,
         parentBlockRootHex: block.parent,
         status: PendingBlockStatus.pending,
+        // the tests in this file is not for UNKNOWN_BLOCK type
+        type: PendingBlockType.UNKNOWN_PARENT,
       } as PendingBlock);
     }
 

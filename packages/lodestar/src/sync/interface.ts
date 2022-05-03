@@ -2,6 +2,7 @@ import {ILogger} from "@chainsafe/lodestar-utils";
 import {allForks, RootHex, Slot, phase0} from "@chainsafe/lodestar-types";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {routes} from "@chainsafe/lodestar-api";
+import PeerId from "peer-id";
 import {INetwork} from "../network";
 import {IBeaconChain} from "../chain";
 import {IMetrics} from "../metrics";
@@ -58,14 +59,27 @@ export interface ISyncModules {
   wsCheckpoint?: phase0.Checkpoint;
 }
 
+export enum PendingBlockType {
+  UNKNOWN_BLOCK = "UNKNOWN_BLOCK",
+  UNKNOWN_PARENT = "UNKNOWN_PARENT",
+}
+
 export type PendingBlock = {
   blockRootHex: RootHex;
-  parentBlockRootHex: RootHex;
-  signedBlock: allForks.SignedBeaconBlock;
   peerIdStrs: Set<string>;
   status: PendingBlockStatus;
   downloadAttempts: number;
-};
+  lastQueriedTimeByPeer: Map<PeerId, number>;
+  receivedTimeSec: number;
+} & (
+  | {
+      type: PendingBlockType.UNKNOWN_PARENT;
+      parentBlockRootHex: RootHex;
+      signedBlock: allForks.SignedBeaconBlock;
+    }
+  | {type: PendingBlockType.UNKNOWN_BLOCK}
+);
+
 export enum PendingBlockStatus {
   pending = "pending",
   fetching = "fetching",

@@ -22,6 +22,9 @@ export type PeerData = {
   agentVersion: string | null;
   agentClient: ClientKind | null;
   encodingPreference: Encoding | null;
+  // similar to our sync,
+  // a peer is considered synced if its head >= currentSlot - SLOTS_PER_EPOCH
+  isSynced: boolean;
 };
 
 /**

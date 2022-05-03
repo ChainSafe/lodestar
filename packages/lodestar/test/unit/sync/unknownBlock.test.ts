@@ -47,7 +47,7 @@ describe("sync / UnknownBlockSync", () => {
 
     const network: Partial<INetwork> = {
       events: new NetworkEventBus(),
-      getConnectedPeers: () => [peer],
+      getSyncedPeers: () => [peer],
       reqResp: reqResp as IReqResp,
     };
 
