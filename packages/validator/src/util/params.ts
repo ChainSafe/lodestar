@@ -8,7 +8,7 @@ export class NotEqualParamsError extends Error {}
 export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: Record<string, string>): void {
   const localConfigJson = chainConfigToJson(localConfig) as Record<string, unknown>;
 
-  const remoteConfigJson = {
+  const externalSpecJsonWithDefaults = {
     // fill missing properties in remote config with spec default values
     ...chainConfigToJson(defaultChainConfig),
     ...externalSpecJson,
@@ -19,9 +19,10 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
   // Ensure only that the localConfig values match the remote spec
   for (const key of Object.keys(localConfigJson)) {
     if (
-      (localConfigJson[key] as string)?.toLocaleLowerCase() !== (remoteConfigJson[key] as string)?.toLocaleLowerCase()
+      (localConfigJson[key] as string)?.toLocaleLowerCase() !==
+      (externalSpecJsonWithDefaults[key] as string)?.toLocaleLowerCase()
     )
-      errors.push(`${key} different value: ${localConfigJson[key]} != ${remoteConfigJson[key]}`);
+      errors.push(`${key} different value: ${localConfigJson[key]} != ${externalSpecJsonWithDefaults[key]}`);
   }
 
   if (errors.length > 0) {
