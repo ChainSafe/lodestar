@@ -96,7 +96,7 @@ then
     echo "setting up geth directory"
     $dockerExec run --rm -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir/geth:/data $GETH_IMAGE --datadir /data init /config/genesis.json
   fi;
-  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data $GETH_IMAGE --datadir /data/geth --networkid $NETWORK_ID --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS --bootnodes $EXTRA_BOOTNODES$bootNode"
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir:/data $GETH_IMAGE --datadir /data/geth --authrpc.jwtsecret /data/jwtsecret $GETH_EXTRA_ARGS --bootnodes $EXTRA_BOOTNODES$bootNode"
 
 elif [ "$elClient" == "nethermind" ] 
 then
@@ -104,7 +104,7 @@ then
   $dockerExec pull $NETHERMIND_IMAGE
 
   elName="$DEVNET_NAME-nethermind"
-  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --Merge.TerminalTotalDifficulty=$MERGE_TTD --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $NETHERMIND_IMAGE --datadir /data/nethermind  --Init.ChainSpecPath=/config/nethermind_genesis.json --JsonRpc.JwtSecretFile /data/jwtsecret $NETHERMIND_EXTRA_ARGS --Discovery.Bootnodes $EXTRA_BOOTNODES$bootNode"
 
 elif [ "$elClient" == "ethereumjs" ] 
 then
@@ -112,7 +112,7 @@ then
   $dockerExec pull $ETHEREUMJS_IMAGE
 
   elName="$DEVNET_NAME-ethereumjs"
-  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $ETHEREUMJS_IMAGE --datadir /data/ethereumjs --gethGenesis /config/genesis.json --jwt-secret /data/jwtsecret $ETHEREUMJS_EXTRA_ARGS --bootnodes=$bootNodeWithSpace "
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $ETHEREUMJS_IMAGE --datadir /data/ethereumjs --gethGenesis /config/genesis.json --jwt-secret /data/jwtsecret $ETHEREUMJS_EXTRA_ARGS --bootnodes=$EXTRA_BOOTNODES$bootNode"
 
 elif [ "$elClient" == "besu" ] 
 then
@@ -120,7 +120,7 @@ then
   $dockerExec pull $BESU_IMAGE
 
   elName="$DEVNET_NAME-besu"
-  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $BESU_IMAGE --data-path=/data --genesis-file=/config/besu_genesis.json --network-id=$NETWORK_ID --engine-jwt-secret=/data/jwtsecret $BESU_EXTRA_ARGS --bootnodes=$EXTRA_BOOTNODES$bootNode"
+  elCmd="$dockerCmd --name $elName $elDockerNetwork -v $currentDir/$dataDir/$configGitDir:/config -v $currentDir/$dataDir:/data $BESU_IMAGE --data-path=/data --genesis-file=/config/besu_genesis.json --engine-jwt-secret=/data/jwtsecret $BESU_EXTRA_ARGS --bootnodes=$EXTRA_BOOTNODES$bootNode"
 
 fi
 
