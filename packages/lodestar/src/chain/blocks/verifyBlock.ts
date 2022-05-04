@@ -3,7 +3,6 @@ import {
   computeStartSlotAtEpoch,
   allForks,
   bellatrix,
-  getCurrentSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
@@ -227,14 +226,13 @@ export async function verifyBlockStateTransition(
         const parentRoot = toHexString(block.message.parentRoot);
         const parentBlock = chain.forkChoice.getBlockHex(parentRoot);
         const justifiedBlock = chain.forkChoice.getJustifiedBlock();
-        const clockSlot = getCurrentSlot(chain.config, postState.genesisTime);
 
         if (
           !parentBlock ||
           // Following condition is the !(Not) of the safe import condition
           (parentBlock.executionStatus === ExecutionStatus.PreMerge &&
             justifiedBlock.executionStatus === ExecutionStatus.PreMerge &&
-            block.message.slot + opts.safeSlotsToImportOptimistically > clockSlot)
+            block.message.slot + opts.safeSlotsToImportOptimistically > chain.clock.currentSlot)
         ) {
           throw new BlockError(block, {
             code: BlockErrorCode.EXECUTION_ENGINE_ERROR,
