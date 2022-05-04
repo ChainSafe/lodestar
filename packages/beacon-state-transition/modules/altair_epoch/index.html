@@ -657,7 +657,7 @@
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="getrewardsandpenalties_1">getRewardsAndPenalties<a class="headerlink" href="#getrewardsandpenalties_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getRewardsAndPenalties</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>process</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>[number[], number[]]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/getRewardsAndPenalties.ts#L44">packages/beacon-state-transition/src/altair/epoch/getRewardsAndPenalties.ts:44</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/getRewardsAndPenalties.ts#L44">packages/beacon-state-transition/src/altair/epoch/getRewardsAndPenalties.ts:44</a></em></p>
 <p>An aggregate of getFlagIndexDeltas and getInactivityPenaltyDeltas that loop through process.statuses 1 time instead of 4.</p>
 <ul>
 <li>On normal mainnet conditions</li>
@@ -693,7 +693,7 @@
 <hr />
 <h3 id="processepoch">processEpoch<a class="headerlink" href="#processepoch" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processEpoch</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/index.ts#L28">packages/beacon-state-transition/src/altair/epoch/index.ts:28</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/index.ts#L28">packages/beacon-state-transition/src/altair/epoch/index.ts:28</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -717,7 +717,7 @@
 <hr />
 <h3 id="processinactivityupdates">processInactivityUpdates<a class="headerlink" href="#processinactivityupdates" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processInactivityUpdates</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/processInactivityUpdates.ts#L20">packages/beacon-state-transition/src/altair/epoch/processInactivityUpdates.ts:20</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/processInactivityUpdates.ts#L20">packages/beacon-state-transition/src/altair/epoch/processInactivityUpdates.ts:20</a></em></p>
 <p>Mutates <code>inactivityScores</code> from pre-calculated validator statuses.</p>
 <p>PERF: Cost = iterate over an array of size $VALIDATOR_COUNT + 'proportional' to how many validtors are inactive or
 have been inactive in the past, i.e. that require an update to their inactivityScore. Worst case = all validators
@@ -752,7 +752,7 @@ need to update their non-zero <code>inactivityScore</code>.</p>
 <hr />
 <h3 id="processparticipationflagupdates">processParticipationFlagUpdates<a class="headerlink" href="#processparticipationflagupdates" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processParticipationFlagUpdates</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/processParticipationFlagUpdates.ts#L12">packages/beacon-state-transition/src/altair/epoch/processParticipationFlagUpdates.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/processParticipationFlagUpdates.ts#L12">packages/beacon-state-transition/src/altair/epoch/processParticipationFlagUpdates.ts:12</a></em></p>
 <p>Updates <code>state.previousEpochParticipation</code> with precalculated epoch participation. Creates a new empty tree for
 <code>state.currentEpochParticipation</code>.</p>
 <p>PERF: Cost = 'proportional' $VALIDATOR_COUNT. Since it updates all of them at once, it will always recreate both
@@ -776,7 +776,7 @@ trees completely.</p>
 <hr />
 <h3 id="processrewardsandpenalties">processRewardsAndPenalties<a class="headerlink" href="#processrewardsandpenalties" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processRewardsAndPenalties</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/processRewardsAndPenalties.ts#L11">packages/beacon-state-transition/src/altair/epoch/processRewardsAndPenalties.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/processRewardsAndPenalties.ts#L11">packages/beacon-state-transition/src/altair/epoch/processRewardsAndPenalties.ts:11</a></em></p>
 <p>Iterate over all validator and compute rewards and penalties to apply to balances.</p>
 <p>PERF: Cost = 'proportional' to $VALIDATOR_COUNT. Extra work is done per validator the more status flags are set</p>
 <p><strong>Parameters:</strong></p>
@@ -802,7 +802,7 @@ trees completely.</p>
 <hr />
 <h3 id="processslashings">processSlashings<a class="headerlink" href="#processslashings" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processSlashings</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>, <code>epochProcess</code>: <a href="../../interfaces/cache.epochprocess/">EpochProcess</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/processSlashings.ts#L5">packages/beacon-state-transition/src/altair/epoch/processSlashings.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/processSlashings.ts#L5">packages/beacon-state-transition/src/altair/epoch/processSlashings.ts:5</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -826,7 +826,7 @@ trees completely.</p>
 <hr />
 <h3 id="processsynccommitteeupdates">processSyncCommitteeUpdates<a class="headerlink" href="#processsynccommitteeupdates" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>processSyncCommitteeUpdates</strong>(<code>state</code>: <a href="../cache/#cachedbeaconstatealtair">CachedBeaconStateAltair</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/0740259/packages/beacon-state-transition/src/altair/epoch/processSyncCommitteeUpdates.ts#L13">packages/beacon-state-transition/src/altair/epoch/processSyncCommitteeUpdates.ts:13</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/3eeb6e2/packages/beacon-state-transition/src/altair/epoch/processSyncCommitteeUpdates.ts#L13">packages/beacon-state-transition/src/altair/epoch/processSyncCommitteeUpdates.ts:13</a></em></p>
 <p>Rotate nextSyncCommittee to currentSyncCommittee if sync committee period is over.</p>
 <p>PERF: Once every <code>EPOCHS_PER_SYNC_COMMITTEE_PERIOD</code>, do an expensive operation to compute the next committee.
 Calculating the next sync committee has a proportional cost to $VALIDATOR_COUNT</p>
