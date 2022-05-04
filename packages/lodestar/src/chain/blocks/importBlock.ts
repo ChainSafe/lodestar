@@ -210,6 +210,21 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
     }
+
+    // Lightclient server support (only after altair)
+    // - Persist state witness
+    // - Use block's syncAggregate
+    if (blockEpoch >= chain.config.ALTAIR_FORK_EPOCH) {
+      try {
+        chain.lightClientServer.onImportBlockHead(
+          block.message as altair.BeaconBlock,
+          postState as CachedBeaconStateAltair,
+          parentBlock
+        );
+      } catch (e) {
+        chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+      }
+    }
   }
 
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
@@ -244,21 +259,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // This adds the state necessary to process the next block
   chain.stateCache.add(postState);
   await chain.db.block.add(block);
-
-  // Lightclient server support (only after altair)
-  // - Persist state witness
-  // - Use block's syncAggregate
-  if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
-    try {
-      chain.lightClientServer.onImportBlock(
-        block.message as altair.BeaconBlock,
-        postState as CachedBeaconStateAltair,
-        parentBlock
-      );
-    } catch (e) {
-      chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
-    }
-  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 
