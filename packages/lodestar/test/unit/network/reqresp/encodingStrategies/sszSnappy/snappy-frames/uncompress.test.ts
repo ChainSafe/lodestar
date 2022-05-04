@@ -27,10 +27,12 @@ describe("snappy frames uncompress", function () {
     const decompress = new SnappyFramesUncompress();
 
     const testData = Buffer.alloc(100000, 4).toString();
+    let result = Buffer.alloc(0);
 
     compressStream.on("data", function (data) {
-      const result = decompress.uncompress(data);
-      if (result) {
+      // testData will come compressed as two or more chunks
+      result = Buffer.concat([result, decompress.uncompress(data) ?? Buffer.alloc(0)]);
+      if (result.length === testData.length) {
         expect(result.toString()).to.be.equal(testData);
         done();
       }
