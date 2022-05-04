@@ -21,7 +21,7 @@ export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: R
     const localValue = String(localConfigJson[key]).toLocaleLowerCase();
     const remoteValue = String(externalSpecJsonWithDefaults[key]).toLocaleLowerCase();
     if (localValue !== remoteValue) {
-      errors.push(`${key} different value: ${localConfigJson[key]} != ${externalSpecJsonWithDefaults[key]}`);
+      errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
     }
   }
 
