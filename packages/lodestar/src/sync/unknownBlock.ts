@@ -26,12 +26,13 @@ export class UnknownBlockSync {
    */
   private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
   private readonly knownBadBlocks = new Set<RootHex>();
+  private readonly logger;
 
   constructor(
     private readonly config: IChainForkConfig,
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
-    private readonly logger: ILogger,
+    logger: ILogger,
     private readonly metrics: IMetrics | null,
     opts?: SyncOptions
   ) {
@@ -40,6 +41,8 @@ export class UnknownBlockSync {
       this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlockParent);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     }
+
+    this.logger = logger.child({module: "UBS"});
 
     if (metrics) {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
@@ -229,15 +232,22 @@ export class UnknownBlockSync {
       this.chain.processBlock(signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
     );
     pendingBlock.status = PendingBlockStatus.pending;
-    const {type, blockRootHex, receivedTimeSec} = pendingBlock;
+    const {type, blockRootHex, receivedTimeSec, downloadAttempts} = pendingBlock;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
     else {
       this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
       const sec = Date.now() / 1000;
       const slotTimeSec = sec - (this.chain.genesisTime + signedBlock.message.slot * this.config.SECONDS_PER_SLOT);
-      this.metrics?.syncUnknownBlock.slotTimeTillProcessed.set({type}, slotTimeSec);
-      this.metrics?.syncUnknownBlock.elappsedTimeTillProcessed.set({type}, sec - receivedTimeSec);
+      this.metrics?.syncUnknownBlock.slotTimeTillProcessed.observe({type}, slotTimeSec);
+      this.metrics?.syncUnknownBlock.elapsedTimeTillProcessed.observe({type}, sec - receivedTimeSec);
+      this.logger.verbose("Fetched and processed block", {
+        root: prettyBytes(blockRootHex),
+        type: pendingBlock.type,
+        sinceSlot: slotTimeSec,
+        sinceReceived: sec - receivedTimeSec,
+        downloadAttempts,
+      });
     }
 
     if (!res.err) {

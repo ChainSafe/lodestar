@@ -108,7 +108,7 @@ export function processBlock(
   try {
     processBlockByFork[fork](postState, block, verifySignatures);
     const delaySec = Date.now() / 1000 - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-    metrics?.stfnElappsedTimeTillProcessed.observe(delaySec);
+    metrics?.stfnElapsedTimeTillProcessed.observe(delaySec);
   } finally {
     if (timer) timer();
   }
