@@ -168,10 +168,10 @@ async function getKeystorePassphrase(
     const passphrase = fs.readFileSync(passphraseFile, "utf8");
     try {
       await keystore.decrypt(stripOffNewlines(passphrase));
-      console.log(`Imported passphrase ${passphraseFile}`);
+      console.log("Imported passphrase successfully");
       return passphrase;
     } catch (e) {
-      console.log(`Imported passphrase ${passphraseFile}, but it's invalid: ${(e as Error).message}`);
+      console.log(`Imported passphrase, but it's invalid: ${(e as Error).message}`);
     }
   }
 
