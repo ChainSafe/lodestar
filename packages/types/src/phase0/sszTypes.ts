@@ -36,6 +36,7 @@ const {
   UintBn64,
   Slot,
   Epoch,
+  EpochInf,
   CommitteeIndex,
   ValidatorIndex,
   Gwei,
@@ -63,6 +64,17 @@ export const BeaconBlockHeader = new ContainerType(
   {typeName: "BeaconBlockHeader", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
+export const BeaconBlockHeaderBn = new ContainerType(
+  {
+    slot: UintBn64,
+    proposerIndex: ValidatorIndex,
+    parentRoot: Root,
+    stateRoot: Root,
+    bodyRoot: Root,
+  },
+  {typeName: "BeaconBlockHeader", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
 export const SignedBeaconBlockHeader = new ContainerType(
   {
     message: BeaconBlockHeader,
@@ -71,9 +83,25 @@ export const SignedBeaconBlockHeader = new ContainerType(
   {typeName: "SignedBeaconBlockHeader", jsonCase: "eth2"}
 );
 
+export const SignedBeaconBlockHeaderBn = new ContainerType(
+  {
+    message: BeaconBlockHeaderBn,
+    signature: BLSSignature,
+  },
+  {typeName: "SignedBeaconBlockHeader", jsonCase: "eth2"}
+);
+
 export const Checkpoint = new ContainerType(
   {
     epoch: Epoch,
+    root: Root,
+  },
+  {typeName: "Checkpoint", jsonCase: "eth2"}
+);
+
+export const CheckpointBn = new ContainerType(
+  {
+    epoch: UintBn64,
     root: Root,
   },
   {typeName: "Checkpoint", jsonCase: "eth2"}
@@ -199,10 +227,10 @@ export const ValidatorContainer = new ContainerType(
     withdrawalCredentials: Bytes32,
     effectiveBalance: UintNum64,
     slashed: Boolean,
-    activationEligibilityEpoch: Epoch,
-    activationEpoch: Epoch,
-    exitEpoch: Epoch,
-    withdrawableEpoch: Epoch,
+    activationEligibilityEpoch: EpochInf,
+    activationEpoch: EpochInf,
+    exitEpoch: EpochInf,
+    withdrawableEpoch: EpochInf,
   },
   {typeName: "Validator", jsonCase: "eth2"}
 );
@@ -231,10 +259,30 @@ export const AttestationData = new ContainerType(
   {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
 );
 
+export const AttestationDataBn = new ContainerType(
+  {
+    slot: UintBn64,
+    index: UintBn64,
+    beaconBlockRoot: Root,
+    source: CheckpointBn,
+    target: CheckpointBn,
+  },
+  {typeName: "AttestationData", jsonCase: "eth2", cachePermanentRootStruct: true}
+);
+
 export const IndexedAttestation = new ContainerType(
   {
     attestingIndices: CommitteeIndices,
     data: AttestationData,
+    signature: BLSSignature,
+  },
+  {typeName: "IndexedAttestation", jsonCase: "eth2"}
+);
+
+export const IndexedAttestationBn = new ContainerType(
+  {
+    attestingIndices: CommitteeIndices,
+    data: AttestationDataBn,
     signature: BLSSignature,
   },
   {typeName: "IndexedAttestation", jsonCase: "eth2"}
@@ -272,8 +320,8 @@ export const Attestation = new ContainerType(
 
 export const AttesterSlashing = new ContainerType(
   {
-    attestation1: IndexedAttestation,
-    attestation2: IndexedAttestation,
+    attestation1: IndexedAttestationBn,
+    attestation2: IndexedAttestationBn,
   },
   {typeName: "AttesterSlashing", jsonCase: "eth2"}
 );
@@ -288,8 +336,8 @@ export const Deposit = new ContainerType(
 
 export const ProposerSlashing = new ContainerType(
   {
-    signedHeader1: SignedBeaconBlockHeader,
-    signedHeader2: SignedBeaconBlockHeader,
+    signedHeader1: SignedBeaconBlockHeaderBn,
+    signedHeader2: SignedBeaconBlockHeaderBn,
   },
   {typeName: "ProposerSlashing", jsonCase: "eth2"}
 );

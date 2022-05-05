@@ -3,8 +3,8 @@ import {ForkName} from "@chainsafe/lodestar-params";
 
 import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
-import {isValidIndexedAttestation} from "./isValidIndexedAttestation";
 import {slashValidatorAllForks} from "./slashValidator";
+import {isValidIndexedAttestationBn} from "./isValidIndexedAttestation";
 
 /**
  * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -48,10 +48,10 @@ export function assertValidAttesterSlashing(
   if (!isSlashableAttestationData(attestation1.data, attestation2.data)) {
     throw new Error("AttesterSlashing is not slashable");
   }
-  if (!isValidIndexedAttestation(state, attestation1, verifySignatures)) {
-    throw new Error("AttesterSlashing attestation1 is not a valid IndexedAttestation");
-  }
-  if (!isValidIndexedAttestation(state, attestation2, verifySignatures)) {
-    throw new Error("AttesterSlashing attestation2 is not a valid IndexedAttestation");
+
+  for (const [i, attestation] of [attestation1, attestation2].entries()) {
+    if (!isValidIndexedAttestationBn(state, attestation, verifySignatures)) {
+      throw new Error(`AttesterSlashing attestation${i} is invalid`);
+    }
   }
 }

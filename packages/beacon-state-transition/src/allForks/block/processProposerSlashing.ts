@@ -28,8 +28,6 @@ export function assertValidProposerSlashing(
   proposerSlashing: phase0.ProposerSlashing,
   verifySignatures = true
 ): void {
-  const {epochCtx} = state;
-  const {BeaconBlockHeader} = ssz.phase0;
   const header1 = proposerSlashing.signedHeader1.message;
   const header2 = proposerSlashing.signedHeader2.message;
 
@@ -46,13 +44,13 @@ export function assertValidProposerSlashing(
   }
 
   // verify headers are different
-  if (BeaconBlockHeader.equals(header1, header2)) {
+  if (ssz.phase0.BeaconBlockHeaderBn.equals(header1, header2)) {
     throw new Error("ProposerSlashing headers are equal");
   }
 
   // verify the proposer is slashable
   const proposer = state.validators.get(header1.proposerIndex);
-  if (!isSlashableValidator(proposer, epochCtx.currentShuffling.epoch)) {
+  if (!isSlashableValidator(proposer, state.epochCtx.epoch)) {
     throw new Error("ProposerSlashing proposer is not slashable");
   }
 

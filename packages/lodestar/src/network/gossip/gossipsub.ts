@@ -205,7 +205,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    const fork = this.config.getForkName(proposerSlashing.signedHeader1.message.slot);
+    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
     await this.publishObject<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, fork},
       proposerSlashing
@@ -213,7 +213,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-    const fork = this.config.getForkName(attesterSlashing.attestation1.data.slot);
+    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     await this.publishObject<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing
