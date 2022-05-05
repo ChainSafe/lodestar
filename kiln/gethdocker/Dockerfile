@@ -9,5 +9,5 @@ RUN cd /go-ethereum && go run build/ci.go install ./cmd/geth
 FROM alpine:latest
 COPY --from=builder /go-ethereum/build/bin/geth /usr/local/bin/
 
-EXPOSE 8545 8546 30303 30303/udp
+EXPOSE 8545 8551 30303 30303/udp
 ENTRYPOINT ["geth"]

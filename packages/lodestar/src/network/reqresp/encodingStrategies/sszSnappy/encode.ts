@@ -29,6 +29,14 @@ export async function* writeSszSnappyPayload<T extends RequestOrOutgoingResponse
  * Buffered Snappy writer
  */
 function encodeSszSnappy(bytes: Buffer): AsyncGenerator<Buffer> {
+  /**
+   * Use sync version (default) for compress as it is almost 2x faster than async
+   * one and most payloads are "1 chunk" and 100kb payloads (which would mostly be
+   * big bellatrix blocks with transactions) are just 2 chunks
+   *
+   * To use async version (for e.g. on big payloads) instantiate the stream with
+   * `createCompressStream({asyncCompress: true})`
+   */
   const stream = createCompressStream();
   stream.write(bytes);
   stream.end();

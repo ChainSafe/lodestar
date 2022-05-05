@@ -186,11 +186,11 @@ export class LightClientServer {
   }
 
   /**
-   * Call after importing a block, having the postState available in memory for proof generation.
+   * Call after importing a block head, having the postState available in memory for proof generation.
    * - Persist state witness
    * - Use block's syncAggregate
    */
-  onImportBlock(
+  onImportBlockHead(
     block: altair.BeaconBlock,
     postState: CachedBeaconStateAltair,
     parentBlock: {blockRoot: RootHex; slot: Slot}

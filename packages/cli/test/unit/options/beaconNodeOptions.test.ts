@@ -1,7 +1,9 @@
 import {expect} from "chai";
+import fs from "node:fs";
 import {IBeaconNodeOptions} from "@chainsafe/lodestar";
 import {LogLevel, RecursivePartial} from "@chainsafe/lodestar-utils";
 import {parseBeaconNodeArgs, IBeaconNodeArgs} from "../../../src/options/beaconNodeOptions";
+import {getTestdirPath} from "../../utils";
 
 describe("options / beaconNodeOptions", () => {
   it("Should parse BeaconNodeArgs", () => {
@@ -128,5 +130,29 @@ describe("options / beaconNodeOptions", () => {
 
     const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
     expect(options).to.deep.equal(expectedOptions);
+  });
+
+  it("Should use execution endpoint & jwt for eth1", () => {
+    const jwtSecretFile = getTestdirPath("./jwtsecret");
+    const jwtSecretHex = "0xdc6457099f127cf0bac78de8b297df04951281909db4f58b43def7c7151e765d";
+    fs.writeFileSync(jwtSecretFile, jwtSecretHex, {encoding: "utf8"});
+
+    // Cast to match the expected fully defined type
+    const beaconNodeArgsPartial = {
+      "eth1.enabled": true,
+      "execution.urls": ["http://my.node:8551"],
+      "jwt-secret": jwtSecretFile,
+    } as IBeaconNodeArgs;
+
+    const expectedOptions: RecursivePartial<IBeaconNodeOptions> = {
+      eth1: {
+        enabled: true,
+        providerUrls: ["http://my.node:8551"],
+        jwtSecretHex,
+      },
+    };
+
+    const options = parseBeaconNodeArgs(beaconNodeArgsPartial);
+    expect(options.eth1).to.deep.equal(expectedOptions.eth1);
   });
 });

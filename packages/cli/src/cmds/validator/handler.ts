@@ -94,7 +94,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
   onGracefulShutdownCbs.push(async () => controller.abort());
 
   const dbOps = {
-    config: config,
+    config,
     controller: new LevelDbController({name: dbPath}, {logger}),
   };
   const slashingProtection = new SlashingProtection(dbOps);
