@@ -1,4 +1,4 @@
-import {phase0, Epoch} from "@chainsafe/lodestar-types";
+import {phase0, Epoch, Slot} from "@chainsafe/lodestar-types";
 import {BitArray} from "@chainsafe/ssz";
 
 /**
@@ -8,9 +8,13 @@ import {BitArray} from "@chainsafe/ssz";
  * @returns {AttestationData}
  */
 
-export function generateAttestationData(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationData {
+export function generateAttestationData(
+  sourceEpoch: Epoch,
+  targetEpoch: Epoch,
+  slot: Slot = 1
+): phase0.AttestationData {
   return {
-    slot: 1,
+    slot,
     index: 0,
     beaconBlockRoot: Buffer.alloc(32),
     source: {epoch: sourceEpoch, root: Buffer.alloc(32)},
