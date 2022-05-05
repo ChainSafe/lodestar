@@ -3,8 +3,7 @@
  */
 
 import PeerId from "peer-id";
-import LibP2p from "libp2p";
-import {NodejsNode} from "./bundle";
+import type LibP2p from "libp2p";
 import {defaultDiscv5Options, defaultNetworkOptions, INetworkOptions} from "../options";
 import {isLocalMultiAddr, clearMultiaddrUDP} from "..";
 import {ENR} from "@chainsafe/discv5";
@@ -66,6 +65,12 @@ export async function createNodeJsLibp2p(
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const {NodejsNode} = await Function("return import('./bundle.mjs')")();
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
   return new NodejsNode({
     peerId,
     addresses: {listen: localMultiaddrs},

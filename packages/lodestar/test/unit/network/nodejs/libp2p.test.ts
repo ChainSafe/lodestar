@@ -1,6 +1,5 @@
 import {assert} from "chai";
 import {sleep} from "@chainsafe/lodestar-utils";
-import {NodejsNode} from "../../../../src/network/nodejs";
 import {createNode} from "../../../utils/network";
 import {Libp2pEvent} from "../../../../src/constants";
 
@@ -8,7 +7,7 @@ const multiaddr = "/ip4/127.0.0.1/tcp/0";
 
 describe("[network] nodejs libp2p", () => {
   it("can start and stop a node", async () => {
-    const node: NodejsNode = await createNode(multiaddr);
+    const node = await createNode(multiaddr);
     await node.start();
     assert.equal(node.isStarted(), true);
     await node.stop();
@@ -18,8 +17,8 @@ describe("[network] nodejs libp2p", () => {
   it("can connect/disconnect to a peer", async function () {
     this.timeout(5000);
     // setup
-    const nodeA: NodejsNode = await createNode(multiaddr);
-    const nodeB: NodejsNode = await createNode(multiaddr);
+    const nodeA = await createNode(multiaddr);
+    const nodeB = await createNode(multiaddr);
 
     await Promise.all([nodeA.start(), nodeB.start()]);
 

@@ -8,24 +8,9 @@ import Mplex from "libp2p-mplex";
 import {NOISE} from "@chainsafe/libp2p-noise";
 import Bootstrap from "libp2p-bootstrap";
 import MDNS from "libp2p-mdns";
-import PeerId from "peer-id";
-import {Datastore} from "interface-datastore";
-
-export interface ILibp2pOptions {
-  peerId: PeerId;
-  addresses: {
-    listen: string[];
-    announce?: string[];
-  };
-  datastore?: Datastore;
-  peerDiscovery?: (typeof Bootstrap | typeof MDNS)[];
-  bootMultiaddrs?: string[];
-  maxConnections?: number;
-  minConnections?: number;
-}
 
 export class NodejsNode extends LibP2p {
-  constructor(options: ILibp2pOptions) {
+  constructor(options) {
     super({
       peerId: options.peerId,
       addresses: {
@@ -90,7 +75,7 @@ export class NodejsNode extends LibP2p {
           bootstrap: {
             enabled: !!(options.bootMultiaddrs && options.bootMultiaddrs.length),
             interval: 2000,
-            list: (options.bootMultiaddrs || []) as string[],
+            list: (options.bootMultiaddrs || []),
           },
         },
       },

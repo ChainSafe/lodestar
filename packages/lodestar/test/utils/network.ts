@@ -3,12 +3,17 @@ import {Multiaddr} from "multiaddr";
 import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {BitArray} from "@chainsafe/ssz";
 import {Network} from "../../src/network";
-import {NodejsNode} from "../../src/network/nodejs";
 import {createPeerId} from "../../src/network";
 import {Libp2pEvent} from "../../src/constants";
+import type Libp2p from "libp2p";
 
-export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<NodejsNode> {
+export async function createNode(multiaddr: string, inPeerId?: PeerId): Promise<Libp2p> {
   const peerId = inPeerId || (await createPeerId());
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+  const {NodejsNode} = await Function("return import('../../src/network/nodejs/bundle.mjs')")();
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
   return new NodejsNode({
     peerId,
     addresses: {listen: [multiaddr]},
