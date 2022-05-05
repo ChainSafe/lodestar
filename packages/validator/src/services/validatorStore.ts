@@ -140,6 +140,10 @@ export class ValidatorStore {
     return this.validators.get(pubkeyHex)?.signer;
   }
 
+  getSigners(): Signer[] {
+    return Array.from(this.validators.values());
+  }
+
   removeSigner(pubkeyHex: PubkeyHex): boolean {
     return this.indicesService.removeForKey(pubkeyHex) || this.validators.delete(pubkeyHex);
   }

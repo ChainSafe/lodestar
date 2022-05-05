@@ -10,6 +10,7 @@ export type AccountPaths = {
   keystoresDir: string;
   secretsDir: string;
   walletsDir: string;
+  remoteKeysDir: string;
 };
 
 /**
@@ -74,11 +75,13 @@ export function getAccountPaths(
   const keystoresDir = args.keystoresDir || path.join(rootDir, "keystores");
   const secretsDir = args.secretsDir || path.join(rootDir, "secrets");
   const walletsDir = args.walletsDir || path.join(rootDir, "wallets");
+  const remoteKeysDir = args.walletsDir || path.join(rootDir, "remoteKeys");
   return {
     ...globalPaths,
     keystoresDir,
     secretsDir,
     walletsDir,
+    remoteKeysDir,
   };
 }
 

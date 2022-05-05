@@ -1,15 +1,17 @@
 import {LevelDbController} from "@chainsafe/lodestar-db";
-import {SignerType, Signer, SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SlashingProtection, Validator} from "@chainsafe/lodestar-validator";
+import {SignerType, SignerLocal, SignerRemote, Signer} from "@chainsafe/lodestar-validator";
 import {getMetrics, MetricsRegister} from "@chainsafe/lodestar-validator";
 import {KeymanagerServer, KeymanagerApi} from "@chainsafe/lodestar-keymanager-server";
 import {RegistryMetricCreator, collectNodeJSMetrics, HttpMetricsServer} from "@chainsafe/lodestar";
+import {ILogger} from "@chainsafe/lodestar-utils";
 import {getBeaconConfigFromArgs} from "../../config/index.js";
 import {IGlobalArgs} from "../../options/index.js";
 import {YargsError, getDefaultGraffiti, mkdir, getCliLogger} from "../../util/index.js";
 import {onGracefulShutdown, parseFeeRecipient} from "../../util/index.js";
 import {getVersionData} from "../../util/version.js";
 import {getBeaconPaths} from "../beacon/paths.js";
-import {getValidatorPaths} from "./paths.js";
+import {getAccountPaths, getValidatorPaths} from "./paths.js";
 import {IValidatorCliArgs, validatorMetricsDefaultOptions, defaultDefaultFeeRecipient} from "./options.js";
 import {getLocalSecretKeys, getExternalSigners, groupExternalSignersByUrl} from "./keys.js";
 
@@ -145,8 +147,12 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     // Use the first path in importKeystoresPath as directory to write keystores
     // KeymanagerApi must ensure that the path is a directory and not a file
     const firstImportKeystorePath = args.importKeystoresPath[0];
+    const accountPaths = getAccountPaths(args);
 
-    const keymanagerApi = new KeymanagerApi(validator, firstImportKeystorePath);
+    const keymanagerApi = new KeymanagerApi(validator, {
+      importedKeystoresDirpath: firstImportKeystorePath,
+      importedRemoteKeysDirpath: accountPaths.remoteKeysDir,
+    });
 
     const keymanagerServer = new KeymanagerServer(
       {
@@ -160,5 +166,38 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
     );
     onGracefulShutdownCbs.push(() => keymanagerServer.close());
     await keymanagerServer.listen();
+  }
+}
+
+/**
+ * Log each pubkeys for auditing out keys are loaded from the logs
+ */
+function logSigners(logger: ILogger, signers: Signer[]): void {
+  const localSigners: SignerLocal[] = [];
+  const remoteSigners: SignerRemote[] = [];
+
+  for (const signer of signers) {
+    switch (signer.type) {
+      case SignerType.Local:
+        localSigners.push(signer);
+        break;
+      case SignerType.Remote:
+        remoteSigners.push(signer);
+        break;
+    }
+  }
+
+  if (localSigners.length > 0) {
+    logger.info(`Decrypted ${localSigners.length} local keystores`);
+    for (const signer of localSigners) {
+      logger.info(signer.secretKey.toPublicKey().toHex());
+    }
+  }
+
+  for (const {externalSignerUrl, pubkeysHex} of groupExternalSignersByUrl(remoteSigners)) {
+    logger.info(`External signers on URL: ${externalSignerUrl}`);
+    for (const pubkeyHex of pubkeysHex) {
+      logger.info(pubkeyHex);
+    }
   }
 }

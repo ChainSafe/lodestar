@@ -20,6 +20,44 @@ export enum DeletionStatus {
   error = "error",
 }
 
+export enum ImportRemoteKeyStatus {
+  /** Remote key successfully imported to validator client permanent storage */
+  imported = "imported",
+  /** Remote key's pubkey is already known to the validator client */
+  duplicate = "duplicate",
+  /** Any other status different to the above: I/O errors, etc. */
+  error = "error",
+}
+
+export enum DeleteRemoteKeyStatus {
+  /** key was active and removed */
+  deleted = "deleted",
+  /** key was not found to be removed */
+  not_found = "not_found",
+  /**
+   * unexpected condition meant the key could not be removed (the key was actually found,
+   * but we couldn't stop using it) - this would be a sign that making it active elsewhere would
+   * almost certainly cause you headaches / slashing conditions etc.
+   */
+  error = "error",
+}
+
+export type ResponseStatus<Status> = {
+  status: Status;
+  message?: string;
+};
+
+export type SignerDefinition = {
+  pubkey: PubkeyHex;
+  /**
+   * URL to API implementing EIP-3030: BLS Remote Signer HTTP API
+   * `"https://remote.signer"`
+   */
+  url: string;
+  /** The signer associated with this pubkey cannot be deleted from the API */
+  readonly: boolean;
+};
+
 /**
  * JSON serialized representation of a single keystore in EIP-2335: BLS12-381 Keystore format.
  * ```
@@ -44,25 +82,6 @@ export type SlashingProtectionData = string;
  */
 export type PubkeyHex = string;
 
-type Statuses<Status> = {
-  status: Status;
-  message?: string;
-}[];
-
-type ImportKeystoresReq = {
-  keystores: KeystoreStr[];
-  passwords: string[];
-  slashingProtection: SlashingProtectionData;
-};
-
-type ListKeysResponse = {
-  validatingPubkey: PubkeyHex;
-  /** The derivation path (if present in the imported keystore) */
-  derivationPath?: string;
-  /** The key associated with this pubkey cannot be deleted from the API */
-  readonly?: boolean;
-};
-
 export type Api = {
   /**
    * List all validating pubkeys known to and decrypted by this keymanager binary
@@ -70,7 +89,13 @@ export type Api = {
    * https://github.com/ethereum/keymanager-APIs/blob/0c975dae2ac6053c8245ebdb6a9f27c2f114f407/keymanager-oapi.yaml
    */
   listKeys(): Promise<{
-    data: ListKeysResponse[];
+    data: {
+      validatingPubkey: PubkeyHex;
+      /** The derivation path (if present in the imported keystore) */
+      derivationPath?: string;
+      /** The key associated with this pubkey cannot be deleted from the API */
+      readonly?: boolean;
+    }[];
   }>;
 
   /**
@@ -91,7 +116,7 @@ export type Api = {
     passwords: string[],
     slashingProtectionStr: SlashingProtectionData
   ): Promise<{
-    data: Statuses<ImportStatus>;
+    data: ResponseStatus<ImportStatus>[];
   }>;
 
   /**
@@ -118,8 +143,28 @@ export type Api = {
   deleteKeystores(
     pubkeysHex: string[]
   ): Promise<{
-    data: Statuses<DeletionStatus>;
+    data: ResponseStatus<DeletionStatus>[];
     slashingProtection: SlashingProtectionData;
+  }>;
+
+  /**
+   * List all remote validating pubkeys known to this validator client binary
+   */
+  listRemoteKeys(): Promise<{data: SignerDefinition[]}>;
+
+  /**
+   * Import remote keys for the validator client to request duties for
+   */
+  importRemoteKeys(
+    remoteSigners: Pick<SignerDefinition, "pubkey" | "url">[]
+  ): Promise<{
+    data: ResponseStatus<ImportRemoteKeyStatus>[];
+  }>;
+
+  deleteRemoteKeys(
+    pubkeys: PubkeyHex[]
+  ): Promise<{
+    data: ResponseStatus<DeleteRemoteKeyStatus>[];
   }>;
 };
 
@@ -127,12 +172,30 @@ export const routesData: RoutesData<Api> = {
   listKeys: {url: "/eth/v1/keystores", method: "GET"},
   importKeystores: {url: "/eth/v1/keystores", method: "POST"},
   deleteKeystores: {url: "/eth/v1/keystores", method: "DELETE"},
+
+  listRemoteKeys: {url: "/eth/v1/remotekeys", method: "GET"},
+  importRemoteKeys: {url: "/eth/v1/remotekeys", method: "POST"},
+  deleteRemoteKeys: {url: "/eth/v1/remotekeys", method: "DELETE"},
 };
 
 export type ReqTypes = {
   listKeys: ReqEmpty;
-  importKeystores: {body: ImportKeystoresReq};
+  importKeystores: {
+    body: {
+      keystores: KeystoreStr[];
+      passwords: string[];
+      slashingProtection: SlashingProtectionData;
+    };
+  };
   deleteKeystores: {body: {pubkeys: string[]}};
+
+  listRemoteKeys: ReqEmpty;
+  importRemoteKeys: {
+    body: {
+      remoteKeys: Pick<SignerDefinition, "pubkey" | "url">[];
+    };
+  };
+  deleteRemoteKeys: {body: {pubkeys: string[]}};
 };
 
 export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
@@ -148,6 +211,18 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
       parseReq: ({body: {pubkeys}}) => [pubkeys],
       schema: {body: Schema.Object},
     },
+
+    listRemoteKeys: reqEmpty,
+    importRemoteKeys: {
+      writeReq: (remoteKeys) => ({body: {remoteKeys}}),
+      parseReq: ({body: {remoteKeys}}) => [remoteKeys],
+      schema: {body: Schema.Object},
+    },
+    deleteRemoteKeys: {
+      writeReq: (pubkeys) => ({body: {pubkeys}}),
+      parseReq: ({body: {pubkeys}}) => [pubkeys],
+      schema: {body: Schema.Object},
+    },
   };
 }
 
@@ -157,5 +232,9 @@ export function getReturnTypes(): ReturnTypes<Api> {
     listKeys: jsonType("camel"),
     importKeystores: jsonType("camel"),
     deleteKeystores: jsonType("camel"),
+
+    listRemoteKeys: jsonType("camel"),
+    importRemoteKeys: jsonType("camel"),
+    deleteRemoteKeys: jsonType("camel"),
   };
 }
