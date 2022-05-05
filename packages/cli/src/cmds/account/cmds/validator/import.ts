@@ -171,7 +171,7 @@ async function getKeystorePassphrase(
       console.log("Imported passphrase successfully");
       return passphrase;
     } catch (e) {
-      console.log("Imported passphrase, but it's invalid");
+      console.log(`Imported passphrase, but it's invalid: ${(e as Error).message}`);
     }
   }
 
