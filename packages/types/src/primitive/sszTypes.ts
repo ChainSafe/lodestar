@@ -18,8 +18,9 @@ export const UintBn128 = new UintBigintType(16);
 export const UintBn256 = new UintBigintType(32);
 
 // Custom types, defined for type hinting and readability
-export const Slot = UintNumInf64;
-export const Epoch = UintNumInf64;
+export const Slot = UintNum64;
+export const Epoch = UintNum64;
+export const EpochInf = UintNumInf64;
 export const SyncPeriod = UintNum64;
 export const CommitteeIndex = UintNum64;
 export const SubcommitteeIndex = UintNum64;

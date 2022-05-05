@@ -53,7 +53,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = ssz.phase0.AttestationData.defaultValue();
+      const attestationData = ssz.phase0.AttestationDataBn.defaultValue();
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,
@@ -61,7 +61,7 @@ describe("GossipMessageValidator", () => {
           attestingIndices: [0],
         },
         attestation2: {
-          data: {...attestationData, slot: 1}, // Make it different so it's slashable
+          data: {...attestationData, slot: BigInt(1)}, // Make it different so it's slashable
           signature: Buffer.alloc(96, 0),
           attestingIndices: [0],
         },

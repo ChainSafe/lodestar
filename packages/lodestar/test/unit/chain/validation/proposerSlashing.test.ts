@@ -45,8 +45,8 @@ describe("validate proposer slashing", () => {
   it("should return invalid proposer slashing - invalid", async () => {
     const proposerSlashing = ssz.phase0.ProposerSlashing.defaultValue();
     // Make it invalid
-    proposerSlashing.signedHeader1.message.slot = 1;
-    proposerSlashing.signedHeader2.message.slot = 0;
+    proposerSlashing.signedHeader1.message.slot = BigInt(1);
+    proposerSlashing.signedHeader2.message.slot = BigInt(0);
 
     await expectRejectedWithLodestarError(
       validateGossipProposerSlashing(chainStub, proposerSlashing),
@@ -55,8 +55,8 @@ describe("validate proposer slashing", () => {
   });
 
   it("should return valid proposer slashing", async () => {
-    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeader.defaultValue();
-    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeader.defaultValue();
+    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeaderBn.defaultValue();
+    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeaderBn.defaultValue();
     // Make it different, so slashable
     signedHeader2.message.stateRoot = Buffer.alloc(32, 1);
 
