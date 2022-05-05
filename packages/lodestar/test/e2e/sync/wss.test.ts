@@ -8,7 +8,7 @@ import {getDevBeaconNode} from "../../utils/node/beacon.js";
 import {waitForEvent} from "../../utils/events/resolver.js";
 import {getAndInitDevValidators} from "../../utils/node/validator.js";
 import {ChainEvent} from "../../../src/chain/index.js";
-import {RestApiOptions} from "../../../src/api/rest/index.js";
+import {BeaconRestApiServerOpts} from "../../../src/api/rest/index.js";
 import {testLogger, TestLoggerOpts} from "../../utils/logger.js";
 import {connect} from "../../utils/network.js";
 import {Network} from "../../../src/network/index.js";
@@ -57,7 +57,7 @@ describe("Start from WSS", function () {
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
         api: {
-          rest: {enabled: true, api: ["debug"]} as RestApiOptions,
+          rest: {enabled: true, api: ["debug"]} as BeaconRestApiServerOpts,
         },
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true},
@@ -98,7 +98,7 @@ describe("Start from WSS", function () {
     const bnStartingFromWSS = await getDevBeaconNode({
       params: {...testParams, ALTAIR_FORK_EPOCH: Infinity},
       options: {
-        api: {rest: {enabled: true, port: 9587} as RestApiOptions},
+        api: {rest: {enabled: true, port: 9587} as BeaconRestApiServerOpts},
         sync: {isSingleNode: true, backfillBatchSize: 64},
       },
       validatorCount: 32,

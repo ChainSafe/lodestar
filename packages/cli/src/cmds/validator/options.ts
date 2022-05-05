@@ -2,12 +2,13 @@ import {defaultOptions} from "@chainsafe/lodestar";
 import {ICliCommandOptions, ILogArgs} from "../../util/index.js";
 import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
-import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
+import {keymanagerRestApiServerOptsDefault} from "./keymanager/server.js";
 import {defaultAccountPaths, defaultValidatorPaths} from "./paths.js";
 
 export type AccountValidatorArgs = {
   keystoresDir?: string;
   secretsDir?: string;
+  remoteKeysDir?: string;
 };
 
 export const validatorMetricsDefaultOptions = {
@@ -19,6 +20,7 @@ export const validatorMetricsDefaultOptions = {
 export const defaultDefaultFeeRecipient = defaultOptions.chain.defaultFeeRecipient;
 
 export type IValidatorCliArgs = AccountValidatorArgs &
+  KeymanagerArgs &
   ILogArgs & {
     logFile: IBeaconPaths["logFile"];
     validatorsDbDir?: string;
@@ -41,7 +43,53 @@ export type IValidatorCliArgs = AccountValidatorArgs &
     "metrics.enabled"?: boolean;
     "metrics.port"?: number;
     "metrics.address"?: string;
-  } & KeymanagerArgs;
+  };
+
+export type KeymanagerArgs = {
+  "keymanager.enabled"?: boolean;
+  "keymanager.authEnabled"?: boolean;
+  "keymanager.port"?: number;
+  "keymanager.address"?: string;
+  "keymanager.cors"?: string;
+};
+
+export const keymanagerOptions: ICliCommandOptions<KeymanagerArgs> = {
+  "keymanager.enabled": {
+    alias: ["keymanagerEnabled"], // Backwards compatibility
+    type: "boolean",
+    description: "Enable keymanager API server",
+    default: false,
+    group: "keymanager",
+  },
+  "keymanager.authEnabled": {
+    alias: ["keymanagerAuthEnabled"], // Backwards compatibility
+    type: "boolean",
+    description: "Enable token bearer authentication for keymanager API server",
+    default: true,
+    group: "keymanager",
+  },
+  "keymanager.port": {
+    alias: ["keymanagerPort"], // Backwards compatibility
+    type: "number",
+    description: "Set port for keymanager API",
+    defaultDescription: String(keymanagerRestApiServerOptsDefault.port),
+    group: "keymanager",
+  },
+  "keymanager.address": {
+    alias: ["keymanagerHost"], // Backwards compatibility
+    type: "string",
+    description: "Set host for keymanager API",
+    defaultDescription: keymanagerRestApiServerOptsDefault.address,
+    group: "keymanager",
+  },
+  "keymanager.cors": {
+    alias: ["keymanagerCors"], // Backwards compatibility
+    type: "string",
+    description: "Configures the Access-Control-Allow-Origin CORS header for keymanager API",
+    defaultDescription: keymanagerRestApiServerOptsDefault.cors,
+    group: "keymanager",
+  },
+};
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   ...logOptions,
@@ -49,18 +97,28 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
   logFile: beaconPathsOptions.logFile,
 
   keystoresDir: {
+    hidden: true,
     description: "Directory for storing validator keystores.",
     defaultDescription: defaultAccountPaths.keystoresDir,
     type: "string",
   },
 
   secretsDir: {
+    hidden: true,
     description: "Directory for storing validator keystore secrets.",
     defaultDescription: defaultAccountPaths.secretsDir,
     type: "string",
   },
 
+  remoteKeysDir: {
+    hidden: true,
+    description: "Directory for storing validator remote key definitions.",
+    defaultDescription: defaultAccountPaths.keystoresDir,
+    type: "string",
+  },
+
   validatorsDbDir: {
+    hidden: true,
     description: "Data directory for validator databases.",
     defaultDescription: defaultValidatorPaths.validatorsDbDir,
     type: "string",

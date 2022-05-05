@@ -1,3 +1,7 @@
+import bls from "@chainsafe/bls";
+import {CoordType} from "@chainsafe/blst";
+import {fromHexString} from "@chainsafe/ssz";
+
 /**
  * 0x prefix a string if not prefixed already
  */
@@ -29,4 +33,22 @@ export function parseRange(range: string): number[] {
   }
 
   return arr;
+}
+
+export function assertValidPubkeysHex(pubkeysHex: string[]): void {
+  for (const pubkeyHex of pubkeysHex) {
+    const pubkeyBytes = fromHexString(pubkeyHex);
+    bls.PublicKey.fromBytes(pubkeyBytes, CoordType.jacobian, true);
+  }
+}
+
+export function isValidHttpUrl(urlStr: string): boolean {
+  let url;
+  try {
+    url = new URL(urlStr);
+  } catch (_) {
+    return false;
+  }
+
+  return url.protocol === "http:" || url.protocol === "https:";
 }

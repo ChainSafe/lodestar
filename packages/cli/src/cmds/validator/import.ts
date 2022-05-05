@@ -1,31 +1,15 @@
 import fs from "node:fs";
-import path from "node:path";
-import inquirer from "inquirer";
 import {Keystore} from "@chainsafe/bls-keystore";
-import {
-  YargsError,
-  stripOffNewlines,
-  sleep,
-  recursivelyFind,
-  isVotingKeystore,
-  isPassphraseFile,
-  writeValidatorPassphrase,
-  ICliCommand,
-} from "../../util/index.js";
-import {VOTING_KEYSTORE_FILE, getValidatorDirPath} from "../../validatorDir/paths.js";
+import {YargsError, ICliCommand} from "../../util/index.js";
 import {IGlobalArgs} from "../../options/index.js";
-import {AccountValidatorArgs} from "./options.js";
+import {validatorOptions, IValidatorCliArgs} from "./options.js";
 import {getAccountPaths} from "./paths.js";
+import {importKeystoreDefinitionsFromExternalDir, readPassphraseOrPrompt} from "./signers/importExternalKeystores.js";
+import {PersistedKeysBackend} from "./keymanager/persistedKeys.js";
 
 /* eslint-disable no-console */
 
-interface IValidatorImportArgs {
-  keystore?: string;
-  directory?: string;
-  passphraseFile?: string;
-}
-
-export const importCmd: ICliCommand<IValidatorImportArgs, AccountValidatorArgs & IGlobalArgs> = {
+export const importCmd: ICliCommand<IValidatorCliArgs, IGlobalArgs> = {
   command: "import",
 
   describe:
@@ -36,60 +20,46 @@ Ethereum Foundation utility.",
 
   examples: [
     {
-      command: "account validator import --network prater --directory $HOME/eth2.0-deposit-cli/validator_keys",
+      command: "account validator import --network prater --keystores $HOME/eth2.0-deposit-cli/validator_keys",
       description: "Import validator keystores generated with the Ethereum Foundation Staking Launchpad",
     },
   ],
 
+  // Note: re-uses `--importKeystoresPath` and `--importKeystoresPassword` from root validator command options
+
   options: {
-    keystore: {
-      description: "Path to a single keystore to be imported.",
-      describe: "Path to a single keystore to be imported.",
-      conflicts: ["directory"],
-      type: "string",
-    },
+    ...validatorOptions,
 
-    directory: {
-      description:
-        "Path to a directory which contains zero or more keystores \
-for import. This directory and all sub-directories will be \
-searched and any file name which contains 'keystore' and \
-has the '.json' extension will be attempted to be imported.",
-      describe:
-        "Path to a directory which contains zero or more keystores \
-  for import. This directory and all sub-directories will be \
-  searched and any file name which contains 'keystore' and \
-  has the '.json' extension will be attempted to be imported.",
-      conflicts: ["keystore"],
-      type: "string",
-    },
-
-    passphraseFile: {
-      description: "Path to a file that contains password that protects the keystore.",
-      describe: "Path to a file that contains password that protects the keystore.",
-      type: "string",
+    importKeystoresPath: {
+      ...validatorOptions.importKeystoresPath,
+      requiresArg: true,
     },
   },
 
   handler: async (args) => {
-    const singleKeystorePath = args.keystore;
-    const directoryPath = args.directory;
-    const passphraseFile = args.passphraseFile;
-    const {keystoresDir, secretsDir} = getAccountPaths(args);
+    // This command takes: importKeystoresPath, importKeystoresPassword
+    //
+    // - recursively finds keystores in importKeystoresPath
+    // - validates keystores can decrypt
+    // - writes them in persisted form
 
-    const keystorePaths = singleKeystorePath
-      ? [singleKeystorePath]
-      : directoryPath
-      ? recursivelyFind(directoryPath, isVotingKeystore)
-      : null;
-    const passphrasePaths = directoryPath ? recursivelyFind(directoryPath, isPassphraseFile) : [];
-
-    if (!keystorePaths) {
-      throw new YargsError("Must supply either keystore or directory");
+    if (!args.importKeystoresPath) {
+      throw new YargsError("Must set importKeystoresPath");
     }
-    if (keystorePaths.length === 0) {
+
+    // Collect same password for all keystores
+
+    const keystoreDefinitions = importKeystoreDefinitionsFromExternalDir({
+      keystoresPath: args.importKeystoresPath,
+      password: await readPassphraseOrPrompt(args),
+    });
+
+    if (keystoreDefinitions.length === 0) {
       throw new YargsError("No keystores found");
     }
+
+    const accountPaths = getAccountPaths(args);
+    const persistedKeystoresBackend = new PersistedKeysBackend(accountPaths);
 
     // For each keystore:
     //
@@ -97,51 +67,46 @@ has the '.json' extension will be attempted to be imported.",
     // - Copy the keystore into the `validator_dir`.
     //
     // Skip keystores that already exist, but exit early if any operation fails.
-    let numOfImportedValidators = 0;
+    console.log(
+      `Importing ${keystoreDefinitions.length} keystores:\n ${keystoreDefinitions
+        .map((def) => def.keystorePath)
+        .join("\n")}`
+    );
 
-    if (keystorePaths.length > 1) {
-      console.log(`
-  ${keystorePaths.join("\n")}
+    let importedCount = 0;
 
-  Found ${keystorePaths.length} keystores in \t${directoryPath}
-  Importing to \t\t${keystoresDir}
-  `);
-    }
-
-    for (const keystorePath of keystorePaths) {
-      const keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
-      const pubkey = keystore.pubkey;
-      const uuid = keystore.uuid;
-      if (!pubkey) {
+    for (const {keystorePath, password} of keystoreDefinitions) {
+      const keystoreStr = fs.readFileSync(keystorePath, "utf8");
+      const keystore = Keystore.parse(keystoreStr);
+      const pubkeyHex = keystore.pubkey;
+      if (!pubkeyHex) {
         throw Error("Invalid keystore, must contain .pubkey property");
       }
-      const dir = getValidatorDirPath({keystoresDir, pubkey, prefixed: true});
-      if (fs.existsSync(dir) || fs.existsSync(getValidatorDirPath({keystoresDir, pubkey}))) {
-        console.log(`Skipping existing validator ${pubkey}. Already exist in ${dir}`);
-        continue;
+
+      // Check if keystore can decrypt
+      if (!(await keystore.verifyPassword(password))) {
+        throw Error(`Invalid password for keystore ${keystorePath}`);
       }
 
-      console.log(`Importing keystore ${keystorePath}
-  - Public key: ${pubkey}
-  - UUID: ${uuid}`);
+      const didImportKey = persistedKeystoresBackend.writeKeystore({
+        pubkeyHex,
+        keystoreStr,
+        password,
+        // Not used immediately
+        lockBeforeWrite: false,
+        // Return duplicate status if already found
+        persistIfDuplicate: false,
+      });
 
-      const passphrase = await getKeystorePassphrase(keystore, passphrasePaths, passphraseFile);
-      fs.mkdirSync(secretsDir, {recursive: true});
-      fs.mkdirSync(dir, {recursive: true});
-      const votingKeystoreFile = path.join(dir, VOTING_KEYSTORE_FILE);
-      fs.writeFileSync(votingKeystoreFile, keystore.stringify());
-      writeValidatorPassphrase({secretsDir, pubkey, passphrase});
-
-      console.log(`Successfully imported validator ${pubkey} to ${votingKeystoreFile}`);
-      numOfImportedValidators++;
+      if (didImportKey) {
+        console.log(`Imported keystore ${pubkeyHex} ${keystorePath}`);
+        importedCount++;
+      } else {
+        console.log(`Duplicate keystore ${pubkeyHex} ${keystorePath}`);
+      }
     }
 
-    if (numOfImportedValidators === 0) {
-      console.log("\nAll validators are already imported");
-    } else if (keystorePaths.length > 1) {
-      const skippedCount = keystorePaths.length - numOfImportedValidators;
-      console.log(`\nSuccessfully imported ${numOfImportedValidators} validators (${skippedCount} skipped)`);
-    }
+    console.log(`\nSuccessfully imported ${importedCount}/${keystoreDefinitions.length} keystores`);
 
     console.log(`
   DO NOT USE THE ORIGINAL KEYSTORES TO VALIDATE WITH
@@ -149,65 +114,3 @@ has the '.json' extension will be attempted to be imported.",
   `);
   },
 };
-
-/**
- * Fetches the passphrase of an imported Kestore
- *
- * Paths that may contain valid passphrases
- * @param keystore
- * @param passphrasePaths ["secrets/0x12341234"]
- * @param passphraseFile
- */
-async function getKeystorePassphrase(
-  keystore: Keystore,
-  passphrasePaths: string[],
-  passphraseFile?: string
-): Promise<string> {
-  // First, try to use a passphrase file if provided, if not, find a passphrase file in the provided directory
-  passphraseFile = passphraseFile ?? passphrasePaths.find((filepath) => filepath.endsWith(keystore.pubkey));
-  if (passphraseFile) {
-    const passphrase = fs.readFileSync(passphraseFile, "utf8");
-    try {
-      await keystore.decrypt(stripOffNewlines(passphrase));
-      console.log("Imported passphrase successfully");
-      return passphrase;
-    } catch (e) {
-      console.log(`Imported passphrase, but it's invalid: ${(e as Error).message}`);
-    }
-  }
-
-  console.log(`
-If you enter the password it will be stored as plain-text so that it is not \
-required each time the validator client starts
-`);
-
-  const answers = await inquirer.prompt<{password: string}>([
-    {
-      name: "password",
-      type: "password",
-      message: "Enter the keystore password, or press enter to omit it",
-      validate: async (input) => {
-        try {
-          console.log("\nValidating password...");
-          await keystore.decrypt(stripOffNewlines(input));
-          return true;
-        } catch (e) {
-          return `Invalid password: ${(e as Error).message}`;
-        }
-      },
-    },
-  ]);
-
-  console.log("Password is correct");
-  await sleep(1000); // For UX
-
-  return answers.password;
-}
-
-/**
- * Extend an existing error by appending a string to its `e.message`
- */
-export function extendError(e: Error, prependMessage: string): Error {
-  e.message = `${e.message} - ${prependMessage}`;
-  return e;
-}
