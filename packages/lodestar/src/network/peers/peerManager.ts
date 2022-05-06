@@ -46,6 +46,9 @@ const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
  */
 const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
+const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
+const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
+
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
 // The Node should compute a recomended value every interval and log a warning
@@ -402,8 +405,10 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toB58String());
         return {
           id: peer,
-          attnets: peerData?.metadata?.attnets ?? BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT),
-          syncnets: peerData?.metadata?.syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+          attnets: peerData?.metadata?.attnets ?? attnetsZero,
+          syncnets: peerData?.metadata?.syncnets ?? syncnetsZero,
+          attnetsTrueBitIndices: peerData?.metadata?.attnets.getTrueBitIndexes() ?? [],
+          syncnetsTrueBitIndices: peerData?.metadata?.syncnets.getTrueBitIndexes() ?? [],
           score: this.peerRpcScores.getScore(peer),
         };
       }),
@@ -412,12 +417,6 @@ export class PeerManager {
       this.syncnetsService.getActiveSubnets(),
       this.opts
     );
-
-    // Register results to metrics
-    for (const [reason, peers] of peersToDisconnect) {
-      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
-    }
-    this.metrics?.peersRequestedToConnect.inc(peersToConnect);
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
     for (const {type, queries} of [
@@ -443,14 +442,18 @@ export class PeerManager {
 
     if (this.discovery) {
       try {
+        this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         this.discovery.discoverPeers(peersToConnect, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }
     }
 
-    for (const peer of Array.from(peersToDisconnect.values()).flat()) {
-      void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+    for (const [reason, peers] of peersToDisconnect) {
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      for (const peer of peers) {
+        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+      }
     }
 
     // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
