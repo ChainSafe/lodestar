@@ -49,9 +49,10 @@ export function createLodestarMetrics(
       help: "number of peers, labeled by client",
       labelNames: ["client"],
     }),
-    peerLongLivedSubnets: register.avgMinMax({
-      name: "lodestar_peer_long_lived_subnets_avg_min_max",
-      help: "Avg min max of amount of long lived subnets of peers",
+    peerLongLivedAttnets: register.histogram({
+      name: "lodestar_peer_long_lived_attnets_count",
+      help: "Histogram of current count of long lived attnets of connected peers",
+      buckets: [0, 4, 16, 32, 64],
     }),
     peerScore: register.avgMinMax({
       name: "lodestar_peer_score_avg_min_max",
@@ -94,9 +95,10 @@ export function createLodestarMetrics(
       name: "lodestar_peers_requested_total_to_connect",
       help: "Priorization results total peers count requested to connect",
     }),
-    peersRequestedToDisconnect: register.gauge({
+    peersRequestedToDisconnect: register.gauge<"reason">({
       name: "lodestar_peers_requested_total_to_disconnect",
       help: "Priorization results total peers count requested to disconnect",
+      labelNames: ["reason"],
     }),
     peersRequestedSubnetsToQuery: register.gauge<"type">({
       name: "lodestar_peers_requested_total_subnets_to_query",
@@ -113,6 +115,13 @@ export function createLodestarMetrics(
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
     }),
+    peerManager: {
+      heartbeatDuration: register.histogram({
+        name: "lodestar_peer_manager_heartbeat_duration_seconds",
+        help: "Peer manager heartbeat function duration in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+    },
 
     discovery: {
       peersToConnect: register.gauge({
