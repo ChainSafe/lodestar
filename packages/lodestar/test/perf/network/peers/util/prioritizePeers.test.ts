@@ -82,7 +82,7 @@ describe("prioritizePeers", () => {
     syncnetPercentage,
   } of testCases) {
     itBench({
-      id: `prioritizePeers lowestScore ${lowestScore} highestScore ${highestScore} attnetPercentage ${attnetPercentage}, syncnetPercentage ${syncnetPercentage} requestedAttnets ${requestedAttnets.count}, requestedSyncNets ${requestedSyncNets.count}`,
+      id: `prioritizePeers score ${lowestScore}:${highestScore} att ${requestedAttnets.count}-${attnetPercentage} sync ${requestedSyncNets.count}-${syncnetPercentage}`,
       beforeEach: () => {
         /**
          * Percentage of active attnet per peer starting from 0.
