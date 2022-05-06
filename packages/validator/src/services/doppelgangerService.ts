@@ -101,16 +101,28 @@ export class DoppelgangerService {
     const violators = [];
 
     for (const [validatorIndex, doppelgangerState] of Array.from(this.doppelgangerStateByIndex.entries())) {
-      const validatorIndexToBeChecked = livenessData.find((liveness) => {
+      const indicesToCheck = livenessData.filter((liveness) => {
         return liveness.index === validatorIndex;
       });
 
-      if (doppelgangerState.remainingEpochsToCheck !== 0 && validatorIndexToBeChecked?.isLive) {
-        violators.push(validatorIndexToBeChecked.index);
-      } else {
-        if (doppelgangerState.remainingEpochsToCheck !== 0) {
-          doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
-          doppelgangerState.epochChecked.push(currentEpoch);
+      for (const validatorIndexToBeChecked of indicesToCheck) {
+        // Get the last epoch checked. Do not perform another check if the epoch
+        // in the liveness data is not > lastEpochChecked. This is to avoid
+        // the scenario where a user reboots their VC inside a single epoch, and
+        // we detect the activity of that previous process as doppelganger
+        // activity, even when it's not running anymore
+        const lastEpochChecked = Math.max(...doppelgangerState.epochChecked);
+        if (
+          doppelgangerState.remainingEpochsToCheck !== 0 &&
+          validatorIndexToBeChecked?.isLive &&
+          validatorIndexToBeChecked?.epoch > lastEpochChecked
+        ) {
+          violators.push(validatorIndexToBeChecked.index);
+        } else {
+          if (doppelgangerState.remainingEpochsToCheck !== 0) {
+            doppelgangerState.remainingEpochsToCheck = doppelgangerState.remainingEpochsToCheck - 1;
+            doppelgangerState.epochChecked.push(currentEpoch);
+          }
         }
       }
     }
