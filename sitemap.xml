@@ -1886,6 +1886,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers_utils.excesspeerdisconnectreason/</loc>
+         <lastmod>2022-05-06</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/lodestar/enums/network_peers_utils.irrelevantpeercode/</loc>
          <lastmod>2022-05-06</lastmod>
          <changefreq>daily</changefreq>

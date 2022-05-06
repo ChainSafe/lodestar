@@ -664,6 +664,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#peermanager-object" class="md-nav__link">
+    peerManager: object
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#precomputenextepochtransition-object" class="md-nav__link">
     precomputeNextEpochTransition: object
   </a>
@@ -751,15 +758,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="ibeaconmetrics">IBeaconMetrics<a class="headerlink" href="#ibeaconmetrics" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IBeaconMetrics</strong>: <em>ReturnType‹typeof createBeaconMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/81a4b0c/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efdad3f/packages/lodestar/src/metrics/metrics/beacon.ts#L3">packages/lodestar/src/metrics/metrics/beacon.ts:3</a></em></p>
 <hr />
 <h3 id="ilodestarmetrics">ILodestarMetrics<a class="headerlink" href="#ilodestarmetrics" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>ILodestarMetrics</strong>: <em>ReturnType‹typeof createLodestarMetrics›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/81a4b0c/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efdad3f/packages/lodestar/src/metrics/metrics/lodestar.ts#L5">packages/lodestar/src/metrics/metrics/lodestar.ts:5</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="createbeaconmetrics">createBeaconMetrics<a class="headerlink" href="#createbeaconmetrics" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createBeaconMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/81a4b0c/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efdad3f/packages/lodestar/src/metrics/metrics/beacon.ts#L11">packages/lodestar/src/metrics/metrics/beacon.ts:11</a></em></p>
 <p>Metrics from:
 https://github.com/ethereum/beacon-metrics/ and
 https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
@@ -1039,7 +1046,7 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
 <hr />
 <h3 id="createlodestarmetrics">createLodestarMetrics<a class="headerlink" href="#createlodestarmetrics" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createLodestarMetrics</strong>(<code>register</code>: <a href="../../classes/metrics_utils.registrymetriccreator/">RegistryMetricCreator</a>, <code>metadata?</code>: <a href="../metrics/#lodestarmetadata">LodestarMetadata</a>, <code>anchorState?</code>: Pick‹allForks.BeaconState, "genesisTime"›): <em>object</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/81a4b0c/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/efdad3f/packages/lodestar/src/metrics/metrics/lodestar.ts#L11">packages/lodestar/src/metrics/metrics/lodestar.ts:11</a></em></p>
 <p>Extra Lodestar custom metrics</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1171,9 +1178,10 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
     })</p>
 </li>
 <li>
-<p><strong>peerLongLivedSubnets</strong>: <em><a href="../../classes/metrics_utils.avgminmax/">AvgMinMax</a>‹string›</em> = register.avgMinMax({
-      name: "lodestar_peer_long_lived_subnets_avg_min_max",
-      help: "Avg min max of amount of long lived subnets of peers",
+<p><strong>peerLongLivedAttnets</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹string›</em> = register.histogram({
+      name: "lodestar_peer_long_lived_attnets_count",
+      help: "Histogram of current count of long lived attnets of connected peers",
+      buckets: [0, 4, 16, 32, 64],
     })</p>
 </li>
 <li>
@@ -1224,9 +1232,10 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
     })</p>
 </li>
 <li>
-<p><strong>peersRequestedToDisconnect</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹string›</em> = register.gauge({
+<p><strong>peersRequestedToDisconnect</strong>: <em><a href="../../classes/metrics_utils.gaugeextra/">GaugeExtra</a>‹"reason"›</em> = register.gauge&lt;"reason"&gt;({
       name: "lodestar_peers_requested_total_to_disconnect",
       help: "Priorization results total peers count requested to disconnect",
+      labelNames: ["reason"],
     })</p>
 </li>
 <li>
@@ -1744,6 +1753,16 @@ https://hackmd.io/D5FmoeFZScim_squBFl8oA</p>
         name: "lodestar_lightclient_server_persisted_updates_total",
         help: "Total number of persisted updates by finalized type",
         labelNames: ["type"],
+      })</p>
+</li>
+<li>
+<h3 id="peermanager-object"><strong>peerManager</strong>: <em>object</em><a class="headerlink" href="#peermanager-object" title="Permanent link">&para;</a></h3>
+</li>
+<li>
+<p><strong>heartbeatDuration</strong>: <em><a href="../../classes/metrics_utils.histogramextra/">HistogramExtra</a>‹string›</em> = register.histogram({
+        name: "lodestar_peer_manager_heartbeat_duration_seconds",
+        help: "Peer manager heartbeat function duration in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
       })</p>
 </li>
 <li>
