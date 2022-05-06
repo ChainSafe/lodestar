@@ -28,7 +28,7 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
-  earlyAttestationDelayMs?: number;
+  afterBlockDelaySlotFraction?: number;
   graffiti?: string;
 };
 
@@ -61,7 +61,7 @@ export class Validator {
   private state: State = {status: Status.stopped};
 
   constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
-    const {dbOps, logger, slashingProtection, signers, graffiti, earlyAttestationDelayMs} = opts;
+    const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
@@ -79,31 +79,25 @@ export class Validator {
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
     const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
-    this.indicesService = new IndicesService(logger, api, validatorStore, metrics);
-    this.emitter = new ValidatorEventEmitter();
-    this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
+    const indicesService = new IndicesService(logger, api, validatorStore, metrics);
+    const emitter = new ValidatorEventEmitter();
+    const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
     const loggerVc = getLoggerVc(logger, clock);
 
-    this.blockProposingService = new BlockProposingService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      metrics,
-      graffiti
-    );
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
+      graffiti,
+    });
 
     this.attestationService = new AttestationService(
       loggerVc,
       api,
       clock,
       validatorStore,
-      this.emitter,
-      this.indicesService,
-      this.chainHeaderTracker,
+      emitter,
+      indicesService,
+      chainHeaderTracker,
       metrics,
-      earlyAttestationDelayMs
+      {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
@@ -112,8 +106,8 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      this.chainHeaderTracker,
-      this.indicesService,
+      chainHeaderTracker,
+      indicesService,
       metrics
     );
 
@@ -122,6 +116,9 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
+    this.indicesService = indicesService;
+    this.emitter = emitter;
+    this.chainHeaderTracker = chainHeaderTracker;
   }
 
   /** Waits for genesis and genesis time */
