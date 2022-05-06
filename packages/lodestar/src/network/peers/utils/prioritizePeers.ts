@@ -1,9 +1,10 @@
 import PeerId from "peer-id";
 import {altair, phase0} from "@chainsafe/lodestar-types";
+import {BitArray} from "@chainsafe/ssz";
+import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {shuffle} from "../../../util/shuffle";
 import {sortBy} from "../../../util/sortBy";
 import {RequestedSubnet} from "./subnetMap";
-import {ATTESTATION_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {MapDef} from "../../../util/map";
 
 /** Target number of peers we'd like to have connected to a given long-lived subnet */
@@ -28,6 +29,9 @@ const LOW_SCORE_TO_PRUNE_IF_TOO_MANY_PEERS = -2;
  * peer count will almost always be just below targetPeers triggering constant discoveries that are not necessary
  */
 const PEERS_TO_CONNECT_OVERSHOOT_FACTOR = 3;
+
+const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
+const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
 
 type SubnetDiscvQuery = {subnet: number; toSlot: number; maxPeersToDiscover: number};
 
@@ -54,7 +58,12 @@ export enum ExcessPeerDisconnectReason {
  * - Prioritize peers with good score
  */
 export function prioritizePeers(
-  connectedPeers: PeerInfo[],
+  connectedPeersInfo: {
+    id: PeerId;
+    attnets: phase0.AttestationSubnets | null;
+    syncnets: altair.SyncSubnets | null;
+    score: number;
+  }[],
   activeAttnets: RequestedSubnet[],
   activeSyncnets: RequestedSubnet[],
   {targetPeers, maxPeers}: {targetPeers: number; maxPeers: number},
@@ -68,6 +77,18 @@ export function prioritizePeers(
 } {
   let peersToConnect = 0;
   const peersToDisconnect = new MapDef<ExcessPeerDisconnectReason, PeerId[]>(() => []);
+
+  // Pre-compute trueBitIndexes for re-use below. Set null subnets Maps to default zero value
+  const connectedPeers = connectedPeersInfo.map(
+    (peer): PeerInfo => ({
+      id: peer.id,
+      attnets: peer.attnets ?? attnetsZero,
+      syncnets: peer.syncnets ?? syncnetsZero,
+      attnetsTrueBitIndices: peer.attnets?.getTrueBitIndexes() ?? [],
+      syncnetsTrueBitIndices: peer.syncnets?.getTrueBitIndexes() ?? [],
+      score: peer.score,
+    })
+  );
 
   const {attnetQueries, syncnetQueries, peerHasDuty} = requestAttnetPeers(
     connectedPeers,

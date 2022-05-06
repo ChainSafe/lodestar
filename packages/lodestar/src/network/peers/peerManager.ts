@@ -46,9 +46,6 @@ const LONG_PEER_CONNECTION_MS = 24 * 60 * 60 * 1000;
  */
 const ALLOWED_NEGATIVE_GOSSIPSUB_FACTOR = 0.1;
 
-const attnetsZero = BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT);
-const syncnetsZero = BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT);
-
 // TODO:
 // maxPeers and targetPeers should be dynamic on the num of validators connected
 // The Node should compute a recomended value every interval and log a warning
@@ -405,10 +402,8 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toB58String());
         return {
           id: peer,
-          attnets: peerData?.metadata?.attnets ?? attnetsZero,
-          syncnets: peerData?.metadata?.syncnets ?? syncnetsZero,
-          attnetsTrueBitIndices: peerData?.metadata?.attnets.getTrueBitIndexes() ?? [],
-          syncnetsTrueBitIndices: peerData?.metadata?.syncnets.getTrueBitIndexes() ?? [],
+          attnets: peerData?.metadata?.attnets ?? null,
+          syncnets: peerData?.metadata?.syncnets ?? null,
           score: this.peerRpcScores.getScore(peer),
         };
       }),

@@ -68,11 +68,9 @@ describe("network / peers / priorization", () => {
       opts: {targetPeers: 1, maxPeers: 1},
       expectedResult: {
         // Peers sorted by score, excluding with future duties
-        peersToDisconnect: new Map<string, PeerId[]>(
-          Object.entries({
-            [ExcessPeerDisconnectReason.LOW_SCORE]: [peers[3], peers[2], peers[1]],
-          })
-        ),
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[3], peers[2], peers[1]]],
+        ]),
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
@@ -92,11 +90,9 @@ describe("network / peers / priorization", () => {
       opts: {targetPeers: 1, maxPeers: 1},
       expectedResult: {
         // Peers sorted by score, excluding with future duties
-        peersToDisconnect: new Map<string, PeerId[]>(
-          Object.entries({
-            [ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET]: [peers[3], peers[2], peers[1]],
-          })
-        ),
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          [ExcessPeerDisconnectReason.NO_LONG_LIVED_SUBNET, [peers[3], peers[2], peers[1]]],
+        ]),
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
@@ -120,11 +116,9 @@ describe("network / peers / priorization", () => {
       opts: {targetPeers: 1, maxPeers: 1},
       expectedResult: {
         // Peers sorted by long lived subnets
-        peersToDisconnect: new Map<string, PeerId[]>(
-          Object.entries({
-            [ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET]: [peers[3], peers[2], peers[1]],
-          })
-        ),
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          [ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET, [peers[3], peers[2], peers[1]]],
+        ]),
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
@@ -151,11 +145,9 @@ describe("network / peers / priorization", () => {
       opts: {targetPeers: 1, maxPeers: 1},
       expectedResult: {
         // Peers sorted by long lived subnets
-        peersToDisconnect: new Map<string, PeerId[]>(
-          Object.entries({
-            [ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET]: [peers[3]],
-          })
-        ),
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          [ExcessPeerDisconnectReason.TOO_GROUPED_SUBNET, [peers[3]]],
+        ]),
         peersToConnect: 0,
         attnetQueries: [],
         syncnetQueries: [],
@@ -179,11 +171,9 @@ describe("network / peers / priorization", () => {
       opts: {targetPeers: 6, maxPeers: 6},
       expectedResult: {
         // Peers sorted by score, excluding with future duties
-        peersToDisconnect: new Map<string, PeerId[]>(
-          Object.entries({
-            [ExcessPeerDisconnectReason.LOW_SCORE]: [peers[5], peers[3]],
-          })
-        ),
+        peersToDisconnect: new Map<ExcessPeerDisconnectReason, PeerId[]>([
+          [ExcessPeerDisconnectReason.LOW_SCORE, [peers[5], peers[3]]],
+        ]),
         peersToConnect: 0,
         attnetQueries: [{subnet: 3, maxPeersToDiscover: 1, toSlot: 0}],
         syncnetQueries: [],
