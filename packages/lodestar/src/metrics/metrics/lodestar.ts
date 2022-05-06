@@ -114,6 +114,13 @@ export function createLodestarMetrics(
       help: "network.reportPeer count by reason",
       labelNames: ["reason"],
     }),
+    peerManager: {
+      heartbeatDuration: register.histogram({
+        name: "lodestar_discovery_find_node_query_time_seconds",
+        help: "Time to complete a find node query in seconds in seconds",
+        buckets: [0.001, 0.01, 0.1, 1],
+      }),
+    },
 
     discovery: {
       peersToConnect: register.gauge({
