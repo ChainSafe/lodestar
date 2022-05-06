@@ -28,6 +28,6 @@ export const defaultChainOptions: IChainOptions = {
   disableBlsBatchVerify: false,
   persistInvalidSszObjects: true,
   persistInvalidSszObjectsDir: "",
-  proposerBoostEnabled: false,
+  proposerBoostEnabled: true,
   safeSlotsToImportOptimistically: SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY,
 };
