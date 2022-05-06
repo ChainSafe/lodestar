@@ -10,6 +10,10 @@ import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties";
 import {PubkeyHex} from "../types";
 import {Metrics} from "../metrics";
 
+type BlockProposingServiceOpts = {
+  graffiti?: string;
+};
+
 /**
  * Service that sets up and handles validator block proposal duties.
  */
@@ -23,7 +27,7 @@ export class BlockProposingService {
     private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly metrics: Metrics | null,
-    private readonly graffiti?: string
+    private readonly opts: BlockProposingServiceOpts
   ) {
     this.dutiesService = new BlockDutiesService(
       logger,
@@ -66,7 +70,7 @@ export class BlockProposingService {
     // Wrap with try catch here to re-use `logCtx`
     try {
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
-      const graffiti = this.graffiti || "";
+      const graffiti = this.opts.graffiti || "";
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);

@@ -14,6 +14,10 @@ import {ValidatorEvent, ValidatorEventEmitter} from "./emitter";
 import {PubkeyHex} from "../types";
 import {Metrics} from "../metrics";
 
+type AttestationServiceOpts = {
+  afterBlockDelaySlotFraction?: number;
+};
+
 /**
  * Service that sets up and handles validator attester duties.
  */
@@ -28,7 +32,8 @@ export class AttestationService {
     private readonly emitter: ValidatorEventEmitter,
     indicesService: IndicesService,
     chainHeadTracker: ChainHeaderTracker,
-    private readonly metrics: Metrics | null
+    private readonly metrics: Metrics | null,
+    private readonly opts?: AttestationServiceOpts
   ) {
     this.dutiesService = new AttestationDutiesService(
       logger,
@@ -148,19 +153,27 @@ export class AttestationService {
       })
     );
 
+    // signAndPublishAttestations() may be called before the 1/3 cutoff time if the block was received early.
+    // If we produced the block or we got the block sooner than our peers, our attestations can be dropped because
+    // they reach our peers before the block. To prevent that, we wait 2 extra seconds AFTER block arrival, but
+    // never beyond the 1/3 cutoff time.
+    // https://github.com/status-im/nimbus-eth2/blob/7b64c1dce4392731a4a59ee3a36caef2e0a8357a/beacon_chain/validators/validator_duties.nim#L1123
+    const msToOneThirdSlot = this.clock.msToSlot(slot + 1 / 3);
+    // Default = 6, which is half of attestation offset
+    const afterBlockDelayMs = (1000 * this.clock.secondsPerSlot) / (this.opts?.afterBlockDelaySlotFraction ?? 6);
+    await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
+
     this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
 
     // Step 2. Publish all `Attestations` in one go
-    if (signedAttestations.length > 0) {
-      try {
-        await this.api.beacon.submitPoolAttestations(signedAttestations);
-        this.logger.info("Published attestations", {slot, count: signedAttestations.length});
-        this.metrics?.publishedAttestations.inc(signedAttestations.length);
-      } catch (e) {
-        // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
-        this.metrics?.attestaterError.inc({error: "publish"});
-        this.logger.error("Error publishing attestations", {slot}, e as Error);
-      }
+    try {
+      await this.api.beacon.submitPoolAttestations(signedAttestations);
+      this.logger.info("Published attestations", {slot, count: signedAttestations.length});
+      this.metrics?.publishedAttestations.inc(signedAttestations.length);
+    } catch (e) {
+      // Note: metric counts only 1 since we don't know how many signedAttestations are invalid
+      this.metrics?.attestaterError.inc({error: "publish"});
+      this.logger.error("Error publishing attestations", {slot}, e as Error);
     }
   }
 
