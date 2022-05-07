@@ -152,24 +152,6 @@ export type OnBlockPrecachedData = {
   justifiedBalances?: EffectiveBalanceIncrements;
   /** Time in seconds when the block was received */
   blockDelaySec: number;
-  /**
-   * POW chain block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
-   * ```ts
-   * powBlock = getPowBlock((block as bellatrix.BeaconBlock).body.executionPayload.parentHash)
-   * ```
-   */
-  powBlock?: PowBlockHex | null;
-  /**
-   * POW chain block's block parent, from getPowBlock() `eth_getBlockByHash` JSON RPC endpoint
-   * ```ts
-   * const powParent = getPowBlock(powBlock.parentHash);
-   * ```
-   */
-  powBlockParent?: PowBlockHex | null;
-  /**
-   * Optimistic sync fields
-   */
-  isMergeTransitionBlock?: boolean;
   executionStatus?: ExecutionStatus;
 };
 
