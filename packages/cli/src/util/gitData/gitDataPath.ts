@@ -7,6 +7,7 @@ import path from "node:path";
 import fs from "node:fs";
 import {fileURLToPath} from "node:url";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**

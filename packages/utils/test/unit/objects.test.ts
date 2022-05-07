@@ -1,5 +1,5 @@
 import {expect} from "chai";
-import {isPlainObject, objectToExpectedCase} from "../../src";
+import {isPlainObject, objectToExpectedCase} from "../../src/index.js";
 
 describe("Objects helper", () => {
   it("should be plain object", () => {

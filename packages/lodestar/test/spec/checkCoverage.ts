@@ -4,6 +4,7 @@ import path from "node:path";
 import {SPEC_TEST_LOCATION} from "./specTestVersioning.js";
 import {fileURLToPath} from "node:url";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // TEMP TEMP

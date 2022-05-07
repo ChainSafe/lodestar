@@ -11,6 +11,7 @@ import {NodeWorkerOptions} from "./threaded/types.js";
 import {IChainConfig} from "@chainsafe/lodestar-config";
 import {fileURLToPath} from "node:url";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */

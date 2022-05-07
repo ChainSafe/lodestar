@@ -3,7 +3,7 @@ import path from "node:path";
 import rimraf from "rimraf";
 import {Writable} from "node:stream";
 import {expect} from "chai";
-import {LogData, LodestarError, LogFormat, logFormats, LogLevel, WinstonLogger} from "../../../src";
+import {LogData, LodestarError, LogFormat, logFormats, LogLevel, WinstonLogger} from "../../../src/index.js";
 import {TransportType} from "../../../src/logger/transport.js";
 
 /**

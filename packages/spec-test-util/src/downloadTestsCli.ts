@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {downloadTests, TestToDownload} from "./downloadTests";
+import {downloadTests, TestToDownload} from "./downloadTests.js";
 
 /* eslint-disable no-console */
 

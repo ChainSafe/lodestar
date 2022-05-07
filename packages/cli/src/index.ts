@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-import yargs from "yargs";
 import {YargsError} from "./util/index.js";
 import {getLodestarCli, yarg} from "./cli.js";
 import "source-map-support/register.js";

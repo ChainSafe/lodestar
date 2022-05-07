@@ -5,6 +5,7 @@ import findUp from "find-up";
 import {readLodestarGitData} from "./gitData/index.js";
 import {GitData} from "./gitData/gitDataPath.js";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 type VersionJson = {

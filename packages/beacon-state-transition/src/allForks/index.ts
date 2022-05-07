@@ -12,5 +12,4 @@ export * from "./getFromBytes.js";
 // allForks.processDeposit(...)
 //
 // const x: allForks.BeaconState;
-// eslint-disable-next-line no-restricted-imports
 export * from "@chainsafe/lodestar-types/allForks";

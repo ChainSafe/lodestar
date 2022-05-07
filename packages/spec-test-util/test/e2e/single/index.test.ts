@@ -3,6 +3,7 @@ import {unlinkSync, writeFileSync} from "node:fs";
 import path, {join} from "node:path";
 import {fileURLToPath} from "node:url";
 
+// eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 import {ContainerType, Type} from "@chainsafe/ssz";

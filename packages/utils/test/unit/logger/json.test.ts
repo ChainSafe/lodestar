@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-assignment */
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {LodestarError} from "../../../src";
+import {LodestarError} from "../../../src/index.js";
 import {logCtxToJson, logCtxToString} from "../../../src/logger/json.js";
 
 describe("Json helper", () => {
