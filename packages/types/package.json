@@ -18,16 +18,16 @@
       "import": "./lib/index.js"
     },
     "./allForks": {
-      "import": "./allForks/index.js"
+      "import": "./lib/allForks/index.js"
     },
     "./altair": {
-      "import": "./altair/index.js"
+      "import": "./lib/altair/index.js"
     },
     "./bellatrix": {
-      "import": "./bellatrix/index.js"
+      "import": "./lib/bellatrix/index.js"
     },
     "./phase0": {
-      "import": "./phase0/index.js"
+      "import": "./lib/phase0/index.js"
     }
   },
   "typesVersions": {
