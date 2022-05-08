@@ -519,3 +519,31 @@ export async function getNetworkCachedState(
   const stateView = config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz);
   return createCachedBeaconStateTest(stateView, config);
 }
+
+/**
+ * Download a state from Infura. Caches states in local fs by network and slot to only download once.
+ */
+export async function getNetworkCachedBlock(
+  network: NetworkName,
+  slot: number,
+  timeout?: number
+): Promise<allForks.SignedBeaconBlock> {
+  const config = getNetworkConfig(network);
+
+  const filepath = path.join(testCachePath, `block_${network}_${slot}.ssz`);
+
+  if (fs.existsSync(filepath)) {
+    const blockSsz = fs.readFileSync(filepath);
+    return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
+  } else {
+    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
+    const res =
+      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+        ? await client.beacon.getBlock(String(slot))
+        : await client.beacon.getBlockV2(String(slot));
+
+    const blockSsz = config.getForkTypes(slot).SignedBeaconBlock.serialize(res.data);
+    fs.writeFileSync(filepath, blockSsz);
+    return res.data;
+  }
+}
