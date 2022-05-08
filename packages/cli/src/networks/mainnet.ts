@@ -1,6 +1,4 @@
-import {mainnetChainConfig} from "@chainsafe/lodestar-config/networks";
-
-export const chainConfig = mainnetChainConfig;
+export {mainnetChainConfig as chainConfig} from "@chainsafe/lodestar-config/networks";
 
 /* eslint-disable max-len */
 
