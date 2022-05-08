@@ -6,7 +6,7 @@ import {ErrorAborted} from "./errors";
  * On abort throws ErrorAborted
  */
 export async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (ms <= 0) {
+  if (ms < 0) {
     return;
   }
 
