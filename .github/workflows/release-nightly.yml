@@ -41,10 +41,20 @@ jobs:
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
 
+      - name: Get version
+        id: version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./packages/lodestar/package.json').version")
+          export VERSION=${PACKAGE_VERSION}-dev.${GITHUB_SHA:0:10}
+          echo "::set-output name=version::$VERSION"
+          echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
+      - name: Set version
+        run: node_modules/.bin/lerna version ${{ steps.version.outputs.version }} --no-git-tag-version --force-publish --yes
       - name: Publish to npm registry
-        # Just use lerna publish with --canary option. Using 'from-package' ignore other options
-        # and only compares against the verison in package.json, and skips release if already
-        # published.
+        # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
+        # We used `lerna publish --canary` option. However, since we now publish must version on branches,
+        # i.e. v0.35.x branch, lerna fails to detect the latest version and publishes canary versions as
+        # `0.34.0-dev.173+28e2c74cf0` instead of `0.36.0-dev.4+28e2c74cf0`, which creates confusion.
         #
         # --no-git-reset:
         #   Do not delete code version artifacts so the next step can pick the version
@@ -71,17 +81,11 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish --yes --no-verify-access \
+          node_modules/.bin/lerna publish ${{ steps.version.outputs.version }} --yes --no-verify-access \
           --canary --dist-tag next --no-git-reset --force-publish \
           --preid dev --exact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(node -p "require('./packages/lodestar/package.json').version")
-          echo VERSION $VERSION
-          echo "::set-output name=version::$VERSION"
     outputs:
       version: ${{ steps.version.outputs.version }}
 
