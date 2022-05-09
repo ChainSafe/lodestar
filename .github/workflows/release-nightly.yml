@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - master
+      - dapplion/fix-next-release-version
 
 jobs:
   npm:
