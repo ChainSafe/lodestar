@@ -58,12 +58,6 @@ jobs:
         # --no-git-reset:
         #   Do not delete code version artifacts so the next step can pick the version
         #
-        # --canary:
-        #   Format version with commit (1.1.0-alpha.0+81e3b443). Make sure the previous
-        #   released tags are not lightweight("commit" type), but proper annotated ("tag" type)
-        #   Otherwise the version canary will generate will be from last annotated tag type
-        #   Best way to create such a tag is by using 'git tag -a' or using lerna publish!
-        #
         # --dist-tag next:
         #   Make this nightly version installable with `@next`
         #
@@ -81,7 +75,7 @@ jobs:
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
           node_modules/.bin/lerna publish ${{ steps.version.outputs.version }} --yes --no-verify-access \
-          --canary --dist-tag next --no-git-reset --force-publish \
+          --dist-tag next --no-git-reset --force-publish \
           --preid dev --exact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
