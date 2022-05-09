@@ -154,13 +154,14 @@ module.exports = {
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
     "import/no-unresolved": "off",
 
-    "@chainsafe/node/file-extension-in-import": [
-      "error",
-      "never", // TEMP disable this check until full migration is complete
-      {
-        "esm": true
-      }
-    ],
+    // TEMP disable this check until full migration is complete
+    // "@chainsafe/node/file-extension-in-import": [
+    //   "error",
+    //   "never",
+    //   {
+    //     "esm": true
+    //   }
+    // ],
   },
   settings: {
     "import/core-modules": [
