@@ -9,7 +9,6 @@ import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
 import {toCheckpointHex} from "./stateCache";
-import {BlockSource} from "./blocks/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -149,7 +148,7 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
   }
 }
 
-export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock, source: BlockSource): void {
+export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   const delaySec = this.clock.secFromSlot(head.slot);
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
@@ -159,7 +158,7 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock, source: B
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
   this.metrics?.headSlot.set(head.slot);
-  this.metrics?.blockElapsedTimeTillBecomeHead.observe({src: source}, delaySec);
+  this.metrics?.gossipBlock.elapsedTimeTillBecomeHead.observe(delaySec);
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {

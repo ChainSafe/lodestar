@@ -12,7 +12,6 @@ import {RangeSyncType, getRangeSyncType, rangeSyncTypes} from "../utils/remoteSy
 import {updateChains} from "./utils";
 import {ChainTarget, SyncChainFns, SyncChain, SyncChainOpts, SyncChainDebugState} from "./chain";
 import {PartiallyVerifiedBlockFlags} from "../../chain/blocks";
-import {BlockSource} from "../../chain/blocks/types";
 
 export enum RangeSyncEvent {
   completedChain = "RangeSync-completedChain",
@@ -201,7 +200,7 @@ export class RangeSync extends (EventEmitter as {new (): RangeSyncEmitter}) {
       // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
       ignoreIfFinalized: true,
       // We won't attest to this block so it's okay to ignore a SYNCING message from execution layer
-      source: BlockSource.RANGE_SYNC,
+      fromRangeSync: true,
       // when this runs, syncing is the most important thing and gossip is not likely to run
       // so we can utilize worker threads to verify signatures
       blsVerifyOnMainThread: false,

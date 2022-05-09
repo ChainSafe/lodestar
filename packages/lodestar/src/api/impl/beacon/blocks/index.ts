@@ -5,7 +5,6 @@ import {computeTimeAtSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {SLOTS_PER_HISTORICAL_ROOT} from "@chainsafe/lodestar-params";
 import {sleep} from "@chainsafe/lodestar-utils";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
-import {BlockSource} from "../../../../chain/blocks/types";
 import {BlockError, BlockErrorCode} from "../../../../chain/errors";
 import {OpSource} from "../../../../metrics/validatorMonitor";
 import {NetworkEvent} from "../../../../network";
@@ -158,7 +157,7 @@ export function getBeaconBlockApi({
         // specification is very clear that this is the desired behaviour.
         network.gossip.publishBeaconBlock(signedBlock),
 
-        chain.processBlock(signedBlock, {source: BlockSource.API}).catch((e) => {
+        chain.processBlock(signedBlock).catch((e) => {
           if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
             network.events.emit(NetworkEvent.unknownBlockParent, signedBlock, network.peerId.toB58String());
           }

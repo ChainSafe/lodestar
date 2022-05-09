@@ -257,11 +257,11 @@ export class BeaconChain implements IBeaconChain {
     return await this.db.block.get(fromHexString(block.blockRoot));
   }
 
-  async processBlock(block: allForks.SignedBeaconBlock, flags: PartiallyVerifiedBlockFlags): Promise<void> {
+  async processBlock(block: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void> {
     return await this.blockProcessor.processBlockJob({...flags, block});
   }
 
-  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags: PartiallyVerifiedBlockFlags): Promise<void> {
+  async processChainSegment(blocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void> {
     return await this.blockProcessor.processChainSegment(blocks.map((block) => ({...flags, block})));
   }
 

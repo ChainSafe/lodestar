@@ -29,7 +29,6 @@ import {
 import {INetwork} from "../../interface";
 import {NetworkEvent} from "../../events";
 import {PeerAction} from "../../peers";
-import {BlockSource} from "../../../chain/blocks/types";
 
 /**
  * Gossip handler options as part of network options
@@ -120,11 +119,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
       // See https://github.com/ChainSafe/lodestar/issues/3792
       chain
-        .processBlock(signedBlock, {
-          validProposerSignature: true,
-          blsVerifyOnMainThread: true,
-          source: BlockSource.GOSSIP,
-        })
+        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true})
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = chain.clock.secFromSlot(slot);
