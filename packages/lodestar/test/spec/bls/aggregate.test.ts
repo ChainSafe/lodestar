@@ -1,7 +1,7 @@
 import path from "node:path";
 import bls from "@chainsafe/bls";
 // eslint-disable-next-line no-restricted-imports
-import {EmptyAggregateError} from "@chainsafe/bls/lib/errors";
+import {EmptyAggregateError} from "@chainsafe/bls/errors";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 

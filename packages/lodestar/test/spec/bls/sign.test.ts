@@ -2,7 +2,7 @@ import path from "node:path";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import bls from "@chainsafe/bls";
 // eslint-disable-next-line no-restricted-imports
-import {ZeroSecretKeyError} from "@chainsafe/bls/lib/errors";
+import {ZeroSecretKeyError} from "@chainsafe/bls/errors";
 import {fromHexString, toHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
 import {IBaseSpecTest} from "../type.js";

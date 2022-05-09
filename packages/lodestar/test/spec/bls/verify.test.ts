@@ -1,5 +1,5 @@
 import path from "node:path";
-import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util/lib";
+import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
 import bls from "@chainsafe/bls";
 import {fromHexString} from "@chainsafe/ssz";
 import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
