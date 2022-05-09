@@ -49,8 +49,6 @@ jobs:
           export VERSION=${PACKAGE_VERSION}-dev.${GITHUB_SHA:0:10}
           echo "::set-output name=version::$VERSION"
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
-      - name: Set version
-        run: node_modules/.bin/lerna version ${{ steps.version.outputs.version }} --no-git-tag-version --force-publish --yes
       - name: Publish to npm registry
         # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
         # We used `lerna publish --canary` option. However, since we now publish must version on branches,
