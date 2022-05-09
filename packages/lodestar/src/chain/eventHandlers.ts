@@ -157,8 +157,15 @@ export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
   });
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
-  this.metrics?.headSlot.set(head.slot);
-  this.metrics?.gossipBlock.elapsedTimeTillBecomeHead.observe(delaySec);
+
+  if (this.metrics) {
+    this.metrics.headSlot.set(head.slot);
+    // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+    // We want to track recent blocks coming from gossip, unknown block sync, and API.
+    if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+      this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+    }
+  }
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
