@@ -1016,7 +1016,7 @@ export function assertValidTerminalPowBlock(
     if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
       throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
 
-    // powBock.blockhash is hex, so we just pick the corresponding root
+    // powBock.blockHash is hex, so we just pick the corresponding root
     if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
       throw new Error(
         `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
@@ -1032,7 +1032,7 @@ export function assertValidTerminalPowBlock(
 
     const {powBlock, powBlockParent} = preCachedData;
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
+    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlockParent");
 
     const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
     const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;

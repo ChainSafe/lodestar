@@ -142,7 +142,7 @@ export interface IForkChoice {
 
 /** Same to the PowBlock but we want RootHex to work with forkchoice conveniently */
 export type PowBlockHex = {
-  blockhash: RootHex;
+  blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
 };
