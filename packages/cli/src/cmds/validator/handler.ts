@@ -140,6 +140,7 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       graffiti,
       enableDoppelganger,
       doppelgangerEpochsToCheck,
+      afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
     },
     controller.signal,
     metrics

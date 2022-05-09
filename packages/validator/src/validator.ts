@@ -29,6 +29,7 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  afterBlockDelaySlotFraction?: number;
   graffiti?: string;
   enableDoppelganger: boolean;
   doppelgangerEpochsToCheck: number;
@@ -104,15 +105,9 @@ export class Validator {
     this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
     const loggerVc = getLoggerVc(logger, clock);
 
-    this.blockProposingService = new BlockProposingService(
-      config,
-      loggerVc,
-      api,
-      clock,
-      validatorStore,
-      metrics,
-      graffiti
-    );
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
+      graffiti,
+    });
 
     this.attestationService = new AttestationService(
       loggerVc,
@@ -122,7 +117,8 @@ export class Validator {
       this.emitter,
       indicesService,
       this.chainHeaderTracker,
-      metrics
+      metrics,
+      {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
     );
 
     this.syncCommitteeService = new SyncCommitteeService(

@@ -2,7 +2,7 @@ import LibP2p, {Connection} from "libp2p";
 import PeerId from "peer-id";
 import {IDiscv5DiscoveryInputOptions} from "@chainsafe/discv5";
 import {BitArray} from "@chainsafe/ssz";
-import {ATTESTATION_SUBNET_COUNT, SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
+import {SYNC_COMMITTEE_SUBNET_COUNT} from "@chainsafe/lodestar-params";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
 import {allForks, altair, phase0} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
@@ -377,6 +377,9 @@ export class PeerManager {
    * NOTE: Discovery should only add a new query if one isn't already queued.
    */
   private heartbeat(): void {
+    // timer is safe without a try {} catch {}, in case of error the metric won't register and timer is GC'ed
+    const timer = this.metrics?.peerManager.heartbeatDuration.startTimer();
+
     const connectedPeers = this.getConnectedPeerIds();
 
     // Decay scores before reading them. Also prunes scores
@@ -402,8 +405,8 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peer.toB58String());
         return {
           id: peer,
-          attnets: peerData?.metadata?.attnets ?? BitArray.fromBitLen(ATTESTATION_SUBNET_COUNT),
-          syncnets: peerData?.metadata?.syncnets ?? BitArray.fromBitLen(SYNC_COMMITTEE_SUBNET_COUNT),
+          attnets: peerData?.metadata?.attnets ?? null,
+          syncnets: peerData?.metadata?.syncnets ?? null,
           score: this.peerRpcScores.getScore(peer),
         };
       }),
@@ -412,10 +415,6 @@ export class PeerManager {
       this.syncnetsService.getActiveSubnets(),
       this.opts
     );
-
-    // Register results to metrics
-    this.metrics?.peersRequestedToDisconnect.inc(peersToDisconnect.length);
-    this.metrics?.peersRequestedToConnect.inc(peersToConnect);
 
     const queriesMerged: SubnetDiscvQueryMs[] = [];
     for (const {type, queries} of [
@@ -441,14 +440,18 @@ export class PeerManager {
 
     if (this.discovery) {
       try {
+        this.metrics?.peersRequestedToConnect.inc(peersToConnect);
         this.discovery.discoverPeers(peersToConnect, queriesMerged);
       } catch (e) {
         this.logger.error("Error on discoverPeers", {}, e as Error);
       }
     }
 
-    for (const peer of peersToDisconnect) {
-      void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+    for (const [reason, peers] of peersToDisconnect) {
+      this.metrics?.peersRequestedToDisconnect.inc({reason}, peers.length);
+      for (const peer of peers) {
+        void this.goodbyeAndDisconnect(peer, GoodByeReasonCode.TOO_MANY_PEERS);
+      }
     }
 
     // Prune connectedPeers map in case it leaks. It has happen in previous nodes,
@@ -462,6 +465,8 @@ export class PeerManager {
         }
       }
     }
+
+    timer?.();
   }
 
   private updateGossipsubScores(): void {
@@ -609,10 +614,13 @@ export class PeerManager {
 
     const peersByDirection = new Map<string, number>();
     const peersByClient = new Map<string, number>();
-    const longLivedSubnets: number[] = [];
+    const longLivedAttnets: number[] = [];
     const scores: number[] = [];
     const connSecs: number[] = [];
     const now = Date.now();
+
+    // peerLongLivedAttnets metric is a count
+    metrics.peerLongLivedAttnets.reset();
 
     for (const connections of this.libp2p.connectionManager.connections.values()) {
       const openCnx = connections.find((cnx) => cnx.stat.status === "open");
@@ -623,7 +631,10 @@ export class PeerManager {
         const peerData = this.connectedPeers.get(peerId.toB58String());
         const client = peerData?.agentClient ?? ClientKind.Unknown;
         peersByClient.set(client, 1 + (peersByClient.get(client) ?? 0));
-        longLivedSubnets.push(countAttnets(peerData));
+
+        const attnets = peerData?.metadata?.attnets;
+        longLivedAttnets.push(attnets ? attnets.getTrueBitIndexes().length : 0);
+
         scores.push(this.peerRpcScores.getScore(peerId));
         connSecs.push(Math.floor((now - openCnx.stat.timeline.open) / 1000));
         total++;
@@ -647,20 +658,9 @@ export class PeerManager {
 
     metrics.peers.set(total);
     metrics.peersSync.set(syncPeers);
-    metrics.peerLongLivedSubnets.set(longLivedSubnets);
     metrics.peerScore.set(scores);
     metrics.peerConnectionLength.set(connSecs);
+    // TODO: Optimize doing observe in batch
+    for (const count of longLivedAttnets) metrics.peerLongLivedAttnets.observe(count);
   }
-}
-
-function countAttnets(peerData?: PeerData): number {
-  const attNets = peerData?.metadata?.attnets;
-  if (!attNets) return 0;
-
-  let count = 0;
-  for (let i = 0; i < ATTESTATION_SUBNET_COUNT; i++) {
-    if (attNets.get(i)) count++;
-  }
-
-  return count;
 }

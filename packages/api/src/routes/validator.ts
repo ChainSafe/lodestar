@@ -352,7 +352,8 @@ export function getReqSerializers(): ReqSerializers<Api, ReqTypes> {
 
 export function getReturnTypes(): ReturnTypes<Api> {
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-  const WithDependentRoot = <T>(dataType: Type<T>) => new ContainerType({data: dataType, dependentRoot: ssz.Root});
+  const WithDependentRoot = <T>(dataType: Type<T>) =>
+    new ContainerType({data: dataType, dependentRoot: ssz.Root}, {jsonCase: "snake"});
 
   const AttesterDuty = new ContainerType(
     {
