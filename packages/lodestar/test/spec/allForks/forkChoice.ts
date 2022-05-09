@@ -12,13 +12,8 @@ import {
   BeaconStateAllForks,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {describeDirectorySpecTest, InputType} from "@chainsafe/lodestar-spec-test-util";
-import {initializeForkChoice} from "@chainsafe/lodestar/src/chain/forkChoice";
-import {
-  CheckpointStateCache,
-  toCheckpointHex,
-  toCheckpointKey,
-} from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
-import {ChainEventEmitter} from "@chainsafe/lodestar/src/chain/emitter";
+import {ChainEventEmitter, initializeForkChoice} from "@chainsafe/lodestar";
+import {CheckpointStateCache, toCheckpointHex, toCheckpointKey} from "@chainsafe/lodestar/chain";
 import {toHexString} from "@chainsafe/ssz";
 import {CheckpointWithHex, ForkChoiceError, ForkChoiceErrorCode, IForkChoice} from "@chainsafe/lodestar-fork-choice";
 import {ssz, RootHex} from "@chainsafe/lodestar-types";

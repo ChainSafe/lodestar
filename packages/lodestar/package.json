@@ -13,7 +13,23 @@
   },
   "version": "0.36.0",
   "type": "module",
-  "exports": "./lib/index.js",
+  "exports": {
+    ".": {
+      "import": "./lib/index.js"
+    },
+    "./chain": {
+      "import": "./lib/chain/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "*",
+        "lib/*",
+        "lib/*/index"
+      ]
+    }
+  },
   "types": "./lib/index.d.ts",
   "files": [
     "lib/**/*.d.ts",
@@ -51,12 +67,12 @@
     "test:ssz-generic": "mocha 'test/spec/ssz/generic/index.test.ts'",
     "test:spec-general": "yarn test:bls && yarn test:ssz-generic",
     "test:spec": "yarn test:spec-general && yarn test:bls && yarn test:spec-phase0 && yarn test:spec-altair && yarn test:spec-bellatrix",
-    "test:spec-phase0-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.js 'test/spec/phase0/**/*.test.ts'",
-    "test:spec-phase0-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.js 'test/spec/phase0/**/*.test.ts'",
-    "test:spec-altair-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.js 'test/spec/altair/**/*.test.ts'",
-    "test:spec-altair-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.js 'test/spec/altair/**/*.test.ts'",
-    "test:spec-bellatrix-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.js 'test/spec/bellatrix/**/*.test.ts'",
-    "test:spec-bellatrix-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.js 'test/spec/bellatrix/**/*.test.ts'",
+    "test:spec-phase0-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/phase0/**/*.test.ts'",
+    "test:spec-phase0-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/phase0/**/*.test.ts'",
+    "test:spec-altair-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/altair/**/*.test.ts'",
+    "test:spec-altair-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/altair/**/*.test.ts'",
+    "test:spec-bellatrix-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/bellatrix/**/*.test.ts'",
+    "test:spec-bellatrix-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/bellatrix/**/*.test.ts'",
     "test:spec-phase0": "yarn test:spec-phase0-minimal && yarn test:spec-phase0-mainnet",
     "test:spec-altair": "yarn test:spec-altair-minimal && yarn test:spec-altair-mainnet",
     "test:spec-bellatrix": "yarn test:spec-bellatrix-minimal && yarn test:spec-bellatrix-mainnet",

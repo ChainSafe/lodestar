@@ -10,7 +10,7 @@ import {isExecutionEnabled} from "../utils.js";
 import {processAttesterSlashing} from "./processAttesterSlashing.js";
 import {processProposerSlashing} from "./processProposerSlashing.js";
 
-export {processOperations, processAttesterSlashing, processProposerSlashing};
+export {processOperations, processAttesterSlashing, processProposerSlashing, processExecutionPayload};
 
 export function processBlock(
   state: CachedBeaconStateBellatrix,

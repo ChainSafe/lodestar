@@ -10,8 +10,6 @@ import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {IBaseSpecTest, shouldVerify} from "../type.js";
 import {operations, BlockProcessFn} from "../allForks/operations.js";
-// eslint-disable-next-line no-restricted-imports
-import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/bellatrix/block/processExecutionPayload";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 
@@ -64,7 +62,7 @@ operations<CachedBeaconStateBellatrix>(ForkName.bellatrix, {
     state,
     testCase: IBaseSpecTest & {execution_payload: bellatrix.ExecutionPayload; execution: {execution_valid: boolean}}
   ) => {
-    processExecutionPayload(
+    bellatrix.processExecutionPayload(
       (state as CachedBeaconStateAllForks) as CachedBeaconStateBellatrix,
       testCase.execution_payload,
       {notifyNewPayload: () => testCase.execution.execution_valid}

@@ -1,8 +1,11 @@
-"use strict";
 
 module.exports = {
   colors: true,
-  require: ["ts-node/register", "./test/setupPreset.ts"],
+  require: ["./test/setupPreset.ts"],
+  "node-option": [
+    "experimental-specifier-resolution=node",
+    "loader=ts-node/esm"
+  ],
   timeout: 60_000,
   // Disable parallel locally for easier debugging
   parallel: Boolean(process.env.CI),
