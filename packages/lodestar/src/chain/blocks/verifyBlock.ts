@@ -280,6 +280,19 @@ export async function verifyBlockStateTransition(
         });
     }
 
+    // If this is a merge transition block, check to ensure if it references
+    // a valid terminal PoW block.
+    //
+    // However specs define this check to be run inside forkChoice's onBlock
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    // but we perform the check here (as inspired from the lighthouse impl)
+    //
+    // Reasons:
+    //  1. If the block is not valid, we should fail early and not wait till
+    //     forkChoice import.
+    //  2. It makes logical sense to pair it with the block validations and
+    //     deal it with the external services like eth1 tracker here than
+    //     in import block
     if (isMergeTransitionBlock) {
       const mergeBlock = block.message as bellatrix.BeaconBlock;
       const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);

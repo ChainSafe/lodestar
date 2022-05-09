@@ -328,6 +328,16 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
+    // As per specs, we should be validating here the terminal conditions of
+    // the PoW if this were a merge transition block.
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    //
+    // However this check has been moved to the `verifyBlockStateTransition` in
+    // `packages/lodestar/src/chain/blocks/verifyBlock.ts` as:
+    //
+    //  1. Its prudent to fail fast and not try importing a block in forkChoice.
+    //  2. Also the data to run such a validation is readily available there.
+
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
     const currentJustifiedCheckpoint = toCheckpointWithHex(state.currentJustifiedCheckpoint);
