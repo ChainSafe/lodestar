@@ -11,7 +11,7 @@ module.exports = {
   },
   parser: "@typescript-eslint/parser",
   parserOptions: {
-    ecmaVersion: "latest",
+    ecmaVersion: 10,
     project: "./tsconfig.json",
     sourceType: "module",
   },
@@ -156,7 +156,7 @@ module.exports = {
 
     "@chainsafe/node/file-extension-in-import": [
       "error",
-      "always",
+      "never", // TEMP disable this check until full migration is complete
       {
         "esm": true
       }
