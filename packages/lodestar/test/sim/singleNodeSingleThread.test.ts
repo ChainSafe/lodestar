@@ -16,7 +16,7 @@ import {createExternalSignerServer} from "../../../validator/test/utils/createEx
 
 /* eslint-disable no-console, @typescript-eslint/naming-convention */
 
-describe.only("Run single node single thread interop validators (no eth1) until checkpoint", function () {
+describe("Run single node single thread interop validators (no eth1) until checkpoint", function () {
   const testParams: Pick<IChainConfig, "SECONDS_PER_SLOT"> = {
     SECONDS_PER_SLOT: 2,
   };

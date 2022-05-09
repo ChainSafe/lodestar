@@ -2,6 +2,7 @@ import {computeSigningRoot} from "@chainsafe/lodestar-beacon-state-transition";
 import {DOMAIN_AGGREGATE_AND_PROOF, DOMAIN_SELECTION_PROOF} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../src/chain/index.js";
+// eslint-disable-next-line import/no-relative-packages
 import {getSecretKeyFromIndexCached} from "../../../../beacon-state-transition/test/perf/util";
 import {SeenAggregators} from "../../../src/chain/seenCache/index.js";
 import {signCached} from "../cache.js";
