@@ -516,9 +516,9 @@ export function createLodestarMetrics(
         help: "Total number of processed blocks successes in UnknownBlockSync",
         labelNames: ["type"],
       }),
-      elapsedTimeTillProcessed: register.histogram<"type">({
-        name: "lodestar_sync_unknown_block_elapsed_time_till_processed_seconds",
-        help: "Duration from received time until the block is processed",
+      downloadTime: register.histogram<"type">({
+        name: "lodestar_sync_unknown_block_download_time_seconds",
+        help: "Duration from received time until the block is downloaded",
         labelNames: ["type"],
       }),
       slotTimeTillProcessed: register.histogram<"type">({

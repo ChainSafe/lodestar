@@ -9,7 +9,7 @@ import {shuffle} from "../util/shuffle";
 import {byteArrayEquals} from "../util/bytes";
 import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
-import {wrapError} from "../util/wrapError";
+import {Result, wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownParentPendingBlock} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
@@ -160,27 +160,31 @@ export class UnknownBlockSync {
     }
   };
 
-  private async downloadUnknownBlock(block: PendingBlock, syncedPeers: PeerId[]): Promise<void> {
-    if (block.status !== PendingBlockStatus.pending) {
+  private async downloadUnknownBlock(pendingBlock: PendingBlock, syncedPeers: PeerId[]): Promise<void> {
+    if (pendingBlock.status !== PendingBlockStatus.pending) {
       return;
     }
 
-    block.status = PendingBlockStatus.fetching;
+    pendingBlock.status = PendingBlockStatus.fetching;
+    const {blockRootHex, type, downloadAttempts, receivedTimeSec} = pendingBlock;
     const unknownBlockHex =
-      block.type === PendingBlockType.UNKNOWN_PARENT ? block.parentBlockRootHex : block.blockRootHex;
-    const res = await this.fetchUnknownBlockRoot(block, fromHexString(unknownBlockHex), syncedPeers);
-    block.status = PendingBlockStatus.pending;
+      pendingBlock.type === PendingBlockType.UNKNOWN_PARENT ? pendingBlock.parentBlockRootHex : blockRootHex;
+    const res = await this.fetchUnknownBlockRoot(pendingBlock, fromHexString(unknownBlockHex), syncedPeers);
+    pendingBlock.status = PendingBlockStatus.pending;
+    const downloadSec = Date.now() / 1000 - receivedTimeSec;
     const logCtx = {
       root: prettyBytes(unknownBlockHex),
-      type: block.type,
-      attempts: block.downloadAttempts,
+      type,
+      downloadAttempts,
       queriedCount: res.attempt,
+      downloadSec,
     };
 
     if (res.signedBlock !== undefined) {
-      this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc({type: block.type});
+      this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc({type});
       const {signedBlock, peerIdStr} = res;
       this.logger.verbose("Successfully download unknown block", logCtx);
+      this.metrics?.syncUnknownBlock.downloadTime.observe({type}, downloadSec);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         const pendingBlock = this.addUnknownBlockParent(signedBlock, peerIdStr);
@@ -194,12 +198,12 @@ export class UnknownBlockSync {
       }
     } else {
       if (res.attempt > 0) {
-        block.downloadAttempts++;
-        this.metrics?.syncUnknownBlock.downloadedBlocksError.inc({type: block.type});
-        if (block.downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
+        pendingBlock.downloadAttempts++;
+        this.metrics?.syncUnknownBlock.downloadedBlocksError.inc({type});
+        if (downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
           // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
           this.logger.error("Ignoring unknown block root after many failed downloads", logCtx, res.err);
-          this.removeAndDownscoreAllDescendants(block);
+          this.removeAndDownscoreAllDescendants(pendingBlock);
         } else {
           // Try again when a new peer connects, its status changes, or a new unknownBlockParent event happens
           this.logger.debug("Error downloading unknown block root", logCtx, res.err);
@@ -222,25 +226,31 @@ export class UnknownBlockSync {
     }
 
     pendingBlock.status = PendingBlockStatus.processing;
-    // At gossip time, it's critical to keep a good number of mesh peers.
-    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-    // Gossip Job Wait Time depends on the BLS Job Wait Time
-    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-    // See https://github.com/ChainSafe/lodestar/issues/3792
     const {signedBlock, type, blockRootHex, receivedTimeSec, downloadAttempts} = pendingBlock;
-    const res = await wrapError(
-      this.chain.processBlock(signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
-    );
+    let isBlockKnown = false;
+    let res: Result<void>;
+    if (this.chain.forkChoice.hasBlock(fromHexString(blockRootHex))) {
+      // for UNKNOWN_BLOCK, it's very possible that gossip block comes and be processed before this downloaded block
+      isBlockKnown = true;
+      res = {err: null} as Result<void>;
+    } else {
+      // At gossip time, it's critical to keep a good number of mesh peers.
+      // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+      // Gossip Job Wait Time depends on the BLS Job Wait Time
+      // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+      // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+      // See https://github.com/ChainSafe/lodestar/issues/3792
+      res = await wrapError(this.chain.processBlock(signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true}));
+    }
     pendingBlock.status = PendingBlockStatus.pending;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
+    else if (isBlockKnown) this.logger.verbose("Fetched known block", {root: prettyBytes(blockRootHex)});
     else {
       this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
       const sec = Date.now() / 1000;
       const slotTimeSec = sec - (this.chain.genesisTime + signedBlock.message.slot * this.config.SECONDS_PER_SLOT);
       this.metrics?.syncUnknownBlock.slotTimeTillProcessed.observe({type}, slotTimeSec);
-      this.metrics?.syncUnknownBlock.elapsedTimeTillProcessed.observe({type}, sec - receivedTimeSec);
       this.logger.verbose("Fetched and processed block", {
         root: prettyBytes(blockRootHex),
         type: pendingBlock.type,
