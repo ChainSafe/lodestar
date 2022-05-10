@@ -103,7 +103,11 @@ export class UnknownBlockSync {
     return pendingBlock;
   }
 
-  private addUnknownBlockParent(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): PendingBlock {
+  /**
+   * An unknown parent block comes
+   * Or we transform an UNKNOWN_BLOCK to UNKNOWN_PARENT after the block is downloaded.
+   */
+  private addUnknownBlockParent(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): UnknownParentPendingBlock {
     const block = signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
@@ -121,6 +125,15 @@ export class UnknownBlockSync {
         downloadAttempts: 0,
         lastQueriedTimeByPeer: new Map(),
         receivedTimeSec: Date.now() / 1000,
+      };
+      this.pendingBlocks.set(blockRootHex, pendingBlock);
+    } else if (pendingBlock.type === PendingBlockType.UNKNOWN_BLOCK) {
+      // the block was downloaded, we transform to UNKNOWN_PARENT so that we can process descendant blocks
+      pendingBlock = {
+        ...pendingBlock,
+        type: PendingBlockType.UNKNOWN_PARENT,
+        signedBlock,
+        parentBlockRootHex,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
     }
@@ -187,12 +200,9 @@ export class UnknownBlockSync {
       this.metrics?.syncUnknownBlock.downloadTime.observe({type}, downloadSec);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        const pendingBlock = this.addUnknownBlockParent(signedBlock, peerIdStr);
-        if (pendingBlock.type === PendingBlockType.UNKNOWN_PARENT) {
-          this.processBlock(pendingBlock).catch((e) => {
-            this.logger.error("Unexpect error - processBlock", {}, e);
-          });
-        }
+        this.processBlock(this.addUnknownBlockParent(signedBlock, peerIdStr)).catch((e) => {
+          this.logger.error("Unexpect error - processBlock", {}, e);
+        });
       } else {
         this.onUnknownBlockParent(signedBlock, peerIdStr);
       }
