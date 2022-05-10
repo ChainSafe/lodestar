@@ -99,16 +99,6 @@ export class EpochContext {
   proposers: ValidatorIndex[];
 
   /**
-   * Map of Indexes of the block proposers keyed by the next epoch.
-   *
-   * We allow requesting proposal duties only one epoch in the future
-   * Note: There is a small probability that returned validators differs
-   * than what is returned when the epoch is reached.
-   *
-   * 32 x Number
-   */
-  nextEpochProposers: Map<Epoch, ValidatorIndex[]> = new Map<Epoch, ValidatorIndex[]>();
-  /**
    * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
    * Note: Per spec definition, shuffling will always be defined. They are never called before loadState()
    *
@@ -163,7 +153,6 @@ export class EpochContext {
   epoch: Epoch;
   syncPeriod: SyncPeriod;
 
-  currentProposerSeed: Uint8Array;
   nextProposerSeed: Uint8Array;
 
   constructor(data: {
@@ -186,7 +175,6 @@ export class EpochContext {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
-    currentProposerSeed: Uint8Array;
     nextProposerSeed: Uint8Array;
   }) {
     this.config = data.config;
@@ -208,7 +196,6 @@ export class EpochContext {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
-    this.currentProposerSeed = data.currentProposerSeed;
     this.nextProposerSeed = data.nextProposerSeed;
   }
 
@@ -290,7 +277,6 @@ export class EpochContext {
     const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
     const currentProposerSeed = getSeed(state, currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-    const nextProposerSeed = getSeed(state, nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
 
     // Allow to create CachedBeaconState for empty states
     const proposers =
@@ -359,8 +345,7 @@ export class EpochContext {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-      currentProposerSeed,
-      nextProposerSeed,
+      nextProposerSeed: getSeed(state, nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)
     });
   }
 
@@ -396,7 +381,6 @@ export class EpochContext {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
-      currentProposerSeed: this.currentProposerSeed,
       nextProposerSeed: this.nextProposerSeed,
     });
   }
@@ -418,11 +402,10 @@ export class EpochContext {
     const nextEpoch = currEpoch + 1;
 
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
-    this.currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
+    const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
     this.nextProposerSeed = getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
 
-    this.proposers = computeProposers(this.currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
-
+    this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
     // TODO: DEDUPLICATE from createEpochContext
     //
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -499,16 +482,13 @@ export class EpochContext {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
+  /**
+   * We allow requesting proposal duties only one epoch in the future
+   * Note: There is a small probability that returned validators differs
+   * than what is returned when the epoch is reached
+   */
   getNextEpochBeaconProposer(): ValidatorIndex[] {
-    const nextShuffling = this.nextShuffling;
-    let nextProposers = this.nextEpochProposers.get(nextShuffling.epoch);
-    if (!nextProposers) {
-      nextProposers = computeProposers(this.nextProposerSeed, nextShuffling, this.effectiveBalanceIncrements);
-      // Only keep proposers for one epoch in the future, so clear before setting new value
-      this.nextEpochProposers.clear();
-      this.nextEpochProposers.set(nextShuffling.epoch, nextProposers);
-    }
-    return nextProposers;
+    return computeProposers(this.nextProposerSeed, this.nextShuffling, this.effectiveBalanceIncrements);
   }
 
   getBeaconProposer(slot: Slot): ValidatorIndex {
