@@ -41,7 +41,6 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
-
       - name: Get version
         id: version
         run: |
@@ -49,6 +48,17 @@ jobs:
           export VERSION=${PACKAGE_VERSION}-dev.${GITHUB_SHA:0:10}
           echo "::set-output name=version::$VERSION"
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
+
+      - name: Change and commit version
+        # Write version before publishing so it's picked up by `lerna publish from-package`
+        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors
+        run: |
+          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          --yes \
+          --no-git-tag-version \
+          --force-publish
+          git commit -am "${{ steps.version.outputs.version }}"
+
       - name: Publish to npm registry
         # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
         # We used `lerna publish --canary` option. However, since we now publish must version on branches,
@@ -74,9 +84,13 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish ${{ steps.version.outputs.version }} --yes --no-verify-access \
-          --dist-tag next --no-git-reset --force-publish \
-          --preid dev --exact
+          node_modules/.bin/lerna publish from-package \
+          --yes \
+          --no-verify-access \
+          --dist-tag next \
+          --no-git-reset \
+          --force-publish \
+          --exact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     outputs:
