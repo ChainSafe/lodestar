@@ -49,7 +49,7 @@ const POW_BLOCK_FILE_NAME = "^(pow_block)_([0-9a-zA-Z]+)$";
 const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
-export function forkChoiceTest(fork: ForkName, testFolders: string[] = ["get_head", "on_block"]): void {
+export function forkChoiceTest(fork: ForkName, testFolders: string[] = ["get_head", "on_block", "ex_ante"]): void {
   for (const testFolder of testFolders) {
     describeDirectorySpecTest<IForkChoiceTestCase, void>(
       `${ACTIVE_PRESET}/${fork}/fork_choice/${testFolder}`,
