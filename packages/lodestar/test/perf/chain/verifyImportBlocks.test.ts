@@ -4,9 +4,9 @@ import {
   getNetworkCachedState,
   getNetworkCachedBlock,
 } from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+import {rangeSyncTest} from "@chainsafe/lodestar-beacon-state-transition/test/perf/params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
 import {BeaconChain} from "../../../src/chain";
 import {ExecutionEngineDisabled} from "../../../src/executionEngine";
 import {Eth1ForBlockProductionDisabled} from "../../../src/eth1";
@@ -15,15 +15,12 @@ import {linspace} from "../../../src/util/numpy";
 import {BeaconDb} from "../../../src";
 import {LevelDbController} from "@chainsafe/lodestar-db";
 
-const network = "mainnet";
-// Must start at the first slot of the epoch to have a proper checkpoint state.
-// Using `computeStartSlotAtEpoch(...) - 1` will cause the chain to initialize with a state that's not the checkpoint
-// state, so processing the first block of the epoch will cause error `BLOCK_ERROR_WOULD_REVERT_FINALIZED_SLOT`
-const startSlot = computeStartSlotAtEpoch(117713);
-const slotCount = 1 * SLOTS_PER_EPOCH;
-const endSlot = startSlot + slotCount;
-const missedSlots = new Set<number>([]);
+// Define this params in `packages/beacon-state-transition/test/perf/params.ts`
+// to trigger Github actions CI cache
+const {network, startSlot, endSlot} = rangeSyncTest;
+const slotCount = endSlot - startSlot;
 
+const timeoutInfura = 300_000;
 const logger = testLogger();
 
 describe("verify+import blocks - range sync perf test", () => {
@@ -31,27 +28,34 @@ describe("verify+import blocks - range sync perf test", () => {
     yieldEventLoopAfterEach: true, // So SubTree(s)'s WeakRef can be garbage collected https://github.com/nodejs/node/issues/39902
   });
 
+  before("Check correct params", () => {
+    // Must start at the first slot of the epoch to have a proper checkpoint state.
+    // Using `computeStartSlotAtEpoch(...) - 1` will cause the chain to initialize with a state that's not the checkpoint
+    // state, so processing the first block of the epoch will cause error `BLOCK_ERROR_WOULD_REVERT_FINALIZED_SLOT`
+    if (rangeSyncTest.startSlot % SLOTS_PER_EPOCH !== 0) {
+      throw Error("startSlot must be the first slot in the epoch");
+    }
+  });
+
   const blocks = beforeValue(
     async () =>
       Promise.all(
         // Start at next slot, since the parent of current state's header is not known
-        linspace(startSlot + 1, endSlot)
-          .filter((slot) => !missedSlots.has(slot))
-          .map(async (slot) =>
-            getNetworkCachedBlock(network, slot, 300_000).catch((e) => {
-              (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
-              throw e;
-            })
-          )
+        linspace(startSlot + 1, endSlot).map(async (slot) =>
+          getNetworkCachedBlock(network, slot, timeoutInfura).catch((e) => {
+            (e as Error).message = `slot ${slot} - ${(e as Error).message}`;
+            throw e;
+          })
+        )
       ),
-    300_000
+    timeoutInfura
   );
 
   const stateOg = beforeValue(async () => {
-    const state = await getNetworkCachedState(network, startSlot, 300_000);
+    const state = await getNetworkCachedState(network, startSlot, timeoutInfura);
     state.hashTreeRoot();
     return state;
-  }, 300_000);
+  }, timeoutInfura);
 
   let db: BeaconDb;
   before(async () => {
