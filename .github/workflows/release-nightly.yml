@@ -8,7 +8,6 @@ on:
   push:
     branches:
       - master
-      - dapplion/fix-next-release-version
 
 jobs:
   npm:
@@ -50,8 +49,10 @@ jobs:
           echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
 
       - name: Change and commit version
-        # Write version before publishing so it's picked up by `lerna publish from-package`
-        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors
+        # Write version before publishing so it's picked up by `lerna publish from-package`.
+        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
+        # This "temp" commit doesn't change the actually release commit which is captured above.
+        # git-data is also correct, since it's generated at build time, before `lerna version` run.
         run: |
           node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
           --yes \
