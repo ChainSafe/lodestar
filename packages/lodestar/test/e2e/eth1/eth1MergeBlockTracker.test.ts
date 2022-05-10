@@ -81,42 +81,44 @@ describe("eth1 / Eth1MergeBlockTracker", function () {
     );
   });
 
-  it("Should find merge block polling future 'latest' blocks", async () => {
-    const eth1Provider = new Eth1Provider(eth1Config, eth1Options, controller.signal);
-    const latestBlock = await eth1Provider.getBlockByNumber("latest");
-    if (!latestBlock) throw Error("No latestBlock");
+  for (let i = 0; i < 100; i++) {
+    it.only("Should find merge block polling future 'latest' blocks i=" + i, async () => {
+      const eth1Provider = new Eth1Provider(eth1Config, eth1Options, controller.signal);
+      const latestBlock = await eth1Provider.getBlockByNumber("latest");
+      if (!latestBlock) throw Error("No latestBlock");
 
-    // Set TTD to current totalDifficulty + 1, so the next block is the merge block
-    const terminalTotalDifficulty = quantityToBigint(latestBlock.totalDifficulty) + BigInt(1);
+      // Set TTD to current totalDifficulty + 1, so the next block is the merge block
+      const terminalTotalDifficulty = quantityToBigint(latestBlock.totalDifficulty) + BigInt(1);
 
-    const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
-      {
-        config: getConfig(terminalTotalDifficulty),
-        logger,
-        signal: controller.signal,
-        clockEpoch: 0,
-        isMergeTransitionComplete: false,
-      },
-      eth1Provider as IEth1Provider
-    );
+      const eth1MergeBlockTracker = new Eth1MergeBlockTracker(
+        {
+          config: getConfig(terminalTotalDifficulty),
+          logger,
+          signal: controller.signal,
+          clockEpoch: 0,
+          isMergeTransitionComplete: false,
+        },
+        eth1Provider as IEth1Provider
+      );
 
-    // Wait for Eth1MergeBlockTracker to find at least one merge block
-    while (!controller.signal.aborted) {
-      if (eth1MergeBlockTracker.getTerminalPowBlock()) break;
-      await sleep(500, controller.signal);
-    }
+      // Wait for Eth1MergeBlockTracker to find at least one merge block
+      while (!controller.signal.aborted) {
+        if (eth1MergeBlockTracker.getTerminalPowBlock()) break;
+        await sleep(500, controller.signal);
+      }
 
-    // Status should acknowlege merge block is found
-    expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
+      // Status should acknowlege merge block is found
+      expect(eth1MergeBlockTracker["status"]).to.equal(StatusCode.FOUND, "Wrong StatusCode");
 
-    // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
-    const mergeBlock = eth1MergeBlockTracker.getTerminalPowBlock();
-    if (!mergeBlock) throw Error("mergeBlock not found");
-    expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
-      true,
-      "mergeBlock.totalDifficulty is not >= TTD"
-    );
-  });
+      // Given the total difficulty offset the block that has TTD is the `difficultyOffset`nth block
+      const mergeBlock = eth1MergeBlockTracker.getTerminalPowBlock();
+      if (!mergeBlock) throw Error("mergeBlock not found");
+      expect(mergeBlock.totalDifficulty >= terminalTotalDifficulty).to.equal(
+        true,
+        "mergeBlock.totalDifficulty is not >= TTD"
+      );
+    });
+  }
 
   it("Should find merge block fetching past blocks", async () => {
     const eth1Provider = new Eth1Provider(eth1Config, eth1Options, controller.signal);

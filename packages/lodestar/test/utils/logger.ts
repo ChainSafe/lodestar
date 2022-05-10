@@ -18,7 +18,7 @@ export type TestLoggerOpts = {
  */
 export function testLogger(module?: string, opts?: TestLoggerOpts): WinstonLogger {
   const transports: TransportOpts[] = [
-    {type: TransportType.console, level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.error},
+    {type: TransportType.console, level: getLogLevelFromEnvs() || opts?.logLevel || LogLevel.debug},
   ];
   if (opts?.logFile) {
     transports.push({type: TransportType.file, filename: opts.logFile, level: LogLevel.debug});
