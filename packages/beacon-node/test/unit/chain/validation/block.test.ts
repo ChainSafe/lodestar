@@ -25,6 +25,7 @@ describe("gossip block validation", function () {
   const block = ssz.phase0.BeaconBlock.defaultValue();
   block.slot = clockSlot;
   const signature = EMPTY_SIGNATURE;
+  const maxSkipSlots = 10;
 
   beforeEach(function () {
     chain = sinon.createStubInstance(BeaconChain);
@@ -34,6 +35,9 @@ describe("gossip block validation", function () {
     forkChoice.getBlockHex.returns(null);
     chain.forkChoice = forkChoice;
     regen = chain.regen = sinon.createStubInstance(StateRegenerator);
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    (chain as any).opts = {maxSkipSlots};
 
     verifySignature = sinon.stub();
     verifySignature.resolves(true);
@@ -98,6 +102,18 @@ describe("gossip block validation", function () {
     await expectRejectedWithLodestarError(
       validateGossipBlock(config, chain, job, ForkName.phase0),
       BlockErrorCode.PARENT_UNKNOWN
+    );
+  });
+
+  it("TOO_MANY_SKIPPED_SLOTS", async function () {
+    // Return not known for proposed block
+    forkChoice.getBlockHex.onCall(0).returns(null);
+    // Return parent block with 1 slot way back than maxSkipSlots
+    forkChoice.getBlockHex.onCall(1).returns({slot: block.slot - (maxSkipSlots + 1)} as ProtoBlock);
+
+    await expectRejectedWithLodestarError(
+      validateGossipBlock(config, chain, job, ForkName.phase0),
+      BlockErrorCode.TOO_MANY_SKIPPED_SLOTS
     );
   });
 

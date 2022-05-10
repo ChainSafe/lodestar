@@ -40,6 +40,7 @@ import {SeenAggregatedAttestations} from "../../../../src/chain/seenCache/seenAg
 import {SeenBlockAttesters} from "../../../../src/chain/seenCache/seenBlockAttesters.js";
 import {BeaconProposerCache} from "../../../../src/chain/beaconProposerCache.js";
 import {CheckpointBalancesCache} from "../../../../src/chain/balancesCache.js";
+import {IChainOptions} from "../../../../src/chain/options.js";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -57,6 +58,12 @@ export class MockBeaconChain implements IBeaconChain {
   readonly eth1 = new Eth1ForBlockProductionDisabled();
   readonly executionEngine = new ExecutionEngineDisabled();
   readonly config: IBeaconConfig;
+  readonly opts: IChainOptions = {
+    persistInvalidSszObjectsDir: "",
+    proposerBoostEnabled: false,
+    safeSlotsToImportOptimistically: 0,
+    defaultFeeRecipient: "0x0000000000000000000000000000000000000000",
+  };
   readonly anchorStateLatestBlockSlot: Slot;
 
   readonly bls: IBlsVerifier;

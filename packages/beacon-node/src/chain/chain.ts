@@ -99,12 +99,12 @@ export class BeaconChain implements IBeaconChain {
 
   readonly beaconProposerCache: BeaconProposerCache;
   readonly checkpointBalancesCache: CheckpointBalancesCache;
+  readonly opts: IChainOptions;
 
   protected readonly blockProcessor: BlockProcessor;
   protected readonly db: IBeaconDb;
   protected readonly logger: ILogger;
   protected readonly metrics: IMetrics | null;
-  protected readonly opts: IChainOptions;
   private readonly archiver: Archiver;
   private abortController = new AbortController();
 

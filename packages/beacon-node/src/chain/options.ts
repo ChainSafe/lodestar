@@ -15,6 +15,7 @@ export type IChainOptions = BlockProcessOpts &
     persistInvalidSszObjectsDir?: string;
     skipCreateStateCacheIfAvailable?: boolean;
     defaultFeeRecipient: string;
+    maxSkipSlots?: number;
   };
 
 export type BlockProcessOpts = {
