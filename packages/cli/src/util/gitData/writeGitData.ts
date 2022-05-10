@@ -1,12 +1,10 @@
 #!/usr/bin/env node
 
-/**
- * Persist git data and distribute through NPM so CLI consumers can know exactly
- * at what commit was this source build. This is also used in the metrics and to log initially.
- */
+// For RATIONALE of this file, check packages/cli/src/util/gitData/gitDataPath.ts
+// Persist exact commit in NPM distributions for easier tracking of the build
 
+import {getGitData} from "./index";
 import {writeGitDataFile} from "./gitDataPath";
-import {forceUpdateGitData} from "./index";
 
-/** Script to write the git data file (json) used by the build procedures to persist git data. */
-writeGitDataFile(forceUpdateGitData());
+// Script to write the git data file (json) used by the build procedures to persist git data.
+writeGitDataFile(getGitData());

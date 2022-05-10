@@ -1,57 +1,52 @@
 import fs from "node:fs";
 import findUp from "find-up";
-import {readLodestarGitData} from "./gitData";
-import {GitData} from "./gitData/gitDataPath";
+import {readAndGetGitData} from "./gitData";
 
 type VersionJson = {
   /** "0.28.2" */
   version: string;
 };
 
-enum ReleaseTrack {
-  git = "git",
-  npm = "npm",
-  nightly = "nightly",
-  alpha = "alpha",
-  beta = "beta",
-  rc = "release candidate",
-  stable = "stable",
-  lts = "long term support",
-}
-
-/** Defines default release track, i.e., the "stability" of tag releases */
-const defaultReleaseTrack = ReleaseTrack.alpha;
+const BRANCH_IGNORE = /^(HEAD|master|main)$/;
 
 /**
  * Gathers all information on package version including Git data.
- * @returns a version string, e.g., `v0.28.2/developer-feature/+7/80c248bb (nightly)`
+ * @returns a version string, e.g.
+ * - Stable release: `v0.36.0/80c248bb`
+ * - Nightly release: `v0.36.0-dev.80c248bb/80c248bb`
+ * - Test branch: `v0.36.0/developer-feature/80c248bb`
  */
-export function getVersion(): string {
-  const gitData: GitData = readLodestarGitData();
-  let semver: string | undefined = gitData.semver;
-  const numCommits: string | undefined = gitData.numCommits;
-  const commitSlice: string | undefined = gitData.commit?.slice(0, 8);
+export function getVersionData(): {
+  version: string;
+  commit: string;
+} {
+  const parts: string[] = [];
 
-  // ansible github branch deployment returns no semver
-  semver = semver ?? `v${getLocalVersion()}`;
-
-  // Tag release has numCommits as "0"
-  if (!commitSlice || numCommits === "0") {
-    return `${semver} (${defaultReleaseTrack})`;
+  /** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
+  const localVersion = readCliPackageJson() || readVersionFromLernaJson();
+  if (localVersion) {
+    parts.push(`v${localVersion}`);
   }
 
-  // Otherwise get branch and commit information
-  return `${semver}/${gitData.branch}/${numCommits}/${commitSlice} (${ReleaseTrack.git})`;
-}
+  const {branch, commit} = readAndGetGitData();
 
-/** Exposes raw version data wherever needed for reporting (metrics, grafana). */
-export function getVersionGitData(): GitData {
-  return readLodestarGitData();
-}
+  // Add branch only if not present and not an ignore value
+  if (branch && !BRANCH_IGNORE.test(branch)) parts.push(branch);
 
-/** Returns local version from `lerna.json` or `package.json` as `"0.28.2"` */
-function getLocalVersion(): string | undefined {
-  return readVersionFromLernaJson() || readCliPackageJson();
+  // Add commit only if present. 7 characters to be consistent with Github
+  if (commit) {
+    const commitShort = commit.slice(0, 7);
+    // Don't add commit if it's already in the version string (nightly versions)
+    if (!localVersion || !localVersion.includes(commitShort)) {
+      parts.push(commitShort);
+    }
+  }
+
+  return {
+    // Guard against empty parts array
+    version: parts.length > 0 ? parts.join("/") : "unknown",
+    commit,
+  };
 }
 
 /** Read version information from lerna.json */

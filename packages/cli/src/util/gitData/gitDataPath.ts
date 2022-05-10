@@ -1,10 +1,22 @@
-/**
- * Persist git data and distribute through NPM so CLI consumers can know exactly
- * at what commit was this src build. This is used in the metrics and to log initially.
- */
-
 import path from "node:path";
 import fs from "node:fs";
+
+// Persist git data and distribute through NPM so CLI consumers can know exactly
+// at what commit was this src build. This is used in the metrics and to log initially.
+//
+// - For NPM release (stable): Only the version is persisted. Once must then track the version's tag
+//   in Github to resolve that version to a specific commit. While this is okay, git-data.json gives
+//   a gurantee of the exact commit at build time.
+//
+// - For NPM release (nightly): canary commits include the commit, so this feature is not really
+//   necessary. However, it's more cumbersome to have conditional logic on stable / nightly.
+//
+// - For build from source: .git folder is available in the context of the built code, so it can extract
+//   branch and commit directly without the need for .git-data.json.
+//
+// - For build from source dockerized: This feature is required to know the branch and commit, since
+//   git data is not persisted past the build. However, .dockerignore prevents .git folder from being
+//   copied into the container's context, so .git-data.json can't be generated.
 
 /**
  * WARNING!! If you change this path make sure to update:
@@ -14,14 +26,10 @@ export const gitDataPath = path.resolve(__dirname, "../../../.git-data.json");
 
 /** Git data type used to construct version information string and persistence. */
 export type GitData = {
-  /** v0.28.2 */
-  semver?: string;
   /** "developer-feature" */
-  branch?: string;
+  branch: string;
   /** "80c248bb392f512cc115d95059e22239a17bbd7d" */
-  commit?: string;
-  /** +7 (commits since last tag) */
-  numCommits?: string;
+  commit: string;
 };
 
 /** Writes a persistent git data file. */
