@@ -11,7 +11,7 @@ import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
-import {PendingBlock, PendingBlockStatus, PendingBlockType} from "./interface";
+import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownParentPendingBlock} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
 import {SyncOptions} from "./options";
 
@@ -26,13 +26,12 @@ export class UnknownBlockSync {
    */
   private readonly pendingBlocks = new Map<RootHex, PendingBlock>();
   private readonly knownBadBlocks = new Set<RootHex>();
-  private readonly logger;
 
   constructor(
     private readonly config: IChainForkConfig,
     private readonly network: INetwork,
     private readonly chain: IBeaconChain,
-    logger: ILogger,
+    private readonly logger: ILogger,
     private readonly metrics: IMetrics | null,
     opts?: SyncOptions
   ) {
@@ -41,8 +40,6 @@ export class UnknownBlockSync {
       this.network.events.on(NetworkEvent.unknownBlockParent, this.onUnknownBlockParent);
       this.network.events.on(NetworkEvent.peerConnected, this.triggerUnknownBlockSearch);
     }
-
-    this.logger = logger.child({module: "UBS"});
 
     if (metrics) {
       metrics.syncUnknownBlock.pendingBlocks.addCollect(() =>
@@ -186,9 +183,12 @@ export class UnknownBlockSync {
       this.logger.verbose("Successfully download unknown block", logCtx);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        this.processBlock(this.addUnknownBlockParent(signedBlock, peerIdStr), signedBlock).catch((e) => {
-          this.logger.error("Unexpect error - processBlock", {}, e);
-        });
+        const pendingBlock = this.addUnknownBlockParent(signedBlock, peerIdStr);
+        if (pendingBlock.type === PendingBlockType.UNKNOWN_PARENT) {
+          this.processBlock(pendingBlock).catch((e) => {
+            this.logger.error("Unexpect error - processBlock", {}, e);
+          });
+        }
       } else {
         this.onUnknownBlockParent(signedBlock, peerIdStr);
       }
@@ -216,7 +216,7 @@ export class UnknownBlockSync {
    * Send block to the processor awaiting completition. If processed successfully, send all children to the processor.
    * On error, remove and downscore all descendants.
    */
-  private async processBlock(pendingBlock: PendingBlock, signedBlock: allForks.SignedBeaconBlock): Promise<void> {
+  private async processBlock(pendingBlock: UnknownParentPendingBlock): Promise<void> {
     if (pendingBlock.status === PendingBlockStatus.processing) {
       return;
     }
@@ -228,11 +228,11 @@ export class UnknownBlockSync {
     // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
     // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
     // See https://github.com/ChainSafe/lodestar/issues/3792
+    const {signedBlock, type, blockRootHex, receivedTimeSec, downloadAttempts} = pendingBlock;
     const res = await wrapError(
       this.chain.processBlock(signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true})
     );
     pendingBlock.status = PendingBlockStatus.pending;
-    const {type, blockRootHex, receivedTimeSec, downloadAttempts} = pendingBlock;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
     else {
@@ -255,11 +255,9 @@ export class UnknownBlockSync {
 
       // Send child blocks to the processor
       for (const descendantBlock of getDescendantBlocks(blockRootHex, this.pendingBlocks)) {
-        if (descendantBlock.type === PendingBlockType.UNKNOWN_PARENT) {
-          this.processBlock(descendantBlock, descendantBlock.signedBlock).catch((e) => {
-            this.logger.error("Unexpect error - processBlock", {}, e);
-          });
-        }
+        this.processBlock(descendantBlock).catch((e) => {
+          this.logger.error("Unexpect error - processBlock", {}, e);
+        });
       }
     } else {
       const errorData = {root: blockRootHex, slot: signedBlock.message.slot};

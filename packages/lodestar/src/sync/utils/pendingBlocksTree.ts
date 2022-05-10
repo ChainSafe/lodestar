@@ -1,7 +1,7 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {PendingBlockType} from "..";
 import {MapDef} from "../../util/map";
-import {PendingBlock, PendingBlockStatus} from "../interface";
+import {PendingBlock, PendingBlockStatus, UnknownParentPendingBlock} from "../interface";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent
@@ -35,8 +35,11 @@ function addToDescendantBlocks(
 /**
  * Return UNKNOWN_PARENT pending block with the parent hex blockRootHex.
  */
-export function getDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const descendantBlocks: PendingBlock[] = [];
+export function getDescendantBlocks(
+  blockRootHex: RootHex,
+  blocks: Map<RootHex, PendingBlock>
+): UnknownParentPendingBlock[] {
+  const descendantBlocks: UnknownParentPendingBlock[] = [];
 
   for (const block of blocks.values()) {
     if (block.type === PendingBlockType.UNKNOWN_PARENT && block.parentBlockRootHex === blockRootHex) {

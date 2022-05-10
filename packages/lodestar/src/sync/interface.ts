@@ -80,6 +80,8 @@ export type PendingBlock = {
   | {type: PendingBlockType.UNKNOWN_BLOCK}
 );
 
+export type UnknownParentPendingBlock = PendingBlock & {type: PendingBlockType.UNKNOWN_PARENT};
+
 export enum PendingBlockStatus {
   pending = "pending",
   fetching = "fetching",
