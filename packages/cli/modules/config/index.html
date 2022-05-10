@@ -1033,15 +1033,15 @@
 <h2 id="type-aliases_1">Type aliases<a class="headerlink" href="#type-aliases_1" title="Permanent link">&para;</a></h2>
 <h3 id="ibeaconparamscliargs">IBeaconParamsCliArgs<a class="headerlink" href="#ibeaconparamscliargs" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IBeaconParamsCliArgs</strong>: <em>object &amp; Partial‹<a href="../../interfaces/paths.iglobalpaths/">IGlobalPaths</a>›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L14">packages/cli/src/config/beaconParams.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L14">packages/cli/src/config/beaconParams.ts:14</a></em></p>
 <hr />
 <h3 id="ibeaconparamsunparsed">IBeaconParamsUnparsed<a class="headerlink" href="#ibeaconparamsunparsed" title="Permanent link">&para;</a></h3>
 <p>Ƭ <strong>IBeaconParamsUnparsed</strong>: <em>Partial‹object›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/types.ts#L3">packages/cli/src/config/types.ts:3</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/types.ts#L3">packages/cli/src/config/types.ts:3</a></em></p>
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="createenr_1">createEnr<a class="headerlink" href="#createenr_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createEnr</strong>(<code>peerId</code>: PeerId): <em>ENR</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/enr.ts#L17">packages/cli/src/config/enr.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/enr.ts#L17">packages/cli/src/config/enr.ts:17</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1061,12 +1061,12 @@
 <hr />
 <h3 id="createpeerid_1">createPeerId<a class="headerlink" href="#createpeerid_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>createPeerId</strong>(): <em>Promise‹PeerId›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/peerId.ts#L4">packages/cli/src/config/peerId.ts:4</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/peerId.ts#L4">packages/cli/src/config/peerId.ts:4</a></em></p>
 <p><strong>Returns:</strong> <em>Promise‹PeerId›</em></p>
 <hr />
 <h3 id="getbeaconconfig_1">getBeaconConfig<a class="headerlink" href="#getbeaconconfig_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBeaconConfig</strong>(<code>args</code>: <a href="../../interfaces/config.ibeaconparamsargs/">IBeaconParamsArgs</a>): <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L52">packages/cli/src/config/beaconParams.ts:52</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L52">packages/cli/src/config/beaconParams.ts:52</a></em></p>
 <p>Initializes IBeaconConfig with params</p>
 <p><strong><code>see</code></strong> getBeaconParams</p>
 <p><strong>Parameters:</strong></p>
@@ -1088,7 +1088,7 @@
 <hr />
 <h3 id="getbeaconconfigfromargs_1">getBeaconConfigFromArgs<a class="headerlink" href="#getbeaconconfigfromargs_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBeaconConfigFromArgs</strong>(<code>args</code>: <a href="./#ibeaconparamscliargs">IBeaconParamsCliArgs</a>): <em>IChainForkConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L29">packages/cli/src/config/beaconParams.ts:29</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L29">packages/cli/src/config/beaconParams.ts:29</a></em></p>
 <p>Convenience method to parse yargs CLI args and call getBeaconParams</p>
 <p><strong><code>see</code></strong> getBeaconConfig</p>
 <p><strong>Parameters:</strong></p>
@@ -1110,7 +1110,7 @@
 <hr />
 <h3 id="getbeaconparams_1">getBeaconParams<a class="headerlink" href="#getbeaconparams_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBeaconParams</strong>(<code>__namedParameters</code>: object): <em>IChainConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L62">packages/cli/src/config/beaconParams.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L62">packages/cli/src/config/beaconParams.ts:62</a></em></p>
 <p>Computes merged IBeaconParams type from (in order)
 - Network params (diff)
 - existing params file
@@ -1143,7 +1143,7 @@
 <hr />
 <h3 id="getbeaconparamsfromargs_1">getBeaconParamsFromArgs<a class="headerlink" href="#getbeaconparamsfromargs_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getBeaconParamsFromArgs</strong>(<code>args</code>: <a href="./#ibeaconparamscliargs">IBeaconParamsCliArgs</a>): <em>IChainConfig</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L37">packages/cli/src/config/beaconParams.ts:37</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L37">packages/cli/src/config/beaconParams.ts:37</a></em></p>
 <p>Convenience method to parse yargs CLI args and call getBeaconParams</p>
 <p><strong><code>see</code></strong> getBeaconParams</p>
 <p><strong>Parameters:</strong></p>
@@ -1165,7 +1165,7 @@
 <hr />
 <h3 id="initenr_1">initEnr<a class="headerlink" href="#initenr_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initEnr</strong>(<code>filepath</code>: string, <code>peerId</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/enr.ts#L31">packages/cli/src/config/enr.ts:31</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/enr.ts#L31">packages/cli/src/config/enr.ts:31</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1189,7 +1189,7 @@
 <hr />
 <h3 id="initpeerid_1">initPeerId<a class="headerlink" href="#initpeerid_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>initPeerId</strong>(<code>filepath</code>: string): <em>Promise‹void›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/peerId.ts#L16">packages/cli/src/config/peerId.ts:16</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/peerId.ts#L16">packages/cli/src/config/peerId.ts:16</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1209,7 +1209,7 @@
 <hr />
 <h3 id="mergebeaconnodeoptions_1">mergeBeaconNodeOptions<a class="headerlink" href="#mergebeaconnodeoptions_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>mergeBeaconNodeOptions</strong>(...<code>partialOptionsArr</code>: RecursivePartial‹IBeaconNodeOptions›[]): <em>RecursivePartial‹IBeaconNodeOptions›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconNodeOptions.ts#L69">packages/cli/src/config/beaconNodeOptions.ts:69</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconNodeOptions.ts#L69">packages/cli/src/config/beaconNodeOptions.ts:69</a></em></p>
 <p>Typesafe wrapper to merge partial IBeaconNodeOptions objects</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1230,7 +1230,7 @@
 <hr />
 <h3 id="mergebeaconnodeoptionswithdefaults_1">mergeBeaconNodeOptionsWithDefaults<a class="headerlink" href="#mergebeaconnodeoptionswithdefaults_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>mergeBeaconNodeOptionsWithDefaults</strong>(<code>defaultOptions</code>: IBeaconNodeOptions, ...<code>partialOptionsArr</code>: RecursivePartial‹IBeaconNodeOptions›[]): <em>IBeaconNodeOptions</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconNodeOptions.ts#L84">packages/cli/src/config/beaconNodeOptions.ts:84</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconNodeOptions.ts#L84">packages/cli/src/config/beaconNodeOptions.ts:84</a></em></p>
 <p>Typesafe wrapper to merge IBeaconNodeOptions objects</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -1255,7 +1255,7 @@
 <hr />
 <h3 id="overwriteenrwithcliargs_1">overwriteEnrWithCliArgs<a class="headerlink" href="#overwriteenrwithcliargs_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>overwriteEnrWithCliArgs</strong>(<code>enr</code>: ENR, <code>enrArgs</code>: <a href="../../interfaces/config.ienrjson/">IENRJson</a>, <code>options</code>: IBeaconNodeOptions): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/enr.ts#L35">packages/cli/src/config/enr.ts:35</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/enr.ts#L35">packages/cli/src/config/enr.ts:35</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1283,7 +1283,7 @@
 <hr />
 <h3 id="overwritetargetarrayifitems">overwriteTargetArrayIfItems<a class="headerlink" href="#overwritetargetarrayifitems" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>overwriteTargetArrayIfItems</strong>(<code>target</code>: unknown[], <code>source</code>: unknown[]): <em>unknown[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconNodeOptions.ts#L99">packages/cli/src/config/beaconNodeOptions.ts:99</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconNodeOptions.ts#L99">packages/cli/src/config/beaconNodeOptions.ts:99</a></em></p>
 <p>If override array option (source) is defined and has items
 replace target (original option).
 Example: network.localMultiaddrs has default ['/ip4/127.0.0.1/tcp/30606'] and we don't wanna append to that with cli flag
@@ -1314,7 +1314,7 @@ as it could result in port taken</p>
 <hr />
 <h3 id="parsepartialichainconfigjson_1">parsePartialIChainConfigJson<a class="headerlink" href="#parsepartialichainconfigjson_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>parsePartialIChainConfigJson</strong>(<code>input</code>: Record‹string, unknown›): <em>Partial‹IChainConfig›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L83">packages/cli/src/config/beaconParams.ts:83</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L83">packages/cli/src/config/beaconParams.ts:83</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1334,7 +1334,7 @@ as it could result in port taken</p>
 <hr />
 <h3 id="readbeaconnodeoptions_1">readBeaconNodeOptions<a class="headerlink" href="#readbeaconnodeoptions_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readBeaconNodeOptions</strong>(<code>filepath</code>: string): <em>RecursivePartial‹IBeaconNodeOptions›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconNodeOptions.ts#L62">packages/cli/src/config/beaconNodeOptions.ts:62</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconNodeOptions.ts#L62">packages/cli/src/config/beaconNodeOptions.ts:62</a></em></p>
 <p>This needs to be a synchronous function because it will be run as part of the yargs 'build' step
 If the config file is not found, the default values will apply.</p>
 <p><strong>Parameters:</strong></p>
@@ -1356,7 +1356,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="readbeaconparams">readBeaconParams<a class="headerlink" href="#readbeaconparams" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readBeaconParams</strong>(<code>filepath</code>: string): <em><a href="./#ibeaconparamsunparsed">IBeaconParamsUnparsed</a></em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconParams.ts#L79">packages/cli/src/config/beaconParams.ts:79</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconParams.ts#L79">packages/cli/src/config/beaconParams.ts:79</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1376,7 +1376,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="readenr_1">readEnr<a class="headerlink" href="#readenr_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readEnr</strong>(<code>filepath</code>: string): <em>ENR</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/enr.ts#L27">packages/cli/src/config/enr.ts:27</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/enr.ts#L27">packages/cli/src/config/enr.ts:27</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1396,7 +1396,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="readpeerid_1">readPeerId<a class="headerlink" href="#readpeerid_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>readPeerId</strong>(<code>filepath</code>: string): <em>Promise‹PeerId›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/peerId.ts#L12">packages/cli/src/config/peerId.ts:12</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/peerId.ts#L12">packages/cli/src/config/peerId.ts:12</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1416,7 +1416,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="writebeaconnodeoptions_1">writeBeaconNodeOptions<a class="headerlink" href="#writebeaconnodeoptions_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>writeBeaconNodeOptions</strong>(<code>filename</code>: string, <code>config</code>: Partial‹IBeaconNodeOptions›): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/beaconNodeOptions.ts#L54">packages/cli/src/config/beaconNodeOptions.ts:54</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/beaconNodeOptions.ts#L54">packages/cli/src/config/beaconNodeOptions.ts:54</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1440,7 +1440,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="writeenr_1">writeEnr<a class="headerlink" href="#writeenr_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>writeEnr</strong>(<code>filepath</code>: string, <code>enr</code>: ENR, <code>peerId</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/enr.ts#L22">packages/cli/src/config/enr.ts:22</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/enr.ts#L22">packages/cli/src/config/enr.ts:22</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -1468,7 +1468,7 @@ If the config file is not found, the default values will apply.</p>
 <hr />
 <h3 id="writepeerid_1">writePeerId<a class="headerlink" href="#writepeerid_1" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>writePeerId</strong>(<code>filepath</code>: string, <code>peerId</code>: PeerId): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/70ea8cd/packages/cli/src/config/peerId.ts#L8">packages/cli/src/config/peerId.ts:8</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/7fd5a4f/packages/cli/src/config/peerId.ts#L8">packages/cli/src/config/peerId.ts:8</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
