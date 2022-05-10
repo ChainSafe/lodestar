@@ -371,11 +371,6 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/enums/util.releasetrack/</loc>
-         <lastmod>2022-05-10</lastmod>
-         <changefreq>daily</changefreq>
-    </url>
-    <url>
          <loc>https://chainsafe.github.io/lodestar/packages/cli/interfaces/cmds_account.iaccountpaths/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
@@ -596,27 +591,27 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2234/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2214/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2234.reflection-2235._/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2214.reflection-2215._/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2234.reflection-2235._.reflection-2237._validator_src/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2214.reflection-2215._.reflection-2217._validator_src/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2234.reflection-2235._.reflection-2237/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2214.reflection-2215._.reflection-2217/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2234.reflection-2235/</loc>
+         <loc>https://chainsafe.github.io/lodestar/packages/cli/modules/reflection-2214.reflection-2215/</loc>
          <lastmod>2022-05-10</lastmod>
          <changefreq>daily</changefreq>
     </url>
