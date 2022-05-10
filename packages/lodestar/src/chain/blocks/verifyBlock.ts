@@ -5,7 +5,7 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -18,9 +18,11 @@ import {IBlsVerifier} from "../bls";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
 import {byteArrayEquals} from "../../util/bytes";
+import {IEth1ForBlockProduction} from "../../eth1";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
+  eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   regen: IStateRegenerator;
   clock: IBeaconClock;
@@ -127,6 +129,11 @@ export async function verifyBlockStateTransition(
   const preState = await chain.regen.getPreState(block.message, RegenCaller.processBlocksInEpoch).catch((e) => {
     throw new BlockError(block, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
   });
+
+  const isMergeTransitionBlock =
+    bellatrix.isBellatrixStateType(preState) &&
+    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
+    bellatrix.isMergeTransitionBlock(preState, block.message.body);
 
   // STFN - per_slot_processing() + per_block_processing()
   // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
@@ -271,6 +278,28 @@ export async function verifyBlockStateTransition(
           execStatus: execResult.status,
           errorMessage: execResult.validationError,
         });
+    }
+
+    // If this is a merge transition block, check to ensure if it references
+    // a valid terminal PoW block.
+    //
+    // However specs define this check to be run inside forkChoice's onBlock
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    // but we perform the check here (as inspired from the lighthouse impl)
+    //
+    // Reasons:
+    //  1. If the block is not valid, we should fail early and not wait till
+    //     forkChoice import.
+    //  2. It makes logical sense to pair it with the block validations and
+    //     deal it with the external services like eth1 tracker here than
+    //     in import block
+    if (isMergeTransitionBlock) {
+      const mergeBlock = block.message as bellatrix.BeaconBlock;
+      const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
+      const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+
+      assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});
     }
   } else {
     // isExecutionEnabled() -> false

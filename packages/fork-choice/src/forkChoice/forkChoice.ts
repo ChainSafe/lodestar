@@ -19,7 +19,7 @@ import {ProtoArray} from "../protoArray/protoArray";
 
 import {IForkChoiceMetrics} from "../metrics";
 import {ForkChoiceError, ForkChoiceErrorCode, InvalidBlockCode, InvalidAttestationCode} from "./errors";
-import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData} from "./interface";
+import {IForkChoice, ILatestMessage, IQueuedAttestation, OnBlockPrecachedData, PowBlockHex} from "./interface";
 import {IForkChoiceStore, CheckpointWithHex, toCheckpointWithHex} from "./store";
 
 /* eslint-disable max-len */
@@ -328,13 +328,15 @@ export class ForkChoice implements IForkChoice {
       });
     }
 
-    if (
-      preCachedData?.isMergeTransitionBlock ||
-      (bellatrix.isBellatrixStateType(state) &&
-        bellatrix.isBellatrixBlockBodyType(block.body) &&
-        bellatrix.isMergeTransitionBlock(state, block.body))
-    )
-      assertValidTerminalPowBlock(this.config, (block as unknown) as bellatrix.BeaconBlock, preCachedData);
+    // As per specs, we should be validating here the terminal conditions of
+    // the PoW if this were a merge transition block.
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    //
+    // However this check has been moved to the `verifyBlockStateTransition` in
+    // `packages/lodestar/src/chain/blocks/verifyBlock.ts` as:
+    //
+    //  1. Its prudent to fail fast and not try importing a block in forkChoice.
+    //  2. Also the data to run such a validation is readily available there.
 
     let shouldUpdateJustified = false;
     const {finalizedCheckpoint} = state;
@@ -1003,16 +1005,28 @@ export class ForkChoice implements IForkChoice {
   }
 }
 
-function assertValidTerminalPowBlock(
+/**
+ * This function checks the terminal pow conditions on the merge block as
+ * specified in the config either via TTD or TBH. This function is part of
+ * forkChoice because if the merge block was previously imported as syncing
+ * and the EL eventually signals it catching up via validateLatestHash
+ * the specs mandates validating terminal conditions on the previously
+ * imported merge block.
+ */
+export function assertValidTerminalPowBlock(
   config: IChainConfig,
   block: bellatrix.BeaconBlock,
-  preCachedData?: OnBlockPrecachedData
+  preCachedData: {
+    executionStatus: ExecutionStatus.Syncing | ExecutionStatus.Valid;
+    powBlock?: PowBlockHex | null;
+    powBlockParent?: PowBlockHex | null;
+  }
 ): void {
   if (!ssz.Root.equals(config.TERMINAL_BLOCK_HASH, ZERO_HASH)) {
     if (computeEpochAtSlot(block.slot) < config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH)
       throw Error(`Terminal block activation epoch ${config.TERMINAL_BLOCK_HASH_ACTIVATION_EPOCH} not reached`);
 
-    // powBock.blockhash is hex, so we just pick the corresponding root
+    // powBock.blockHash is hex, so we just pick the corresponding root
     if (!ssz.Root.equals(block.body.executionPayload.parentHash, config.TERMINAL_BLOCK_HASH))
       throw new Error(
         `Invalid terminal block hash, expected: ${toHexString(config.TERMINAL_BLOCK_HASH)}, actual: ${toHexString(
@@ -1026,9 +1040,9 @@ function assertValidTerminalPowBlock(
     // syncing response in notifyNewPayload call while verifying
     if (preCachedData?.executionStatus === ExecutionStatus.Syncing) return;
 
-    const {powBlock, powBlockParent} = preCachedData || {};
+    const {powBlock, powBlockParent} = preCachedData;
     if (!powBlock) throw Error("onBlock preCachedData must include powBlock");
-    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlock");
+    if (!powBlockParent) throw Error("onBlock preCachedData must include powBlockParent");
 
     const isTotalDifficultyReached = powBlock.totalDifficulty >= config.TERMINAL_TOTAL_DIFFICULTY;
     const isParentTotalDifficultyValid = powBlockParent.totalDifficulty < config.TERMINAL_TOTAL_DIFFICULTY;

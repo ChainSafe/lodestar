@@ -1,7 +1,7 @@
 export {ProtoArray} from "./protoArray/protoArray";
 export {IProtoBlock, IProtoNode, ExecutionStatus} from "./protoArray/interface";
 
-export {ForkChoice} from "./forkChoice/forkChoice";
+export {ForkChoice, assertValidTerminalPowBlock} from "./forkChoice/forkChoice";
 export {
   IForkChoice,
   OnBlockPrecachedData,

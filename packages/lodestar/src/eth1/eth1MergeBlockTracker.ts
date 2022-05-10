@@ -122,7 +122,7 @@ export class Eth1MergeBlockTracker {
     const blockRaw = await this.eth1Provider.getBlockByHash(powBlockHash);
     if (blockRaw) {
       const block = toPowBlock(blockRaw);
-      this.blocksByHashCache.set(block.blockhash, block);
+      this.blocksByHashCache.set(block.blockHash, block);
       return block;
     }
 
@@ -135,7 +135,7 @@ export class Eth1MergeBlockTracker {
 
   private setTerminalPowBlock(mergeBlock: PowMergeBlock): void {
     this.logger.info("Terminal POW block found!", {
-      hash: mergeBlock.blockhash,
+      hash: mergeBlock.blockHash,
       number: mergeBlock.number,
       totalDifficulty: mergeBlock.totalDifficulty,
     });
@@ -233,7 +233,7 @@ export class Eth1MergeBlockTracker {
             parentBlock.totalDifficulty < this.config.TERMINAL_TOTAL_DIFFICULTY
           ) {
             // Is terminal total difficulty block
-            if (childBlock.parentHash === parentBlock.blockhash) {
+            if (childBlock.parentHash === parentBlock.blockHash) {
               // AND has verified block -> parent relationship
               return this.setTerminalPowBlock(childBlock);
             } else {
@@ -280,11 +280,11 @@ export class Eth1MergeBlockTracker {
   private async fetchPotentialMergeBlock(block: PowMergeBlock): Promise<void> {
     this.logger.debug("Potential terminal POW block", {
       number: block.number,
-      hash: block.blockhash,
+      hash: block.blockHash,
       totalDifficulty: block.totalDifficulty,
     });
     // Persist block for future searches
-    this.blocksByHashCache.set(block.blockhash, block);
+    this.blocksByHashCache.set(block.blockHash, block);
 
     // Check if this block is already visited
 
@@ -310,8 +310,8 @@ export class Eth1MergeBlockTracker {
       }
 
       // Guard against infinite loops
-      if (parent.blockhash === block.blockhash) {
-        throw Error("Infinite loop: parent.blockhash === block.blockhash");
+      if (parent.blockHash === block.blockHash) {
+        throw Error("Infinite loop: parent.blockHash === block.blockHash");
       }
 
       // Fetch parent's parent
@@ -348,7 +348,7 @@ export function toPowBlock(block: EthJsonRpcBlockRaw): PowMergeBlock {
   // Validate untrusted data from API
   return {
     number: quantityToNum(block.number),
-    blockhash: dataToRootHex(block.hash),
+    blockHash: dataToRootHex(block.hash),
     parentHash: dataToRootHex(block.parentHash),
     totalDifficulty: quantityToBigint(block.totalDifficulty),
   };
