@@ -17,7 +17,7 @@ export TAG=v0.34.0-beta.0 && git tag -a $TAG 9fceb02 -m "$TAG" && git push origi
 4. The team creates a PR to bump `master` to the next version (in the example: `v0.35.0`) and continues releasing nightly builds.
 
 ```
-lerna version minor --no-git-tag-version --force-publish
+lerna version minor --no-git-tag-version --force-publish --yes
 ```
 
 After 3-5 days of testing:
