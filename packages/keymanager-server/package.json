@@ -1,6 +1,6 @@
 {
   "name": "@chainsafe/lodestar-keymanager-server",
-  "version": "0.36.0",
+  "version": "0.37.0",
   "description": "A Typescript implementation of the keymanager server",
   "author": "ChainSafe Systems",
   "license": "Apache-2.0",
@@ -45,21 +45,21 @@
     "@chainsafe/abort-controller": "^3.0.1",
     "@chainsafe/bls": "6.0.3",
     "@chainsafe/bls-keystore": "^2.0.0",
-    "@chainsafe/lodestar-api": "^0.36.0",
-    "@chainsafe/lodestar-config": "^0.36.0",
-    "@chainsafe/lodestar-db": "^0.36.0",
-    "@chainsafe/lodestar-params": "^0.36.0",
-    "@chainsafe/lodestar-types": "^0.36.0",
-    "@chainsafe/lodestar-utils": "^0.36.0",
-    "@chainsafe/lodestar-validator": "^0.36.0",
+    "@chainsafe/lodestar-api": "^0.37.0",
+    "@chainsafe/lodestar-config": "^0.37.0",
+    "@chainsafe/lodestar-db": "^0.37.0",
+    "@chainsafe/lodestar-params": "^0.37.0",
+    "@chainsafe/lodestar-types": "^0.37.0",
+    "@chainsafe/lodestar-utils": "^0.37.0",
+    "@chainsafe/lodestar-validator": "^0.37.0",
     "@chainsafe/ssz": "^0.9.1",
-    "lockfile": "^1.0.4",
     "fastify": "3.15.1",
+    "fastify-bearer-auth": "6.1.0",
     "fastify-cors": "^6.0.1",
-    "fastify-bearer-auth": "6.1.0"
+    "lockfile": "^1.0.4"
   },
   "devDependencies": {
-    "bigint-buffer": "^1.1.5",
-    "@types/lockfile": "^1.0.1"
+    "@types/lockfile": "^1.0.1",
+    "bigint-buffer": "^1.1.5"
   }
 }
