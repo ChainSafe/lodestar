@@ -1,8 +1,7 @@
-import bls, {CoordType} from "@chainsafe/bls";
+import bls, {CoordType, Signature} from "@chainsafe/bls";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
-import {expect} from "chai";
 import {TestRunnerFn} from "../utils/types";
 
 /* eslint-disable @typescript-eslint/naming-convention */
@@ -31,10 +30,14 @@ export const blsTestRunner: TestRunnerFn<BlsTestCase, unknown> = (fork, testName
       }
 
       try {
-        expect(testFn(data.input)).to.deep.equal(data.output);
+        return testFn(data.input) as unknown;
       } catch (e) {
-        // spec test expect a boolean even for invalid inputs
-        expect(false).to.deep.equal(Boolean(data.output));
+        const {message} = e as Error;
+        if (message.includes("BLST_ERROR") || message === "EMPTY_AGGREGATE_ARRAY" || message === "ZERO_SECRET_KEY") {
+          return null;
+        } else {
+          throw e;
+        }
       }
     },
     options: {
@@ -57,9 +60,10 @@ type BlsTestCase = {
  * output: BLS Signature -- expected output, single BLS signature or empty.
  * ```
  */
-function aggregate(input: string[]): string | null {
-  const agg = bls.aggregateSignatures(input.map(fromHexString));
-  return toHexString(agg);
+function aggregate(input: string[]): string {
+  const pks = input.map((pkHex) => Signature.fromHex(pkHex));
+  const agg = bls.Signature.aggregate(pks);
+  return agg.toHex();
 }
 
 /**
