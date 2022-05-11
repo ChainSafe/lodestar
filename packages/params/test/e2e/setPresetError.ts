@@ -3,7 +3,7 @@
 
 // 1. Import from not only @chainsafe/lodestar-params/setPreset will trigger an error
 import {SLOTS_PER_EPOCH} from "../../lib/index.js";
-import {setActivePreset, PresetName} from "../../setPreset.js";
+import {setActivePreset, PresetName} from "../../lib/setPreset.js";
 // This line should throw
 setActivePreset(PresetName.minimal);
 

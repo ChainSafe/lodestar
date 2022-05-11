@@ -16,7 +16,7 @@ const exec = util.promisify(child.exec);
 
 // eslint-disable-next-line @typescript-eslint/naming-convention
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const tsNodeBinary = path.join(__dirname, "../../../../node_modules/.bin/ts-node");
+const tsNodeBinary = path.join(__dirname, "../../../../node_modules/.bin/ts-node-esm");
 
 describe("setPreset", function () {
   // Allow time for ts-node to compile Typescript source
