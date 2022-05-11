@@ -94,6 +94,8 @@ export class Eth2Gossipsub extends Gossipsub {
 
     const scoreParams = computeGossipPeerScoreParams(modules);
 
+    const heartbeatInterval = 0.7 * 1000;
+
     // Gossipsub parameters defined here:
     // https://github.com/ethereum/consensus-specs/blob/v1.1.10/specs/phase0/p2p-interface.md#the-gossip-domain-gossipsub
     super(modules.libp2p, {
@@ -104,6 +106,11 @@ export class Eth2Gossipsub extends Gossipsub {
       Dlo: GOSSIP_D_LOW,
       Dhi: GOSSIP_D_HIGH,
       Dlazy: 6,
+      heartbeatInterval,
+      fanoutTTL: 60 * 1000,
+      mcacheLength: 6,
+      mcacheGossip: 3,
+      seenTTL: 550 * heartbeatInterval,
       scoreParams,
       scoreThresholds: gossipScoreThresholds,
       // the default in gossipsub is 3s is not enough since lodestar suffers from I/O lag
