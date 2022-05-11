@@ -163,11 +163,10 @@ export class AttestationService {
     const afterBlockDelayMs = (1000 * this.clock.secondsPerSlot) / (this.opts?.afterBlockDelaySlotFraction ?? 6);
     await sleep(Math.min(msToOneThirdSlot, afterBlockDelayMs));
 
-    this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
-
     // Step 2. Publish all `Attestations` in one go
     try {
       await this.api.beacon.submitPoolAttestations(signedAttestations);
+      this.metrics?.attesterStepCallPublishAttestation.observe(this.clock.secFromSlot(slot + 1 / 3));
       this.logger.info("Published attestations", {slot, count: signedAttestations.length});
       this.metrics?.publishedAttestations.inc(signedAttestations.length);
     } catch (e) {
