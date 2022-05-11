@@ -49,7 +49,7 @@ const ATTESTATION_FILE_NAME = "^(attestation)_([0-9a-zA-Z])+$";
 
 const logger = testLogger("spec-test");
 
-export const forkChoiceTest: TestRunnerFn<IForkChoiceTestCase, void> = (fork) => {
+export const forkChoiceTest: TestRunnerFn<ForkChoiceTestCase, void> = (fork) => {
   return {
     testFunction: (testcase) => {
       const {steps, anchorState} = testcase;
@@ -85,6 +85,9 @@ export const forkChoiceTest: TestRunnerFn<IForkChoiceTestCase, void> = (fork) =>
 
         // block step
         else if (isBlock(step)) {
+          logger.debug("Step block", {root: step.block, valid: Boolean(step.valid)});
+          const validBlock = Boolean(step.valid ?? true);
+
           const signedBlock = testcase.blocks.get(step.block);
           if (!signedBlock) throw Error(`No block ${step.block}`);
 
@@ -98,10 +101,34 @@ export const forkChoiceTest: TestRunnerFn<IForkChoiceTestCase, void> = (fork) =>
             // should not throw error, on_block_bad_parent_root test wants this
           }
           const blockDelaySec = (tickTime - preState.genesisTime) % config.SECONDS_PER_SLOT;
-          state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
-          // TODO: May be part of runStateTranstion, necessary to commit again?
-          state.commit();
-          cacheState(state, stateCache);
+          const isMergeTransitionBlock =
+            bellatrix.isBellatrixStateType(preState) &&
+            bellatrix.isBellatrixBlockBodyType(signedBlock.message.body) &&
+            bellatrix.isMergeTransitionBlock(preState, signedBlock.message.body);
+
+          try {
+            if (isMergeTransitionBlock) {
+              const mergeBlock = signedBlock.message as bellatrix.BeaconBlock;
+
+              const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+              const powBlock = serializePowBlock(testcase.powBlocks.get(`pow_block_${powBlockRootHex}`));
+              const powBlockParent = serializePowBlock(
+                powBlock && testcase.powBlocks.get(`pow_block_${powBlock.parentHash}`)
+              );
+              assertValidTerminalPowBlock(config, mergeBlock, {
+                executionStatus: powBlock !== undefined ? ExecutionStatus.Valid : ExecutionStatus.Syncing,
+                powBlock,
+                powBlockParent,
+              });
+            }
+
+            state = runStateTranstion(preState, signedBlock, forkchoice, checkpointStateCache, blockDelaySec);
+            // TODO: May be part of runStateTranstion, necessary to commit again?
+            state.commit();
+            cacheState(state, stateCache);
+          } catch (e) {
+            if (validBlock) throw e;
+          }
         }
 
         // checks step
@@ -159,16 +186,22 @@ export const forkChoiceTest: TestRunnerFn<IForkChoiceTestCase, void> = (fork) =>
         [ANCHOR_STATE_FILE_NAME]: ssz[fork].BeaconState,
         [ANCHOR_BLOCK_FILE_NAME]: ssz[fork].BeaconBlock,
         [BLOCK_FILE_NAME]: ssz[fork].SignedBeaconBlock,
+        [POW_BLOCK_FILE_NAME]: ssz.bellatrix.PowBlock,
         [ATTESTATION_FILE_NAME]: ssz.phase0.Attestation,
       },
       mapToTestCase: (t: Record<string, any>) => {
         // t has input file name as key
         const blocks = new Map<string, allForks.SignedBeaconBlock>();
+        const powBlocks = new Map<string, bellatrix.PowBlock>();
         const attestations = new Map<string, phase0.Attestation>();
         for (const key in t) {
           const blockMatch = key.match(BLOCK_FILE_NAME);
           if (blockMatch) {
             blocks.set(key, t[key]);
+          }
+          const powBlockMatch = key.match(POW_BLOCK_FILE_NAME);
+          if (powBlockMatch) {
+            powBlocks.set(key, t[key]);
           }
           const attMatch = key.match(ATTESTATION_FILE_NAME);
           if (attMatch) {
@@ -176,11 +209,12 @@ export const forkChoiceTest: TestRunnerFn<IForkChoiceTestCase, void> = (fork) =>
           }
         }
         return {
-          meta: t["meta"] as IForkChoiceTestCase["meta"],
-          anchorState: t[ANCHOR_STATE_FILE_NAME] as IForkChoiceTestCase["anchorState"],
-          anchorBlock: t[ANCHOR_BLOCK_FILE_NAME] as IForkChoiceTestCase["anchorBlock"],
-          steps: t["steps"] as IForkChoiceTestCase["steps"],
+          meta: t["meta"] as ForkChoiceTestCase["meta"],
+          anchorState: t[ANCHOR_STATE_FILE_NAME] as ForkChoiceTestCase["anchorState"],
+          anchorBlock: t[ANCHOR_BLOCK_FILE_NAME] as ForkChoiceTestCase["anchorBlock"],
+          steps: t["steps"] as ForkChoiceTestCase["steps"],
           blocks,
+          powBlocks,
           attestations,
         };
       },
@@ -346,7 +380,7 @@ type Checks = {
   };
 };
 
-interface IForkChoiceTestCase {
+type ForkChoiceTestCase = {
   meta?: {
     description?: string;
     bls_setting: BigInt;
@@ -357,7 +391,7 @@ interface IForkChoiceTestCase {
   blocks: Map<string, allForks.SignedBeaconBlock>;
   powBlocks: Map<string, bellatrix.PowBlock>;
   attestations: Map<string, phase0.Attestation>;
-}
+};
 
 function isTick(step: Step): step is OnTick {
   return (step as OnTick).tick > 0;
