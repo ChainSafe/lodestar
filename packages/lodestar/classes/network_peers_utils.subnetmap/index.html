@@ -702,17 +702,17 @@
 <h2 id="properties_1">Properties<a class="headerlink" href="#properties_1" title="Permanent link">&para;</a></h2>
 <h3 id="private-subnets"><code>Private</code> subnets<a class="headerlink" href="#private-subnets" title="Permanent link">&para;</a></h3>
 <p>• <strong>subnets</strong>: <em><a href="../chain_statecache.maptracker/#static-map">Map</a>‹number, number›</em> = new Map<number, Slot>()</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L17">packages/lodestar/src/network/peers/utils/subnetMap.ts:17</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L17">packages/lodestar/src/network/peers/utils/subnetMap.ts:17</a></em></p>
 <p>Map of subnets and the slot until they are needed</p>
 <h2 id="accessors_1">Accessors<a class="headerlink" href="#accessors_1" title="Permanent link">&para;</a></h2>
 <h3 id="size">size<a class="headerlink" href="#size" title="Permanent link">&para;</a></h3>
 <p>• <strong>get size</strong>(): <em>number</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L19">packages/lodestar/src/network/peers/utils/subnetMap.ts:19</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L19">packages/lodestar/src/network/peers/utils/subnetMap.ts:19</a></em></p>
 <p><strong>Returns:</strong> <em>number</em></p>
 <h2 id="methods_1">Methods<a class="headerlink" href="#methods_1" title="Permanent link">&para;</a></h2>
 <h3 id="delete">delete<a class="headerlink" href="#delete" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>delete</strong>(<code>subnet</code>: number): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L85">packages/lodestar/src/network/peers/utils/subnetMap.ts:85</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L85">packages/lodestar/src/network/peers/utils/subnetMap.ts:85</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -732,7 +732,7 @@
 <hr />
 <h3 id="getactive">getActive<a class="headerlink" href="#getactive" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getActive</strong>(<code>currentSlot</code>: Slot): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L48">packages/lodestar/src/network/peers/utils/subnetMap.ts:48</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L48">packages/lodestar/src/network/peers/utils/subnetMap.ts:48</a></em></p>
 <p>Return subnetIds with a <code>toSlot</code> equal greater than <code>currentSlot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -753,7 +753,7 @@
 <hr />
 <h3 id="getactivettl">getActiveTtl<a class="headerlink" href="#getactivettl" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getActiveTtl</strong>(<code>currentSlot</code>: Slot): <em><a href="../../modules/network_peers_utils/#requestedsubnet">RequestedSubnet</a>[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L59">packages/lodestar/src/network/peers/utils/subnetMap.ts:59</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L59">packages/lodestar/src/network/peers/utils/subnetMap.ts:59</a></em></p>
 <p>Return subnetIds with a <code>toSlot</code> equal greater than <code>currentSlot</code></p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -774,12 +774,12 @@
 <hr />
 <h3 id="getall">getAll<a class="headerlink" href="#getall" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getAll</strong>(): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L81">packages/lodestar/src/network/peers/utils/subnetMap.ts:81</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L81">packages/lodestar/src/network/peers/utils/subnetMap.ts:81</a></em></p>
 <p><strong>Returns:</strong> <em>number[]</em></p>
 <hr />
 <h3 id="getexpired">getExpired<a class="headerlink" href="#getexpired" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getExpired</strong>(<code>currentSlot</code>: Slot): <em>number[]</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L70">packages/lodestar/src/network/peers/utils/subnetMap.ts:70</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L70">packages/lodestar/src/network/peers/utils/subnetMap.ts:70</a></em></p>
 <p>Return subnetIds with a <code>toSlot</code> less than <code>currentSlot</code>. Also deletes expired entries</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -800,7 +800,7 @@
 <hr />
 <h3 id="gettoslot">getToSlot<a class="headerlink" href="#gettoslot" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>getToSlot</strong>(<code>subnet</code>: number): <em>number | undefined</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L38">packages/lodestar/src/network/peers/utils/subnetMap.ts:38</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L38">packages/lodestar/src/network/peers/utils/subnetMap.ts:38</a></em></p>
 <p>Get last active slot of a subnet.</p>
 <p><strong>Parameters:</strong></p>
 <table>
@@ -821,7 +821,7 @@
 <hr />
 <h3 id="has">has<a class="headerlink" href="#has" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>has</strong>(<code>subnet</code>: number): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L23">packages/lodestar/src/network/peers/utils/subnetMap.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L23">packages/lodestar/src/network/peers/utils/subnetMap.ts:23</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -841,7 +841,7 @@
 <hr />
 <h3 id="isactiveatslot">isActiveAtSlot<a class="headerlink" href="#isactiveatslot" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>isActiveAtSlot</strong>(<code>subnet</code>: number, <code>slot</code>: Slot): <em>boolean</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L42">packages/lodestar/src/network/peers/utils/subnetMap.ts:42</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L42">packages/lodestar/src/network/peers/utils/subnetMap.ts:42</a></em></p>
 <p><strong>Parameters:</strong></p>
 <table>
 <thead>
@@ -865,7 +865,7 @@
 <hr />
 <h3 id="request">request<a class="headerlink" href="#request" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>request</strong>(<code>requestedSubnet</code>: <a href="../../modules/network_peers_utils/#requestedsubnet">RequestedSubnet</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/29a3789/packages/lodestar/src/network/peers/utils/subnetMap.ts#L30">packages/lodestar/src/network/peers/utils/subnetMap.ts:30</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/52cf6aa/packages/lodestar/src/network/peers/utils/subnetMap.ts#L30">packages/lodestar/src/network/peers/utils/subnetMap.ts:30</a></em></p>
 <p>Register requested subnets, extends toSlot if same subnet.</p>
 <p><strong>Parameters:</strong></p>
 <table>
