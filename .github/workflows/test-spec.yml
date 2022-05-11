@@ -43,9 +43,6 @@ jobs:
       - name: Download spec tests
         run: yarn download-spec-tests
         working-directory: packages/lodestar
-      - name: Check spec tests
-        run: yarn check-spec-tests
-        working-directory: packages/lodestar
 
       # Run them in different steps to quickly identifying which command failed
       # Otherwise just doing `yarn test:spec` you can't tell which specific suite failed
