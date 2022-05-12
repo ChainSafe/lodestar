@@ -345,7 +345,7 @@ export class EpochContext {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-      nextProposerSeed: getSeed(state, nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)
+      nextProposerSeed: getSeed(state, nextShuffling.epoch, DOMAIN_BEACON_PROPOSER),
     });
   }
 
