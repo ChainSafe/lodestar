@@ -97,7 +97,7 @@
     "@chainsafe/persistent-merkle-tree": "^0.4.0",
     "@chainsafe/snappy-stream": "5.0.0",
     "@chainsafe/ssz": "^0.9.0",
-    "@chainsafe/threads": "^1.9.0",
+    "@chainsafe/threads": "^1.10.0",
     "@ethersproject/abi": "^5.0.0",
     "@types/datastore-level": "^3.0.0",
     "bl": "^5.0.0",
