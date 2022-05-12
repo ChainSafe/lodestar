@@ -1,6 +1,5 @@
 import {getClient} from "@chainsafe/lodestar-api";
 import {config} from "@chainsafe/lodestar-config/default";
-import {getInfuraBeaconUrl} from "@chainsafe/lodestar-beacon-state-transition/test/perf/infura";
 import {NetworkName} from "@chainsafe/lodestar-config/networks";
 
 // To populate packages/light-client/src/networks.ts
@@ -23,6 +22,15 @@ async function getGenesisData(): Promise<void> {
       genesisValidatorsRoot: "0x" + Buffer.from(genesis.genesisValidatorsRoot as Uint8Array).toString("hex"),
     });
   }
+}
+
+function getInfuraBeaconUrl(network: NetworkName): string {
+  const INFURA_ETH2_CREDENTIALS = process.env.INFURA_ETH2_CREDENTIALS;
+  if (!INFURA_ETH2_CREDENTIALS) {
+    throw Error("Must set ENV INFURA_ETH2_CREDENTIALS");
+  }
+
+  return `https://${INFURA_ETH2_CREDENTIALS}@eth2-beacon-${network}.infura.io`;
 }
 
 getGenesisData().catch((e) => {
