@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import fetch from "cross-fetch";
 import {getClient} from "@chainsafe/lodestar-api";
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -9,8 +8,6 @@ import {getInfuraBeaconUrl} from "./infura";
 import {testCachePath} from "../cache";
 import {createCachedBeaconStateTest} from "../utils/state";
 import {allForks} from "@chainsafe/lodestar-types";
-
-const testCacheDirUrl = "https://gateway.pinata.cloud/ipfs/QmWGtRQ83qw6k16tRRfjFbiTuNoseaBewKZg9g4WAwHMY";
 
 /**
  * Create a network config from known network params
@@ -36,15 +33,11 @@ export async function getNetworkCachedState(
   if (fs.existsSync(filepath)) {
     stateSsz = fs.readFileSync(filepath);
   } else {
-    stateSsz = await Promise.race([
-      (async function () {
-        const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-        return computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-          ? await client.debug.getState(String(slot), "ssz")
-          : await client.debug.getStateV2(String(slot), "ssz");
-      })(),
-      downloadTestCacheFile(fileId),
-    ]);
+    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
+    stateSsz =
+      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+        ? await client.debug.getState(String(slot), "ssz")
+        : await client.debug.getStateV2(String(slot), "ssz");
 
     fs.writeFileSync(filepath, stateSsz);
   }
@@ -71,31 +64,15 @@ export async function getNetworkCachedBlock(
     return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
   } else {
     const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-    const block = await Promise.race([
-      (async function () {
-        const res =
-          computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-            ? await client.beacon.getBlock(String(slot))
-            : await client.beacon.getBlockV2(String(slot));
-        return res.data;
-      })(),
-      (async function () {
-        const blockBytes = await downloadTestCacheFile(fileId);
-        return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockBytes);
-      })(),
-    ]);
+
+    const res =
+      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+        ? await client.beacon.getBlock(String(slot))
+        : await client.beacon.getBlockV2(String(slot));
+    const block = res.data;
 
     const blockSsz = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
     fs.writeFileSync(filepath, blockSsz);
     return block;
   }
-}
-
-export async function downloadTestCacheFile(fileId: string): Promise<Uint8Array> {
-  const res = await fetch(`${testCacheDirUrl}/${fileId}`);
-
-  if (!res.ok) throw Error(`Response error: ${res.statusText}`);
-
-  const arrayBuffer = await res.arrayBuffer();
-  return new Uint8Array(arrayBuffer);
 }
