@@ -296,8 +296,8 @@ export async function verifyBlockStateTransition(
     if (isMergeTransitionBlock) {
       const mergeBlock = block.message as bellatrix.BeaconBlock;
       const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
-      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
-      const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((_error) => null);
+      const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash).catch((_error) => null));
 
       assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});
     }
