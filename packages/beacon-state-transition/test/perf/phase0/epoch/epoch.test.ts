@@ -7,7 +7,8 @@ import {
   CachedBeaconStatePhase0,
   beforeProcessEpoch,
 } from "../../../../src";
-import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
+import {getNetworkCachedState} from "../../../utils/testFileCache";
+import {beforeValue, LazyValue} from "../../util";
 import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates";
 import {StateEpoch} from "../../types";
 import {phase0State} from "../../params";

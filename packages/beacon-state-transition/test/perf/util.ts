@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import {config} from "@chainsafe/lodestar-config/default";
 import {phase0, ssz, Slot, altair} from "@chainsafe/lodestar-types";
 import bls, {CoordType, PublicKey, SecretKey} from "@chainsafe/bls";
@@ -14,7 +12,7 @@ import {
   createCachedBeaconState,
   computeCommitteeCount,
 } from "../../src";
-import {createIBeaconConfig, createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
+import {createIBeaconConfig, createIChainForkConfig} from "@chainsafe/lodestar-config";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStatePhase0,
@@ -32,12 +30,7 @@ import {
   SLOTS_PER_EPOCH,
   SLOTS_PER_HISTORICAL_ROOT,
 } from "@chainsafe/lodestar-params";
-import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
-import {getClient} from "@chainsafe/lodestar-api";
-import {getInfuraBeaconUrl} from "./infura";
-import {testCachePath} from "../cache";
 import {getNextSyncCommittee} from "../../src/util/syncCommittee";
-import {createCachedBeaconStateTest} from "../utils/state";
 import {getEffectiveBalanceIncrements} from "../../src/cache/effectiveBalanceIncrements";
 
 let phase0State: BeaconStatePhase0 | null = null;
@@ -483,67 +476,4 @@ export function beforeValue<T>(fn: () => T | Promise<T>, timeout?: number): Lazy
       },
     }
   );
-}
-
-/**
- * Create a network config from known network params
- */
-export function getNetworkConfig(network: NetworkName): IChainForkConfig {
-  const configNetwork = networksChainConfig[network];
-  return createIChainForkConfig(configNetwork);
-}
-
-/**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
- */
-export async function getNetworkCachedState(
-  network: NetworkName,
-  slot: number,
-  timeout?: number
-): Promise<CachedBeaconStateAllForks> {
-  const config = getNetworkConfig(network);
-
-  const filepath = path.join(testCachePath, `state_${network}_${slot}.ssz`);
-  let stateSsz: Uint8Array;
-  if (fs.existsSync(filepath)) {
-    stateSsz = fs.readFileSync(filepath);
-  } else {
-    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-    stateSsz =
-      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-        ? await client.debug.getState(String(slot), "ssz")
-        : await client.debug.getStateV2(String(slot), "ssz");
-    fs.writeFileSync(filepath, stateSsz);
-  }
-
-  const stateView = config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz);
-  return createCachedBeaconStateTest(stateView, config);
-}
-
-/**
- * Download a state from Infura. Caches states in local fs by network and slot to only download once.
- */
-export async function getNetworkCachedBlock(
-  network: NetworkName,
-  slot: number,
-  timeout?: number
-): Promise<allForks.SignedBeaconBlock> {
-  const config = getNetworkConfig(network);
-
-  const filepath = path.join(testCachePath, `block_${network}_${slot}.ssz`);
-
-  if (fs.existsSync(filepath)) {
-    const blockSsz = fs.readFileSync(filepath);
-    return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
-  } else {
-    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-    const res =
-      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-        ? await client.beacon.getBlock(String(slot))
-        : await client.beacon.getBlockV2(String(slot));
-
-    const blockSsz = config.getForkTypes(slot).SignedBeaconBlock.serialize(res.data);
-    fs.writeFileSync(filepath, blockSsz);
-    return res.data;
-  }
 }
