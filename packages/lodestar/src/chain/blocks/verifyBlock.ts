@@ -19,6 +19,7 @@ import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
 import {byteArrayEquals} from "../../util/bytes";
 import {IEth1ForBlockProduction} from "../../eth1";
+import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
@@ -151,7 +152,6 @@ export async function verifyBlockStateTransition(
     chain.metrics
   );
 
-  // TODO: Review mergeBlock conditions
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     bellatrix.isBellatrixStateType(postState) &&
@@ -317,5 +317,24 @@ export async function verifyBlockStateTransition(
     });
   }
 
+  // All checks have passed, if this is a merge transition block we can log
+  if (isMergeTransitionBlock) {
+    logOnPowBlock(chain, block as bellatrix.SignedBeaconBlock);
+  }
+
   return {postState, executionStatus};
+}
+
+function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {
+  const mergeBlock = block.message;
+  const mergeBlockHash = toHexString(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+  const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
+  const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);
+  chain.logger.info(POS_PANDA_MERGE_TRANSITION_BANNER);
+  chain.logger.info("Execution transitioning from PoW to PoS!!!");
+  chain.logger.info("Importing block referencing terminal PoW block", {
+    blockHash: mergeBlockHash,
+    executionHash: mergeExecutionHash,
+    powHash: mergePowHash,
+  });
 }
