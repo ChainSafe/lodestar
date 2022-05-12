@@ -53,7 +53,7 @@ describe("GossipMessageValidator", () => {
     });
 
     it("should return valid attester slashing", async () => {
-      const attestationData = ssz.phase0.AttestationDataBn.defaultValue();
+      const attestationData = ssz.phase0.AttestationDataBigint.defaultValue();
       const attesterSlashing: phase0.AttesterSlashing = {
         attestation1: {
           data: attestationData,

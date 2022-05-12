@@ -8,10 +8,13 @@ import {phase0, Slot, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 /**
  * Check if [[data1]] and [[data2]] are slashable according to Casper FFG rules.
  */
-export function isSlashableAttestationData(data1: phase0.AttestationDataBn, data2: phase0.AttestationDataBn): boolean {
+export function isSlashableAttestationData(
+  data1: phase0.AttestationDataBigint,
+  data2: phase0.AttestationDataBigint
+): boolean {
   return (
     // Double vote
-    (!ssz.phase0.AttestationDataBn.equals(data1, data2) && data1.target.epoch === data2.target.epoch) ||
+    (!ssz.phase0.AttestationDataBigint.equals(data1, data2) && data1.target.epoch === data2.target.epoch) ||
     // Surround vote
     (data1.source.epoch < data2.source.epoch && data2.target.epoch < data1.target.epoch)
   );

@@ -4,7 +4,7 @@ import {ForkName} from "@chainsafe/lodestar-params";
 import {isSlashableValidator, isSlashableAttestationData, getAttesterSlashableIndices} from "../../util";
 import {CachedBeaconStateAllForks} from "../../types";
 import {slashValidatorAllForks} from "./slashValidator";
-import {isValidIndexedAttestationBn} from "./isValidIndexedAttestation";
+import {isValidIndexedAttestationBigint} from "./isValidIndexedAttestation";
 
 /**
  * Process an AttesterSlashing operation. Initiates the exit of a validator, decreases the balance of the slashed
@@ -49,8 +49,11 @@ export function assertValidAttesterSlashing(
     throw new Error("AttesterSlashing is not slashable");
   }
 
+  // In state transition, AttesterSlashing attestations are only partially validated. Their slot and epoch could
+  // be higher than the clock and the slashing would still be valid. Same applies to attestation data index, which
+  // can be any arbitrary value. Must use bigint variants to hash correctly to all possible values
   for (const [i, attestation] of [attestation1, attestation2].entries()) {
-    if (!isValidIndexedAttestationBn(state, attestation, verifySignatures)) {
+    if (!isValidIndexedAttestationBigint(state, attestation, verifySignatures)) {
       throw new Error(`AttesterSlashing attestation${i} is invalid`);
     }
   }

@@ -71,7 +71,7 @@ export function getBlockPhase0(
     const startIndex = attesterSlashingStartIndex + i * bitsLen * exitedIndexStep;
     const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep);
 
-    const attData: phase0.AttestationDataBn = {
+    const attData: phase0.AttestationDataBigint = {
       slot: BigInt(attSlot),
       index: BigInt(0),
       beaconBlockRoot: rootA,

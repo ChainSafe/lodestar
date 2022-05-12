@@ -55,8 +55,8 @@ describe("validate proposer slashing", () => {
   });
 
   it("should return valid proposer slashing", async () => {
-    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeaderBn.defaultValue();
-    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeaderBn.defaultValue();
+    const signedHeader1 = ssz.phase0.SignedBeaconBlockHeaderBigint.defaultValue();
+    const signedHeader2 = ssz.phase0.SignedBeaconBlockHeaderBigint.defaultValue();
     // Make it different, so slashable
     signedHeader2.message.stateRoot = Buffer.alloc(32, 1);
 
