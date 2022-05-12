@@ -403,6 +403,11 @@ export class EpochContext {
 
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
+    /**
+     * The next proposer seed is only used in the getNextEpochBeaconProposer call. It cannot
+     * be moved into getNextEpochBeaconProposer because it needs state as input and all info
+     * needed by getNextEpochBeaconProposer should be in the epoch context.
+     */
     this.nextProposerSeed = getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
 
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
