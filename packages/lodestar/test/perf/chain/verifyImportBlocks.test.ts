@@ -3,7 +3,7 @@ import {
   beforeValue,
   getNetworkCachedState,
   getNetworkCachedBlock,
-} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
+} from "@chainsafe/lodestar-beacon-state-transition/test/utils";
 import {rangeSyncTest} from "@chainsafe/lodestar-beacon-state-transition/test/perf/params";
 import {config} from "@chainsafe/lodestar-config/default";
 import {SAFE_SLOTS_TO_IMPORT_OPTIMISTICALLY, SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
