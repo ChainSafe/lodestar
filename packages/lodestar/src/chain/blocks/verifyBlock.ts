@@ -44,13 +44,14 @@ export async function verifyBlock(
 ): Promise<FullyVerifiedBlock> {
   const parentBlock = verifyBlockSanityChecks(chain, partiallyVerifiedBlock);
 
-  const processedBlockData = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
+  const {postState, executionStatus} = await verifyBlockStateTransition(chain, partiallyVerifiedBlock, opts);
 
   return {
     block: partiallyVerifiedBlock.block,
+    postState,
     parentBlock,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
-    ...processedBlockData,
+    executionStatus,
   };
 }
 
@@ -318,14 +319,14 @@ export async function verifyBlockStateTransition(
 
   // All checks have passed, if this is a merge transition block we can log
   if (isMergeTransitionBlock) {
-    logOnPowBlock(chain, block);
+    logOnPowBlock(chain, block as bellatrix.SignedBeaconBlock);
   }
 
   return {postState, executionStatus};
 }
 
-function logOnPowBlock(chain: VerifyBlockModules, block: allForks.SignedBeaconBlock): void {
-  const mergeBlock = block.message as bellatrix.BeaconBlock;
+function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {
+  const mergeBlock = block.message;
   const mergeBlockHash = toHexString(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
   const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
   const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);
