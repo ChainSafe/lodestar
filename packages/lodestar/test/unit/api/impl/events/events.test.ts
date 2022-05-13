@@ -9,6 +9,7 @@ import {generateProtoBlock, generateEmptySignedBlock, generateSignedBlock} from 
 import {generateAttestation, generateEmptySignedVoluntaryExit} from "../../../../utils/attestation";
 import {generateCachedState} from "../../../../utils/state";
 import {StateContextCache} from "../../../../../src/chain/stateCache";
+import {BlockSource} from "../../../../../src/chain/blocks/types";
 
 describe("Events api impl", function () {
   describe("beacon event stream", function () {
@@ -67,7 +68,7 @@ describe("Events api impl", function () {
       const events = getEvents([routes.events.EventType.block]);
 
       const block = generateSignedBlock();
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, BlockSource.GOSSIP);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.block);
@@ -91,7 +92,7 @@ describe("Events api impl", function () {
       const exit = generateEmptySignedVoluntaryExit();
       const block = generateEmptySignedBlock();
       block.message.body.voluntaryExits.push(exit);
-      chainEventEmmitter.emit(ChainEvent.block, block, null as any);
+      chainEventEmmitter.emit(ChainEvent.block, block, null as any, BlockSource.GOSSIP);
 
       expect(events).to.have.length(1, "Wrong num of received events");
       expect(events[0].type).to.equal(routes.events.EventType.voluntaryExit);

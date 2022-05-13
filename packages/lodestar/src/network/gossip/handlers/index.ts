@@ -29,6 +29,7 @@ import {
 import {INetwork} from "../../interface";
 import {NetworkEvent} from "../../events";
 import {PeerAction} from "../../peers";
+import {BlockSource} from "../../../chain/blocks/types";
 
 /**
  * Gossip handler options as part of network options
@@ -120,7 +121,12 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       // See https://github.com/ChainSafe/lodestar/issues/3792
       // it's possible that the block is found by unknown block root attestations
       chain
-        .processBlock(signedBlock, {validProposerSignature: true, blsVerifyOnMainThread: true, ignoreIfKnown: true})
+        .processBlock(signedBlock, {
+          validProposerSignature: true,
+          blsVerifyOnMainThread: true,
+          ignoreIfKnown: true,
+          source: BlockSource.GOSSIP,
+        })
         .then(() => {
           // Returns the delay between the start of `block.slot` and `current time`
           const delaySec = chain.clock.secFromSlot(slot);

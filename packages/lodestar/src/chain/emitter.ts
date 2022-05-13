@@ -6,6 +6,7 @@ import {phase0, Epoch, Slot, allForks} from "@chainsafe/lodestar-types";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
 import {CachedBeaconStateAllForks} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError} from "./errors";
+import {BlockSource} from "./blocks/types";
 
 /**
  * Important chain events that occur during normal chain operation.
@@ -108,7 +109,11 @@ export enum ChainEvent {
 
 export interface IChainEvents {
   [ChainEvent.attestation]: (attestation: phase0.Attestation) => void;
-  [ChainEvent.block]: (signedBlock: allForks.SignedBeaconBlock, postState: CachedBeaconStateAllForks) => void;
+  [ChainEvent.block]: (
+    signedBlock: allForks.SignedBeaconBlock,
+    postState: CachedBeaconStateAllForks,
+    source: BlockSource
+  ) => void;
   [ChainEvent.errorAttestation]: (error: AttestationError) => void;
   [ChainEvent.errorBlock]: (error: BlockError) => void;
 

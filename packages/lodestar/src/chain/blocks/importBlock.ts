@@ -237,7 +237,7 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // - Send event after everything is done
 
   // Emit all events at once after fully completing importBlock()
-  chain.emitter.emit(ChainEvent.block, block, postState);
+  chain.emitter.emit(ChainEvent.block, block, postState, fullyVerifiedBlock.source);
   pendingEvents.emit();
 }
 

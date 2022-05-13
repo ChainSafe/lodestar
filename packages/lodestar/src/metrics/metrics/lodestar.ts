@@ -516,11 +516,6 @@ export function createLodestarMetrics(
         help: "Duration from received time until the block is downloaded",
         labelNames: ["type"],
       }),
-      slotTimeTillProcessed: register.histogram<"type">({
-        name: "lodestar_sync_unknown_block_slot_time_till_processed_seconds",
-        help: "Duration from slot time until the block is processed",
-        labelNames: ["type"],
-      }),
       processedBlocksError: register.gauge({
         name: "lodestar_sync_unknown_block_processed_blocks_error_total",
         help: "Total number of processed blocks errors in UnknownBlockSync",
@@ -560,10 +555,11 @@ export function createLodestarMetrics(
       buckets: [0.5, 1, 2, 4, 6, 12],
     }),
 
-    elapsedTimeTillProcessed: register.histogram({
+    elapsedTimeTillProcessed: register.histogram<"source">({
       name: "lodestar_elapsed_time_until_processed_seconds",
       help: "Duration from slot time until block is processed in seconds",
       buckets: [0.1, 1, 10],
+      labelNames: ["source"],
     }),
 
     backfillSync: {

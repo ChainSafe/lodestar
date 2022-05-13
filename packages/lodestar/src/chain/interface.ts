@@ -87,9 +87,9 @@ export interface IBeaconChain {
   getCanonicalBlockAtSlot(slot: Slot): Promise<allForks.SignedBeaconBlock | null>;
 
   /** Process a block until complete */
-  processBlock(signedBlock: allForks.SignedBeaconBlock, flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processBlock(signedBlock: allForks.SignedBeaconBlock, flags: PartiallyVerifiedBlockFlags): Promise<void>;
   /** Process a chain of blocks until complete */
-  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags?: PartiallyVerifiedBlockFlags): Promise<void>;
+  processChainSegment(signedBlocks: allForks.SignedBeaconBlock[], flags: PartiallyVerifiedBlockFlags): Promise<void>;
 
   getStatus(): phase0.Status;
 

@@ -8,6 +8,7 @@ import {LocalClock} from "../../../../src/chain/clock";
 import {BlockErrorCode} from "../../../../src/chain/errors";
 import {allForks, ssz} from "@chainsafe/lodestar-types";
 import {expectThrowsLodestarError} from "../../../utils/errors";
+import {BlockSource} from "../../../../src/chain/blocks/types";
 
 describe("chain / blocks / verifyBlock", function () {
   let forkChoice: SinonStubbedInstance<ForkChoice>;
@@ -30,29 +31,41 @@ describe("chain / blocks / verifyBlock", function () {
 
   it("PARENT_UNKNOWN", function () {
     forkChoice.getBlockHex.returns(null);
-    expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.PARENT_UNKNOWN);
+    expectThrowsLodestarError(
+      () => verifyBlockSanityChecks(modules, {block, source: BlockSource.GOSSIP}),
+      BlockErrorCode.PARENT_UNKNOWN
+    );
   });
 
   it("GENESIS_BLOCK", function () {
     block.message.slot = 0;
-    expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.GENESIS_BLOCK);
+    expectThrowsLodestarError(
+      () => verifyBlockSanityChecks(modules, {block, source: BlockSource.GOSSIP}),
+      BlockErrorCode.GENESIS_BLOCK
+    );
   });
 
   it("ALREADY_KNOWN", function () {
     forkChoice.hasBlockHex.returns(true);
-    expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.ALREADY_KNOWN);
+    expectThrowsLodestarError(
+      () => verifyBlockSanityChecks(modules, {block, source: BlockSource.GOSSIP}),
+      BlockErrorCode.ALREADY_KNOWN
+    );
   });
 
   it("WOULD_REVERT_FINALIZED_SLOT", function () {
     forkChoice.getFinalizedCheckpoint.returns({epoch: 5, root: Buffer.alloc(32), rootHex: ""});
     expectThrowsLodestarError(
-      () => verifyBlockSanityChecks(modules, {block}),
+      () => verifyBlockSanityChecks(modules, {block, source: BlockSource.GOSSIP}),
       BlockErrorCode.WOULD_REVERT_FINALIZED_SLOT
     );
   });
 
   it("FUTURE_SLOT", function () {
     block.message.slot = currentSlot + 1;
-    expectThrowsLodestarError(() => verifyBlockSanityChecks(modules, {block}), BlockErrorCode.FUTURE_SLOT);
+    expectThrowsLodestarError(
+      () => verifyBlockSanityChecks(modules, {block, source: BlockSource.GOSSIP}),
+      BlockErrorCode.FUTURE_SLOT
+    );
   });
 });

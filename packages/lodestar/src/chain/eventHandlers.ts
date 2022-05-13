@@ -9,6 +9,7 @@ import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
 import {REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC} from "./reprocess";
 import {toCheckpointHex} from "./stateCache";
+import {BlockSource} from "./blocks/types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyCallback = () => Promise<void>;
@@ -186,7 +187,8 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
 export async function onBlock(
   this: BeaconChain,
   block: allForks.SignedBeaconBlock,
-  _postState: CachedBeaconStateAllForks
+  _postState: CachedBeaconStateAllForks,
+  source: BlockSource
 ): Promise<void> {
   const blockRoot = toHexString(this.config.getForkTypes(block.message.slot).BeaconBlock.hashTreeRoot(block.message));
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
@@ -194,11 +196,12 @@ export async function onBlock(
   this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
   const delaySec = this.clock.secFromSlot(block.message.slot);
   // block may come from different sources so we want to track a different metric than the gossip one
-  this.metrics?.elapsedTimeTillProcessed.observe(delaySec);
+  this.metrics?.elapsedTimeTillProcessed.observe({source}, delaySec);
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: blockRoot,
+    source,
     delaySec,
   });
 }

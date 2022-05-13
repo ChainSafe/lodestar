@@ -23,6 +23,10 @@ export type FullyVerifiedBlockFlags = {
    * If the execution payload couldnt be verified because of EL syncing status, used in optimistic sync or for merge block
    */
   executionStatus?: ExecutionStatus;
+  /**
+   * If from RangeSync module, we won't attest to this block so it's okay to ignore a SYNCING message from execution layer
+   */
+  source: BlockSource;
 };
 
 export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
@@ -35,14 +39,20 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
    */
   validSignatures?: boolean;
   /**
-   * From RangeSync module, we won't attest to this block so it's okay to ignore a SYNCING message from execution layer
-   */
-  fromRangeSync?: boolean;
-  /**
    * Verify signatures on main thread or not.
    */
   blsVerifyOnMainThread?: boolean;
 };
+
+/**
+ * An enum of how a block comes to this node.
+ */
+export enum BlockSource {
+  API = "BLOCK_SOURCE_API",
+  GOSSIP = "BLOCK_SOURCE_GOSSIP",
+  UNKNOWN_BLOCK_SYNC = "BLOCK_SOURCE_UNKNOWN_BLOCK_SYNC",
+  RANGE_SYNC = "BLOCK_SOURCE_RANGE_SYNC",
+}
 
 /**
  * A wrapper around a `SignedBeaconBlock` that indicates that this block is fully verified and ready to import

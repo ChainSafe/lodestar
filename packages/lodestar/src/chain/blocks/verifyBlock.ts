@@ -52,6 +52,7 @@ export async function verifyBlock(
     parentBlock,
     skipImportingAttestations: partiallyVerifiedBlock.skipImportingAttestations,
     executionStatus,
+    source: partiallyVerifiedBlock.source,
   };
 }
 

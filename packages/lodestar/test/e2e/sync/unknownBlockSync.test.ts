@@ -11,6 +11,7 @@ import {fromHexString} from "@chainsafe/ssz";
 import {TimestampFormatCode} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {BlockError, BlockErrorCode} from "../../../src/chain/errors";
+import {BlockSource} from "../../../src/chain/blocks/types";
 
 describe("sync / unknown block sync", function () {
   const validatorCount = 8;
@@ -91,7 +92,7 @@ describe("sync / unknown block sync", function () {
     );
 
     await connect(bn2.network as Network, bn.network.peerId, bn.network.localMultiaddrs);
-    await bn2.chain.processBlock(head).catch((e) => {
+    await bn2.chain.processBlock(head, {source: BlockSource.UNKNOWN_BLOCK_SYNC}).catch((e) => {
       if (e instanceof BlockError && e.type.code === BlockErrorCode.PARENT_UNKNOWN) {
         // Expected
         bn2.network.events.emit(NetworkEvent.unknownBlockParent, head, bn2.network.peerId.toB58String());

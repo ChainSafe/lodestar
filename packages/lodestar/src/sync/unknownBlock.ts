@@ -9,11 +9,12 @@ import {shuffle} from "../util/shuffle";
 import {byteArrayEquals} from "../util/bytes";
 import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
-import {Result, wrapError} from "../util/wrapError";
+import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownParentPendingBlock} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
 import {SyncOptions} from "./options";
+import {BlockSource} from "../chain/blocks/types";
 
 const MAX_ATTEMPTS_PER_BLOCK = 5;
 const MAX_KNOWN_BAD_BLOCKS = 500;
@@ -234,38 +235,31 @@ export class UnknownBlockSync {
     if (pendingBlock.status === PendingBlockStatus.processing) {
       return;
     }
-
     pendingBlock.status = PendingBlockStatus.processing;
-    const {signedBlock, type, blockRootHex, receivedTimeSec, downloadAttempts} = pendingBlock;
-    let isBlockKnown = false;
-    let res: Result<void>;
-    if (this.chain.forkChoice.hasBlock(fromHexString(blockRootHex))) {
-      // for UNKNOWN_BLOCK, it's very possible that gossip block comes and be processed before this downloaded block
-      isBlockKnown = true;
-      res = {err: null} as Result<void>;
-    } else {
-      // At gossip time, it's critical to keep a good number of mesh peers.
-      // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-      // Gossip Job Wait Time depends on the BLS Job Wait Time
-      // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-      // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-      // See https://github.com/ChainSafe/lodestar/issues/3792
-      res = await wrapError(this.chain.processBlock(signedBlock, {ignoreIfKnown: true, blsVerifyOnMainThread: true}));
-    }
+    const {signedBlock, type, blockRootHex, downloadAttempts} = pendingBlock;
+    // At gossip time, it's critical to keep a good number of mesh peers.
+    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+    // Gossip Job Wait Time depends on the BLS Job Wait Time
+    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+    // See https://github.com/ChainSafe/lodestar/issues/3792
+    // it's very possible that gossip block comes and be processed before this downloaded block, hence ignoreIfKnown
+    const res = await wrapError(
+      this.chain.processBlock(signedBlock, {
+        ignoreIfKnown: true,
+        blsVerifyOnMainThread: true,
+        source: BlockSource.UNKNOWN_BLOCK_SYNC,
+      })
+    );
     pendingBlock.status = PendingBlockStatus.pending;
 
     if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
-    else if (isBlockKnown) this.logger.verbose("Fetched known block", {root: prettyBytes(blockRootHex)});
     else {
       this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
-      const sec = Date.now() / 1000;
-      const slotTimeSec = sec - (this.chain.genesisTime + signedBlock.message.slot * this.config.SECONDS_PER_SLOT);
-      this.metrics?.syncUnknownBlock.slotTimeTillProcessed.observe({type}, slotTimeSec);
       this.logger.verbose("Fetched and processed block", {
         root: prettyBytes(blockRootHex),
-        type: pendingBlock.type,
-        sinceSlot: slotTimeSec,
-        sinceReceived: sec - receivedTimeSec,
+        type,
+        sinceSlot: this.chain.clock.secFromSlot(signedBlock.message.slot),
         downloadAttempts,
       });
     }

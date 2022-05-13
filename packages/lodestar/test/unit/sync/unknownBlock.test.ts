@@ -4,7 +4,7 @@ import {ssz} from "@chainsafe/lodestar-types";
 import {notNullish, sleep} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {expect} from "chai";
-import {IBeaconChain} from "../../../src/chain";
+import {IBeaconChain, IBeaconClock} from "../../../src/chain";
 import {INetwork, IReqResp, NetworkEvent, NetworkEventBus} from "../../../src/network";
 import {UnknownBlockSync} from "../../../src/sync/unknownBlock";
 import {testLogger} from "../../utils/logger";
@@ -58,6 +58,7 @@ describe("sync / UnknownBlockSync", () => {
 
     const chain: Partial<IBeaconChain> = {
       forkChoice: forkChoice as IForkChoice,
+      clock: ({secFromSlot: () => 0} as Partial<IBeaconClock>) as IBeaconClock,
       processBlock: async (block) => {
         if (!forkChoice.hasBlock(block.message.parentRoot)) throw Error("Unknown parent");
         // Simluate adding the block to the forkchoice
