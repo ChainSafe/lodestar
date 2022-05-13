@@ -8,7 +8,7 @@ import {
   getNextSyncCommittee,
 } from "../../../../src";
 import {computeProposers} from "../../../../src";
-import {getSeed} from "../../../../lib";
+import {getSeed} from "../../../../src";
 import {generatePerfTestCachedStatePhase0, numValidators} from "../../util";
 
 describe("epoch shufflings", () => {
