@@ -10,6 +10,10 @@ import {CheckpointWithHex} from "@chainsafe/lodestar-fork-choice";
 
 const PROCESS_FINALIZED_CHECKPOINT_QUEUE_LEN = 256;
 
+export type ArchiverOpts = {
+  disableArchiveOnCheckpoint?: boolean;
+};
+
 /**
  * Used for running tasks that depends on some events or are executed
  * periodically.
@@ -23,7 +27,8 @@ export class Archiver {
     private readonly db: IBeaconDb,
     private readonly chain: IBeaconChain,
     private readonly logger: ILogger,
-    signal: AbortSignal
+    signal: AbortSignal,
+    opts: ArchiverOpts
   ) {
     this.statesArchiver = new StatesArchiver(chain.checkpointStateCache, db, logger);
     this.jobQueue = new JobItemQueue<[CheckpointWithHex], void>(this.processFinalizedCheckpoint, {
@@ -31,17 +36,19 @@ export class Archiver {
       signal,
     });
 
-    this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-    this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
+    if (!opts.disableArchiveOnCheckpoint) {
+      this.chain.emitter.on(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+      this.chain.emitter.on(ChainEvent.checkpoint, this.onCheckpoint);
 
-    signal.addEventListener(
-      "abort",
-      () => {
-        this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
-        this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
-      },
-      {once: true}
-    );
+      signal.addEventListener(
+        "abort",
+        () => {
+          this.chain.emitter.off(ChainEvent.forkChoiceFinalized, this.onFinalizedCheckpoint);
+          this.chain.emitter.off(ChainEvent.checkpoint, this.onCheckpoint);
+        },
+        {once: true}
+      );
+    }
   }
 
   /** Archive latest finalized state */

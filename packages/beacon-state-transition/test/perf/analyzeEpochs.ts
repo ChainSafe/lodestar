@@ -14,7 +14,7 @@ import {
 } from "../../src";
 import {Validator} from "../../lib/phase0";
 import {csvAppend, readCsv} from "./csv";
-import {getInfuraBeaconUrl} from "./infura";
+import {getInfuraBeaconUrl} from "../utils/infura";
 import {createCachedBeaconStateTest} from "../utils/state";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.

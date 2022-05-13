@@ -7,7 +7,7 @@ import {
   CachedBeaconStateAltair,
   beforeProcessEpoch,
 } from "../../../../src";
-import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
+import {getNetworkCachedState, beforeValue, LazyValue} from "../../../utils";
 import {StateEpoch} from "../../types";
 import {altairState} from "../../params";
 
