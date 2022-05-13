@@ -51,6 +51,7 @@ import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
+import {SeenAggregatedAttestations} from "./seenCache/seenAggregateAndProof";
 
 export class BeaconChain implements IBeaconChain {
   readonly genesisTime: UintNum64;
@@ -81,6 +82,7 @@ export class BeaconChain implements IBeaconChain {
   // Gossip seen cache
   readonly seenAttesters = new SeenAttesters();
   readonly seenAggregators = new SeenAggregators();
+  readonly seenAggregatedAttestations = new SeenAggregatedAttestations();
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
@@ -188,6 +190,7 @@ export class BeaconChain implements IBeaconChain {
         lightClientServer,
         stateCache,
         checkpointStateCache,
+        seenAggregatedAttestations: this.seenAggregatedAttestations,
         emitter,
         config,
         logger,

@@ -1,4 +1,5 @@
-import {ValidatorIndex} from "@chainsafe/lodestar-types";
+import {toHexString} from "@chainsafe/ssz";
+import {ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
 import {
   phase0,
   allForks,
@@ -24,6 +25,7 @@ export async function validateGossipAggregateAndProof(
 
   const aggregateAndProof = signedAggregateAndProof.message;
   const aggregate = aggregateAndProof.aggregate;
+  const aggregateRoot = toHexString(ssz.phase0.Attestation.hashTreeRoot(aggregate));
   const attData = aggregate.data;
   const attSlot = attData.slot;
   const attEpoch = computeEpochAtSlot(attSlot);
@@ -39,6 +41,16 @@ export async function validateGossipAggregateAndProof(
   // -- i.e. aggregate.data.slot + ATTESTATION_PROPAGATION_SLOT_RANGE >= current_slot >= aggregate.data.slot
   // (a client MAY queue future aggregates for processing at the appropriate slot).
   verifyPropagationSlotRange(chain, attSlot);
+
+  // [IGNORE] The valid aggregate attestation defined by hash_tree_root(aggregate) has not already been seen
+  // (via aggregate gossip, within a verified block, or through the creation of an equivalent aggregate locally).
+  if (chain.seenAggregatedAttestations.isKnown(targetEpoch, aggregateRoot)) {
+    throw new AttestationError(GossipAction.IGNORE, {
+      code: AttestationErrorCode.AGGREGATED_ATTESTATION_ALREADY_KNOWN,
+      targetEpoch,
+      aggregateRoot,
+    });
+  }
 
   // [IGNORE] The aggregate is the first valid aggregate received for the aggregator with
   // index aggregate_and_proof.aggregator_index for the epoch aggregate.data.target.epoch.
@@ -122,6 +134,7 @@ export async function validateGossipAggregateAndProof(
   }
 
   chain.seenAggregators.add(targetEpoch, aggregatorIndex);
+  chain.seenAggregatedAttestations.add(targetEpoch, aggregateRoot);
 
   return {indexedAttestation, committeeIndices};
 }

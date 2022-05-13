@@ -1,5 +1,6 @@
+import {toHexString} from "@chainsafe/ssz";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {phase0} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
 import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
@@ -62,6 +63,17 @@ describe("chain / validation / aggregateAndProof", () => {
     const {chain, signedAggregateAndProof} = getValidData({attSlot: stateSlot + 2});
 
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.FUTURE_SLOT);
+  });
+
+  it("AGGREGATED_ATTESTATION_ALREADY_KNOWN", async () => {
+    const {chain, signedAggregateAndProof} = getValidData();
+    // Register attester as already seen
+    chain.seenAggregatedAttestations.add(
+      signedAggregateAndProof.message.aggregate.data.target.epoch,
+      toHexString(ssz.phase0.Attestation.hashTreeRoot(signedAggregateAndProof.message.aggregate))
+    );
+
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATED_ATTESTATION_ALREADY_KNOWN);
   });
 
   it("AGGREGATOR_ALREADY_KNOWN", async () => {

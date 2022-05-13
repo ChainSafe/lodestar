@@ -38,6 +38,10 @@ export enum AttestationErrorCode {
    */
   AGGREGATOR_ALREADY_KNOWN = "ATTESTATION_ERROR_AGGREGATOR_ALREADY_KNOWN",
   /**
+   * There has already been an aggregated attestation known, we refuse to process a second with same aggregated root, even though with different AggregateAndProof.
+   */
+  AGGREGATED_ATTESTATION_ALREADY_KNOWN = "ATTESTATION_ERROR_AGGREGATED_ATTESTATION_ALREADY_KNOWN",
+  /**
    * The aggregator index is higher than the maximum possible validator count.
    */
   AGGREGATOR_INDEX_TOO_HIGH = "ATTESTATION_ERROR_AGGREGATOR_INDEX_TOO_HIGH",
@@ -133,6 +137,7 @@ export type AttestationErrorType =
   | {code: AttestationErrorCode.AGGREGATOR_PUBKEY_UNKNOWN; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; validatorIndex: number}
   | {code: AttestationErrorCode.AGGREGATOR_ALREADY_KNOWN; targetEpoch: Epoch; aggregatorIndex: number}
+  | {code: AttestationErrorCode.AGGREGATED_ATTESTATION_ALREADY_KNOWN; targetEpoch: Epoch; aggregateRoot: RootHex}
   | {code: AttestationErrorCode.AGGREGATOR_INDEX_TOO_HIGH; aggregatorIndex: ValidatorIndex}
   | {code: AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT; root: RootHex}
   | {code: AttestationErrorCode.BAD_TARGET_EPOCH}
