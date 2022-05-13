@@ -44,7 +44,7 @@ export function assertValidProposerSlashing(
   }
 
   // verify headers are different
-  if (ssz.phase0.BeaconBlockHeaderBn.equals(header1, header2)) {
+  if (ssz.phase0.BeaconBlockHeaderBigint.equals(header1, header2)) {
     throw new Error("ProposerSlashing headers are equal");
   }
 

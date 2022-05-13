@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {generateAttestationDataBn} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
+import {generateAttestationDataBigint} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool";
 import {Network} from "../../../../../../src/network/network";
 import {
@@ -88,12 +88,12 @@ describe("beacon pool api impl", function () {
     const atterterSlashing: phase0.AttesterSlashing = {
       attestation1: {
         attestingIndices: [0],
-        data: generateAttestationDataBn(0, 1),
+        data: generateAttestationDataBigint(0, 1),
         signature: Buffer.alloc(96),
       },
       attestation2: {
         attestingIndices: [0],
-        data: generateAttestationDataBn(0, 1),
+        data: generateAttestationDataBigint(0, 1),
         signature: Buffer.alloc(96),
       },
     };
