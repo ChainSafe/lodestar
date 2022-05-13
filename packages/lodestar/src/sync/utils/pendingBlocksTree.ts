@@ -1,13 +1,12 @@
 import {RootHex} from "@chainsafe/lodestar-types";
-import {PendingBlockType} from "..";
 import {MapDef} from "../../util/map";
-import {PendingBlock, PendingBlockStatus, UnknownParentPendingBlock} from "../interface";
+import {PendingBlock, PendingBlockStatus, PendingBlockToProcess, PendingBlockToDownload} from "../interface";
 
 export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
   // Do one pass over all blocks to index by parent
-  const byParent = new MapDef<RootHex, PendingBlock[]>(() => []);
+  const byParent = new MapDef<RootHex, PendingBlockToProcess[]>(() => []);
   for (const block of blocks.values()) {
-    if (block.type === PendingBlockType.UNKNOWN_PARENT) {
+    if (block.status === PendingBlockStatus.toProcess) {
       byParent.getOrDefault(block.parentBlockRootHex).push(block);
     }
   }
@@ -19,9 +18,9 @@ export function getAllDescendantBlocks(blockRootHex: RootHex, blocks: Map<RootHe
 /** Recursive function for `getAllDescendantBlocks()` */
 function addToDescendantBlocks(
   childBlockRootHex: string,
-  byParent: Map<RootHex, PendingBlock[]>,
-  descendantBlocks: PendingBlock[] = []
-): PendingBlock[] {
+  byParent: Map<RootHex, PendingBlockToProcess[]>,
+  descendantBlocks: PendingBlockToProcess[] = []
+): PendingBlockToProcess[] {
   const firstDescendantBlocks = byParent.get(childBlockRootHex);
   if (firstDescendantBlocks) {
     for (const firstDescendantBlock of firstDescendantBlocks) {
@@ -38,11 +37,11 @@ function addToDescendantBlocks(
 export function getDescendantBlocks(
   blockRootHex: RootHex,
   blocks: Map<RootHex, PendingBlock>
-): UnknownParentPendingBlock[] {
-  const descendantBlocks: UnknownParentPendingBlock[] = [];
+): PendingBlockToProcess[] {
+  const descendantBlocks: PendingBlockToProcess[] = [];
 
   for (const block of blocks.values()) {
-    if (block.type === PendingBlockType.UNKNOWN_PARENT && block.parentBlockRootHex === blockRootHex) {
+    if (block.status === PendingBlockStatus.toProcess && block.parentBlockRootHex === blockRootHex) {
       descendantBlocks.push(block);
     }
   }
@@ -55,14 +54,11 @@ export function getDescendantBlocks(
  * + UNKNOWN_BLOCK
  * + UNKNOWN_PARENT: parent block is not known
  */
-export function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlock[] {
-  const blocksToFetch: PendingBlock[] = [];
+export function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlockToDownload[] {
+  const blocksToFetch: PendingBlockToDownload[] = [];
 
   for (const block of blocks.values()) {
-    if (
-      block.status === PendingBlockStatus.pending &&
-      (block.type === PendingBlockType.UNKNOWN_BLOCK || !blocks.has(block.parentBlockRootHex))
-    ) {
+    if (block.status === PendingBlockStatus.toDownload) {
       blocksToFetch.push(block);
     }
   }

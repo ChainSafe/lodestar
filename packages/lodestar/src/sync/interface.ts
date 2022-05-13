@@ -60,30 +60,33 @@ export interface ISyncModules {
 }
 
 export enum PendingBlockType {
-  UNKNOWN_BLOCK = "UNKNOWN_BLOCK",
-  UNKNOWN_PARENT = "UNKNOWN_PARENT",
+  UNKNOWN_BLOCK = "unknown_block",
+  UNKNOWN_PARENT = "unknown_parent",
 }
 
-export type PendingBlock = {
+export enum PendingBlockStatus {
+  toDownload = "toDownload",
+  toProcess = "toProcess",
+}
+
+type PendingBlockMetadata = {
   blockRootHex: RootHex;
   peerIdStrs: Set<string>;
-  status: PendingBlockStatus;
   downloadAttempts: number;
   lastQueriedTimeByPeer: Map<PeerId, number>;
   receivedTimeSec: number;
-} & (
-  | {
-      type: PendingBlockType.UNKNOWN_PARENT;
-      parentBlockRootHex: RootHex;
-      signedBlock: allForks.SignedBeaconBlock;
-    }
-  | {type: PendingBlockType.UNKNOWN_BLOCK}
-);
+};
 
-export type UnknownParentPendingBlock = PendingBlock & {type: PendingBlockType.UNKNOWN_PARENT};
+export type PendingBlockToDownload = PendingBlockMetadata & {
+  status: PendingBlockStatus.toDownload;
+  processing: boolean;
+};
 
-export enum PendingBlockStatus {
-  pending = "pending",
-  fetching = "fetching",
-  processing = "processing",
-}
+export type PendingBlockToProcess = PendingBlockMetadata & {
+  status: PendingBlockStatus.toProcess;
+  processing: boolean;
+  parentBlockRootHex: RootHex;
+  signedBlock: allForks.SignedBeaconBlock;
+};
+
+export type PendingBlock = PendingBlockToDownload | PendingBlockToProcess;

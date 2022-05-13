@@ -11,7 +11,7 @@ import PeerId from "peer-id";
 import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
-import {PendingBlock, PendingBlockStatus, PendingBlockType, UnknownParentPendingBlock} from "./interface";
+import {PendingBlock, PendingBlockStatus, PendingBlockToProcess, PendingBlockType} from "./interface";
 import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
 import {SyncOptions} from "./options";
 import {BlockSource} from "../chain/blocks/types";
@@ -88,13 +88,13 @@ export class UnknownBlockSync {
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
       pendingBlock = {
-        type: PendingBlockType.UNKNOWN_BLOCK,
+        status: PendingBlockStatus.toDownload,
         blockRootHex,
         peerIdStrs: new Set(),
-        status: PendingBlockStatus.pending,
         downloadAttempts: 0,
         lastQueriedTimeByPeer: new Map(),
         receivedTimeSec: Date.now() / 1000,
+        processing: false,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
     }
@@ -108,7 +108,7 @@ export class UnknownBlockSync {
    * An unknown parent block comes
    * Or we transform an UNKNOWN_BLOCK to UNKNOWN_PARENT after the block is downloaded.
    */
-  private addUnknownBlockParent(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): UnknownParentPendingBlock {
+  private addUnknownBlockParent(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): PendingBlockToProcess {
     const block = signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
@@ -117,28 +117,34 @@ export class UnknownBlockSync {
     let pendingBlock = this.pendingBlocks.get(blockRootHex);
     if (!pendingBlock) {
       pendingBlock = {
-        type: PendingBlockType.UNKNOWN_PARENT,
+        status: PendingBlockStatus.toProcess,
         blockRootHex,
         parentBlockRootHex,
         signedBlock,
         peerIdStrs: new Set(),
-        status: PendingBlockStatus.pending,
         downloadAttempts: 0,
         lastQueriedTimeByPeer: new Map(),
         receivedTimeSec: Date.now() / 1000,
+        processing: false,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
-    } else if (pendingBlock.type === PendingBlockType.UNKNOWN_BLOCK) {
+
+      // Add parent block as pending, if it's known by pendingBlocks this will not add it
+      this.addUnknownBlock(parentBlockRootHex, peerIdStr);
+    } else if (pendingBlock.status === PendingBlockStatus.toDownload) {
       // the block was downloaded, we transform to UNKNOWN_PARENT so that we can process descendant blocks
+      // do not add unknown block parent here, it's checked at the consumer side
       pendingBlock = {
         ...pendingBlock,
-        type: PendingBlockType.UNKNOWN_PARENT,
+        status: PendingBlockStatus.toProcess,
         signedBlock,
         parentBlockRootHex,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
     }
+
     pendingBlock.peerIdStrs.add(peerIdStr);
+
     this.prunePendingBlocks();
 
     return pendingBlock;
@@ -175,30 +181,28 @@ export class UnknownBlockSync {
   };
 
   private async downloadUnknownBlock(pendingBlock: PendingBlock, syncedPeers: PeerId[]): Promise<void> {
-    if (pendingBlock.status !== PendingBlockStatus.pending) {
+    if (pendingBlock.status !== PendingBlockStatus.toDownload || pendingBlock.processing) {
       return;
     }
 
-    pendingBlock.status = PendingBlockStatus.fetching;
-    const {blockRootHex, type, downloadAttempts, receivedTimeSec} = pendingBlock;
-    const unknownBlockHex =
-      pendingBlock.type === PendingBlockType.UNKNOWN_PARENT ? pendingBlock.parentBlockRootHex : blockRootHex;
-    const res = await this.fetchUnknownBlockRoot(pendingBlock, fromHexString(unknownBlockHex), syncedPeers);
-    pendingBlock.status = PendingBlockStatus.pending;
+    pendingBlock.processing = true;
+    const {blockRootHex, downloadAttempts, receivedTimeSec} = pendingBlock;
+    const res = await this.fetchUnknownBlockRoot(pendingBlock, fromHexString(blockRootHex), syncedPeers);
+    pendingBlock.processing = false;
+
     const downloadSec = Date.now() / 1000 - receivedTimeSec;
     const logCtx = {
-      root: prettyBytes(unknownBlockHex),
-      type,
+      root: blockRootHex,
       downloadAttempts,
       queriedCount: res.attempt,
       downloadSec,
     };
 
     if (res.signedBlock !== undefined) {
-      this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc({type});
+      this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
       const {signedBlock, peerIdStr} = res;
       this.logger.verbose("Successfully download unknown block", logCtx);
-      this.metrics?.syncUnknownBlock.downloadTime.observe({type}, downloadSec);
+      this.metrics?.syncUnknownBlock.downloadTime.observe(downloadSec);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
         this.processBlock(this.addUnknownBlockParent(signedBlock, peerIdStr)).catch((e) => {
@@ -210,7 +214,7 @@ export class UnknownBlockSync {
     } else {
       if (res.attempt > 0) {
         pendingBlock.downloadAttempts++;
-        this.metrics?.syncUnknownBlock.downloadedBlocksError.inc({type});
+        this.metrics?.syncUnknownBlock.downloadedBlocksError.inc();
         if (downloadAttempts > MAX_ATTEMPTS_PER_BLOCK) {
           // Give up on this block and assume it does not exist, penalizing all peers as if it was a bad block
           this.logger.error("Ignoring unknown block root after many failed downloads", logCtx, res.err);
@@ -231,40 +235,37 @@ export class UnknownBlockSync {
    * Send block to the processor awaiting completition. If processed successfully, send all children to the processor.
    * On error, remove and downscore all descendants.
    */
-  private async processBlock(pendingBlock: UnknownParentPendingBlock): Promise<void> {
-    if (pendingBlock.status === PendingBlockStatus.processing) {
+  private async processBlock(pendingBlock: PendingBlock): Promise<void> {
+    if (pendingBlock.status !== PendingBlockStatus.toProcess || pendingBlock.processing) {
       return;
     }
-    pendingBlock.status = PendingBlockStatus.processing;
-    const {signedBlock, type, blockRootHex, downloadAttempts} = pendingBlock;
-    // At gossip time, it's critical to keep a good number of mesh peers.
-    // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
-    // Gossip Job Wait Time depends on the BLS Job Wait Time
-    // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
-    // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
-    // See https://github.com/ChainSafe/lodestar/issues/3792
-    // it's very possible that gossip block comes and be processed before this downloaded block, hence ignoreIfKnown
+
+    const {signedBlock, blockRootHex} = pendingBlock;
+
+    pendingBlock.processing = true;
     const res = await wrapError(
       this.chain.processBlock(signedBlock, {
+        // it's very possible that gossip block comes and be processed before this downloaded block
         ignoreIfKnown: true,
+        // At gossip time, it's critical to keep a good number of mesh peers.
+        // To do that, the Gossip Job Wait Time should be consistently <3s to avoid the behavior penalties in gossip
+        // Gossip Job Wait Time depends on the BLS Job Wait Time
+        // so `blsVerifyOnMainThread = true`: we want to verify signatures immediately without affecting the bls thread pool.
+        // otherwise we can't utilize bls thread pool capacity and Gossip Job Wait Time can't be kept low consistently.
+        // See https://github.com/ChainSafe/lodestar/issues/3792
         blsVerifyOnMainThread: true,
         source: BlockSource.UNKNOWN_BLOCK_SYNC,
       })
     );
-    pendingBlock.status = PendingBlockStatus.pending;
+    pendingBlock.processing = false;
 
-    if (res.err) this.metrics?.syncUnknownBlock.processedBlocksError.inc();
-    else {
+    if (!res.err) {
       this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
       this.logger.verbose("Fetched and processed block", {
         root: prettyBytes(blockRootHex),
-        type,
         sinceSlot: this.chain.clock.secFromSlot(signedBlock.message.slot),
-        downloadAttempts,
+        downloadAttempts: pendingBlock.downloadAttempts,
       });
-    }
-
-    if (!res.err) {
       this.pendingBlocks.delete(blockRootHex);
 
       // Send child blocks to the processor
@@ -274,6 +275,7 @@ export class UnknownBlockSync {
         });
       }
     } else {
+      this.metrics?.syncUnknownBlock.processedBlocksError.inc();
       const errorData = {root: blockRootHex, slot: signedBlock.message.slot};
       if (res.err instanceof BlockError) {
         switch (res.err.type.code) {
@@ -285,7 +287,6 @@ export class UnknownBlockSync {
           case BlockErrorCode.PRESTATE_MISSING:
             // Should no happen, mark as pending to try again latter
             this.logger.error("Attempted to process block but its parent was still unknown", errorData, res.err);
-            pendingBlock.status = PendingBlockStatus.pending;
             break;
 
           case BlockErrorCode.EXECUTION_ENGINE_ERROR:
@@ -304,7 +305,6 @@ export class UnknownBlockSync {
       // Probably a queue error or something unwanted happened, mark as pending to try again latter
       else {
         this.logger.error("Unknown error processing block from unknown sync", errorData, res.err);
-        pendingBlock.status = PendingBlockStatus.pending;
       }
     }
   }
@@ -391,8 +391,7 @@ export class UnknownBlockSync {
       this.knownBadBlocks.add(block.blockRootHex);
       this.logger.error("Banning unknown block", {
         root: block.blockRootHex,
-        type: block.type,
-        slot: block.type === PendingBlockType.UNKNOWN_PARENT ? block.signedBlock.message.slot : "unknown",
+        slot: block.status === PendingBlockStatus.toProcess ? block.signedBlock.message.slot : "toDownload",
       });
 
       for (const peerIdStr of block.peerIdStrs) {
@@ -416,8 +415,7 @@ export class UnknownBlockSync {
       this.pendingBlocks.delete(block.blockRootHex);
       this.logger.error("Removing unknown block", {
         root: block.blockRootHex,
-        type: block.type,
-        slot: block.type === PendingBlockType.UNKNOWN_PARENT ? block.signedBlock.message.slot : "unknown",
+        slot: block.status === PendingBlockStatus.toProcess ? block.signedBlock.message.slot : "toDownload",
       });
     }
 

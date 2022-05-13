@@ -54,9 +54,9 @@ describe("sync / pendingBlocksTree", () => {
       blocks.set(block.block, {
         blockRootHex: block.block,
         parentBlockRootHex: block.parent,
-        status: PendingBlockStatus.pending,
+        status: PendingBlockStatus.toProcess,
         // the tests in this file is not for UNKNOWN_BLOCK type
-        type: PendingBlockType.UNKNOWN_PARENT,
+        processing: false,
       } as PendingBlock);
     }
 
