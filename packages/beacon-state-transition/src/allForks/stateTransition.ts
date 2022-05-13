@@ -101,14 +101,11 @@ export function processBlock(
   metrics?: IBeaconStateTransitionMetrics | null
 ): void {
   const {verifySignatures = true} = options || {};
-  const {config, genesisTime} = postState;
-  const fork = config.getForkName(block.slot);
+  const fork = postState.config.getForkName(block.slot);
 
   const timer = metrics?.stfnProcessBlock.startTimer();
   try {
     processBlockByFork[fork](postState, block, verifySignatures);
-    const delaySec = Date.now() / 1000 - (genesisTime + block.slot * config.SECONDS_PER_SLOT);
-    metrics?.stfnElapsedTimeTillProcessed.observe(delaySec);
   } finally {
     if (timer) timer();
   }

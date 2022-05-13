@@ -192,11 +192,14 @@ export async function onBlock(
   const advancedSlot = this.clock.slotWithFutureTolerance(REPROCESS_MIN_TIME_TO_NEXT_SLOT_SEC);
 
   this.reprocessController.onBlockImported({slot: block.message.slot, root: blockRoot}, advancedSlot);
+  const delaySec = this.clock.secFromSlot(block.message.slot);
+  // block may come from different sources so we want to track a different metric than the gossip one
+  this.metrics?.elapsedTimeTillProcessed.observe(delaySec);
 
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: blockRoot,
-    delaySec: this.clock.secFromSlot(block.message.slot),
+    delaySec,
   });
 }
 

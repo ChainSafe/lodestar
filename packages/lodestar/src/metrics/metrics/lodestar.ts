@@ -376,11 +376,6 @@ export function createLodestarMetrics(
       help: "Time to process a single block in seconds",
       buckets: [0.1, 1, 10],
     }),
-    stfnElapsedTimeTillProcessed: register.histogram({
-      name: "lodestar_stfn_elapsed_time_until_processed_seconds",
-      help: "Duration from slot time until block is processed in seconds",
-      buckets: [0.1, 1, 10],
-    }),
 
     // BLS verifier thread pool and queue
 
@@ -563,6 +558,12 @@ export function createLodestarMetrics(
       name: "lodestar_gossip_block_elapsed_time_till_become_head",
       help: "Time elappsed between block slot time and the time block becomes head",
       buckets: [0.5, 1, 2, 4, 6, 12],
+    }),
+
+    elapsedTimeTillProcessed: register.histogram({
+      name: "lodestar_elapsed_time_until_processed_seconds",
+      help: "Duration from slot time until block is processed in seconds",
+      buckets: [0.1, 1, 10],
     }),
 
     backfillSync: {
