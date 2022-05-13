@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import got from "got";
 import {getClient} from "@chainsafe/lodestar-api";
 import {NetworkName, networksChainConfig} from "@chainsafe/lodestar-config/networks";
 import {createIChainForkConfig, IChainForkConfig} from "@chainsafe/lodestar-config";
@@ -8,6 +9,13 @@ import {getInfuraBeaconUrl} from "./infura";
 import {testCachePath} from "../cache";
 import {createCachedBeaconStateTest} from "../utils/state";
 import {allForks} from "@chainsafe/lodestar-types";
+
+/**
+ * Full link example:
+ * ```
+ * https://github.com/dapplion/ethereum-consensus-test-data/releases/download/v0.1.0/block_mainnet_3766821.ssz
+ * ``` */
+const TEST_FILES_BASE_URL = "https://github.com/dapplion/ethereum-consensus-test-data/releases/download/v0.1.0";
 
 /**
  * Create a network config from known network params
@@ -29,21 +37,24 @@ export async function getNetworkCachedState(
   const fileId = `state_${network}_${slot}.ssz`;
 
   const filepath = path.join(testCachePath, fileId);
-  let stateSsz: Uint8Array;
+
   if (fs.existsSync(filepath)) {
-    stateSsz = fs.readFileSync(filepath);
+    const stateSsz = fs.readFileSync(filepath);
+    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   } else {
-    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
-    stateSsz =
-      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-        ? await client.debug.getState(String(slot), "ssz")
-        : await client.debug.getStateV2(String(slot), "ssz");
+    const stateSsz = await tryEach([
+      () => downloadTestFile(fileId),
+      () => {
+        const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
+        return computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+          ? client.debug.getState(String(slot), "ssz")
+          : client.debug.getStateV2(String(slot), "ssz");
+      },
+    ]);
 
     fs.writeFileSync(filepath, stateSsz);
+    return createCachedBeaconStateTest(config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz), config);
   }
-
-  const stateView = config.getForkTypes(slot).BeaconState.deserializeToViewDU(stateSsz);
-  return createCachedBeaconStateTest(stateView, config);
 }
 
 /**
@@ -63,16 +74,43 @@ export async function getNetworkCachedBlock(
     const blockSsz = fs.readFileSync(filepath);
     return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
   } else {
-    const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
+    const blockSsz = await tryEach([
+      () => downloadTestFile(fileId),
+      async () => {
+        const client = getClient({baseUrl: getInfuraBeaconUrl(network), timeoutMs: timeout ?? 300_000}, {config});
 
-    const res =
-      computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
-        ? await client.beacon.getBlock(String(slot))
-        : await client.beacon.getBlockV2(String(slot));
-    const block = res.data;
+        const res =
+          computeEpochAtSlot(slot) < config.ALTAIR_FORK_EPOCH
+            ? await client.beacon.getBlock(String(slot))
+            : await client.beacon.getBlockV2(String(slot));
+        return config.getForkTypes(slot).SignedBeaconBlock.serialize(res.data);
+      },
+    ]);
 
-    const blockSsz = config.getForkTypes(slot).SignedBeaconBlock.serialize(block);
     fs.writeFileSync(filepath, blockSsz);
-    return block;
+    return config.getForkTypes(slot).SignedBeaconBlock.deserialize(blockSsz);
   }
+}
+
+async function downloadTestFile(fileId: string): Promise<Buffer> {
+  const fileUrl = `${TEST_FILES_BASE_URL}/${fileId}`;
+  // eslint-disable-next-line no-console
+  console.log(`Downloading file ${fileUrl}`);
+
+  const res = await got(fileUrl, {responseType: "buffer"});
+  return res.body;
+}
+
+async function tryEach<T>(promises: (() => Promise<T>)[]): Promise<T> {
+  const errors: Error[] = [];
+
+  for (let i = 0; i < promises.length; i++) {
+    try {
+      return promises[i]();
+    } catch (e) {
+      errors.push(e as Error);
+    }
+  }
+
+  throw Error(errors.map((e, i) => `Error[${i}] ${e.message}`).join("\n"));
 }
