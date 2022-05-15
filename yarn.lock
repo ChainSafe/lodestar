@@ -440,6 +440,15 @@
     bls-eth-wasm "^0.4.8"
     randombytes "^2.1.0"
 
+"@chainsafe/bls@7.1.1":
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/@chainsafe/bls/-/bls-7.1.1.tgz#57db4b565a1a1a544c4091bb5f172d683fc65750"
+  integrity sha512-56hjFJujW0Z0Ntkr8y22xIAfT4SChYWQtCGM8dfUMkWWX8xLOXkhBFFSNTvPXA5cBlsFlo102CtBo+6A60II2w==
+  dependencies:
+    "@chainsafe/bls-keygen" "^0.4.0"
+    bls-eth-wasm "^0.4.8"
+    randombytes "^2.1.0"
+
 "@chainsafe/blst@^0.2.4":
   version "0.2.4"
   resolved "https://registry.yarnpkg.com/@chainsafe/blst/-/blst-0.2.4.tgz#ed0737dcf52a8775bd163c9a892424fa365d2c8b"
@@ -543,10 +552,10 @@
     "@chainsafe/persistent-merkle-tree" "^0.4.0"
     case "^1.6.3"
 
-"@chainsafe/threads@^1.9.0":
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.9.0.tgz#5ab07b1c150ad6ffc2325f344cde549a96b53802"
-  integrity sha512-TFSj5CWwi2o0Z3qBdrROdR+mJ23reBm+e0iPaifn657AxNtatdHNV9l6DiNwOKHTxTxKTm1daVuWW5TP0dJGDw==
+"@chainsafe/threads@^1.10.0":
+  version "1.10.0"
+  resolved "https://registry.yarnpkg.com/@chainsafe/threads/-/threads-1.10.0.tgz#1b98eccb2791f0737b2d8ddf56e8c2fc3c45162c"
+  integrity sha512-1PRtW3s5welk2WUAMN0bjEGtQ3PSqLWAxlMTSeOYJ2NV+bgNgi8PsALX/xEiB/CHd8XG5gS2BlmYZ+Q3b4wR7Q==
   dependencies:
     callsites "^3.1.0"
     debug "^4.2.0"
