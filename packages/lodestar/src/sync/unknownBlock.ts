@@ -204,7 +204,7 @@ export class UnknownBlockSync {
     if (res.signedBlock !== undefined) {
       this.metrics?.syncUnknownBlock.downloadedBlocksSuccess.inc();
       const {signedBlock, peerIdStr} = res;
-      this.logger.verbose("Successfully download unknown block", logCtx);
+      this.logger.verbose("Successfully download unknown block", {...logCtx, slot: res.signedBlock.message.slot});
       this.metrics?.syncUnknownBlock.downloadTime.observe(downloadSec);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
@@ -266,6 +266,7 @@ export class UnknownBlockSync {
       this.metrics?.syncUnknownBlock.processedBlocksSuccess.inc();
       this.logger.verbose("Fetched and processed block", {
         root: prettyBytes(blockRootHex),
+        slot: signedBlock.message.slot,
         sinceSlot: this.chain.clock.secFromSlot(signedBlock.message.slot),
         downloadAttempts: pendingBlock.downloadAttempts,
       });

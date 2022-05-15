@@ -45,13 +45,13 @@ export type PartiallyVerifiedBlockFlags = FullyVerifiedBlockFlags & {
 };
 
 /**
- * An enum of how a block comes to this node.
+ * An enum of how a block comes to this node, used for metrics as well so value is in snake case.
  */
 export enum BlockSource {
-  API = "BLOCK_SOURCE_API",
-  GOSSIP = "BLOCK_SOURCE_GOSSIP",
-  UNKNOWN_BLOCK_SYNC = "BLOCK_SOURCE_UNKNOWN_BLOCK_SYNC",
-  RANGE_SYNC = "BLOCK_SOURCE_RANGE_SYNC",
+  API = "api",
+  GOSSIP = "gossip",
+  UNKNOWN_BLOCK_SYNC = "unknown_block_sync",
+  RANGE_SYNC = "range_sync",
 }
 
 /**
