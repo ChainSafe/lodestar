@@ -496,39 +496,33 @@ export function createLodestarMetrics(
         help: "Total number of unknownBlockParent events or requests",
         labelNames: ["type"],
       }),
-      pendingBlocks: register.gauge<"type">({
+      pendingBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_pending_blocks_size",
         help: "Current size of UnknownBlockSync pending blocks cache",
-        labelNames: ["type"],
       }),
-      knownBadBlocks: register.gauge<"type">({
+      knownBadBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_known_bad_blocks_size",
         help: "Current size of UnknownBlockSync known bad blocks cache",
-        labelNames: ["type"],
       }),
-      processedBlocksSuccess: register.gauge<"type">({
+      processedBlocksSuccess: register.gauge({
         name: "lodestar_sync_unknown_block_processed_blocks_success_total",
         help: "Total number of processed blocks successes in UnknownBlockSync",
-        labelNames: ["type"],
       }),
-      downloadTime: register.histogram<"type">({
+      downloadTime: register.histogram({
         name: "lodestar_sync_unknown_block_download_time_seconds",
         help: "Duration from received time until the block is downloaded",
-        labelNames: ["type"],
       }),
       processedBlocksError: register.gauge({
         name: "lodestar_sync_unknown_block_processed_blocks_error_total",
         help: "Total number of processed blocks errors in UnknownBlockSync",
       }),
-      downloadedBlocksSuccess: register.gauge<"type">({
+      downloadedBlocksSuccess: register.gauge({
         name: "lodestar_sync_unknown_block_downloaded_blocks_success_total",
         help: "Total number of downloaded blocks successes in UnknownBlockSync",
-        labelNames: ["type"],
       }),
-      downloadedBlocksError: register.gauge<"type">({
+      downloadedBlocksError: register.gauge({
         name: "lodestar_sync_unknown_block_downloaded_blocks_error_total",
         help: "Total number of downloaded blocks errors in UnknownBlockSync",
-        labelNames: ["type"],
       }),
       removedBlocks: register.gauge({
         name: "lodestar_sync_unknown_block_removed_blocks_total",
