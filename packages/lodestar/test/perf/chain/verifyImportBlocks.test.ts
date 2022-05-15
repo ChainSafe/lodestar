@@ -14,6 +14,7 @@ import {testLogger} from "../../utils/logger";
 import {linspace} from "../../../src/util/numpy";
 import {BeaconDb} from "../../../src";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {BlockSource} from "../../../src/chain/blocks/types";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -105,7 +106,7 @@ describe("verify+import blocks - range sync perf test", () => {
         // Ignore WOULD_REVERT_FINALIZED_SLOT error, continue with the next block in chain segment
         ignoreIfFinalized: true,
         // We won't attest to this block so it's okay to ignore a SYNCING message from execution layer
-        fromRangeSync: true,
+        source: BlockSource.RANGE_SYNC,
         // when this runs, syncing is the most important thing and gossip is not likely to run
         // so we can utilize worker threads to verify signatures
         blsVerifyOnMainThread: false,
