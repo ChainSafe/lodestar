@@ -12,7 +12,7 @@ import {BlockError, BlockErrorCode} from "../chain/errors";
 import {wrapError} from "../util/wrapError";
 import {pruneSetToMax} from "../util/map";
 import {PendingBlock, PendingBlockStatus, PendingBlockToProcess, PendingBlockType} from "./interface";
-import {getDescendantBlocks, getAllDescendantBlocks, getLowestPendingUnknownParents} from "./utils/pendingBlocksTree";
+import {getDescendantBlocks, getAllDescendantBlocks, getBlocksToDownload} from "./utils/pendingBlocksTree";
 import {SyncOptions} from "./options";
 import {BlockSource} from "../chain/blocks/types";
 
@@ -106,9 +106,19 @@ export class UnknownBlockSync {
 
   /**
    * An unknown parent block comes
-   * Or we transform an UNKNOWN_BLOCK to UNKNOWN_PARENT after the block is downloaded.
    */
   private addUnknownBlockParent(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): PendingBlockToProcess {
+    const pendingBlock = this.toBlockToProcess(signedBlock, peerIdStr);
+    // Add parent block as pending, if it's known by pendingBlocks this will not add it
+    this.addUnknownBlock(pendingBlock.parentBlockRootHex, peerIdStr);
+    return pendingBlock;
+  }
+
+  /**
+   * An unknown parent block comes
+   * Or an toDownload block was downloaded, transform to toProcess
+   */
+  private toBlockToProcess(signedBlock: allForks.SignedBeaconBlock, peerIdStr: string): PendingBlockToProcess {
     const block = signedBlock.message;
     const blockRoot = this.config.getForkTypes(block.slot).BeaconBlock.hashTreeRoot(block);
     const blockRootHex = toHexString(blockRoot);
@@ -128,12 +138,7 @@ export class UnknownBlockSync {
         processing: false,
       };
       this.pendingBlocks.set(blockRootHex, pendingBlock);
-
-      // Add parent block as pending, if it's known by pendingBlocks this will not add it
-      this.addUnknownBlock(parentBlockRootHex, peerIdStr);
     } else if (pendingBlock.status === PendingBlockStatus.toDownload) {
-      // the block was downloaded, we transform to UNKNOWN_PARENT so that we can process descendant blocks
-      // do not add unknown block parent here, it's checked at the consumer side
       pendingBlock = {
         ...pendingBlock,
         status: PendingBlockStatus.toProcess,
@@ -144,9 +149,7 @@ export class UnknownBlockSync {
     }
 
     pendingBlock.peerIdStrs.add(peerIdStr);
-
     this.prunePendingBlocks();
-
     return pendingBlock;
   }
 
@@ -173,7 +176,7 @@ export class UnknownBlockSync {
       return;
     }
 
-    for (const block of getLowestPendingUnknownParents(this.pendingBlocks)) {
+    for (const block of getBlocksToDownload(this.pendingBlocks)) {
       this.downloadUnknownBlock(block, syncedPeers).catch((e) => {
         this.logger.error("Unexpect error - downloadUnknownBlock", {}, e);
       });
@@ -205,7 +208,7 @@ export class UnknownBlockSync {
       this.metrics?.syncUnknownBlock.downloadTime.observe(downloadSec);
       if (this.chain.forkChoice.hasBlock(signedBlock.message.parentRoot)) {
         // Bingo! Process block. Add to pending blocks anyway for recycle the cache that prevents duplicate processing
-        this.processBlock(this.addUnknownBlockParent(signedBlock, peerIdStr)).catch((e) => {
+        this.processBlock(this.toBlockToProcess(signedBlock, peerIdStr)).catch((e) => {
           this.logger.error("Unexpect error - processBlock", {}, e);
         });
       } else {

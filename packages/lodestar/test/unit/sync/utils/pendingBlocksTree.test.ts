@@ -1,37 +1,38 @@
 import {RootHex} from "@chainsafe/lodestar-types";
 import {expect} from "chai";
-import {PendingBlock, PendingBlockStatus, PendingBlockType} from "../../../../src/sync";
+import {PendingBlock, PendingBlockStatus} from "../../../../src/sync";
 import {
   getAllDescendantBlocks,
   getDescendantBlocks,
-  getLowestPendingUnknownParents,
+  getBlocksToDownload,
 } from "../../../../src/sync/utils/pendingBlocksTree";
 
 describe("sync / pendingBlocksTree", () => {
   const testCases: {
     id: string;
-    blocks: {block: string; parent: string}[];
+    blocks: {block: string; parent: string; status: PendingBlockStatus}[];
     getAllDescendantBlocks: {block: string; res: string[]}[];
     getDescendantBlocks: {block: string; res: string[]}[];
-    getLowestPendingUnknownParents: string[];
+    getBlocksToDownload: string[];
   }[] = [
     {
       id: "empty case",
       blocks: [],
       getAllDescendantBlocks: [{block: "0A", res: []}],
       getDescendantBlocks: [{block: "0A", res: []}],
-      getLowestPendingUnknownParents: [],
+      getBlocksToDownload: [],
     },
     {
       id: "two branches with multiple blocks",
       blocks: [
-        {block: "0A", parent: "-"},
-        {block: "1A", parent: "0A"},
-        {block: "2A", parent: "1A"},
-        {block: "3A", parent: "2A"},
-        {block: "2B", parent: "1A"},
-        {block: "3B", parent: "2B"},
-        {block: "4C", parent: "3C"},
+        {block: "0A", parent: "-", status: PendingBlockStatus.toDownload},
+        {block: "1A", parent: "0A", status: PendingBlockStatus.toProcess},
+        {block: "2A", parent: "1A", status: PendingBlockStatus.toProcess},
+        {block: "3A", parent: "2A", status: PendingBlockStatus.toProcess},
+        {block: "2B", parent: "1A", status: PendingBlockStatus.toProcess},
+        {block: "3B", parent: "2B", status: PendingBlockStatus.toProcess},
+        {block: "3C", parent: "_", status: PendingBlockStatus.toDownload},
+        {block: "4C", parent: "3C", status: PendingBlockStatus.toProcess},
       ],
       getAllDescendantBlocks: [
         {block: "0A", res: ["1A", "2A", "3A", "2B", "3B"]},
@@ -44,7 +45,7 @@ describe("sync / pendingBlocksTree", () => {
         {block: "3C", res: ["4C"]},
         {block: "3B", res: []},
       ],
-      getLowestPendingUnknownParents: ["0A", "4C"],
+      getBlocksToDownload: ["0A", "3C"],
     },
   ];
 
@@ -54,8 +55,7 @@ describe("sync / pendingBlocksTree", () => {
       blocks.set(block.block, {
         blockRootHex: block.block,
         parentBlockRootHex: block.parent,
-        status: PendingBlockStatus.toProcess,
-        // the tests in this file is not for UNKNOWN_BLOCK type
+        status: block.status,
         processing: false,
       } as PendingBlock);
     }
@@ -74,7 +74,7 @@ describe("sync / pendingBlocksTree", () => {
       }
 
       it("getLowestPendingUnknownParents", () => {
-        expect(toRes(getLowestPendingUnknownParents(blocks))).to.deep.equal(testCase.getLowestPendingUnknownParents);
+        expect(toRes(getBlocksToDownload(blocks))).to.deep.equal(testCase.getBlocksToDownload);
       });
     });
   }

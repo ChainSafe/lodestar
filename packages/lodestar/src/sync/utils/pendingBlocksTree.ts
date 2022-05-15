@@ -32,7 +32,7 @@ function addToDescendantBlocks(
 }
 
 /**
- * Return UNKNOWN_PARENT pending block with the parent hex blockRootHex.
+ * Return toProcess blocks with the parent hex blockRootHex.
  */
 export function getDescendantBlocks(
   blockRootHex: RootHex,
@@ -50,11 +50,9 @@ export function getDescendantBlocks(
 }
 
 /**
- * Get pending blocks that do not have a parent. This includes pending blocks:
- * + UNKNOWN_BLOCK
- * + UNKNOWN_PARENT: parent block is not known
+ * Get blocks to download
  */
-export function getLowestPendingUnknownParents(blocks: Map<RootHex, PendingBlock>): PendingBlockToDownload[] {
+export function getBlocksToDownload(blocks: Map<RootHex, PendingBlock>): PendingBlockToDownload[] {
   const blocksToFetch: PendingBlockToDownload[] = [];
 
   for (const block of blocks.values()) {
