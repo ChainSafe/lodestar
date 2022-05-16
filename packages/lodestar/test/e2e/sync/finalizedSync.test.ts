@@ -38,6 +38,9 @@ describe("sync / finalized sync", function () {
       validatorCount,
       logger: loggerNodeA,
     });
+    // the node needs time to transpile/initialize bls worker threads
+    const waitTime = 10_000;
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     afterEachCallbacks.push(() => bn.close());
 
