@@ -52,32 +52,6 @@ describe("get proposers api impl", function () {
     api = getValidatorApi(modules);
   });
 
-  it("should get proposers", async function () {
-    syncStub.isSynced.returns(true);
-    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
-    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
-    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
-    const state = generateState(
-      {
-        slot: 0,
-        validators: generateValidators(25, {
-          effectiveBalance: MAX_EFFECTIVE_BALANCE,
-          activationEpoch: 0,
-          exitEpoch: FAR_FUTURE_EPOCH,
-        }),
-        balances: Array.from({length: 25}, () => MAX_EFFECTIVE_BALANCE),
-      },
-      config
-    );
-    const cachedState = createCachedBeaconStateTest(state, config);
-    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
-    stubGetBeaconProposer.returns(1);
-    const {data: result} = await api.getProposerDuties(0);
-    expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
-    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.true;
-  });
-
   it("should get proposers for next epoch", async function () {
     syncStub.isSynced.returns(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
