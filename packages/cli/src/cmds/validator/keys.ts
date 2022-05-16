@@ -64,7 +64,7 @@ export async function getLocalSecretKeys(
         try {
           keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
         } catch (e) {
-          throw new Error("Invalid keystore at " + keystorePath);
+          throw new Error("Error parsing keystore at " + keystorePath + ": " + (e as Error).message);
         }
         return SecretKey.fromBytes(await keystore.decrypt(passphrase));
       })
