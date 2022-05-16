@@ -329,7 +329,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     // the node needs time to transpile/initialize bls worker threads
-    const waitTime = 16_000;
+    const waitTime = 26_000;
     await sleep(waitTime);
 
     afterEachCallbacks.push(async function () {
