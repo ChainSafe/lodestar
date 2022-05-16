@@ -30,4 +30,9 @@ export {EpochProcess, beforeProcessEpoch} from "./cache/epochProcess";
 
 // Aux data-structures
 export {PubkeyIndexMap, Index2PubkeyCache} from "./cache/pubkeyCache";
-export {EffectiveBalanceIncrements, getEffectiveBalanceIncrementsZeroed} from "./cache/effectiveBalanceIncrements";
+
+export {
+  EffectiveBalanceIncrements,
+  getEffectiveBalanceIncrementsZeroed,
+  getEffectiveBalanceIncrementsWithLen,
+} from "./cache/effectiveBalanceIncrements";

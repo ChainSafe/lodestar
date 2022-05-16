@@ -52,7 +52,38 @@ describe("get proposers api impl", function () {
     api = getValidatorApi(modules);
   });
 
-  it("should get proposers", async function () {
+  it("should get proposers for next epoch", async function () {
+    syncStub.isSynced.returns(true);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: Array.from({length: 25}, () => MAX_EFFECTIVE_BALANCE),
+      },
+      config
+    );
+
+    const cachedState = createCachedBeaconStateTest(state, config);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposersNextEpoch");
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetNextBeaconProposer.returns([1]);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
+    const {data: result} = await api.getProposerDuties(1);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    expect(result.length).to.be.equal(SLOTS_PER_EPOCH, "result should be equals to slots per epoch");
+    expect(stubGetNextBeaconProposer.called, "stubGetBeaconProposer function should not have been called").to.be.true;
+    expect(stubGetBeaconProposer.called, "stubGetBeaconProposer function should have been called").to.be.false;
+  });
+
+  it("should have different proposer for current and next epoch", async function () {
     syncStub.isSynced.returns(true);
     server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
     server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
@@ -71,8 +102,34 @@ describe("get proposers api impl", function () {
     );
     const cachedState = createCachedBeaconStateTest(state, config);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    sinon.stub(cachedState.epochCtx, "getBeaconProposer").returns(1);
-    const {data: result} = await api.getProposerDuties(0);
-    expect(result.length).to.be.equal(SLOTS_PER_EPOCH);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.returns(1);
+    const {data: currentProposers} = await api.getProposerDuties(0);
+    const {data: nextProposers} = await api.getProposerDuties(1);
+    expect(currentProposers).to.not.deep.equal(nextProposers, "current proposer and next proposer should be different");
+  });
+
+  it("should not get proposers for more than one epoch in the future", async function () {
+    syncStub.isSynced.returns(true);
+    server.sandbox.stub(chainStub.clock, "currentEpoch").get(() => 0);
+    server.sandbox.stub(chainStub.clock, "currentSlot").get(() => 0);
+    dbStub.block.get.resolves({message: {stateRoot: Buffer.alloc(32)}} as any);
+    const state = generateState(
+      {
+        slot: 0,
+        validators: generateValidators(25, {
+          effectiveBalance: MAX_EFFECTIVE_BALANCE,
+          activationEpoch: 0,
+          exitEpoch: FAR_FUTURE_EPOCH,
+        }),
+        balances: Array.from({length: 25}, () => MAX_EFFECTIVE_BALANCE),
+      },
+      config
+    );
+    const cachedState = createCachedBeaconStateTest(state, config);
+    chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
+    const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
+    stubGetBeaconProposer.throws();
+    expect(api.getProposerDuties(2), "calling getProposerDuties should throw").to.eventually.throws;
   });
 });
