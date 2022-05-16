@@ -1,3 +1,4 @@
+import {ssz} from "@chainsafe/lodestar-types";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
 import {allForks} from "@chainsafe/lodestar-types";
@@ -24,8 +25,6 @@ import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof";
-import {ssz} from "@chainsafe/lodestar-types";
-// import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.
