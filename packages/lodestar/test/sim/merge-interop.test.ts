@@ -282,10 +282,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     const expectedEpochsToFinish = 6;
     // 1 epoch of margin of error
     const epochsOfMargin = 1;
-    const timeoutSetupMargin = 40 * 1000; // Give extra 30 seconds of margin
+    const timeoutSetupMargin = 30 * 1000; // Give extra 30 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 3;
+    const genesisSlotsDelay = 30;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
@@ -327,10 +327,6 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       genesisTime,
       eth1BlockHash: fromHexString(genesisBlockHash),
     });
-
-    // the node needs time to transpile/initialize bls worker threads
-    const waitTime = 26_000;
-    await sleep(waitTime);
 
     afterEachCallbacks.push(async function () {
       await bn.close();
