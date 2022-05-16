@@ -276,23 +276,19 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       const startSlot = computeStartSlotAtEpoch(epoch);
       await waitForSlot(startSlot); // Must never request for a future slot > currentSlot
 
-      const nextEpoch = chain.clock.currentEpoch + 1;
       const state = await chain.getHeadStateAtCurrentEpoch();
-      const duties: routes.validator.ProposerDuty[] = [];
-      const indexes: ValidatorIndex[] = [];
 
-      // We allow requesting proposal duties only one epoch in the future
-      // Note: There is a small probability that returned validators differs
-      // than what is returned when the epoch is reached.
-      if (epoch === nextEpoch) {
-        indexes.push(...state.epochCtx.getNextEpochBeaconProposer());
+      const stateEpoch = state.epochCtx.epoch;
+      let indexes: ValidatorIndex[] = [];
+
+      if (epoch === stateEpoch) {
+        indexes = state.epochCtx.getBeaconProposers();
+      } else if (epoch === stateEpoch + 1) {
+        // Requesting duties for next epoch is allow since they can be predicted with high probabilities.
+        // @see `epochCtx.getBeaconProposersNextEpoch` JSDocs for rationale.
+        indexes = state.epochCtx.getBeaconProposersNextEpoch();
       } else {
-        // Gather indexes to get pubkeys in batch (performance optimization)
-        for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
-          // getBeaconProposer ensures the requested epoch is correct
-          const validatorIndex = state.epochCtx.getBeaconProposer(startSlot + i);
-          indexes.push(validatorIndex);
-        }
+        throw Error(`Proposer duties for epoch ${epoch} not supported, current epoch ${stateEpoch}`);
       }
 
       // NOTE: this is the fastest way of getting compressed pubkeys.
@@ -301,6 +297,7 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
       // TODO: Add a flag to just send 0x00 as pubkeys since the Lodestar validator does not need them.
       const pubkeys = getPubkeysForIndices(state.validators, indexes);
 
+      const duties: routes.validator.ProposerDuty[] = [];
       for (let i = 0; i < SLOTS_PER_EPOCH; i++) {
         duties.push({slot: startSlot + i, validatorIndex: indexes[i], pubkey: pubkeys[i]});
       }

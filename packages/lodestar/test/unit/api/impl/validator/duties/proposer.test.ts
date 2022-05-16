@@ -98,7 +98,7 @@ describe("get proposers api impl", function () {
 
     const cachedState = createCachedBeaconStateTest(state, config);
     chainStub.getHeadStateAtCurrentEpoch.resolves(cachedState);
-    const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getNextEpochBeaconProposer");
+    const stubGetNextBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposersNextEpoch");
     const stubGetBeaconProposer = sinon.stub(cachedState.epochCtx, "getBeaconProposer");
     stubGetNextBeaconProposer.returns([1]);
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access

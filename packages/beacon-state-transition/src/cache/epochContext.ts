@@ -49,6 +49,9 @@ export type EpochContextOpts = {
   skipSyncPubkeys?: boolean;
 };
 
+/** Defers computing proposers by persisting only the seed, and dropping it once indexes are computed */
+type ProposersDeferred = {computed: false; seed: Uint8Array} | {computed: true; indexes: ValidatorIndex[]};
+
 /**
  * EpochContext is the parent object of:
  * - Any data-structures not part of the spec'ed BeaconState
@@ -97,6 +100,13 @@ export class EpochContext {
    * 32 x Number
    */
   proposers: ValidatorIndex[];
+
+  /**
+   * The next proposer seed is only used in the getBeaconProposersNextEpoch call. It cannot be moved into
+   * getBeaconProposersNextEpoch because it needs state as input and all data needed by getBeaconProposersNextEpoch
+   * should be in the epoch context.
+   */
+  proposersNextEpoch: ProposersDeferred;
 
   /**
    * Shuffling of validator indexes. Immutable through the epoch, then it's replaced entirely.
@@ -153,13 +163,12 @@ export class EpochContext {
   epoch: Epoch;
   syncPeriod: SyncPeriod;
 
-  nextProposerSeed: Uint8Array;
-
   constructor(data: {
     config: IBeaconConfig;
     pubkey2index: PubkeyIndexMap;
     index2pubkey: Index2PubkeyCache;
     proposers: number[];
+    proposersNextEpoch: ProposersDeferred;
     previousShuffling: IEpochShuffling;
     currentShuffling: IEpochShuffling;
     nextShuffling: IEpochShuffling;
@@ -175,12 +184,12 @@ export class EpochContext {
     nextSyncCommitteeIndexed: SyncCommitteeCache;
     epoch: Epoch;
     syncPeriod: SyncPeriod;
-    nextProposerSeed: Uint8Array;
   }) {
     this.config = data.config;
     this.pubkey2index = data.pubkey2index;
     this.index2pubkey = data.index2pubkey;
     this.proposers = data.proposers;
+    this.proposersNextEpoch = data.proposersNextEpoch;
     this.previousShuffling = data.previousShuffling;
     this.currentShuffling = data.currentShuffling;
     this.nextShuffling = data.nextShuffling;
@@ -196,7 +205,6 @@ export class EpochContext {
     this.nextSyncCommitteeIndexed = data.nextSyncCommitteeIndexed;
     this.epoch = data.epoch;
     this.syncPeriod = data.syncPeriod;
-    this.nextProposerSeed = data.nextProposerSeed;
   }
 
   /**
@@ -276,13 +284,18 @@ export class EpochContext {
       : computeEpochShuffling(state, previousActiveIndices, previousEpoch);
     const nextShuffling = computeEpochShuffling(state, nextActiveIndices, nextEpoch);
 
-    const currentProposerSeed = getSeed(state, currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
+    const currentProposerSeed = getSeed(state, currentEpoch, DOMAIN_BEACON_PROPOSER);
 
     // Allow to create CachedBeaconState for empty states
     const proposers =
       state.validators.length > 0
         ? computeProposers(currentProposerSeed, currentShuffling, effectiveBalanceIncrements)
         : [];
+
+    const proposersNextEpoch: ProposersDeferred = {
+      computed: false,
+      seed: getSeed(state, nextEpoch, DOMAIN_BEACON_PROPOSER),
+    };
 
     // Only after altair, compute the indices of the current sync committee
     const afterAltairFork = currentEpoch >= config.ALTAIR_FORK_EPOCH;
@@ -330,6 +343,7 @@ export class EpochContext {
       pubkey2index,
       index2pubkey,
       proposers,
+      proposersNextEpoch,
       previousShuffling,
       currentShuffling,
       nextShuffling,
@@ -345,7 +359,6 @@ export class EpochContext {
       nextSyncCommitteeIndexed,
       epoch: currentEpoch,
       syncPeriod: computeSyncPeriodAtEpoch(currentEpoch),
-      nextProposerSeed: getSeed(state, nextShuffling.epoch, DOMAIN_BEACON_PROPOSER),
     });
   }
 
@@ -363,6 +376,7 @@ export class EpochContext {
       index2pubkey: this.index2pubkey,
       // Immutable data
       proposers: this.proposers,
+      proposersNextEpoch: this.proposersNextEpoch,
       previousShuffling: this.previousShuffling,
       currentShuffling: this.currentShuffling,
       nextShuffling: this.nextShuffling,
@@ -381,7 +395,6 @@ export class EpochContext {
       nextSyncCommitteeIndexed: this.nextSyncCommitteeIndexed,
       epoch: this.epoch,
       syncPeriod: this.syncPeriod,
-      nextProposerSeed: this.nextProposerSeed,
     });
   }
 
@@ -403,14 +416,15 @@ export class EpochContext {
 
     this.nextShuffling = computeEpochShuffling(state, epochProcess.nextEpochShufflingActiveValidatorIndices, nextEpoch);
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-    /**
-     * The next proposer seed is only used in the getNextEpochBeaconProposer call. It cannot
-     * be moved into getNextEpochBeaconProposer because it needs state as input and all info
-     * needed by getNextEpochBeaconProposer should be in the epoch context.
-     */
-    this.nextProposerSeed = getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER);
-
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
+
+    /**
+     * The next proposer seed is only used in the getBeaconProposersNextEpoch call. It cannot
+     * be moved into getBeaconProposersNextEpoch because it needs state as input and all info
+     * needed by getBeaconProposersNextEpoch should be in the epoch context.
+     */
+    this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
+
     // TODO: DEDUPLICATE from createEpochContext
     //
     // Precompute churnLimit for efficient initiateValidatorExit() during block proposing MUST be recompute everytime the
@@ -487,15 +501,6 @@ export class EpochContext {
     return (committeesSinceEpochStart + committeeIndex) % ATTESTATION_SUBNET_COUNT;
   }
 
-  /**
-   * We allow requesting proposal duties only one epoch in the future
-   * Note: There is a small probability that returned validators differs
-   * than what is returned when the epoch is reached
-   */
-  getNextEpochBeaconProposer(): ValidatorIndex[] {
-    return computeProposers(this.nextProposerSeed, this.nextShuffling, this.effectiveBalanceIncrements);
-  }
-
   getBeaconProposer(slot: Slot): ValidatorIndex {
     const epoch = computeEpochAtSlot(slot);
     if (epoch !== this.currentShuffling.epoch) {
@@ -504,6 +509,60 @@ export class EpochContext {
       );
     }
     return this.proposers[slot % SLOTS_PER_EPOCH];
+  }
+
+  getBeaconProposers(): ValidatorIndex[] {
+    return this.proposers;
+  }
+
+  /**
+   * We allow requesting proposal duties 1 epoch in the future as in normal network conditions it's possible to predict
+   * the correct shuffling with high probability. While knowing the proposers in advance is not useful for consensus,
+   * users want to know it to plan manteinance and avoid missing block proposals.
+   *
+   * **How to predict future proposers**
+   *
+   * Proposer duties for epoch N are guaranteed to be known at epoch N. Proposer duties depend exclusively on:
+   * 1. seed (from randao_mix): known 2 epochs ahead
+   * 2. active validator set: known 4 epochs ahead
+   * 3. effective balance: not known ahead
+   *
+   * ```python
+   * def get_beacon_proposer_index(state: BeaconState) -> ValidatorIndex:
+   *   epoch = get_current_epoch(state)
+   *   seed = hash(get_seed(state, epoch, DOMAIN_BEACON_PROPOSER) + uint_to_bytes(state.slot))
+   *   indices = get_active_validator_indices(state, epoch)
+   *   return compute_proposer_index(state, indices, seed)
+   * ```
+   *
+   * **1**: If `MIN_SEED_LOOKAHEAD = 1` the randao_mix used for the seed is from 2 epochs ago. So at epoch N, the seed
+   * is known and unchangable for duties at epoch N+1 and N+2 for proposer duties.
+   *
+   * ```python
+   * def get_seed(state: BeaconState, epoch: Epoch, domain_type: DomainType) -> Bytes32:
+   *   mix = get_randao_mix(state, Epoch(epoch - MIN_SEED_LOOKAHEAD - 1))
+   *   return hash(domain_type + uint_to_bytes(epoch) + mix)
+   * ```
+   *
+   * **2**: The active validator set can be predicted `MAX_SEED_LOOKAHEAD` in advance due to how activations are
+   * processed. We already compute the active validator set for the next epoch to optimize epoch processing, so it's
+   * reused here.
+   *
+   * **3**: Effective balance is not known ahead of time, but it rarely changes. Even if it changes, only a few
+   * balances are sampled to adjust the probability of the next selection (32 per epoch on average). So to invalidate
+   * the prediction the effective of one of those 32 samples should change and change the random_byte inequality.
+   */
+  getBeaconProposersNextEpoch(): ValidatorIndex[] {
+    if (!this.proposersNextEpoch.computed) {
+      const indexes = computeProposers(
+        this.proposersNextEpoch.seed,
+        this.nextShuffling,
+        this.effectiveBalanceIncrements
+      );
+      this.proposersNextEpoch = {computed: true, indexes};
+    }
+
+    return this.proposersNextEpoch.indexes;
   }
 
   /**
