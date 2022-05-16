@@ -61,6 +61,9 @@ describe("sync / unknown block sync", function () {
       useRestApi: false,
       testLoggerOpts,
     });
+    // the node needs time to transpile/initialize bls worker threads
+    const waitTime = 10_000;
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
 
@@ -79,6 +82,9 @@ describe("sync / unknown block sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
+    // the node needs time to transpile/initialize bls worker threads
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
+
     afterEachCallbacks.push(() => bn2.close());
 
     afterEachCallbacks.push(() => bn2.close());

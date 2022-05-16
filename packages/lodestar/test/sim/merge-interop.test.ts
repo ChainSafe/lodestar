@@ -328,6 +328,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
       eth1BlockHash: fromHexString(genesisBlockHash),
     });
 
+    // the node needs time to transpile/initialize bls worker threads
+    const waitTime = 10_000;
+    await new Promise((resolve) => setTimeout(resolve, waitTime));
+
     afterEachCallbacks.push(async function () {
       await bn.close();
       await sleep(1000);

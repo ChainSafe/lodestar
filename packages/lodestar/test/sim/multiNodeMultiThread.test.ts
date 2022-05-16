@@ -72,7 +72,7 @@ function runMultiNodeMultiThreadTest({nodeCount, validatorsPerNode, event, altai
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // When running multi-thread each thread has to compile the entire codebase from Typescript
     // so it takes a long time before each node is started
-    const genesisSlotsDelay = 30;
+    const genesisSlotsDelay = 40;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     for (let i = 0; i < nodeCount; i++) {

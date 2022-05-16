@@ -54,7 +54,7 @@ describe("Run multi node single thread interop validators (no eth1) until checkp
       const validators: Validator[] = [];
       const loggers: ILogger[] = [];
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
+      const genesisSlotsDelay = 16;
       const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
       for (let i = 0; i < nodeCount; i++) {
