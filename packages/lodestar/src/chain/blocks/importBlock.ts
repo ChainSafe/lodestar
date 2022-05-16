@@ -1,6 +1,6 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {toHexString} from "@chainsafe/ssz";
-import {allForks, ssz} from "@chainsafe/lodestar-types";
+import {allForks} from "@chainsafe/lodestar-types";
 import {
   CachedBeaconStateAllForks,
   CachedBeaconStateAltair,
@@ -24,6 +24,7 @@ import {getCheckpointFromState} from "./utils/checkpoint";
 import {PendingEvents} from "./utils/pendingEvents";
 import {FullyVerifiedBlock} from "./types";
 import {SeenAggregatedAttestations} from "../seenCache/seenAggregateAndProof";
+import {ssz} from "@chainsafe/lodestar-types";
 // import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 /**
@@ -122,15 +123,12 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
         const indexedAttestation = postState.epochCtx.getIndexedAttestation(attestation);
         const targetEpoch = attestation.data.target.epoch;
 
-        // cache attestation roots
-        chain.seenAggregatedAttestations.add(
-          targetEpoch,
-          toHexString(ssz.phase0.Attestation.hashTreeRoot(attestation))
-        );
+        const attDataRoot = toHexString(ssz.phase0.AttestationData.hashTreeRoot(indexedAttestation.data));
+        chain.seenAggregatedAttestations.add(targetEpoch, attDataRoot, indexedAttestation.attestingIndices, true);
         // Duplicated logic from fork-choice onAttestation validation logic.
         // Attestations outside of this range will be dropped as Errors, so no need to import
         if (targetEpoch <= currentEpoch && targetEpoch >= currentEpoch - FORK_CHOICE_ATT_EPOCH_LIMIT) {
-          chain.forkChoice.onAttestation(indexedAttestation);
+          chain.forkChoice.onAttestation(indexedAttestation, attDataRoot);
         }
 
         if (parentSlot !== undefined) {

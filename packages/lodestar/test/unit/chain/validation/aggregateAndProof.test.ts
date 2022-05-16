@@ -3,7 +3,7 @@ import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
 import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {IBeaconChain} from "../../../../src/chain";
 import {AttestationErrorCode} from "../../../../src/chain/errors";
-import {validateGossipAggregateAndProof} from "../../../../src/chain/validation";
+import {getCommitteeIndices, validateGossipAggregateAndProof} from "../../../../src/chain/validation";
 import {expectRejectedWithLodestarError} from "../../../utils/errors";
 import {generateTestCachedBeaconStateOnlyValidators} from "@chainsafe/lodestar-beacon-state-transition/test/perf/util";
 import {memoOnce} from "../../../utils/cache";
@@ -65,15 +65,19 @@ describe("chain / validation / aggregateAndProof", () => {
     await expectError(chain, signedAggregateAndProof, AttestationErrorCode.FUTURE_SLOT);
   });
 
-  it("AGGREGATED_ATTESTATION_ALREADY_KNOWN", async () => {
+  it("ATTESTING_INDICES_ALREADY_KNOWN", async () => {
     const {chain, signedAggregateAndProof} = getValidData();
+    const attData = signedAggregateAndProof.message.aggregate.data;
+    const committeeIndices = getCommitteeIndices(getState(), attData.slot, attData.index);
     // Register attester as already seen
     chain.seenAggregatedAttestations.add(
-      signedAggregateAndProof.message.aggregate.data.target.epoch,
-      toHexString(ssz.phase0.Attestation.hashTreeRoot(signedAggregateAndProof.message.aggregate))
+      attData.target.epoch,
+      toHexString(ssz.phase0.AttestationData.hashTreeRoot(attData)),
+      committeeIndices,
+      false
     );
 
-    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.AGGREGATED_ATTESTATION_ALREADY_KNOWN);
+    await expectError(chain, signedAggregateAndProof, AttestationErrorCode.ATTESTING_INDICES_ALREADY_KNOWN);
   });
 
   it("AGGREGATOR_ALREADY_KNOWN", async () => {
