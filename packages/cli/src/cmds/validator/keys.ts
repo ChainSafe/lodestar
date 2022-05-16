@@ -59,9 +59,15 @@ export async function getLocalSecretKeys(
     }
 
     const secretKeys = await Promise.all(
-      keystorePaths.map(async (keystorePath) =>
-        SecretKey.fromBytes(await Keystore.parse(fs.readFileSync(keystorePath, "utf8")).decrypt(passphrase))
-      )
+      keystorePaths.map(async (keystorePath) => {
+        let keystore;
+        try {
+          keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
+        } catch (e) {
+          throw new Error("Invalid keystore at " + keystorePath);
+        }
+        return SecretKey.fromBytes(await keystore.decrypt(passphrase));
+      })
     );
 
     return {
