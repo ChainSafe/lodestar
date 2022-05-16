@@ -329,8 +329,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     });
 
     // the node needs time to transpile/initialize bls worker threads
-    const waitTime = 10_000;
-    await new Promise((resolve) => setTimeout(resolve, waitTime));
+    const waitTime = 16_000;
+    await sleep(waitTime);
 
     afterEachCallbacks.push(async function () {
       await bn.close();
