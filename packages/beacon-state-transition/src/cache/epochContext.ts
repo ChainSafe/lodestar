@@ -418,11 +418,7 @@ export class EpochContext {
     const currentProposerSeed = getSeed(state, this.currentShuffling.epoch, DOMAIN_BEACON_PROPOSER);
     this.proposers = computeProposers(currentProposerSeed, this.currentShuffling, this.effectiveBalanceIncrements);
 
-    /**
-     * The next proposer seed is only used in the getBeaconProposersNextEpoch call. It cannot
-     * be moved into getBeaconProposersNextEpoch because it needs state as input and all info
-     * needed by getBeaconProposersNextEpoch should be in the epoch context.
-     */
+    // Only pre-compute the seed since it's very cheap. Do the expensive computeProposers() call only on demand.
     this.proposersNextEpoch = {computed: false, seed: getSeed(state, this.nextShuffling.epoch, DOMAIN_BEACON_PROPOSER)};
 
     // TODO: DEDUPLICATE from createEpochContext
