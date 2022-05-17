@@ -16,6 +16,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
+import {intersectBitArrays, IntersectResult} from "../../util/bitArray";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
 
@@ -54,7 +55,7 @@ export class AggregatedAttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
-  add(attestation: phase0.Attestation, attestingIndices: ValidatorIndex[], committee: ValidatorIndex[]): InsertOutcome {
+  add(attestation: phase0.Attestation, committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -73,7 +74,10 @@ export class AggregatedAttestationPool {
       attestationGroupByDataHash.set(dataRootHex, attestationGroup);
     }
 
-    return attestationGroup.add({attestation, attestingIndices: new Set(attestingIndices)});
+    return attestationGroup.add({
+      attestation,
+      trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length,
+    });
   }
 
   /** Remove attestations which are too old to be included in a block. */
@@ -144,7 +148,7 @@ export class AggregatedAttestationPool {
         attestationsByScore.push(
           ...attestationGroup.getAttestationsForBlock(participation).map((attestation) => ({
             attestation: attestation.attestation,
-            score: (attestation.notSeenAttesterCount ?? attestation.attestingIndices.size) / (stateSlot - slot),
+            score: attestation.notSeenAttesterCount / (stateSlot - slot),
           }))
         );
 
@@ -241,11 +245,18 @@ export class AggregatedAttestationPool {
 // eslint-disable-next-line @typescript-eslint/naming-convention
 interface AttestationWithIndex {
   attestation: phase0.Attestation;
-  attestingIndices: Set<ValidatorIndex>;
+  trueBitsCount: number;
   // this is <= attestingIndices.count since some attesters may be seen by the chain
   // this is only updated and used in removeBySeenValidators function
   notSeenAttesterCount?: number;
 }
+
+type AttestationNonParticipant = {
+  attestation: phase0.Attestation;
+  // this is <= attestingIndices.count since some attesters may be seen by the chain
+  // this is only updated and used in removeBySeenValidators function
+  notSeenAttesterCount: number;
+};
 
 /**
  * Maintain a pool of AggregatedAttestation which all share the same AttestationData.
@@ -265,64 +276,79 @@ export class MatchingDataAttestationGroup {
    * If it's a superset of an existing attestation, remove the existing attestation and add new.
    */
   add(attestation: AttestationWithIndex): InsertOutcome {
-    const {attestingIndices} = attestation;
-    // preaggregate
-    let insertResult = InsertOutcome.NewData;
+    const newBits = attestation.attestation.aggregationBits;
+
     const indicesToRemove = [];
-    for (const [i, existingAttestation] of this.attestations.entries()) {
-      const existingAttestingIndices = existingAttestation.attestingIndices;
-      const numIntersection =
-        // TODO: Intersect the uint8arrays from BitArray directly, it's probably much faster
-        existingAttestingIndices.size >= attestingIndices.size
-          ? intersection(existingAttestingIndices, attestingIndices)
-          : intersection(attestingIndices, existingAttestingIndices);
-      // no intersection
-      if (numIntersection === 0) {
-        aggregateInto(existingAttestation, attestation);
-        insertResult = InsertOutcome.Aggregated;
-      } else if (numIntersection === attestingIndices.size) {
-        // this new attestation is actually a subset of an existing one, don't want to add it
-        insertResult = InsertOutcome.AlreadyKnown;
-      } else if (numIntersection === existingAttestingIndices.size) {
-        // this new attestation is superset of an existing one, remove existing one
-        indicesToRemove.push(i);
+
+    for (const [i, prevAttestation] of this.attestations.entries()) {
+      const prevBits = prevAttestation.attestation.aggregationBits;
+
+      switch (intersectBitArrays(newBits, prevBits)) {
+        case IntersectResult.Subset:
+        case IntersectResult.Equal:
+          // this new attestation is actually a subset of an existing one, don't want to add it
+          return InsertOutcome.AlreadyKnown;
+
+        case IntersectResult.Exclude:
+          // no intersection
+          aggregateInto(prevAttestation, attestation);
+          return InsertOutcome.Aggregated;
+
+        case IntersectResult.Superset:
+          // newBits superset of prevBits
+          // this new attestation is superset of an existing one, remove existing one
+          indicesToRemove.push(i);
       }
     }
-    if (insertResult === InsertOutcome.NewData) {
-      for (const index of indicesToRemove.reverse()) {
-        this.attestations.splice(index, 1);
-      }
-      this.attestations.push(attestation);
-      // Remove the attestations with less participation
-      if (this.attestations.length > MAX_RETAINED_ATTESTATIONS_PER_GROUP) {
-        this.attestations.sort((a, b) => b.attestingIndices.size - a.attestingIndices.size);
-        this.attestations.splice(
-          MAX_RETAINED_ATTESTATIONS_PER_GROUP,
-          this.attestations.length - MAX_RETAINED_ATTESTATIONS_PER_GROUP
-        );
-      }
+
+    // Added new data
+    for (const index of indicesToRemove.reverse()) {
+      // TODO: .splice performance warning
+      this.attestations.splice(index, 1);
     }
-    return insertResult;
+
+    this.attestations.push(attestation);
+
+    // Remove the attestations with less participation
+    if (this.attestations.length > MAX_RETAINED_ATTESTATIONS_PER_GROUP) {
+      this.attestations.sort((a, b) => b.trueBitsCount - a.trueBitsCount);
+      this.attestations.splice(
+        MAX_RETAINED_ATTESTATIONS_PER_GROUP,
+        this.attestations.length - MAX_RETAINED_ATTESTATIONS_PER_GROUP
+      );
+    }
+
+    return InsertOutcome.NewData;
   }
 
-  getAttestationsForBlock(seenAttestingIndices: Set<ValidatorIndex>): AttestationWithIndex[] {
-    const attestations: AttestationWithIndex[] = [];
+  getAttestationsForBlock(seenAttestingIndices: Set<ValidatorIndex>): AttestationNonParticipant[] {
+    const attestations: AttestationNonParticipant[] = [];
 
-    for (const attestation of this.attestations) {
+    const committeeLen = this.committee.length;
+    const committeeSeenAttesting = new Array<boolean>(committeeLen);
+
+    // Intersect committee with participation only once for all attestations
+    for (let i = 0; i < committeeLen; i++) {
+      committeeSeenAttesting[i] = seenAttestingIndices.has(this.committee[i]);
+    }
+
+    for (const {attestation} of this.attestations) {
+      const {aggregationBits} = attestation;
       let notSeenAttesterCount = 0;
-      for (const attIndex of attestation.attestingIndices) {
-        if (!seenAttestingIndices.has(attIndex)) notSeenAttesterCount++;
+
+      for (let i = 0; i < committeeLen; i++) {
+        if (!committeeSeenAttesting[i] && aggregationBits.get(i)) {
+          notSeenAttesterCount++;
+        }
       }
+
       if (notSeenAttesterCount > 0) {
-        attestations.push({...attestation, notSeenAttesterCount});
+        attestations.push({attestation, notSeenAttesterCount});
       }
     }
 
     return attestations
-      .sort(
-        (a, b) =>
-          (b.notSeenAttesterCount ?? b.attestingIndices.size) - (a.notSeenAttesterCount ?? a.attestingIndices.size)
-      )
+      .sort((a, b) => b.notSeenAttesterCount - a.notSeenAttesterCount)
       .slice(0, MAX_ATTESTATIONS_PER_GROUP);
   }
 
@@ -333,10 +359,6 @@ export class MatchingDataAttestationGroup {
 }
 
 export function aggregateInto(attestation1: AttestationWithIndex, attestation2: AttestationWithIndex): void {
-  for (const attIndex of attestation2.attestingIndices) {
-    attestation1.attestingIndices.add(attIndex);
-  }
-
   // Merge bits of attestation2 into attestation1
   attestation1.attestation.aggregationBits.mergeOrWith(attestation2.attestation.aggregationBits);
 

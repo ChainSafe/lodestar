@@ -1,7 +1,7 @@
 import {toHexString} from "@chainsafe/ssz";
 import PeerId from "peer-id";
 import {IBeaconConfig} from "@chainsafe/lodestar-config";
-import {phase0, ssz, ValidatorIndex} from "@chainsafe/lodestar-types";
+import {phase0, ssz} from "@chainsafe/lodestar-types";
 import {ILogger, prettyBytes} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../../metrics";
 import {OpSource} from "../../../metrics/validatorMonitor";
@@ -166,11 +166,7 @@ export function getGossipHandlers(modules: ValidatorFnsModules, options: GossipH
       metrics?.registerGossipAggregatedAttestation(seenTimestampSec, signedAggregateAndProof, indexedAttestation);
       const aggregatedAttestation = signedAggregateAndProof.message.aggregate;
 
-      chain.aggregatedAttestationPool.add(
-        aggregatedAttestation,
-        indexedAttestation.attestingIndices as ValidatorIndex[],
-        committeeIndices
-      );
+      chain.aggregatedAttestationPool.add(aggregatedAttestation, committeeIndices);
 
       if (!options.dontSendGossipAttestationsToForkchoice) {
         try {
