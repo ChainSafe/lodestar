@@ -20,8 +20,14 @@ export function readAndGetGitData(): GitData {
     return {
       // If the CLI is run from source, prioritze current git data
       // over `.git-data.json` file, which might be stale here.
-      branch: currentGitData.branch ?? persistedGitData.branch ?? "",
-      commit: currentGitData.commit ?? persistedGitData.commit ?? "",
+      branch:
+        currentGitData.branch && currentGitData.branch.length > 0
+          ? currentGitData.branch
+          : persistedGitData.branch ?? "",
+      commit:
+        currentGitData.commit && currentGitData.commit.length > 0
+          ? currentGitData.commit
+          : persistedGitData.commit ?? "",
     };
   } catch (e) {
     return {
