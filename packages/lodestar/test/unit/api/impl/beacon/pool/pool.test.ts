@@ -1,6 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
-import {generateAttestationDataBigint} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
+import {generateAttestationDataBigint} from "../../../../../../../beacon-state-transition/test/utils/attestation.js";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {Network} from "../../../../../../src/network/network.js";
 import {

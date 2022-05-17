@@ -1,8 +1,12 @@
 import fs from "node:fs";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
 
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
 import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types.js";
+
+// eslint-disable-next-line @typescript-eslint/naming-convention
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export interface ISszSnappyTestBlockData<T extends RequestOrIncomingResponseBody> {
   id: string;
