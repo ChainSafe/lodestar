@@ -27,7 +27,7 @@
     "benchmark": "yarn benchmark:files 'packages/*/test/perf/**/*.test.ts'",
     "benchmark:files": "LODESTAR_PRESET=mainnet NODE_OPTIONS=--max-old-space-size=4096 benchmark --config .benchrc.yaml",
     "publish:release": "lerna publish from-package --yes --no-verify-access",
-    "release": "lerna version --no-push --sign-git-commit",
+    "release": "node scripts/release.mjs",
     "postrelease": "git tag -d $(git describe --abbrev=0)",
     "check-readme": "lerna run check-readme"
   },
