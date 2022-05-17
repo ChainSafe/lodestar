@@ -8,7 +8,10 @@ import {getGitData} from "../../../src/util";
 
 const WRITE_GIT_DATA_CMD = "npm run write-git-data";
 
-describe("util / gitData", () => {
+describe("util / gitData", function () {
+  // In CI, the below before() function takes time
+  this.timeout(3000);
+
   before(() => {
     const pkgJsonPath = findUp.sync("package.json", {cwd: __dirname});
     if (!pkgJsonPath) {
