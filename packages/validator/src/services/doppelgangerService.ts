@@ -9,6 +9,11 @@ import {IClock} from "../util";
 import {IndicesService} from "./indices";
 import {LivenessResponseData} from "@chainsafe/lodestar-api/src/routes/validator";
 
+
+// The number of epochs that must be checked before we assume that there are
+// no other duplicate validators on the network
+const DEFAULT_REMAINING_DETECTION_EPOCHS = 1;
+
 type DoppelgangerState = {
   epochRegistered: Epoch;
   epochChecked: Epoch[];
@@ -31,7 +36,6 @@ export class DoppelgangerService {
     private readonly genesisTime: number,
     private readonly indicesService: IndicesService,
     private readonly validatorController: AbortController,
-    private readonly doppelgangerEpochsToCheck: number
   ) {
     this.clock.runEveryEpoch(this.pollLiveness);
   }
@@ -170,7 +174,7 @@ export class DoppelgangerService {
           this.doppelgangerStateByIndex.set(index, {
             epochRegistered: epoch,
             epochChecked: [],
-            remainingEpochsToCheck: this.doppelgangerEpochsToCheck,
+            remainingEpochsToCheck: DEFAULT_REMAINING_DETECTION_EPOCHS,
           });
         }
       }

@@ -156,7 +156,6 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
         secretKey,
       })),
       enableDoppelganger: args.enableDoppelganger,
-      doppelgangerEpochsToCheck: args.doppelgangerEpochsToCheck,
     });
 
     onGracefulShutdownCbs.push(() => validator.stop());

@@ -31,8 +31,7 @@ export type ValidatorOptions = {
   logger: ILogger;
   afterBlockDelaySlotFraction?: number;
   graffiti?: string;
-  enableDoppelganger: boolean;
-  doppelgangerEpochsToCheck: number;
+  enableDoppelganger?: boolean;
 };
 
 // TODO: Extend the timeout, and let it be customizable
@@ -97,7 +96,6 @@ export class Validator {
         Number(genesis.genesisTime),
         indicesService,
         this.controller,
-        opts.doppelgangerEpochsToCheck
       );
       validatorStore.setDoppelganger(doppelgangerService);
     }

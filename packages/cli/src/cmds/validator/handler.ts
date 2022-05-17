@@ -22,7 +22,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
 
   const graffiti = args.graffiti || getDefaultGraffiti();
   const enableDoppelganger = args.enableDoppelganger;
-  const doppelgangerEpochsToCheck = args.doppelgangerEpochsToCheck;
 
   const validatorPaths = getValidatorPaths(args);
   const beaconPaths = getBeaconPaths(args);
@@ -139,7 +138,6 @@ export async function validatorHandler(args: IValidatorCliArgs & IGlobalArgs): P
       signers,
       graffiti,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
       afterBlockDelaySlotFraction: args.afterBlockDelaySlotFraction,
     },
     controller.signal,

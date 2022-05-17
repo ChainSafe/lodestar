@@ -26,7 +26,6 @@ export async function getAndInitValidatorsWithKeystore({
   useRestApi,
   testLoggerOpts,
   enableDoppelganger = false,
-  doppelgangerEpochsToCheck = 3,
 }: {
   node: BeaconNode;
   keystoreContent: string;
@@ -34,7 +33,6 @@ export async function getAndInitValidatorsWithKeystore({
   useRestApi?: boolean;
   testLoggerOpts?: TestLoggerOpts;
   enableDoppelganger?: boolean;
-  doppelgangerEpochsToCheck?: number;
 }): Promise<{
   validator: Validator;
   secretKeys: SecretKey[];
@@ -97,7 +95,6 @@ export async function getAndInitValidatorsWithKeystore({
     logger,
     signers,
     enableDoppelganger,
-    doppelgangerEpochsToCheck,
   });
 
   return {
@@ -122,7 +119,6 @@ export async function getAndInitDevValidators({
   testLoggerOpts,
   externalSignerUrl,
   enableDoppelganger = false,
-  doppelgangerEpochsToCheck = 3,
 }: {
   node: BeaconNode;
   validatorsPerClient: number;
@@ -132,7 +128,6 @@ export async function getAndInitDevValidators({
   testLoggerOpts?: TestLoggerOpts;
   externalSignerUrl?: string;
   enableDoppelganger?: boolean;
-  doppelgangerEpochsToCheck?: number;
 }): Promise<{validators: Validator[]; secretKeys: SecretKey[]}> {
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
@@ -174,7 +169,6 @@ export async function getAndInitDevValidators({
         logger,
         signers,
         enableDoppelganger,
-        doppelgangerEpochsToCheck,
       })
     );
   }

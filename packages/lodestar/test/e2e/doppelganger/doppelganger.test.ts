@@ -38,7 +38,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
@@ -61,7 +60,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -94,7 +92,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
@@ -118,7 +115,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -169,7 +165,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
@@ -192,7 +187,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validator0WithDoppelganger.map((v) => v.stop())));
 
@@ -235,7 +229,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
@@ -256,7 +249,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -306,7 +298,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
 
@@ -329,7 +320,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -342,8 +332,6 @@ describe("doppelganger / doppelganger test", function () {
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
-
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signBlock(fromHexString(pubKey), beaconBlock, bn.chain.clock.currentSlot)
@@ -361,7 +349,6 @@ describe("doppelganger / doppelganger test", function () {
     this.timeout("10 min");
 
     const enableDoppelganger = true;
-    const doppelgangerEpochsToCheck = 2;
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     // set genesis time 2 slots in the past
@@ -384,7 +371,6 @@ describe("doppelganger / doppelganger test", function () {
       useRestApi: false,
       testLoggerOpts,
       enableDoppelganger,
-      doppelgangerEpochsToCheck,
     });
     afterEachCallbacks.push(() => Promise.all(validatorsWithDoppelganger.map((v) => v.stop())));
 
@@ -402,8 +388,6 @@ describe("doppelganger / doppelganger test", function () {
         bn.chain.clock.currentEpoch
       )
     ).to.eventually.be.rejectedWith("Doppelganger protection status is: Unknown");
-
-    await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout);
 
     await expect(
       validatorUnderTest.validatorStore.signAttestation(

@@ -25,8 +25,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     externalSignerUrl?: string;
     externalSignerPublicKeys?: string[];
     externalSignerFetchPubkeys?: boolean;
-    enableDoppelganger: boolean;
-    doppelgangerEpochsToCheck: number;
+    enableDoppelganger?: boolean;
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
