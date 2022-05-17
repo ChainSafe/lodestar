@@ -5,7 +5,7 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
-import {IForkChoice, IProtoBlock, ExecutionStatus} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, IProtoBlock, ExecutionStatus, assertValidTerminalPowBlock} from "@chainsafe/lodestar-fork-choice";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IMetrics} from "../../metrics";
@@ -18,9 +18,12 @@ import {IBlsVerifier} from "../bls";
 import {FullyVerifiedBlock, PartiallyVerifiedBlock} from "./types";
 import {ExecutePayloadStatus} from "../../executionEngine/interface";
 import {byteArrayEquals} from "../../util/bytes";
+import {IEth1ForBlockProduction} from "../../eth1";
+import {POS_PANDA_MERGE_TRANSITION_BANNER} from "./utils/pandaMergeTransitionBanner";
 
 export type VerifyBlockModules = {
   bls: IBlsVerifier;
+  eth1: IEth1ForBlockProduction;
   executionEngine: IExecutionEngine;
   regen: IStateRegenerator;
   clock: IBeaconClock;
@@ -128,6 +131,11 @@ export async function verifyBlockStateTransition(
     throw new BlockError(block, {code: BlockErrorCode.PRESTATE_MISSING, error: e as Error});
   });
 
+  const isMergeTransitionBlock =
+    bellatrix.isBellatrixStateType(preState) &&
+    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
+    bellatrix.isMergeTransitionBlock(preState, block.message.body);
+
   // STFN - per_slot_processing() + per_block_processing()
   // NOTE: `regen.getPreState()` should have dialed forward the state already caching checkpoint states
   const useBlsBatchVerify = !opts?.disableBlsBatchVerify;
@@ -144,7 +152,6 @@ export async function verifyBlockStateTransition(
     chain.metrics
   );
 
-  // TODO: Review mergeBlock conditions
   /** Not null if execution is enabled */
   const executionPayloadEnabled =
     bellatrix.isBellatrixStateType(postState) &&
@@ -272,6 +279,28 @@ export async function verifyBlockStateTransition(
           errorMessage: execResult.validationError,
         });
     }
+
+    // If this is a merge transition block, check to ensure if it references
+    // a valid terminal PoW block.
+    //
+    // However specs define this check to be run inside forkChoice's onBlock
+    // (https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/fork-choice.md#on_block)
+    // but we perform the check here (as inspired from the lighthouse impl)
+    //
+    // Reasons:
+    //  1. If the block is not valid, we should fail early and not wait till
+    //     forkChoice import.
+    //  2. It makes logical sense to pair it with the block validations and
+    //     deal it with the external services like eth1 tracker here than
+    //     in import block
+    if (isMergeTransitionBlock) {
+      const mergeBlock = block.message as bellatrix.BeaconBlock;
+      const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
+      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
+      const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+
+      assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});
+    }
   } else {
     // isExecutionEnabled() -> false
     executionStatus = ExecutionStatus.PreMerge;
@@ -288,5 +317,24 @@ export async function verifyBlockStateTransition(
     });
   }
 
+  // All checks have passed, if this is a merge transition block we can log
+  if (isMergeTransitionBlock) {
+    logOnPowBlock(chain, block as bellatrix.SignedBeaconBlock);
+  }
+
   return {postState, executionStatus};
+}
+
+function logOnPowBlock(chain: VerifyBlockModules, block: bellatrix.SignedBeaconBlock): void {
+  const mergeBlock = block.message;
+  const mergeBlockHash = toHexString(chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock));
+  const mergeExecutionHash = toHexString(mergeBlock.body.executionPayload.blockHash);
+  const mergePowHash = toHexString(mergeBlock.body.executionPayload.parentHash);
+  chain.logger.info(POS_PANDA_MERGE_TRANSITION_BANNER);
+  chain.logger.info("Execution transitioning from PoW to PoS!!!");
+  chain.logger.info("Importing block referencing terminal PoW block", {
+    blockHash: mergeBlockHash,
+    executionHash: mergeExecutionHash,
+    powHash: mergePowHash,
+  });
 }

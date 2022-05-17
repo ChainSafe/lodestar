@@ -128,6 +128,10 @@ export class LocalClock implements IBeaconClock {
     });
   }
 
+  secFromSlot(slot: Slot, toSec = Date.now() / 1000): number {
+    return toSec - (this.genesisTime + slot * this.config.SECONDS_PER_SLOT);
+  }
+
   private onNextSlot = (slot?: Slot): void => {
     const clockSlot = slot ?? getCurrentSlot(this.config, this.genesisTime);
     // process multiple clock slots in the case the main thread has been saturated for > SECONDS_PER_SLOT

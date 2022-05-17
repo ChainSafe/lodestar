@@ -19,13 +19,13 @@ export function getAttesterSlashingSignatureSets(
   attesterSlashing: phase0.AttesterSlashing
 ): ISignatureSet[] {
   return [attesterSlashing.attestation1, attesterSlashing.attestation2].map((attestation) =>
-    getIndexedAttestationBnSignatureSet(state, attestation)
+    getIndexedAttestationBigintSignatureSet(state, attestation)
   );
 }
 
-export function getIndexedAttestationBnSignatureSet(
+export function getIndexedAttestationBigintSignatureSet(
   state: CachedBeaconStateAllForks,
-  indexedAttestation: phase0.IndexedAttestationBn
+  indexedAttestation: phase0.IndexedAttestationBigint
 ): ISignatureSet {
   const {index2pubkey} = state.epochCtx;
   const slot = computeStartSlotAtEpoch(Number(indexedAttestation.data.target.epoch as bigint));
@@ -34,7 +34,7 @@ export function getIndexedAttestationBnSignatureSet(
   return {
     type: SignatureSetType.aggregate,
     pubkeys: indexedAttestation.attestingIndices.map((i) => index2pubkey[i]),
-    signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBn, indexedAttestation.data, domain),
+    signingRoot: computeSigningRoot(ssz.phase0.AttestationDataBigint, indexedAttestation.data, domain),
     signature: indexedAttestation.signature,
   };
 }

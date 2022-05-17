@@ -20,6 +20,7 @@ describe("chain / lightclient", function () {
    */
   const maxLcHeadTrackingDiffSlots = 4;
   const validatorCount = 8;
+  const validatorClientCount = 4;
   const targetSyncCommittee = 3;
   /** N sync committee periods + 1 epoch of margin */
   const finalizedEpochToReach = targetSyncCommittee * EPOCHS_PER_SYNC_COMMITTEE_PERIOD + 1;
@@ -72,7 +73,7 @@ describe("chain / lightclient", function () {
         network: {allowPublishToZeroPeers: true},
         api: {rest: {enabled: true, api: ["lightclient"], port: restPort}},
       },
-      validatorCount,
+      validatorCount: validatorCount * validatorClientCount,
       genesisTime,
       logger: loggerNodeA,
     });
@@ -84,7 +85,7 @@ describe("chain / lightclient", function () {
     const {validators} = await getAndInitDevValidators({
       node: bn,
       validatorsPerClient: validatorCount,
-      validatorClientCount: 1,
+      validatorClientCount,
       startIndex: 0,
       useRestApi: false,
       testLoggerOpts: {...testLoggerOpts, logLevel: LogLevel.error},

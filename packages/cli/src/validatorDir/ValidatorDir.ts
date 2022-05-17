@@ -4,15 +4,13 @@ import bls, {SecretKey} from "@chainsafe/bls";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
 import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
-import {YargsError, readValidatorPassphrase} from "../util";
+import {YargsError, readValidatorPassphrase, add0xPrefix} from "../util";
 import {decodeEth1TxData} from "../depositContract/depositData";
-import {add0xPrefix} from "../util/format";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
-  ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths";
 
 export interface IValidatorDirOptions {
@@ -114,28 +112,6 @@ export class ValidatorDir {
     const password = readValidatorPassphrase({secretsDir, pubkey: keystore.pubkey});
     const privKey = await keystore.decrypt(password);
     return bls.SecretKey.fromBytes(privKey);
-  }
-
-  /**
-   * Indicates if there is a file containing an eth1 deposit transaction. This can be used to
-   * check if a deposit transaction has been created.
-   *
-   * *Note*: It's possible to submit an Eth1 deposit without creating this file, so use caution
-   * when relying upon this value.
-   */
-  eth1DepositTxHashExists(): boolean {
-    return fs.existsSync(path.join(this.dirpath, ETH1_DEPOSIT_TX_HASH_FILE));
-  }
-
-  /**
-   * Saves the `tx_hash` to a file in `this.dir`.
-   */
-  saveEth1DepositTxHash(txHash: string): void {
-    const filepath = path.join(this.dirpath, ETH1_DEPOSIT_TX_HASH_FILE);
-
-    if (fs.existsSync(filepath)) throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
-
-    fs.writeFileSync(filepath, txHash);
   }
 
   /**

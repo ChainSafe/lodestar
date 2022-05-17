@@ -20,7 +20,7 @@ import {initializeOptionsAndConfig} from "../init/handler";
 import {mkdir, initBLS, getCliLogger} from "../../util";
 import {getBeaconPaths} from "../beacon/paths";
 import {getValidatorPaths} from "../validator/paths";
-import {getVersion} from "../../util/version";
+import {getVersionData} from "../../util/version";
 
 /**
  * Run a beacon node with validator
@@ -68,7 +68,7 @@ export async function devHandler(args: IDevArgs & IGlobalArgs): Promise<void> {
   // BeaconNode setup
   const libp2p = await createNodeJsLibp2p(peerId, options.network, {peerStoreDir: beaconPaths.peerStoreDir});
   const logger = getCliLogger(args, beaconPaths, config);
-  logger.info("Lodestar", {version: getVersion(), network: args.network});
+  logger.info("Lodestar", {network: args.network, ...getVersionData()});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   const db = new BeaconDb({config, controller: new LevelDbController(options.db, {logger})});

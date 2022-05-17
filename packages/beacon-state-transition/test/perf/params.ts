@@ -10,3 +10,9 @@ export const altairState = {
   network: "mainnet" as const,
   epoch: 81889, // Post altair fork
 };
+
+export const rangeSyncTest = {
+  network: "mainnet" as const,
+  startSlot: 3766816, // Post altair, first slot in epoch 117713
+  endSlot: 3766847, // 3766816 + 31, all blocks in same epoch
+};

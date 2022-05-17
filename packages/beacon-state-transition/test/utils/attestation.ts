@@ -22,7 +22,7 @@ export function generateAttestationData(
   };
 }
 
-export function generateAttestationDataBn(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBn {
+export function generateAttestationDataBigint(sourceEpoch: Epoch, targetEpoch: Epoch): phase0.AttestationDataBigint {
   return {
     slot: BigInt(0),
     index: BigInt(0),

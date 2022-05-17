@@ -75,7 +75,7 @@ export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader
   };
 }
 
-export function generateSignedBlockHeaderBn(): phase0.SignedBeaconBlockHeaderBn {
+export function generateSignedBlockHeaderBn(): phase0.SignedBeaconBlockHeaderBigint {
   return {
     message: {
       slot: BigInt(0),

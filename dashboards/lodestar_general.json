@@ -8632,6 +8632,18 @@
               "interval": "",
               "legendFormat": "till processed",
               "refId": "B"
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${DS_PROMETHEUS}"
+              },
+              "exemplar": false,
+              "expr": "delta(lodestar_gossip_block_elapsed_time_till_become_head_sum[$__rate_interval])\n/\ndelta(lodestar_gossip_block_elapsed_time_till_become_head_count[$__rate_interval])",
+              "hide": false,
+              "interval": "",
+              "legendFormat": "till become head",
+              "refId": "C"
             }
           ],
           "title": "Gossip Block Received Delay",
