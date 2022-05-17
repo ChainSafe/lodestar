@@ -31,7 +31,7 @@ describe("Start from WSS", function () {
     const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-    const genesisSlotsDelay = 3;
+    const genesisSlotsDelay = 16;
 
     const timeout =
       ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
