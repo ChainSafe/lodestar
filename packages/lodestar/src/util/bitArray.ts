@@ -1,34 +1,36 @@
-import {BitArray} from "@chainsafe/ssz";
-
 export enum IntersectResult {
   Equal,
+  /** All elements in set B are in set A  */
   Superset,
+  /** All elements in set A are in set B  */
   Subset,
-  Exclude,
-  Diff,
+  /** Set A and set B do not share any elements */
+  Exclusive,
+  /** Set A and set B intersect but are not superset or subset */
+  Intersect,
 }
 
 /**
  * For each byte check if a includes b,
- * | a        | b        | result       |
- * | 00001111 | 00001111 | A equals B   |
- * | 00001111 | 00000011 | A superset B |
- * | 00000011 | 00001111 | A subset B   |
- * | 11110000 | 00001111 | A exclude B  |
- * | 11111100 | 00111111 | A diff B     |
+ * | a        | b        | result        |
+ * | -------- | -------- | ------------- |
+ * | 00001111 | 00001111 | A equals B    |
+ * | 00001111 | 00000011 | A superset B  |
+ * | 00000011 | 00001111 | A subset B    |
+ * | 11110000 | 00001111 | A exclude B   |
+ * | 11111100 | 00111111 | A intersect B |
  *
  * For all bytes in BitArray:
- * - equals = (equals)[]
- * - excludes = (excludes)[]
- * - superset = (Superset | equal)[]
- * - subset = (Subset | equal)[]
- * - diff = (diff | *)[]
+ * - equals = MAYBE ONLY equals
+ * - excludes = MUST ONLY equals
+ * - superset = MUST superset MAYBE equal
+ * - subset = MUST subset MAYBE equal
+ * - intersect = any other condition
  */
-export function intersectBitArrays(aBA: BitArray, bBA: BitArray): IntersectResult {
-  const aUA = aBA.uint8Array;
-  const bUA = bBA.uint8Array;
-  const len = aBA.uint8Array.length;
+export function intersectUint8Arrays(aUA: Uint8Array, bUA: Uint8Array): IntersectResult {
+  const len = aUA.length;
 
+  let someEquals = false;
   let someExcludes = false;
   let someSuperset = false;
   let someSubset = false;
@@ -37,28 +39,36 @@ export function intersectBitArrays(aBA: BitArray, bBA: BitArray): IntersectResul
     const a = aUA[i];
     const b = bUA[i];
 
-    if (a === b) {
+    if (a === 0 && b === 0) {
+      // zero, skip
+    } else if (a === b) {
       // A equals B
+      someEquals = true;
     } else if ((a & b) === 0) {
       // A excludes B
       someExcludes = true;
-    } else if ((a & b) === a) {
-      // A superset B
-      if (someSubset) return IntersectResult.Diff;
-      someSuperset = true;
     } else if ((a & b) === b) {
+      // A superset B
+      if (someSubset) return IntersectResult.Intersect;
+      someSuperset = true;
+    } else if ((a & b) === a) {
       // A subset B
-      if (someSuperset) return IntersectResult.Diff;
+      if (someSuperset) return IntersectResult.Intersect;
       someSubset = true;
     } else {
       // A diff B
-      return IntersectResult.Diff;
+      return IntersectResult.Intersect;
     }
   }
 
+  // equals = MAYBE ONLY equals
   if (!someExcludes && !someSuperset && !someSubset) return IntersectResult.Equal;
-  if (someExcludes && !someSuperset && !someSubset) return IntersectResult.Exclude;
+  // excludes = MUST ONLY equals
+  if (!someEquals && someExcludes && !someSuperset && !someSubset) return IntersectResult.Exclusive;
+  // superset = MUST superset MAYBE equal
   if (!someExcludes && someSuperset && !someSubset) return IntersectResult.Superset;
+  // subset = MUST subset MAYBE equal
   if (!someExcludes && !someSuperset && someSubset) return IntersectResult.Subset;
-  else return IntersectResult.Diff;
+  // intersect = any other condition
+  else return IntersectResult.Intersect;
 }

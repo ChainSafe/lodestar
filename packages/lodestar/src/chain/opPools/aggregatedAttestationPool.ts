@@ -16,7 +16,7 @@ import {
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {toHexString} from "@chainsafe/ssz";
 import {MapDef} from "../../util/map";
-import {intersectBitArrays, IntersectResult} from "../../util/bitArray";
+import {intersectUint8Arrays, IntersectResult} from "../../util/bitArray";
 import {pruneBySlot} from "./utils";
 import {InsertOutcome} from "./types";
 
@@ -283,13 +283,13 @@ export class MatchingDataAttestationGroup {
     for (const [i, prevAttestation] of this.attestations.entries()) {
       const prevBits = prevAttestation.attestation.aggregationBits;
 
-      switch (intersectBitArrays(newBits, prevBits)) {
+      switch (intersectUint8Arrays(newBits.uint8Array, prevBits.uint8Array)) {
         case IntersectResult.Subset:
         case IntersectResult.Equal:
           // this new attestation is actually a subset of an existing one, don't want to add it
           return InsertOutcome.AlreadyKnown;
 
-        case IntersectResult.Exclude:
+        case IntersectResult.Exclusive:
           // no intersection
           aggregateInto(prevAttestation, attestation);
           return InsertOutcome.Aggregated;
