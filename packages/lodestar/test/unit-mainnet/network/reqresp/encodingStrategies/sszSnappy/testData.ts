@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import {bellatrix, ssz} from "@chainsafe/lodestar-types";
-import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types";
+import {RequestOrIncomingResponseBody, RequestOrResponseType} from "../../../../../../src/network/reqresp/types.js";
 
 export interface ISszSnappyTestBlockData<T extends RequestOrIncomingResponseBody> {
   id: string;

@@ -1,9 +1,9 @@
 import {ForkName} from "@chainsafe/lodestar-params";
 import fs from "node:fs";
 import path from "node:path";
-import {SPEC_TEST_LOCATION} from "../specTestVersioning";
+import {SPEC_TEST_LOCATION} from "../specTestVersioning.js";
 import {describeDirectorySpecTest} from "@chainsafe/lodestar-spec-test-util";
-import {RunnerType, TestRunner} from "./types";
+import {RunnerType, TestRunner} from "./types.js";
 import {expect} from "chai";
 
 const specTestsTestPath = path.join(SPEC_TEST_LOCATION, "tests");

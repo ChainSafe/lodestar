@@ -3,7 +3,7 @@ import {CoordType, Signature} from "@chainsafe/bls/types";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {toHexString} from "@chainsafe/lodestar-utils";
 import {fromHexString} from "@chainsafe/ssz";
-import {TestRunnerFn} from "../utils/types";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

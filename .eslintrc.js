@@ -154,7 +154,7 @@ module.exports = {
 
     "@chainsafe/node/file-extension-in-import": [
       "error",
-      "never",
+      "always",
       {
         "esm": true
       }

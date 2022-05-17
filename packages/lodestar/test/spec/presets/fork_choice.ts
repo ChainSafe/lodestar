@@ -31,10 +31,10 @@ import {
 import {ssz, RootHex} from "@chainsafe/lodestar-types";
 import {bnToNum} from "@chainsafe/lodestar-utils";
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {testLogger} from "../../utils/logger";
-import {getConfig} from "../utils/getConfig";
-import {TestRunnerFn} from "../utils/types";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {testLogger} from "../../utils/logger.js";
+import {getConfig} from "../utils/getConfig.js";
+import {TestRunnerFn} from "../utils/types.js";
 
 /* eslint-disable @typescript-eslint/naming-convention */
 

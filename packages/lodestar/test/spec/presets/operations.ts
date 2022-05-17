@@ -13,10 +13,10 @@ import {
 import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/bellatrix/block/processExecutionPayload";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState";
-import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState";
-import {getConfig} from "../utils/getConfig";
-import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types";
+import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";
+import {expectEqualBeaconState, inputTypeSszTreeViewDU} from "../utils/expectEqualBeaconState.js";
+import {getConfig} from "../utils/getConfig.js";
+import {BaseSpecTest, shouldVerify, TestRunnerFn} from "../utils/types.js";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 
 /* eslint-disable @typescript-eslint/naming-convention */

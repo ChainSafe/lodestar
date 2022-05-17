@@ -1,2 +1,2 @@
-export * from "./beforeValue";
-export * from "./testFileCache";
+export * from "./beforeValue.js";
+export * from "./testFileCache.js";

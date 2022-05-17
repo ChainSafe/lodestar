@@ -1,7 +1,7 @@
 import {unshuffleList} from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
 import {bnToNum, fromHex} from "@chainsafe/lodestar-utils";
-import {TestRunnerFn} from "../utils/types";
+import {TestRunnerFn} from "../utils/types.js";
 
 export const shuffling: TestRunnerFn<ShufflingTestCase, number[]> = () => {
   return {

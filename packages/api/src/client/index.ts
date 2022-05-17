@@ -1,5 +1,5 @@
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
-import {Api} from "../interface";
+import {Api} from "../interface.js";
 import {IHttpClient, HttpClient, HttpClientOptions, HttpClientModules, HttpError} from "./utils/index.js";
 export {HttpClient, HttpClientOptions, HttpError};
 
