@@ -5,6 +5,7 @@
 export {Validator, ValidatorOptions} from "./validator.js";
 export {ValidatorStore, SignerType, Signer, SignerLocal, SignerRemote} from "./services/validatorStore.js";
 export {waitForGenesis} from "./genesis.js";
+export {getMetrics, Metrics, MetricsRegister} from "./metrics.js";
 
 // Remote signer client
 export {

@@ -1,14 +1,15 @@
 import {SLOTS_PER_EPOCH} from "@chainsafe/lodestar-params";
-import {sleep} from "@chainsafe/lodestar-utils";
+import {extendError, sleep} from "@chainsafe/lodestar-utils";
 import {computeEpochAtSlot, isAggregatorFromCommitteeLength} from "@chainsafe/lodestar-beacon-state-transition";
 import {BLSSignature, Epoch, Slot, ValidatorIndex, RootHex} from "@chainsafe/lodestar-types";
 import {Api, routes} from "@chainsafe/lodestar-api";
 import {toHexString} from "@chainsafe/ssz";
 import {IndicesService} from "./indices.js";
-import {IClock, extendError, ILoggerVc} from "../util/index.js";
+import {IClock, ILoggerVc} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {ChainHeaderTracker, HeadEventData} from "./chainHeaderTracker.js";
 import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
 
 /** Only retain `HISTORICAL_DUTIES_EPOCHS` duties prior to the current epoch. */
 const HISTORICAL_DUTIES_EPOCHS = 2;
@@ -38,13 +39,25 @@ export class AttestationDutiesService {
     private clock: IClock,
     private readonly validatorStore: ValidatorStore,
     private readonly indicesService: IndicesService,
-    chainHeadTracker: ChainHeaderTracker
+    chainHeadTracker: ChainHeaderTracker,
+    private readonly metrics: Metrics | null
   ) {
     // Running this task every epoch is safe since a re-org of two epochs is very unlikely
     // TODO: If the re-org event is reliable consider re-running then
     clock.runEveryEpoch(this.runDutiesTasks);
     clock.runEverySlot(this.prepareForNextEpoch);
     chainHeadTracker.runOnNewHead(this.onNewHead);
+
+    if (metrics) {
+      metrics.attesterDutiesCount.addCollect(() => {
+        let duties = 0;
+        for (const attDutiesAtEpoch of this.dutiesByIndexByEpoch.values()) {
+          duties += attDutiesAtEpoch.dutiesByIndex.size;
+        }
+        metrics.attesterDutiesCount.set(duties);
+        metrics.attesterDutiesEpochCount.set(this.dutiesByIndexByEpoch.size);
+      });
+    }
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -89,7 +102,7 @@ export class AttestationDutiesService {
     }
 
     // during the 1 / 3 of epoch, last block of epoch may come
-    await sleep(this.clock.msToSlotFraction(slot, 1 / 3));
+    await sleep(this.clock.msToSlot(slot + 1 / 3));
 
     const nextEpoch = computeEpochAtSlot(slot) + 1;
     const dependentRoot = this.dutiesByIndexByEpoch.get(nextEpoch)?.dependentRoot;
@@ -216,6 +229,7 @@ export class AttestationDutiesService {
     }
 
     if (priorDependentRoot && dependentRootChanged) {
+      this.metrics?.attesterDutiesReorg.inc();
       this.logger.warn("Attester duties re-org. This may happen from time to time", {
         priorDependentRoot: priorDependentRoot,
         dependentRoot: dependentRoot,
@@ -292,13 +306,8 @@ export class AttestationDutiesService {
     oldDependentRoot: RootHex,
     newDependentRoot: RootHex
   ): Promise<void> {
-    const logContext = {
-      dutyEpoch,
-      slot,
-      oldDependentRoot,
-      newDependentRoot,
-    };
-
+    this.metrics?.attesterDutiesReorg.inc();
+    const logContext = {dutyEpoch, slot, oldDependentRoot, newDependentRoot};
     this.logger.debug("Redownload attester duties", logContext);
 
     await this.pollBeaconAttestersForEpoch(dutyEpoch, this.indicesService.getAllLocalIndices())

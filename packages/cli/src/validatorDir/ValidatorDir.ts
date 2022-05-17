@@ -4,17 +4,14 @@ import bls from "@chainsafe/bls";
 import type {SecretKey} from "@chainsafe/bls/types";
 import {Keystore} from "@chainsafe/bls-keystore";
 import {phase0} from "@chainsafe/lodestar-types";
-import {getLockFile, Lockfile} from "@chainsafe/lodestar-keymanager-server";
-import {YargsError, readValidatorPassphrase} from "../util/index.js";
+import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
+import {YargsError, readValidatorPassphrase, add0xPrefix} from "../util/index.js";
 import {decodeEth1TxData} from "../depositContract/depositData.js";
-import {add0xPrefix} from "../util/format.js";
 import {
   VOTING_KEYSTORE_FILE,
   WITHDRAWAL_KEYSTORE_FILE,
-  LOCK_FILE,
   ETH1_DEPOSIT_DATA_FILE,
   ETH1_DEPOSIT_AMOUNT_FILE,
-  ETH1_DEPOSIT_TX_HASH_FILE,
 } from "./paths.js";
 
 export interface IValidatorDirOptions {
@@ -51,24 +48,21 @@ export interface IEth1DepositData {
  * ```
  */
 export class ValidatorDir {
-  dir: string;
-  private lockfilePath: string;
-  private lockfile: Lockfile;
+  private readonly dirpath: string;
 
   /**
    * Open `dir`, creating a lockfile to prevent concurrent access.
    * Errors if there is a filesystem error or if a lockfile already exists
-   * @param dir
    */
-  constructor(baseDir: string, lockfile: Lockfile, pubkey: string, options?: IValidatorDirOptions) {
-    this.dir = path.join(baseDir, add0xPrefix(pubkey));
-    this.lockfilePath = path.join(this.dir, LOCK_FILE);
-    this.lockfile = lockfile;
+  constructor(baseDir: string, pubkey: string, options?: IValidatorDirOptions) {
+    this.dirpath = path.join(baseDir, add0xPrefix(pubkey));
 
-    if (!fs.existsSync(this.dir)) throw new YargsError(`Validator directory ${this.dir} does not exist`);
+    if (!fs.existsSync(this.dirpath)) {
+      throw new YargsError(`Validator directory ${this.dirpath} does not exist`);
+    }
 
     try {
-      this.lockfile.lockSync(this.lockfilePath);
+      lockFilepath(this.dirpath);
     } catch (e) {
       if (options && options.force) {
         // Ignore error, maybe log?
@@ -79,14 +73,14 @@ export class ValidatorDir {
   }
 
   static async create(baseDir: string, pubkey: string, options?: IValidatorDirOptions): Promise<ValidatorDir> {
-    return new ValidatorDir(baseDir, await getLockFile(), pubkey, options);
+    return new ValidatorDir(baseDir, pubkey, options);
   }
 
   /**
    * Removes the lockfile associated with this validator dir
    */
   close(): void {
-    this.lockfile.unlockSync(this.lockfilePath);
+    unlockFilepath(this.dirpath);
   }
 
   /**
@@ -97,7 +91,7 @@ export class ValidatorDir {
    * @param secretsDir
    */
   async votingKeypair(secretsDir: string): Promise<SecretKey> {
-    const keystorePath = path.join(this.dir, VOTING_KEYSTORE_FILE);
+    const keystorePath = path.join(this.dirpath, VOTING_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
@@ -109,7 +103,7 @@ export class ValidatorDir {
    * @param secretsDir
    */
   async withdrawalKeypair(secretsDir: string): Promise<SecretKey> {
-    const keystorePath = path.join(this.dir, WITHDRAWAL_KEYSTORE_FILE);
+    const keystorePath = path.join(this.dirpath, WITHDRAWAL_KEYSTORE_FILE);
     return await this.unlockKeypair(keystorePath, secretsDir);
   }
 
@@ -126,34 +120,12 @@ export class ValidatorDir {
   }
 
   /**
-   * Indicates if there is a file containing an eth1 deposit transaction. This can be used to
-   * check if a deposit transaction has been created.
-   *
-   * *Note*: It's possible to submit an Eth1 deposit without creating this file, so use caution
-   * when relying upon this value.
-   */
-  eth1DepositTxHashExists(): boolean {
-    return fs.existsSync(path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE));
-  }
-
-  /**
-   * Saves the `tx_hash` to a file in `this.dir`.
-   */
-  saveEth1DepositTxHash(txHash: string): void {
-    const filepath = path.join(this.dir, ETH1_DEPOSIT_TX_HASH_FILE);
-
-    if (fs.existsSync(filepath)) throw new YargsError(`ETH1_DEPOSIT_TX_HASH_FILE ${filepath} already exists`);
-
-    fs.writeFileSync(filepath, txHash);
-  }
-
-  /**
    * Attempts to read files in `this.dir` and return an `Eth1DepositData` that can be used for
    * submitting an Eth1 deposit.
    */
   eth1DepositData(): IEth1DepositData {
-    const depositDataPath = path.join(this.dir, ETH1_DEPOSIT_DATA_FILE);
-    const depositAmountPath = path.join(this.dir, ETH1_DEPOSIT_AMOUNT_FILE);
+    const depositDataPath = path.join(this.dirpath, ETH1_DEPOSIT_DATA_FILE);
+    const depositAmountPath = path.join(this.dirpath, ETH1_DEPOSIT_AMOUNT_FILE);
     const depositDataRlp = fs.readFileSync(depositDataPath, "utf8");
     const depositAmount = fs.readFileSync(depositAmountPath, "utf8");
 

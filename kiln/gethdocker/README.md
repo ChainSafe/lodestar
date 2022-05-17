@@ -12,5 +12,5 @@ docker build  . --tag geth:kiln
 
 ```bash
 cd packages/lodestar
-EL_BINARY_DIR=geth:kiln EL_SCRIPT_DIR=kiln/gethdocker EL_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
+EL_BINARY_DIR=geth:kiln EL_SCRIPT_DIR=kiln/gethdocker ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple yarn mocha test/sim/merge-interop.test.ts
 ```

@@ -48,3 +48,11 @@ export class TimeoutError extends Error {
 export function isErrorAborted(e: unknown): e is ErrorAborted {
   return e instanceof ErrorAborted;
 }
+
+/**
+ * Extend an existing error by appending a string to its `e.message`
+ */
+export function extendError(e: Error, appendMessage: string): Error {
+  e.message = `${e.message} - ${appendMessage}`;
+  return e;
+}

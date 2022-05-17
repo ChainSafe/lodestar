@@ -6,21 +6,13 @@ import {
   CachedBeaconStateAltair,
   computeStartSlotAtEpoch,
   getEffectiveBalanceIncrementsZeroInactive,
-  bellatrix,
   altair,
   computeEpochAtSlot,
 } from "@chainsafe/lodestar-beacon-state-transition";
-import {
-  IForkChoice,
-  OnBlockPrecachedData,
-  ExecutionStatus,
-  ForkChoiceError,
-  ForkChoiceErrorCode,
-} from "@chainsafe/lodestar-fork-choice";
+import {IForkChoice, OnBlockPrecachedData, ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {IMetrics} from "../../metrics/index.js";
-import {IEth1ForBlockProduction} from "../../eth1/index.js";
 import {IExecutionEngine} from "../../executionEngine/index.js";
 import {IBeaconDb} from "../../db/index.js";
 import {ZERO_HASH_HEX} from "../../constants/index.js";
@@ -40,7 +32,6 @@ const FORK_CHOICE_ATT_EPOCH_LIMIT = 1;
 
 export type ImportBlockModules = {
   db: IBeaconDb;
-  eth1: IEth1ForBlockProduction;
   forkChoice: IForkChoice;
   stateCache: StateContextCache;
   checkpointStateCache: CheckpointStateCache;
@@ -100,25 +91,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   if (justifiedCheckpoint.epoch > chain.forkChoice.getJustifiedCheckpoint().epoch) {
     const state = getStateForJustifiedBalances(chain, postState, block);
     onBlockPrecachedData.justifiedBalances = getEffectiveBalanceIncrementsZeroInactive(state);
-  }
-
-  if (
-    bellatrix.isBellatrixStateType(postState) &&
-    bellatrix.isBellatrixBlockBodyType(block.message.body) &&
-    bellatrix.isMergeTransitionBlock(postState, block.message.body)
-  ) {
-    // pow_block = get_pow_block(block.body.execution_payload.parent_hash)
-    const powBlockRootHex = toHexString(block.message.body.executionPayload.parentHash);
-    const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
-    if (!powBlock && executionStatus !== ExecutionStatus.Syncing)
-      throw Error(`merge block parent POW block not found ${powBlockRootHex}`);
-    // pow_parent = get_pow_block(pow_block.parent_hash)
-    const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
-    if (powBlock && !powBlockParent)
-      throw Error(`merge block parent's parent POW block not found ${powBlock.parentHash}`);
-    onBlockPrecachedData.powBlock = powBlock;
-    onBlockPrecachedData.powBlockParent = powBlockParent;
-    onBlockPrecachedData.isMergeTransitionBlock = true;
   }
 
   const prevFinalizedEpoch = chain.forkChoice.getFinalizedCheckpoint().epoch;
@@ -210,6 +182,21 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
       pendingEvents.push(ChainEvent.forkChoiceReorg, newHead, oldHead, distance);
       chain.metrics?.forkChoiceReorg.inc();
     }
+
+    // Lightclient server support (only after altair)
+    // - Persist state witness
+    // - Use block's syncAggregate
+    if (blockEpoch >= chain.config.ALTAIR_FORK_EPOCH) {
+      try {
+        chain.lightClientServer.onImportBlockHead(
+          block.message as altair.BeaconBlock,
+          postState as CachedBeaconStateAltair,
+          parentBlock
+        );
+      } catch (e) {
+        chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
+      }
+    }
   }
 
   // NOTE: forkChoice.fsStore.finalizedCheckpoint MUST only change is response to an onBlock event
@@ -244,21 +231,6 @@ export async function importBlock(chain: ImportBlockModules, fullyVerifiedBlock:
   // This adds the state necessary to process the next block
   chain.stateCache.add(postState);
   await chain.db.block.add(block);
-
-  // Lightclient server support (only after altair)
-  // - Persist state witness
-  // - Use block's syncAggregate
-  if (computeEpochAtSlot(block.message.slot) >= chain.config.ALTAIR_FORK_EPOCH) {
-    try {
-      chain.lightClientServer.onImportBlock(
-        block.message as altair.BeaconBlock,
-        postState as CachedBeaconStateAltair,
-        parentBlock
-      );
-    } catch (e) {
-      chain.logger.error("Error lightClientServer.onImportBlock", {slot: block.message.slot}, e as Error);
-    }
-  }
 
   // - head_tracker.register_block(block_root, parent_root, slot)
 

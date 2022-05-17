@@ -47,9 +47,12 @@ export class KeymanagerServer {
 
   constructor(optsArg: Partial<RestApiOptions>, modules: IRestApiModules) {
     this.logger = modules.logger;
+
     // Apply opts defaults
     const opts = {
       ...restApiOptionsDefault,
+      // optsArg is a Partial type, any of its properties can be undefined. If port is set to undefined,
+      // it overrides the default port value in restApiOptionsDefault to be undefined.
       ...Object.fromEntries(Object.entries(optsArg).filter(([_, v]) => v != null)),
     };
 

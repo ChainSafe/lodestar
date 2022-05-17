@@ -146,7 +146,7 @@ export async function fetchWeakSubjectivityState(
 ): Promise<{wsState: BeaconStateAllForks; wsCheckpoint: Checkpoint}> {
   try {
     let wsCheckpoint;
-    const api = getClient(config, {baseUrl: weakSubjectivityServerUrl});
+    const api = getClient({baseUrl: weakSubjectivityServerUrl}, {config});
     if (weakSubjectivityCheckpoint) {
       wsCheckpoint = getCheckpointFromArg(weakSubjectivityCheckpoint);
     } else {

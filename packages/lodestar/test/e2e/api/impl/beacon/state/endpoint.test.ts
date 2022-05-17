@@ -60,7 +60,7 @@ describe("lodestar / api / impl / state", function () {
 
       await Promise.all(validators.map((validator) => validator.start()));
 
-      const client = getClient(config, {baseUrl: `http://127.0.0.1:${restPort}`}).beacon;
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 
       const response = await client.getStateValidators("head");
       expect(response.data.length).to.be.equal(validatorCount);
@@ -96,7 +96,7 @@ describe("lodestar / api / impl / state", function () {
 
       await Promise.all(validators.map((validator) => validator.start()));
 
-      const client = getClient(config, {baseUrl: `http://127.0.0.1:${restPort}`}).beacon;
+      const client = getClient({baseUrl: `http://127.0.0.1:${restPort}`}, {config}).beacon;
 
       const response = await client.getStateValidators("head", {
         id: [filterPubKey],

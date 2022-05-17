@@ -19,6 +19,7 @@ import {ValidatorEventEmitter} from "./services/emitter.js";
 import {ValidatorStore, Signer} from "./services/validatorStore.js";
 import {computeEpochAtSlot, getCurrentSlot} from "@chainsafe/lodestar-beacon-state-transition";
 import {PubkeyHex} from "./types.js";
+import {Metrics} from "./metrics.js";
 import {MetaDataRepository} from "./repositories/metaDataRepository.js";
 
 export type ValidatorOptions = {
@@ -27,6 +28,7 @@ export type ValidatorOptions = {
   api: Api | string;
   signers: Signer[];
   logger: ILogger;
+  afterBlockDelaySlotFraction?: number;
   graffiti?: string;
 };
 
@@ -58,37 +60,44 @@ export class Validator {
   private readonly logger: ILogger;
   private state: State = {status: Status.stopped};
 
-  constructor(opts: ValidatorOptions, readonly genesis: Genesis) {
+  constructor(opts: ValidatorOptions, readonly genesis: Genesis, metrics: Metrics | null = null) {
     const {dbOps, logger, slashingProtection, signers, graffiti} = opts;
     const config = createIBeaconConfig(dbOps.config, genesis.genesisValidatorsRoot);
 
     const api =
       typeof opts.api === "string"
-        ? getClient(config, {
-            baseUrl: opts.api,
-            // Validator would need the beacon to respond within the slot
-            timeoutMs: config.SECONDS_PER_SLOT * 1000,
-            getAbortSignal: this.getAbortSignal,
-          })
+        ? getClient(
+            {
+              baseUrl: opts.api,
+              // Validator would need the beacon to respond within the slot
+              timeoutMs: config.SECONDS_PER_SLOT * 1000,
+              getAbortSignal: this.getAbortSignal,
+            },
+            {config, logger, metrics: metrics?.restApiClient}
+          )
         : opts.api;
 
     const clock = new Clock(config, logger, {genesisTime: Number(genesis.genesisTime)});
-    const validatorStore = new ValidatorStore(config, slashingProtection, signers, genesis);
-    this.indicesService = new IndicesService(logger, api, validatorStore);
-    this.emitter = new ValidatorEventEmitter();
-    this.chainHeaderTracker = new ChainHeaderTracker(logger, api, this.emitter);
+    const validatorStore = new ValidatorStore(config, slashingProtection, metrics, signers, genesis);
+    const indicesService = new IndicesService(logger, api, validatorStore, metrics);
+    const emitter = new ValidatorEventEmitter();
+    const chainHeaderTracker = new ChainHeaderTracker(logger, api, emitter);
     const loggerVc = getLoggerVc(logger, clock);
 
-    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, graffiti);
+    this.blockProposingService = new BlockProposingService(config, loggerVc, api, clock, validatorStore, metrics, {
+      graffiti,
+    });
 
     this.attestationService = new AttestationService(
       loggerVc,
       api,
       clock,
       validatorStore,
-      this.emitter,
-      this.indicesService,
-      this.chainHeaderTracker
+      emitter,
+      indicesService,
+      chainHeaderTracker,
+      metrics,
+      {afterBlockDelaySlotFraction: opts.afterBlockDelaySlotFraction}
     );
 
     this.syncCommitteeService = new SyncCommitteeService(
@@ -97,8 +106,9 @@ export class Validator {
       api,
       clock,
       validatorStore,
-      this.chainHeaderTracker,
-      this.indicesService
+      chainHeaderTracker,
+      indicesService,
+      metrics
     );
 
     this.config = config;
@@ -106,29 +116,37 @@ export class Validator {
     this.api = api;
     this.clock = clock;
     this.validatorStore = validatorStore;
+    this.indicesService = indicesService;
+    this.emitter = emitter;
+    this.chainHeaderTracker = chainHeaderTracker;
   }
 
   /** Waits for genesis and genesis time */
-  static async initializeFromBeaconNode(opts: ValidatorOptions, signal?: AbortSignal): Promise<Validator> {
+  static async initializeFromBeaconNode(
+    opts: ValidatorOptions,
+    signal?: AbortSignal,
+    metrics?: Metrics | null
+  ): Promise<Validator> {
     const {config} = opts.dbOps;
+    const {logger} = opts;
     const api =
       typeof opts.api === "string"
         ? // This new api instance can make do with default timeout as a faster timeout is
           // not necessary since this instance won't be used for validator duties
-          getClient(config, {baseUrl: opts.api, getAbortSignal: () => signal})
+          getClient({baseUrl: opts.api, getAbortSignal: () => signal}, {config, logger})
         : opts.api;
 
     const genesis = await waitForGenesis(api, opts.logger, signal);
-    opts.logger.info("Genesis available");
+    logger.info("Genesis available");
 
     const {data: externalSpecJson} = await api.config.getSpec();
     assertEqualParams(config, externalSpecJson);
-    opts.logger.info("Verified node and validator have same config");
+    logger.info("Verified node and validator have same config");
 
     await assertEqualGenesis(opts, genesis);
-    opts.logger.info("Verified node and validator have same genesisValidatorRoot");
+    logger.info("Verified node and validator have same genesisValidatorRoot");
 
-    return new Validator(opts, genesis);
+    return new Validator(opts, genesis, metrics);
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {

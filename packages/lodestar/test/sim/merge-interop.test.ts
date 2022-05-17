@@ -28,7 +28,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // EL_BINARY_DIR: File path to locate the EL executable
 // EL_SCRIPT_DIR: Directory in packages/lodestar for the EL client, from where to
 // execute post-merge/pre-merge EL scenario scripts
-// EL_PORT: EL port on localhost for hosting both engine & json rpc endpoints
+// ETH_PORT: EL port on localhost hosting non auth protected eth_ methods
 // ENGINE_PORT: Specify the port on which an jwt auth protected engine api is being hosted,
 //   typically by default at 8551 for geth. Some ELs could host it as same port as eth_ apis,
 //   but just with the engine_ methods protected. In that case this param can be skipped
@@ -36,7 +36,7 @@ import {bytesToData, dataToBytes, quantityToNum} from "../../src/eth1/provider/u
 // Example:
 // ```
 // $ EL_BINARY_DIR=/home/lion/Code/eth2.0/merge-interop/go-ethereum/build/bin \
-//   EL_SCRIPT_DIR=kiln/geth EL_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
+//   EL_SCRIPT_DIR=kiln/geth ETH_PORT=8545 ENGINE_PORT=8551 TX_SCENARIOS=simple \
 //   ../../node_modules/.bin/mocha test/sim/merge.test.ts
 // ```
 
@@ -52,8 +52,10 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   this.timeout("10min");
 
   const dataPath = fs.mkdtempSync("lodestar-test-merge-interop");
-  const jsonRpcPort = process.env.EL_PORT;
-  const enginePort = process.env.ENGINE_PORT ?? jsonRpcPort;
+  const jsonRpcPort = process.env.ETH_PORT;
+  const enginePort = process.env.ENGINE_PORT;
+
+  /** jsonRpcUrl is used only for eth transactions or to check if EL online/offline */
   const jsonRpcUrl = `http://localhost:${jsonRpcPort}`;
   const engineApiUrl = `http://localhost:${enginePort}`;
 
@@ -115,9 +117,9 @@ describe("executionEngine / ExecutionEngineHttp", function () {
   // $ ./go-ethereum/build/bin/geth --catalyst --datadir "~/ethereum/taunus" init genesis.json
   // $ ./build/bin/geth --catalyst --http --ws -http.api "engine" --datadir "~/ethereum/taunus" console
   async function runEL(elScript: string, ttd: number): Promise<{genesisBlockHash: string}> {
-    if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR || !process.env.EL_PORT) {
+    if (!process.env.EL_BINARY_DIR || !process.env.EL_SCRIPT_DIR || !process.env.ENGINE_PORT || !process.env.ETH_PORT) {
       throw Error(
-        `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}, EL_PORT: ${process.env.EL_PORT}`
+        `EL ENV must be provided, EL_BINARY_DIR: ${process.env.EL_BINARY_DIR}, EL_SCRIPT_DIR: ${process.env.EL_SCRIPT_DIR}, ENGINE_PORT: ${process.env.ENGINE_PORT}, ETH_PORT: ${process.env.ETH_PORT}`
       );
     }
 
@@ -136,7 +138,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
     await waitForELOnline(jsonRpcUrl, controller.signal);
 
     // Fetch genesis block hash
-    const genesisBlockHash = await getGenesisBlockHash(jsonRpcUrl, controller.signal);
+    const genesisBlockHash = await getGenesisBlockHash({providerUrl: engineApiUrl, jwtSecretHex}, controller.signal);
     return {genesisBlockHash};
   }
 
@@ -319,7 +321,8 @@ describe("executionEngine / ExecutionEngineHttp", function () {
         api: {rest: {enabled: true} as RestApiOptions},
         sync: {isSingleNode: true},
         network: {allowPublishToZeroPeers: true, discv5: null},
-        eth1: {enabled: true, providerUrls: [jsonRpcUrl]},
+        // Now eth deposit/merge tracker methods directly available on engine endpoints
+        eth1: {enabled: true, providerUrls: [engineApiUrl], jwtSecretHex},
         executionEngine: {urls: [engineApiUrl], jwtSecretHex},
       },
       validatorCount: validatorClientCount * validatorsPerClient,
@@ -418,7 +421,7 @@ describe("executionEngine / ExecutionEngineHttp", function () {
 
     // Assertions to make sure the end state is good
     // 1. The proper head is set
-    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [jsonRpcUrl]});
+    const rpc = new Eth1Provider({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH}, {providerUrls: [engineApiUrl], jwtSecretHex});
     const consensusHead = bn.chain.forkChoice.getHead();
     const executionHeadBlockNumber = await rpc.getBlockNumber();
     const executionHeadBlock = await rpc.getBlockByNumber(executionHeadBlockNumber);
@@ -502,10 +505,13 @@ async function isPortInUse(port: number): Promise<boolean> {
   });
 }
 
-async function getGenesisBlockHash(url: string, signal: AbortSignal): Promise<string> {
+async function getGenesisBlockHash(
+  {providerUrl, jwtSecretHex}: {providerUrl: string; jwtSecretHex?: string},
+  signal: AbortSignal
+): Promise<string> {
   const eth1Provider = new Eth1Provider(
     ({DEPOSIT_CONTRACT_ADDRESS: ZERO_HASH} as Partial<IChainConfig>) as IChainConfig,
-    {providerUrls: [url]},
+    {providerUrls: [providerUrl], jwtSecretHex},
     signal
   );
 

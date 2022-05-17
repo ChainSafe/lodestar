@@ -43,9 +43,20 @@ describe("lightclient", () => {
       args: [1, 2],
       res: {data: [lightClientUpdate]},
     },
-    getHeadUpdate: {
+    getLatestHeadUpdate: {
       args: [],
       res: {data: {syncAggregate, attestedHeader: header}},
+    },
+    getLatestFinalizedHeadUpdate: {
+      args: [],
+      res: {
+        data: {
+          syncAggregate,
+          attestedHeader: header,
+          finalizedHeader: lightClientUpdate.finalizedHeader,
+          finalityBranch: lightClientUpdate.finalityBranch,
+        },
+      },
     },
     getSnapshot: {
       args: [toHexString(root)],

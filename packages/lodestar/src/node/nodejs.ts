@@ -128,12 +128,10 @@ export class BeaconNode {
     // start db if not already started
     await db.start();
 
-    let metrics: IMetrics | null = null;
-    if (opts.metrics.enabled) {
-      if (db.metricsRegistry) {
-        metricsRegistries.push(db.metricsRegistry);
-      }
-      metrics = createMetrics(opts.metrics, config, anchorState, metricsRegistries);
+    const metrics = opts.metrics.enabled
+      ? createMetrics(opts.metrics, config, anchorState, logger.child({module: "VMON"}), metricsRegistries)
+      : null;
+    if (metrics) {
       initBeaconMetrics(metrics, anchorState);
     }
 
@@ -199,7 +197,7 @@ export class BeaconNode {
     });
 
     const metricsServer = metrics
-      ? new HttpMetricsServer(opts.metrics, {metrics, logger: logger.child(opts.logger.metrics)})
+      ? new HttpMetricsServer(opts.metrics, {register: metrics.register, logger: logger.child(opts.logger.metrics)})
       : undefined;
     if (metricsServer) {
       await metricsServer.start();

@@ -206,7 +206,7 @@ export class BeaconChain implements IBeaconChain {
     this.emitter = emitter;
     this.lightClientServer = lightClientServer;
 
-    this.archiver = new Archiver(db, this, logger, signal);
+    this.archiver = new Archiver(db, this, logger, signal, opts);
     new PrecomputeNextEpochTransitionScheduler(this, this.config, metrics, this.logger, signal);
 
     handleChainEvents.bind(this)(this.abortController.signal);

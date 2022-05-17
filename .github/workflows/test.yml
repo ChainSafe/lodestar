@@ -42,8 +42,8 @@ jobs:
           key: spec-test-data-${{ hashFiles('packages/validator/test/spec/params.ts') }}
 
       # Misc sanity checks
-      - name: Lint Grafana Dashboard
-        run: yarn validate-gdash
+      - name: Lint Grafana dashboards
+        run: node scripts/validate-grafana-dashboard.mjs ./dashboards
       - name: Test root binary exists
         run: ./lodestar --version
       - name: Reject yarn.lock changes

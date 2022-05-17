@@ -53,11 +53,11 @@ export function getBlockPhase0(
     const proposerIndex = proposerSlashingStartIndex + i * exitedIndexStep;
     proposerSlashings.push({
       signedHeader1: {
-        message: {slot: 1_800_000, proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
+        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootA, stateRoot: rootB, bodyRoot: rootC},
         signature: emptySig,
       },
       signedHeader2: {
-        message: {slot: 1_800_000, proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
+        message: {slot: BigInt(1_800_000), proposerIndex, parentRoot: rootC, stateRoot: rootA, bodyRoot: rootB},
         signature: emptySig,
       },
     });
@@ -71,12 +71,12 @@ export function getBlockPhase0(
     const startIndex = attesterSlashingStartIndex + i * bitsLen * exitedIndexStep;
     const attestingIndices = linspace(startIndex, bitsLen, exitedIndexStep);
 
-    const attData: phase0.AttestationData = {
-      slot: attSlot,
-      index: 0,
+    const attData: phase0.AttestationDataBigint = {
+      slot: BigInt(attSlot),
+      index: BigInt(0),
       beaconBlockRoot: rootA,
-      source: {epoch: stateEpoch - 3, root: rootC},
-      target: {epoch: attEpoch, root: rootA},
+      source: {epoch: BigInt(stateEpoch - 3), root: rootC},
+      target: {epoch: BigInt(attEpoch), root: rootA},
     };
     attesterSlashings.push({
       attestation1: {

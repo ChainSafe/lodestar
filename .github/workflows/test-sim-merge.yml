@@ -3,8 +3,8 @@ name: Sim merge tests
 on: [pull_request, push]
 
 env:
-  GETH_COMMIT: e0e8bf31c5d44f7de33ce774b221debf2c42256c
-  NETHERMIND_COMMIT: 29ffe2630afb69120004ff79bde70d37a3b80b7b
+  GETH_COMMIT: bb5633c5ee3975ce016636066ec790054ec469e4
+  NETHERMIND_COMMIT: 00b50532543824dbac65e8b7ab09484e44992c27
 
 jobs:
   sim-merge-tests:
@@ -51,7 +51,7 @@ jobs:
           EL_BINARY_DIR: ../../go-ethereum/build/bin
           EL_SCRIPT_DIR: kiln/geth
           ENGINE_PORT: 8551
-          EL_PORT: 8545
+          ETH_PORT: 8545
           TX_SCENARIOS: simple
 
       # Install Nethermind merge interop
@@ -69,8 +69,8 @@ jobs:
         env:
           EL_BINARY_DIR: ../../nethermind/src/Nethermind/Nethermind.Runner
           EL_SCRIPT_DIR: kiln/nethermind
-          EL_PORT: 8550
           ENGINE_PORT: 8551
+          ETH_PORT: 8545
 
       - name: Upload debug log test files
         if: ${{ always() }}

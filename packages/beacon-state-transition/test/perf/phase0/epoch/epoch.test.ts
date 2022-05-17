@@ -7,7 +7,7 @@ import {
   CachedBeaconStatePhase0,
   beforeProcessEpoch,
 } from "../../../../src/index.js";
-import {beforeValue, getNetworkCachedState, LazyValue} from "../../util";
+import {getNetworkCachedState, beforeValue, LazyValue} from "../../../utils/index.js";
 import {processParticipationRecordUpdates} from "../../../../src/phase0/epoch/processParticipationRecordUpdates.js";
 import {StateEpoch} from "../../types.js";
 import {phase0State} from "../../params.js";

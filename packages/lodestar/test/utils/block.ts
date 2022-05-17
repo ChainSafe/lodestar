@@ -75,6 +75,19 @@ export function generateEmptySignedBlockHeader(): phase0.SignedBeaconBlockHeader
   };
 }
 
+export function generateSignedBlockHeaderBn(): phase0.SignedBeaconBlockHeaderBigint {
+  return {
+    message: {
+      slot: BigInt(0),
+      proposerIndex: 0,
+      parentRoot: Buffer.alloc(32),
+      stateRoot: Buffer.alloc(32),
+      bodyRoot: Buffer.alloc(32),
+    },
+    signature: EMPTY_SIGNATURE,
+  };
+}
+
 export function generateSignedBlock(
   override: RecursivePartial<phase0.SignedBeaconBlock> = {}
 ): phase0.SignedBeaconBlock {

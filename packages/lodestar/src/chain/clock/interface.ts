@@ -29,4 +29,8 @@ export interface IBeaconClock {
    * Rejects if the clock is aborted
    */
   waitForSlot(slot: Slot): Promise<void>;
+  /**
+   * Return second from a slot to either toSec or now.
+   */
+  secFromSlot(slot: Slot, toSec?: number): number;
 }

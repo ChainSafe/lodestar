@@ -5,6 +5,12 @@ import {logOptions, beaconPathsOptions} from "../beacon/options.js";
 import {IBeaconPaths} from "../beacon/paths.js";
 import {KeymanagerArgs, keymanagerOptions} from "../../options/keymanagerOptions.js";
 
+export const validatorMetricsDefaultOptions = {
+  enabled: false,
+  port: 5064,
+  address: "127.0.0.1",
+};
+
 export type IValidatorCliArgs = IAccountValidatorArgs &
   ILogArgs & {
     logFile: IBeaconPaths["logFile"];
@@ -12,6 +18,7 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     server: string;
     force: boolean;
     graffiti: string;
+    afterBlockDelaySlotFraction?: number;
     importKeystoresPath?: string[];
     importKeystoresPassword?: string;
     externalSignerUrl?: string;
@@ -20,6 +27,10 @@ export type IValidatorCliArgs = IAccountValidatorArgs &
     interopIndexes?: string;
     fromMnemonic?: string;
     mnemonicIndexes?: string;
+
+    "metrics.enabled"?: boolean;
+    "metrics.port"?: number;
+    "metrics.address"?: string;
   } & KeymanagerArgs;
 
 export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
@@ -49,6 +60,12 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Specify your custom graffiti to be included in blocks (plain UTF8 text, 32 characters max)",
     // Don't use a default here since it should be computed only if necessary by getDefaultGraffiti()
     type: "string",
+  },
+
+  afterBlockDelaySlotFraction: {
+    hidden: true,
+    description: "Delay before publishing attestations if block comes early, as a fraction of SECONDS_PER_SLOT",
+    type: "number",
   },
 
   importKeystoresPath: {
@@ -87,6 +104,29 @@ export const validatorOptions: ICliCommandOptions<IValidatorCliArgs> = {
     description: "Fetch then list of pubkeys to validate from an external signer",
     type: "boolean",
     group: "External signer",
+  },
+
+  // Metrics
+
+  "metrics.enabled": {
+    type: "boolean",
+    description: "Enable the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.enabled),
+    group: "metrics",
+  },
+
+  "metrics.port": {
+    type: "number",
+    description: "Listen TCP port for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.port),
+    group: "metrics",
+  },
+
+  "metrics.address": {
+    type: "string",
+    description: "Listen address for the Prometheus metrics HTTP server",
+    defaultDescription: String(validatorMetricsDefaultOptions.address),
+    group: "metrics",
   },
 
   // For testing only

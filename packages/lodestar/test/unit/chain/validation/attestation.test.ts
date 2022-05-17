@@ -86,7 +86,7 @@ describe("chain / validation / attestation", () => {
     // Set beaconBlockRoot to a root not known by the fork choice
     attestation.data.beaconBlockRoot = UNKNOWN_ROOT;
 
-    await expectError(chain, attestation, subnet, AttestationErrorCode.UNKNOWN_BEACON_BLOCK_ROOT);
+    await expectError(chain, attestation, subnet, AttestationErrorCode.UNKNOWN_OR_PREFINALIZED_BEACON_BLOCK_ROOT);
   });
 
   it("INVALID_TARGET_ROOT", async () => {

@@ -50,7 +50,7 @@ describe("SyncCommitteeService", function () {
 
   it("Should produce, sign, and publish a sync committee + contribution", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const syncCommitteeService = new SyncCommitteeService(
       config,
       loggerVc,
@@ -58,7 +58,8 @@ describe("SyncCommitteeService", function () {
       clock,
       validatorStore,
       chainHeaderTracker,
-      indicesService
+      indicesService,
+      null
     );
 
     const beaconBlockRoot = Buffer.alloc(32, 0x4d);

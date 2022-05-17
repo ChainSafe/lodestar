@@ -13,7 +13,7 @@ import {initializeOptionsAndConfig, persistOptionsAndConfig} from "../init/handl
 import {IBeaconArgs} from "./options.js";
 import {getBeaconPaths} from "./paths.js";
 import {initBeaconState} from "./initBeaconState.js";
-import {getVersion, getVersionGitData} from "../../util/version.js";
+import {getVersionData} from "../../util/version.js";
 import {deleteOldPeerstorePreV036} from "../../migrations/index.js";
 
 /**
@@ -23,16 +23,15 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
   const {beaconNodeOptions, config} = await initializeOptionsAndConfig(args);
   await persistOptionsAndConfig(args);
 
-  const version = getVersion();
-  const gitData = getVersionGitData();
+  const {version, commit} = getVersionData();
   const beaconPaths = getBeaconPaths(args);
   // TODO: Rename db.name to db.path or db.location
   beaconNodeOptions.set({db: {name: beaconPaths.dbDir}});
   beaconNodeOptions.set({chain: {persistInvalidSszObjectsDir: beaconPaths.persistInvalidSszObjectsDir}});
   // Add metrics metadata to show versioning + network info in Prometheus + Grafana
-  beaconNodeOptions.set({metrics: {metadata: {...gitData, version, network: args.network}}});
+  beaconNodeOptions.set({metrics: {metadata: {version, commit, network: args.network}}});
   // Add detailed version string for API node/version endpoint
-  beaconNodeOptions.set({api: {version: version}});
+  beaconNodeOptions.set({api: {version}});
 
   // ENR setup
   const peerId = await readPeerId(beaconPaths.peerIdFile);
@@ -50,7 +49,7 @@ export async function beaconHandler(args: IBeaconArgs & IGlobalArgs): Promise<vo
     abortController.abort();
   }, logger.info.bind(logger));
 
-  logger.info("Lodestar", {version: version, network: args.network});
+  logger.info("Lodestar", {network: args.network, version, commit});
   if (ACTIVE_PRESET === PresetName.minimal) logger.info("ACTIVE_PRESET == minimal preset");
 
   // peerstore migration

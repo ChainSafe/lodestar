@@ -28,4 +28,9 @@ export class ClockStatic implements IBeaconClock {
   async waitForSlot(): Promise<void> {
     //
   }
+
+  secFromSlot(slot: number, toSec?: number): number {
+    // SECONDS_PER_SLOT = 6 in minimal config
+    return (toSec ?? Date.now() / 1000) - slot * 6;
+  }
 }

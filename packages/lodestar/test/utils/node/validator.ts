@@ -127,8 +127,8 @@ export async function getAndInitDevValidators({
   const validators: Promise<Validator>[] = [];
   const secretKeys: SecretKey[] = [];
 
-  for (let i = 0; i < validatorClientCount; i++) {
-    const startIndexVc = startIndex + i * validatorClientCount;
+  for (let clientIndex = 0; clientIndex < validatorClientCount; clientIndex++) {
+    const startIndexVc = startIndex + clientIndex * validatorsPerClient;
     const endIndex = startIndexVc + validatorsPerClient - 1;
     const logger = testLogger(`Vali ${startIndexVc}-${endIndex}`, testLoggerOpts);
     const tmpDir = tmp.dirSync({unsafeCleanup: true});

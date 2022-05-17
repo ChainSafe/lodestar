@@ -41,8 +41,6 @@ module.exports = {
       //classes and types must be in PascalCase
       {selector: ["typeLike", "enum"], format: ["PascalCase"]},
       {selector: "enumMember", format: null},
-      //interface must start with I
-      {selector: "interface", format: ["PascalCase"], prefix: ["I"]},
       //ignore rule for quoted stuff
       {
         selector: [
@@ -154,14 +152,13 @@ module.exports = {
     // TEMP Disabled while eslint-plugin-import support ESM (Typescript does support it) https://github.com/import-js/eslint-plugin-import/issues/2170
     "import/no-unresolved": "off",
 
-    // TEMP disable this check until full migration is complete
-    // "@chainsafe/node/file-extension-in-import": [
-    //   "error",
-    //   "never",
-    //   {
-    //     "esm": true
-    //   }
-    // ],
+    "@chainsafe/node/file-extension-in-import": [
+      "error",
+      "never",
+      {
+        "esm": true
+      }
+    ],
   },
   settings: {
     "import/core-modules": [

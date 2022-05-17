@@ -5,9 +5,9 @@ import {hideBin} from "yargs/helpers";
 import {cmds} from "./cmds/index.js";
 import {globalOptions, rcConfigOption} from "./options/index.js";
 import {registerCommandToYargs} from "./util/index.js";
-import {getVersion} from "./util/version.js";
+import {getVersionData} from "./util/version.js";
 
-const version = getVersion();
+const {version} = getVersionData();
 const topBanner = `🌟 Lodestar: TypeScript Implementation of the Ethereum Consensus Beacon Chain.
   * Version: ${version}
   * by ChainSafe Systems, 2018-2022`;

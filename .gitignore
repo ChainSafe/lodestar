@@ -46,7 +46,7 @@ docs/reference/cli.md
 .lodestar
 *.ssz
 .pyrmont
-packages/lodestar/.tmpdb/
+.tmpdb
 
 # Wallet CLI artifacts
 .pass

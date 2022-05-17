@@ -25,7 +25,7 @@ export function getDebugApi({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state};
+        return {data: state.toValue()};
       }
     },
 
@@ -36,7 +36,7 @@ export function getDebugApi({
         // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-explicit-any
         return state.serialize() as any;
       } else {
-        return {data: state, version: config.getForkName(state.slot)};
+        return {data: state.toValue(), version: config.getForkName(state.slot)};
       }
     },
 

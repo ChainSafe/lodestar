@@ -36,7 +36,6 @@ import {
   GOSSIP_D_LOW,
 } from "./scoringParameters.js";
 import {Eth2Context} from "../../chain/index.js";
-import {computeAllPeersScoreWeights} from "./scoreMetrics.js";
 import {MetricsRegister, TopicLabel, TopicStrToLabel} from "libp2p-gossipsub/src/metrics";
 import {PeersData} from "../peers/peersData.js";
 import {ClientKind} from "../peers/client.js";
@@ -151,12 +150,13 @@ export class Eth2Gossipsub extends Gossipsub {
   /**
    * Publish a `GossipObject` on a `GossipTopic`
    */
-  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<void> {
+  async publishObject<K extends GossipType>(topic: GossipTopicMap[K], object: GossipTypeMap[K]): Promise<number> {
     const topicStr = this.getGossipTopicString(topic);
     const sszType = getGossipSSZType(topic);
     const messageData = (sszType.serialize as (object: GossipTypeMap[GossipType]) => Uint8Array)(object);
     const sentPeers = await this.publish(topicStr, messageData);
     this.logger.verbose("Publish to topic", {topic: topicStr, sentPeers});
+    return sentPeers;
   }
 
   /**
@@ -185,17 +185,17 @@ export class Eth2Gossipsub extends Gossipsub {
     await this.publishObject<GossipType.beacon_block>({type: GossipType.beacon_block, fork}, signedBlock);
   }
 
-  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<void> {
+  async publishBeaconAggregateAndProof(aggregateAndProof: phase0.SignedAggregateAndProof): Promise<number> {
     const fork = this.config.getForkName(aggregateAndProof.message.aggregate.data.slot);
-    await this.publishObject<GossipType.beacon_aggregate_and_proof>(
+    return await this.publishObject<GossipType.beacon_aggregate_and_proof>(
       {type: GossipType.beacon_aggregate_and_proof, fork},
       aggregateAndProof
     );
   }
 
-  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<void> {
+  async publishBeaconAttestation(attestation: phase0.Attestation, subnet: number): Promise<number> {
     const fork = this.config.getForkName(attestation.data.slot);
-    await this.publishObject<GossipType.beacon_attestation>(
+    return await this.publishObject<GossipType.beacon_attestation>(
       {type: GossipType.beacon_attestation, fork, subnet},
       attestation
     );
@@ -207,7 +207,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishProposerSlashing(proposerSlashing: phase0.ProposerSlashing): Promise<void> {
-    const fork = this.config.getForkName(proposerSlashing.signedHeader1.message.slot);
+    const fork = this.config.getForkName(Number(proposerSlashing.signedHeader1.message.slot as bigint));
     await this.publishObject<GossipType.proposer_slashing>(
       {type: GossipType.proposer_slashing, fork},
       proposerSlashing
@@ -215,7 +215,7 @@ export class Eth2Gossipsub extends Gossipsub {
   }
 
   async publishAttesterSlashing(attesterSlashing: phase0.AttesterSlashing): Promise<void> {
-    const fork = this.config.getForkName(attesterSlashing.attestation1.data.slot);
+    const fork = this.config.getForkName(Number(attesterSlashing.attestation1.data.slot as bigint));
     await this.publishObject<GossipType.attester_slashing>(
       {type: GossipType.attester_slashing, fork},
       attesterSlashing
@@ -331,36 +331,13 @@ export class Eth2Gossipsub extends Gossipsub {
     }
 
     // Access once for all calls below
-    const {scoreByThreshold, scoreWeights} = metrics.gossipPeer;
-    scoreByThreshold.set({threshold: "graylist"}, peerCountScoreGraylist);
-    scoreByThreshold.set({threshold: "publish"}, peerCountScorePublish);
-    scoreByThreshold.set({threshold: "gossip"}, peerCountScoreGossip);
-    scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
-
-    // Breakdown on each score weight
-    // TODO: consider removing as it's duplicate to new gossipsub
-    const sw = computeAllPeersScoreWeights(
-      peers.keys(),
-      score.peerStats,
-      score.params,
-      score.peerIPs,
-      this.gossipTopicCache
-    );
-
-    for (const [topic, wsTopic] of sw.byTopic) {
-      scoreWeights.set({topic, p: "p1"}, wsTopic.p1w);
-      scoreWeights.set({topic, p: "p2"}, wsTopic.p2w);
-      scoreWeights.set({topic, p: "p3"}, wsTopic.p3w);
-      scoreWeights.set({topic, p: "p3b"}, wsTopic.p3bw);
-      scoreWeights.set({topic, p: "p4"}, wsTopic.p4w);
-    }
-
-    scoreWeights.set({p: "p5"}, sw.p5w);
-    scoreWeights.set({p: "p6"}, sw.p6w);
-    scoreWeights.set({p: "p7"}, sw.p7w);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "graylist"}, peerCountScoreGraylist);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "publish"}, peerCountScorePublish);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "gossip"}, peerCountScoreGossip);
+    metrics.gossipPeer.scoreByThreshold.set({threshold: "mesh"}, peerCountScoreMesh);
 
     // Register full score too
-    metrics.gossipPeer.score.set(sw.score);
+    metrics.gossipPeer.score.set(gossipScores);
   }
 
   private onGossipsubMessage(event: GossipsubEvents["gossipsub:message"]): void {

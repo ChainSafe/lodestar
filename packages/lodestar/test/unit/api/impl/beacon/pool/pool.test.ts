@@ -1,5 +1,6 @@
 import {expect} from "chai";
 import sinon from "sinon";
+import {generateAttestationDataBigint} from "@chainsafe/lodestar-beacon-state-transition/test/utils/attestation";
 import {getBeaconPoolApi} from "../../../../../../src/api/impl/beacon/pool/index.js";
 import {Network} from "../../../../../../src/network/network.js";
 import {
@@ -15,7 +16,7 @@ import * as voluntaryExitValidation from "../../../../../../src/chain/validation
 
 import {phase0} from "@chainsafe/lodestar-types";
 import {Eth2Gossipsub} from "../../../../../../src/network/gossip/index.js";
-import {generateEmptySignedBlockHeader} from "../../../../../utils/block.js";
+import {generateSignedBlockHeaderBn} from "../../../../../utils/block.js";
 import {setupApiImplTestServer} from "../../index.test";
 import {SinonStubFn} from "../../../../../utils/types.js";
 import {testLogger} from "../../../../../utils/logger.js";
@@ -88,12 +89,12 @@ describe.skip("beacon pool api impl", function () {
     const atterterSlashing: phase0.AttesterSlashing = {
       attestation1: {
         attestingIndices: [0],
-        data: generateAttestationData(0, 1, 0, 1),
+        data: generateAttestationDataBigint(0, 1),
         signature: Buffer.alloc(96),
       },
       attestation2: {
         attestingIndices: [0],
-        data: generateAttestationData(0, 1, 0, 1),
+        data: generateAttestationDataBigint(0, 1),
         signature: Buffer.alloc(96),
       },
     };
@@ -113,8 +114,8 @@ describe.skip("beacon pool api impl", function () {
 
   describe("submitPoolProposerSlashing", function () {
     const proposerSlashing: phase0.ProposerSlashing = {
-      signedHeader1: generateEmptySignedBlockHeader(),
-      signedHeader2: generateEmptySignedBlockHeader(),
+      signedHeader1: generateSignedBlockHeaderBn(),
+      signedHeader2: generateSignedBlockHeaderBn(),
     };
 
     it("should broadcast", async function () {

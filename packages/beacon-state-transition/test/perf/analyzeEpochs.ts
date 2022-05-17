@@ -13,7 +13,7 @@ import {
 } from "../../src/index.js";
 import {Validator} from "../../src/phase0/index.js";
 import {csvAppend, readCsv} from "./csv.js";
-import {getInfuraBeaconUrl} from "./infura.js";
+import {getInfuraBeaconUrl} from "../utils/infura.js";
 import {createCachedBeaconStateTest} from "../utils/state.js";
 
 // Understand the real network characteristics regarding epoch transitions to accurately produce performance test data.
@@ -78,7 +78,7 @@ async function analyzeEpochs(network: NetworkName, fromEpoch?: number): Promise<
 
   const baseUrl = getInfuraBeaconUrl(network);
   // Long timeout to download states
-  const client = getClient(config, {baseUrl, timeoutMs: 5 * 60 * 1000});
+  const client = getClient({baseUrl, timeoutMs: 5 * 60 * 1000}, {config});
 
   // Start at epoch 1 since 0 will go and fetch state at slot -1
   const maxEpoch = fromEpoch ?? Math.max(1, ...currCsv.map((row) => row.epoch));

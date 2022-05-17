@@ -357,7 +357,13 @@ export class PeerDiscovery {
    * Peers that have been returned by discovery requests are dialed here if they are suitable.
    */
   private async dialPeer(cachedPeer: CachedENR): Promise<void> {
-    this.peersToConnect--;
+    // we dial a peer when:
+    // - this.peersToConnect > 0
+    // - or the peer subscribes to a subnet that we want
+    // If this.peersToConnect is 3 while we need to dial 5 subnet peers, in that case we want this.peersToConnect
+    // to be 0 instead of a negative value. The next heartbeat may increase this.peersToConnect again if some dials
+    // are not successful.
+    this.peersToConnect = Math.max(this.peersToConnect - 1, 0);
 
     const {peerId, multiaddrTCP} = cachedPeer;
 
@@ -376,7 +382,6 @@ export class PeerDiscovery {
     // Note: You must listen to the connected events to listen for a successful conn upgrade
     try {
       await this.libp2p.dial(peerId);
-
       timer?.({status: "success"});
       this.logger.debug("Dialed discovered peer", {peer: peerIdShort});
     } catch (e) {

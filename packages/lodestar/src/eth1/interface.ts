@@ -60,7 +60,7 @@ export type Eth1Block = {
 
 export type PowMergeBlock = {
   number: number;
-  blockhash: RootHex;
+  blockHash: RootHex;
   parentHash: RootHex;
   totalDifficulty: bigint;
 };

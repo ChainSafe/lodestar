@@ -46,7 +46,7 @@ describe("AttestationService", function () {
 
   it("Should produce, sign, and publish an attestation + aggregate", async () => {
     const clock = new ClockMock();
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const attestationService = new AttestationService(
       loggerVc,
       api,
@@ -54,7 +54,8 @@ describe("AttestationService", function () {
       validatorStore,
       emitter,
       indicesService,
-      chainHeadTracker
+      chainHeadTracker,
+      null
     );
 
     const attestation = generateEmptyAttestation();

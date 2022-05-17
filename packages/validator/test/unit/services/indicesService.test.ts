@@ -26,7 +26,7 @@ describe("IndicesService", function () {
   });
 
   it("Should remove pubkey", async function () {
-    const indicesService = new IndicesService(logger, api, validatorStore);
+    const indicesService = new IndicesService(logger, api, validatorStore, null);
     const firstValidatorIndex = 0;
     const secondValidatorIndex = 1;
 

@@ -40,20 +40,36 @@ jobs:
         run: yarn build
         if: steps.cache-deps.outputs.cache-hit == 'true'
       # </common-build>
+      - name: Get version
+        id: version
+        run: |
+          PACKAGE_VERSION=$(node -p "require('./packages/lodestar/package.json').version")
+          export VERSION=${PACKAGE_VERSION}-dev.${GITHUB_SHA:0:10}
+          echo "::set-output name=version::$VERSION"
+          echo PACKAGE_VERSION $PACKAGE_VERSION GITHUB_SHA $GITHUB_SHA VERSION $VERSION
+
+      - name: Change and commit version
+        # Write version before publishing so it's picked up by `lerna publish from-package`.
+        # It must also be committed to ensure a clean git tree, otherwise `lerna publish` errors.
+        # This "temp" commit doesn't change the actually release commit which is captured above.
+        # git-data is also correct, since it's generated at build time, before `lerna version` run.
+        run: |
+          node_modules/.bin/lerna version ${{ steps.version.outputs.version }} \
+          --yes \
+          --no-git-tag-version
+
+          git config user.name 'temp'
+          git config user.email 'temp@github.com'
+          git commit -am "${{ steps.version.outputs.version }}"
 
       - name: Publish to npm registry
-        # Just use lerna publish with --canary option. Using 'from-package' ignore other options
-        # and only compares against the verison in package.json, and skips release if already
-        # published.
+        # Note: before https://github.com/ChainSafe/lodestar/commit/28e2c74cf0f1bede8b09c8c9fec26f54b367e3fd
+        # We used `lerna publish --canary` option. However, since we now publish must version on branches,
+        # i.e. v0.35.x branch, lerna fails to detect the latest version and publishes canary versions as
+        # `0.34.0-dev.173+28e2c74cf0` instead of `0.36.0-dev.4+28e2c74cf0`, which creates confusion.
         #
         # --no-git-reset:
         #   Do not delete code version artifacts so the next step can pick the version
-        #
-        # --canary:
-        #   Format version with commit (1.1.0-alpha.0+81e3b443). Make sure the previous
-        #   released tags are not lightweight("commit" type), but proper annotated ("tag" type)
-        #   Otherwise the version canary will generate will be from last annotated tag type
-        #   Best way to create such a tag is by using 'git tag -a' or using lerna publish!
         #
         # --dist-tag next:
         #   Make this nightly version installable with `@next`
@@ -71,17 +87,15 @@ jobs:
         #
         # NOTE: Using --preid dev.$(git rev-parse --short=7 HEAD) results in `0.24.3-dev.3ddb91d.0+3ddb91d`
         run: |
-          node_modules/.bin/lerna publish --yes --no-verify-access \
-          --canary --dist-tag next --no-git-reset --force-publish \
-          --preid dev --exact
+          node_modules/.bin/lerna publish from-package \
+          --yes \
+          --no-verify-access \
+          --dist-tag next \
+          --no-git-reset \
+          --force-publish \
+          --exact
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - name: Get version
-        id: version
-        run: |
-          VERSION=$(node -p "require('./packages/lodestar/package.json').version")
-          echo VERSION $VERSION
-          echo "::set-output name=version::$VERSION"
     outputs:
       version: ${{ steps.version.outputs.version }}
 

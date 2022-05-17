@@ -7,7 +7,7 @@ import {defaultChainOptions, IChainOptions} from "../chain/options.js";
 import {defaultDbOptions, IDatabaseOptions} from "../db/options.js";
 import {defaultEth1Options, Eth1Options} from "../eth1/options.js";
 import {defaultLoggerOptions, IBeaconLoggerOptions} from "./loggerOptions.js";
-import {defaultMetricsOptions, IMetricsOptions} from "../metrics/options.js";
+import {defaultMetricsOptions, MetricsOptions} from "../metrics/options.js";
 import {defaultNetworkOptions, INetworkOptions} from "../network/options.js";
 import {defaultSyncOptions, SyncOptions} from "../sync/options.js";
 import {defaultExecutionEngineOpts, ExecutionEngineOpts} from "../executionEngine/index.js";
@@ -21,7 +21,7 @@ export interface IBeaconNodeOptions {
   eth1: Eth1Options;
   executionEngine: ExecutionEngineOpts;
   logger: IBeaconLoggerOptions;
-  metrics: IMetricsOptions;
+  metrics: MetricsOptions;
   network: INetworkOptions;
   sync: SyncOptions;
 }

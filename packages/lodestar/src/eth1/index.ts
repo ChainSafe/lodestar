@@ -92,7 +92,7 @@ export class Eth1ForBlockProduction implements IEth1ForBlockProduction {
 
   getTerminalPowBlock(): Root | null {
     const block = this.eth1MergeBlockTracker.getTerminalPowBlock();
-    return block && fromHexString(block.blockhash);
+    return block && fromHexString(block.blockHash);
   }
 
   mergeCompleted(): void {

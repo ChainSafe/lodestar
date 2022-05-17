@@ -88,15 +88,15 @@ interface IBlockProposerData {
 
 function getMockProposerSlashings(data1: IBlockProposerData, data2: IBlockProposerData): phase0.ProposerSlashing {
   return {
-    signedHeader1: getMockSignedBeaconBlockHeader(data1),
-    signedHeader2: getMockSignedBeaconBlockHeader(data2),
+    signedHeader1: getMockSignedBeaconBlockHeaderBigint(data1),
+    signedHeader2: getMockSignedBeaconBlockHeaderBigint(data2),
   };
 }
 
-function getMockSignedBeaconBlockHeader(data: IBlockProposerData): phase0.SignedBeaconBlockHeader {
+function getMockSignedBeaconBlockHeaderBigint(data: IBlockProposerData): phase0.SignedBeaconBlockHeaderBigint {
   return {
     message: {
-      slot: 0,
+      slot: BigInt(0),
       proposerIndex: data.proposerIndex,
       parentRoot: ZERO_HASH,
       stateRoot: ZERO_HASH,
@@ -113,15 +113,15 @@ interface IIndexAttestationData {
 
 function getMockAttesterSlashings(data1: IIndexAttestationData, data2: IIndexAttestationData): phase0.AttesterSlashing {
   return {
-    attestation1: getMockIndexAttestation(data1),
-    attestation2: getMockIndexAttestation(data2),
+    attestation1: getMockIndexAttestationBn(data1),
+    attestation2: getMockIndexAttestationBn(data2),
   };
 }
 
-function getMockIndexAttestation(data: IIndexAttestationData): phase0.IndexedAttestation {
+function getMockIndexAttestationBn(data: IIndexAttestationData): phase0.IndexedAttestationBigint {
   return {
     attestingIndices: data.attestingIndices,
-    data: getAttestationData(),
+    data: getAttestationDataBigint(),
     signature: data.signature,
   };
 }
@@ -131,14 +131,18 @@ function getAttestationData(): phase0.AttestationData {
     slot: 0,
     index: 0,
     beaconBlockRoot: ZERO_HASH,
-    source: {
-      epoch: 0,
-      root: ZERO_HASH,
-    },
-    target: {
-      epoch: 0,
-      root: ZERO_HASH,
-    },
+    source: {epoch: 0, root: ZERO_HASH},
+    target: {epoch: 0, root: ZERO_HASH},
+  };
+}
+
+function getAttestationDataBigint(): phase0.AttestationDataBigint {
+  return {
+    slot: BigInt(0),
+    index: BigInt(0),
+    beaconBlockRoot: ZERO_HASH,
+    source: {epoch: BigInt(0), root: ZERO_HASH},
+    target: {epoch: BigInt(0), root: ZERO_HASH},
   };
 }
 

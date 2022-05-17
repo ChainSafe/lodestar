@@ -6,7 +6,7 @@ import {CoordType, SecretKey} from "@chainsafe/bls/types";
 import {deriveEth2ValidatorKeys, deriveKeyFromMnemonic} from "@chainsafe/bls-keygen";
 import {interopSecretKey} from "@chainsafe/lodestar-beacon-state-transition";
 import {externalSignerGetKeys} from "@chainsafe/lodestar-validator";
-import {LOCK_FILE_EXT, getLockFile} from "@chainsafe/lodestar-keymanager-server";
+import {lockFilepath, unlockFilepath} from "@chainsafe/lodestar-keymanager-server";
 import {defaultNetwork, IGlobalArgs} from "../../options/index.js";
 import {parseRange, stripOffNewlines, YargsError} from "../../util/index.js";
 import {ValidatorDirManager} from "../../validatorDir/index.js";
@@ -54,13 +54,9 @@ export async function getLocalSecretKeys(
 
     const keystorePaths = args.importKeystoresPath.map((filepath) => resolveKeystorePaths(filepath)).flat(1);
 
-    // Create lock files for all keystores
-    const lockFile = await getLockFile();
-    const lockFilePaths = keystorePaths.map((keystorePath) => keystorePath + LOCK_FILE_EXT);
-
     // Lock all keystores first
-    for (const lockFilePath of lockFilePaths) {
-      lockFile.lockSync(lockFilePath);
+    for (const keystorePath of keystorePaths) {
+      lockFilepath(keystorePath);
     }
 
     const secretKeys = await Promise.all(
@@ -72,8 +68,9 @@ export async function getLocalSecretKeys(
     return {
       secretKeys,
       unlockSecretKeys: () => {
-        for (const lockFilePath of lockFilePaths) {
-          lockFile.unlockSync(lockFilePath);
+        for (const keystorePath of keystorePaths) {
+          // Should not throw if lock file is already deleted
+          unlockFilepath(keystorePath);
         }
       },
     };

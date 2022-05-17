@@ -1,4 +1,4 @@
-import {IChainConfig, chainConfigToJson} from "@chainsafe/lodestar-config";
+import {IChainConfig, chainConfigToJson, defaultChainConfig} from "@chainsafe/lodestar-config";
 
 export class NotEqualParamsError extends Error {}
 
@@ -6,15 +6,23 @@ export class NotEqualParamsError extends Error {}
  * Assert localConfig values match externalSpecJson. externalSpecJson may contain more values than localConfig.
  */
 export function assertEqualParams(localConfig: IChainConfig, externalSpecJson: Record<string, string>): void {
-  const params1Json = chainConfigToJson(localConfig) as Record<string, unknown>;
-  const params2Json = externalSpecJson;
+  const localConfigJson = chainConfigToJson(localConfig) as Record<string, unknown>;
+
+  const externalSpecJsonWithDefaults = {
+    // fill missing properties in remote config with spec default values
+    ...chainConfigToJson(defaultChainConfig),
+    ...externalSpecJson,
+  };
 
   const errors: string[] = [];
 
   // Ensure only that the localConfig values match the remote spec
-  for (const key of Object.keys(params1Json)) {
-    if (params1Json[key] !== params2Json[key])
-      errors.push(`${key} different value: ${params1Json[key]} != ${params2Json[key]}`);
+  for (const key of Object.keys(localConfigJson)) {
+    const localValue = String(localConfigJson[key]).toLocaleLowerCase();
+    const remoteValue = String(externalSpecJsonWithDefaults[key]).toLocaleLowerCase();
+    if (localValue !== remoteValue) {
+      errors.push(`${key} different value: ${localValue} != ${remoteValue}`);
+    }
   }
 
   if (errors.length > 0) {

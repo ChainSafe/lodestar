@@ -1,13 +1,18 @@
 import {BLSPubkey, Slot} from "@chainsafe/lodestar-types";
 import {IChainForkConfig} from "@chainsafe/lodestar-config";
 import {ForkName} from "@chainsafe/lodestar-params";
-import {prettyBytes} from "@chainsafe/lodestar-utils";
+import {extendError, prettyBytes} from "@chainsafe/lodestar-utils";
 import {toHexString} from "@chainsafe/ssz";
 import {Api} from "@chainsafe/lodestar-api";
-import {IClock, extendError, ILoggerVc} from "../util/index.js";
+import {IClock, ILoggerVc} from "../util/index.js";
 import {ValidatorStore} from "./validatorStore.js";
 import {BlockDutiesService, GENESIS_SLOT} from "./blockDuties.js";
 import {PubkeyHex} from "../types.js";
+import {Metrics} from "../metrics.js";
+
+type BlockProposingServiceOpts = {
+  graffiti?: string;
+};
 
 /**
  * Service that sets up and handles validator block proposal duties.
@@ -19,11 +24,19 @@ export class BlockProposingService {
     private readonly config: IChainForkConfig,
     private readonly logger: ILoggerVc,
     private readonly api: Api,
-    clock: IClock,
+    private readonly clock: IClock,
     private readonly validatorStore: ValidatorStore,
-    private readonly graffiti?: string
+    private readonly metrics: Metrics | null,
+    private readonly opts: BlockProposingServiceOpts
   ) {
-    this.dutiesService = new BlockDutiesService(logger, api, clock, validatorStore, this.notifyBlockProductionFn);
+    this.dutiesService = new BlockDutiesService(
+      logger,
+      api,
+      clock,
+      validatorStore,
+      metrics,
+      this.notifyBlockProductionFn
+    );
   }
 
   removeDutiesForKey(pubkey: PubkeyHex): void {
@@ -57,20 +70,29 @@ export class BlockProposingService {
     // Wrap with try catch here to re-use `logCtx`
     try {
       const randaoReveal = await this.validatorStore.signRandao(pubkey, slot);
-      const graffiti = this.graffiti || "";
+      const graffiti = this.opts.graffiti || "";
       const debugLogCtx = {...logCtx, validator: pubkeyHex};
 
       this.logger.debug("Producing block", debugLogCtx);
+      this.metrics?.proposerStepCallProduceBlock.observe(this.clock.secFromSlot(slot));
+
       const block = await this.produceBlock(slot, randaoReveal, graffiti).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "produce"});
         throw extendError(e, "Failed to produce block");
       });
       this.logger.debug("Produced block", debugLogCtx);
+      this.metrics?.blocksProduced.inc();
 
       const signedBlock = await this.validatorStore.signBlock(pubkey, block.data, slot);
+
+      this.metrics?.proposerStepCallPublishBlock.observe(this.clock.secFromSlot(slot));
+
       await this.api.beacon.publishBlock(signedBlock).catch((e: Error) => {
+        this.metrics?.blockProposingErrors.inc({error: "publish"});
         throw extendError(e, "Failed to publish block");
       });
       this.logger.info("Published block", {...logCtx, graffiti});
+      this.metrics?.blocksPublished.inc();
     } catch (e) {
       this.logger.error("Error proposing block", logCtx, e as Error);
     }

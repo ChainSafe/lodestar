@@ -54,6 +54,8 @@ export function handleChainEvents(this: BeaconChain, signal: AbortSignal): void 
     [ChainEvent.justified]: onJustified,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
     [ChainEvent.lightclientHeaderUpdate]: () => {},
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    [ChainEvent.lightclientFinalizedUpdate]: () => {},
   };
 
   const emitter = this.emitter;
@@ -149,13 +151,23 @@ export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWit
 }
 
 export function onForkChoiceHead(this: BeaconChain, head: IProtoBlock): void {
+  const delaySec = this.clock.secFromSlot(head.slot);
   this.logger.verbose("New chain head", {
     headSlot: head.slot,
     headRoot: head.blockRoot,
+    delaySec,
   });
   this.syncContributionAndProofPool.prune(head.slot);
   this.seenContributionAndProof.prune(head.slot);
-  this.metrics?.headSlot.set(head.slot);
+
+  if (this.metrics) {
+    this.metrics.headSlot.set(head.slot);
+    // Only track "recent" blocks. Otherwise sync can distort this metrics heavily.
+    // We want to track recent blocks coming from gossip, unknown block sync, and API.
+    if (delaySec < 64 * this.config.SECONDS_PER_SLOT) {
+      this.metrics.elapsedTimeTillBecomeHead.observe(delaySec);
+    }
+  }
 }
 
 export function onForkChoiceReorg(this: BeaconChain, head: IProtoBlock, oldHead: IProtoBlock, depth: number): void {
@@ -184,6 +196,7 @@ export async function onBlock(
   this.logger.verbose("Block processed", {
     slot: block.message.slot,
     root: blockRoot,
+    delaySec: this.clock.secFromSlot(block.message.slot),
   });
 }
 

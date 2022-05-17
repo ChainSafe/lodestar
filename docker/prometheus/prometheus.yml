@@ -4,5 +4,6 @@ scrape_configs:
     scrape_timeout: 20s
     metrics_path: /metrics
     static_configs:
-      # Run in a docker-compose context with a "beacon_node" service. Uses internal docker DNS
-      - targets: ["beacon_node:8008"]
+      # This tag is to be replaced in the Dockerfile with sed
+      # Modified datasource to work with a network_mode: host
+      - targets: ["#BEACON_URL"]

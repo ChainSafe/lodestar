@@ -18,4 +18,10 @@ describe("utils / params / assertEqualParams", () => {
 
     expect(() => assertEqualParams(chainConfig, otherConfig)).to.throw(NotEqualParamsError);
   });
+
+  it("should fill missing remote values with default and be equal", () => {
+    const chainConfigJson = chainConfigToJson(chainConfig);
+    delete chainConfigJson["DEPOSIT_CONTRACT_ADDRESS"];
+    assertEqualParams(chainConfig, chainConfigJson);
+  });
 });
