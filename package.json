@@ -33,7 +33,7 @@
     "check-readme": "lerna run check-readme"
   },
   "devDependencies": {
-    "@chainsafe/eslint-plugin-node": "^11.2.2",
+    "@chainsafe/eslint-plugin-node": "^11.2.3",
     "@dapplion/benchmark": "^0.2.2",
     "@types/chai": "4.2.0",
     "@types/chai-as-promised": "^7.1.2",

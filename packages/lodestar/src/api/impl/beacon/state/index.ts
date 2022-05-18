@@ -15,7 +15,11 @@ import {
   toValidatorResponse,
 } from "./utils.js";
 
-export function getBeaconStateApi({chain, config, db}: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
+export function getBeaconStateApi({
+  chain,
+  config,
+  db,
+}: Pick<ApiModules, "chain" | "config" | "db">): routes.beacon.state.Api {
   async function getState(stateId: routes.beacon.StateId): Promise<BeaconStateAllForks> {
     return await resolveStateId(config, chain, db, stateId);
   }
