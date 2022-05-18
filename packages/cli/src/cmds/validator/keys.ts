@@ -60,9 +60,10 @@ export async function getLocalSecretKeys(
 
     const secretKeys = await Promise.all(
       keystorePaths.map(async (keystorePath) => {
+        const keystoreStr = fs.readFileSync(keystorePath, "utf8");
         let keystore;
         try {
-          keystore = Keystore.parse(fs.readFileSync(keystorePath, "utf8"));
+          keystore = Keystore.parse(keystoreStr);
         } catch (e) {
           throw new Error(`Error parsing keystore at ${keystorePath}: ${(e as Error).message}`);
         }
