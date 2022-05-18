@@ -94,10 +94,8 @@ export class AggregatedAttestationPool {
     const stateSlot = state.slot;
     const stateEpoch = state.epochCtx.epoch;
     const statePrevEpoch = stateEpoch - 1;
-    const forkName = state.config.getForkName(stateSlot);
 
-    const getParticipationFn =
-      forkName === ForkName.phase0 ? this.getParticipationPhase0(state) : this.getParticipationAltair(state);
+    const getParticipation = getParticipationFn(state);
 
     const attestationsByScore: AttestationWithScore[] = [];
 
@@ -132,7 +130,7 @@ export class AggregatedAttestationPool {
         ) {
           continue;
         }
-        const participation = getParticipationFn(epoch, attestationGroup.committee);
+        const participation = getParticipation(epoch, attestationGroup.committee);
         if (participation === null) {
           continue;
         }
@@ -334,6 +332,7 @@ export class MatchingDataAttestationGroup {
       let notSeenAttesterCount = 0;
 
       for (let i = 0; i < committeeLen; i++) {
+        // TODO: Optimize aggregationBits.get() in bulk for the entire BitArray
         if (!committeeSeenAttesting[i] && aggregationBits.get(i)) {
           notSeenAttesterCount++;
         }
@@ -362,6 +361,62 @@ export function aggregateInto(attestation1: AttestationWithIndex, attestation2: 
   const signature1 = bls.Signature.fromBytes(attestation1.attestation.signature, undefined, true);
   const signature2 = bls.Signature.fromBytes(attestation2.attestation.signature, undefined, true);
   attestation1.attestation.signature = bls.Signature.aggregate([signature1, signature2]).toBytes();
+}
+
+/**
+ * Pre-compute participation from a CachedBeaconStateAllForks, for use to check if an attestation's committee
+ * has already attested or not.
+ */
+export function getParticipationFn(state: CachedBeaconStateAllForks): GetParticipationFn {
+  if (state.config.getForkName(state.slot) === ForkName.phase0) {
+    // Get attestations to be included in a phase0 block.
+    // As we are close to altair, this is not really important, it's mainly for e2e.
+    // The performance is not great due to the different BeaconState data structure to altair.
+    // check for phase0 block already
+    const phase0State = state as CachedBeaconStatePhase0;
+    const stateEpoch = computeEpochAtSlot(state.slot);
+
+    const previousEpochParticipants = extractParticipation(
+      phase0State.previousEpochAttestations.getAllReadonly(),
+      state
+    );
+    const currentEpochParticipants = extractParticipation(phase0State.currentEpochAttestations.getAllReadonly(), state);
+
+    return (epoch: Epoch) => {
+      return epoch === stateEpoch
+        ? currentEpochParticipants
+        : epoch === stateEpoch - 1
+        ? previousEpochParticipants
+        : null;
+    };
+  }
+
+  // altair and future forks
+  else {
+    // Get attestations to be included in an altair block.
+    // Attestations are sorted by inclusion distance then number of attesters.
+    // Attestations should pass the validation when processing attestations in beacon-state-transition.
+    // check for altair block already
+    const altairState = state as CachedBeaconStateAltair;
+    const previousParticipation = altairState.previousEpochParticipation.getAll();
+    const currentParticipation = altairState.currentEpochParticipation.getAll();
+    const stateEpoch = computeEpochAtSlot(state.slot);
+
+    return (epoch: Epoch, committee: number[]) => {
+      const participationStatus =
+        epoch === stateEpoch ? currentParticipation : epoch === stateEpoch - 1 ? previousParticipation : null;
+
+      if (participationStatus === null) return null;
+
+      const seenValidatorIndices = new Set<ValidatorIndex>();
+      for (const validatorIndex of committee) {
+        if (flagIsTimelySource(participationStatus[validatorIndex])) {
+          seenValidatorIndices.add(validatorIndex);
+        }
+      }
+      return seenValidatorIndices;
+    };
+  }
 }
 
 export function extractParticipation(
