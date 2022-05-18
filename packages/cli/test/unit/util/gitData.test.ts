@@ -13,7 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WRITE_GIT_DATA_CMD = "npm run write-git-data";
 
 describe("util / gitData", () => {
-  before(() => {
+  before(function () {
+    this.timeout(4000);
     const pkgJsonPath = findUp.sync("package.json", {cwd: __dirname});
     if (!pkgJsonPath) {
       throw Error("No package.json found");

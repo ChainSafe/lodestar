@@ -84,8 +84,6 @@ describe("sync / unknown block sync", function () {
 
     afterEachCallbacks.push(() => bn2.close());
 
-    afterEachCallbacks.push(() => bn2.close());
-
     const headSummary = bn.chain.forkChoice.getHead();
     const head = await bn.db.block.get(fromHexString(headSummary.blockRoot));
     if (!head) throw Error("First beacon node has no head block");
