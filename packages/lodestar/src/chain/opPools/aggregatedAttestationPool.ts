@@ -55,7 +55,7 @@ export class AggregatedAttestationPool {
   );
   private lowestPermissibleSlot = 0;
 
-  add(attestation: phase0.Attestation, committee: ValidatorIndex[]): InsertOutcome {
+  add(attestation: phase0.Attestation, attestingIndicesCount: number, committee: ValidatorIndex[]): InsertOutcome {
     const slot = attestation.data.slot;
     const lowestPermissibleSlot = this.lowestPermissibleSlot;
 
@@ -76,7 +76,7 @@ export class AggregatedAttestationPool {
 
     return attestationGroup.add({
       attestation,
-      trueBitsCount: attestation.aggregationBits.getTrueBitIndexes().length,
+      trueBitsCount: attestingIndicesCount,
     });
   }
 
@@ -246,9 +246,6 @@ export class AggregatedAttestationPool {
 interface AttestationWithIndex {
   attestation: phase0.Attestation;
   trueBitsCount: number;
-  // this is <= attestingIndices.count since some attesters may be seen by the chain
-  // this is only updated and used in removeBySeenValidators function
-  notSeenAttesterCount?: number;
 }
 
 type AttestationNonParticipant = {

@@ -439,7 +439,11 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
               signedAggregateAndProof
             );
 
-            chain.aggregatedAttestationPool.add(signedAggregateAndProof.message.aggregate, committeeIndices);
+            chain.aggregatedAttestationPool.add(
+              signedAggregateAndProof.message.aggregate,
+              indexedAttestation.attestingIndices.length,
+              committeeIndices
+            );
             const sentPeers = await network.gossip.publishBeaconAggregateAndProof(signedAggregateAndProof);
             metrics?.submitAggregatedAttestation(seenTimestampSec, indexedAttestation, sentPeers);
           } catch (e) {

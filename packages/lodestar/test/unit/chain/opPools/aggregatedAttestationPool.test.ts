@@ -52,7 +52,7 @@ describe("AggregatedAttestationPool", function () {
 
   for (const {name, attestingIndices, expected} of testCases) {
     it(name, function () {
-      pool.add(attestation, attestingIndices, committee);
+      pool.add(attestation, attestingIndices.length, committee);
       expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal(expected, "incorrect returned attestations");
     });
   }
@@ -61,7 +61,7 @@ describe("AggregatedAttestationPool", function () {
     altairState.currentJustifiedCheckpoint.epoch = 1000;
     // all attesters are not seen
     const attestingIndices = [2, 3];
-    pool.add(attestation, attestingIndices, committee);
+    pool.add(attestation, attestingIndices.length, committee);
     expect(pool.getAttestationsForBlock(altairState)).to.be.deep.equal([], "no attestation since incorrect source");
   });
 });
@@ -89,15 +89,12 @@ describe("MatchingDataAttestationGroup", function () {
 
   beforeEach(() => {
     attestationGroup = new MatchingDataAttestationGroup(committee, attestation1.data);
-    attestationGroup.add({
-      attestation: attestation1,
-      attestingIndices: new Set([100, 200]),
-    });
+    attestationGroup.add({attestation: attestation1, trueBitsCount: 2});
   });
 
   it("add - new data, getAttestations() return 2", () => {
     const attestation2 = attestationFromBits([true, false, true]);
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: 2});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation1, attestation2], "Incorrect attestations for block");
@@ -105,7 +102,7 @@ describe("MatchingDataAttestationGroup", function () {
 
   it("add - new data, remove existing attestation, getAttestations() return 1", () => {
     const attestation2 = attestationFromBits([true, true, true]);
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set(committee)});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: committee.length});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation2], "should return only new attestation");
@@ -114,7 +111,7 @@ describe("MatchingDataAttestationGroup", function () {
   it("add - already known, getAttestations() return 1", () => {
     const attestation2 = attestationFromBits([true, false, false]);
     // attestingIndices is subset of an existing one
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100])});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: 1});
     expect(result).to.be.equal(InsertOutcome.AlreadyKnown, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation1], "expect exactly 1 attestation");
@@ -124,7 +121,7 @@ describe("MatchingDataAttestationGroup", function () {
     const attestation2 = attestationFromBits([false, false, true]);
     const sk2 = bls.SecretKey.fromBytes(Buffer.alloc(32, 2));
     attestation2.signature = sk2.sign(attestationDataRoot).toBytes();
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([300])});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: 1});
     expect(result).to.be.equal(InsertOutcome.Aggregated, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations.length).to.be.equal(1, "expect exactly 1 aggregated attestation");
@@ -160,7 +157,7 @@ describe("MatchingDataAttestationGroup", function () {
 
   it("getAttestationsForBlock - return 2", () => {
     const attestation2 = attestationFromBits([true, false, true]);
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: 2});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestationsForBlock(new Set([200]));
     expect(attestations).to.be.deep.equal(
@@ -182,7 +179,7 @@ describe("MatchingDataAttestationGroup", function () {
 
   it("getAttestations", () => {
     const attestation2 = attestationFromBits([true, false, true]);
-    const result = attestationGroup.add({attestation: attestation2, attestingIndices: new Set([100, 300])});
+    const result = attestationGroup.add({attestation: attestation2, trueBitsCount: 2});
     expect(result).to.be.equal(InsertOutcome.NewData, "incorrect InsertOutcome");
     const attestations = attestationGroup.getAttestations();
     expect(attestations).to.be.deep.equal([attestation1, attestation2]);
@@ -206,13 +203,10 @@ describe("aggregateInto", function () {
   });
 
   it("should aggregate 2 attestations", () => {
-    const attWithIndex1 = {attestation: attestation1, attestingIndices: new Set([100])};
-    const attWithIndex2 = {attestation: attestation2, attestingIndices: new Set([200])};
+    const attWithIndex1 = {attestation: attestation1, trueBitsCount: 1};
+    const attWithIndex2 = {attestation: attestation2, trueBitsCount: 1};
     aggregateInto(attWithIndex1, attWithIndex2);
-    expect(setToArr(attWithIndex1.attestingIndices)).to.be.deep.equal(
-      [100, 200],
-      "invalid aggregated attestingIndices"
-    );
+
     expect(renderBitArray(attWithIndex1.attestation.aggregationBits)).to.be.deep.equal(
       renderBitArray(mergedBitArray),
       "invalid aggregationBits"
@@ -223,7 +217,3 @@ describe("aggregateInto", function () {
     ).to.be.equal(true, "invalid aggregated signature");
   });
 });
-
-function setToArr<T>(set: Set<T>): T[] {
-  return Array.from(set.values());
-}
