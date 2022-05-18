@@ -37,6 +37,7 @@ import {ReqRespBlockResponse} from "../../../../src/network/reqresp/types";
 import {testLogger} from "../../logger";
 import {ReprocessController} from "../../../../src/chain/reprocess";
 import {createCachedBeaconStateTest} from "@chainsafe/lodestar-beacon-state-transition/test/utils/state";
+import {ObservedAttesters, ObservedProposers} from "../../../../src/chain/blocks/observeBlock";
 
 /* eslint-disable @typescript-eslint/no-empty-function */
 
@@ -81,6 +82,11 @@ export class MockBeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
+
+  // Validators seen cache via block processing
+  readonly observedBlockProposers = new ObservedProposers();
+  readonly observedBlockAttesters = new ObservedAttesters();
+
 
   private state: BeaconStateAllForks;
   private abortController: AbortController;

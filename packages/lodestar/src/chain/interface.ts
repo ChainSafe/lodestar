@@ -22,6 +22,7 @@ import {LightClientServer} from "./lightClient";
 import {AggregatedAttestationPool} from "./opPools/aggregatedAttestationPool";
 import {PartiallyVerifiedBlockFlags} from "./blocks/types";
 import {ReprocessController} from "./reprocess";
+import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock";
 
 export type Eth2Context = {
   activeValidatorCount: number;
@@ -67,6 +68,10 @@ export interface IBeaconChain {
   readonly seenBlockProposers: SeenBlockProposers;
   readonly seenSyncCommitteeMessages: SeenSyncCommitteeMessages;
   readonly seenContributionAndProof: SeenContributionAndProof;
+
+  // Validators seen cache via processing blocks
+  readonly observedBlockProposers: ObservedProposers;
+  readonly observedBlockAttesters: ObservedAttesters;
 
   /** Stop beacon chain processing */
   close(): void;

@@ -49,6 +49,7 @@ import {LightClientServer} from "./lightClient";
 import {Archiver} from "./archiver";
 import {IEth1ForBlockProduction} from "../eth1";
 import {IExecutionEngine} from "../executionEngine";
+import {ObservedAttesters, ObservedProposers} from "./blocks/observeBlock";
 import {PrecomputeNextEpochTransitionScheduler} from "./precomputeNextEpochTransition";
 import {ReprocessController} from "./reprocess";
 
@@ -84,6 +85,10 @@ export class BeaconChain implements IBeaconChain {
   readonly seenBlockProposers = new SeenBlockProposers();
   readonly seenSyncCommitteeMessages = new SeenSyncCommitteeMessages();
   readonly seenContributionAndProof = new SeenContributionAndProof();
+
+  // Validators seen cache via block processing
+  readonly observedBlockProposers = new ObservedProposers();
+  readonly observedBlockAttesters = new ObservedAttesters();
 
   // Global state caches
   readonly pubkey2index: PubkeyIndexMap;

@@ -6,7 +6,6 @@ import {
   attesterShufflingDecisionRoot,
   getBlockRootAtSlot,
   computeEpochAtSlot,
-  computeEndSlotForEpoch,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {
   GENESIS_SLOT,
@@ -616,19 +615,10 @@ export function getValidatorApi({chain, config, logger, metrics, network, sync}:
 }
 
 function isLive(chain: IBeaconChain, index: ValidatorIndex, epoch: Epoch): boolean {
-  const startSlot = computeStartSlotAtEpoch(epoch);
-  const endSlot = computeEndSlotForEpoch(epoch);
+  const hasAttestedViaGossip = chain.seenAttesters.isKnown(epoch, index);
+  const hasAttestedViaBlock = chain.observedBlockAttesters.isKnown(epoch, index);
+  const hasAggregatedViaGossip = chain.seenAggregators.isKnown(epoch, index);
+  const hasProposedViaBlock = chain.observedBlockProposers.isKnown(epoch, index);
 
-  let proposedBlock = false;
-  for (let slot = startSlot; slot <= endSlot; slot++) {
-    if (chain.seenBlockProposers.isKnown(slot, index)) {
-      proposedBlock = true;
-      break;
-    }
-  }
-
-  const hasAggregated = chain.seenAggregators.isKnown(epoch, index);
-  const hasAttested = chain.seenAttesters.isKnown(epoch, index);
-
-  return proposedBlock || hasAggregated || hasAttested;
+  return hasAttestedViaGossip || hasAttestedViaBlock || hasAggregatedViaGossip || hasProposedViaBlock;
 }

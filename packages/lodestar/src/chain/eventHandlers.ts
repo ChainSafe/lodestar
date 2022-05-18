@@ -3,7 +3,11 @@ import {toHexString} from "@chainsafe/ssz";
 import {allForks, Epoch, phase0, Slot, ssz, Version} from "@chainsafe/lodestar-types";
 import {ILogger} from "@chainsafe/lodestar-utils";
 import {CheckpointWithHex, IProtoBlock} from "@chainsafe/lodestar-fork-choice";
-import {CachedBeaconStateAllForks, computeStartSlotAtEpoch} from "@chainsafe/lodestar-beacon-state-transition";
+import {
+  CachedBeaconStateAllForks,
+  computeEpochAtSlot,
+  computeStartSlotAtEpoch,
+} from "@chainsafe/lodestar-beacon-state-transition";
 import {AttestationError, BlockError, BlockErrorCode} from "./errors";
 import {ChainEvent, IChainEvents} from "./emitter";
 import {BeaconChain} from "./chain";
@@ -96,6 +100,7 @@ export async function onClockSlot(this: BeaconChain, slot: Slot): Promise<void> 
 export function onClockEpoch(this: BeaconChain, currentEpoch: Epoch): void {
   this.seenAttesters.prune(currentEpoch);
   this.seenAggregators.prune(currentEpoch);
+  this.observedBlockAttesters.prune(currentEpoch);
 }
 
 export function onForkVersion(this: BeaconChain, version: Version): void {
@@ -141,7 +146,9 @@ export function onForkChoiceJustified(this: BeaconChain, cp: CheckpointWithHex):
 
 export async function onForkChoiceFinalized(this: BeaconChain, cp: CheckpointWithHex): Promise<void> {
   this.logger.verbose("Fork choice finalized", {epoch: cp.epoch, root: cp.rootHex});
-  this.seenBlockProposers.prune(computeStartSlotAtEpoch(cp.epoch));
+  const finalizedSlot = computeStartSlotAtEpoch(cp.epoch);
+  this.seenBlockProposers.prune(finalizedSlot);
+  this.observedBlockProposers.prune(finalizedSlot);
 
   // TODO: Improve using regen here
   const headState = this.stateCache.get(this.forkChoice.getHead().stateRoot);
@@ -181,6 +188,7 @@ export function onAttestation(this: BeaconChain, attestation: phase0.Attestation
     targetRoot: toHexString(attestation.data.target.root),
     aggregationBits: ssz.phase0.CommitteeBits.toJson(attestation.aggregationBits) as string,
   });
+  this.observedBlockAttesters.add(computeEpochAtSlot(attestation.data.slot), attestation.data.index);
 }
 
 export async function onBlock(
@@ -198,8 +206,7 @@ export async function onBlock(
     root: blockRoot,
     delaySec: this.clock.secFromSlot(block.message.slot),
   });
-  // TODO DA confirm if it is fine to use seenBlockProposers or create another data structure?
-  this.seenBlockProposers.add(block.message.slot, block.message.proposerIndex);
+  this.observedBlockProposers.add(computeEpochAtSlot(block.message.slot), block.message.proposerIndex);
 }
 
 export async function onErrorAttestation(this: BeaconChain, err: AttestationError): Promise<void> {
