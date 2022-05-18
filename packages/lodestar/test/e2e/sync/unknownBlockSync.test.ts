@@ -30,7 +30,9 @@ describe("sync / unknown block sync", function () {
   it("should do an unknown block sync from another BN", async function () {
     this.timeout("10 min");
 
-    const genesisTime = Math.floor(Date.now() / 1000) + 2 * testParams.SECONDS_PER_SLOT;
+    // the node needs time to transpile/initialize bls worker threads
+    const genesisSlotsDelay = 16;
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
     const testLoggerOpts: TestLoggerOpts = {
       logLevel: LogLevel.info,
       timestampFormat: {
@@ -61,9 +63,6 @@ describe("sync / unknown block sync", function () {
       useRestApi: false,
       testLoggerOpts,
     });
-    // the node needs time to transpile/initialize bls worker threads
-    const waitTime = 10_000;
-    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     afterEachCallbacks.push(() => Promise.all(validators.map((v) => v.stop())));
 
@@ -82,8 +81,6 @@ describe("sync / unknown block sync", function () {
       genesisTime: bn.chain.getHeadState().genesisTime,
       logger: loggerNodeB,
     });
-    // the node needs time to transpile/initialize bls worker threads
-    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     afterEachCallbacks.push(() => bn2.close());
 

@@ -51,7 +51,7 @@ describe("chain / lightclient", function () {
 
     // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
     // also delay to allow bls workers to be transpiled/initialized
-    const genesisSlotsDelay = 20 / testParams.SECONDS_PER_SLOT;
+    const genesisSlotsDelay = 16;
     const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * testParams.SECONDS_PER_SLOT;
 
     const testLoggerOpts: TestLoggerOpts = {

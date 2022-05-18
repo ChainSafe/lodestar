@@ -31,16 +31,19 @@ describe("sync / finalized sync", function () {
     const testLoggerOpts: TestLoggerOpts = {logLevel: LogLevel.info};
     const loggerNodeA = testLogger("Node-A", testLoggerOpts);
     const loggerNodeB = testLogger("Node-B", testLoggerOpts);
+    // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
+    // the node needs time to transpile/initialize bls worker threads
+    const genesisSlotsDelay = 16;
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const genesisTime = Math.floor(Date.now() / 1000) + genesisSlotsDelay * beaconParams.SECONDS_PER_SLOT!;
 
     const bn = await getDevBeaconNode({
       params: beaconParams,
       options: {sync: {isSingleNode: true}, network: {allowPublishToZeroPeers: true}},
       validatorCount,
+      genesisTime,
       logger: loggerNodeA,
     });
-    // the node needs time to transpile/initialize bls worker threads
-    const waitTime = 10_000;
-    await new Promise((resolve) => setTimeout(resolve, waitTime));
 
     afterEachCallbacks.push(() => bn.close());
 

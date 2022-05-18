@@ -14,6 +14,7 @@ import {testLogger} from "../../utils/logger.js";
 import {linspace} from "../../../src/util/numpy.js";
 import {BeaconDb} from "../../../src/index.js";
 import {LevelDbController} from "@chainsafe/lodestar-db";
+import {sleep} from "@chainsafe/lodestar-utils";
 
 // Define this params in `packages/beacon-state-transition/test/perf/params.ts`
 // to trigger Github actions CI cache
@@ -72,8 +73,8 @@ describe("verify+import blocks - range sync perf test", () => {
     minRuns: 5,
     maxRuns: Infinity,
     maxMs: Infinity,
-    timeoutBench: 10 * 60 * 1000,
-    beforeEach: () => {
+    timeoutBench: 10 * 60 * 1000 + 16_000 * 5,
+    beforeEach: async () => {
       const state = stateOg.value.clone();
       const chain = new BeaconChain(
         {
@@ -91,6 +92,9 @@ describe("verify+import blocks - range sync perf test", () => {
           executionEngine: new ExecutionEngineDisabled(),
         }
       );
+
+      // wait for bls worker threads to warm up
+      await sleep(16_000);
 
       return chain;
     },
