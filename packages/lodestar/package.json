@@ -66,7 +66,7 @@
     "test:spec-general": "mocha --config .mocharc.spec.cjs 'test/spec/general/**/*.test.ts'",
     "test:spec-minimal": "LODESTAR_PRESET=minimal mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
     "test:spec-mainnet": "LODESTAR_PRESET=mainnet mocha --config .mocharc.spec.cjs 'test/spec/presets/**/*.test.ts'",
-    "test:spec": "yarn test:spec-general && yarn test:spec-minimal && test:spec-mainnet",
+    "test:spec": "yarn test:spec-general && yarn test:spec-minimal && yarn test:spec-mainnet",
     "check-readme": "typescript-docs-verifier"
   },
   "dependencies": {

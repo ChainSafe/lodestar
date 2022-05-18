@@ -10,6 +10,9 @@ import * as state from "./state.js";
 // NOTE: We choose to split the block, pool, and state namespaces so the files are not too big.
 // However, for a consumer all these methods are within the same service "beacon"
 
+export * as block from "./block.js";
+export * as pool from "./pool.js";
+export * as state from "./state.js";
 export {BlockId, BlockHeaderResponse} from "./block.js";
 export {AttestationFilters} from "./pool.js";
 // TODO: Review if re-exporting all these types is necessary

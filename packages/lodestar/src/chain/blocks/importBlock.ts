@@ -23,7 +23,6 @@ import {LightClientServer} from "../lightClient/index.js";
 import {getCheckpointFromState} from "./utils/checkpoint.js";
 import {PendingEvents} from "./utils/pendingEvents.js";
 import {FullyVerifiedBlock} from "./types.js";
-// import {ForkChoiceError, ForkChoiceErrorCode} from "@chainsafe/lodestar-fork-choice/lib/forkChoice/errors";
 
 /**
  * Fork-choice allows to import attestations from current (0) or past (1) epoch.

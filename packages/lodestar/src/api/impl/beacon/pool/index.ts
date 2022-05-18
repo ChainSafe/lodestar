@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-restricted-imports
-import {Api as IBeaconPoolApi} from "@chainsafe/lodestar-api/lib/routes/beacon/pool";
+import {routes} from "@chainsafe/lodestar-api";
 import {Epoch, ssz} from "@chainsafe/lodestar-types";
 import {SYNC_COMMITTEE_SUBNET_SIZE} from "@chainsafe/lodestar-params";
 import {validateGossipAttestation} from "../../../../chain/validation/index.js";
@@ -16,7 +15,7 @@ export function getBeaconPoolApi({
   logger,
   metrics,
   network,
-}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): IBeaconPoolApi {
+}: Pick<ApiModules, "chain" | "logger" | "metrics" | "network">): routes.beacon.pool.Api {
   return {
     async getPoolAttestations(filters) {
       // Already filtered by slot

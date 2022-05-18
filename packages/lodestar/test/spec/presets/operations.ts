@@ -9,8 +9,7 @@ import {
   CachedBeaconStatePhase0,
   phase0,
 } from "@chainsafe/lodestar-beacon-state-transition";
-// eslint-disable-next-line no-restricted-imports
-import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/lib/bellatrix/block/processExecutionPayload";
+import {processExecutionPayload} from "@chainsafe/lodestar-beacon-state-transition/bellatrix";
 import {ssz} from "@chainsafe/lodestar-types";
 import {ForkName} from "@chainsafe/lodestar-params";
 import {createCachedBeaconStateTest} from "../../utils/cachedBeaconState.js";

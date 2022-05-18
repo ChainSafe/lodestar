@@ -12,12 +12,13 @@ import {
   bellatrix,
 } from "@chainsafe/lodestar-beacon-state-transition";
 import {InputType} from "@chainsafe/lodestar-spec-test-util";
-import {ChainEventEmitter, initializeForkChoice} from "@chainsafe/lodestar/chain";
 import {
+  ChainEventEmitter,
+  initializeForkChoice,
   CheckpointStateCache,
   toCheckpointHex,
   toCheckpointKey,
-} from "@chainsafe/lodestar/src/chain/stateCache/stateContextCheckpointsCache";
+} from "@chainsafe/lodestar/chain";
 import {toHexString} from "@chainsafe/ssz";
 import {
   CheckpointWithHex,
