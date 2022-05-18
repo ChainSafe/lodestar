@@ -479,10 +479,10 @@
     strict-event-emitter-types "^2.0.0"
     varint "^6.0.0"
 
-"@chainsafe/eslint-plugin-node@^11.2.2":
-  version "11.2.2"
-  resolved "https://registry.yarnpkg.com/@chainsafe/eslint-plugin-node/-/eslint-plugin-node-11.2.2.tgz#d6679ff183dc2e2101e0ac3fed9eb768b5576f5e"
-  integrity sha512-+6VplHcZvcQ0v7wHW6Us/szM3xPOTq89DePt+ryXB52TzkpM8nSJjCyZjT3g3sqMzdiDacrNlTkDnfvHW604rg==
+"@chainsafe/eslint-plugin-node@^11.2.3":
+  version "11.2.3"
+  resolved "https://registry.yarnpkg.com/@chainsafe/eslint-plugin-node/-/eslint-plugin-node-11.2.3.tgz#ff2c3fbf11db204aeaa72dcee60233140ad1c34a"
+  integrity sha512-2iQv5JEaPcJuKP4pdawGd6iOVoUEDwx/PhsLqevwQXXz0WYwazW+p1fTF1bAcQNvZzLz4/wEBPtcVpQKNwY+jw==
   dependencies:
     eslint-plugin-es "^4.1.0"
     eslint-utils "^2.0.0"
