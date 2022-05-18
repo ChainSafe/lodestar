@@ -84,7 +84,7 @@ export class DoppelgangerService {
           ? (
               await this.api.validator.getLiveness(indices, previousEpoch).catch((e) => {
                 this.logger.error(`Error getting liveness data for previous epoch ${previousEpoch}`, {}, e as Error);
-                return Promise.resolve({data: []});
+                return {data: []};
               })
             ).data
           : [];
