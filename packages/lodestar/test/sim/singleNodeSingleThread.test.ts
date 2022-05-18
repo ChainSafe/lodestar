@@ -70,7 +70,8 @@ describe("Run single node single thread interop validators (no eth1) until check
       const timeoutSetupMargin = 5 * 1000; // Give extra 5 seconds of margin
 
       // delay a bit so regular sync sees it's up to date and sync is completed from the beginning
-      const genesisSlotsDelay = 3;
+      // allow time for bls worker threads to warm up
+      const genesisSlotsDelay = 20;
 
       const timeout =
         ((epochsOfMargin + expectedEpochsToFinish) * SLOTS_PER_EPOCH + genesisSlotsDelay) *
