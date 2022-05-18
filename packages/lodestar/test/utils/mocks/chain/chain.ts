@@ -87,7 +87,6 @@ export class MockBeaconChain implements IBeaconChain {
   readonly observedBlockProposers = new ObservedProposers();
   readonly observedBlockAttesters = new ObservedAttesters();
 
-
   private state: BeaconStateAllForks;
   private abortController: AbortController;
 
