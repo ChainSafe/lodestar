@@ -74,11 +74,13 @@ export const logOptions: ICliCommandOptions<ILogArgs> = {
   logRotate: {
     description: "Daily rotate log files",
     type: "boolean",
+    default: true,
   },
 
   logMaxFiles: {
     description: "Number of log files to maintain while rotating logs(if provided with logRotate)",
     type: "number",
+    default: 14,
   },
 };
 
