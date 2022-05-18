@@ -295,9 +295,32 @@ export async function verifyBlockStateTransition(
     //     in import block
     if (isMergeTransitionBlock) {
       const mergeBlock = block.message as bellatrix.BeaconBlock;
+      const mergeBlockHash = toHexString(
+        chain.config.getForkTypes(mergeBlock.slot).BeaconBlock.hashTreeRoot(mergeBlock)
+      );
       const powBlockRootHex = toHexString(mergeBlock.body.executionPayload.parentHash);
-      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex);
-      const powBlockParent = powBlock && (await chain.eth1.getPowBlock(powBlock.parentHash));
+      const powBlock = await chain.eth1.getPowBlock(powBlockRootHex).catch((error) => {
+        // Lets just warn the user here, errors if any will be reported on
+        // `assertValidTerminalPowBlock` checks
+        chain.logger.warn(
+          "Error fetching terminal PoW block referred in the merge transition block",
+          {powBlockHash: powBlockRootHex, mergeBlockHash},
+          error
+        );
+        return null;
+      });
+      const powBlockParent =
+        powBlock &&
+        (await chain.eth1.getPowBlock(powBlock.parentHash).catch((error) => {
+          // Lets just warn the user here, errors if any will be reported on
+          // `assertValidTerminalPowBlock` checks
+          chain.logger.warn(
+            "Error fetching parent of the terminal PoW block referred in the merge transition block",
+            {powBlockParentHash: powBlock.parentHash, powBlock: powBlockRootHex, mergeBlockHash},
+            error
+          );
+          return null;
+        }));
 
       assertValidTerminalPowBlock(chain.config, mergeBlock, {executionStatus, powBlock, powBlockParent});
     }
