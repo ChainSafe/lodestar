@@ -668,7 +668,7 @@
 <h2 id="variables_1">Variables<a class="headerlink" href="#variables_1" title="Permanent link">&para;</a></h2>
 <h3 id="let-userselectedpreset"><code>Let</code> userSelectedPreset<a class="headerlink" href="#let-userselectedpreset" title="Permanent link">&para;</a></h3>
 <p>• <strong>userSelectedPreset</strong>: <em><a href="../../enums/root.presetname/">PresetName</a> | null</em> = null</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/setPreset.ts#L14">setPreset.ts:14</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/setPreset.ts#L14">setPreset.ts:14</a></em></p>
 <p>The preset name currently exported by this library</p>
 <p>The <code>LODESTAR_PRESET</code> environment variable is used to select the active preset
 If <code>LODESTAR_PRESET</code> is not set, the default is <code>mainnet</code>.</p>
@@ -676,7 +676,7 @@ If <code>LODESTAR_PRESET</code> is not set, the default is <code>mainnet</code>.
 <h2 id="functions_1">Functions<a class="headerlink" href="#functions_1" title="Permanent link">&para;</a></h2>
 <h3 id="presettojson">presetToJson<a class="headerlink" href="#presettojson" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>presetToJson</strong>(<code>preset</code>: <a href="../interface/#beaconpreset">BeaconPreset</a>): <em>Record‹string, string›</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/json.ts#L7">json.ts:7</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/json.ts#L7">json.ts:7</a></em></p>
 <p>Render BeaconPreset to JSON strings
 - Numbers: Render as a quoted decimal string</p>
 <p><strong>Parameters:</strong></p>
@@ -698,7 +698,7 @@ If <code>LODESTAR_PRESET</code> is not set, the default is <code>mainnet</code>.
 <hr />
 <h3 id="serializepresetvalue">serializePresetValue<a class="headerlink" href="#serializepresetvalue" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>serializePresetValue</strong>(<code>value</code>: number): <em>string</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/json.ts#L21">json.ts:21</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/json.ts#L21">json.ts:21</a></em></p>
 <p>Type Wrapper to ensure that all values of BeaconPreset are number.
 If there are more types, expand this function with a type switch</p>
 <p><strong>Parameters:</strong></p>
@@ -720,7 +720,7 @@ If there are more types, expand this function with a type switch</p>
 <hr />
 <h3 id="setactivepreset">setActivePreset<a class="headerlink" href="#setactivepreset" title="Permanent link">&para;</a></h3>
 <p>▸ <strong>setActivePreset</strong>(<code>presetName</code>: <a href="../../enums/root.presetname/">PresetName</a>): <em>void</em></p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/setPreset.ts#L23">setPreset.ts:23</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/setPreset.ts#L23">setPreset.ts:23</a></em></p>
 <p>Override the active preset</p>
 <p>WARNING: Lodestar libraries rely on preset values being <em>constant</em>, so the active preset must be set <em>before</em> loading any other lodestar libraries.</p>
 <p>Only call this function if you <em>really</em> know what you are doing.</p>
@@ -743,10 +743,10 @@ If there are more types, expand this function with a type switch</p>
 <h2 id="object-literals_1">Object literals<a class="headerlink" href="#object-literals_1" title="Permanent link">&para;</a></h2>
 <h3 id="const-presetstatus"><code>Const</code> presetStatus<a class="headerlink" href="#const-presetstatus" title="Permanent link">&para;</a></h3>
 <h3 id="presetstatus-object">▪ <strong>presetStatus</strong>: <em>object</em><a class="headerlink" href="#presetstatus-object" title="Permanent link">&para;</a></h3>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/presetStatus.ts#L1">presetStatus.ts:1</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/presetStatus.ts#L1">presetStatus.ts:1</a></em></p>
 <h3 id="frozen">frozen<a class="headerlink" href="#frozen" title="Permanent link">&para;</a></h3>
 <p>• <strong>frozen</strong>: <em>boolean</em> = false</p>
-<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/01e6ffe/packages/params/src/presetStatus.ts#L2">presetStatus.ts:2</a></em></p>
+<p><em>Defined in <a href="https://github.com/ChainSafe/lodestar/blob/267dce7/packages/params/src/presetStatus.ts#L2">presetStatus.ts:2</a></em></p>
 
               
             </article>
