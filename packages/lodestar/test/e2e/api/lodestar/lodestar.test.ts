@@ -57,11 +57,11 @@ describe("api / impl / lodestar", function () {
       afterEachCallbacks.push(() => bn.close());
 
       // live indices at epoch of consideration, epoch 0
-      bn.chain.seenBlockProposers.add(1, 1);
+      bn.chain.observedBlockProposers.add(0, 1);
       bn.chain.seenAttesters.add(0, 2);
       bn.chain.seenAggregators.add(0, 3);
       // live indices at other epochs
-      bn.chain.seenBlockProposers.add(1000, 1000);
+      bn.chain.observedBlockProposers.add(1000, 1000);
       bn.chain.seenAttesters.add(10, 2000);
       bn.chain.seenAggregators.add(10, 3000);
 
@@ -104,7 +104,7 @@ describe("api / impl / lodestar", function () {
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 1
       await waitForEvent<phase0.Checkpoint>(bn.chain.emitter, ChainEvent.clockEpoch, timeout); // wait for epoch 2
 
-      bn.chain.seenBlockProposers.add(bn.chain.clock.currentSlot, 1);
+      bn.chain.observedBlockProposers.add(bn.chain.clock.currentEpoch, 1);
 
       const client = getClient(config, new HttpClient({baseUrl: `http://127.0.0.1:${restPort}`}));
 
